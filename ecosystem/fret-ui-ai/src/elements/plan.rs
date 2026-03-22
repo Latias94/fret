@@ -3,17 +3,25 @@
 //! Upstream reference: `repo-ref/ai-elements/packages/elements/src/plan.tsx`.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{Px, SemanticsRole, TextWrap};
 use fret_icons::ids;
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
+use fret_ui::element::{
+    AnyElement, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle, OpacityProps,
+    SemanticsDecoration,
+};
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::overlay_motion;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+use fret_ui_kit::primitives::collapsible as radix_collapsible;
 use fret_ui_kit::ui;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, CardAction, CardContent, CardDescription, CardFooter,
     CardHeader, CardTitle,
@@ -26,6 +34,7 @@ pub struct PlanController {
     pub open: Model<bool>,
     pub is_streaming: bool,
     pub disabled: bool,
+    pub content_id: GlobalElementId,
 }
 
 pub fn use_plan_controller<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<PlanController> {
@@ -84,6 +93,16 @@ impl Plan {
         }
     }
 
+    /// Composable children surface aligned with upstream `Plan` usage:
+    /// callers compose `PlanHeader`/`PlanTrigger`/`PlanContent`/`PlanFooter` as direct children.
+    pub fn into_element<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.into_element_with_children(cx, |cx, _controller| children(cx))
+    }
+
     /// Controlled open model (Radix `open`).
     pub fn open_model(mut self, open: Model<bool>) -> Self {
         self.open = Some(open);
@@ -136,40 +155,51 @@ impl Plan {
         let disabled = self.disabled;
         let test_id_root = self.test_id_root.clone();
 
-        let root = cx.container(
-            decl_style::container_props(&theme, chrome, layout),
-            move |cx| {
-                let open_model =
-                    controllable_state::use_controllable_model(cx, controlled_open.clone(), || {
-                        default_open
-                    })
-                    .model();
-
-                let controller = PlanController {
-                    open: open_model,
-                    is_streaming,
-                    disabled,
-                };
-
-                cx.provide(controller.clone(), |cx| {
-                    let body = ui::v_stack(move |cx| children(cx, controller.clone()))
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .gap(Space::N6)
-                        .into_element(cx);
-
-                    vec![body]
+        cx.scope(move |cx| {
+            let open_model =
+                controllable_state::use_controllable_model(cx, controlled_open.clone(), || {
+                    default_open
                 })
-            },
-        );
+                .model();
+            let open = cx
+                .get_model_copied(&open_model, Invalidation::Layout)
+                .unwrap_or(default_open);
 
-        let Some(test_id) = test_id_root else {
-            return root;
-        };
-        root.attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Group)
-                .test_id(test_id),
-        )
+            // Stable target id for trigger `controls` relationships (Radix `aria-controls`).
+            let content_id = cx.keyed("plan-content", |cx| cx.root_id());
+
+            let controller = PlanController {
+                open: open_model,
+                is_streaming,
+                disabled,
+                content_id,
+            };
+
+            let mut root = cx.container(
+                decl_style::container_props(&theme, chrome, layout),
+                move |cx| {
+                    cx.provide(controller.clone(), |cx| {
+                        let body = ui::v_stack(move |cx| children(cx, controller.clone()))
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N6)
+                            .into_element(cx);
+
+                        vec![body]
+                    })
+                },
+            );
+
+            if let Some(test_id) = test_id_root {
+                root = root.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Group)
+                        .expanded(open)
+                        .test_id(test_id),
+                );
+            }
+
+            root
+        })
     }
 }
 
@@ -431,6 +461,10 @@ impl PlanTrigger {
             return hidden(cx);
         };
 
+        let open = cx
+            .get_model_copied(&controller.open, Invalidation::Layout)
+            .unwrap_or(false);
+
         let theme = Theme::global(&*cx.app).clone();
         let icon_size = Px(16.0);
 
@@ -451,7 +485,13 @@ impl PlanTrigger {
         if let Some(test_id) = self.test_id {
             button = button.test_id(test_id);
         }
-        button.into_element(cx)
+
+        let el = button.into_element(cx);
+        radix_collapsible::apply_collapsible_trigger_controls_expanded(
+            el,
+            controller.content_id,
+            open,
+        )
     }
 }
 
@@ -494,25 +534,87 @@ impl PlanContent {
             return hidden(cx);
         };
 
-        let open = cx
-            .get_model_copied(&controller.open, Invalidation::Layout)
-            .unwrap_or(false);
-        if !open {
-            return hidden(cx);
-        }
+        cx.keyed("plan-content-motion", move |cx| {
+            let open = cx
+                .get_model_copied(&controller.open, Invalidation::Layout)
+                .unwrap_or(false);
 
-        let el = CardContent::new(self.children)
-            .refine_style(self.chrome)
-            .refine_layout(self.layout)
-            .into_element(cx);
-        let Some(test_id) = self.test_id else {
-            return el;
-        };
-        el.attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Group)
-                .test_id(test_id),
-        )
+            let toggle_duration = {
+                let theme_full = Theme::global(&*cx.app);
+                theme_full
+                    .duration_ms_by_key("duration.shadcn.motion.collapsible.toggle")
+                    .or_else(|| theme_full.duration_ms_by_key("duration.motion.collapsible.toggle"))
+                    .or_else(|| theme_full.duration_ms_by_key("duration.shadcn.motion.200"))
+            }
+            .map(|ms| Duration::from_millis(ms as u64))
+            .unwrap_or(Duration::from_millis(200));
+            let toggle_ticks = ticks_60hz_for_duration(toggle_duration);
+
+            let toggle_easing = {
+                let theme_full = Theme::global(&*cx.app);
+                theme_full
+                    .easing_by_key("easing.shadcn.motion.collapsible.toggle")
+                    .or_else(|| theme_full.easing_by_key("easing.motion.collapsible.toggle"))
+            }
+            .unwrap_or_else(|| overlay_motion::shadcn_motion_ease_bezier(cx));
+
+            let motion = radix_collapsible::measured_height_motion_for_root_with_cubic_bezier(
+                cx,
+                open,
+                false,
+                true,
+                toggle_ticks,
+                toggle_ticks,
+                toggle_easing,
+            );
+            if !motion.should_render {
+                return hidden(cx);
+            }
+
+            let content = CardContent::new(self.children)
+                .refine_style(self.chrome)
+                .refine_layout(self.layout)
+                .into_element(cx);
+
+            let wrapper_layout = decl_style::layout_style(
+                &Theme::global(&*cx.app).snapshot(),
+                motion.wrapper_refinement.clone(),
+            );
+            let wrapper_child = cx.opacity_props(
+                OpacityProps {
+                    layout: LayoutStyle::default(),
+                    opacity: motion.wrapper_opacity,
+                },
+                move |_cx| vec![content],
+            );
+
+            let wrapper_kind = if motion.wants_measurement {
+                ElementKind::InteractivityGate(InteractivityGateProps {
+                    layout: wrapper_layout,
+                    present: true,
+                    interactive: false,
+                })
+            } else {
+                ElementKind::Container(ContainerProps {
+                    layout: wrapper_layout,
+                    ..Default::default()
+                })
+            };
+
+            let mut wrapper_el =
+                AnyElement::new(controller.content_id, wrapper_kind, vec![wrapper_child]);
+            let _ = radix_collapsible::update_measured_for_motion(cx, motion, wrapper_el.id);
+
+            if let Some(test_id) = self.test_id {
+                wrapper_el = wrapper_el.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Group)
+                        .test_id(test_id),
+                );
+            }
+
+            wrapper_el
+        })
     }
 }
 
@@ -523,6 +625,7 @@ pub struct PlanFooter {
     test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    justify: Justify,
 }
 
 impl PlanFooter {
@@ -532,6 +635,7 @@ impl PlanFooter {
             test_id: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            justify: Justify::Start,
         }
     }
 
@@ -550,10 +654,32 @@ impl PlanFooter {
         self
     }
 
+    pub fn justify(mut self, justify: Justify) -> Self {
+        self.justify = justify;
+        self
+    }
+
+    pub fn justify_start(self) -> Self {
+        self.justify(Justify::Start)
+    }
+
+    pub fn justify_center(self) -> Self {
+        self.justify(Justify::Center)
+    }
+
+    pub fn justify_end(self) -> Self {
+        self.justify(Justify::End)
+    }
+
+    pub fn justify_between(self) -> Self {
+        self.justify(Justify::Between)
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let el = CardFooter::new(self.children)
             .refine_style(self.chrome)
             .refine_layout(self.layout)
+            .justify(self.justify)
             .into_element(cx);
         let Some(test_id) = self.test_id else {
             return el;
@@ -573,6 +699,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
     use fret_ui::element::{AnyElement, ElementKind};
+    use fret_ui::elements::GlobalElementId;
 
     fn find_text_by_content<'a>(element: &'a AnyElement, content: &str) -> Option<&'a AnyElement> {
         if let ElementKind::Text(props) = &element.kind
@@ -585,6 +712,33 @@ mod tests {
             .children
             .iter()
             .find_map(|child| find_text_by_content(child, content))
+    }
+
+    fn find_element_by_test_id<'a>(
+        element: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a AnyElement> {
+        let matches = element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            .is_some_and(|id| id == test_id)
+            || matches!(
+                &element.kind,
+                ElementKind::Semantics(props) if props.test_id.as_deref().is_some_and(|id| id == test_id)
+            )
+            || matches!(
+                &element.kind,
+                ElementKind::Pressable(props) if props.a11y.test_id.as_deref().is_some_and(|id| id == test_id)
+            );
+        if matches {
+            return Some(element);
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_element_by_test_id(child, test_id))
     }
 
     #[test]
@@ -603,6 +757,7 @@ mod tests {
                     open: open.clone(),
                     is_streaming: true,
                     disabled: false,
+                    content_id: GlobalElementId(1),
                 },
                 |cx| PlanTitle::new("Title").into_element(cx),
             )
@@ -647,6 +802,7 @@ mod tests {
                     open: open.clone(),
                     is_streaming: true,
                     disabled: false,
+                    content_id: GlobalElementId(1),
                 },
                 |cx| PlanDescription::new("Description").into_element(cx),
             )
@@ -673,5 +829,75 @@ mod tests {
         assert!(props.style.is_none());
         assert!(props.color.is_none());
         assert_eq!(props.wrap, TextWrap::Word);
+    }
+
+    #[test]
+    fn plan_trigger_stamps_controls_and_expanded_for_collapsible_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let content_id = GlobalElementId(42);
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            cx.provide(
+                PlanController {
+                    open: open.clone(),
+                    is_streaming: false,
+                    disabled: false,
+                    content_id,
+                },
+                |cx| PlanTrigger::default().test_id("trigger").into_element(cx),
+            )
+        });
+
+        let trigger = find_element_by_test_id(&element, "trigger").expect("expected trigger node");
+        let ElementKind::Pressable(props) = &trigger.kind else {
+            panic!("expected trigger to resolve to a pressable element");
+        };
+        assert_eq!(props.a11y.expanded, Some(false));
+        assert_eq!(props.a11y.controls_element, Some(content_id.0));
+    }
+
+    #[test]
+    fn plan_content_uses_controller_content_id_as_root_element_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let content_id = GlobalElementId(77);
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            cx.provide(
+                PlanController {
+                    open: open.clone(),
+                    is_streaming: false,
+                    disabled: false,
+                    content_id,
+                },
+                |cx| {
+                    PlanContent::new([cx.text("Hello")])
+                        .test_id("content")
+                        .into_element(cx)
+                },
+            )
+        });
+
+        assert_eq!(element.id, content_id);
+        assert!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref())
+                .is_some_and(|id| id == "content")
+        );
     }
 }

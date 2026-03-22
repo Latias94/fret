@@ -4,6 +4,7 @@
   "scripts": [
     "tools/diag-scripts/ui-gallery-ai-artifact-docs-run-action.json",
     "tools/diag-scripts/ui-gallery-ai-inline-citation-demo-hovercard.json",
+    "tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json",
     "tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json",
     "tools/diag-scripts/ui-gallery-ai-package-info-demo-basics.json",
     "tools/diag-scripts/ui-gallery-ai-package-info-demo-screenshot-zinc-dark.json",

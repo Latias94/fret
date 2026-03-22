@@ -1,6 +1,9 @@
 {
   "schema_version": 2,
   "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
       "predicate": {
@@ -30,15 +33,14 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-plan-trigger" } },
     {
-      "type": "wait_until",
+      "type": "assert",
       "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-plan-open-true" }
-      },
-      "timeout_frames": 240
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-ai-plan-content-marker" }
+      }
     },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-plan-trigger" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -46,6 +48,14 @@
         "target": { "kind": "test_id", "id": "ui-ai-plan-content-marker" }
       },
       "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-ai-plan-demo-toggle.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-ai-plan-demo-toggle"
     },
     { "type": "capture_bundle", "label": "ui-gallery-ai-plan-demo-toggle" }
   ]

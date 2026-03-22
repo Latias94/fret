@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("plan_demo.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_icons::ids;
+use fret_icons_lucide::generated_ids::lucide::FILE_TEXT;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
@@ -20,13 +20,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .default_open(false)
         .is_streaming(is_streaming)
         .test_id_root("ui-ai-plan-root")
-        .into_element_with_children(cx, move |cx, controller| {
-            let open = cx
-                .get_model_copied(&controller.open, Invalidation::Layout)
-                .unwrap_or(false);
-            let marker = open.then(|| cx.text("").test_id("ui-ai-plan-open-true"));
-
-            let file_icon = icon::icon_with(cx, ids::ui::FILE, Some(Px(16.0)), None);
+        .into_element(cx, move |cx| {
+            let file_icon = icon::icon_with(cx, FILE_TEXT, Some(Px(16.0)), None);
             let title_row = ui::h_flex(move |cx| {
                     vec![
                         file_icon,
@@ -59,7 +54,6 @@ updating all 29 components and their test suite.",
                         .into_element(cx),
                 ])
                 .into_element(cx),
-                marker.unwrap_or_else(|| cx.text("")),
                 ui_ai::PlanContent::new([
                     ui::v_flex(move |cx| {
                             vec![
@@ -122,24 +116,19 @@ library from React to SolidJS, ensuring compatibility and maintaining existing f
                 .test_id("ui-ai-plan-content-marker")
                 .into_element(cx),
                 ui_ai::PlanFooter::new([
-                    ui::h_flex(move |cx| {
-                        vec![ui_ai::PlanAction::new([
-                            shadcn::Button::new("Build")
-                                .variant(shadcn::ButtonVariant::Secondary)
-                                .size(shadcn::ButtonSize::Sm)
-                                .children([
-                                    ui::text("Build").into_element(cx),
-                                    shadcn::Kbd::new("⌘↩").into_element(cx),
-                                ])
-                                .a11y_label("Build")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx)]
-                    })
-                    .w_full()
-                    .justify_end()
+                    ui_ai::PlanAction::new([
+                        shadcn::Button::new("Build")
+                            .size(shadcn::ButtonSize::Sm)
+                            .children([
+                                ui::text("Build").into_element(cx),
+                                shadcn::Kbd::new("⌘↩").into_element(cx),
+                            ])
+                            .a11y_label("Build")
+                            .into_element(cx),
+                    ])
                     .into_element(cx),
                 ])
+                .justify_end()
                 .into_element(cx),
             ]
         });

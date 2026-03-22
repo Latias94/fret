@@ -6,8 +6,8 @@ use fret_ui::element::{AnyElement, ElementKind, Length};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::{current_color, style as decl_style};
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiPatch, UiPatchTarget,
-    UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, Justify, LayoutRefinement, Space, UiPatch,
+    UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -781,7 +781,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, AttributedText, Axis, Point, Rect, Size, TextSpan};
     use fret_ui::element::{
-        ContainerProps, CrossAlign, FlexProps, Length, Overflow, SemanticsProps,
+        ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow, SemanticsProps,
     };
     use fret_ui::elements::GlobalElementId;
     use fret_ui_kit::ui::UiElementSinkExt as _;
@@ -1891,6 +1891,7 @@ mod tests {
             let FlexProps {
                 align,
                 direction,
+                justify,
                 layout,
                 ..
             } = find_flex(&el);
@@ -1906,6 +1907,11 @@ mod tests {
                 "expected CardFooter row to keep the upstream `items-center` outcome"
             );
             assert_eq!(
+                *justify,
+                MainAlign::Start,
+                "expected CardFooter row to keep start main-axis alignment by default"
+            );
+            assert_eq!(
                 layout.size.width,
                 Length::Fill,
                 "expected CardFooter row to request fill width so footer-only text resolves against the card's inner width"
@@ -1914,6 +1920,50 @@ mod tests {
                 root_layout.size.min_width,
                 Some(Length::Px(Px(0.0))),
                 "expected CardFooter root to opt into min-w-0 so wrapped text can shrink without collapsing to per-word lines"
+            );
+        });
+    }
+
+    #[test]
+    fn card_footer_justify_end_aligns_row_content_to_main_end() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = CardFooter::new([cx.text("Footer only.")])
+                .justify_end()
+                .into_element(cx);
+
+            fn find_flex<'a>(el: &'a AnyElement) -> &'a FlexProps {
+                let mut stack = vec![el];
+                while let Some(node) = stack.pop() {
+                    if let ElementKind::Flex(props) = &node.kind {
+                        return props;
+                    }
+                    for child in node.children.iter().rev() {
+                        stack.push(child);
+                    }
+                }
+                panic!("expected CardFooter subtree to contain a flex root");
+            }
+
+            let FlexProps {
+                direction, justify, ..
+            } = find_flex(&el);
+
+            assert_eq!(
+                *direction,
+                Axis::Horizontal,
+                "expected CardFooter(justify_end) to keep the default row direction"
+            );
+            assert_eq!(
+                *justify,
+                MainAlign::End,
+                "expected CardFooter(justify_end) to align row content to the main-axis end"
             );
         });
     }
@@ -2086,6 +2136,7 @@ pub struct CardFooter {
     layout: LayoutRefinement,
     border_top: bool,
     direction: CardFooterDirection,
+    justify: Justify,
     gap: Space,
     wrap: bool,
 }
@@ -2112,6 +2163,7 @@ impl CardFooter {
             layout: LayoutRefinement::default(),
             border_top: false,
             direction: CardFooterDirection::Row,
+            justify: Justify::Start,
             gap: Space::N0.into(),
             wrap: false,
         }
@@ -2129,6 +2181,7 @@ impl CardFooter {
             layout: LayoutRefinement::default(),
             border_top: false,
             direction: CardFooterDirection::Row,
+            justify: Justify::Start,
             gap: Space::N0.into(),
             wrap: false,
             _phantom: PhantomData,
@@ -2163,6 +2216,27 @@ impl CardFooter {
         self
     }
 
+    pub fn justify(mut self, justify: Justify) -> Self {
+        self.justify = justify;
+        self
+    }
+
+    pub fn justify_start(self) -> Self {
+        self.justify(Justify::Start)
+    }
+
+    pub fn justify_center(self) -> Self {
+        self.justify(Justify::Center)
+    }
+
+    pub fn justify_end(self) -> Self {
+        self.justify(Justify::End)
+    }
+
+    pub fn justify_between(self) -> Self {
+        self.justify(Justify::Between)
+    }
+
     pub fn gap(mut self, gap: Space) -> Self {
         self.gap = gap;
         self
@@ -2189,6 +2263,7 @@ impl CardFooter {
         let chrome = self.chrome;
         let layout = self.layout;
         let direction = self.direction;
+        let justify = self.justify;
         let gap = self.gap;
         let wrap = self.wrap;
 
@@ -2221,12 +2296,14 @@ impl CardFooter {
                             .wrap()
                             .gap(gap)
                             .items_center()
+                            .justify(justify)
                             .layout(LayoutRefinement::default().w_full())
                             .into_element(cx)
                     } else {
                         ui::h_flex(move |_cx| children)
                             .gap(gap)
                             .items_center()
+                            .justify(justify)
                             .layout(LayoutRefinement::default().w_full())
                             .into_element(cx)
                     }
@@ -2238,6 +2315,7 @@ impl CardFooter {
                     // shadcn/ui v4: `flex-col` uses the default `items-stretch` behavior.
                     ui::v_flex(move |_cx| children)
                         .gap(gap)
+                        .justify(justify)
                         .layout(LayoutRefinement::default().w_full())
                         .into_element(cx)
                 }
@@ -2279,6 +2357,7 @@ pub struct CardFooterBuild<H, B> {
     layout: LayoutRefinement,
     border_top: bool,
     direction: CardFooterDirection,
+    justify: Justify,
     gap: Space,
     wrap: bool,
     _phantom: PhantomData<fn() -> H>,
@@ -2313,6 +2392,27 @@ where
         self
     }
 
+    pub fn justify(mut self, justify: Justify) -> Self {
+        self.justify = justify;
+        self
+    }
+
+    pub fn justify_start(self) -> Self {
+        self.justify(Justify::Start)
+    }
+
+    pub fn justify_center(self) -> Self {
+        self.justify(Justify::Center)
+    }
+
+    pub fn justify_end(self) -> Self {
+        self.justify(Justify::End)
+    }
+
+    pub fn justify_between(self) -> Self {
+        self.justify(Justify::Between)
+    }
+
     pub fn gap(mut self, gap: Space) -> Self {
         self.gap = gap;
         self
@@ -2334,6 +2434,7 @@ where
             .refine_layout(self.layout)
             .border_top(self.border_top)
             .direction(self.direction)
+            .justify(self.justify)
             .gap(self.gap)
             .wrap(self.wrap);
         if let Some(size) = self.size {
