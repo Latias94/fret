@@ -42,13 +42,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let selector = ui_ai::MicSelector::from_arc(devices)
         .open_model(open.clone())
         .value_model(value.clone())
-        .into_element_with_children(cx, move |cx| {
-            let trigger =
+        .into_element_with_children(cx, move |cx, slot| match slot {
+            ui_ai::MicSelectorChildSlot::Trigger => {
                 ui_ai::MicSelectorTrigger::new([ui_ai::MicSelectorValue::new().into_element(cx)])
                     .test_id("ui-ai-mic-selector-demo-trigger")
-                    .into_element(cx);
-
-            let content = ui_ai::MicSelectorContent::new([
+                    .into_element(cx)
+            }
+            ui_ai::MicSelectorChildSlot::Content => ui_ai::MicSelectorContent::new([
                 ui_ai::MicSelectorInput::new()
                     .test_id("ui-ai-mic-selector-demo-input")
                     .into_element(cx),
@@ -73,9 +73,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     }),
             ])
             .test_id_root("ui-ai-mic-selector-demo-content")
-            .into_element(cx);
-
-            (trigger, content)
+            .into_element(cx),
         });
 
     let open_now = cx

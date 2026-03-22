@@ -27,6 +27,12 @@ use fret_ui_shadcn::facade::{
     Dialog, DialogContent, DialogTitle, Spinner,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VoiceSelectorChildSlot {
+    Trigger,
+    Content,
+}
+
 pub type OnVoiceSelectorValueChange =
     Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Option<Arc<str>>) + 'static>;
 
@@ -221,7 +227,7 @@ impl VoiceSelector {
     ) -> AnyElement
     where
         H: UiHost + 'static,
-        F: Fn(&mut ElementContext<'_, H>) -> (AnyElement, AnyElement) + Clone + 'static,
+        F: Fn(&mut ElementContext<'_, H>, VoiceSelectorChildSlot) -> AnyElement + Clone + 'static,
     {
         let open = fret_ui_kit::primitives::dialog::DialogRoot::new()
             .open(self.open.clone())
@@ -251,14 +257,12 @@ impl VoiceSelector {
             cx,
             move |cx| {
                 cx.provide(controller_for_trigger.clone(), |cx| {
-                    let (trigger, _) = children_for_trigger(cx);
-                    trigger
+                    children_for_trigger(cx, VoiceSelectorChildSlot::Trigger)
                 })
             },
             move |cx| {
                 cx.provide(controller_for_content.clone(), |cx| {
-                    let (_, content) = children_for_content(cx);
-                    content
+                    children_for_content(cx, VoiceSelectorChildSlot::Content)
                 })
             },
         )

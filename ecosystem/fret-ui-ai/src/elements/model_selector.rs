@@ -25,6 +25,12 @@ use fret_ui_shadcn::facade::{
     CommandSeparator, CommandShortcut, Dialog, DialogContent, DialogTitle,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModelSelectorChildSlot {
+    Trigger,
+    Content,
+}
+
 /// AI Elements-aligned `ModelSelector` root.
 ///
 /// This is a light wrapper over shadcn `Dialog` that exposes a stable open model to both
@@ -72,7 +78,7 @@ impl ModelSelector {
     ) -> AnyElement
     where
         H: UiHost + 'static,
-        F: Fn(&mut ElementContext<'_, H>, Model<bool>) -> (AnyElement, AnyElement)
+        F: Fn(&mut ElementContext<'_, H>, ModelSelectorChildSlot, Model<bool>) -> AnyElement
             + Clone
             + 'static,
     {
@@ -89,12 +95,18 @@ impl ModelSelector {
         Dialog::new(open.clone()).into_element(
             cx,
             move |cx| {
-                let (trigger, _) = children_for_trigger(cx, open_for_trigger.clone());
-                trigger
+                children_for_trigger(
+                    cx,
+                    ModelSelectorChildSlot::Trigger,
+                    open_for_trigger.clone(),
+                )
             },
             move |cx| {
-                let (_, content) = children_for_content(cx, open_for_content.clone());
-                content
+                children_for_content(
+                    cx,
+                    ModelSelectorChildSlot::Content,
+                    open_for_content.clone(),
+                )
             },
         )
     }
@@ -416,14 +428,13 @@ impl ModelSelectorLogo {
 
 /// AI Elements-aligned logo group.
 ///
-/// Upstream uses negative spacing (`-space-x-1`) to overlap the logos. Fret currently does not
-/// expose negative gap at the stack level, so we render a tight row (apps can customize with
-/// transforms if needed).
+/// Upstream uses negative spacing (`-space-x-1`) to overlap the logos.
 pub struct ModelSelectorLogoGroup {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
     gap: Space,
+    overlap_x: Space,
 }
 
 impl std::fmt::Debug for ModelSelectorLogoGroup {
@@ -433,6 +444,7 @@ impl std::fmt::Debug for ModelSelectorLogoGroup {
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .field("gap", &self.gap)
+            .field("overlap_x", &self.overlap_x)
             .finish()
     }
 }
@@ -442,8 +454,9 @@ impl ModelSelectorLogoGroup {
         Self {
             children: children.into_iter().collect(),
             test_id: None,
-            layout: LayoutRefinement::default(),
-            gap: Space::N1,
+            layout: LayoutRefinement::default().flex_shrink_0(),
+            gap: Space::N0,
+            overlap_x: Space::N1,
         }
     }
 
@@ -462,8 +475,29 @@ impl ModelSelectorLogoGroup {
         self
     }
 
+    pub fn overlap_x(mut self, overlap_x: Space) -> Self {
+        self.overlap_x = overlap_x;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut element = ui::h_row(move |_cx| self.children)
+        let overlap_x = self.overlap_x;
+        let children: Vec<AnyElement> = self
+            .children
+            .into_iter()
+            .enumerate()
+            .map(|(idx, child)| {
+                if idx == 0 || overlap_x == Space::N0 {
+                    return child;
+                }
+
+                ui::container(move |_cx| vec![child])
+                    .layout(LayoutRefinement::default().ml_neg(overlap_x))
+                    .into_element(cx)
+            })
+            .collect();
+
+        let mut element = ui::h_row(move |_cx| children)
             .layout(self.layout)
             .gap(self.gap)
             .items(Items::Center)

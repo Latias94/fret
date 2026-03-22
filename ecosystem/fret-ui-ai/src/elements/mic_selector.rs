@@ -24,6 +24,12 @@ use fret_ui_shadcn::facade::{
     PopoverContent,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MicSelectorChildSlot {
+    Trigger,
+    Content,
+}
+
 pub type OnMicSelectorValueChange =
     Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Option<Arc<str>>) + 'static>;
 
@@ -187,7 +193,7 @@ impl MicSelector {
     ) -> AnyElement
     where
         H: UiHost + 'static,
-        F: Fn(&mut ElementContext<'_, H>) -> (AnyElement, AnyElement) + Clone + 'static,
+        F: Fn(&mut ElementContext<'_, H>, MicSelectorChildSlot) -> AnyElement + Clone + 'static,
     {
         let open = fret_ui_kit::primitives::popover::PopoverRoot::new()
             .open(self.open.clone())
@@ -218,16 +224,14 @@ impl MicSelector {
             move |cx| {
                 cx.provide(controller_for_trigger.clone(), |cx| {
                     cx.provide(MicSelectorAnchorWidth(None), |cx| {
-                        let (trigger, _) = children_for_trigger(cx);
-                        trigger
+                        children_for_trigger(cx, MicSelectorChildSlot::Trigger)
                     })
                 })
             },
             move |cx, anchor_rect| {
                 cx.provide(controller_for_content.clone(), |cx| {
                     cx.provide(MicSelectorAnchorWidth(Some(anchor_rect.size.width)), |cx| {
-                        let (_, content) = children_for_content(cx);
-                        content
+                        children_for_content(cx, MicSelectorChildSlot::Content)
                     })
                 })
             },
