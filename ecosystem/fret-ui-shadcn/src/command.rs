@@ -1840,6 +1840,7 @@ pub struct CommandPalette {
     input_expanded: Option<bool>,
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
+    list_viewport_test_id: Option<Arc<str>>,
     list_multiselectable: bool,
     a11y_selected_mode: CommandPaletteA11ySelectedMode,
     on_value_change: Option<OnValueChange>,
@@ -2166,6 +2167,14 @@ impl std::fmt::Debug for CommandPalette {
                 &self.test_id_input.as_ref().map(|s| s.as_ref()),
             )
             .field(
+                "list_test_id",
+                &self.list_test_id.as_ref().map(|s| s.as_ref()),
+            )
+            .field(
+                "list_viewport_test_id",
+                &self.list_viewport_test_id.as_ref().map(|s| s.as_ref()),
+            )
+            .field(
                 "test_id_item_prefix",
                 &self.test_id_item_prefix.as_ref().map(|s| s.as_ref()),
             )
@@ -2204,6 +2213,7 @@ impl CommandPalette {
             input_expanded: None,
             input_test_id: None,
             list_test_id: None,
+            list_viewport_test_id: None,
             list_multiselectable: false,
             a11y_selected_mode: CommandPaletteA11ySelectedMode::Active,
             on_value_change: None,
@@ -2391,6 +2401,15 @@ impl CommandPalette {
         self
     }
 
+    /// Installs a stable `test_id` on the internal scroll viewport.
+    ///
+    /// Use this when automation needs the scroll semantics surface rather than the outer listbox
+    /// semantics wrapper.
+    pub fn list_viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.list_viewport_test_id = Some(test_id.into());
+        self
+    }
+
     pub fn list_multiselectable(mut self, multiselectable: bool) -> Self {
         self.list_multiselectable = multiselectable;
         self
@@ -2507,6 +2526,7 @@ impl CommandPalette {
             let disable_pointer_selection = self.disable_pointer_selection;
             let input_test_id = self.input_test_id.clone();
             let list_test_id = self.list_test_id.clone();
+            let list_viewport_test_id = self.list_viewport_test_id.clone();
             let list_multiselectable = self.list_multiselectable;
             let list_id_out_cell = self.list_id_out_cell.clone();
             let a11y_selected_mode = self.a11y_selected_mode;
@@ -3454,7 +3474,7 @@ impl CommandPalette {
                 CommandEmpty::new(empty).into_element(cx)
             } else {
                 let scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
-                let scroll_area = ScrollArea::new(vec![
+                let mut scroll_area = ScrollArea::new(vec![
                     cx.flex(
                         FlexProps {
                             layout: {
@@ -3481,8 +3501,11 @@ impl CommandPalette {
                     ),
                 ])
                 .scroll_handle(scroll_handle.clone())
-                .refine_layout(scroll_layout.clone())
-                .into_element(cx);
+                .refine_layout(scroll_layout.clone());
+                if let Some(test_id) = list_viewport_test_id.clone() {
+                    scroll_area = scroll_area.viewport_test_id(test_id);
+                }
+                let scroll_area = scroll_area.into_element(cx);
 
                 if let Some(active_row_element) = active_row_element {
                     let _ = active_desc::scroll_active_element_into_view_y(
@@ -3528,6 +3551,7 @@ pub struct CommandDialog {
     a11y_label: Option<Arc<str>>,
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
+    list_viewport_test_id: Option<Arc<str>>,
     test_id_item_prefix: Option<Arc<str>>,
     test_id_heading_prefix: Option<Arc<str>>,
     disabled: bool,
@@ -3560,6 +3584,10 @@ impl std::fmt::Debug for CommandDialog {
             .field(
                 "list_test_id",
                 &self.list_test_id.as_ref().map(|s| s.as_ref()),
+            )
+            .field(
+                "list_viewport_test_id",
+                &self.list_viewport_test_id.as_ref().map(|s| s.as_ref()),
             )
             .field(
                 "test_id_item_prefix",
@@ -3608,6 +3636,7 @@ impl CommandDialog {
             a11y_label: None,
             input_test_id: None,
             list_test_id: None,
+            list_viewport_test_id: None,
             test_id_item_prefix: None,
             test_id_heading_prefix: None,
             disabled: false,
@@ -3658,6 +3687,7 @@ impl CommandDialog {
             a11y_label: None,
             input_test_id: None,
             list_test_id: None,
+            list_viewport_test_id: None,
             test_id_item_prefix: None,
             test_id_heading_prefix: None,
             disabled: false,
@@ -3694,6 +3724,11 @@ impl CommandDialog {
 
     pub fn list_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.list_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn list_viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.list_viewport_test_id = Some(test_id.into());
         self
     }
 
@@ -3839,6 +3874,7 @@ impl CommandDialog {
             .unwrap_or_else(|| Arc::from("Command palette"));
         let input_test_id = self.input_test_id;
         let list_test_id = self.list_test_id;
+        let list_viewport_test_id = self.list_viewport_test_id;
         let test_id_item_prefix = self.test_id_item_prefix;
         let test_id_heading_prefix = self.test_id_heading_prefix;
         let disabled = self.disabled;
@@ -4053,6 +4089,10 @@ impl CommandDialog {
 
                 if let Some(list_test_id) = list_test_id.as_ref() {
                     palette = palette.list_test_id(list_test_id.clone());
+                }
+
+                if let Some(list_viewport_test_id) = list_viewport_test_id.as_ref() {
+                    palette = palette.list_viewport_test_id(list_viewport_test_id.clone());
                 }
 
                 if let Some(test_id_item_prefix) = test_id_item_prefix.as_ref() {
@@ -5289,6 +5329,59 @@ mod tests {
     }
 
     #[test]
+    fn command_palette_list_viewport_test_id_mounts_scroll_semantics_surface() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::new());
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "cmdk-list-viewport-test-id",
+            |cx| {
+                vec![
+                    CommandPalette::new(
+                        query.clone(),
+                        vec![CommandItem::new("Alpha"), CommandItem::new("Beta")],
+                    )
+                    .list_test_id("cmd-listbox")
+                    .list_viewport_test_id("cmd-viewport")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let ids: Vec<&str> = snap
+            .nodes
+            .iter()
+            .filter_map(|n| n.test_id.as_deref())
+            .collect();
+        assert!(ids.iter().copied().any(|id| id == "cmd-listbox"));
+        assert!(ids.iter().copied().any(|id| id == "cmd-viewport"));
+
+        let _ = root;
+    }
+
+    #[test]
     fn command_palette_explicit_item_test_id_overrides_prefix_derivation() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -5384,6 +5477,7 @@ mod tests {
                         ])
                         .test_id_input("cmd-dialog-input")
                         .list_test_id("cmd-dialog-listbox")
+                        .list_viewport_test_id("cmd-dialog-viewport")
                         .test_id_item_prefix("cmd-dialog-item-")
                         .test_id_heading_prefix("cmd-dialog-heading-")
                         .into_element(cx, |cx| crate::button::Button::new("Open").into_element(cx)),
@@ -5403,6 +5497,7 @@ mod tests {
             .collect();
         assert!(ids.iter().copied().any(|id| id == "cmd-dialog-input"));
         assert!(ids.iter().copied().any(|id| id == "cmd-dialog-listbox"));
+        assert!(ids.iter().copied().any(|id| id == "cmd-dialog-viewport"));
         assert!(ids.iter().copied().any(|id| id == "cmd-dialog-item-alpha"));
         assert!(
             ids.iter()

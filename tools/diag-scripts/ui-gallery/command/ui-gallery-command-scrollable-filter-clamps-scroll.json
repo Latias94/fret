@@ -78,17 +78,17 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-listbox" }
+        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" }
       },
       "timeout_frames": 600
     },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-listbox" }, "delta_y": -480.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" }, "delta_y": -480.0 },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "assert",
       "predicate": {
         "kind": "semantics_scroll_not_approx_eq",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-listbox" },
+        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" },
         "field": "y",
         "value": 0.0,
         "eps": 0.01
@@ -104,7 +104,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "semantics_scroll_approx_eq",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-listbox" },
+        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" },
         "field": "y_max",
         "value": 0.0,
         "eps": 0.01
@@ -115,19 +115,19 @@
       "type": "assert",
       "predicate": {
         "kind": "semantics_scroll_approx_eq",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-listbox" },
+        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" },
         "field": "y",
         "value": 0.0,
         "eps": 0.01
       }
     },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-listbox" }, "delta_y": -240.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" }, "delta_y": -240.0 },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "assert",
       "predicate": {
         "kind": "semantics_scroll_approx_eq",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-listbox" },
+        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" },
         "field": "y",
         "value": 0.0,
         "eps": 0.01

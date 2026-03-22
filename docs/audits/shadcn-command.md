@@ -88,12 +88,16 @@ Key upstream semantics:
   `CommandDialog::on_open_change`, `CommandDialog::on_open_change_with_reason`, and
   `CommandDialog::on_open_change_complete`
   (delegated to the aligned `Dialog` lifecycle semantics).
+- Pass: `CommandPalette::list_viewport_test_id(...)` and `CommandDialog::list_viewport_test_id(...)`
+  now expose the internal scroll viewport semantics surface, so diagnostics can target actual
+  scroll state instead of the outer listbox wrapper.
 
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib command::tests`
 - Contract test: `command_dialog_open_change_builders_set_handlers`
 - Contract test: `command_dialog_test_id_builders_forward_to_palette_semantics`
+- Contract test: `command_palette_list_viewport_test_id_mounts_scroll_semantics_surface`
 - Reason mapping test: `command_dialog_open_change_reason_maps_dismiss_reasons`
 - Reason behavior test: `command_dialog_open_change_with_reason_reports_item_press_when_close_on_select`
 - Curated stable subset suite entry (docs screenshots + keybindings + RTL):
@@ -103,6 +107,10 @@ Key upstream semantics:
   - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json --dir target/fret-diag-command-docs-icons-dark --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
   - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots.json --dir target/fret-diag-command-docs-shortcuts-light --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
   - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots-zinc-dark.json --dir target/fret-diag-command-docs-shortcuts-dark --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+- UI Gallery behavior/diagnostics scripts:
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-filter-clamps-scroll.json --dir target/fret-diag-command-scrollable --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-force-mount-item-visible.json --dir target/fret-diag-command-force-mount --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-separator-always-render-visible.json --dir target/fret-diag-command-separator --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
 - shadcn-web golden + gates:
   - Golden: `goldens/shadcn-web/v4/new-york-v4/command-demo.json`
   - Layout gates:
@@ -154,6 +162,9 @@ Key upstream semantics:
   (`test_id_input`, `list_test_id`, `test_id_item_prefix`, `test_id_heading_prefix`) so
   docs-aligned dialog examples can remain automation-friendly without dropping back to embedded
   `CommandPalette` just for selectors.
+- Diagnostics surface: `CommandPalette` / `CommandDialog` now also forward an explicit
+  `list_viewport_test_id(...)` seam for the internal scroll viewport; scripts that assert scroll
+  position should target that viewport semantics node rather than the outer listbox wrapper.
 - Composability: if split authoring (`CommandInput`/`CommandList`/`CommandItem`) becomes a goal, introduce a shared context model (query + active + selection) with an explicit contract/ADR first.
 - Composability status: `CommandInput` / `CommandList` remain available as lower-level shell pieces
   and for legacy roving-list use, but they are not a promoted cmdk-equivalent split children API.

@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use fret_runtime::ActionId;
-use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
 use fret_ui::Theme;
+use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::typography::{description_text_refinement, muted_foreground_color};
 use fret_ui_kit::ui;

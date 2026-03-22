@@ -3540,6 +3540,17 @@ fn command_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn command_scrollable_snippet_keeps_listbox_and_viewport_test_ids_for_diagnostics() {
+    assert_normalized_markers_present(
+        "src/ui/snippets/command/scrollable.rs",
+        &[
+            ".list_test_id(\"ui-gallery-command-scrollable-listbox\")",
+            ".list_viewport_test_id(\"ui-gallery-command-scrollable-viewport\")",
+        ],
+    );
+}
+
+#[test]
 fn popover_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

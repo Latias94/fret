@@ -133,6 +133,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .empty_text("No results found.")
         .test_id_input("ui-gallery-command-scrollable-input")
         .list_test_id("ui-gallery-command-scrollable-listbox")
+        .list_viewport_test_id("ui-gallery-command-scrollable-viewport")
         .test_id_item_prefix("ui-gallery-command-scrollable-item-")
         .into_element(cx, |cx| {
             shadcn::Button::new("Open Menu")

@@ -7,6 +7,12 @@
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots-zinc-dark.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-cmdk-keybindings.json",
+    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-loading-visible.json",
+    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-group-force-mount-heading-visible.json",
+    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-should-filter-false.json",
+    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-force-mount-item-visible.json",
+    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-separator-always-render-visible.json",
+    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-filter-clamps-scroll.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-rtl-screenshot.json"
   ]
 }
