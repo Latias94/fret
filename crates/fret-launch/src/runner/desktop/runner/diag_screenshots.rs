@@ -114,6 +114,15 @@ impl DiagScreenshotCapture {
             .or_else(|| resolve_config_path("screenshot_result_trigger_path"))
             .unwrap_or_else(|| out_dir.join("screenshots.result.touch"));
 
+        tracing::debug!(
+            enabled,
+            request_path = %request_path.display(),
+            trigger_path = %trigger_path.display(),
+            result_path = %result_path.display(),
+            result_trigger_path = %result_trigger_path.display(),
+            "diag screenshot: configured capture surface"
+        );
+
         Some(Self {
             request_path,
             trigger_path,
@@ -133,6 +142,13 @@ impl DiagScreenshotCapture {
             return;
         }
         self.last_trigger_stamp = Some(stamp);
+
+        tracing::debug!(
+            stamp,
+            trigger_path = %self.trigger_path.display(),
+            request_path = %self.request_path.display(),
+            "diag screenshot: observed trigger stamp"
+        );
 
         let bytes = match std::fs::read(&self.request_path) {
             Ok(b) => b,
@@ -155,7 +171,21 @@ impl DiagScreenshotCapture {
         }
 
         let out_dir = PathBuf::from(&req.out_dir);
+        tracing::debug!(
+            out_dir = %out_dir.display(),
+            bundle_dir_name = %req.bundle_dir_name,
+            request_id = ?req.request_id.as_deref(),
+            windows = req.windows.len(),
+            "diag screenshot: parsed request"
+        );
         for item in req.windows {
+            tracing::debug!(
+                window = item.window,
+                tick_id = item.tick_id,
+                frame_id = item.frame_id,
+                scale_factor = item.scale_factor,
+                "diag screenshot: queued window capture"
+            );
             self.pending_by_window_ffi.insert(
                 item.window,
                 PendingCapture {
@@ -182,12 +212,28 @@ impl DiagScreenshotCapture {
         source_format: wgpu::TextureFormat,
         surface_size_px: (u32, u32),
     ) -> Option<(wgpu::CommandBuffer, InFlightCapture)> {
-        let pending = self.pending_by_window_ffi.remove(&window_ffi)?;
-
         let (width_px, height_px) = surface_size_px;
         if width_px == 0 || height_px == 0 {
+            // Avoid dropping the request on transient zero-sized surfaces (minimized/just-created).
+            // We'll retry on the next frame once the surface is configured to a real size.
+            if let Some(pending) = self.pending_by_window_ffi.get(&window_ffi) {
+                tracing::debug!(
+                    window = window_ffi,
+                    bundle_dir_name = pending.bundle_dir_name.as_str(),
+                    "diag screenshot: surface has zero size; delaying capture"
+                );
+            }
             return None;
         }
+
+        let pending = self.pending_by_window_ffi.remove(&window_ffi)?;
+        tracing::debug!(
+            window = window_ffi,
+            width_px,
+            height_px,
+            format = ?source_format,
+            "diag screenshot: begin capture"
+        );
 
         let bytes_per_pixel: u32 = 4;
         let unpadded_bytes_per_row = width_px.saturating_mul(bytes_per_pixel);
