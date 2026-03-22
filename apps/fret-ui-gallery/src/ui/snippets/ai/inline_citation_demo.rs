@@ -2,35 +2,36 @@ pub const SOURCE: &str = include_str!("inline_citation_demo.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_ui::Invalidation;
+use fret_core::Px;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
+fn centered_row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
+    ui::h_flex(children)
+        .gap(Space::N1)
+        .wrap()
+        .w_full()
+        .max_w(Px(720.0))
+        .min_w_0()
+        .justify_center()
+        .items_center()
+}
+
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let selected_model = cx.local_model_keyed("selected", || None::<Arc<str>>);
-    let selected_now = cx
-        .get_model_cloned(&selected_model, Invalidation::Paint)
-        .flatten();
-
-    let marker = cx
-        .text(format!(
-            "selected_source={}",
-            selected_now.as_deref().unwrap_or("<none>")
-        ))
-        .test_id("ui-ai-inline-citation-demo-selected");
-
     let sources: Arc<[ui_ai::SourceItem]> = Arc::from(vec![
         ui_ai::SourceItem::new("src-0", "Advances in Natural Language Processing")
             .url("https://example.com/nlp-advances")
             .description(
-                "A comprehensive study on recent developments in natural language processing technologies and their applications.",
+                "A comprehensive study on the recent developments in natural language processing technologies and their applications.",
             )
-            .quote(
-                "The technology continues to evolve rapidly, with new breakthroughs being announced regularly.",
-            ),
+            .quote("The technology continues to evolve rapidly, with new breakthroughs being announced regularly."),
         ui_ai::SourceItem::new("src-1", "Breakthroughs in Machine Learning")
             .url("https://mlnews.org/breakthroughs")
             .description(
@@ -41,33 +42,82 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .description(
                 "A report on how artificial intelligence is transforming healthcare and diagnostics.",
             ),
+        ui_ai::SourceItem::new("src-3", "Ethics of Artificial Intelligence")
+            .url("https://aiethics.org/overview")
+            .description(
+                "A discussion on the ethical considerations and challenges in the development of AI.",
+            ),
+        ui_ai::SourceItem::new("src-4", "Scaling Deep Learning Models")
+            .url("https://deeplearninghub.com/scaling-models")
+            .description(
+                "Insights into the technical challenges and solutions for scaling deep learning architectures.",
+            ),
+        ui_ai::SourceItem::new("src-5", "Natural Language Understanding Benchmarks")
+            .url("https://nlubenchmarks.com/latest")
+            .description(
+                "A summary of the latest benchmarks and evaluation metrics for natural language understanding systems.",
+            ),
     ]);
 
-    let citation_text = cx.text(
-        "The technology continues to evolve rapidly, with new breakthroughs being announced regularly",
-    );
     let citation_ids: Arc<[Arc<str>]> = Arc::from(vec![
         Arc::<str>::from("src-0"),
         Arc::<str>::from("src-1"),
         Arc::<str>::from("src-2"),
+        Arc::<str>::from("src-3"),
+        Arc::<str>::from("src-4"),
+        Arc::<str>::from("src-5"),
     ]);
-    let citation = ui_ai::InlineCitation::with_children([citation_text])
+    let citation = ui_ai::InlineCitationRoot::new()
         .sources(sources)
         .source_ids(citation_ids)
-        .select_source_model(selected_model)
         .test_id("ui-ai-inline-citation-demo-citation")
-        .into_element(cx);
+        .refine_layout(LayoutRefinement::default().min_w_0())
+        .into_element_with_children(cx, |cx| {
+            vec![
+                ui_ai::InlineCitationText::new([cx.text(
+                    "The technology continues to evolve rapidly, with new breakthroughs being announced regularly",
+                )])
+                .into_element(cx),
+                ui_ai::InlineCitationCard::new()
+                    .trigger(ui_ai::InlineCitationCardTrigger::new().into_element(cx))
+                    .body(
+                        ui_ai::InlineCitationCardBody::new([ui_ai::InlineCitationCarousel::new()
+                            .header(
+                                ui_ai::InlineCitationCarouselHeader::new([
+                                    ui_ai::InlineCitationCarouselPrev::new().into_element(cx),
+                                    ui_ai::InlineCitationCarouselNext::new().into_element(cx),
+                                    ui_ai::InlineCitationCarouselIndex::new().into_element(cx),
+                                ])
+                                .into_element(cx),
+                            )
+                            .content(
+                                ui_ai::InlineCitationCarouselContent::new([
+                                    ui_ai::InlineCitationCarouselItem::new([
+                                        ui_ai::InlineCitationSource::from_context()
+                                            .into_element(cx),
+                                        ui_ai::InlineCitationQuote::from_context().into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                ])
+                                .into_element(cx),
+                            )
+                            .into_element(cx)])
+                        .into_element(cx),
+                    )
+                    .into_element(cx),
+            ]
+        });
 
-    let intro = cx.text(
-        "According to recent studies, artificial intelligence has shown remarkable progress in natural language processing.",
-    );
-    let hint = cx.text(
-        "Hover the hostname badge to preview sources and page through them. Fret also exposes `select_source_model(...)` so apps can sync the citation with a nearby Sources block.",
-    );
-
-    ui::v_flex(move |_cx| vec![intro, citation, marker, hint])
-        .layout(LayoutRefinement::default().w_full().min_w_0())
-        .gap(Space::N4)
-        .into_element(cx)
+    centered_row(|cx| {
+        vec![
+            cx.text(
+                "According to recent studies, artificial intelligence has shown remarkable progress in natural language processing.",
+            ),
+            citation,
+            cx.text("."),
+        ]
+    })
+    .into_element(cx)
+    .test_id("ui-ai-inline-citation-demo-root")
 }
 // endregion: example

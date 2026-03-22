@@ -1,0 +1,95 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: AI inline citation detail page hovercard",
+    "tags": ["ui-gallery", "ai-elements", "inline-citation", "hovercard", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Navigates to the AI Inline Citation detail page.",
+      "Opens the hostname badge hover card, captures a screenshot, then pages next/prev.",
+      "Captures a bundle for interaction triage."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai inline citation" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-inline-citation-demo" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-inline-citation-demo" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-inline-citation-demo-root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-inline-citation-demo-citation" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-ai-inline-citation-demo-citation" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-inline-citation-demo-citation-card" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-inline-citation-demo-citation-index" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-ai-inline-citation-demo-hovercard"
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-ai-inline-citation-demo-citation-next" }
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-ai-inline-citation-demo-citation-prev" }
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-ai-inline-citation-demo-hovercard"
+    }
+  ]
+}

@@ -2458,6 +2458,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-inline-citation-demo-hovercard",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-inline-citation-demo-hovercard.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [
+        "ai-elements",
+        "hovercard",
+        "inline-citation",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the AI Inline Citation detail page.",
+        "Opens the hostname badge hover card and captures a screenshot.",
+        "Pages the inline citation next/prev controls, then captures a bundle."
+      ]
+    },
+    {
       "id": "ui-gallery-ai-package-info-demo-basics",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-package-info-demo-basics.json",
       "required_capabilities": [],
@@ -4904,6 +4926,66 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-command-palette-force-mount-item-visible",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-force-mount-item-visible.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-palette-group-force-mount-heading-visible",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-group-force-mount-heading-visible.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-palette-loading-visible",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-loading-visible.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-palette-separator-always-render-visible",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-separator-always-render-visible.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-palette-should-filter-false",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-should-filter-false.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-command-rtl-screenshot",
       "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-rtl-screenshot.json",
       "required_capabilities": [
@@ -4926,6 +5008,24 @@
         "Scrolls to the RTL CommandPalette snippet.",
         "Captures a screenshot to validate inline-start/end mirroring for the search icon + padding."
       ]
+    },
+    {
+      "id": "ui-gallery-command-scrollable-filter-clamps-scroll",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-filter-clamps-scroll.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [
+        "command",
+        "filter",
+        "scroll",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-context-menu-basic-keyboard-nav",
