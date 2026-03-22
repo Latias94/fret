@@ -413,7 +413,10 @@ fn selected_ai_snippets_prefer_grouped_uicx_actions_when_widgets_have_native_act
             &[
                 "use fret::app::UiCxActionsExt as _;",
                 "cx.actions().models::<act::ToggleSearch>(",
+                "ui_ai::PromptInputSelect::new(",
+                "ui_ai::PromptInputSelectTrigger::new().into()",
                 "ui_ai::PromptInputButton::new(\"Search\")",
+                "ui_ai::PromptInputBody::new([",
                 ".action(act::ToggleSearch)",
             ][..],
         ),
@@ -9340,23 +9343,46 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
 
 #[test]
 fn selected_ai_snippets_follow_selects_direct_recipe_root_lane() {
-    for relative_path in [
+    assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/code_block_demo.rs",
+        &[
+            "shadcn::Select::new(",
+            ".trigger(",
+            ".value(",
+            ".content(",
+            ".entries(",
+            ".into_element(cx)",
+        ],
+        &[".into_element_parts("],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/prompt_input_docs_demo.rs",
-    ] {
-        assert_selected_generic_helpers_prefer_into_ui_element(
-            relative_path,
-            &[
-                "shadcn::Select::new(",
-                ".trigger(",
-                ".value(",
-                ".content(",
-                ".entries(",
-                ".into_element(cx)",
-            ],
-            &[".into_element_parts("],
-        );
-    }
+        &[
+            "ui_ai::PromptInputSelect::new(",
+            ".trigger(ui_ai::PromptInputSelectTrigger::new().into())",
+            ".value(ui_ai::PromptInputSelectValue::new().placeholder(\"Model\"))",
+            ".content(ui_ai::PromptInputSelectContent::new())",
+            ".entries([",
+            ".into_element(cx)",
+        ],
+        &["shadcn::Select::new(", ".into_element_parts("],
+    );
+}
+
+#[test]
+fn prompt_input_docs_demo_prefers_children_lane_over_root_slots() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/prompt_input_docs_demo.rs",
+        &[
+            "ui_ai::PromptInput::new(controller.text)",
+            ".children([",
+            "ui_ai::PromptInputHeader::new([",
+            "ui_ai::PromptInputBody::new([",
+            "ui_ai::PromptInputFooter::new(",
+        ],
+        &["PromptInputRoot::new(", ".into_element_with_slots("],
+    );
 }
 
 #[test]

@@ -12,18 +12,22 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ColorFallback, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Space,
+    ChromeRefinement, ColorFallback, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Space,
     WidgetStateProperty, WidgetStates,
 };
 
 use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
-    DropdownMenuItem, DropdownMenuSide, InputGroup, Kbd, Spinner, Tooltip, TooltipContent,
-    TooltipSide,
+    DropdownMenuItem, DropdownMenuSide, InputGroup, Kbd, Select as ShadcnSelect,
+    SelectContent as ShadcnSelectContent, SelectItem as ShadcnSelectItem,
+    SelectTrigger as ShadcnSelectTrigger, SelectTriggerSize, SelectValue as ShadcnSelectValue,
+    Spinner, Tooltip, TooltipContent, TooltipSide,
 };
 use fret_ui_shadcn::raw::button::ButtonStyle;
 
 type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
+
+const DEFAULT_PROMPT_INPUT_PLACEHOLDER: &str = "What would you like to know?";
 
 use crate::elements::attachments::{
     Attachment, AttachmentData, AttachmentFileData, AttachmentSourceDocumentData,
@@ -570,6 +574,7 @@ fn prompt_input_referenced_sources_model<H: UiHost>(
 /// Use `PromptInputRoot::into_element_with_slots` to inject block-start/block-end content.
 pub struct PromptInputRoot {
     model: Option<Model<String>>,
+    placeholder: Option<Arc<str>>,
     textarea_min_height: Px,
     textarea_max_height: Option<Px>,
     disabled: bool,
@@ -601,6 +606,7 @@ impl PromptInputRoot {
     pub fn new(model: Model<String>) -> Self {
         Self {
             model: Some(model),
+            placeholder: None,
             textarea_min_height: Px(96.0),
             textarea_max_height: None,
             disabled: false,
@@ -632,6 +638,7 @@ impl PromptInputRoot {
     pub fn new_uncontrolled() -> Self {
         Self {
             model: None,
+            placeholder: None,
             textarea_min_height: Px(96.0),
             textarea_max_height: None,
             disabled: false,
@@ -662,6 +669,11 @@ impl PromptInputRoot {
 
     pub fn textarea_min_height(mut self, min_height: Px) -> Self {
         self.textarea_min_height = min_height;
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
         self
     }
 
@@ -791,6 +803,14 @@ impl PromptInputRoot {
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
+    }
+
+    pub fn children<I, P>(self, parts: I) -> PromptInputChildren
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<PromptInputPart>,
+    {
+        PromptInputChildren::new(self, parts)
     }
 
     pub fn into_element_with_slots<H: UiHost + 'static>(
@@ -929,11 +949,15 @@ impl PromptInputRoot {
                         slots.block_end.push(marker);
                     }
 
-                    let mut group = InputGroup::new(text_model.clone())
-                        .textarea()
-                        .textarea_min_height(textarea_min_height)
-                        .control_on_key_down(control_key_handler)
-                        .refine_layout(self.layout.w_full());
+                    let mut group =
+                        InputGroup::new(text_model.clone())
+                            .textarea()
+                            .placeholder(self.placeholder.clone().unwrap_or_else(|| {
+                                Arc::<str>::from(DEFAULT_PROMPT_INPUT_PLACEHOLDER)
+                            }))
+                            .textarea_min_height(textarea_min_height)
+                            .control_on_key_down(control_key_handler)
+                            .refine_layout(self.layout.w_full());
 
                     if let Some(max_h) = textarea_max_height {
                         group = group.textarea_max_height(max_h);
@@ -1014,17 +1038,243 @@ impl PromptInputRoot {
     }
 }
 
-/// Alias for upstream naming parity: in AI Elements the textarea is a child part; in Fret the
-/// shadcn `InputGroup` owns the textarea control, so `PromptInputTextarea` maps to the root.
-pub type PromptInputTextarea = PromptInputRoot;
+/// Child control part aligned with AI Elements `PromptInputTextarea`.
+///
+/// Fret's `InputGroup` still owns the actual textarea widget; this type captures the control-side
+/// authoring defaults so the root can offer a composable `children([...])` lane.
+#[derive(Debug, Clone, Default)]
+pub struct PromptInputTextarea {
+    placeholder: Option<Arc<str>>,
+    disabled: Option<bool>,
+    test_id: Option<Arc<str>>,
+    min_height: Option<Px>,
+    max_height: Option<Px>,
+}
+
+impl PromptInputTextarea {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn min_height(mut self, min_height: Px) -> Self {
+        self.min_height = Some(min_height);
+        self
+    }
+
+    pub fn max_height(mut self, max_height: Px) -> Self {
+        self.max_height = Some(max_height);
+        self
+    }
+
+    fn apply_to_root(self, mut root: PromptInputRoot) -> PromptInputRoot {
+        if let Some(placeholder) = self.placeholder {
+            root = root.placeholder(placeholder);
+        }
+        if let Some(disabled) = self.disabled {
+            root = root.disabled(disabled);
+        }
+        if let Some(test_id) = self.test_id {
+            root = root.test_id_textarea(test_id);
+        }
+        if let Some(min_height) = self.min_height {
+            root = root.textarea_min_height(min_height);
+        }
+        if let Some(max_height) = self.max_height {
+            root = root.textarea_max_height(max_height);
+        }
+        root
+    }
+}
+
+impl<H: UiHost + 'static> IntoUiElement<H> for PromptInputTextarea {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.apply_to_root(PromptInputRoot::new_uncontrolled())
+            .into_element(cx)
+    }
+}
+
+/// Grouping wrapper aligned with AI Elements `PromptInputBody`.
+///
+/// The upstream DOM version is effectively a `contents` wrapper; in Fret we use it to keep the
+/// docs-shaped children lane explicit while still lowering into the existing input-group control.
+#[derive(Debug, Clone)]
+pub struct PromptInputBody {
+    textarea: PromptInputTextarea,
+}
+
+impl PromptInputBody {
+    pub fn new(children: impl IntoIterator<Item = PromptInputTextarea>) -> Self {
+        let mut children = children.into_iter();
+        let textarea = children
+            .next()
+            .expect("PromptInputBody::new(...) requires one PromptInputTextarea");
+        assert!(
+            children.next().is_none(),
+            "PromptInputBody::new(...) accepts at most one PromptInputTextarea"
+        );
+        Self { textarea }
+    }
+
+    fn into_textarea(self) -> PromptInputTextarea {
+        self.textarea
+    }
+}
+
+pub enum PromptInputPart {
+    Header(PromptInputHeader),
+    Body(PromptInputBody),
+    Footer(PromptInputFooter),
+}
+
+impl std::fmt::Debug for PromptInputPart {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Header(_) => f.write_str("PromptInputPart::Header(<deferred>)"),
+            Self::Body(body) => f.debug_tuple("PromptInputPart::Body").field(body).finish(),
+            Self::Footer(_) => f.write_str("PromptInputPart::Footer(<deferred>)"),
+        }
+    }
+}
+
+impl From<PromptInputHeader> for PromptInputPart {
+    fn from(value: PromptInputHeader) -> Self {
+        Self::Header(value)
+    }
+}
+
+impl From<PromptInputBody> for PromptInputPart {
+    fn from(value: PromptInputBody) -> Self {
+        Self::Body(value)
+    }
+}
+
+impl From<PromptInputFooter> for PromptInputPart {
+    fn from(value: PromptInputFooter) -> Self {
+        Self::Footer(value)
+    }
+}
+
+/// Root-level children adapter for docs-shaped prompt-input composition.
+///
+/// This stays in the component/policy layer and only lowers authored parts into the existing
+/// `PromptInputRoot` slot surface.
+pub struct PromptInputChildren {
+    root: PromptInputRoot,
+    parts: Vec<PromptInputPart>,
+}
+
+impl std::fmt::Debug for PromptInputChildren {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut header = 0usize;
+        let mut body = 0usize;
+        let mut footer = 0usize;
+
+        for part in &self.parts {
+            match part {
+                PromptInputPart::Header(_) => header += 1,
+                PromptInputPart::Body(_) => body += 1,
+                PromptInputPart::Footer(_) => footer += 1,
+            }
+        }
+
+        f.debug_struct("PromptInputChildren")
+            .field("header_parts", &header)
+            .field("body_parts", &body)
+            .field("footer_parts", &footer)
+            .finish()
+    }
+}
+
+impl PromptInputChildren {
+    pub fn new<I, P>(root: PromptInputRoot, parts: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<PromptInputPart>,
+    {
+        Self {
+            root,
+            parts: parts.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut header: Option<PromptInputHeader> = None;
+        let mut body: Option<PromptInputBody> = None;
+        let mut footer: Option<PromptInputFooter> = None;
+
+        for part in self.parts {
+            match part {
+                PromptInputPart::Header(next) => {
+                    assert!(
+                        header.replace(next).is_none(),
+                        "PromptInputRoot::children(...) accepts at most one PromptInputHeader"
+                    );
+                }
+                PromptInputPart::Body(next) => {
+                    assert!(
+                        body.replace(next).is_none(),
+                        "PromptInputRoot::children(...) accepts at most one PromptInputBody"
+                    );
+                }
+                PromptInputPart::Footer(next) => {
+                    assert!(
+                        footer.replace(next).is_none(),
+                        "PromptInputRoot::children(...) accepts at most one PromptInputFooter"
+                    );
+                }
+            }
+        }
+
+        let body = body
+            .expect("PromptInputRoot::children(...) requires one PromptInputBody-compatible part");
+        let root = body.into_textarea().apply_to_root(self.root);
+
+        root.into_element_with_slots(cx, move |cx| {
+            let mut slots = PromptInputSlots::default();
+            if let Some(header) = header {
+                slots.block_start.push(header.into_element(cx));
+            }
+            if let Some(footer) = footer {
+                slots.block_end.push(footer.into_element(cx));
+            }
+            slots
+        })
+    }
+}
+
+impl<H: UiHost + 'static> IntoUiElement<H> for PromptInputChildren {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        PromptInputChildren::into_element(self, cx)
+    }
+}
 
 #[derive(Clone)]
 pub struct PromptInput {
     model: Option<Model<String>>,
+    placeholder: Option<Arc<str>>,
     textarea_min_height: Px,
     textarea_max_height: Option<Px>,
     disabled: bool,
     loading: bool,
+    status: Option<PromptInputStatus>,
     clear_on_send: bool,
     clear_attachments_on_send: bool,
     on_send: Option<OnActivate>,
@@ -1036,11 +1286,13 @@ pub struct PromptInput {
     max_file_size_bytes: Option<u64>,
     on_error: Option<OnPromptInputError>,
     attachments: Option<Model<Vec<AttachmentData>>>,
+    referenced_sources: Option<Model<Vec<AttachmentSourceDocumentData>>>,
     test_id_root: Option<Arc<str>>,
     test_id_textarea: Option<Arc<str>>,
     test_id_send: Option<Arc<str>>,
     test_id_stop: Option<Arc<str>>,
     test_id_attachments: Option<Arc<str>>,
+    test_id_referenced_sources: Option<Arc<str>>,
     test_id_add_attachments: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -1049,10 +1301,12 @@ impl std::fmt::Debug for PromptInput {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PromptInput")
             .field("model", &self.model.as_ref().map(|_| "<model>"))
+            .field("placeholder", &self.placeholder.as_deref())
             .field("textarea_min_height", &self.textarea_min_height)
             .field("textarea_max_height", &self.textarea_max_height)
             .field("disabled", &self.disabled)
             .field("loading", &self.loading)
+            .field("status", &self.status)
             .field("clear_on_send", &self.clear_on_send)
             .field("clear_attachments_on_send", &self.clear_attachments_on_send)
             .field("on_send", &self.on_send.as_ref().map(|_| "<on_send>"))
@@ -1068,11 +1322,22 @@ impl std::fmt::Debug for PromptInput {
                 "attachments",
                 &self.attachments.as_ref().map(|_| "<attachments>"),
             )
+            .field(
+                "referenced_sources",
+                &self
+                    .referenced_sources
+                    .as_ref()
+                    .map(|_| "<referenced_sources>"),
+            )
             .field("test_id_root", &self.test_id_root.as_deref())
             .field("test_id_textarea", &self.test_id_textarea.as_deref())
             .field("test_id_send", &self.test_id_send.as_deref())
             .field("test_id_stop", &self.test_id_stop.as_deref())
             .field("test_id_attachments", &self.test_id_attachments.as_deref())
+            .field(
+                "test_id_referenced_sources",
+                &self.test_id_referenced_sources.as_deref(),
+            )
             .field(
                 "test_id_add_attachments",
                 &self.test_id_add_attachments.as_deref(),
@@ -1086,10 +1351,12 @@ impl PromptInput {
     pub fn new(model: Model<String>) -> Self {
         Self {
             model: Some(model),
+            placeholder: None,
             textarea_min_height: Px(96.0),
             textarea_max_height: None,
             disabled: false,
             loading: false,
+            status: None,
             clear_on_send: true,
             clear_attachments_on_send: true,
             on_send: None,
@@ -1101,11 +1368,13 @@ impl PromptInput {
             max_file_size_bytes: None,
             on_error: None,
             attachments: None,
+            referenced_sources: None,
             test_id_root: None,
             test_id_textarea: None,
             test_id_send: None,
             test_id_stop: None,
             test_id_attachments: None,
+            test_id_referenced_sources: None,
             test_id_add_attachments: None,
             layout: LayoutRefinement::default(),
         }
@@ -1114,10 +1383,12 @@ impl PromptInput {
     pub fn new_uncontrolled() -> Self {
         Self {
             model: None,
+            placeholder: None,
             textarea_min_height: Px(96.0),
             textarea_max_height: None,
             disabled: false,
             loading: false,
+            status: None,
             clear_on_send: true,
             clear_attachments_on_send: true,
             on_send: None,
@@ -1129,14 +1400,21 @@ impl PromptInput {
             max_file_size_bytes: None,
             on_error: None,
             attachments: None,
+            referenced_sources: None,
             test_id_root: None,
             test_id_textarea: None,
             test_id_send: None,
             test_id_stop: None,
             test_id_attachments: None,
+            test_id_referenced_sources: None,
             test_id_add_attachments: None,
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
     }
 
     pub fn textarea_min_height(mut self, min_height: Px) -> Self {
@@ -1156,6 +1434,11 @@ impl PromptInput {
 
     pub fn loading(mut self, loading: bool) -> Self {
         self.loading = loading;
+        self
+    }
+
+    pub fn status(mut self, status: PromptInputStatus) -> Self {
+        self.status = Some(status);
         self
     }
 
@@ -1213,6 +1496,14 @@ impl PromptInput {
         self
     }
 
+    pub fn referenced_sources_model(
+        mut self,
+        model: Model<Vec<AttachmentSourceDocumentData>>,
+    ) -> Self {
+        self.referenced_sources = Some(model);
+        self
+    }
+
     pub fn test_id_root(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id_root = Some(id.into());
         self
@@ -1243,6 +1534,11 @@ impl PromptInput {
         self
     }
 
+    pub fn test_id_referenced_sources(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_referenced_sources = Some(id.into());
+        self
+    }
+
     pub fn test_id_add_attachments(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id_add_attachments = Some(id.into());
         self
@@ -1251,6 +1547,88 @@ impl PromptInput {
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
+    }
+
+    fn into_root(self) -> PromptInputRoot {
+        let mut root = match self.model {
+            Some(model) => PromptInputRoot::new(model),
+            None => PromptInputRoot::new_uncontrolled(),
+        }
+        .textarea_min_height(self.textarea_min_height)
+        .disabled(self.disabled)
+        .loading(self.loading)
+        .clear_on_send(self.clear_on_send)
+        .clear_attachments_on_send(self.clear_attachments_on_send)
+        .multiple(self.multiple)
+        .refine_layout(self.layout);
+
+        if let Some(placeholder) = self.placeholder {
+            root = root.placeholder(placeholder);
+        }
+        if let Some(max_h) = self.textarea_max_height {
+            root = root.textarea_max_height(max_h);
+        }
+        if let Some(status) = self.status {
+            root = root.status(status);
+        }
+        if let Some(on_send) = self.on_send {
+            root = root.on_send(on_send);
+        }
+        if let Some(on_stop) = self.on_stop {
+            root = root.on_stop(on_stop);
+        }
+        if let Some(on_add_attachments) = self.on_add_attachments {
+            root = root.on_add_attachments(on_add_attachments);
+        }
+        if let Some(accept) = self.accept {
+            root = root.accept(accept);
+        }
+        if let Some(max_files) = self.max_files {
+            root = root.max_files(max_files);
+        }
+        if let Some(max_file_size_bytes) = self.max_file_size_bytes {
+            root = root.max_file_size_bytes(max_file_size_bytes);
+        }
+        if let Some(on_error) = self.on_error {
+            root = root.on_error(on_error);
+        }
+        if let Some(attachments) = self.attachments {
+            root = root.attachments(attachments);
+        }
+        if let Some(referenced_sources) = self.referenced_sources {
+            root = root.referenced_sources_model(referenced_sources);
+        }
+        if let Some(id) = self.test_id_root {
+            root = root.test_id_root(id);
+        }
+        if let Some(id) = self.test_id_textarea {
+            root = root.test_id_textarea(id);
+        }
+        if let Some(id) = self.test_id_send {
+            root = root.test_id_send(id);
+        }
+        if let Some(id) = self.test_id_stop {
+            root = root.test_id_stop(id);
+        }
+        if let Some(id) = self.test_id_attachments {
+            root = root.test_id_attachments(id);
+        }
+        if let Some(id) = self.test_id_referenced_sources {
+            root = root.test_id_referenced_sources(id);
+        }
+        if let Some(id) = self.test_id_add_attachments {
+            root = root.test_id_add_attachments(id);
+        }
+
+        root
+    }
+
+    pub fn children<I, P>(self, parts: I) -> PromptInputChildren
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<PromptInputPart>,
+    {
+        self.into_root().children(parts)
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1328,9 +1706,15 @@ impl PromptInput {
             });
 
             let stop_activate = self.on_stop.clone();
+            let status = self.status.unwrap_or(if self.loading {
+                PromptInputStatus::Streaming
+            } else {
+                PromptInputStatus::Idle
+            });
+            let generating = status.is_generating();
 
-            let send_disabled = self.disabled || self.loading || (is_empty && attachments_len == 0);
-            let stop_disabled = self.disabled || !self.loading;
+            let send_disabled = self.disabled || generating || (is_empty && attachments_len == 0);
+            let stop_disabled = self.disabled || !generating;
 
             let textarea_min_height = if self.textarea_min_height == Px(96.0) {
                 theme
@@ -1345,7 +1729,7 @@ impl PromptInput {
                 .or_else(|| theme.metric_by_key("fret.ai.prompt_input.max_height"));
 
             let send_activate_for_button = send_activate.clone();
-            let send_button = (!self.loading).then(|| {
+            let send_button = (!generating).then(|| {
                 let mut btn = Button::new("Send")
                     .variant(ButtonVariant::Default)
                     .size(ButtonSize::Sm)
@@ -1357,7 +1741,7 @@ impl PromptInput {
                 btn.into_element(cx)
             });
 
-            let stop_button = (self.loading).then(|| {
+            let stop_button = generating.then(|| {
                 let mut btn = Button::new("Stop")
                     .variant(ButtonVariant::Secondary)
                     .size(ButtonSize::Sm)
@@ -1592,6 +1976,11 @@ impl PromptInput {
 
             let mut group = InputGroup::new(text_model.clone())
                 .textarea()
+                .placeholder(
+                    self.placeholder
+                        .clone()
+                        .unwrap_or_else(|| Arc::<str>::from(DEFAULT_PROMPT_INPUT_PLACEHOLDER)),
+                )
                 .textarea_min_height(textarea_min_height)
                 .control_on_key_down(control_key_handler)
                 .block_end({
@@ -1670,6 +2059,64 @@ impl PromptInput {
                 content
             }
         })
+    }
+}
+
+pub type PromptInputSelect = ShadcnSelect;
+pub type PromptInputSelectContent = ShadcnSelectContent;
+pub type PromptInputSelectItem = ShadcnSelectItem;
+pub type PromptInputSelectValue = ShadcnSelectValue;
+
+/// Prompt-input-scoped Select trigger aligned with AI Elements toolbar chrome.
+#[derive(Debug, Clone)]
+pub struct PromptInputSelectTrigger {
+    inner: ShadcnSelectTrigger,
+}
+
+impl Default for PromptInputSelectTrigger {
+    fn default() -> Self {
+        let transparent = ColorRef::Color(Color::TRANSPARENT);
+        let chrome = ChromeRefinement::default()
+            .shadow_none()
+            .bg(transparent.clone())
+            .border_color(transparent);
+
+        Self {
+            inner: ShadcnSelectTrigger::new()
+                .size(SelectTriggerSize::Sm)
+                .refine_style(chrome),
+        }
+    }
+}
+
+impl PromptInputSelectTrigger {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn size(mut self, size: SelectTriggerSize) -> Self {
+        self.inner = self.inner.size(size);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.inner = self.inner.refine_style(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.inner = self.inner.refine_layout(layout);
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnSelectTrigger {
+        self.inner
+    }
+}
+
+impl From<PromptInputSelectTrigger> for ShadcnSelectTrigger {
+    fn from(value: PromptInputSelectTrigger) -> Self {
+        value.into_inner()
     }
 }
 

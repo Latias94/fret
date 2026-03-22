@@ -73,3 +73,21 @@ fn default_facing_ai_action_wrappers_keep_native_action_first_aliases() {
         );
     }
 }
+
+#[test]
+fn prompt_input_public_surface_keeps_docs_shaped_children_and_select_lane() {
+    for marker in [
+        "pub struct PromptInputBody {",
+        "pub struct PromptInputChildren {",
+        "pub enum PromptInputPart {",
+        "pub fn children<I, P>(self, parts: I) -> PromptInputChildren",
+        "pub type PromptInputSelect = ShadcnSelect;",
+        "pub struct PromptInputSelectTrigger {",
+        "const DEFAULT_PROMPT_INPUT_PLACEHOLDER: &str = \"What would you like to know?\";",
+    ] {
+        assert!(
+            PROMPT_INPUT_RS.contains(marker),
+            "prompt_input.rs should keep docs-shaped public surface marker `{marker}`"
+        );
+    }
+}

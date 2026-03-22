@@ -1450,7 +1450,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_DOCS_DEMO,
                 "AI Prompt Input (Docs-aligned)",
-                "Docs-aligned PromptInput composition (tools + model select + tooltips) Demo",
+                "Docs-aligned PromptInput children composition (tools + model select + tooltips) Demo",
                 "fret-ui-ai (prompt input)",
                 CMD_NAV_AI_PROMPT_INPUT_DOCS_DEMO,
                 &[
@@ -1938,7 +1938,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_DOCS_DEMO,
                 "AI Prompt Input (Docs-aligned)",
-                "Docs-aligned PromptInput composition (tools + model select + tooltips) Demo",
+                "Docs-aligned PromptInput children composition (tools + model select + tooltips) Demo",
                 "fret-ui-ai (prompt input)",
                 CMD_NAV_AI_PROMPT_INPUT_DOCS_DEMO,
                 &[

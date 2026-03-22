@@ -94,7 +94,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .action(act::ToggleSearch)
                 .into_element(cx);
 
-            let select = shadcn::Select::new(model_value.clone(), model_open.clone())
+            let select = ui_ai::PromptInputSelect::new(model_value.clone(), model_open.clone())
                 .trigger_test_id("ui-gallery-ai-prompt-input-docs-model-trigger")
                 .on_value_change({
                     let model_value = model_value.clone();
@@ -102,38 +102,42 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         let _ = host.models_mut().update(&model_value, |v| *v = Some(value));
                     }
                 })
-                .trigger(shadcn::SelectTrigger::new().size(shadcn::SelectTriggerSize::Sm))
-                .value(shadcn::SelectValue::new().placeholder("Model"))
-                .content(shadcn::SelectContent::new())
+                .trigger(ui_ai::PromptInputSelectTrigger::new().into())
+                .value(ui_ai::PromptInputSelectValue::new().placeholder("Model"))
+                .content(ui_ai::PromptInputSelectContent::new())
                 .entries([
-                    shadcn::SelectItem::new("gpt-4o", "GPT-4o").into(),
-                    shadcn::SelectItem::new("claude-opus-4-20250514", "Claude 4 Opus").into(),
+                    ui_ai::PromptInputSelectItem::new("gpt-4o", "GPT-4o").into(),
+                    ui_ai::PromptInputSelectItem::new("claude-opus-4-20250514", "Claude 4 Opus")
+                        .into(),
                 ])
                 .into_element(cx);
 
-            let tools = ui_ai::PromptInputTools::new([menu, search_btn, select]).into_element(cx);
-            let submit = ui_ai::PromptInputSubmit::new()
-                .refine_layout(LayoutRefinement::default().ml_auto())
-                .into_element(cx);
-            let footer = ui_ai::PromptInputFooter::new([tools], [submit]).into_element(cx);
-
-            let header = ui_ai::PromptInputHeader::new([
-                ui_ai::PromptInputAttachmentsRow::new().into_element(cx)
-            ])
-            .into_element(cx);
-
-            let input = ui_ai::PromptInputRoot::new(controller.text)
-                .attachments(controller.attachments.expect("provider sets attachments"))
-                .on_send(on_send)
-                .on_add_attachments(on_add_attachments)
-                .test_id_root("ui-gallery-ai-prompt-input-docs")
-                .test_id_textarea("ui-gallery-ai-prompt-input-docs-textarea")
-                .test_id_send("ui-gallery-ai-prompt-input-docs-send")
-                .test_id_stop("ui-gallery-ai-prompt-input-docs-stop")
-                .into_element_with_slots(cx, move |_cx| ui_ai::PromptInputSlots {
-                    block_start: vec![header],
-                    block_end: vec![footer],
-                });
+            let input =
+                ui_ai::PromptInput::new(controller.text)
+                    .attachments(controller.attachments.expect("provider sets attachments"))
+                    .on_send(on_send)
+                    .on_add_attachments(on_add_attachments)
+                    .test_id_root("ui-gallery-ai-prompt-input-docs")
+                    .test_id_send("ui-gallery-ai-prompt-input-docs-send")
+                    .test_id_stop("ui-gallery-ai-prompt-input-docs-stop")
+                    .children([
+                        ui_ai::PromptInputPart::from(ui_ai::PromptInputHeader::new([
+                            ui_ai::PromptInputAttachmentsRow::new().into_element(cx),
+                        ])),
+                        ui_ai::PromptInputPart::from(ui_ai::PromptInputBody::new([
+                            ui_ai::PromptInputTextarea::new()
+                                .placeholder("What would you like to know?")
+                                .test_id("ui-gallery-ai-prompt-input-docs-textarea"),
+                        ])),
+                        ui_ai::PromptInputPart::from(ui_ai::PromptInputFooter::new(
+                            [ui_ai::PromptInputTools::new([menu, search_btn, select])
+                                .into_element(cx)],
+                            [ui_ai::PromptInputSubmit::new()
+                                .refine_layout(LayoutRefinement::default().ml_auto())
+                                .into_element(cx)],
+                        )),
+                    ])
+                    .into_element(cx);
 
             vec![input]
         });
@@ -160,7 +164,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(move |cx| {
             vec![
                 cx.text("Prompt Input (AI Elements)"),
-                cx.text("Docs-aligned parts composition: attachments header + tools + model picker + submit."),
+                cx.text("Docs-aligned children composition: header + body textarea + footer tools/model picker/submit."),
                 frame,
             ]
         })
