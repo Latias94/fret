@@ -38,22 +38,33 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
       "target": { "kind": "test_id", "id": "ui-gallery-ai-prompt-input-docs-search" },
       "delta_y": -240.0,
+      "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 16.0,
       "timeout_frames": 1800
     },
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-ai-prompt-input-docs-model-trigger" }
-      },
-      "timeout_frames": 240
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-prompt-input-docs-search" },
+      "stable_frames": 16,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
     },
+    { "type": "wait_frames", "n": 8 },
     {
       "type": "move_pointer",
       "target": { "kind": "test_id", "id": "ui-gallery-ai-prompt-input-docs-search" }
     },
+    {
+      "type": "move_pointer_sweep",
+      "pointer_kind": "mouse",
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-prompt-input-docs-search" },
+      "delta_x": 2.0,
+      "delta_y": 0.0,
+      "steps": 2,
+      "frames_per_step": 1
+    },
+    { "type": "wait_frames", "n": 20 },
     {
       "type": "wait_until",
       "predicate": {
@@ -68,4 +79,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-ai-prompt-input-docs-demo" }
   ]
 }
-
