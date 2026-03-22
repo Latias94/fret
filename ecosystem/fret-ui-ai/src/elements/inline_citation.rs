@@ -14,7 +14,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, IntoUiElement, Items, Justify, LayoutRefinement,
+    Radius, Space,
 };
 
 use fret_ui_shadcn::facade::{Badge, BadgeVariant, HoverCard, HoverCardContent};
@@ -462,6 +463,27 @@ impl InlineCitationRoot {
         self
     }
 
+    /// Eager helper for the upstream-shaped compound-parts usage lane.
+    ///
+    /// This is equivalent to calling `into_element_with_children(...)` and landing the provided
+    /// part values inside the nearest `InlineCitationParts` provider scope.
+    #[track_caller]
+    pub fn into_element_parts<H, TText, TCard>(
+        self,
+        text: TText,
+        card: TCard,
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement
+    where
+        H: UiHost + 'static,
+        TText: IntoUiElement<H> + 'static,
+        TCard: IntoUiElement<H> + 'static,
+    {
+        self.into_element_with_children(cx, move |cx| {
+            vec![text.into_element(cx), card.into_element(cx)]
+        })
+    }
+
     pub fn into_element_with_children<H: UiHost + 'static>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -520,6 +542,20 @@ impl InlineCitationRoot {
 impl Default for InlineCitationRoot {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<H: UiHost + 'static> IntoUiElement<H> for InlineCitationText {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        InlineCitationText::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost + 'static> IntoUiElement<H> for InlineCitationCard {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        InlineCitationCard::into_element(self, cx)
     }
 }
 
@@ -1553,7 +1589,9 @@ impl InlineCitation {
 
         let label_fallback = label.clone();
 
-        let mut root = InlineCitationRoot::new().source_ids(source_ids).refine_layout(layout);
+        let mut root = InlineCitationRoot::new()
+            .source_ids(source_ids)
+            .refine_layout(layout);
         if let Some(sources) = sources {
             root = root.sources(sources);
         }
@@ -1869,10 +1907,11 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
         let inline_copy = "The technology continues to evolve rapidly, with new breakthroughs being announced regularly";
-        let sources: Arc<[SourceItem]> = Arc::from(vec![
-            SourceItem::new("source-1", "Advances in Natural Language Processing")
-                .url("https://example.com/nlp-advances"),
-        ]);
+        let sources: Arc<[SourceItem]> = Arc::from(vec![SourceItem::new(
+            "source-1",
+            "Advances in Natural Language Processing",
+        )
+        .url("https://example.com/nlp-advances")]);
 
         let el = fret_ui::elements::with_element_cx(
             &mut app,
@@ -1890,5 +1929,34 @@ mod tests {
         let inline_text =
             find_text_by_content(&el, inline_copy).expect("inline citation custom inline copy");
         assert_eq!(inline_text.text.as_ref(), inline_copy);
+    }
+
+    #[test]
+    fn inline_citation_root_into_element_parts_renders_hostname_trigger() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let sources: Arc<[SourceItem]> =
+            Arc::from(vec![
+                SourceItem::new("source-1", "Alpha source").url("https://example.com/foo")
+            ]);
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "citation-root-parts",
+            |cx| {
+                let text = InlineCitationText::new([cx.text("Inline copy")]);
+                InlineCitationRoot::new()
+                    .source_id("source-1")
+                    .sources(sources.clone())
+                    .test_id("citation")
+                    .into_element_parts(text, InlineCitationCard::new(), cx)
+            },
+        );
+
+        let trigger =
+            find_pressable_by_label(&el, "example.com").expect("inline citation hostname trigger");
+        assert_eq!(trigger.a11y.test_id.as_deref(), Some("citation"));
     }
 }

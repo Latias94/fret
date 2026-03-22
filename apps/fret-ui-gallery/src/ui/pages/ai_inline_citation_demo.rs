@@ -11,7 +11,7 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         [
             [
                 "InlineCitationRoot",
-                "Compound-parts root aligned with the AI Elements docs example. Provides `InlineCitationParts` in scope (open state + pager index + resolved sources) so the child parts can stay purely compositional.",
+                "Compound-parts root aligned with the AI Elements docs example. Provides `InlineCitationParts` in scope (open state + pager index + resolved sources) so the child parts can stay purely compositional. Prefer `InlineCitationRoot::into_element_parts(...)` for the common docs-shaped `Text + Card` composition to avoid extra closure boilerplate.",
             ],
             [
                 "InlineCitationText/Card/Trigger/Body/Carousel/...",

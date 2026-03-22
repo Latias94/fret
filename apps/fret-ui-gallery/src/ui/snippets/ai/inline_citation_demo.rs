@@ -4,8 +4,8 @@ pub const SOURCE: &str = include_str!("inline_citation_demo.rs");
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::ui;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -67,46 +67,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         Arc::<str>::from("src-4"),
         Arc::<str>::from("src-5"),
     ]);
+
+    let citation_text = ui_ai::InlineCitationText::new([cx.text(
+        "The technology continues to evolve rapidly, with new breakthroughs being announced regularly",
+    )]);
     let citation = ui_ai::InlineCitationRoot::new()
         .sources(sources)
         .source_ids(citation_ids)
         .test_id("ui-ai-inline-citation-demo-citation")
         .refine_layout(LayoutRefinement::default().min_w_0())
-        .into_element_with_children(cx, |cx| {
-            vec![
-                ui_ai::InlineCitationText::new([cx.text(
-                    "The technology continues to evolve rapidly, with new breakthroughs being announced regularly",
-                )])
-                .into_element(cx),
-                ui_ai::InlineCitationCard::new()
-                    .trigger(ui_ai::InlineCitationCardTrigger::new().into_element(cx))
-                    .body(
-                        ui_ai::InlineCitationCardBody::new([ui_ai::InlineCitationCarousel::new()
-                            .header(
-                                ui_ai::InlineCitationCarouselHeader::new([
-                                    ui_ai::InlineCitationCarouselPrev::new().into_element(cx),
-                                    ui_ai::InlineCitationCarouselNext::new().into_element(cx),
-                                    ui_ai::InlineCitationCarouselIndex::new().into_element(cx),
-                                ])
-                                .into_element(cx),
-                            )
-                            .content(
-                                ui_ai::InlineCitationCarouselContent::new([
-                                    ui_ai::InlineCitationCarouselItem::new([
-                                        ui_ai::InlineCitationSource::from_context()
-                                            .into_element(cx),
-                                        ui_ai::InlineCitationQuote::from_context().into_element(cx),
-                                    ])
-                                    .into_element(cx),
-                                ])
-                                .into_element(cx),
-                            )
-                            .into_element(cx)])
-                        .into_element(cx),
-                    )
-                    .into_element(cx),
-            ]
-        });
+        .into_element_parts(citation_text, ui_ai::InlineCitationCard::new(), cx);
 
     centered_row(|cx| {
         vec![
