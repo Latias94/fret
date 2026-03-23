@@ -77,7 +77,7 @@ pub(super) fn preview_combobox(
         )
         .code_rust_from_file_region(snippets::groups_with_separator::SOURCE, "example")
         .no_shell();
-    let trigger_button = DocSection::build(cx, "Popup", trigger_button)
+    let trigger_button = DocSection::build(cx, "Trigger Button", trigger_button)
         .description("Matches the Base UI/shadcn popup recipe: a button-like trigger with the searchable listbox in the popover content.")
         .code_rust_from_file_region(snippets::trigger_button::SOURCE, "example")
         .no_shell();

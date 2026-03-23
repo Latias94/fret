@@ -100,7 +100,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .unwrap_or_else(|| theme.color_token("primary"));
         let destructive = theme.color_token("destructive");
 
-        let request_btn = shadcn::Button::new("Delete Example File")
+        let request_btn = shadcn::Button::new("Request approval")
             .variant(shadcn::ButtonVariant::Secondary)
             .size(shadcn::ButtonSize::Sm)
             .test_id("ui-ai-confirmation-requested-btn")

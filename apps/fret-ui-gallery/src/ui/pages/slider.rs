@@ -18,7 +18,7 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/radix/slider.mdx`. Base UI reference: `repo-ref/ui/apps/v4/content/docs/components/base/slider.mdx`.",
         "`slider(model)` is the default controlled helper for first-party teaching surfaces, while `new_controllable(...)` stays available when the example needs a default-value bridge or element-owned state.",
-        "Slider already exposes the important authoring surface (`new`, `new_controllable`, range/step/orientation/on_value_commit), so the main parity gap here is usage clarity rather than missing composition APIs.",
+        "`slider(model)` and `new_controllable(...)` already cover the main recipe root surface, so the remaining parity work is example grouping and teaching clarity rather than missing composition APIs.",
         "Slider remains a leaf recipe on the shadcn lane: labels, value readouts, and field layout are composed outside the control, so no extra generic children/`compose()` API is needed here.",
         "Base UI's `Slider.Root/Label/Value/Control/Track/Indicator/Thumb` family is a useful headless reference, but if we promote that compound-children surface it should live in `fret-ui-kit` / a headless lane rather than on `fret-ui-shadcn::Slider`.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",

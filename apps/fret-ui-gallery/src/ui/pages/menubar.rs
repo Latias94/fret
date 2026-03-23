@@ -21,10 +21,12 @@ pub(super) fn preview_menubar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`MenubarCheckboxItem::from_checked(...).on_checked_change(...)` and `MenubarRadioGroup::from_value(...).on_value_change(...)` cover the docs examples without widening this family into per-row model plumbing.",
         "`MenubarContent::{min_width, submenu_min_width}` own explicit panel sizing overrides; root width remains caller-owned page/layout negotiation.",
         "A generic heterogeneous children API is still not warranted here: the typed `MenubarEntry` tree already preserves submenu structure, collection semantics, and diagnostics-friendly test ids without adding hidden scope contracts.",
+        "Compact Fret-first root authoring uses `Menubar::new([MenubarMenu::new(...).entries([...])])`.",
     ]);
     let notes = doc_layout::notes_block([
         "Preview now mirrors the upstream shadcn/base Menubar docs path first: `Demo`, `Usage`, `Checkbox`, `Radio`, `Submenu`, `With Icons`, `RTL`, and `API Reference`.",
         "The docs-path snippets now stay on the part-shaped lane so the copyable code tabs teach the same `MenubarTrigger` / `MenubarContent` / `MenubarSub*` vocabulary that upstream docs do.",
+        "`MenubarTrigger::new(...).into_menu().entries_parts(...)` remains the upstream-shaped copyable lane; the `Parts` section is a focused adapter example on that same lane rather than an advanced escape hatch.",
         "The compact Fret-first root shorthand still exists, but it is documented in `API Reference` instead of displacing the docs-aligned authoring lane.",
         "`Parts` stays as the focused advanced adapter example after the docs path; it is not the primary teaching surface anymore.",
         "Keep `ui-gallery-menubar-*` and `ui-gallery-page-menubar` test IDs stable; existing diag scripts depend on them.",
@@ -72,7 +74,7 @@ pub(super) fn preview_menubar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-menubar-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let parts = DocSection::build(cx, "Parts", parts)
-        .description("Advanced Trigger/Content adapter surface kept outside the default docs path.")
+        .description("Focused Trigger/Content adapter example on the same copyable parts lane.")
         .test_id_prefix("ui-gallery-menubar-parts")
         .code_rust_from_file_region(snippets::parts::SOURCE, "example");
 

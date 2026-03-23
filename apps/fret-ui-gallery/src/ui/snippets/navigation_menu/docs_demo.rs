@@ -21,7 +21,7 @@ fn list_item(
     description: &'static str,
     test_id: &'static str,
     command: &'static str,
-) -> shadcn::NavigationMenuLink {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let title_el = cx.text_props(TextProps {
         layout: Default::default(),
         text: Arc::from(title),
@@ -80,7 +80,7 @@ fn icon_row(
     label: &'static str,
     test_id: &'static str,
     command: &'static str,
-) -> shadcn::NavigationMenuLink {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let icon_el = icon::icon(cx, fret_icons::IconId::new_static(icon));
     let label_el = cx.text(label);
     let row = ui::h_row(move |_cx| [icon_el, label_el])

@@ -151,6 +151,14 @@ impl DocSection {
 // `Vec<AnyElement>` internally before centering the final shell, but callers now keep the final
 // landing explicit at the page surface.
 pub(in crate::ui) fn render_doc_page(
+    cx: &mut UiCx<'_>,
+    intro: Option<&'static str>,
+    sections: Vec<DocSection>,
+) -> impl UiChild + use<> {
+    render_doc_page_raw(cx as *mut _, intro, sections)
+}
+
+fn render_doc_page_raw(
     cx: *mut UiCx<'_>,
     intro: Option<&'static str>,
     sections: Vec<DocSection>,
@@ -197,6 +205,16 @@ pub(in crate::ui) fn render_doc_page(
 // into the shared doc page scaffold, but the explicit landing now lives at the preview-page call
 // site rather than on this helper signature.
 pub(in crate::ui) fn wrap_preview_page(
+    cx: &mut UiCx<'_>,
+    intro: Option<&'static str>,
+    section_title: &'static str,
+    elements: Vec<AnyElement>,
+) -> impl UiChild + use<> {
+    wrap_preview_page_raw(cx as *mut _, intro, section_title, elements)
+}
+
+#[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
+fn wrap_preview_page_raw(
     cx: *mut UiCx<'_>,
     intro: Option<&'static str>,
     section_title: &'static str,
@@ -228,7 +246,7 @@ pub(in crate::ui) fn wrap_row<F>(
     gap: Space,
     align: fret_ui::element::CrossAlign,
     children: F,
-) -> AnyElement
+) -> impl UiChild + use<F>
 where
     F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
 {
@@ -254,7 +272,7 @@ pub(in crate::ui) fn wrap_controls_row<F>(
     theme: &Theme,
     gap: Space,
     children: F,
-) -> AnyElement
+) -> impl UiChild + use<F>
 where
     F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
 {

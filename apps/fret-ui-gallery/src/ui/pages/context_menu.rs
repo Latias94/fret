@@ -31,6 +31,7 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Preview now mirrors the upstream shadcn Context Menu docs path first: `Demo`, `Usage`, the example set through `RTL`, then `API Reference`.",
         "Mechanism parity already looks healthy here: existing web-vs-fret placement/chrome gates plus context-menu diag scripts cover right-click open, keyboard open, dismissal, focus routing, safe-corridor submenu behavior, and panel geometry.",
         "This pass mainly fixes teaching-surface drift: docs-aligned snippets now prefer the same typed `compose()` root lane instead of mixing older `build(...)` roots into the default examples.",
+        "Those lower-level adapter seams are still advanced API, not the default copyable teaching lane.",
         "Docs-backed trigger copy now adapts to the committed primary pointer capability, so touch-first windows read `Long press here` / `Long press (...)` without needing any new context-menu mechanism work.",
         "The RTL example now exercises logical-side placement directly: `ContextMenuContent::side(shadcn::DropdownMenuSide::InlineEnd)` matches the upstream Base UI docs while submenu chevrons still follow direction-provider parity.",
         "The RTL preview now stays closer to the upstream Base UI example shape too: dual submenus, checkbox toggles, and a radio group all render under `LayoutDirection::Rtl` while keeping the explicit `inline-end` teaching point.",

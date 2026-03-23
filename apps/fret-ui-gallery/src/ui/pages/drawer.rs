@@ -32,6 +32,7 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/drawer.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/drawer.mdx` and Vaul docs.",
         "Preview mirrors the shadcn Drawer docs path after the prose-only `About` and `Installation` sections: `Demo`, `Usage`, `Scrollable Content`, `Sides`, `Responsive Dialog`, `RTL`, and `API Reference`.",
+        "`Usage` is the default copyable `children([...])` path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane.",
         "`Usage` is the default copyable path; `Snap Points`, `Nested Drawers`, and `Outside Press` stay after `API Reference` as explicit Vaul/Fret follow-ups instead of being mixed into the docs path.",
         "The docs-path examples now share the same `Drawer::children([...])` root lane, while `Drawer::compose()` remains the builder-first alternative without pushing children API concerns into the mechanism layer.",
         "Docs-path footer close actions now consistently use `DrawerClose::from_scope().build(cx, child)` so the copyable lane stays aligned with upstream `DrawerClose asChild` intent.",
@@ -59,9 +60,7 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
-        .description(
-            "Default copyable `children([...])` path using typed trigger/content builders.",
-        )
+        .description("Default copyable `children([...])` path for common Drawer call sites.")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let scrollable_content = DocSection::build(cx, "Scrollable Content", scrollable_content)
         .description("Keep actions visible while the content area scrolls.")

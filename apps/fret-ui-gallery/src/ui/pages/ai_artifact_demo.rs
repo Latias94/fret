@@ -53,7 +53,8 @@ fn render_features(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .test_id("ui-gallery-ai-artifact-features")
 }
 
-fn render_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn render_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let _ = cx;
     doc_layout::notes_block([
         "Artifact root/header/content defaults already line up with the upstream AI Elements chrome; the main drift was the UI Gallery docs surface, not the underlying mechanism layer.",
         "The docs-aligned preview now keeps the visible `With Code Display` example faithful to the official page and moves diagnostics state into a non-visual marker.",

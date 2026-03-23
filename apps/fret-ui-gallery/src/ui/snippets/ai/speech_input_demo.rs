@@ -73,16 +73,13 @@ fn fill_text_layout() -> LayoutStyle {
     layout
 }
 
-fn body_text<T>(
+fn body_text(
     cx: &mut UiCx<'_>,
-    text: T,
+    text: impl Into<Arc<str>>,
     style: TextStyle,
     color: Color,
     align: TextAlign,
-) -> impl UiChild + use<T>
-where
-    T: Into<Arc<str>>,
-{
+) -> impl UiChild + use<> {
     cx.text_props(TextProps {
         layout: fill_text_layout(),
         text: text.into(),

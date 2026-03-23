@@ -4,9 +4,22 @@ pub const SOURCE: &str = include_str!("demo.rs");
 use crate::ui::snippets::sonner::{last_action_model, message_request};
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
-use fret_ui::element::SemanticsDecoration;
+use fret_ui::UiHost;
+use fret_ui::element::{AnyElement, SemanticsDecoration};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
+
+fn wrap_controls_row<H: UiHost>(
+    gap: Space,
+    children: Vec<AnyElement>,
+) -> impl IntoUiElement<H> + use<H> {
+    ui::h_flex(move |_cx| children)
+        .gap(gap)
+        .items_center()
+        .wrap()
+        .layout(LayoutRefinement::default().w_full())
+}
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     const CMD_TOAST_ACTION: &str = "ui_gallery.toast.action";
@@ -36,10 +49,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .test_id("ui-gallery-sonner-demo-show")
         .into_element(cx);
 
-    ui::h_flex(move |_cx| vec![show])
-        .gap(Space::N2)
-        .items_center()
-        .layout(LayoutRefinement::default().w_full().min_w_0())
+    wrap_controls_row::<fret_app::App>(Space::N2, vec![show])
         .into_element(cx)
         .attach_semantics(
             SemanticsDecoration::default()
