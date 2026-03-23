@@ -4,24 +4,27 @@ pub const SOURCE: &str = include_str!("inline_citation_demo.rs");
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-fn centered_row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F>
+fn centered_row<F>(cx: &mut UiCx<'_>, children: F) -> impl UiChild + use<F>
 where
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
 {
     ui::h_flex(children)
         .gap(Space::N1)
         .wrap()
-        .w_full()
-        .max_w(Px(720.0))
-        .min_w_0()
+        .layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(720.0))
+                .min_w_0(),
+        )
         .justify_center()
         .items_center()
+        .into_element(cx)
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -78,7 +81,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .refine_layout(LayoutRefinement::default().min_w_0())
         .into_element_parts(citation_text, ui_ai::InlineCitationCard::new(), cx);
 
-    centered_row(|cx| {
+    centered_row(cx, |cx| {
         vec![
             cx.text(
                 "According to recent studies, artificial intelligence has shown remarkable progress in natural language processing.",
@@ -87,7 +90,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             cx.text("."),
         ]
     })
-    .into_element(cx)
     .test_id("ui-ai-inline-citation-demo-root")
 }
 // endregion: example
