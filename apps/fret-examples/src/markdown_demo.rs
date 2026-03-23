@@ -372,6 +372,8 @@ $$
         } else {
             fret_code_view::CodeBlockWrap::ScrollX
         };
+        components.code_block_windowed =
+            cap_enabled.then_some(fret_code_view::CodeBlockWindowedOptions::default());
         components.code_block_max_height_from_theme = cap_enabled;
         components.code_block_ui.show_scrollbar_y = cap_enabled;
         components.code_block_ui.scrollbar_y_on_hover = true;

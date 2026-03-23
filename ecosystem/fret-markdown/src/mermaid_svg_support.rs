@@ -60,11 +60,46 @@ pub(super) fn render_mermaid_code_fence<H: UiHost + 'static>(
     info: CodeBlockInfo,
     options: fret_code_view::CodeBlockUiOptions,
     header: fret_code_view::CodeBlockHeaderSlots,
+    windowed: fret_code_view::CodeBlockWindowedOptions,
 ) -> AnyElement {
     let entry = mermaid_svg_entry(cx, &info);
     match entry {
         MermaidSvgEntry::Ready(ready) => render_mermaid_svg(cx, theme, options, header, ready),
-        MermaidSvgEntry::Loading => fret_code_view::code_block_with_header_slots(
+        MermaidSvgEntry::Loading => fret_code_view::code_block_with_header_slots_windowed(
+            cx,
+            &info.code,
+            info.language.as_deref(),
+            false,
+            options,
+            header,
+            windowed,
+        ),
+        MermaidSvgEntry::Error(err) => fret_code_view::code_block_with_header_slots_windowed(
+            cx,
+            &Arc::<str>::from(format!(
+                "{}\n\n(fret-markdown: mermaid render failed: {err})",
+                info.code
+            )),
+            info.language.as_deref(),
+            false,
+            options,
+            header,
+            windowed,
+        ),
+    }
+}
+
+pub(super) fn render_mermaid_code_fence_non_windowed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    info: CodeBlockInfo,
+    options: fret_code_view::CodeBlockUiOptions,
+    header: fret_code_view::CodeBlockHeaderSlots,
+) -> AnyElement {
+    let entry = mermaid_svg_entry(cx, &info);
+    match entry {
+        MermaidSvgEntry::Ready(ready) => render_mermaid_svg(cx, theme, options, header, ready),
+        MermaidSvgEntry::Loading => fret_code_view::code_block_with_header_slots_non_windowed(
             cx,
             &info.code,
             info.language.as_deref(),
@@ -72,7 +107,7 @@ pub(super) fn render_mermaid_code_fence<H: UiHost + 'static>(
             options,
             header,
         ),
-        MermaidSvgEntry::Error(err) => fret_code_view::code_block_with_header_slots(
+        MermaidSvgEntry::Error(err) => fret_code_view::code_block_with_header_slots_non_windowed(
             cx,
             &Arc::<str>::from(format!(
                 "{}\n\n(fret-markdown: mermaid render failed: {err})",
@@ -86,7 +121,7 @@ pub(super) fn render_mermaid_code_fence<H: UiHost + 'static>(
     }
 }
 
-fn render_mermaid_svg<H: UiHost + 'static>(
+fn render_mermaid_svg<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     options: fret_code_view::CodeBlockUiOptions,
@@ -138,7 +173,7 @@ fn render_mermaid_svg<H: UiHost + 'static>(
     })
 }
 
-fn render_mermaid_header_row<H: UiHost + 'static>(
+fn render_mermaid_header_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     header: fret_code_view::CodeBlockHeaderSlots,

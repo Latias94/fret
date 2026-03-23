@@ -47,7 +47,8 @@ pub use anchors::anchor_test_id_from_fragment;
 pub use components::*;
 pub use mdstream_render::{
     MarkdownPulldownState, MarkdownStreamState, markdown_streaming_pulldown,
-    markdown_streaming_pulldown_with, markdown_with,
+    markdown_streaming_pulldown_non_windowed, markdown_streaming_pulldown_with,
+    markdown_streaming_pulldown_with_non_windowed, markdown_with, markdown_with_non_windowed,
 };
 use mermaid::{detect_mermaid_diagram_type, is_mermaid_language, render_mermaid_header_label};
 pub use open_url::{OnLinkActivate, is_safe_open_url, on_link_activate_open_url};
@@ -58,6 +59,9 @@ use parse::{
     split_trailing_heading_id, strip_blockquote_prefix,
 };
 use theme::MarkdownTheme;
+
+pub(crate) type MarkdownCodeBlockRenderer<H> =
+    for<'a> fn(&mut ElementContext<'a, H>, CodeBlockInfo, &MarkdownComponents<H>) -> AnyElement;
 
 #[derive(Debug, Clone)]
 pub struct Markdown {
@@ -77,6 +81,14 @@ impl Markdown {
     }
 
     #[track_caller]
+    pub fn into_element_non_windowed<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        markdown_non_windowed(cx, &self.source)
+    }
+
+    #[track_caller]
     pub fn into_element_with<H: UiHost + 'static>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -84,11 +96,28 @@ impl Markdown {
     ) -> AnyElement {
         markdown_with(cx, &self.source, components)
     }
+
+    #[track_caller]
+    pub fn into_element_with_non_windowed<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        components: &MarkdownComponents<H>,
+    ) -> AnyElement {
+        markdown_with_non_windowed(cx, &self.source, components)
+    }
 }
 
 #[track_caller]
 pub fn markdown<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, source: &str) -> AnyElement {
     markdown_with(cx, source, &MarkdownComponents::default())
+}
+
+#[track_caller]
+pub fn markdown_non_windowed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    source: &str,
+) -> AnyElement {
+    markdown_with_non_windowed(cx, source, &MarkdownComponents::default())
 }
 
 // `markdown_with` and the mdstream-backed streaming state live in `mdstream_render.rs`.
@@ -104,6 +133,66 @@ pub fn mdstream_options_for_markdown() -> mdstream::Options {
 }
 
 fn render_code_block<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    info: CodeBlockInfo,
+    components: &MarkdownComponents<H>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    let mut options = components.code_block_ui;
+    let windowed = components.code_block_windowed;
+    if components.code_block_max_height_from_theme {
+        resolve_code_block_ui(&theme, &mut options);
+    }
+    if let Some(resolve) = &components.code_block_ui_resolver {
+        resolve(cx, &info, &mut options);
+    }
+
+    let mut header = fret_code_view::CodeBlockHeaderSlots::default();
+    if is_mermaid_language(info.language.as_deref()) {
+        let diagram_type = detect_mermaid_diagram_type(&info.code);
+        header = header
+            .show_language(false)
+            .push_left(render_mermaid_header_label(cx, &theme, diagram_type));
+    }
+    if let Some(render_actions) = &components.code_block_actions {
+        header = header.push_right(render_actions(cx, info.clone()));
+    }
+
+    #[cfg(feature = "mermaid")]
+    if is_mermaid_language(info.language.as_deref()) {
+        return match windowed {
+            Some(windowed) => mermaid_svg_support::render_mermaid_code_fence(
+                cx, &theme, info, options, header, windowed,
+            ),
+            None => mermaid_svg_support::render_mermaid_code_fence_non_windowed(
+                cx, &theme, info, options, header,
+            ),
+        };
+    }
+
+    if let Some(windowed) = windowed {
+        fret_code_view::code_block_with_header_slots_windowed(
+            cx,
+            &info.code,
+            info.language.as_deref(),
+            false,
+            options,
+            header,
+            windowed,
+        )
+    } else {
+        fret_code_view::code_block_with_header_slots(
+            cx,
+            &info.code,
+            info.language.as_deref(),
+            false,
+            options,
+            header,
+        )
+    }
+}
+
+fn render_code_block_non_windowed<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     info: CodeBlockInfo,
     components: &MarkdownComponents<H>,
@@ -130,10 +219,12 @@ fn render_code_block<H: UiHost + 'static>(
 
     #[cfg(feature = "mermaid")]
     if is_mermaid_language(info.language.as_deref()) {
-        return mermaid_svg_support::render_mermaid_code_fence(cx, &theme, info, options, header);
+        return mermaid_svg_support::render_mermaid_code_fence_non_windowed(
+            cx, &theme, info, options, header,
+        );
     }
 
-    fret_code_view::code_block_with_header_slots(
+    fret_code_view::code_block_with_header_slots_non_windowed(
         cx,
         &info.code,
         info.language.as_deref(),

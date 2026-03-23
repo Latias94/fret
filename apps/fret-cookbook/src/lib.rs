@@ -496,6 +496,10 @@ mod authoring_surface_policy_tests {
 
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("MarkdownComponents::<App>::default()"));
         assert!(
+            MARKDOWN_AND_CODE_EXAMPLE.contains(".with_code_block_windowed("),
+            "markdown/code basics should teach the explicit retained/windowed code-fence lane"
+        );
+        assert!(
             MARKDOWN_AND_CODE_EXAMPLE.contains(
                 ".selector_layout((&wrap_state, &cap_height_state), |(wrap, cap_height)| {"
             )

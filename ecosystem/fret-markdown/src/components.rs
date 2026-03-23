@@ -124,6 +124,11 @@ pub struct MarkdownComponents<H: UiHost> {
     ///
     /// If you set `code_block`, you own the full rendering and this value is ignored.
     pub code_block_ui: fret_code_view::CodeBlockUiOptions,
+    /// Explicit retained/windowed config for the default fenced code block renderer.
+    ///
+    /// This stays separate from `code_block_ui` because opting into the retained lane changes
+    /// the host contract (`H: UiHost + 'static`) and should never be implicit.
+    pub code_block_windowed: Option<fret_code_view::CodeBlockWindowedOptions>,
     /// Whether the default fenced code block renderer should resolve `max_height` from theme
     /// tokens when `code_block_ui.max_height` is unset.
     ///
@@ -133,7 +138,8 @@ pub struct MarkdownComponents<H: UiHost> {
     /// Per-code-block UI tweaks for the default fenced code block renderer (`fret-code-view`).
     ///
     /// This is applied after theme token resolution, so the resolver can override the final
-    /// `CodeBlockUiOptions` for specific blocks (expand/collapse, wrap overrides, etc.).
+    /// `CodeBlockUiOptions` for specific blocks (expand/collapse, wrap overrides, etc.). The
+    /// retained/windowed lane is configured separately via `code_block_windowed`.
     pub code_block_ui_resolver: Option<Arc<CodeBlockUiResolver<H>>>,
     /// Render an optional “actions” area for fenced code blocks.
     ///
@@ -194,6 +200,7 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
             paragraph: None,
             code_block: None,
             code_block_ui,
+            code_block_windowed: None,
             code_block_max_height_from_theme: true,
             code_block_ui_resolver: None,
             code_block_actions: None,
@@ -226,6 +233,14 @@ impl<H: UiHost> MarkdownComponents<H> {
 
     pub fn with_code_block_max_height(mut self, max_height: Option<Px>) -> Self {
         self.code_block_ui.max_height = max_height;
+        self
+    }
+
+    pub fn with_code_block_windowed(
+        mut self,
+        windowed: Option<fret_code_view::CodeBlockWindowedOptions>,
+    ) -> Self {
+        self.code_block_windowed = windowed;
         self
     }
 

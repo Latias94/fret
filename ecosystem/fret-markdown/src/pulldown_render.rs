@@ -8,12 +8,13 @@ use fret_ui_kit::ui;
 
 use super::*;
 
-pub(super) fn render_pulldown_events_root<H: UiHost + 'static>(
+pub(super) fn render_pulldown_events_root_with_code_block<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
+    render_code_block: crate::MarkdownCodeBlockRenderer<H>,
 ) -> AnyElement {
     let mut cursor = 0usize;
     let children = render_pulldown_blocks(
@@ -25,6 +26,7 @@ pub(super) fn render_pulldown_events_root<H: UiHost + 'static>(
         &mut cursor,
         None,
         0,
+        render_code_block,
     );
     if children.len() == 1 {
         return children.into_iter().next().unwrap();
@@ -50,7 +52,7 @@ fn stop_matches(end: &pulldown_cmark::TagEnd, stop: PulldownStop) -> bool {
     }
 }
 
-fn render_pulldown_blocks<H: UiHost + 'static>(
+fn render_pulldown_blocks<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
@@ -59,6 +61,7 @@ fn render_pulldown_blocks<H: UiHost + 'static>(
     cursor: &mut usize,
     stop: Option<PulldownStop>,
     list_depth: usize,
+    render_code_block: crate::MarkdownCodeBlockRenderer<H>,
 ) -> Vec<AnyElement> {
     use pulldown_cmark::{Event, Tag, TagEnd};
 
@@ -96,6 +99,7 @@ fn render_pulldown_blocks<H: UiHost + 'static>(
                 events,
                 cursor,
                 kind.clone(),
+                render_code_block,
             )),
             Event::Start(Tag::List(start)) => out.push(render_pulldown_list(
                 cx,
@@ -106,6 +110,7 @@ fn render_pulldown_blocks<H: UiHost + 'static>(
                 cursor,
                 *start,
                 list_depth,
+                render_code_block,
             )),
             Event::Start(Tag::BlockQuote(_)) => out.push(render_pulldown_blockquote(
                 cx,
@@ -115,6 +120,7 @@ fn render_pulldown_blocks<H: UiHost + 'static>(
                 events,
                 cursor,
                 list_depth,
+                render_code_block,
             )),
             Event::Start(Tag::FootnoteDefinition(label)) => {
                 out.push(render_pulldown_footnote_definition(
@@ -126,6 +132,7 @@ fn render_pulldown_blocks<H: UiHost + 'static>(
                     cursor,
                     Arc::<str>::from(label.to_string()),
                     list_depth,
+                    render_code_block,
                 ))
             }
             Event::Start(Tag::Table(_)) => out.push(render_pulldown_table(
@@ -471,12 +478,13 @@ fn render_pulldown_heading<H: UiHost>(
     )
 }
 
-fn render_pulldown_code_block<H: UiHost + 'static>(
+fn render_pulldown_code_block<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
     cursor: &mut usize,
     kind: pulldown_cmark::CodeBlockKind<'static>,
+    render_code_block: crate::MarkdownCodeBlockRenderer<H>,
 ) -> AnyElement {
     use pulldown_cmark::{CodeBlockKind, Event, TagEnd};
 
@@ -519,7 +527,7 @@ fn render_pulldown_code_block<H: UiHost + 'static>(
     }
 }
 
-fn render_pulldown_blockquote<H: UiHost + 'static>(
+fn render_pulldown_blockquote<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
@@ -527,6 +535,7 @@ fn render_pulldown_blockquote<H: UiHost + 'static>(
     events: &[pulldown_cmark::Event<'static>],
     cursor: &mut usize,
     list_depth: usize,
+    render_code_block: crate::MarkdownCodeBlockRenderer<H>,
 ) -> AnyElement {
     *cursor += 1;
     let children = render_pulldown_blocks(
@@ -538,6 +547,7 @@ fn render_pulldown_blockquote<H: UiHost + 'static>(
         cursor,
         Some(PulldownStop::BlockQuote),
         list_depth,
+        render_code_block,
     );
     render_blockquote_container(cx, theme, markdown_theme, children)
 }
@@ -568,7 +578,7 @@ fn render_blockquote_container<H: UiHost>(
     })
 }
 
-fn render_pulldown_list<H: UiHost + 'static>(
+fn render_pulldown_list<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
@@ -577,6 +587,7 @@ fn render_pulldown_list<H: UiHost + 'static>(
     cursor: &mut usize,
     start: Option<u64>,
     list_depth: usize,
+    render_code_block: crate::MarkdownCodeBlockRenderer<H>,
 ) -> AnyElement {
     use pulldown_cmark::{Event, Tag, TagEnd};
 
@@ -613,6 +624,7 @@ fn render_pulldown_list<H: UiHost + 'static>(
                     cursor,
                     Some(PulldownStop::Item),
                     list_depth.saturating_add(1),
+                    render_code_block,
                 );
                 let item_end = *cursor;
                 let label = plain_text_from_events_any(&events[item_start..item_end]);
@@ -776,7 +788,7 @@ fn render_task_list_marker<H: UiHost>(
     )
 }
 
-fn render_pulldown_footnote_definition<H: UiHost + 'static>(
+fn render_pulldown_footnote_definition<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
@@ -785,6 +797,7 @@ fn render_pulldown_footnote_definition<H: UiHost + 'static>(
     cursor: &mut usize,
     label: Arc<str>,
     list_depth: usize,
+    render_code_block: crate::MarkdownCodeBlockRenderer<H>,
 ) -> AnyElement {
     *cursor += 1;
     let children = render_pulldown_blocks(
@@ -796,6 +809,7 @@ fn render_pulldown_footnote_definition<H: UiHost + 'static>(
         cursor,
         Some(PulldownStop::FootnoteDefinition),
         list_depth,
+        render_code_block,
     );
 
     let label_el = cx.text_props(TextProps {

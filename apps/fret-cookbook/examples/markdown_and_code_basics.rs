@@ -6,7 +6,7 @@ use fret::{
     icons::IconId,
     style::{LayoutRefinement, MetricRef, Space},
 };
-use fret_code_view::CodeBlockWrap;
+use fret_code_view::{CodeBlockWindowedOptions, CodeBlockWrap};
 use fret_markdown as markdown;
 
 const TEST_ID_ROOT: &str = "cookbook.markdown_and_code_basics.root";
@@ -88,7 +88,8 @@ impl View for MarkdownAndCodeBasicsView {
         let mut components = markdown::MarkdownComponents::<App>::default()
             .with_open_url()
             .with_code_block_wrap(wrap_mode)
-            .with_code_block_max_height(max_height);
+            .with_code_block_max_height(max_height)
+            .with_code_block_windowed(max_height.map(|_| CodeBlockWindowedOptions::default()));
         // Keep the "Copy" affordance visible in scripts/screenshots without requiring hover.
         components.code_block_ui.copy_button_on_hover = false;
 

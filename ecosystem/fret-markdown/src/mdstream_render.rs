@@ -79,6 +79,33 @@ pub fn markdown_with<H: UiHost + 'static>(
         &snapshot.doc,
         &snapshot.adapter,
         components,
+        crate::render_code_block,
+    )
+}
+
+#[track_caller]
+pub fn markdown_with_non_windowed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    source: &str,
+    components: &MarkdownComponents<H>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    let markdown_theme = MarkdownTheme::resolve(&theme);
+
+    let snapshot = cx.named("markdown", |cx| {
+        cx.root_state(MarkdownCachedState::new, |state| {
+            state.snapshot_for_source(source)
+        })
+    });
+
+    markdown_mdstream_pulldown_with(
+        cx,
+        &theme,
+        markdown_theme,
+        &snapshot.doc,
+        &snapshot.adapter,
+        components,
+        crate::render_code_block_non_windowed,
     )
 }
 
@@ -182,6 +209,13 @@ pub fn markdown_streaming_pulldown<H: UiHost + 'static>(
     markdown_streaming_pulldown_with(cx, state, &MarkdownComponents::default())
 }
 
+pub fn markdown_streaming_pulldown_non_windowed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    state: &MarkdownPulldownState,
+) -> AnyElement {
+    markdown_streaming_pulldown_with_non_windowed(cx, state, &MarkdownComponents::default())
+}
+
 pub fn markdown_streaming_pulldown_with<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     state: &MarkdownPulldownState,
@@ -196,17 +230,37 @@ pub fn markdown_streaming_pulldown_with<H: UiHost + 'static>(
         state.doc(),
         &state.adapter,
         components,
+        crate::render_code_block,
+    )
+}
+
+pub fn markdown_streaming_pulldown_with_non_windowed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    state: &MarkdownPulldownState,
+    components: &MarkdownComponents<H>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    let markdown_theme = MarkdownTheme::resolve(&theme);
+    markdown_mdstream_pulldown_with(
+        cx,
+        &theme,
+        markdown_theme,
+        state.doc(),
+        &state.adapter,
+        components,
+        crate::render_code_block_non_windowed,
     )
 }
 
 #[track_caller]
-fn markdown_mdstream_pulldown_with<H: UiHost + 'static>(
+fn markdown_mdstream_pulldown_with<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
     doc: &mdstream::DocumentState,
     adapter: &mdstream::adapters::pulldown::PulldownAdapter,
     components: &MarkdownComponents<H>,
+    render_code_block: crate::MarkdownCodeBlockRenderer<H>,
 ) -> AnyElement {
     let committed = doc.committed();
     let pending = doc.pending();
@@ -282,6 +336,7 @@ fn markdown_mdstream_pulldown_with<H: UiHost + 'static>(
                     components,
                     block,
                     events,
+                    render_code_block,
                 )),
                 None => {
                     let tmp = crate::parse_events(block.display_or_raw());
@@ -292,6 +347,7 @@ fn markdown_mdstream_pulldown_with<H: UiHost + 'static>(
                         components,
                         block,
                         &tmp,
+                        render_code_block,
                     ));
                 }
             },
@@ -307,6 +363,7 @@ fn markdown_mdstream_pulldown_with<H: UiHost + 'static>(
                     components,
                     pending,
                     &events,
+                    render_code_block,
                 ));
             });
         }
@@ -319,13 +376,14 @@ fn markdown_mdstream_pulldown_with<H: UiHost + 'static>(
 }
 
 #[track_caller]
-fn render_mdstream_block_with_events<H: UiHost + 'static>(
+fn render_mdstream_block_with_events<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     block: &mdstream::Block,
     events: &[pulldown_cmark::Event<'static>],
+    render_code_block: crate::MarkdownCodeBlockRenderer<H>,
 ) -> AnyElement {
     match block.kind {
         mdstream::BlockKind::Heading => {
@@ -405,7 +463,7 @@ fn render_mdstream_block_with_events<H: UiHost + 'static>(
             if let Some(render) = &components.code_block {
                 render(cx, info)
             } else {
-                crate::render_code_block(cx, info, components)
+                render_code_block(cx, info, components)
             }
         }
         mdstream::BlockKind::List => {
@@ -413,12 +471,13 @@ fn render_mdstream_block_with_events<H: UiHost + 'static>(
             if let Some(render) = &components.list {
                 render(cx, list)
             } else {
-                crate::pulldown_render::render_pulldown_events_root(
+                crate::pulldown_render::render_pulldown_events_root_with_code_block(
                     cx,
                     theme,
                     markdown_theme,
                     components,
                     events,
+                    render_code_block,
                 )
             }
         }
@@ -429,12 +488,13 @@ fn render_mdstream_block_with_events<H: UiHost + 'static>(
             if let Some(render) = &components.blockquote {
                 render(cx, info)
             } else {
-                crate::pulldown_render::render_pulldown_events_root(
+                crate::pulldown_render::render_pulldown_events_root_with_code_block(
                     cx,
                     theme,
                     markdown_theme,
                     components,
                     events,
+                    render_code_block,
                 )
             }
         }
@@ -448,12 +508,13 @@ fn render_mdstream_block_with_events<H: UiHost + 'static>(
                 // Intentionally not using fret-ui-kit's TanStack-inspired table:
                 // it is a data-grid with fixed-row virtualized layout (sorting/resizing/pinning),
                 // while Markdown tables need content-driven, multi-line cell layout.
-                crate::pulldown_render::render_pulldown_events_root(
+                crate::pulldown_render::render_pulldown_events_root_with_code_block(
                     cx,
                     theme,
                     markdown_theme,
                     components,
                     events,
+                    render_code_block,
                 )
             }
         }
@@ -508,12 +569,13 @@ fn render_mdstream_block_with_events<H: UiHost + 'static>(
             if let Some(render) = &components.raw_block {
                 render(cx, info)
             } else {
-                crate::pulldown_render::render_pulldown_events_root(
+                crate::pulldown_render::render_pulldown_events_root_with_code_block(
                     cx,
                     theme,
                     markdown_theme,
                     components,
                     events,
+                    render_code_block,
                 )
             }
         }

@@ -174,6 +174,29 @@ pub enum CodeBlockHeaderBackground {
     Muted80,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CodeBlockWindowedOptions {
+    pub overscan: usize,
+}
+
+impl CodeBlockWindowedOptions {
+    pub fn overscan(mut self, overscan: usize) -> Self {
+        self.overscan = overscan.max(1);
+        self
+    }
+
+    fn normalized(mut self) -> Self {
+        self.overscan = self.overscan.max(1);
+        self
+    }
+}
+
+impl Default for CodeBlockWindowedOptions {
+    fn default() -> Self {
+        Self { overscan: 6 }
+    }
+}
+
 #[derive(Debug)]
 pub struct CodeBlockHeaderSlots {
     pub show_language: bool,
@@ -232,8 +255,7 @@ pub struct CodeBlock {
     border: bool,
     wrap: CodeBlockWrap,
     max_height: Option<Px>,
-    windowed_lines: bool,
-    windowed_lines_overscan: usize,
+    windowed: Option<CodeBlockWindowedOptions>,
     show_scrollbar_x: bool,
     scrollbar_x_on_hover: bool,
     show_scrollbar_y: bool,
@@ -257,8 +279,7 @@ impl CodeBlock {
             border: true,
             wrap: CodeBlockWrap::ScrollX,
             max_height: None,
-            windowed_lines: false,
-            windowed_lines_overscan: 6,
+            windowed: None,
             show_scrollbar_x: false,
             scrollbar_x_on_hover: true,
             show_scrollbar_y: false,
@@ -323,13 +344,13 @@ impl CodeBlock {
         self
     }
 
-    pub fn windowed_lines(mut self, windowed: bool) -> Self {
-        self.windowed_lines = windowed;
-        self
-    }
-
-    pub fn windowed_lines_overscan(mut self, overscan: usize) -> Self {
-        self.windowed_lines_overscan = overscan.max(1);
+    /// Enables the retained/windowed renderer.
+    ///
+    /// Call `into_element_windowed` to opt into the retained lane. The default `into_element`
+    /// keeps the non-windowed contract so callers do not inherit a `'static` requirement unless
+    /// they explicitly choose it.
+    pub fn windowed(mut self, options: CodeBlockWindowedOptions) -> Self {
+        self.windowed = Some(options.normalized());
         self
     }
 
@@ -364,7 +385,11 @@ impl CodeBlock {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        debug_assert!(
+            self.windowed.is_none(),
+            "CodeBlock::windowed(...) requires CodeBlock::into_element_windowed(...)"
+        );
         code_block_with(
             cx,
             &self.code,
@@ -380,8 +405,6 @@ impl CodeBlock {
                 border: self.border,
                 wrap: self.wrap,
                 max_height: self.max_height,
-                windowed_lines: self.windowed_lines,
-                windowed_lines_overscan: self.windowed_lines_overscan,
                 show_scrollbar_x: self.show_scrollbar_x,
                 scrollbar_x_on_hover: self.scrollbar_x_on_hover,
                 show_scrollbar_y: self.show_scrollbar_y,
@@ -391,16 +414,90 @@ impl CodeBlock {
             },
         )
     }
+
+    #[track_caller]
+    pub fn into_element_windowed<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        let windowed = self.windowed.unwrap_or_default();
+        code_block_with_windowed(
+            cx,
+            &self.code,
+            self.language.as_deref(),
+            self.show_line_numbers,
+            CodeBlockUiOptions {
+                show_header: self.show_header,
+                header_divider: self.header_divider,
+                header_background: self.header_background,
+                show_copy_button: self.show_copy_button,
+                copy_button_on_hover: self.copy_button_on_hover,
+                copy_button_placement: self.copy_button_placement,
+                border: self.border,
+                wrap: self.wrap,
+                max_height: self.max_height,
+                show_scrollbar_x: self.show_scrollbar_x,
+                scrollbar_x_on_hover: self.scrollbar_x_on_hover,
+                show_scrollbar_y: self.show_scrollbar_y,
+                scrollbar_y_on_hover: self.scrollbar_y_on_hover,
+                disable_ligatures: self.disable_ligatures,
+                disable_contextual_alternates: self.disable_contextual_alternates,
+            },
+            windowed,
+        )
+    }
+
+    #[track_caller]
+    pub fn into_element_non_windowed<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        self.windowed = None;
+        self.into_element(cx)
+    }
 }
 
 #[track_caller]
-pub fn code_block<H: UiHost + 'static>(
+pub fn code_block<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
     show_line_numbers: bool,
 ) -> AnyElement {
     code_block_with(
+        cx,
+        code,
+        language,
+        show_line_numbers,
+        CodeBlockUiOptions::default(),
+    )
+}
+
+#[track_caller]
+pub fn code_block_windowed<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    code: &str,
+    language: Option<&str>,
+    show_line_numbers: bool,
+) -> AnyElement {
+    code_block_with_windowed(
+        cx,
+        code,
+        language,
+        show_line_numbers,
+        CodeBlockUiOptions::default(),
+        CodeBlockWindowedOptions::default(),
+    )
+}
+
+#[track_caller]
+pub fn code_block_non_windowed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    code: &str,
+    language: Option<&str>,
+    show_line_numbers: bool,
+) -> AnyElement {
+    code_block_with_non_windowed(
         cx,
         code,
         language,
@@ -420,8 +517,6 @@ pub struct CodeBlockUiOptions {
     pub border: bool,
     pub wrap: CodeBlockWrap,
     pub max_height: Option<Px>,
-    pub windowed_lines: bool,
-    pub windowed_lines_overscan: usize,
     pub show_scrollbar_x: bool,
     pub scrollbar_x_on_hover: bool,
     pub show_scrollbar_y: bool,
@@ -443,8 +538,6 @@ impl Default for CodeBlockUiOptions {
             border: true,
             wrap: CodeBlockWrap::ScrollX,
             max_height: None,
-            windowed_lines: false,
-            windowed_lines_overscan: 6,
             show_scrollbar_x: false,
             scrollbar_x_on_hover: true,
             show_scrollbar_y: false,
@@ -457,7 +550,7 @@ impl Default for CodeBlockUiOptions {
 }
 
 #[track_caller]
-pub fn code_block_with<H: UiHost + 'static>(
+pub fn code_block_with<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
@@ -475,14 +568,138 @@ pub fn code_block_with<H: UiHost + 'static>(
 }
 
 #[track_caller]
-pub fn code_block_with_header_slots<H: UiHost + 'static>(
+pub fn code_block_with_windowed<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    code: &str,
+    language: Option<&str>,
+    show_line_numbers: bool,
+    options: CodeBlockUiOptions,
+    windowed: CodeBlockWindowedOptions,
+) -> AnyElement {
+    code_block_with_header_slots_windowed(
+        cx,
+        code,
+        language,
+        show_line_numbers,
+        options,
+        CodeBlockHeaderSlots::default(),
+        windowed,
+    )
+}
+
+#[track_caller]
+pub fn code_block_with_non_windowed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    code: &str,
+    language: Option<&str>,
+    show_line_numbers: bool,
+    options: CodeBlockUiOptions,
+) -> AnyElement {
+    code_block_with_header_slots_non_windowed(
+        cx,
+        code,
+        language,
+        show_line_numbers,
+        options,
+        CodeBlockHeaderSlots::default(),
+    )
+}
+
+#[track_caller]
+pub fn code_block_with_header_slots<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    code: &str,
+    language: Option<&str>,
+    show_line_numbers: bool,
+    options: CodeBlockUiOptions,
+    header: CodeBlockHeaderSlots,
+) -> AnyElement {
+    code_block_with_header_slots_non_windowed(
+        cx,
+        code,
+        language,
+        show_line_numbers,
+        options,
+        header,
+    )
+}
+
+#[track_caller]
+pub fn code_block_with_header_slots_windowed<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    code: &str,
+    language: Option<&str>,
+    show_line_numbers: bool,
+    options: CodeBlockUiOptions,
+    header: CodeBlockHeaderSlots,
+    windowed: CodeBlockWindowedOptions,
+) -> AnyElement {
+    let windowed = windowed.normalized();
+    code_block_with_header_slots_impl(
+        cx,
+        code,
+        language,
+        show_line_numbers,
+        options,
+        header,
+        move |cx, theme, prepared, options| {
+            render_code_block_body(cx, theme, prepared, options, windowed)
+        },
+    )
+}
+
+#[track_caller]
+pub fn code_block_with_header_slots_non_windowed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    code: &str,
+    language: Option<&str>,
+    show_line_numbers: bool,
+    options: CodeBlockUiOptions,
+    header: CodeBlockHeaderSlots,
+) -> AnyElement {
+    code_block_with_header_slots_impl(
+        cx,
+        code,
+        language,
+        show_line_numbers,
+        options,
+        header,
+        |cx, theme, prepared, options| {
+            render_code_block_body_non_windowed(
+                cx,
+                theme,
+                prepared,
+                options.wrap,
+                options.show_scrollbar_x,
+                options.scrollbar_x_on_hover,
+                options.show_scrollbar_y,
+                options.scrollbar_y_on_hover,
+                options.max_height,
+                options.disable_ligatures,
+                options.disable_contextual_alternates,
+            )
+        },
+    )
+}
+
+#[track_caller]
+fn code_block_with_header_slots_impl<H: UiHost, F>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
     show_line_numbers: bool,
     options: CodeBlockUiOptions,
     mut header: CodeBlockHeaderSlots,
-) -> AnyElement {
+    render_body: F,
+) -> AnyElement
+where
+    F: Fn(
+        &mut ElementContext<'_, H>,
+        &Theme,
+        Arc<crate::prepare::PreparedCodeBlock>,
+        CodeBlockUiOptions,
+    ) -> AnyElement,
+{
     let theme = Theme::global(&*cx.app).clone();
     let bg = theme.color_token("card");
     let border = theme.color_token("border");
@@ -555,20 +772,17 @@ pub fn code_block_with_header_slots<H: UiHost + 'static>(
                         },
                     ));
                 }
-                out.push(render_code_block_body(
+                out.push(render_body(
                     cx,
                     &theme,
                     prepared.clone(),
-                    options.wrap,
-                    options.windowed_lines,
-                    options.windowed_lines_overscan,
-                    scrollbar_x_enabled,
-                    scrollbar_x_visible,
-                    scrollbar_y_enabled,
-                    scrollbar_y_visible,
-                    options.max_height,
-                    options.disable_ligatures,
-                    options.disable_contextual_alternates,
+                    CodeBlockUiOptions {
+                        show_scrollbar_x: scrollbar_x_enabled,
+                        scrollbar_x_on_hover: scrollbar_x_visible,
+                        show_scrollbar_y: scrollbar_y_enabled,
+                        scrollbar_y_on_hover: scrollbar_y_visible,
+                        ..options
+                    },
                 ));
                 out
             })
@@ -689,16 +903,8 @@ fn render_code_block_body<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     prepared: Arc<crate::prepare::PreparedCodeBlock>,
-    wrap: CodeBlockWrap,
-    windowed_lines: bool,
-    windowed_lines_overscan: usize,
-    scrollbar_x_enabled: bool,
-    scrollbar_x_visible: bool,
-    scrollbar_y_enabled: bool,
-    scrollbar_y_visible: bool,
-    max_height: Option<Px>,
-    disable_ligatures: bool,
-    disable_contextual_alternates: bool,
+    options: CodeBlockUiOptions,
+    windowed: CodeBlockWindowedOptions,
 ) -> AnyElement {
     // shadcn/AI Elements baseline: `p-4`.
     let pad = MetricRef::space(Space::N4).resolve(theme);
@@ -711,186 +917,212 @@ fn render_code_block_body<H: UiHost + 'static>(
     cx.container(props, |cx| {
         let wrap = if prepared.show_line_numbers {
             debug_assert!(
-                !matches!(wrap, CodeBlockWrap::Word | CodeBlockWrap::Grapheme),
+                !matches!(options.wrap, CodeBlockWrap::Word | CodeBlockWrap::Grapheme),
                 "wrapping with line numbers is not supported yet"
             );
             CodeBlockWrap::ScrollX
         } else {
-            wrap
+            options.wrap
         };
 
         let scrollbar_w = theme.metric_token("metric.scrollbar.width");
 
-        let content =
-            if windowed_lines && max_height.is_some() && matches!(wrap, CodeBlockWrap::ScrollX) {
-                let reserved_right_for_x_scrollbar = if scrollbar_y_enabled {
-                    scrollbar_w
-                } else {
-                    Px(0.0)
-                };
-                render_code_block_windowed_lines(
-                    cx,
-                    theme,
-                    prepared.clone(),
-                    windowed_lines_overscan,
-                    scrollbar_x_enabled,
-                    scrollbar_x_visible,
-                    reserved_right_for_x_scrollbar,
-                    scrollbar_y_enabled,
-                    scrollbar_y_visible,
-                    max_height,
-                    disable_ligatures,
-                    disable_contextual_alternates,
-                )
+        let content = if options.max_height.is_some() && matches!(wrap, CodeBlockWrap::ScrollX) {
+            let reserved_right_for_x_scrollbar = if options.show_scrollbar_y {
+                scrollbar_w
             } else {
-                let (rich, line_numbers) = resolve_code_block_cached_text(
-                    cx,
-                    theme,
-                    &prepared,
-                    disable_ligatures,
-                    disable_contextual_alternates,
-                );
-                let line_count = prepared.lines.len();
-
-                let needs_scroll_y = match max_height {
-                    None => false,
-                    Some(max_height) => match text_wrap_for_code_block_wrap(wrap) {
-                        TextWrap::None => {
-                            let line_height = theme.metric_token("metric.font.mono_line_height");
-                            let est_h = Px(line_height.0 * (line_count.max(1) as f32));
-                            est_h.0 > max_height.0
-                        }
-                        TextWrap::Word
-                        | TextWrap::Balance
-                        | TextWrap::WordBreak
-                        | TextWrap::Grapheme => true,
-                    },
-                };
-                let reserved_right_for_x_scrollbar = if needs_scroll_y && scrollbar_y_enabled {
-                    scrollbar_w
-                } else {
-                    Px(0.0)
-                };
-
-                let content = if !prepared.show_line_numbers {
-                    render_code_block_text(
-                        cx,
-                        theme,
-                        rich,
-                        wrap,
-                        scrollbar_x_enabled,
-                        scrollbar_x_visible,
-                        reserved_right_for_x_scrollbar,
-                        line_count,
-                    )
-                } else {
-                    let code = render_code_block_text(
-                        cx,
-                        theme,
-                        rich,
-                        wrap,
-                        scrollbar_x_enabled,
-                        scrollbar_x_visible,
-                        reserved_right_for_x_scrollbar,
-                        line_count,
-                    );
-                    let line_numbers = line_numbers.unwrap_or_else(|| Arc::<str>::from(""));
-                    render_code_block_with_line_numbers(cx, theme, line_numbers, code)
-                };
-
-                if let (Some(max_height), true) = (max_height, needs_scroll_y) {
-                    let thumb = theme.color_token("scrollbar.thumb.background");
-                    let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
-                    let handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
-
-                    let outer_layout = {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        // `Scroll` children frequently use `Length::Fill` so they need a definite
-                        // viewport height. Using `max_height` alone yields an indefinite height
-                        // (auto) which can collapse or produce inconsistent layout.
-                        layout.size.height = Length::Px(max_height);
-                        layout.size.min_height = Some(Length::Px(max_height));
-                        layout.size.max_height = Some(Length::Px(max_height));
-                        layout.overflow = Overflow::Clip;
-                        layout
-                    };
-
-                    let scroll = cx.scroll(
-                        ScrollProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout.overflow = Overflow::Clip;
-                                layout
-                            },
-                            axis: ScrollAxis::Y,
-                            scroll_handle: Some(handle.clone()),
-                            ..Default::default()
-                        },
-                        |_cx| vec![content],
-                    );
-
-                    let scroll_id = scroll.id;
-                    return vec![cx.stack_props(
-                        StackProps {
-                            layout: outer_layout,
-                        },
-                        move |cx| {
-                            let mut out = vec![scroll];
-
-                            if scrollbar_y_enabled {
-                                let scrollbar_layout = LayoutStyle {
-                                    position: PositionStyle::Absolute,
-                                    inset: InsetStyle {
-                                        top: Some(Px(0.0)).into(),
-                                        right: Some(Px(0.0)).into(),
-                                        bottom: Some(if scrollbar_x_enabled {
-                                            scrollbar_w
-                                        } else {
-                                            Px(0.0)
-                                        })
-                                        .into(),
-                                        left: None.into(),
-                                    },
-                                    size: SizeStyle {
-                                        width: Length::Px(scrollbar_w),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                };
-
-                                let scrollbar = cx.scrollbar(ScrollbarProps {
-                                    layout: fill_layout(),
-                                    axis: ScrollbarAxis::Vertical,
-                                    scroll_target: Some(scroll_id),
-                                    scroll_handle: handle,
-                                    style: ScrollbarStyle {
-                                        thumb,
-                                        thumb_hover,
-                                        ..Default::default()
-                                    },
-                                });
-
-                                out.push(overlay_chrome(
-                                    cx,
-                                    scrollbar_layout,
-                                    scrollbar_y_visible,
-                                    scrollbar,
-                                ));
-                            }
-
-                            out
-                        },
-                    )];
-                } else {
-                    return vec![content];
-                }
+                Px(0.0)
             };
+            render_code_block_windowed_lines(
+                cx,
+                theme,
+                prepared.clone(),
+                windowed.overscan,
+                options.show_scrollbar_x,
+                options.scrollbar_x_on_hover,
+                reserved_right_for_x_scrollbar,
+                options.show_scrollbar_y,
+                options.scrollbar_y_on_hover,
+                options.max_height,
+                options.disable_ligatures,
+                options.disable_contextual_alternates,
+            )
+        } else {
+            render_code_block_body_non_windowed(
+                cx,
+                theme,
+                prepared.clone(),
+                wrap,
+                options.show_scrollbar_x,
+                options.scrollbar_x_on_hover,
+                options.show_scrollbar_y,
+                options.scrollbar_y_on_hover,
+                options.max_height,
+                options.disable_ligatures,
+                options.disable_contextual_alternates,
+            )
+        };
 
         vec![content]
     })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_code_block_body_non_windowed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    prepared: Arc<crate::prepare::PreparedCodeBlock>,
+    wrap: CodeBlockWrap,
+    scrollbar_x_enabled: bool,
+    scrollbar_x_visible: bool,
+    scrollbar_y_enabled: bool,
+    scrollbar_y_visible: bool,
+    max_height: Option<Px>,
+    disable_ligatures: bool,
+    disable_contextual_alternates: bool,
+) -> AnyElement {
+    let (rich, line_numbers) = resolve_code_block_cached_text(
+        cx,
+        theme,
+        &prepared,
+        disable_ligatures,
+        disable_contextual_alternates,
+    );
+    let line_count = prepared.lines.len();
+
+    let needs_scroll_y = match max_height {
+        None => false,
+        Some(max_height) => match text_wrap_for_code_block_wrap(wrap) {
+            TextWrap::None => {
+                let line_height = theme.metric_token("metric.font.mono_line_height");
+                let est_h = Px(line_height.0 * (line_count.max(1) as f32));
+                est_h.0 > max_height.0
+            }
+            TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme => true,
+        },
+    };
+    let scrollbar_w = theme.metric_token("metric.scrollbar.width");
+    let reserved_right_for_x_scrollbar = if needs_scroll_y && scrollbar_y_enabled {
+        scrollbar_w
+    } else {
+        Px(0.0)
+    };
+
+    let content = if !prepared.show_line_numbers {
+        render_code_block_text(
+            cx,
+            theme,
+            rich,
+            wrap,
+            scrollbar_x_enabled,
+            scrollbar_x_visible,
+            reserved_right_for_x_scrollbar,
+            line_count,
+        )
+    } else {
+        let code = render_code_block_text(
+            cx,
+            theme,
+            rich,
+            wrap,
+            scrollbar_x_enabled,
+            scrollbar_x_visible,
+            reserved_right_for_x_scrollbar,
+            line_count,
+        );
+        let line_numbers = line_numbers.unwrap_or_else(|| Arc::<str>::from(""));
+        render_code_block_with_line_numbers(cx, theme, line_numbers, code)
+    };
+
+    if let (Some(max_height), true) = (max_height, needs_scroll_y) {
+        let thumb = theme.color_token("scrollbar.thumb.background");
+        let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
+        let handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
+
+        let outer_layout = {
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            // `Scroll` children frequently use `Length::Fill` so they need a definite
+            // viewport height. Using `max_height` alone yields an indefinite height
+            // (auto) which can collapse or produce inconsistent layout.
+            layout.size.height = Length::Px(max_height);
+            layout.size.min_height = Some(Length::Px(max_height));
+            layout.size.max_height = Some(Length::Px(max_height));
+            layout.overflow = Overflow::Clip;
+            layout
+        };
+
+        let scroll = cx.scroll(
+            ScrollProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout.overflow = Overflow::Clip;
+                    layout
+                },
+                axis: ScrollAxis::Y,
+                scroll_handle: Some(handle.clone()),
+                ..Default::default()
+            },
+            |_cx| vec![content],
+        );
+
+        let scroll_id = scroll.id;
+        return cx.stack_props(
+            StackProps {
+                layout: outer_layout,
+            },
+            move |cx| {
+                let mut out = vec![scroll];
+
+                if scrollbar_y_enabled {
+                    let scrollbar_layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            top: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            bottom: Some(if scrollbar_x_enabled {
+                                scrollbar_w
+                            } else {
+                                Px(0.0)
+                            })
+                            .into(),
+                            left: None.into(),
+                        },
+                        size: SizeStyle {
+                            width: Length::Px(scrollbar_w),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+
+                    let scrollbar = cx.scrollbar(ScrollbarProps {
+                        layout: fill_layout(),
+                        axis: ScrollbarAxis::Vertical,
+                        scroll_target: Some(scroll_id),
+                        scroll_handle: handle,
+                        style: ScrollbarStyle {
+                            thumb,
+                            thumb_hover,
+                            ..Default::default()
+                        },
+                    });
+
+                    out.push(overlay_chrome(
+                        cx,
+                        scrollbar_layout,
+                        scrollbar_y_visible,
+                        scrollbar,
+                    ));
+                }
+
+                out
+            },
+        );
+    }
+
+    content
 }
 
 fn fill_layout() -> LayoutStyle {
@@ -1171,7 +1403,7 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
     disable_contextual_alternates: bool,
 ) -> AnyElement {
     let Some(max_height) = max_height else {
-        return cx.text("windowed_lines requires max_height");
+        return cx.text("windowed code block requires max_height");
     };
 
     let row_h = theme.metric_token("metric.font.mono_line_height");
@@ -1337,7 +1569,7 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                 },
             );
 
-            // `windowed_lines` code blocks wrap the VirtualList inside a horizontal `Scroll` for X
+            // Windowed code blocks wrap the VirtualList inside a horizontal `Scroll` for X
             // overflow. That `Scroll` can end up capturing wheel events, preventing the VirtualList
             // from receiving vertical wheel deltas. A WheelRegion drives the VirtualList's shared
             // scroll handle so vertical wheel scrolling always works.
@@ -1604,6 +1836,8 @@ fn text_wrap_for_code_block_wrap(wrap: CodeBlockWrap) -> TextWrap {
 mod tests {
     use super::*;
 
+    const CODE_BLOCK_RS: &str = include_str!("code_block.rs");
+
     #[test]
     fn code_block_wrap_maps_to_text_wrap() {
         assert_eq!(
@@ -1617,6 +1851,81 @@ mod tests {
         assert_eq!(
             text_wrap_for_code_block_wrap(CodeBlockWrap::Grapheme),
             TextWrap::Grapheme
+        );
+    }
+
+    #[test]
+    fn code_block_public_surface_defaults_to_non_windowed_host_lane() {
+        for marker in [
+            "pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn into_element_non_windowed<H: UiHost>(",
+            "pub fn code_block<H: UiHost>(",
+            "pub fn code_block_with<H: UiHost>(",
+            "pub fn code_block_with_non_windowed<H: UiHost>(",
+            "pub fn code_block_with_header_slots<H: UiHost>(",
+            "pub fn code_block_with_header_slots_non_windowed<H: UiHost>(",
+        ] {
+            assert!(
+                CODE_BLOCK_RS.contains(marker),
+                "code_block.rs should keep non-windowed public surface marker `{marker}`"
+            );
+        }
+    }
+
+    #[test]
+    fn code_block_windowed_lane_keeps_explicit_static_host_boundary() {
+        for marker in [
+            "pub struct CodeBlockWindowedOptions {",
+            "pub fn windowed(mut self, options: CodeBlockWindowedOptions) -> Self {",
+            "pub fn into_element_windowed<H: UiHost + 'static>(",
+            "pub fn code_block_windowed<H: UiHost + 'static>(",
+            "pub fn code_block_with_windowed<H: UiHost + 'static>(",
+            "pub fn code_block_with_header_slots_windowed<H: UiHost + 'static>(",
+            "fn render_code_block_windowed_lines<H: UiHost + 'static>(",
+            "CodeBlock::windowed(...) requires CodeBlock::into_element_windowed(...)",
+        ] {
+            assert!(
+                CODE_BLOCK_RS.contains(marker),
+                "code_block.rs should keep explicit retained-lane marker `{marker}`"
+            );
+        }
+    }
+
+    #[test]
+    fn code_block_common_ui_options_do_not_leak_windowed_knobs() {
+        let source_without_tests = CODE_BLOCK_RS
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap_or(CODE_BLOCK_RS);
+        let ui_options_section = source_without_tests
+            .split("pub struct CodeBlockUiOptions {")
+            .nth(1)
+            .and_then(|section| section.split("impl Default for CodeBlockUiOptions").next())
+            .unwrap_or("");
+
+        for marker in [
+            "pub struct CodeBlockUiOptions {",
+            "pub wrap: CodeBlockWrap,",
+            "pub max_height: Option<Px>,",
+            "pub show_scrollbar_x: bool,",
+            "pub show_scrollbar_y: bool,",
+        ] {
+            assert!(
+                source_without_tests.contains(marker),
+                "code_block.rs should keep common UI option marker `{marker}`"
+            );
+        }
+        assert!(
+            !ui_options_section.contains("windowed_lines"),
+            "code_block.rs should keep `windowed_lines` out of CodeBlockUiOptions"
+        );
+        assert!(
+            !ui_options_section.contains("windowed_lines_overscan"),
+            "code_block.rs should keep `windowed_lines_overscan` out of CodeBlockUiOptions"
+        );
+        assert!(
+            !source_without_tests.contains("options.windowed_lines"),
+            "code_block.rs should not branch on hidden windowed flags inside the common options lane"
         );
     }
 }

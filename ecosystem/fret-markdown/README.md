@@ -34,6 +34,9 @@ let components = fret_markdown::MarkdownComponents::<App>::default()
     // Default fenced code blocks are rendered via `fret-code-view`.
     .with_code_block_wrap(fret_code_view::CodeBlockWrap::ScrollX)
     .with_code_block_scrollbar_x(true)
+    .with_code_block_windowed(Some(
+        fret_code_view::CodeBlockWindowedOptions::default(),
+    ))
     // Optional: cap code block height via theme (default: ~16 lines) and enable internal Y scrolling.
     // Theme keys:
     // - canonical: `fret.markdown.code_block.max_height`
@@ -48,6 +51,8 @@ let components = fret_markdown::MarkdownComponents {
         // return AnyElement
         todo!()
     })),
+    // Retained/windowed code fences are configured separately from `_options`.
+    code_block_windowed: Some(fret_code_view::CodeBlockWindowedOptions::default()),
     // Optional: tweak the default code block renderer per fence (expand/collapse, wrap overrides, …).
     code_block_ui_resolver: Some(Arc::new(|_cx, _info, _options| {
         // mutate options

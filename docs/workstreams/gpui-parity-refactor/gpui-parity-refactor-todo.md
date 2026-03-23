@@ -1244,8 +1244,9 @@ topics (if/when we implement them):
     - Scripted scroll capture exists: `tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json` (run with `fretboard diag run ...`).
     - Baseline variant exists (same steps, different label): `tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json`.
     - Stale-paint check is wired: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-code-view-root`.
-    - First migration target complete: `ecosystem/fret-code-view` now supports `CodeBlockUiOptions.windowed_lines` and implements it via a retained
-      VirtualList host (ADR 0177), so window shifts can reconcile without dirtying the parent cache root.
+    - First migration target complete: `ecosystem/fret-code-view` now supports an explicit retained/windowed lane
+      (`CodeBlockWindowedOptions`, `CodeBlock::windowed(...)`, `code_block_*_windowed(...)`) and implements it via a
+      retained VirtualList host (ADR 0177), so window shifts can reconcile without dirtying the parent cache root.
     - Next (v1):
       - First migration target: `ecosystem/fret-code-view` “CodeBlock -> windowed lines” (visible line window + overscan), with regression enforced by the harness above.
       - Run A/B: `FRET_UI_GALLERY_CODE_VIEW_WINDOWED=0|1` toggles the `code_view_torture` page path (default: `1`).
