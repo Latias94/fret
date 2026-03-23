@@ -6,7 +6,6 @@ use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
-use fret_ui_shadcn::prelude::*;
 use serde_json::json;
 use std::sync::Arc;
 
@@ -40,40 +39,41 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         json_schema: None,
     };
 
-    let tools = ui_ai::AgentTools::multiple_uncontrolled([
-        ui_ai::AgentTool::new("web_search", tool_web_search)
-            .trigger_test_id("ui-ai-agent-demo-tool-search-trigger")
-            .into_item(cx),
-        ui_ai::AgentTool::new("read_url", tool_read_url)
-            .trigger_test_id("ui-ai-agent-demo-tool-read-file-trigger")
-            .into_item(cx),
-    ])
-    .into_element(cx);
+    let tools = ui_ai::AgentTools::empty()
+        .children([
+            ui_ai::AgentTool::new("web_search", tool_web_search)
+                .trigger_test_id("ui-ai-agent-demo-tool-search-trigger"),
+            ui_ai::AgentTool::new("read_url", tool_read_url)
+                .trigger_test_id("ui-ai-agent-demo-tool-read-file-trigger"),
+        ])
+        .into_element(cx);
 
     let output_schema = Arc::from(
         "z.object({\n  sentiment: z.enum(['positive', 'negative', 'neutral']),\n  score: z.number(),\n  summary: z.string(),\n})",
     );
 
-    let content = ui_ai::AgentContent::new([
-        ui_ai::AgentInstructions::new(
-            "Analyze the sentiment of the provided text and return a structured analysis with sentiment classification, confidence score, and summary.",
-        )
-        .into_element(cx),
-        tools,
-        ui_ai::AgentOutput::new(output_schema).into_element(cx),
-    ])
-    .into_element(cx);
-
-    let agent = ui_ai::Agent::new([
-        ui_ai::AgentHeader::new("Sentiment Analyzer")
-            .model("anthropic/claude-sonnet-4-5")
-            .test_id("ui-ai-agent-demo-header")
+    let content = ui_ai::AgentContent::empty()
+        .children([
+            ui_ai::AgentInstructions::new(
+                "Analyze the sentiment of the provided text and return a structured analysis with sentiment classification, confidence score, and summary.",
+            )
             .into_element(cx),
-        content,
-    ])
-    .test_id("ui-ai-agent-demo-root")
-    .refine_layout(max_w)
-    .into_element(cx);
+            tools,
+            ui_ai::AgentOutput::new(output_schema).into_element(cx),
+        ])
+        .into_element(cx);
+
+    let agent = ui_ai::Agent::empty()
+        .children([
+            ui_ai::AgentHeader::new("Sentiment Analyzer")
+                .model("anthropic/claude-sonnet-4-5")
+                .test_id("ui-ai-agent-demo-header")
+                .into_element(cx),
+            content,
+        ])
+        .test_id("ui-ai-agent-demo-root")
+        .refine_layout(max_w)
+        .into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![

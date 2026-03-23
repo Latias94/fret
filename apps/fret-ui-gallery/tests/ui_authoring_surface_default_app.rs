@@ -9218,6 +9218,7 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/ai/prompt_input_docs_demo.rs",
             "src/ui/snippets/ai/prompt_input_provider_demo.rs",
             "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
+            "src/ui/snippets/ai/prompt_input_tooltip_demo.rs",
             "src/ui/snippets/ai/queue_demo.rs",
             "src/ui/snippets/ai/reasoning_demo.rs",
             "src/ui/snippets/ai/sandbox_demo.rs",
@@ -9309,6 +9310,7 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
         "src/ui/snippets/ai/prompt_input_docs_demo.rs",
         "src/ui/snippets/ai/prompt_input_provider_demo.rs",
         "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
+        "src/ui/snippets/ai/prompt_input_tooltip_demo.rs",
         "src/ui/snippets/ai/reasoning_demo.rs",
         "src/ui/snippets/ai/schema_display_demo.rs",
         "src/ui/snippets/ai/shimmer_demo.rs",
@@ -9384,6 +9386,66 @@ fn prompt_input_docs_demo_prefers_children_lane_over_root_slots() {
             "ui_ai::PromptInputFooter::new(",
         ],
         &["PromptInputRoot::new(", ".into_element_with_slots("],
+    );
+}
+
+#[test]
+fn prompt_input_docs_page_tracks_official_examples_sections() {
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_prompt_input_docs_demo.rs",
+        &[
+            "DocSection::build(cx, \"Usage with AI SDK\", demo)",
+            "DocSection::build(cx, \"Features\", features)",
+            "DocSection::build(cx, \"Cursor Style\", cursor_style)",
+            "DocSection::build(cx, \"Button Tooltips\", button_tooltips)",
+            "DocSection::build(cx, \"Parts & Props\", parts)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[],
+    );
+}
+
+#[test]
+fn prompt_input_tooltip_demo_prefers_prompt_input_tooltip_surface() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/prompt_input_tooltip_demo.rs",
+        &[
+            "ui_ai::PromptInputButton::new(\"Search the web\")",
+            ".tooltip(ui_ai::PromptInputButtonTooltip::new(\"Search the web\"))",
+            ".shortcut(\"⌘K\")",
+            ".side(shadcn::TooltipSide::Bottom)",
+            "ui_ai::PromptInputTools::empty()",
+        ],
+        &["shadcn::Tooltip::new("],
+    );
+}
+
+#[test]
+fn tool_demo_prefers_docs_shaped_tool_children_and_rich_output_lane() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/tool_demo.rs",
+        &[
+            "ui_ai::Tool::root()",
+            ".children([",
+            "ui_ai::ToolOutput::custom([",
+            "ui_ai::MessageResponse::new(weather_markdown).into_element(cx)",
+        ],
+        &["ui_ai::Tool::new("],
+    );
+}
+
+#[test]
+fn ai_tool_page_tracks_docs_shaped_sections() {
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_tool_demo.rs",
+        &[
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"State Mapping\", state_mapping)",
+            "DocSection::build(cx, \"Builder Surface\", props)",
+            "DocSection::build(cx, \"Notes\", notes)",
+            "Tool::root().children([...])",
+        ],
+        &[],
     );
 }
 

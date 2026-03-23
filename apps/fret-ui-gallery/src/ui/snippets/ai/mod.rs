@@ -20,6 +20,7 @@ pub mod open_in_chat_demo;
 pub mod package_info_demo;
 pub mod plan_demo;
 pub mod prompt_input_docs_demo;
+pub mod prompt_input_tooltip_demo;
 pub mod reasoning_demo;
 pub mod reasoning_hooks;
 pub mod schema_display_demo;
