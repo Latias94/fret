@@ -114,8 +114,8 @@ pub fn use_task_controller<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Task
 pub struct Task {
     open: Option<Model<bool>>,
     default_open: bool,
-    trigger: TaskTrigger,
-    content: TaskContent,
+    trigger: Option<TaskTrigger>,
+    content: Option<TaskContent>,
     test_id_root: Option<Arc<str>>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
@@ -126,6 +126,8 @@ impl std::fmt::Debug for Task {
         f.debug_struct("Task")
             .field("open", &self.open.as_ref().map(|_| "<model>"))
             .field("default_open", &self.default_open)
+            .field("has_trigger", &self.trigger.is_some())
+            .field("has_content", &self.content.is_some())
             .field("test_id_root", &self.test_id_root.as_deref())
             .field("layout", &self.layout)
             .field("chrome", &self.chrome)
@@ -134,16 +136,51 @@ impl std::fmt::Debug for Task {
 }
 
 impl Task {
-    pub fn new(trigger: TaskTrigger, content: TaskContent) -> Self {
+    /// Docs-shaped compound root aligned with upstream `<Task>...</Task>`.
+    pub fn root() -> Self {
         Self {
             open: None,
             default_open: true,
-            trigger,
-            content,
+            trigger: None,
+            content: None,
             test_id_root: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    pub fn new(trigger: TaskTrigger, content: TaskContent) -> Self {
+        Self::root().trigger(trigger).content(content)
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = TaskChild>) -> Self {
+        for child in children {
+            match child {
+                TaskChild::Trigger(trigger) => {
+                    if self.trigger.is_some() {
+                        debug_assert!(false, "Task expects a single TaskTrigger");
+                    }
+                    self.trigger = Some(trigger);
+                }
+                TaskChild::Content(content) => {
+                    if self.content.is_some() {
+                        debug_assert!(false, "Task expects a single TaskContent");
+                    }
+                    self.content = Some(content);
+                }
+            }
+        }
+        self
+    }
+
+    pub fn trigger(mut self, trigger: TaskTrigger) -> Self {
+        self.trigger = Some(trigger);
+        self
+    }
+
+    pub fn content(mut self, content: TaskContent) -> Self {
+        self.content = Some(content);
+        self
     }
 
     pub fn open_model(mut self, open: Model<bool>) -> Self {
@@ -172,10 +209,15 @@ impl Task {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Some(trigger) = self.trigger else {
+            debug_assert!(false, "Task requires a TaskTrigger");
+            return cx.container(Default::default(), |_| Vec::new());
+        };
         let chrome = self.chrome;
         let layout = self.layout;
-        let trigger = self.trigger;
-        let content = self.content;
+        let content = self
+            .content
+            .unwrap_or_else(|| TaskContent::new(Vec::<AnyElement>::new()));
         let test_id_root = self.test_id_root;
         let open = fret_ui_kit::primitives::collapsible::CollapsibleRoot::new()
             .open(self.open.clone())
@@ -210,6 +252,32 @@ impl Task {
                 .role(SemanticsRole::Group)
                 .test_id(test_id),
         )
+    }
+}
+
+pub enum TaskChild {
+    Trigger(TaskTrigger),
+    Content(TaskContent),
+}
+
+impl std::fmt::Debug for TaskChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Trigger(_) => f.write_str("TaskChild::Trigger(..)"),
+            Self::Content(_) => f.write_str("TaskChild::Content(..)"),
+        }
+    }
+}
+
+impl From<TaskTrigger> for TaskChild {
+    fn from(value: TaskTrigger) -> Self {
+        Self::Trigger(value)
+    }
+}
+
+impl From<TaskContent> for TaskChild {
+    fn from(value: TaskContent) -> Self {
+        Self::Content(value)
     }
 }
 
@@ -693,6 +761,38 @@ mod tests {
                 Some(FontWeight::NORMAL),
                 None,
             ))
+        );
+    }
+
+    #[test]
+    fn task_compound_children_surface_resolves_trigger_and_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "task-root", |cx| {
+            Task::root()
+                .default_open(true)
+                .children([
+                    TaskChild::Trigger(TaskTrigger::new("Found project files")),
+                    TaskChild::Content(TaskContent::new([
+                        TaskItem::new([cx.text("Read layout.tsx")]).into_element(cx),
+                        TaskItem::new([cx.text("Scan 52 files")]).into_element(cx),
+                    ])),
+                ])
+                .into_element(cx)
+        });
+
+        assert!(
+            find_text_by_content(&el, "Found project files").is_some(),
+            "compound Task root should render the trigger title"
+        );
+        assert!(
+            find_text_by_content(&el, "Read layout.tsx").is_some(),
+            "compound Task root should render TaskContent children"
         );
     }
 }

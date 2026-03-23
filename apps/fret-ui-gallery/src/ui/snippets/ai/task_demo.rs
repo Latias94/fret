@@ -3,31 +3,33 @@ pub const SOURCE: &str = include_str!("task_demo.rs");
 // region: example
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
+use fret_core::Px;
+use fret_ui::Theme;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::{icon, style as decl_style};
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
+use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let preset = cx.local_model_keyed("preset", || 0_u8);
     let preset_value = cx.app.models().read(&preset, |v| *v).unwrap_or(0);
 
-    let preset_for_react = preset.clone();
+    let react_preset = preset.clone();
     let react_dev = shadcn::Button::new("React Development")
         .variant(shadcn::ButtonVariant::Outline)
         .on_activate(cx.actions().listen(move |host, action_cx| {
-            let _ = host.models_mut().update(&preset_for_react, |v| *v = 0);
+            let _ = host.models_mut().update(&react_preset, |v| *v = 0);
             host.notify(action_cx);
             host.request_redraw(action_cx.window);
         }))
         .into_element(cx);
 
-    let preset_for_api = preset.clone();
+    let api_preset = preset.clone();
     let api_integration = shadcn::Button::new("API Integration")
         .variant(shadcn::ButtonVariant::Outline)
         .on_activate(cx.actions().listen(move |host, action_cx| {
-            let _ = host.models_mut().update(&preset_for_api, |v| *v = 1);
+            let _ = host.models_mut().update(&api_preset, |v| *v = 1);
             host.notify(action_cx);
             host.request_redraw(action_cx.window);
         }))
@@ -101,13 +103,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 };
 
                 let content_children = items.into_iter().map(|(text, file)| {
-                    let row = if let Some((file_name, icon)) = file {
+                    if let Some((file_name, icon_name)) = file {
                         ui_ai::TaskItem::new([
                             cx.text(text),
                             ui_ai::TaskItemFile::new([
                                 icon::icon_with(
                                     cx,
-                                    fret_icons::IconId::new_static(icon),
+                                    fret_icons::IconId::new_static(icon_name),
                                     Some(Px(16.0)),
                                     None,
                                 ),
@@ -118,8 +120,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .into_element(cx)
                     } else {
                         ui_ai::TaskItem::new([cx.text(text)]).into_element(cx)
-                    };
-                    row
+                    }
                 });
 
                 let content = if task_index == 0 {
@@ -128,8 +129,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ui_ai::TaskContent::new(content_children)
                 };
 
-                ui_ai::Task::new(trigger, content)
+                ui_ai::Task::root()
                     .default_open(task_index == 0)
+                    .children([
+                        ui_ai::TaskChild::Trigger(trigger),
+                        ui_ai::TaskChild::Content(content),
+                    ])
                     .into_element(cx)
             })
             .collect::<Vec<_>>()
@@ -161,7 +166,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(move |cx| {
         vec![
             cx.text("Task (AI Elements)"),
-            cx.text("Collapsible task list demo aligned with the AI Elements Task docs."),
+            cx.text(
+                "Collapsible task list demo aligned with the official AI Elements Task structure.",
+            ),
             ui::h_row(move |_cx| vec![react_dev, api_integration])
                 .gap(Space::N2)
                 .items_center()
