@@ -3,10 +3,11 @@ pub const SOURCE: &str = include_str!("suggestions_demo.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::{Corners, Edges, Px, SemanticsRole};
+use fret_icons_lucide::generated_ids::lucide;
 use fret_ui::element::SemanticsProps;
 use fret_ui::{Invalidation, Theme};
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::{icon as decl_icon, style as decl_style};
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
@@ -55,6 +56,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .on_click(on_click)
             .into_element(cx),
     ])
+    .viewport_test_id("ui-ai-suggestions-viewport")
     .test_id_root("ui-ai-suggestions-root")
     .into_element(cx);
 
@@ -124,3 +126,36 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .into_element(cx)
 }
 // endregion: example
+
+// region: custom_children_example
+pub fn render_custom_children(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let sparkles = decl_icon::icon_with(cx, lucide::SPARKLES, Some(Px(16.0)), None);
+    let globe = decl_icon::icon_with(cx, lucide::GLOBE, Some(Px(16.0)), None);
+
+    let suggestions = ui_ai::Suggestions::new([
+        ui_ai::Suggestion::new("Summarize the release notes")
+            .test_id("ui-ai-suggestion-custom-summary")
+            .children([sparkles, cx.text("Summarize the release notes")])
+            .into_element(cx),
+        ui_ai::Suggestion::new("Draft a Tokyo travel brief")
+            .test_id("ui-ai-suggestion-custom-brief")
+            .children([globe, cx.text("Draft a Tokyo travel brief")])
+            .into_element(cx),
+    ])
+    .viewport_test_id("ui-ai-suggestions-custom-viewport")
+    .test_id_root("ui-ai-suggestions-custom-root")
+    .into_element(cx);
+
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text(
+                "Composable children let callers add icons or extra inline structure while the suggestion payload stays app-owned.",
+            ),
+            suggestions,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
+}
+// endregion: custom_children_example

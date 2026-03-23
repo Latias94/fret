@@ -106,11 +106,11 @@ impl Suggestions {
     }
 }
 
-#[derive(Clone)]
 /// A single suggestion pill aligned with AI Elements `Suggestion`.
 pub struct Suggestion {
     suggestion: Arc<str>,
     label: Option<Arc<str>>,
+    children: Vec<AnyElement>,
     on_click: Option<OnSuggestionClick>,
     disabled: bool,
     test_id: Option<Arc<str>>,
@@ -125,6 +125,7 @@ impl std::fmt::Debug for Suggestion {
         f.debug_struct("Suggestion")
             .field("suggestion", &self.suggestion.as_ref())
             .field("label", &self.label.as_deref())
+            .field("children_len", &self.children.len())
             .field("has_on_click", &self.on_click.is_some())
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id.as_deref())
@@ -141,6 +142,7 @@ impl Suggestion {
         Self {
             suggestion: suggestion.into(),
             label: None,
+            children: Vec::new(),
             on_click: None,
             disabled: false,
             test_id: None,
@@ -155,6 +157,16 @@ impl Suggestion {
 
     pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    pub fn child(mut self, child: AnyElement) -> Self {
+        self.children.push(child);
         self
     }
 
@@ -198,6 +210,7 @@ impl Suggestion {
             .label
             .clone()
             .unwrap_or_else(|| Arc::clone(&self.suggestion));
+        let children = self.children;
         let on_click = self.on_click;
         let suggestion = self.suggestion;
 
@@ -212,6 +225,10 @@ impl Suggestion {
             button = button.test_id(test_id);
         }
 
+        if !children.is_empty() {
+            button = button.children(children);
+        }
+
         if let Some(on_click) = on_click {
             button = button.on_activate(Arc::new(move |host, action_cx, _reason| {
                 on_click(host, action_cx, Arc::clone(&suggestion));
@@ -221,5 +238,73 @@ impl Suggestion {
         }
 
         button.into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{ElementKind, PressableProps, TextProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(220.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    fn find_pressable_by_label<'a>(el: &'a AnyElement, label: &str) -> Option<&'a PressableProps> {
+        match &el.kind {
+            ElementKind::Pressable(props) if props.a11y.label.as_deref() == Some(label) => {
+                Some(props)
+            }
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_pressable_by_label(child, label)),
+        }
+    }
+
+    #[test]
+    fn suggestion_custom_children_replace_default_visible_copy() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let suggestion = "Summarize the roadmap";
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "suggestion", |cx| {
+                Suggestion::new(suggestion)
+                    .children([cx.text("Custom chip body")])
+                    .into_element(cx)
+            });
+
+        assert!(
+            find_text_by_content(&el, "Custom chip body").is_some(),
+            "custom children should render inside the button"
+        );
+        assert!(
+            find_text_by_content(&el, suggestion).is_none(),
+            "default suggestion text should not render when custom children are provided"
+        );
+
+        let pressable =
+            find_pressable_by_label(&el, suggestion).expect("suggestion pressable label");
+        assert!(
+            pressable.enabled,
+            "custom children should not disable activation"
+        );
     }
 }
