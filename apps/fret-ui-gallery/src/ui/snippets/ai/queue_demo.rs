@@ -156,8 +156,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let idx = idx + 1;
             let msg = message.clone();
             let keyed_id = msg.id.clone();
-            let hover_marker_id =
-                Arc::<str>::from(format!("ui-ai-queue-item-{idx}-hovered-marker"));
 
             let on_remove: ui_ai::OnQueueItemActionActivate = Arc::new({
                 let messages = messages.clone();
@@ -192,7 +190,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             out.push(cx.keyed(keyed_id, move |cx| {
                 ui_ai::QueueItem::new()
                     .test_id(format!("ui-ai-queue-item-{idx}"))
-                    .into_element(cx, move |cx, st| {
+                    .into_element(cx, move |cx, _st| {
                         let summary: Arc<str> = {
                             let mut s = String::new();
                             for part in msg.parts.iter() {
@@ -218,7 +216,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .items_center()
                             .into_element(cx);
 
-                        let actions_visible = st.hovered;
                         let remove_icon = decl_icon::icon_with(
                             cx,
                             fret_icons::IconId::new_static("lucide.trash-2"),
@@ -233,7 +230,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         );
                         let mut remove_action = ui_ai::QueueItemAction::new("Remove from queue")
                             .children([remove_icon])
-                            .visible(actions_visible)
                             .on_activate(on_remove.clone());
                         if idx == 1 {
                             remove_action =
@@ -243,17 +239,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
                         let send_action = ui_ai::QueueItemAction::new("Send now")
                             .children([send_icon])
-                            .visible(actions_visible)
                             .on_activate(on_send.clone())
                             .into_element(cx);
 
-                        let mut actions =
-                            ui_ai::QueueItemActions::new([remove_action, send_action])
-                                .refine_layout(LayoutRefinement::default().flex_none())
-                                .into_element(cx);
-                        if idx == 1 && st.hovered {
-                            actions = actions.test_id(hover_marker_id.clone());
-                        }
+                        let actions = ui_ai::QueueItemActions::new([remove_action, send_action])
+                            .refine_layout(LayoutRefinement::default().flex_none())
+                            .into_element(cx);
 
                         let row = ui::h_flex(move |_cx| vec![left, actions])
                             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -317,7 +308,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             });
 
             out.push(cx.keyed(keyed_id, move |cx| {
-                ui_ai::QueueItem::new().into_element(cx, move |cx, st| {
+                ui_ai::QueueItem::new().into_element(cx, move |cx, _st| {
                     let indicator = ui_ai::QueueItemIndicator::new()
                         .completed(todo.completed)
                         .into_element(cx);
@@ -330,7 +321,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .items_center()
                         .into_element(cx);
 
-                    let actions_visible = st.hovered;
                     let remove_icon = decl_icon::icon_with(
                         cx,
                         fret_icons::IconId::new_static("lucide.trash-2"),
@@ -340,7 +330,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     let actions =
                         ui_ai::QueueItemActions::new([ui_ai::QueueItemAction::new("Remove todo")
                             .children([remove_icon])
-                            .visible(actions_visible)
                             .on_activate(on_remove.clone())
                             .into_element(cx)])
                         .refine_layout(LayoutRefinement::default().flex_none())

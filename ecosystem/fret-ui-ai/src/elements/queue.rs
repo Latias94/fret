@@ -84,6 +84,105 @@ fn rich_strikethrough(text: &Arc<str>, strike_color: Color) -> AttributedText {
     AttributedText::new(Arc::clone(text), Arc::<[TextSpan]>::from([span]))
 }
 
+/// Rust surface aligned with AI Elements `QueueMessagePart`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QueueMessagePart {
+    pub r#type: Arc<str>,
+    pub text: Option<Arc<str>>,
+    pub url: Option<Arc<str>>,
+    pub filename: Option<Arc<str>>,
+    pub media_type: Option<Arc<str>>,
+}
+
+impl QueueMessagePart {
+    pub fn new(kind: impl Into<Arc<str>>) -> Self {
+        Self {
+            r#type: kind.into(),
+            text: None,
+            url: None,
+            filename: None,
+            media_type: None,
+        }
+    }
+
+    pub fn text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.text = Some(text.into());
+        self
+    }
+
+    pub fn url(mut self, url: impl Into<Arc<str>>) -> Self {
+        self.url = Some(url.into());
+        self
+    }
+
+    pub fn filename(mut self, filename: impl Into<Arc<str>>) -> Self {
+        self.filename = Some(filename.into());
+        self
+    }
+
+    pub fn media_type(mut self, media_type: impl Into<Arc<str>>) -> Self {
+        self.media_type = Some(media_type.into());
+        self
+    }
+}
+
+/// Rust surface aligned with AI Elements `QueueMessage`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QueueMessage {
+    pub id: Arc<str>,
+    pub parts: Arc<[QueueMessagePart]>,
+}
+
+impl QueueMessage {
+    pub fn new(id: impl Into<Arc<str>>, parts: impl IntoIterator<Item = QueueMessagePart>) -> Self {
+        Self {
+            id: id.into(),
+            parts: Arc::from(parts.into_iter().collect::<Vec<_>>()),
+        }
+    }
+}
+
+/// Rust surface aligned with AI Elements `QueueTodo["status"]`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QueueTodoStatus {
+    Pending,
+    Completed,
+}
+
+/// Rust surface aligned with AI Elements `QueueTodo`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QueueTodo {
+    pub id: Arc<str>,
+    pub title: Arc<str>,
+    pub description: Option<Arc<str>>,
+    pub status: Option<QueueTodoStatus>,
+}
+
+impl QueueTodo {
+    pub fn new(id: impl Into<Arc<str>>, title: impl Into<Arc<str>>) -> Self {
+        Self {
+            id: id.into(),
+            title: title.into(),
+            description: None,
+            status: None,
+        }
+    }
+
+    pub fn description(mut self, description: impl Into<Arc<str>>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    pub fn status(mut self, status: QueueTodoStatus) -> Self {
+        self.status = Some(status);
+        self
+    }
+
+    pub fn is_completed(&self) -> bool {
+        matches!(self.status, Some(QueueTodoStatus::Completed))
+    }
+}
+
 /// AI Elements-aligned `Queue` surface.
 pub struct Queue {
     children: Vec<AnyElement>,
@@ -272,6 +371,20 @@ impl QueueSection {
         collapsible.into_element_with_open_model(
             cx,
             move |cx, open, is_open| trigger(cx, QueueSectionState { open, is_open }),
+            content,
+        )
+    }
+
+    /// Docs-style content-only lane for layouts that mount a section shell without a visible
+    /// trigger (for example the AI Elements Queue + PromptInput example).
+    pub fn into_content_only_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement {
+        self.into_element(
+            cx,
+            |cx, _st| cx.container(ContainerProps::default(), |_cx| Vec::<AnyElement>::new()),
             content,
         )
     }
@@ -636,6 +749,10 @@ pub struct QueueItemState {
     pub hovered: bool,
 }
 
+fn inherited_queue_item_state<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<QueueItemState> {
+    cx.provided::<QueueItemState>().copied()
+}
+
 #[derive(Clone)]
 /// AI Elements-aligned item wrapper (`QueueItem`).
 pub struct QueueItem {
@@ -701,7 +818,10 @@ impl QueueItem {
             chrome.background = hovered.then_some(muted);
             chrome.corner_radii = Corners::all(MetricRef::radius(Radius::Sm).resolve(&theme));
 
-            let children = content(cx, QueueItemState { hovered });
+            // Mirror upstream `group` semantics by installing the hovered signal as inherited
+            // state so descendants can query it (e.g. QueueItemAction default visibility).
+            let state = QueueItemState { hovered };
+            let children = cx.provide(state, |cx| content(cx, state));
             let col = ui::v_stack(move |_cx| children)
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N1)
@@ -797,10 +917,10 @@ impl QueueItemIndicator {
     }
 }
 
-#[derive(Clone)]
 /// AI Elements-aligned item main content (`QueueItemContent`).
 pub struct QueueItemContent {
     text: Arc<str>,
+    children: Vec<AnyElement>,
     completed: bool,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -821,6 +941,7 @@ impl QueueItemContent {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
             text: text.into(),
+            children: Vec::new(),
             completed: false,
             test_id: None,
             layout: LayoutRefinement::default()
@@ -832,6 +953,18 @@ impl QueueItemContent {
 
     pub fn completed(mut self, completed: bool) -> Self {
         self.completed = completed;
+        self
+    }
+
+    /// Overrides the visible content while keeping the base text available as a fallback value.
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Appends one custom child to the visible content override.
+    pub fn child(mut self, child: AnyElement) -> Self {
+        self.children.push(child);
         self
     }
 
@@ -848,58 +981,78 @@ impl QueueItemContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let muted_fg = resolve_muted_fg(&theme);
+        let has_custom_children = !self.children.is_empty();
 
         let fg = if self.completed {
             alpha(muted_fg, 0.5)
         } else {
             muted_fg
         };
+        let refinement = typography::composable_preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+        );
 
-        let style = TextStyle {
-            ..typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(&theme)
-        };
-
-        let el = if self.completed {
-            let rich = rich_strikethrough(&self.text, fg);
-            cx.styled_text_props(StyledTextProps {
-                layout: decl_style::layout_style(&theme, self.layout),
-                rich,
-                style: Some(style),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            })
+        let el = if !has_custom_children {
+            let style = TextStyle {
+                ..typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
+                    .resolve(&theme)
+            };
+            if self.completed {
+                let rich = rich_strikethrough(&self.text, fg);
+                cx.styled_text_props(StyledTextProps {
+                    layout: decl_style::layout_style(&theme, self.layout),
+                    rich,
+                    style: Some(style),
+                    color: Some(fg),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Ellipsis,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
+                })
+            } else {
+                cx.text_props(TextProps {
+                    layout: decl_style::layout_style(&theme, self.layout),
+                    text: self.text,
+                    style: Some(style),
+                    color: Some(fg),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Ellipsis,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
+                })
+            }
         } else {
-            cx.text_props(TextProps {
-                layout: decl_style::layout_style(&theme, self.layout),
-                text: self.text,
-                style: Some(style),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            })
+            let row = ui::h_row(move |_cx| self.children)
+                .layout(self.layout)
+                .gap(Space::N0)
+                .items(Items::Center)
+                .into_element(cx);
+            typography::scope_text_style_with_color(row, refinement, fg)
         };
 
         if let Some(test_id) = self.test_id {
             el.attach_semantics(
                 SemanticsDecoration::default()
-                    .role(SemanticsRole::Text)
+                    .role(if !has_custom_children {
+                        SemanticsRole::Text
+                    } else {
+                        SemanticsRole::Group
+                    })
                     .test_id(test_id),
             )
-        } else {
+        } else if !has_custom_children {
             el.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Text))
+        } else {
+            el.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Group))
         }
     }
 }
 
-#[derive(Clone)]
 /// AI Elements-aligned item description (`QueueItemDescription`).
 pub struct QueueItemDescription {
     text: Arc<str>,
+    children: Vec<AnyElement>,
     completed: bool,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -920,6 +1073,7 @@ impl QueueItemDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
             text: text.into(),
+            children: Vec::new(),
             completed: false,
             test_id: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
@@ -928,6 +1082,19 @@ impl QueueItemDescription {
 
     pub fn completed(mut self, completed: bool) -> Self {
         self.completed = completed;
+        self
+    }
+
+    /// Overrides the visible description content while keeping the base text available as a
+    /// fallback value.
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Appends one custom child to the visible description content override.
+    pub fn child(mut self, child: AnyElement) -> Self {
+        self.children.push(child);
         self
     }
 
@@ -944,6 +1111,7 @@ impl QueueItemDescription {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let muted_fg = resolve_muted_fg(&theme);
+        let has_custom_children = !self.children.is_empty();
 
         let fg = if self.completed {
             alpha(muted_fg, 0.4)
@@ -958,40 +1126,56 @@ impl QueueItemDescription {
         let mut layout = decl_style::layout_style(&theme, self.layout);
         layout.margin.left = MarginEdge::Px(MetricRef::space(Space::N6).resolve(&theme));
 
-        let mut el = if self.completed {
-            let rich = rich_strikethrough(&self.text, fg);
-            cx.styled_text_props(StyledTextProps {
-                layout,
-                rich,
-                style: None,
-                color: None,
-                wrap: TextWrap::Word,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            })
+        let mut el = if !has_custom_children {
+            if self.completed {
+                let rich = rich_strikethrough(&self.text, fg);
+                cx.styled_text_props(StyledTextProps {
+                    layout,
+                    rich,
+                    style: None,
+                    color: None,
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
+                })
+            } else {
+                cx.text_props(TextProps {
+                    layout,
+                    text: self.text,
+                    style: None,
+                    color: None,
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
+                })
+            }
         } else {
-            cx.text_props(TextProps {
-                layout,
-                text: self.text,
-                style: None,
-                color: None,
-                wrap: TextWrap::Word,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            })
+            let content = ui::v_stack(move |_cx| self.children)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N0)
+                .into_element(cx);
+            let mut props = ContainerProps::default();
+            props.layout = layout;
+            cx.container(props, move |_cx| vec![content])
         };
         el = typography::scope_text_style_with_color(el, refinement, fg);
 
         if let Some(test_id) = self.test_id {
             el.attach_semantics(
                 SemanticsDecoration::default()
-                    .role(SemanticsRole::Text)
+                    .role(if !has_custom_children {
+                        SemanticsRole::Text
+                    } else {
+                        SemanticsRole::Group
+                    })
                     .test_id(test_id),
             )
-        } else {
+        } else if !has_custom_children {
             el.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Text))
+        } else {
+            el.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Group))
         }
     }
 }
@@ -1040,7 +1224,7 @@ pub struct QueueItemAction {
     label: Arc<str>,
     children: Vec<AnyElement>,
     on_activate: Option<OnQueueItemActionActivate>,
-    visible: bool,
+    visible: Option<bool>,
     disabled: bool,
     test_id: Option<Arc<str>>,
     variant: ButtonVariant,
@@ -1072,7 +1256,7 @@ impl QueueItemAction {
             label: label.into(),
             children: Vec::new(),
             on_activate: None,
-            visible: true,
+            visible: None,
             disabled: false,
             test_id: None,
             variant: ButtonVariant::Ghost,
@@ -1094,9 +1278,12 @@ impl QueueItemAction {
 
     /// Mirrors the upstream default `opacity-0` + `group-hover:opacity-100` outcome.
     ///
-    /// When `false`, the action is still mounted but rendered at `opacity=0` (to preserve layout).
+    /// When unset (default), the action is visible only while the nearest `QueueItem` is hovered.
+    ///
+    /// When explicitly set to `false`, the action is still mounted but rendered at `opacity=0` (to
+    /// preserve layout).
     pub fn visible(mut self, visible: bool) -> Self {
-        self.visible = visible;
+        self.visible = Some(visible);
         self
     }
 
@@ -1173,7 +1360,10 @@ impl QueueItemAction {
         }
 
         let btn = btn.into_element(cx);
-        let opacity = if self.visible { 1.0 } else { 0.0 };
+        let visible = self
+            .visible
+            .unwrap_or_else(|| inherited_queue_item_state(cx).is_some_and(|st| st.hovered));
+        let opacity = if visible { 1.0 } else { 0.0 };
         cx.opacity(opacity, move |_cx| vec![btn])
     }
 }
@@ -1300,10 +1490,10 @@ impl QueueItemImage {
     }
 }
 
-#[derive(Clone)]
 /// AI Elements-aligned file attachment badge (`QueueItemFile`).
 pub struct QueueItemFile {
-    filename: Arc<str>,
+    filename: Option<Arc<str>>,
+    children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -1311,7 +1501,8 @@ pub struct QueueItemFile {
 impl std::fmt::Debug for QueueItemFile {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("QueueItemFile")
-            .field("filename", &self.filename.as_ref())
+            .field("filename", &self.filename.as_deref())
+            .field("children_len", &self.children.len())
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .finish()
@@ -1321,10 +1512,24 @@ impl std::fmt::Debug for QueueItemFile {
 impl QueueItemFile {
     pub fn new(filename: impl Into<Arc<str>>) -> Self {
         Self {
-            filename: filename.into(),
+            filename: Some(filename.into()),
+            children: Vec::new(),
             test_id: None,
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Overrides the visible filename content while keeping the base filename available as a
+    /// fallback value.
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Appends one custom child to the visible filename content override.
+    pub fn child(mut self, child: AnyElement) -> Self {
+        self.children.push(child);
+        self
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -1342,6 +1547,7 @@ impl QueueItemFile {
         let border = resolve_border(&theme);
         let muted = resolve_muted(&theme);
         let fg = resolve_muted_fg(&theme);
+        let has_custom_children = !self.children.is_empty();
 
         let icon = decl_icon::icon_with(
             cx,
@@ -1350,24 +1556,40 @@ impl QueueItemFile {
             Some(ColorRef::Color(fg)),
         );
 
-        let filename = cx.text_props(TextProps {
-            layout: decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default()
-                    .max_w(MetricRef::Px(Px(100.0)))
-                    .min_w_0(),
-            ),
-            text: self.filename,
-            style: Some(
-                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs)
-                    .resolve(&theme),
-            ),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let filename = if !has_custom_children {
+            cx.text_props(TextProps {
+                layout: decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default()
+                        .max_w(MetricRef::Px(Px(100.0)))
+                        .min_w_0(),
+                ),
+                text: self.filename.unwrap_or_else(|| Arc::<str>::from("file")),
+                style: Some(
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Xs)
+                        .resolve(&theme),
+                ),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Ellipsis,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+            })
+        } else {
+            let content = ui::h_row(move |_cx| self.children)
+                .layout(LayoutRefinement::default().min_w_0())
+                .gap(Space::N0)
+                .items(Items::Center)
+                .into_element(cx);
+            typography::scope_text_style_with_color(
+                content,
+                typography::composable_preset_text_refinement(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                ),
+                fg,
+            )
+        };
 
         let row = ui::h_row(move |_cx| vec![icon, filename])
             .layout(LayoutRefinement::default().min_w_0())
@@ -1470,5 +1692,41 @@ mod tests {
             Some(alpha(expected_fg, 0.4))
         );
         assert_eq!(completed.inherited_text_style, Some(expected_refinement));
+    }
+
+    #[test]
+    fn queue_item_action_auto_visibility_follows_inherited_queue_item_hovered_state() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let visible =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                cx.provide(QueueItemState { hovered: true }, |cx| {
+                    QueueItemAction::new("Remove").into_element(cx)
+                })
+            });
+        let ElementKind::Opacity(props) = &visible.kind else {
+            panic!("expected QueueItemAction to build Opacity wrapper");
+        };
+        assert_eq!(props.opacity, 1.0);
+
+        let hidden = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            cx.provide(QueueItemState { hovered: false }, |cx| {
+                QueueItemAction::new("Remove").into_element(cx)
+            })
+        });
+        let ElementKind::Opacity(props) = &hidden.kind else {
+            panic!("expected QueueItemAction to build Opacity wrapper");
+        };
+        assert_eq!(props.opacity, 0.0);
+
+        let no_context =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                QueueItemAction::new("Remove").into_element(cx)
+            });
+        let ElementKind::Opacity(props) = &no_context.kind else {
+            panic!("expected QueueItemAction to build Opacity wrapper");
+        };
+        assert_eq!(props.opacity, 0.0);
     }
 }

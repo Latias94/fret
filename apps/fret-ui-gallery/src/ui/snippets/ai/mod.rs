@@ -99,6 +99,8 @@ pub mod prompt_input_referenced_sources_demo;
 #[cfg(feature = "gallery-dev")]
 pub mod queue_demo;
 #[cfg(feature = "gallery-dev")]
+pub mod queue_prompt_input_demo;
+#[cfg(feature = "gallery-dev")]
 pub mod sandbox_demo;
 #[cfg(feature = "gallery-dev")]
 pub mod sources_demo;
