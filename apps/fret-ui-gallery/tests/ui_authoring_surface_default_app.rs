@@ -9421,6 +9421,32 @@ fn prompt_input_action_menu_demo_prefers_docs_shaped_content_builder() {
 }
 
 #[test]
+fn prompt_input_provider_and_referenced_sources_keep_their_intentional_seams() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/prompt_input_provider_demo.rs",
+        &[
+            "ui_ai::PromptInputProvider::new()",
+            ".text_model(text)",
+            ".attachments_model(attachments)",
+            ".into_element_with_children(cx, move |cx, controller|",
+            "ui_ai::PromptInput::new(controller.text)",
+        ],
+        &[],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
+        &[
+            "ui_ai::PromptInputRoot::new_uncontrolled()",
+            ".referenced_sources_model(sources)",
+            ".into_element_with_slots(cx, move |cx| ui_ai::PromptInputSlots {",
+            "block_start: vec![ui_ai::PromptInputReferencedSourcesRow::new().into_element(cx)]",
+        ],
+        &[],
+    );
+}
+
+#[test]
 fn selected_ai_snippet_helpers_prefer_typed_children_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/shimmer_elements_demo.rs",

@@ -12,9 +12,14 @@ pub(super) fn preview_ai_prompt_input_action_menu_demo(
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
-        Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
+        Some(
+            "AI Elements are policy-level compositions built on top of lower-level primitives.",
+        ),
         vec![
             DocSection::build(cx, "Prompt Input Action Menu", demo)
+                .description(
+                    "Focused footer-tools lane: `PromptInputActionMenuContent::new([]).add_attachments(...)` is the copyable docs-shaped builder surface, while callback resolution still stays deferred inside the prompt scope.",
+                )
                 .test_id_prefix("ui-gallery-ai-prompt-input-action-menu-demo")
                 .code_rust_from_file_region(
                     snippets::prompt_input_action_menu_demo::SOURCE,
