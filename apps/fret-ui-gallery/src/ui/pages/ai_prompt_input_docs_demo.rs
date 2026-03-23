@@ -43,7 +43,7 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
         "This page now teaches the docs-shaped children lane first: transcript shell, header attachments row, body textarea, footer tools, model picker, and submit.",
         "The audit outcome remained mainly public-surface drift, not a `crates/fret-ui` mechanism bug: runtime drop handling and stable automation seams were already mostly healthy.",
         "The prompt input now exposes an upstream-like `on_submit(message)` payload lane so first-party docs no longer have to teach `PromptInputProvider` just to read submit data.",
-        "The prompt action menu now includes `PromptInputActionAddScreenshot`, but capture itself stays app-owned to preserve the mechanism-vs-policy boundary.",
+        "The prompt action menu content now accepts docs-shaped add-attachments / add-screenshot builders without explicit per-item callback wiring, while capture policy itself stays app-owned.",
     ])
     .test_id("ui-gallery-ai-prompt-input-docs-features");
     let parts = parts_table(cx).test_id("ui-gallery-ai-prompt-input-docs-parts");

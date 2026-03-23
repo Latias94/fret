@@ -2279,6 +2279,7 @@ impl PromptInputHeader {
 pub enum PromptInputFooterChild {
     Element(AnyElement),
     Submit(PromptInputSubmit),
+    Tools(PromptInputTools),
 }
 
 impl From<AnyElement> for PromptInputFooterChild {
@@ -2293,11 +2294,18 @@ impl From<PromptInputSubmit> for PromptInputFooterChild {
     }
 }
 
+impl From<PromptInputTools> for PromptInputFooterChild {
+    fn from(value: PromptInputTools) -> Self {
+        Self::Tools(value)
+    }
+}
+
 impl PromptInputFooterChild {
     fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         match self {
             Self::Element(el) => el,
             Self::Submit(submit) => submit.into_element(cx),
+            Self::Tools(tools) => tools.into_element(cx),
         }
     }
 }
@@ -2372,18 +2380,73 @@ impl PromptInputFooter {
     }
 }
 
+/// Children accepted by [`PromptInputTools`].
+///
+/// This keeps prompt-scoped composite affordances like [`PromptInputActionMenu`] on a deferred lane
+/// so they can resolve prompt callbacks before dropdown content is portalled.
+pub enum PromptInputToolsChild {
+    Element(AnyElement),
+    ActionMenu(PromptInputActionMenu),
+}
+
+impl From<AnyElement> for PromptInputToolsChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+impl From<PromptInputActionMenu> for PromptInputToolsChild {
+    fn from(value: PromptInputActionMenu) -> Self {
+        Self::ActionMenu(value)
+    }
+}
+
+impl PromptInputToolsChild {
+    fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        match self {
+            Self::Element(el) => el,
+            Self::ActionMenu(menu) => menu.into_element(cx),
+        }
+    }
+}
+
 /// Left-aligned tools container aligned with AI Elements `PromptInputTools`.
 pub struct PromptInputTools {
-    children: Vec<AnyElement>,
+    children: Vec<PromptInputToolsChild>,
     layout: LayoutRefinement,
 }
 
 impl PromptInputTools {
-    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+    pub fn empty() -> Self {
         Self {
-            children: children.into_iter().collect(),
+            children: Vec::new(),
             layout: LayoutRefinement::default().min_w_0(),
         }
+    }
+
+    pub fn new<I, T>(children: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<PromptInputToolsChild>,
+    {
+        Self::empty().children(children)
+    }
+
+    pub fn child<T>(mut self, child: T) -> Self
+    where
+        T: Into<PromptInputToolsChild>,
+    {
+        self.children.push(child.into());
+        self
+    }
+
+    pub fn children<I, T>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<PromptInputToolsChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
@@ -2405,7 +2468,12 @@ impl PromptInputTools {
                 align: CrossAlign::Center,
                 wrap: false,
             },
-            move |_cx| self.children,
+            move |cx| {
+                self.children
+                    .into_iter()
+                    .map(|child| child.into_element(cx))
+                    .collect::<Vec<_>>()
+            },
         )
     }
 }
@@ -2828,19 +2896,67 @@ impl PromptInputActionMenuItem {
 }
 
 /// Action menu content wrapper aligned with AI Elements `PromptInputActionMenuContent`.
+enum PromptInputActionMenuContentEntry {
+    Entry(DropdownMenuEntry),
+    Item(PromptInputActionMenuItem),
+    AddAttachments(PromptInputActionAddAttachments),
+    AddScreenshot(PromptInputActionAddScreenshot),
+}
+
+impl PromptInputActionMenuContentEntry {
+    fn into_entry<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuEntry {
+        match self {
+            Self::Entry(entry) => entry,
+            Self::Item(item) => item.into_entry(),
+            Self::AddAttachments(item) => item.into_entry(cx),
+            Self::AddScreenshot(item) => item.into_entry(cx),
+        }
+    }
+}
+
 pub struct PromptInputActionMenuContent {
-    entries: Vec<DropdownMenuEntry>,
+    entries: Vec<PromptInputActionMenuContentEntry>,
 }
 
 impl PromptInputActionMenuContent {
     pub fn new(entries: impl IntoIterator<Item = DropdownMenuEntry>) -> Self {
         Self {
-            entries: entries.into_iter().collect(),
+            entries: entries
+                .into_iter()
+                .map(PromptInputActionMenuContentEntry::Entry)
+                .collect(),
         }
     }
 
-    pub fn into_entries(self) -> Vec<DropdownMenuEntry> {
+    /// Add a generic prompt-input action-menu item on the docs-shaped builder lane.
+    pub fn item(mut self, item: PromptInputActionMenuItem) -> Self {
         self.entries
+            .push(PromptInputActionMenuContentEntry::Item(item));
+        self
+    }
+
+    /// Add the upstream-like attachments action without eagerly resolving prompt scope.
+    pub fn add_attachments(mut self, item: PromptInputActionAddAttachments) -> Self {
+        self.entries
+            .push(PromptInputActionMenuContentEntry::AddAttachments(item));
+        self
+    }
+
+    /// Add the upstream-like screenshot action without eagerly resolving prompt scope.
+    pub fn add_screenshot(mut self, item: PromptInputActionAddScreenshot) -> Self {
+        self.entries
+            .push(PromptInputActionMenuContentEntry::AddScreenshot(item));
+        self
+    }
+
+    pub fn into_entries<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> Vec<DropdownMenuEntry> {
+        self.entries
+            .into_iter()
+            .map(|entry| entry.into_entry(cx))
+            .collect()
     }
 }
 
@@ -2903,7 +3019,7 @@ impl PromptInputActionMenu {
         let side = self.side;
         let side_offset = self.side_offset;
         let trigger = self.trigger;
-        let entries = self.content.into_entries();
+        let entries = self.content.into_entries(cx);
 
         DropdownMenu::from_open(open.clone())
             .modal(modal)
@@ -3626,6 +3742,58 @@ mod tests {
     }
 
     #[test]
+    fn prompt_input_tools_child_builder_accepts_deferred_action_menu() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let attachments = app.models_mut().insert(Vec::<AttachmentData>::new());
+        let on_submit: OnPromptInputSubmit = Arc::new(|_host, _action_cx, _message, _reason| {});
+        let on_add_attachments: OnActivate = Arc::new(|_host, _action_cx, _reason| {});
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(180.0)),
+        );
+
+        let _element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "prompt-input", |cx| {
+                let menu = PromptInputActionMenu::new(
+                    PromptInputActionMenuContent::new([]).add_attachments(
+                        PromptInputActionAddAttachments::new().test_id("pi-add-attachments-item"),
+                    ),
+                )
+                .trigger(PromptInputActionMenuTrigger::new().test_id("pi-action-menu-trigger"));
+                let search = PromptInputButton::new("Search").test_id("pi-search-btn");
+                let tools = PromptInputTools::empty()
+                    .child(menu)
+                    .child(search.into_element(cx));
+                assert_eq!(tools.children.len(), 2);
+                assert!(matches!(
+                    tools.children[0],
+                    PromptInputToolsChild::ActionMenu(_)
+                ));
+                assert!(matches!(
+                    tools.children[1],
+                    PromptInputToolsChild::Element(_)
+                ));
+
+                PromptInput::new_uncontrolled()
+                    .attachments(attachments.clone())
+                    .on_submit(on_submit.clone())
+                    .on_add_attachments(on_add_attachments.clone())
+                    .test_id_root("pi-root")
+                    .children([
+                        PromptInputPart::from(PromptInputBody::new([
+                            PromptInputTextarea::new().test_id("pi-textarea")
+                        ])),
+                        PromptInputPart::from(PromptInputFooter::new(
+                            [tools],
+                            [PromptInputSubmit::new()],
+                        )),
+                    ])
+                    .into_element(cx)
+            });
+    }
+
+    #[test]
     fn prompt_input_on_submit_receives_message_and_supersedes_legacy_on_send() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -3745,6 +3913,68 @@ mod tests {
             .read(&attachments, |items| items.len())
             .unwrap_or(usize::MAX);
         assert_eq!(cleared_attachments_len, 0);
+    }
+
+    #[test]
+    fn prompt_input_action_menu_content_deferred_builder_resolves_prompt_callbacks() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(180.0)),
+        );
+
+        let mut app = App::new();
+        let on_add_attachments: OnActivate = Arc::new(|_host, _action_cx, _reason| {});
+        let entries = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "prompt-input-action-menu-content-test",
+            |cx| {
+                let config = PromptInputConfig {
+                    disabled: false,
+                    loading: false,
+                    status: None,
+                    clear_on_send: true,
+                    clear_attachments_on_send: true,
+                    on_submit: None,
+                    on_send: None,
+                    on_stop: None,
+                    on_add_attachments: Some(on_add_attachments.clone()),
+                    on_add_screenshot: None,
+                    accept: None,
+                    multiple: false,
+                    max_files: None,
+                    max_file_size_bytes: None,
+                    on_error: None,
+                    test_id_root: None,
+                    test_id_textarea: None,
+                    test_id_send: None,
+                    test_id_stop: None,
+                    test_id_attachments: None,
+                    test_id_referenced_sources: None,
+                    test_id_add_attachments: None,
+                };
+                cx.provide(config, |cx| {
+                    PromptInputActionMenuContent::new([])
+                        .add_attachments(
+                            PromptInputActionAddAttachments::new()
+                                .test_id("pi-add-attachments-item"),
+                        )
+                        .into_entries(cx)
+                })
+            },
+        );
+
+        assert_eq!(entries.len(), 1);
+        match &entries[0] {
+            DropdownMenuEntry::Item(item) => {
+                assert!(!item.disabled);
+                assert!(item.on_activate.is_some());
+                assert_eq!(item.test_id.as_deref(), Some("pi-add-attachments-item"));
+            }
+            other => panic!("expected dropdown item entry, got {other:?}"),
+        }
     }
 
     #[test]

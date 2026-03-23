@@ -7,10 +7,10 @@ use fret_core::{ImageColorSpace, ImageId, Px};
 use fret_icons::IconId;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_assets::{ui::ImageSourceElementContextExt as _, ImageSource};
+use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -257,42 +257,43 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .test_id("ui-gallery-ai-prompt-input-docs-conversation")
         .refine_layout(LayoutRefinement::default().w_full().flex_1().min_h_0())
         .into_element_with_children(cx, move |cx| {
-            let content_children = if transcript_messages.is_empty() {
-                vec![ui_ai::ConversationEmptyState::new("Start a conversation")
+            let content_children =
+                if transcript_messages.is_empty() {
+                    vec![ui_ai::ConversationEmptyState::new("Start a conversation")
                     .description(
                         "Submit a prompt below to preview the docs-shaped PromptInput flow.",
                     )
                     .icon(decl_icon::icon(cx, IconId::new("lucide.message-square")))
                     .test_id("ui-gallery-ai-prompt-input-docs-empty")
                     .into_element(cx)]
-            } else {
-                transcript_messages
-                    .iter()
-                    .enumerate()
-                    .map(|(index, message)| {
-                        let content_parts = message
-                            .parts
-                            .iter()
-                            .filter_map(|part| match part {
-                                ui_ai::MessagePart::Text(text) => Some(
-                                    ui_ai::MessageResponse::new(text.clone())
-                                        .streaming(false)
-                                        .into_element(cx),
-                                ),
-                                _ => None,
-                            })
-                            .collect::<Vec<_>>();
+                } else {
+                    transcript_messages
+                        .iter()
+                        .enumerate()
+                        .map(|(index, message)| {
+                            let content_parts = message
+                                .parts
+                                .iter()
+                                .filter_map(|part| match part {
+                                    ui_ai::MessagePart::Text(text) => Some(
+                                        ui_ai::MessageResponse::new(text.clone())
+                                            .streaming(false)
+                                            .into_element(cx),
+                                    ),
+                                    _ => None,
+                                })
+                                .collect::<Vec<_>>();
 
-                        ui_ai::Message::new(
-                            message.role,
-                            [ui_ai::MessageContent::new(message.role, content_parts)
-                                .test_id(format!("ui-gallery-ai-prompt-input-docs-msg-{index}"))
-                                .into_element(cx)],
-                        )
-                        .into_element(cx)
-                    })
-                    .collect()
-            };
+                            ui_ai::Message::new(
+                                message.role,
+                                [ui_ai::MessageContent::new(message.role, content_parts)
+                                    .test_id(format!("ui-gallery-ai-prompt-input-docs-msg-{index}"))
+                                    .into_element(cx)],
+                            )
+                            .into_element(cx)
+                        })
+                        .collect()
+                };
 
             vec![
                 ui_ai::ConversationContent::new(content_children).into_element(cx),
@@ -307,22 +308,21 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .text_model(text.clone())
             .attachments_model(attachments.clone())
             .into_element_with_children(cx, move |cx, controller| {
-                let menu =
-                    ui_ai::PromptInputActionMenu::new(ui_ai::PromptInputActionMenuContent::new([
-                        ui_ai::PromptInputActionAddAttachments::new()
-                            .on_activate(on_add_attachments.clone())
-                            .test_id("ui-gallery-ai-prompt-input-docs-add-attachments-item")
-                            .into_entry(cx),
-                        ui_ai::PromptInputActionAddScreenshot::new()
-                            .on_activate(on_add_screenshot.clone())
-                            .test_id("ui-gallery-ai-prompt-input-docs-add-screenshot-item")
-                            .into_entry(cx),
-                    ]))
-                    .trigger(
-                        ui_ai::PromptInputActionMenuTrigger::new()
-                            .test_id("ui-gallery-ai-prompt-input-docs-action-menu-trigger"),
-                    )
-                    .into_element(cx);
+                let menu = ui_ai::PromptInputActionMenu::new(
+                    ui_ai::PromptInputActionMenuContent::new([])
+                        .add_attachments(
+                            ui_ai::PromptInputActionAddAttachments::new()
+                                .test_id("ui-gallery-ai-prompt-input-docs-add-attachments-item"),
+                        )
+                        .add_screenshot(
+                            ui_ai::PromptInputActionAddScreenshot::new()
+                                .test_id("ui-gallery-ai-prompt-input-docs-add-screenshot-item"),
+                        ),
+                )
+                .trigger(
+                    ui_ai::PromptInputActionMenuTrigger::new()
+                        .test_id("ui-gallery-ai-prompt-input-docs-action-menu-trigger"),
+                );
 
                 let search_btn = ui_ai::PromptInputButton::new("Search")
                     .children([
@@ -383,8 +383,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 .test_id("ui-gallery-ai-prompt-input-docs-textarea"),
                         ])),
                         ui_ai::PromptInputPart::from(ui_ai::PromptInputFooter::new(
-                            [ui_ai::PromptInputTools::new([menu, search_btn, select])
-                                .into_element(cx)],
+                            [ui_ai::PromptInputTools::empty()
+                                .child(menu)
+                                .child(search_btn)
+                                .child(select)],
                             [ui_ai::PromptInputSubmit::new()
                                 .refine_layout(LayoutRefinement::default().ml_auto())],
                         )),

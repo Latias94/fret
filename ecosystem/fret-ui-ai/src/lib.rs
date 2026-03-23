@@ -139,7 +139,7 @@ pub use elements::{
     PromptInputReferencedSourcesController, PromptInputReferencedSourcesRow, PromptInputRoot,
     PromptInputSelect, PromptInputSelectContent, PromptInputSelectItem, PromptInputSelectTrigger,
     PromptInputSelectValue, PromptInputSlots, PromptInputStatus, PromptInputSubmit,
-    PromptInputTextarea, PromptInputTools, Queue, QueueItem, QueueItemAction, QueueItemActions,
+    PromptInputTextarea, PromptInputTools, PromptInputToolsChild, Queue, QueueItem, QueueItemAction, QueueItemActions,
     QueueItemAttachment, QueueItemContent, QueueItemDescription, QueueItemFile, QueueItemImage,
     QueueItemIndicator, QueueItemState, QueueList, QueueMessage, QueueMessagePart, QueueSection,
     QueueSectionContent, QueueSectionLabel, QueueSectionState, QueueSectionTrigger, QueueTodo,
