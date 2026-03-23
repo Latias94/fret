@@ -35,17 +35,17 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .test_id_root("ui-gallery-ai-prompt-input-action-menu")
         .test_id_attachments("ui-gallery-ai-prompt-input-action-menu-attachments")
         .into_element_with_slots(cx, move |cx| {
-            let menu =
-                ui_ai::PromptInputActionMenu::new(ui_ai::PromptInputActionMenuContent::new([
+            let menu = ui_ai::PromptInputActionMenu::new(
+                ui_ai::PromptInputActionMenuContent::new([]).add_attachments(
                     ui_ai::PromptInputActionAddAttachments::new()
-                        .test_id("ui-gallery-ai-prompt-input-action-menu-add-attachments-item")
-                        .into_entry(cx),
-                ]))
-                .trigger(
-                    ui_ai::PromptInputActionMenuTrigger::new()
-                        .test_id("ui-gallery-ai-prompt-input-action-menu-trigger"),
-                )
-                .into_element(cx);
+                        .test_id("ui-gallery-ai-prompt-input-action-menu-add-attachments-item"),
+                ),
+            )
+            .trigger(
+                ui_ai::PromptInputActionMenuTrigger::new()
+                    .test_id("ui-gallery-ai-prompt-input-action-menu-trigger"),
+            )
+            .into_element(cx);
 
             ui_ai::PromptInputSlots {
                 block_start: vec![ui_ai::PromptInputAttachmentsRow::new().into_element(cx)],

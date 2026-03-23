@@ -240,19 +240,18 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .text_model(text)
         .attachments_model(attachments)
         .into_element_with_children(cx, move |cx, controller| {
-            let menu =
-                ui_ai::PromptInputActionMenu::new(ui_ai::PromptInputActionMenuContent::new([
+            let menu = ui_ai::PromptInputActionMenu::new(
+                ui_ai::PromptInputActionMenuContent::new([]).item(
                     ui_ai::PromptInputActionMenuItem::new("Add photos or files")
                         .leading_icon(fret_icons::IconId::new("lucide.image"))
                         .on_activate(on_add_attachments.clone())
-                        .test_id("ui-ai-queue-prompt-input-add-attachments-item")
-                        .into_entry(),
-                ]))
-                .trigger(
-                    ui_ai::PromptInputActionMenuTrigger::new()
-                        .test_id("ui-ai-queue-prompt-input-action-menu-trigger"),
-                )
-                .into_element(cx);
+                        .test_id("ui-ai-queue-prompt-input-add-attachments-item"),
+                ),
+            )
+            .trigger(
+                ui_ai::PromptInputActionMenuTrigger::new()
+                    .test_id("ui-ai-queue-prompt-input-action-menu-trigger"),
+            );
 
             let search = ui_ai::PromptInputButton::new("Search")
                 .children([
@@ -399,9 +398,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ],
                     block_end: vec![
                         ui_ai::PromptInputFooter::new(
-                            [ui_ai::PromptInputTools::new([menu, search, model_selector])
-                                .into_element(cx)],
-                            [ui_ai::PromptInputSubmit::new().into_element(cx)],
+                            [ui_ai::PromptInputTools::empty()
+                                .child(menu)
+                                .child(search)
+                                .child(model_selector)],
+                            [ui_ai::PromptInputSubmit::new()],
                         )
                         .into_element(cx),
                     ],

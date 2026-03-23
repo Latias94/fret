@@ -9388,6 +9388,39 @@ fn prompt_input_docs_demo_prefers_children_lane_over_root_slots() {
 }
 
 #[test]
+fn queue_prompt_input_demo_prefers_deferred_tools_children_builder() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/queue_prompt_input_demo.rs",
+        &[
+            "ui_ai::PromptInputActionMenuContent::new([]).item(",
+            "ui_ai::PromptInputFooter::new(",
+            "ui_ai::PromptInputTools::empty()",
+            ".child(menu)",
+            ".child(search)",
+            ".child(model_selector)",
+            "[ui_ai::PromptInputSubmit::new()]",
+        ],
+        &[
+            ".into_entry()",
+            "PromptInputTools::new([menu, search, model_selector]).into_element(cx)",
+            "PromptInputSubmit::new().into_element(cx)",
+        ],
+    );
+}
+
+#[test]
+fn prompt_input_action_menu_demo_prefers_docs_shaped_content_builder() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/prompt_input_action_menu_demo.rs",
+        &[
+            "ui_ai::PromptInputActionMenuContent::new([]).add_attachments(",
+            "ui_ai::PromptInputActionAddAttachments::new()",
+        ],
+        &[".into_entry(cx)"],
+    );
+}
+
+#[test]
 fn selected_ai_snippet_helpers_prefer_typed_children_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/shimmer_elements_demo.rs",
