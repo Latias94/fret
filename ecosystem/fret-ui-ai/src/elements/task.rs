@@ -208,7 +208,7 @@ impl Task {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(trigger) = self.trigger else {
             debug_assert!(false, "Task requires a TaskTrigger");
             return cx.container(Default::default(), |_| Vec::new());
@@ -331,7 +331,7 @@ impl TaskTrigger {
         self
     }
 
-    fn into_element_with_open<H: UiHost + 'static>(
+    fn into_element_with_open<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         open: Model<bool>,

@@ -79,7 +79,7 @@ impl Sandbox {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let base_chrome = ChromeRefinement::default()
             .rounded_md()
             .border_1()
@@ -155,7 +155,7 @@ impl SandboxHeader {
         self
     }
 
-    fn into_trigger<H: UiHost + 'static>(
+    fn into_trigger<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         open_model: fret_runtime::Model<bool>,

@@ -555,7 +555,7 @@ impl ConversationTranscript {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         #[derive(Debug, Default, Clone)]
         struct ConversationState {
             handle: VirtualListScrollHandle,
@@ -621,38 +621,6 @@ impl ConversationTranscript {
         let messages = self.messages;
         let debug_row_test_id_prefix = self.debug_row_test_id_prefix;
 
-        let key_at: Arc<dyn Fn(usize) -> u64> = Arc::new({
-            let messages = messages.clone();
-            move |index| messages.get(index).map(|m| m.id).unwrap_or(index as u64)
-        });
-
-        let row: Arc<dyn for<'a> Fn(&mut ElementContext<'a, H>, usize) -> AnyElement> = Arc::new({
-            let messages = messages.clone();
-            let prefix = debug_row_test_id_prefix.clone();
-            move |cx, index| {
-                let Some(msg) = messages.get(index) else {
-                    return cx.text("");
-                };
-
-                let content =
-                    MessageContent::new(msg.role, [cx.text(msg.text.clone())]).into_element(cx);
-                let bubble = Message::new(msg.role, [content]).into_element(cx);
-                let Some(prefix) = prefix.clone() else {
-                    return bubble;
-                };
-
-                let test_id: Arc<str> = Arc::from(format!("{prefix}{}", msg.id));
-                cx.semantics(
-                    SemanticsProps {
-                        role: SemanticsRole::Group,
-                        test_id: Some(test_id),
-                        ..Default::default()
-                    },
-                    move |_cx| vec![bubble],
-                )
-            }
-        });
-
         let mut options = fret_ui::element::VirtualListOptions::new(Px(64.0), 8);
         options.items_revision = revision;
         options.gap = if content_gap == Space::N8 {
@@ -673,13 +641,41 @@ impl ConversationTranscript {
             ..Default::default()
         };
 
-        let list = cx.virtual_list_keyed_retained_with_layout(
+        let list = cx.virtual_list_keyed_with_layout(
             list_layout,
             messages.len(),
             options,
             &handle,
-            key_at,
-            row,
+            {
+                let messages = messages.clone();
+                move |index| messages.get(index).map(|m| m.id).unwrap_or(index as u64)
+            },
+            {
+                let messages = messages.clone();
+                let prefix = debug_row_test_id_prefix.clone();
+                move |cx, index| {
+                    let Some(msg) = messages.get(index) else {
+                        return cx.text("");
+                    };
+
+                    let content =
+                        MessageContent::new(msg.role, [cx.text(msg.text.clone())]).into_element(cx);
+                    let bubble = Message::new(msg.role, [content]).into_element(cx);
+                    let Some(prefix) = prefix.clone() else {
+                        return bubble;
+                    };
+
+                    let test_id: Arc<str> = Arc::from(format!("{prefix}{}", msg.id));
+                    cx.semantics(
+                        SemanticsProps {
+                            role: SemanticsRole::Group,
+                            test_id: Some(test_id),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![bubble],
+                    )
+                }
+            },
         );
 
         let padding_px = if content_padding == Space::N4 {

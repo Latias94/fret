@@ -123,7 +123,7 @@ impl ConversationDownload {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let has_custom_children = self.children.is_some();
         let theme = Theme::global(&*cx.app).clone();
         let layout = self.layout;

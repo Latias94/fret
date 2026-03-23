@@ -167,7 +167,7 @@ impl OpenIn {
         self
     }
 
-    pub fn into_element_with_entries<H: UiHost + 'static>(
+    pub fn into_element_with_entries<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<DropdownMenuEntry> + 'static,
@@ -205,7 +205,7 @@ impl OpenIn {
             })
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.into_element_with_entries(cx, move |cx| {
             vec![
                 OpenInChatGpt::new().into_entry(cx),
@@ -250,7 +250,7 @@ impl OpenInTrigger {
         self
     }
 
-    pub fn into_element_with_open<H: UiHost + 'static>(
+    pub fn into_element_with_open<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         open: Model<bool>,
@@ -286,7 +286,7 @@ impl OpenInTrigger {
     }
 }
 
-fn open_in_item_entry<H: UiHost + 'static>(
+fn open_in_item_entry<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     provider: OpenInProvider,
     test_id: Option<Arc<str>>,
@@ -349,10 +349,7 @@ impl OpenInChatGpt {
         self
     }
 
-    pub fn into_entry<H: UiHost + 'static>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-    ) -> DropdownMenuEntry {
+    pub fn into_entry<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuEntry {
         open_in_item_entry(cx, OpenInProvider::ChatGpt, self.test_id)
     }
 }
@@ -372,10 +369,7 @@ impl OpenInClaude {
         self
     }
 
-    pub fn into_entry<H: UiHost + 'static>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-    ) -> DropdownMenuEntry {
+    pub fn into_entry<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuEntry {
         open_in_item_entry(cx, OpenInProvider::Claude, self.test_id)
     }
 }
@@ -395,10 +389,7 @@ impl OpenInT3 {
         self
     }
 
-    pub fn into_entry<H: UiHost + 'static>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-    ) -> DropdownMenuEntry {
+    pub fn into_entry<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuEntry {
         open_in_item_entry(cx, OpenInProvider::T3, self.test_id)
     }
 }
@@ -418,10 +409,7 @@ impl OpenInScira {
         self
     }
 
-    pub fn into_entry<H: UiHost + 'static>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-    ) -> DropdownMenuEntry {
+    pub fn into_entry<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuEntry {
         open_in_item_entry(cx, OpenInProvider::Scira, self.test_id)
     }
 }
@@ -441,10 +429,7 @@ impl OpenInv0 {
         self
     }
 
-    pub fn into_entry<H: UiHost + 'static>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-    ) -> DropdownMenuEntry {
+    pub fn into_entry<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuEntry {
         open_in_item_entry(cx, OpenInProvider::V0, self.test_id)
     }
 }
@@ -464,10 +449,7 @@ impl OpenInCursor {
         self
     }
 
-    pub fn into_entry<H: UiHost + 'static>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-    ) -> DropdownMenuEntry {
+    pub fn into_entry<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuEntry {
         open_in_item_entry(cx, OpenInProvider::Cursor, self.test_id)
     }
 }

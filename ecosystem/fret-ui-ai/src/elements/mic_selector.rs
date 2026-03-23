@@ -192,7 +192,7 @@ impl MicSelector {
         children: F,
     ) -> AnyElement
     where
-        H: UiHost + 'static,
+        H: UiHost,
         F: Fn(&mut ElementContext<'_, H>, MicSelectorChildSlot) -> AnyElement + Clone + 'static,
     {
         let open = fret_ui_kit::primitives::popover::PopoverRoot::new()
@@ -238,7 +238,7 @@ impl MicSelector {
         )
     }
 
-    pub fn into_element<H: UiHost + 'static>(
+    pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
@@ -329,7 +329,7 @@ impl MicSelectorTrigger {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_mic_selector_controller(cx) else {
             return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
@@ -422,7 +422,7 @@ impl MicSelectorContent {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let command = Command::new(self.children)
             .refine_style(self.command_chrome)
             .refine_layout(self.command_layout)
@@ -903,7 +903,7 @@ impl MicSelectorList {
         self
     }
 
-    fn auto_entries<H: UiHost + 'static>(
+    fn auto_entries<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         devices: &[MicSelectorDevice],
     ) -> Vec<MicSelectorItem> {
@@ -918,7 +918,7 @@ impl MicSelectorList {
             .collect()
     }
 
-    fn into_element_with_item_entries<H: UiHost + 'static>(
+    fn into_element_with_item_entries<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         empty_text: Arc<str>,
         test_id_prefix: Option<Arc<str>>,
@@ -952,7 +952,7 @@ impl MicSelectorList {
         children: F,
     ) -> AnyElement
     where
-        H: UiHost + 'static,
+        H: UiHost,
         F: FnOnce(&mut ElementContext<'_, H>, Arc<[MicSelectorDevice]>) -> I,
         I: IntoIterator<Item = MicSelectorItem>,
     {
@@ -972,7 +972,7 @@ impl MicSelectorList {
         Self::into_element_with_item_entries(cx, empty_text, test_id_prefix, scroll_layout, entries)
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Self {
             empty_text,
             test_id_prefix,

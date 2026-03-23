@@ -262,7 +262,7 @@ impl FileTree {
         cx.local_model(move || seed)
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Arc::new(Theme::global(&*cx.app).clone());
 
         let expanded_model = self.resolve_expanded_model(cx);
@@ -339,81 +339,79 @@ impl FileTree {
 
         let expanded_snapshot: Arc<HashSet<Arc<str>>> = Arc::new(expanded);
 
-        let row: Arc<dyn for<'a> Fn(&mut ElementContext<'a, H>, usize) -> AnyElement> = Arc::new({
-            let theme = Arc::clone(&theme);
-            let entries = Arc::clone(&entries);
-            let rows_by_id = Arc::clone(&rows_by_id);
-            let expanded_model = expanded_model.clone();
-            let expanded_snapshot = Arc::clone(&expanded_snapshot);
-            move |cx, index| {
-                let Some(entry) = entries.get(index) else {
-                    return cx.text("");
-                };
-                let Some(payload) = rows_by_id.get(&entry.id).cloned() else {
-                    return cx.text("");
-                };
+        let list = cx.virtual_list_keyed_with_layout(
+            list_layout,
+            entries.len(),
+            options,
+            &scroll,
+            {
+                let entries: Arc<Vec<fret_ui_kit::TreeEntry>> = Arc::clone(&entries);
+                move |i: usize| -> fret_ui::ItemKey {
+                    entries.get(i).map(|e| e.id).unwrap_or_default()
+                }
+            },
+            {
+                let theme = Arc::clone(&theme);
+                let entries = Arc::clone(&entries);
+                let rows_by_id = Arc::clone(&rows_by_id);
+                let expanded_model = expanded_model.clone();
+                let expanded_snapshot = Arc::clone(&expanded_snapshot);
+                move |cx, index| {
+                    let Some(entry) = entries.get(index) else {
+                        return cx.text("");
+                    };
+                    let Some(payload) = rows_by_id.get(&entry.id).cloned() else {
+                        return cx.text("");
+                    };
 
-                match payload {
-                    FileTreeRowPayload::Folder {
-                        path,
-                        name,
-                        actions,
-                        test_id,
-                    } => render_folder_row(
-                        cx,
-                        theme.as_ref(),
-                        row_height,
-                        entry.depth,
-                        &expanded_model,
-                        expanded_snapshot.as_ref(),
-                        selected_path.as_ref(),
-                        on_select.as_ref(),
-                        on_expanded_change.as_ref(),
-                        FileTreeFolder {
+                    match payload {
+                        FileTreeRowPayload::Folder {
                             path,
                             name,
-                            children: Vec::new(),
                             actions,
                             test_id,
-                        },
-                    ),
-                    FileTreeRowPayload::File {
-                        path,
-                        name,
-                        icon,
-                        actions,
-                        test_id,
-                    } => render_file_row(
-                        cx,
-                        theme.as_ref(),
-                        row_height,
-                        entry.depth,
-                        selected_path.as_ref(),
-                        on_select.as_ref(),
-                        FileTreeFile {
+                        } => render_folder_row(
+                            cx,
+                            theme.as_ref(),
+                            row_height,
+                            entry.depth,
+                            &expanded_model,
+                            expanded_snapshot.as_ref(),
+                            selected_path.as_ref(),
+                            on_select.as_ref(),
+                            on_expanded_change.as_ref(),
+                            FileTreeFolder {
+                                path,
+                                name,
+                                children: Vec::new(),
+                                actions,
+                                test_id,
+                            },
+                        ),
+                        FileTreeRowPayload::File {
                             path,
                             name,
                             icon,
                             actions,
                             test_id,
-                        },
-                    ),
+                        } => render_file_row(
+                            cx,
+                            theme.as_ref(),
+                            row_height,
+                            entry.depth,
+                            selected_path.as_ref(),
+                            on_select.as_ref(),
+                            FileTreeFile {
+                                path,
+                                name,
+                                icon,
+                                actions,
+                                test_id,
+                            },
+                        ),
+                    }
                 }
-            }
-        });
-
-        let key_at: Arc<dyn Fn(usize) -> fret_ui::ItemKey> = Arc::new({
-            let entries: Arc<Vec<fret_ui_kit::TreeEntry>> = Arc::clone(&entries);
-            move |i: usize| -> fret_ui::ItemKey { entries.get(i).map(|e| e.id).unwrap_or_default() }
-        });
-
-        let list = cx.virtual_list_keyed_retained_with_layout(
-            list_layout,
-            entries.len(),
-            options,
-            &scroll,
-            key_at,
-            row,
+            },
         );
 
         let tree = cx.container(props, move |_cx| vec![list]);
@@ -631,7 +629,7 @@ impl FileTreeName {
     }
 }
 
-fn render_actions<H: UiHost + 'static>(
+fn render_actions<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     row_path: Arc<str>,
@@ -733,7 +731,7 @@ fn render_actions<H: UiHost + 'static>(
     Some(group)
 }
 
-fn file_tree_indent_el<H: UiHost + 'static>(
+fn file_tree_indent_el<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     row_height: Px,
@@ -821,7 +819,7 @@ fn file_tree_indent_el<H: UiHost + 'static>(
         .into_element(cx)
 }
 
-fn render_folder_row<H: UiHost + 'static>(
+fn render_folder_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     row_height: Px,
@@ -968,7 +966,7 @@ fn render_folder_row<H: UiHost + 'static>(
     row
 }
 
-fn render_file_row<H: UiHost + 'static>(
+fn render_file_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     row_height: Px,

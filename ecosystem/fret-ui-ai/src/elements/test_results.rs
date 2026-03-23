@@ -294,7 +294,7 @@ impl TestResults {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let base_chrome = ChromeRefinement::default()
@@ -843,7 +843,7 @@ impl TestSuite {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let base_chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
             .border_1()
@@ -973,7 +973,7 @@ impl TestSuiteName {
         self
     }
 
-    fn into_trigger<H: UiHost + 'static>(
+    fn into_trigger<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         open_model: Model<bool>,
@@ -1442,7 +1442,7 @@ impl Test {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let status = self.status;
@@ -1736,7 +1736,7 @@ impl TestSuiteContent {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let border = theme.color_token("border");
 

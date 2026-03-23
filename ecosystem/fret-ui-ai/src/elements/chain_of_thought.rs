@@ -155,10 +155,10 @@ impl ChainOfThought {
         self.children([ChainOfThoughtChild::Content(content)])
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement> + 'static,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
         let controlled_open = self.open;
         let default_open = self.default_open;
@@ -236,7 +236,7 @@ impl From<ChainOfThoughtContent> for ChainOfThoughtChild {
 }
 
 impl ChainOfThoughtChild {
-    fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         match self {
             Self::Header(header) => header.into_element(cx),
             Self::Content(content) => content.into_element(cx),
@@ -268,7 +268,7 @@ impl ChainOfThoughtWithChildren {
         self.children([ChainOfThoughtChild::Content(content)])
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Self { root, children } = self;
         root.into_element_with_children(cx, move |cx| {
             children
@@ -332,7 +332,7 @@ impl ChainOfThoughtHeader {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_chain_of_thought_controller(cx) else {
             debug_assert!(
                 false,
@@ -490,7 +490,7 @@ impl ChainOfThoughtContent {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_chain_of_thought_controller(cx) else {
             debug_assert!(
                 false,

@@ -153,7 +153,7 @@ impl Reasoning {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(
+    pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
@@ -318,7 +318,7 @@ impl ReasoningWithChildren {
         self.children([ReasoningChild::Content(content)])
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Self { root, children } = self;
 
         let mut trigger: Option<ReasoningTrigger> = None;
@@ -406,7 +406,7 @@ impl ReasoningTrigger {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_reasoning_controller(cx) else {
             debug_assert!(
                 false,
@@ -642,7 +642,7 @@ impl ReasoningContent {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let muted_fg = theme.color_token("muted-foreground");
 
@@ -651,7 +651,7 @@ impl ReasoningContent {
         components.on_link_activate = None;
 
         let content = fret_markdown::Markdown::new(self.markdown)
-            .into_element_with(cx, &components)
+            .into_element_with_non_windowed(cx, &components)
             .inherit_foreground(muted_fg);
 
         let inner = cx.container(

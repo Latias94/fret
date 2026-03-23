@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_core::Color;
 use fret_core::{FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_icons::{IconId, ids};
+use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -192,7 +193,7 @@ impl ToolHeader {
         self
     }
 
-    fn into_trigger<H: UiHost + 'static>(
+    fn into_trigger<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         open_model: fret_runtime::Model<bool>,
@@ -390,7 +391,7 @@ impl ToolInput {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let title = ToolSectionTitle::new("Parameters").into_element(cx);
 
@@ -398,7 +399,7 @@ impl ToolInput {
             .language("json")
             .show_header(false)
             .show_language(false)
-            .into_element(cx);
+            .into_element_non_windowed(cx);
         let bg = token_color_with_alpha(&theme, "muted", "accent", 0.5);
         let code = cx.container(
             decl_style::container_props(
@@ -420,22 +421,64 @@ impl ToolInput {
 }
 
 /// Tool call output section (AI Elements: “Result” / “Error”).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ToolOutput {
     output: Option<ToolCallPayload>,
     error_text: Option<Arc<str>>,
+    children: Vec<AnyElement>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
 }
 
 impl ToolOutput {
-    pub fn new(output: Option<ToolCallPayload>, error_text: Option<Arc<str>>) -> Self {
+    pub fn empty() -> Self {
         Self {
-            output,
-            error_text,
+            output: None,
+            error_text: None,
+            children: Vec::new(),
             layout: LayoutRefinement::default().w_full(),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    pub fn new(output: Option<ToolCallPayload>, error_text: Option<Arc<str>>) -> Self {
+        Self::empty()
+            .with_payload(output)
+            .with_error_text(error_text)
+    }
+
+    pub fn custom(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self::empty().children(children)
+    }
+
+    pub fn with_payload(mut self, output: Option<ToolCallPayload>) -> Self {
+        self.output = output;
+        self
+    }
+
+    pub fn with_error_text(mut self, error_text: Option<Arc<str>>) -> Self {
+        self.error_text = error_text;
+        self
+    }
+
+    pub fn payload(mut self, output: ToolCallPayload) -> Self {
+        self.output = Some(output);
+        self
+    }
+
+    pub fn error_text(mut self, error_text: impl Into<Arc<str>>) -> Self {
+        self.error_text = Some(error_text.into());
+        self
+    }
+
+    pub fn child(mut self, child: AnyElement) -> Self {
+        self.children.push(child);
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children.extend(children);
+        self
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
@@ -448,11 +491,8 @@ impl ToolOutput {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-    ) -> Option<AnyElement> {
-        if self.output.is_none() && self.error_text.is_none() {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> Option<AnyElement> {
+        if self.output.is_none() && self.error_text.is_none() && self.children.is_empty() {
             return None;
         }
 
@@ -498,13 +538,15 @@ impl ToolOutput {
                 }),
             );
         }
-        if let Some(output) = self.output.as_ref() {
+        if !self.children.is_empty() {
+            body.extend(self.children);
+        } else if let Some(output) = self.output.as_ref() {
             body.push(
                 CodeBlock::new(payload_to_jsonish_code(output))
                     .language("json")
                     .show_header(false)
                     .show_language(false)
-                    .into_element(cx),
+                    .into_element_non_windowed(cx),
             );
         }
 
@@ -537,22 +579,64 @@ impl ToolOutput {
 /// Tool disclosure root (bordered Collapsible).
 #[derive(Debug)]
 pub struct Tool {
+    open: Option<Model<bool>>,
     default_open: bool,
-    header: ToolHeader,
-    content: ToolContent,
+    header: Option<ToolHeader>,
+    content: Option<ToolContent>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
 }
 
 impl Tool {
-    pub fn new(header: ToolHeader, content: ToolContent) -> Self {
+    /// Docs-shaped compound root aligned with AI Elements `<Tool>...</Tool>`.
+    pub fn root() -> Self {
         Self {
+            open: None,
             default_open: false,
-            header,
-            content,
+            header: None,
+            content: None,
             layout: LayoutRefinement::default().w_full().mb(Space::N4),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    pub fn new(header: ToolHeader, content: ToolContent) -> Self {
+        Self::root().header(header).content(content)
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = ToolChild>) -> Self {
+        for child in children {
+            match child {
+                ToolChild::Header(header) => {
+                    if self.header.is_some() {
+                        debug_assert!(false, "Tool expects a single ToolHeader");
+                    }
+                    self.header = Some(header);
+                }
+                ToolChild::Content(content) => {
+                    if self.content.is_some() {
+                        debug_assert!(false, "Tool expects a single ToolContent");
+                    }
+                    self.content = Some(content);
+                }
+            }
+        }
+        self
+    }
+
+    pub fn header(mut self, header: ToolHeader) -> Self {
+        self.header = Some(header);
+        self
+    }
+
+    pub fn content(mut self, content: ToolContent) -> Self {
+        self.content = Some(content);
+        self
+    }
+
+    pub fn open_model(mut self, open: Model<bool>) -> Self {
+        self.open = Some(open);
+        self
     }
 
     pub fn default_open(mut self, default_open: bool) -> Self {
@@ -570,7 +654,14 @@ impl Tool {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Some(header) = self.header else {
+            debug_assert!(false, "Tool requires a ToolHeader");
+            return cx.container(Default::default(), |_| Vec::new());
+        };
+        let content = self
+            .content
+            .unwrap_or_else(|| ToolContent::new(Vec::<AnyElement>::new()));
         let base_chrome = ChromeRefinement::default()
             .rounded_md()
             .border_1()
@@ -578,18 +669,54 @@ impl Tool {
                 key: "border",
                 fallback: ColorFallback::ThemePanelBorder,
             });
+        let chrome = base_chrome.merge(self.chrome);
+        let layout = self.layout;
 
-        let header = self.header;
-        let content = self.content;
+        if let Some(open) = self.open {
+            return Collapsible::new(open)
+                .refine_layout(layout)
+                .refine_style(chrome)
+                .into_element_with_open_model(
+                    cx,
+                    move |cx, open_model, is_open| header.into_trigger(cx, open_model, is_open),
+                    move |cx| content.into_element(cx),
+                );
+        }
 
         Collapsible::uncontrolled(self.default_open)
-            .refine_layout(self.layout)
-            .refine_style(base_chrome.merge(self.chrome))
+            .refine_layout(layout)
+            .refine_style(chrome)
             .into_element_with_open_model(
                 cx,
                 move |cx, open_model, is_open| header.into_trigger(cx, open_model, is_open),
                 move |cx| content.into_element(cx),
             )
+    }
+}
+
+pub enum ToolChild {
+    Header(ToolHeader),
+    Content(ToolContent),
+}
+
+impl std::fmt::Debug for ToolChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Header(_) => f.write_str("ToolChild::Header(..)"),
+            Self::Content(_) => f.write_str("ToolChild::Content(..)"),
+        }
+    }
+}
+
+impl From<ToolHeader> for ToolChild {
+    fn from(value: ToolHeader) -> Self {
+        Self::Header(value)
+    }
+}
+
+impl From<ToolContent> for ToolChild {
+    fn from(value: ToolContent) -> Self {
+        Self::Content(value)
     }
 }
 
@@ -690,5 +817,45 @@ mod tests {
         assert_eq!(label.layout.flex.shrink, 1.0);
         assert_eq!(label.layout.flex.basis, Length::Auto);
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn tool_root_children_lane_matches_docs_shaped_composition() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "tool", |cx| {
+            Tool::root()
+                .default_open(true)
+                .children([
+                    ToolHeader::new("tool-shell_exec", ToolStatus::InputAvailable)
+                        .title("shell_exec")
+                        .into(),
+                    ToolContent::new([ToolInput::new(ToolCallPayload::Json(
+                        serde_json::json!({ "cmd": "cargo test" }),
+                    ))
+                    .into_element(cx)])
+                    .into(),
+                ])
+                .into_element(cx)
+        });
+
+        assert!(find_text_by_content(&el, "shell_exec").is_some());
+        assert!(find_text_by_content(&el, "PARAMETERS").is_some());
+    }
+
+    #[test]
+    fn tool_output_custom_children_support_rich_output_lane() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "tool", |cx| {
+            ToolOutput::custom([cx.text("Rich output body")])
+                .into_element(cx)
+                .expect("custom tool output")
+        });
+
+        assert!(find_text_by_content(&el, "RESULT").is_some());
+        assert!(find_text_by_content(&el, "Rich output body").is_some());
     }
 }

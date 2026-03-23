@@ -5,7 +5,7 @@ use fret_core::{Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::ActionId;
 use fret_ui::action::OnActivate;
-use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
+use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
@@ -295,8 +295,9 @@ impl ArtifactTitle {
                 .foreground_scope(foreground, move |cx| {
                     vec![
                         fret_ui_kit::ui::raw_text(text)
-                            .wrap(fret_core::TextWrap::None)
-                            .overflow(fret_core::TextOverflow::Clip)
+                            .wrap(fret_core::TextWrap::Word)
+                            .w_full()
+                            .min_w_0()
                             .into_element(cx),
                     ]
                 })
@@ -375,24 +376,17 @@ impl ArtifactDescription {
         let foreground = typography::muted_foreground_color(&theme);
 
         let mut text = match self.content {
-            ArtifactDescriptionContent::Text(text) => {
-                typography::scope_description_text_with_fallbacks(
-                    cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text,
-                        style: None,
-                        color: None,
-                        wrap: fret_core::TextWrap::None,
-                        overflow: fret_core::TextOverflow::Clip,
-                        align: fret_core::TextAlign::Start,
-                        ink_overflow: Default::default(),
-                    }),
-                    &theme,
-                    "component.artifact.description_text",
-                    Some("font.size"),
-                    Some("font.line_height"),
-                )
-            }
+            ArtifactDescriptionContent::Text(text) => typography::scope_description_text_with_fallbacks(
+                fret_ui_kit::ui::raw_text(text)
+                    .wrap(fret_core::TextWrap::Word)
+                    .w_full()
+                    .min_w_0()
+                    .into_element(cx),
+                &theme,
+                "component.artifact.description_text",
+                Some("font.size"),
+                Some("font.line_height"),
+            ),
             ArtifactDescriptionContent::Children(children) => cx
                 .foreground_scope(foreground, move |_cx| children)
                 .inherit_foreground(foreground)
@@ -876,6 +870,13 @@ mod tests {
             .any(|child| has_scoped_text_style(child, refinement, foreground))
     }
 
+    fn find_text<'a>(element: &'a AnyElement, text: &str) -> Option<&'a fret_ui::element::TextProps> {
+        match &element.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => element.children.iter().find_map(|child| find_text(child, text)),
+        }
+    }
+
     #[test]
     fn artifact_keeps_group_role_when_stamping_test_id() {
         let window = AppWindowId::default();
@@ -984,6 +985,62 @@ mod tests {
     }
 
     #[test]
+    fn artifact_title_text_wraps_like_paragraph_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Artifact Title Paragraph Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 14.0),
+                    ("font.line_height".to_string(), 20.0),
+                    ("component.artifact.title_text_px".to_string(), 12.0),
+                ]),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let text = "Artifact title should wrap when the available width is constrained.";
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ArtifactTitle::new(text)
+                    .test_id("artifact-title")
+                    .into_element(cx)
+            });
+
+        let props = find_text(&element, text).expect("expected artifact title text");
+        assert_eq!(props.wrap, fret_core::TextWrap::Word);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Clip);
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("artifact-title")
+        );
+
+        let theme = Theme::global(&app).snapshot();
+        let style = typography::as_control_text(TextStyle {
+            font: FontId::default(),
+            size: theme
+                .metric_by_key("component.artifact.title_text_px")
+                .unwrap_or_else(|| theme.metric_token("font.size")),
+            weight: FontWeight::MEDIUM,
+            slant: Default::default(),
+            line_height: Some(theme.metric_token("font.line_height")),
+            letter_spacing_em: None,
+            ..Default::default()
+        });
+        let expected_refinement = typography::composable_refinement_from_style(&style);
+        let expected_foreground = theme.color_token("foreground");
+        assert!(has_scoped_text_style(
+            &element,
+            &expected_refinement,
+            expected_foreground
+        ));
+    }
+
+    #[test]
     fn artifact_description_scopes_inherited_description_typography() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1015,7 +1072,7 @@ mod tests {
         };
         assert!(props.style.is_none());
         assert!(props.color.is_none());
-        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.wrap, fret_core::TextWrap::Word);
         assert_eq!(
             element
                 .semantics_decoration

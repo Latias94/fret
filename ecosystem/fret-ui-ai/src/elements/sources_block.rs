@@ -131,7 +131,7 @@ impl SourcesBlock {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let root_layout = decl_style::layout_style(&theme, self.layout);
         let excerpt_color = theme

@@ -187,7 +187,7 @@ impl WorkflowControlsButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let icon = decl_icon::icon(cx, self.icon);
 
         let mut btn = Button::new(self.label)

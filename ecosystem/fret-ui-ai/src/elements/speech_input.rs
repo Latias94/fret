@@ -165,7 +165,7 @@ impl SpeechInput {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let listening =
                 controllable_state::use_controllable_model(cx, self.listening.clone(), || {
@@ -321,7 +321,7 @@ fn button_style_for_state(theme: &fret_ui::ThemeSnapshot, listening: bool) -> Bu
         )))
 }
 
-fn speech_input_pulse_ring<H: UiHost + 'static>(
+fn speech_input_pulse_ring<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &fret_ui::ThemeSnapshot,
     progress: f32,

@@ -269,7 +269,7 @@ impl AudioPlayer {
         self
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(&mut ElementContext<'_, H>, AudioPlayerController) -> Vec<AnyElement>,
@@ -443,7 +443,7 @@ impl AudioPlayerPlayButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_audio_player_controller(cx) else {
             return hidden(cx);
         };
@@ -517,7 +517,7 @@ impl AudioPlayerSeekBackwardButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_audio_player_controller(cx) else {
             return hidden(cx);
         };
@@ -593,7 +593,7 @@ impl AudioPlayerSeekForwardButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_audio_player_controller(cx) else {
             return hidden(cx);
         };
@@ -721,7 +721,7 @@ impl AudioPlayerTimeRange {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_audio_player_controller(cx) else {
             return hidden(cx);
         };
@@ -821,7 +821,7 @@ impl AudioPlayerMuteButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_audio_player_controller(cx) else {
             return hidden(cx);
         };
@@ -895,7 +895,7 @@ impl AudioPlayerVolumeRange {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_audio_player_controller(cx) else {
             return hidden(cx);
         };

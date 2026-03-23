@@ -63,13 +63,22 @@ impl std::fmt::Debug for Agent {
 }
 
 impl Agent {
-    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+    pub fn empty() -> Self {
         Self {
-            children: children.into_iter().collect(),
+            children: Vec::new(),
             test_id: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self::empty().children(children)
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children.extend(children);
+        self
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -117,6 +126,12 @@ impl Agent {
             },
             move |_cx| [body],
         )
+    }
+}
+
+impl Default for Agent {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 
@@ -265,12 +280,21 @@ impl std::fmt::Debug for AgentContent {
 }
 
 impl AgentContent {
-    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+    pub fn empty() -> Self {
         Self {
-            children: children.into_iter().collect(),
+            children: Vec::new(),
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self::empty().children(children)
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children.extend(children);
+        self
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
@@ -300,6 +324,12 @@ impl AgentContent {
             self.layout,
         );
         cx.container(props, move |_cx| [body])
+    }
+}
+
+impl Default for AgentContent {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 
@@ -472,6 +502,61 @@ mod tests {
     }
 
     #[test]
+    fn agent_docs_shaped_children_surface_renders_sections() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let tool = AgentToolDefinition {
+            description: Some(Arc::from("Search the web for information")),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": { "query": { "type": "string" } },
+                "required": ["query"]
+            }),
+            json_schema: None,
+        };
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "agent", |cx| {
+            Agent::empty()
+                .children([
+                    AgentHeader::new("Sentiment Analyzer")
+                        .model("anthropic/claude-sonnet-4-5")
+                        .into_element(cx),
+                    AgentContent::empty()
+                        .children([
+                            AgentInstructions::new("Summarize the sentiment with a score.")
+                                .into_element(cx),
+                            AgentTools::empty()
+                                .children([AgentTool::new("web_search", tool)
+                                    .trigger_test_id("agent-tool-trigger")])
+                                .into_element(cx),
+                            AgentOutput::new("z.object({ sentiment: z.string() })")
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                ])
+                .into_element(cx)
+        });
+
+        assert!(
+            find_text_by_content(&el, "Sentiment Analyzer").is_some(),
+            "agent header should render through the docs-shaped children lane"
+        );
+        assert!(
+            find_text_by_content(&el, "Instructions").is_some(),
+            "instructions label should render through the docs-shaped children lane"
+        );
+        assert!(
+            find_text_by_content(&el, "Tools").is_some(),
+            "tools label should render through the docs-shaped children lane"
+        );
+        assert!(
+            find_text_by_content(&el, "Output Schema").is_some(),
+            "output label should render through the docs-shaped children lane"
+        );
+    }
+
+    #[test]
     fn agent_surfaces_use_shared_sm_typography_preset() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -532,16 +617,26 @@ mod tests {
 }
 
 /// `Tools` section wrapper (label + bordered accordion).
+enum AgentToolsContent {
+    Accordion(Accordion),
+    Tools(Vec<AgentTool>),
+}
+
 pub struct AgentTools {
-    accordion: Accordion,
+    content: AgentToolsContent,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
 }
 
 impl std::fmt::Debug for AgentTools {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (content, tools_len) = match &self.content {
+            AgentToolsContent::Accordion(_) => ("accordion", None),
+            AgentToolsContent::Tools(tools) => ("tools", Some(tools.len())),
+        };
         f.debug_struct("AgentTools")
-            .field("accordion", &"<accordion>")
+            .field("content", &content)
+            .field("tools_len", &tools_len)
             .field("layout", &self.layout)
             .field("chrome", &self.chrome)
             .finish()
@@ -549,12 +644,24 @@ impl std::fmt::Debug for AgentTools {
 }
 
 impl AgentTools {
-    pub fn new(accordion: Accordion) -> Self {
+    pub fn empty() -> Self {
         Self {
-            accordion,
+            content: AgentToolsContent::Tools(Vec::new()),
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    pub fn new(accordion: Accordion) -> Self {
+        Self {
+            content: AgentToolsContent::Accordion(accordion),
+            ..Self::empty()
+        }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AgentTool>) -> Self {
+        self.content = AgentToolsContent::Tools(children.into_iter().collect());
+        self
     }
 
     /// Rust-friendly compound entrypoint that mirrors the upstream docs shape more closely.
@@ -596,7 +703,18 @@ impl AgentTools {
             ink_overflow: Default::default(),
         });
 
-        let accordion = self.accordion.into_element(cx);
+        let accordion = match self.content {
+            AgentToolsContent::Accordion(accordion) => accordion.into_element(cx),
+            AgentToolsContent::Tools(tools) => {
+                let items = tools
+                    .into_iter()
+                    .map(|tool| tool.into_item(cx))
+                    .collect::<Vec<_>>();
+                Accordion::multiple_uncontrolled([] as [&'static str; 0])
+                    .items(items)
+                    .into_element(cx)
+            }
+        };
         let bordered = {
             let props = decl_style::container_props(
                 &theme,
@@ -617,6 +735,12 @@ impl AgentTools {
             .gap(Space::N2)
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx)
+    }
+}
+
+impl Default for AgentTools {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 
@@ -656,7 +780,7 @@ impl AgentTool {
         self
     }
 
-    pub fn into_item<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AccordionItem {
+    pub fn into_item<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AccordionItem {
         let theme = Theme::global(&*cx.app).clone();
         let value = self.value;
         let desc = self
@@ -679,7 +803,7 @@ impl AgentTool {
             .language("json")
             .show_header(false)
             .show_language(false)
-            .into_element(cx);
+            .into_element_non_windowed(cx);
         let bg = token_color_with_alpha(&theme, "muted", "accent", 0.5);
         let code_card = {
             let props = decl_style::container_props(
@@ -736,7 +860,7 @@ impl AgentOutput {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let muted = muted_fg(&theme);
 
@@ -760,7 +884,7 @@ impl AgentOutput {
             .language("typescript")
             .show_header(false)
             .show_language(false)
-            .into_element(cx);
+            .into_element_non_windowed(cx);
         let bg = token_color_with_alpha(&theme, "muted", "accent", 0.5);
         let props = decl_style::container_props(
             &theme,

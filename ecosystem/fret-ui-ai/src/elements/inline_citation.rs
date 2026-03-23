@@ -475,19 +475,19 @@ impl InlineCitationRoot {
         cx: &mut ElementContext<'_, H>,
     ) -> AnyElement
     where
-        H: UiHost + 'static,
-        TText: IntoUiElement<H> + 'static,
-        TCard: IntoUiElement<H> + 'static,
+        H: UiHost,
+        TText: IntoUiElement<H>,
+        TCard: IntoUiElement<H>,
     {
         self.into_element_with_children(cx, move |cx| {
             vec![text.into_element(cx), card.into_element(cx)]
         })
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement> + 'static,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
         let resolved_sources: Arc<[SourceItem]> = self
             .sources
@@ -534,7 +534,7 @@ impl InlineCitationRoot {
         })
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.into_element_with_children(cx, |_cx| Vec::new())
     }
 }
@@ -545,14 +545,14 @@ impl Default for InlineCitationRoot {
     }
 }
 
-impl<H: UiHost + 'static> IntoUiElement<H> for InlineCitationText {
+impl<H: UiHost> IntoUiElement<H> for InlineCitationText {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         InlineCitationText::into_element(self, cx)
     }
 }
 
-impl<H: UiHost + 'static> IntoUiElement<H> for InlineCitationCard {
+impl<H: UiHost> IntoUiElement<H> for InlineCitationCard {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         InlineCitationCard::into_element(self, cx)
@@ -592,7 +592,7 @@ impl InlineCitationText {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(parts) = use_inline_citation_parts(cx) else {
             return hidden(cx);
         };
@@ -679,7 +679,7 @@ impl InlineCitationCardTrigger {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(parts) = use_inline_citation_parts(cx) else {
             return hidden(cx);
         };
@@ -762,7 +762,7 @@ impl InlineCitationCarouselPrev {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(parts) = use_inline_citation_parts(cx) else {
             return hidden(cx);
         };
@@ -827,7 +827,7 @@ impl InlineCitationCarouselNext {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(parts) = use_inline_citation_parts(cx) else {
             return hidden(cx);
         };
@@ -892,7 +892,7 @@ impl InlineCitationCarouselIndex {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(parts) = use_inline_citation_parts(cx) else {
             return hidden(cx);
         };
@@ -972,7 +972,7 @@ impl InlineCitationCarouselHeader {
         }
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let mut children = self.children;
@@ -1040,7 +1040,7 @@ impl InlineCitationSource {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(parts) = use_inline_citation_parts(cx) else {
             return hidden(cx);
         };
@@ -1099,7 +1099,7 @@ impl InlineCitationQuote {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(parts) = use_inline_citation_parts(cx) else {
             return hidden(cx);
         };
@@ -1155,7 +1155,7 @@ impl InlineCitationCarouselItem {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let body_inner = ui::v_stack(move |_cx| self.children)
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -1204,7 +1204,7 @@ impl InlineCitationCarouselContent {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         if self.children.len() == 1 {
             return self
                 .children
@@ -1262,7 +1262,7 @@ impl InlineCitationCarousel {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let header = self
             .header
             .unwrap_or_else(|| InlineCitationCarouselHeader::default().into_element(cx));
@@ -1327,7 +1327,7 @@ impl InlineCitationCardBody {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(parts) = use_inline_citation_parts(cx) else {
             return hidden(cx);
         };
@@ -1413,7 +1413,7 @@ impl InlineCitationCard {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(parts) = use_inline_citation_parts(cx) else {
             return hidden(cx);
         };
@@ -1567,15 +1567,15 @@ impl InlineCitation {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let label = self.label.clone();
         self.into_element_with_children(cx, move |cx| vec![cx.text(label.clone())])
     }
 
-    fn into_element_with_children<H: UiHost + 'static>(
+    fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement> + 'static,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
         let InlineCitation {
             label,
@@ -1682,7 +1682,7 @@ impl InlineCitationWithChildren {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Self { root, children } = self;
         root.into_element_with_children(cx, move |_cx| children)
     }

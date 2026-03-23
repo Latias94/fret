@@ -146,13 +146,13 @@ impl Transcription {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.into_element_with_children(cx, |cx, seg, index| {
             TranscriptionSegment::new(seg, index).into_element(cx)
         })
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl for<'a> Fn(
@@ -297,7 +297,7 @@ impl TranscriptionSegment {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_transcription_controller(cx) else {
             return cx.text("");
         };

@@ -127,7 +127,7 @@ impl MessageBranch {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let current_branch = self
             .current_branch
             .clone()
@@ -354,7 +354,7 @@ impl MessageBranchSelector {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(current_branch) = self.current_branch else {
             return cx.interactivity_gate(false, false, |_cx| Vec::new());
         };

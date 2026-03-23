@@ -83,7 +83,7 @@ fn persona_palette(theme: &Theme, variant: PersonaVariant, state: PersonaState) 
     }
 }
 
-fn circle<H: UiHost + 'static>(
+fn circle<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     color: Color,
@@ -99,7 +99,7 @@ fn circle<H: UiHost + 'static>(
     cx.container(props, |_cx| std::iter::empty::<AnyElement>())
 }
 
-fn circle_border<H: UiHost + 'static>(
+fn circle_border<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     color: Color,
@@ -264,11 +264,11 @@ impl Persona {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.into_element_with_children(cx, |_cx, _controller| Vec::new())
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(&mut ElementContext<'_, H>, PersonaController) -> Vec<AnyElement>,
@@ -282,7 +282,7 @@ impl Persona {
         self.render_with_children(cx, custom_children)
     }
 
-    fn render_with_children<H: UiHost + 'static>(
+    fn render_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         custom_children: Vec<AnyElement>,

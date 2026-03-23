@@ -226,7 +226,7 @@ impl VoiceSelector {
         children: F,
     ) -> AnyElement
     where
-        H: UiHost + 'static,
+        H: UiHost,
         F: Fn(&mut ElementContext<'_, H>, VoiceSelectorChildSlot) -> AnyElement + Clone + 'static,
     {
         let open = fret_ui_kit::primitives::dialog::DialogRoot::new()
@@ -268,7 +268,7 @@ impl VoiceSelector {
         )
     }
 
-    pub fn into_element<H: UiHost + 'static>(
+    pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
@@ -331,7 +331,7 @@ impl VoiceSelectorTrigger {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_voice_selector_controller(cx) else {
             return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
@@ -583,7 +583,7 @@ impl VoiceSelectorList {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_voice_selector_controller(cx) else {
             return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
@@ -1138,7 +1138,7 @@ impl VoiceSelectorPreview {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let label = if self.playing {
             "Pause preview"
         } else {
@@ -1280,7 +1280,7 @@ impl VoiceSelectorButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_voice_selector_controller(cx) else {
             return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };

@@ -156,7 +156,7 @@ impl EnvironmentVariables {
         self
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(
@@ -428,7 +428,7 @@ impl EnvironmentVariablesToggle {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_environment_variables_controller(cx) else {
             return hidden(cx);
         };
@@ -834,7 +834,7 @@ impl EnvironmentVariableCopyButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(data) = use_environment_variable_data(cx) else {
             return hidden(cx);
         };

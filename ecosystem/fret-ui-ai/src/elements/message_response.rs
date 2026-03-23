@@ -109,7 +109,7 @@ impl MessageResponse {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = fret_ui::Theme::global(&*cx.app).clone();
 
         let mut components = fret_markdown::MarkdownComponents::<H>::default();
@@ -261,9 +261,14 @@ impl MessageResponse {
             }
 
             let st = stream.borrow();
-            fret_markdown::markdown_streaming_pulldown_with(cx, st.stream.state(), &components)
+            fret_markdown::markdown_streaming_pulldown_with_non_windowed(
+                cx,
+                st.stream.state(),
+                &components,
+            )
         } else {
-            fret_markdown::Markdown::new(self.source).into_element_with(cx, &components)
+            fret_markdown::Markdown::new(self.source)
+                .into_element_with_non_windowed(cx, &components)
         };
 
         let root_layout = decl_style::layout_style(&theme, self.layout);

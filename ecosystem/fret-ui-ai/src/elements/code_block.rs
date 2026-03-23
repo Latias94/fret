@@ -48,7 +48,7 @@ pub struct CodeBlock {
     show_line_numbers: bool,
     show_language: bool,
     max_height: Option<Px>,
-    windowed_lines: bool,
+    windowed: Option<fret_code_view::CodeBlockWindowedOptions>,
     children: Vec<AnyElement>,
     header_left: Vec<AnyElement>,
     header_right: Vec<AnyElement>,
@@ -65,7 +65,7 @@ impl std::fmt::Debug for CodeBlock {
             .field("show_line_numbers", &self.show_line_numbers)
             .field("show_language", &self.show_language)
             .field("max_height", &self.max_height)
-            .field("windowed_lines", &self.windowed_lines)
+            .field("windowed", &self.windowed)
             .field("children_len", &self.children.len())
             .field("header_left_len", &self.header_left.len())
             .field("header_right_len", &self.header_right.len())
@@ -84,7 +84,7 @@ impl CodeBlock {
             show_line_numbers: false,
             show_language: false,
             max_height: None,
-            windowed_lines: false,
+            windowed: None,
             children: Vec::new(),
             header_left: Vec::new(),
             header_right: Vec::new(),
@@ -122,12 +122,13 @@ impl CodeBlock {
         self
     }
 
-    /// Enables a virtualized/windowed vertical list for long snippets.
+    /// Enables the explicit retained/windowed renderer for long snippets.
     ///
-    /// This keeps the UI gallery responsive for large examples while preserving shadcn-aligned
-    /// scrollbar + max-height behavior.
-    pub fn windowed_lines(mut self, enabled: bool) -> Self {
-        self.windowed_lines = enabled;
+    /// This requires the explicit retained entrypoints `into_element_windowed` /
+    /// `into_element_with_children_windowed`. The default `into_element` methods stay
+    /// non-windowed so downstream composition does not inherit a `'static` bound by default.
+    pub fn windowed(mut self, windowed: fret_code_view::CodeBlockWindowedOptions) -> Self {
+        self.windowed = Some(windowed);
         self
     }
 
@@ -162,7 +163,7 @@ impl CodeBlock {
         self
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
@@ -178,9 +179,46 @@ impl CodeBlock {
         self.children(children(cx)).into_element(cx)
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element_with_children_windowed<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        let context = CodeBlockContext {
+            code: self.code.clone(),
+            language: self.language.clone(),
+            show_line_numbers: self.show_line_numbers,
+        };
+        cx.root_state(CodeBlockLocalState::default, |st| {
+            st.context = Some(context);
+        });
+        self.children(children(cx)).into_element_windowed(cx)
+    }
+
+    pub fn into_element_with_children_non_windowed<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        let context = CodeBlockContext {
+            code: self.code.clone(),
+            language: self.language.clone(),
+            show_line_numbers: self.show_line_numbers,
+        };
+        cx.root_state(CodeBlockLocalState::default, |st| {
+            st.context = Some(context);
+        });
+        self.children(children(cx)).into_element_non_windowed(cx)
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        debug_assert!(
+            self.windowed.is_none(),
+            "CodeBlock::windowed(...) requires CodeBlock::into_element_windowed(...)"
+        );
+
         if !self.children.is_empty() {
-            return self.into_element_composable(cx);
+            return self.into_element_composable_non_windowed(cx);
         }
 
         let theme = Theme::global(&*cx.app).clone();
@@ -211,16 +249,10 @@ impl CodeBlock {
             disable_ligatures: true,
             disable_contextual_alternates: true,
             max_height: self.max_height,
-            windowed_lines: false,
-            windowed_lines_overscan: 6,
             show_scrollbar_x: true,
             scrollbar_x_on_hover: true,
             show_scrollbar_y: true,
             scrollbar_y_on_hover: true,
-        };
-        let options = fret_code_view::CodeBlockUiOptions {
-            windowed_lines: self.windowed_lines,
-            ..options
         };
 
         let code = self.code;
@@ -254,7 +286,146 @@ impl CodeBlock {
         )
     }
 
-    fn into_element_composable<H: UiHost + 'static>(
+    pub fn into_element_windowed<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        let windowed = self.windowed.unwrap_or_default();
+        if !self.children.is_empty() {
+            let theme = Theme::global(&*cx.app).clone();
+            let mut chrome = ChromeRefinement::default().rounded(Radius::Md);
+            chrome = chrome
+                .border_1()
+                .bg(ColorRef::Color(theme.color_token("card")))
+                .border_color(ColorRef::Color(theme.color_token("border")));
+
+            let mut props = decl_style::container_props(&theme, chrome, self.layout);
+            props.layout.overflow = Overflow::Clip;
+
+            let content = fret_code_view::code_block_with_header_slots_windowed(
+                cx,
+                &self.code,
+                self.language.as_deref(),
+                self.show_line_numbers,
+                fret_code_view::CodeBlockUiOptions {
+                    show_header: false,
+                    header_divider: false,
+                    header_background: fret_code_view::CodeBlockHeaderBackground::None,
+                    show_copy_button: false,
+                    copy_button_on_hover: true,
+                    copy_button_placement: fret_code_view::CodeBlockCopyButtonPlacement::Overlay,
+                    border: false,
+                    wrap: fret_code_view::CodeBlockWrap::ScrollX,
+                    disable_ligatures: true,
+                    disable_contextual_alternates: true,
+                    max_height: self.max_height,
+                    show_scrollbar_x: true,
+                    scrollbar_x_on_hover: true,
+                    show_scrollbar_y: true,
+                    scrollbar_y_on_hover: true,
+                },
+                fret_code_view::CodeBlockHeaderSlots::default(),
+                windowed,
+            );
+
+            let children = self.children;
+            let el = cx.container(props, move |cx| {
+                vec![
+                    ui::v_flex(move |_cx| {
+                        let mut out = children;
+                        out.push(content);
+                        out
+                    })
+                    .gap(Space::N0)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+                ]
+            });
+
+            return match self.test_id {
+                Some(test_id) => el.attach_semantics(
+                    fret_ui::element::SemanticsDecoration::default()
+                        .role(SemanticsRole::Group)
+                        .test_id(test_id),
+                ),
+                None => el,
+            };
+        }
+
+        let theme = Theme::global(&*cx.app).clone();
+
+        let mut header =
+            fret_code_view::CodeBlockHeaderSlots::default().show_language(self.show_language);
+        header.left = self.header_left;
+        header.right = self.header_right;
+
+        let header_visible = self.show_header
+            || !header.left.is_empty()
+            || !header.right.is_empty()
+            || (self.show_language && self.language.is_some());
+
+        let options = fret_code_view::CodeBlockUiOptions {
+            show_header: self.show_header,
+            header_divider: header_visible,
+            header_background: if header_visible {
+                fret_code_view::CodeBlockHeaderBackground::Muted80
+            } else {
+                fret_code_view::CodeBlockHeaderBackground::None
+            },
+            show_copy_button: false,
+            copy_button_on_hover: true,
+            copy_button_placement: fret_code_view::CodeBlockCopyButtonPlacement::Overlay,
+            border: true,
+            wrap: fret_code_view::CodeBlockWrap::ScrollX,
+            disable_ligatures: true,
+            disable_contextual_alternates: true,
+            max_height: self.max_height,
+            show_scrollbar_x: true,
+            scrollbar_x_on_hover: true,
+            show_scrollbar_y: true,
+            scrollbar_y_on_hover: true,
+        };
+
+        let code = self.code;
+        let language = self.language;
+        let show_line_numbers = self.show_line_numbers;
+        let content = fret_code_view::code_block_with_header_slots_windowed(
+            cx,
+            &code,
+            language.as_deref(),
+            show_line_numbers,
+            options,
+            header,
+            windowed,
+        );
+
+        let el = cx.container(
+            ContainerProps {
+                layout: decl_style::layout_style(&theme, self.layout),
+                ..Default::default()
+            },
+            move |_cx| vec![content],
+        );
+
+        match self.test_id {
+            Some(test_id) => el.attach_semantics(
+                fret_ui::element::SemanticsDecoration::default()
+                    .role(SemanticsRole::Group)
+                    .test_id(test_id),
+            ),
+            None => el,
+        }
+    }
+
+    pub fn into_element_non_windowed<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        self.windowed = None;
+        self.into_element(cx)
+    }
+
+    fn into_element_composable_non_windowed<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
     ) -> AnyElement {
@@ -268,7 +439,7 @@ impl CodeBlock {
         let mut props = decl_style::container_props(&theme, chrome, self.layout);
         props.layout.overflow = Overflow::Clip;
 
-        let content = fret_code_view::code_block_with_header_slots(
+        let content = fret_code_view::code_block_with_header_slots_non_windowed(
             cx,
             &self.code,
             self.language.as_deref(),
@@ -285,8 +456,6 @@ impl CodeBlock {
                 disable_ligatures: true,
                 disable_contextual_alternates: true,
                 max_height: self.max_height,
-                windowed_lines: self.windowed_lines,
-                windowed_lines_overscan: 6,
                 show_scrollbar_x: true,
                 scrollbar_x_on_hover: true,
                 show_scrollbar_y: true,
@@ -574,7 +743,7 @@ impl CodeBlockCopyButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
 

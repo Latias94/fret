@@ -113,7 +113,7 @@ impl Snippet {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Snippet {
             code: _,
             children,
@@ -152,7 +152,7 @@ impl Snippet {
         )
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
@@ -462,7 +462,7 @@ impl SnippetCopyButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
 

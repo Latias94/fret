@@ -186,7 +186,7 @@ impl Terminal {
         self
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(&mut ElementContext<'_, H>, TerminalController) -> Vec<AnyElement>,
@@ -231,7 +231,7 @@ impl Terminal {
         }
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let test_id_copy = self.test_id_copy.clone();
         let copied_marker_test_id = self.copied_marker_test_id.clone();
         let test_id_clear = self.test_id_clear.clone();
@@ -615,7 +615,7 @@ impl TerminalCopyButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_terminal_controller(cx) else {
             return cx.text("");
         };
@@ -792,7 +792,7 @@ impl TerminalClearButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_terminal_controller(cx) else {
             return cx.text("");
         };
@@ -908,7 +908,7 @@ impl TerminalContent {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_terminal_controller(cx) else {
             return cx.text("");
         };

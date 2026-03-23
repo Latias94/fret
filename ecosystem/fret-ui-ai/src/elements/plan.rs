@@ -95,7 +95,7 @@ impl Plan {
 
     /// Composable children surface aligned with upstream `Plan` usage:
     /// callers compose `PlanHeader`/`PlanTrigger`/`PlanContent`/`PlanFooter` as direct children.
-    pub fn into_element<H: UiHost + 'static>(
+    pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
@@ -140,7 +140,7 @@ impl Plan {
         self
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(&mut ElementContext<'_, H>, PlanController) -> Vec<AnyElement>,

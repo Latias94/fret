@@ -161,7 +161,7 @@ impl Commit {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let base_chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
             .border_1()
@@ -232,7 +232,7 @@ impl CommitHeader {
         self
     }
 
-    fn into_trigger<H: UiHost + 'static>(
+    fn into_trigger<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         open_model: fret_runtime::Model<bool>,
@@ -730,7 +730,7 @@ impl CommitCopyButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
 
@@ -1121,7 +1121,7 @@ impl CommitFilePath {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg_primary = theme
             .color_by_key("primary")

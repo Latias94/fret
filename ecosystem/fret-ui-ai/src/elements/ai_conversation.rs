@@ -174,7 +174,7 @@ impl AiConversationTranscript {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         #[derive(Debug, Default, Clone)]
         struct ConversationState {
             handle: VirtualListScrollHandle,

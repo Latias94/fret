@@ -61,7 +61,7 @@ impl MessageActions {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let layout = self.layout;
         let justify = self.justify;
         let children = self.children;
@@ -174,7 +174,7 @@ impl MessageActionTemplate {
             .unwrap_or(true)
     }
 
-    pub fn into_action<H: UiHost + 'static>(
+    pub fn into_action<H: UiHost>(
         &self,
         _cx: &mut ElementContext<'_, H>,
         message_test_id_prefix: Option<&str>,
@@ -335,7 +335,7 @@ impl MessageAction {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let tooltip_text = self.tooltip.clone();
 
         let mut btn = if !self.children.is_empty() {

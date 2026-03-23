@@ -77,10 +77,9 @@ impl ModelSelector {
         children: F,
     ) -> AnyElement
     where
-        H: UiHost + 'static,
+        H: UiHost,
         F: Fn(&mut ElementContext<'_, H>, ModelSelectorChildSlot, Model<bool>) -> AnyElement
-            + Clone
-            + 'static,
+            + Clone,
     {
         let open = fret_ui_kit::primitives::dialog::DialogRoot::new()
             .open(self.open)
@@ -111,7 +110,7 @@ impl ModelSelector {
         )
     }
 
-    pub fn into_element<H: UiHost + 'static>(
+    pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>, Model<bool>) -> AnyElement,
@@ -175,7 +174,7 @@ impl ModelSelectorTrigger {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = self.open;
         let disabled = self.disabled;
         let test_id = self.test_id;

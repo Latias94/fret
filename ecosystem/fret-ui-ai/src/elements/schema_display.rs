@@ -337,7 +337,7 @@ impl SchemaDisplay {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let base_chrome = ChromeRefinement::default()
@@ -785,7 +785,7 @@ impl SchemaDisplayParameters {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let params = self.parameters;
         let count: Arc<str> = Arc::from(params.len().to_string());
         let test_id = self.test_id_trigger;
@@ -868,7 +868,7 @@ impl SchemaDisplayRequest {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = self.properties;
         let test_id = self.test_id_trigger;
         let test_id_first_property_trigger = self.test_id_first_property_trigger;
@@ -959,7 +959,7 @@ impl SchemaDisplayResponse {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = self.properties;
         let test_id = self.test_id_trigger;
         let test_id_first_property_trigger = self.test_id_first_property_trigger;
@@ -1118,7 +1118,7 @@ impl SchemaDisplayProperty {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let base_left = 40.0;
@@ -1372,7 +1372,7 @@ fn schema_inline_description<H: UiHost>(
     )
 }
 
-fn schema_section_trigger<H: UiHost + 'static>(
+fn schema_section_trigger<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open_model: Model<bool>,
     is_open: bool,
@@ -1459,7 +1459,7 @@ fn schema_section_trigger<H: UiHost + 'static>(
     })
 }
 
-fn schema_parameter_list<H: UiHost + 'static>(
+fn schema_parameter_list<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     parameters: Arc<[SchemaParameter]>,
 ) -> AnyElement {
@@ -1479,7 +1479,7 @@ fn schema_parameter_list<H: UiHost + 'static>(
         .into_element(cx)
 }
 
-fn schema_property_trigger_row<H: UiHost + 'static>(
+fn schema_property_trigger_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     open_model: Model<bool>,
@@ -1638,7 +1638,7 @@ fn schema_property_leaf<H: UiHost>(
     )
 }
 
-fn schema_property_list_from_vec<H: UiHost + 'static>(
+fn schema_property_list_from_vec<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     properties: Vec<SchemaProperty>,
     depth: u32,

@@ -57,7 +57,7 @@ impl MessageToolbar {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let layout = self.layout.merge(LayoutRefinement::default().w_full());
         let justify = self.justify;
         let gap = self.gap;

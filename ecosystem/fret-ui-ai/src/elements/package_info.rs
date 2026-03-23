@@ -312,7 +312,7 @@ impl PackageInfo {
         self
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(&mut ElementContext<'_, H>, PackageInfoController) -> Vec<AnyElement>,
@@ -357,7 +357,7 @@ impl PackageInfo {
         )
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.into_element_with_children(cx, move |cx, controller| {
             let mut header_children = vec![PackageInfoName::new().into_element(cx)];
             if controller.change_type.is_some() {

@@ -306,7 +306,7 @@ impl AiChat {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let messages_value = cx
             .get_model_cloned(&self.messages, Invalidation::Paint)
             .unwrap_or_default();

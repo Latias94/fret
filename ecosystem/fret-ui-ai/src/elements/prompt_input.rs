@@ -205,7 +205,7 @@ impl PromptInputProvider {
         self
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(&mut ElementContext<'_, H>, PromptInputController) -> Vec<AnyElement>,
@@ -861,7 +861,7 @@ impl PromptInputRoot {
         PromptInputChildren::new(self, parts)
     }
 
-    pub fn into_element_with_slots<H: UiHost + 'static>(
+    pub fn into_element_with_slots<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         slots: impl FnOnce(&mut ElementContext<'_, H>) -> PromptInputSlots,
@@ -1084,7 +1084,7 @@ impl PromptInputRoot {
         })
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.into_element_with_slots(cx, |_cx| PromptInputSlots::default())
     }
 }
@@ -1152,7 +1152,7 @@ impl PromptInputTextarea {
     }
 }
 
-impl<H: UiHost + 'static> IntoUiElement<H> for PromptInputTextarea {
+impl<H: UiHost> IntoUiElement<H> for PromptInputTextarea {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.apply_to_root(PromptInputRoot::new_uncontrolled())
@@ -1265,7 +1265,7 @@ impl PromptInputChildren {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut header: Option<PromptInputHeader> = None;
         let mut body: Option<PromptInputBody> = None;
         let mut footer: Option<PromptInputFooter> = None;
@@ -1310,7 +1310,7 @@ impl PromptInputChildren {
     }
 }
 
-impl<H: UiHost + 'static> IntoUiElement<H> for PromptInputChildren {
+impl<H: UiHost> IntoUiElement<H> for PromptInputChildren {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         PromptInputChildren::into_element(self, cx)
@@ -1720,7 +1720,7 @@ impl PromptInput {
         self.into_root().children(parts)
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let provider = use_prompt_input_controller(cx);
@@ -2214,7 +2214,7 @@ impl From<PromptInputReferencedSourcesRow> for PromptInputHeaderChild {
 }
 
 impl PromptInputHeaderChild {
-    fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         match self {
             Self::Element(el) => el,
             Self::AttachmentsRow(row) => row.into_element(cx),
@@ -2246,7 +2246,7 @@ impl PromptInputHeader {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
         let children = self.children;
@@ -2301,7 +2301,7 @@ impl From<PromptInputTools> for PromptInputFooterChild {
 }
 
 impl PromptInputFooterChild {
-    fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         match self {
             Self::Element(el) => el,
             Self::Submit(submit) => submit.into_element(cx),
@@ -2337,7 +2337,7 @@ impl PromptInputFooter {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N2).resolve(&theme);
 
@@ -2402,7 +2402,7 @@ impl From<PromptInputActionMenu> for PromptInputToolsChild {
 }
 
 impl PromptInputToolsChild {
-    fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         match self {
             Self::Element(el) => el,
             Self::ActionMenu(menu) => menu.into_element(cx),
@@ -2454,7 +2454,7 @@ impl PromptInputTools {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
 
@@ -2590,7 +2590,7 @@ impl PromptInputButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let icon_only = self.icon.is_some() && self.children.is_empty();
         let size = self.size.unwrap_or_else(|| {
             if icon_only {
@@ -2798,7 +2798,7 @@ impl PromptInputActionMenuTrigger {
         self
     }
 
-    pub fn into_element_with_open<H: UiHost + 'static>(
+    pub fn into_element_with_open<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         open: Model<bool>,
@@ -2904,7 +2904,7 @@ enum PromptInputActionMenuContentEntry {
 }
 
 impl PromptInputActionMenuContentEntry {
-    fn into_entry<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuEntry {
+    fn into_entry<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuEntry {
         match self {
             Self::Entry(entry) => entry,
             Self::Item(item) => item.into_entry(),
@@ -2949,10 +2949,7 @@ impl PromptInputActionMenuContent {
         self
     }
 
-    pub fn into_entries<H: UiHost + 'static>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-    ) -> Vec<DropdownMenuEntry> {
+    pub fn into_entries<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> Vec<DropdownMenuEntry> {
         self.entries
             .into_iter()
             .map(|entry| entry.into_entry(cx))
@@ -3012,7 +3009,7 @@ impl PromptInputActionMenu {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = prompt_input_action_menu_open_model(cx);
         let modal = self.modal;
         let align = self.align;
@@ -3068,10 +3065,7 @@ impl PromptInputActionAddAttachments {
         self
     }
 
-    pub fn into_entry<H: UiHost + 'static>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-    ) -> DropdownMenuEntry {
+    pub fn into_entry<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuEntry {
         let cfg = use_prompt_input_config(cx);
         let on_activate = self
             .on_activate
@@ -3132,10 +3126,7 @@ impl PromptInputActionAddScreenshot {
         self
     }
 
-    pub fn into_entry<H: UiHost + 'static>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-    ) -> DropdownMenuEntry {
+    pub fn into_entry<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuEntry {
         let cfg = use_prompt_input_config(cx);
         let on_activate = self
             .on_activate
@@ -3197,7 +3188,7 @@ impl PromptInputAttachmentsRow {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let attachments_model = self
             .attachments
             .or_else(|| use_prompt_input_controller(cx).and_then(|c| c.attachments));
@@ -3293,7 +3284,7 @@ impl PromptInputReferencedSourcesRow {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_prompt_input_referenced_sources(cx) else {
             return cx.text("");
         };
@@ -3381,7 +3372,7 @@ impl PromptInputActionAddAttachmentsButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let cfg = use_prompt_input_config(cx);
         let on_add = cfg.as_ref().and_then(|c| c.on_add_attachments.clone());
         let disabled = cfg.as_ref().map(|c| c.disabled).unwrap_or(true);
@@ -3431,7 +3422,7 @@ impl PromptInputSubmit {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let cfg = use_prompt_input_config(cx);
         let controller = use_prompt_input_controller(cx);
 

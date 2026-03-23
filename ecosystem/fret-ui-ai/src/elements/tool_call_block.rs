@@ -73,7 +73,7 @@ impl ToolCallBlock {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let call = self.call;
         let status = ToolStatus::from_tool_call_state(call.state);
         let mut header = ToolHeader::new(call.name.clone(), status);

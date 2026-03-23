@@ -317,7 +317,7 @@ impl StackTraceCopyButton {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(raw) = self
             .raw
             .or_else(|| use_stack_trace_context(cx).map(|ctx| ctx.raw))
@@ -513,7 +513,7 @@ impl StackTraceHeader {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(context) = use_stack_trace_context(cx) else {
             return hidden(cx);
         };
@@ -761,7 +761,7 @@ impl StackTraceActions {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut children = self.children;
         if children.is_empty() {
             children = vec![
@@ -881,7 +881,7 @@ impl StackTraceContent {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(context) = use_stack_trace_context(cx) else {
             return hidden(cx);
         };
@@ -1030,7 +1030,7 @@ impl StackTraceFrames {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let context = use_stack_trace_context(cx);
         let Some(frames_src) = self
             .frames
@@ -1420,7 +1420,7 @@ impl StackTrace {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let max_height = self.max_height;
         let test_id_header_trigger = self.test_id_header_trigger.clone();
         let test_id_copy_button = self.test_id_copy_button.clone();
@@ -1477,7 +1477,7 @@ impl StackTrace {
         })
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,

@@ -67,7 +67,7 @@ impl Sources {
         self
     }
 
-    pub fn into_element_parts<H: UiHost + 'static>(
+    pub fn into_element_parts<H: UiHost>(
         self,
         trigger: SourcesTrigger,
         content: SourcesContent,
@@ -176,7 +176,7 @@ impl SourcesTrigger {
         self
     }
 
-    fn into_element<H: UiHost + 'static>(
+    fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         open_model: Model<bool>,
@@ -300,7 +300,7 @@ impl SourcesContent {
         self
     }
 
-    fn into_element<H: UiHost + 'static>(
+    fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         fallback_test_id: Option<Arc<str>>,
@@ -395,7 +395,7 @@ impl Source {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let layout = decl_style::layout_style(&theme, self.layout);
         let title = self.title.clone();

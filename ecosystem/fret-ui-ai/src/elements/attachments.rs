@@ -462,7 +462,7 @@ impl Attachment {
         self
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl for<'a> Fn(&mut ElementContext<'a, H>, AttachmentChildParts) -> Vec<AnyElement>
@@ -612,7 +612,7 @@ impl Attachment {
         el
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.into_element_with_children(cx, move |cx, parts| {
             let preview = parts.preview().into_element(cx);
             let info = parts.info().into_element(cx);
@@ -1160,7 +1160,7 @@ impl AttachmentRemove {
             .unwrap_or(AttachmentVariant::Grid)
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let parts = use_attachment_parts(cx);
         let variant = self.resolved_variant(parts.as_ref());
         let on_remove = self

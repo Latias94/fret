@@ -399,7 +399,7 @@ fn render_context_footer_shell<H: UiHost>(
     }
 }
 
-fn resolve_context_trigger_slot<H: UiHost + 'static>(
+fn resolve_context_trigger_slot<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     mut slot: AnyElement,
 ) -> AnyElement {
@@ -420,7 +420,7 @@ fn resolve_context_trigger_slot<H: UiHost + 'static>(
     }
 }
 
-fn resolve_context_content_subtree<H: UiHost + 'static>(
+fn resolve_context_content_subtree<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     mut element: AnyElement,
 ) -> Option<AnyElement> {
@@ -484,7 +484,7 @@ fn resolve_context_content_subtree<H: UiHost + 'static>(
     Some(element)
 }
 
-fn resolve_context_root_children<H: UiHost + 'static>(
+fn resolve_context_root_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     children: Vec<AnyElement>,
 ) -> (Option<AnyElement>, Option<AnyElement>) {
@@ -600,7 +600,7 @@ impl Context {
         self
     }
 
-    pub fn into_element_with_children<H: UiHost + 'static>(
+    pub fn into_element_with_children<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         children: impl FnOnce(&mut ElementContext<'_, H>) -> (AnyElement, AnyElement),
@@ -656,7 +656,7 @@ impl Context {
         root
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         if !self.children.is_empty() {
             let theme = Theme::global(&*cx.app).clone();
 
@@ -922,7 +922,7 @@ impl ContextContentHeader {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let ContextContentHeader { children, test_id } = self;
 
         let Some(schema) = use_context_schema(cx) else {
