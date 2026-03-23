@@ -1907,11 +1907,10 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
         let inline_copy = "The technology continues to evolve rapidly, with new breakthroughs being announced regularly";
-        let sources: Arc<[SourceItem]> = Arc::from(vec![SourceItem::new(
-            "source-1",
-            "Advances in Natural Language Processing",
-        )
-        .url("https://example.com/nlp-advances")]);
+        let sources: Arc<[SourceItem]> = Arc::from(vec![
+            SourceItem::new("source-1", "Advances in Natural Language Processing")
+                .url("https://example.com/nlp-advances"),
+        ]);
 
         let el = fret_ui::elements::with_element_cx(
             &mut app,
@@ -1935,10 +1934,9 @@ mod tests {
     fn inline_citation_root_into_element_parts_renders_hostname_trigger() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        let sources: Arc<[SourceItem]> =
-            Arc::from(vec![
-                SourceItem::new("source-1", "Alpha source").url("https://example.com/foo")
-            ]);
+        let sources: Arc<[SourceItem]> = Arc::from(vec![
+            SourceItem::new("source-1", "Alpha source").url("https://example.com/foo"),
+        ]);
 
         let el = fret_ui::elements::with_element_cx(
             &mut app,

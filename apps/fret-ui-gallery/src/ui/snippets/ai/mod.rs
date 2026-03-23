@@ -105,6 +105,8 @@ pub mod queue_prompt_input_demo;
 #[cfg(feature = "gallery-dev")]
 pub mod sandbox_demo;
 #[cfg(feature = "gallery-dev")]
+pub mod sources_custom_demo;
+#[cfg(feature = "gallery-dev")]
 pub mod sources_demo;
 #[cfg(feature = "gallery-dev")]
 pub mod speech_input_demo;

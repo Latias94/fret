@@ -6,6 +6,7 @@ const PROMPT_INPUT_RS: &str = include_str!("elements/prompt_input.rs");
 const CHECKPOINT_RS: &str = include_str!("elements/checkpoint.rs");
 const CONVERSATION_DOWNLOAD_RS: &str = include_str!("elements/conversation_download.rs");
 const WEB_PREVIEW_RS: &str = include_str!("elements/web_preview.rs");
+const SOURCES_RS: &str = include_str!("elements/sources.rs");
 
 #[test]
 fn default_facing_ai_action_wrappers_keep_native_action_first_aliases() {
@@ -99,6 +100,24 @@ fn prompt_input_public_surface_keeps_docs_shaped_children_and_select_lane() {
         assert!(
             PROMPT_INPUT_RS.contains(marker),
             "prompt_input.rs should keep docs-shaped public surface marker `{marker}`"
+        );
+    }
+}
+
+#[test]
+fn sources_public_surface_keeps_docs_shaped_compound_and_custom_children() {
+    for marker in [
+        "pub struct Sources {",
+        "pub fn into_element_parts<H: UiHost + 'static>(",
+        "pub struct SourcesTrigger {",
+        "pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {",
+        "pub struct SourcesContent {",
+        "pub struct Source {",
+        "pub fn with_open_url(mut self) -> Self {",
+    ] {
+        assert!(
+            SOURCES_RS.contains(marker),
+            "sources.rs should keep docs-shaped public surface marker `{marker}`"
         );
     }
 }

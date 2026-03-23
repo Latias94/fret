@@ -7,7 +7,7 @@ use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let streaming = cx.local_model_keyed("streaming", || false);
@@ -54,15 +54,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let reasoning = ui_ai::Reasoning::new(is_streaming)
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .test_id_root("ui-ai-reasoning-root")
-        .into_element(
-            cx,
-            |cx| ui_ai::ReasoningTrigger::new().into_element(cx),
-            |cx| {
-                ui_ai::ReasoningContent::new(reasoning_text)
-                    .test_id("ui-ai-reasoning-content")
-                    .into_element(cx)
-            },
-        );
+        .trigger(ui_ai::ReasoningTrigger::new())
+        .content(ui_ai::ReasoningContent::new(reasoning_text).test_id("ui-ai-reasoning-content"))
+        .into_element(cx);
 
     let controls = ui::h_row(move |_cx| vec![start, stop])
         .gap(Space::N2)

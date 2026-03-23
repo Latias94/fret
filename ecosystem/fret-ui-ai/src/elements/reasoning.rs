@@ -7,6 +7,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, PressableA11y, PressableProps, SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::transition::{
@@ -20,12 +21,18 @@ use crate::elements::Shimmer;
 const AUTO_CLOSE_DELAY: Duration = Duration::from_millis(1000);
 const MS_IN_S: u128 = 1000;
 
-#[derive(Debug, Clone, Default)]
-struct ReasoningContextState {
-    open: Option<Model<bool>>,
-    is_open: bool,
-    is_streaming: bool,
-    duration_secs: Option<u32>,
+#[derive(Debug, Clone)]
+pub struct ReasoningController {
+    pub open: Model<bool>,
+    pub is_open: bool,
+    pub is_streaming: bool,
+    pub duration_secs: Option<u32>,
+}
+
+pub fn use_reasoning_controller<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<ReasoningController> {
+    cx.provided::<ReasoningController>().cloned()
 }
 
 #[derive(Debug, Default)]
@@ -35,7 +42,6 @@ struct ReasoningLogicState {
     started_at: Option<Instant>,
     computed_duration_secs: Option<u32>,
     auto_close_deadline: Option<Instant>,
-    open: Option<Model<bool>>,
 }
 
 #[derive(Clone, Default)]
@@ -86,6 +92,35 @@ impl Reasoning {
         }
     }
 
+    /// Docs-style compound children composition (Trigger + Content).
+    ///
+    /// This mirrors the upstream JSX shape:
+    ///
+    /// ```tsx
+    /// <Reasoning>
+    ///   <ReasoningTrigger />
+    ///   <ReasoningContent>...</ReasoningContent>
+    /// </Reasoning>
+    /// ```
+    pub fn children<I, C>(self, children: I) -> ReasoningWithChildren
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<ReasoningChild>,
+    {
+        ReasoningWithChildren {
+            root: self,
+            children: children.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    pub fn trigger(self, trigger: ReasoningTrigger) -> ReasoningWithChildren {
+        self.children([ReasoningChild::Trigger(trigger)])
+    }
+
+    pub fn content(self, content: ReasoningContent) -> ReasoningWithChildren {
+        self.children([ReasoningChild::Content(content)])
+    }
+
     /// Provide a controlled open model (Radix `open`).
     pub fn open(mut self, open: Model<bool>) -> Self {
         self.open = Some(open);
@@ -124,17 +159,15 @@ impl Reasoning {
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
+        use fret_ui_kit::primitives::collapsible::CollapsibleRoot;
         use fret_ui_shadcn::facade::Collapsible;
 
         let is_streaming = self.is_streaming;
         let resolved_default_open = self.default_open.unwrap_or(is_streaming);
         let is_explicitly_closed = self.default_open == Some(false);
-
-        let collapsible = if let Some(open) = self.open {
-            Collapsible::new(open)
-        } else {
-            Collapsible::uncontrolled(resolved_default_open)
-        };
+        let open_root = CollapsibleRoot::new()
+            .open(self.open)
+            .default_open(resolved_default_open);
 
         let duration_prop = self.duration_secs;
         let test_id_root = self.test_id_root;
@@ -142,6 +175,8 @@ impl Reasoning {
 
         cx.scope(move |cx| {
             let logic = cx.root_state(ReasoningLogicRef::default, |st| st.clone());
+            let open = open_root.use_open_model(cx).model();
+            let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
             let theme = Theme::global(&*cx.app).clone();
             let wrapper = cx.container(
@@ -150,83 +185,74 @@ impl Reasoning {
                     ..Default::default()
                 },
                 move |cx| {
-                    let container_id = cx.root_id();
-                    let _ = container_id;
+                    let now_duration = {
+                        let mut st = logic.lock();
+                        if !st.has_ever_streamed {
+                            st.has_ever_streamed = is_streaming;
+                        }
 
-                    vec![collapsible.into_element_with_open_model(
-                        cx,
-                        |cx, open, is_open| {
-                            let now_duration = {
-                                let mut st = logic.lock();
-                                if !st.has_ever_streamed {
-                                    st.has_ever_streamed = is_streaming;
-                                }
+                        if is_streaming {
+                            st.has_ever_streamed = true;
+                            if st.started_at.is_none() {
+                                st.started_at = Some(Instant::now());
+                            }
+                        } else if let Some(started_at) = st.started_at.take() {
+                            let elapsed_ms = started_at.elapsed().as_millis();
+                            let secs = (elapsed_ms + (MS_IN_S - 1)) / MS_IN_S;
+                            st.computed_duration_secs = Some(u32::try_from(secs).unwrap_or(0));
+                        }
 
-                                if is_streaming {
-                                    st.has_ever_streamed = true;
-                                    if st.started_at.is_none() {
-                                        st.started_at = Some(Instant::now());
-                                    }
-                                } else if let Some(started_at) = st.started_at.take() {
-                                    let elapsed_ms = started_at.elapsed().as_millis();
-                                    let secs = (elapsed_ms + (MS_IN_S - 1)) / MS_IN_S;
-                                    st.computed_duration_secs =
-                                        Some(u32::try_from(secs).unwrap_or(0));
-                                }
+                        duration_prop.or(st.computed_duration_secs)
+                    };
 
-                                st.open = Some(open.clone());
+                    // Auto-open when streaming starts (unless defaultOpen was explicitly false).
+                    if is_streaming && !is_open && !is_explicitly_closed {
+                        let _ = cx.app.models_mut().update(&open, |v| *v = true);
+                        cx.request_frame();
+                    }
 
-                                duration_prop.or(st.computed_duration_secs)
-                            };
+                    // Auto-close once when streaming ends.
+                    {
+                        let wants_auto_close = {
+                            let st = logic.lock();
+                            st.has_ever_streamed && !is_streaming && is_open && !st.has_auto_closed
+                        };
 
-                            // Auto-open when streaming starts (unless defaultOpen was explicitly false).
-                            if is_streaming && !is_open && !is_explicitly_closed {
-                                let _ = cx.app.models_mut().update(&open, |v| *v = true);
+                        let mut st = logic.lock();
+                        if wants_auto_close && st.auto_close_deadline.is_none() {
+                            st.auto_close_deadline = Some(Instant::now() + AUTO_CLOSE_DELAY);
+                        } else if !wants_auto_close {
+                            st.auto_close_deadline = None;
+                        }
+
+                        if let Some(deadline) = st.auto_close_deadline {
+                            // Drive time-based progression without relying on runner timer
+                            // routing (which requires explicit token -> element mapping).
+                            cx.request_animation_frame();
+                            if Instant::now() >= deadline {
+                                st.auto_close_deadline = None;
+                                st.has_auto_closed = true;
+                                let _ = cx.app.models_mut().update(&open, |v| *v = false);
                                 cx.request_frame();
                             }
+                        }
+                    }
 
-                            // Auto-close once when streaming ends.
-                            {
-                                let wants_auto_close = {
-                                    let st = logic.lock();
-                                    st.has_ever_streamed
-                                        && !is_streaming
-                                        && is_open
-                                        && !st.has_auto_closed
-                                };
+                    let controller = ReasoningController {
+                        open: open.clone(),
+                        is_open,
+                        is_streaming,
+                        duration_secs: now_duration,
+                    };
+                    let collapsible = Collapsible::new(open.clone());
 
-                                let mut st = logic.lock();
-                                if wants_auto_close && st.auto_close_deadline.is_none() {
-                                    st.auto_close_deadline =
-                                        Some(Instant::now() + AUTO_CLOSE_DELAY);
-                                } else if !wants_auto_close {
-                                    st.auto_close_deadline = None;
-                                }
-
-                                if let Some(deadline) = st.auto_close_deadline {
-                                    // Drive time-based progression without relying on runner timer
-                                    // routing (which requires explicit token → element mapping).
-                                    cx.request_animation_frame();
-                                    if Instant::now() >= deadline {
-                                        st.auto_close_deadline = None;
-                                        st.has_auto_closed = true;
-                                        let _ = cx.app.models_mut().update(&open, |v| *v = false);
-                                        cx.request_frame();
-                                    }
-                                }
-                            }
-
-                            cx.root_state(ReasoningContextState::default, |ctx_state| {
-                                ctx_state.open = Some(open.clone());
-                                ctx_state.is_open = is_open;
-                                ctx_state.is_streaming = is_streaming;
-                                ctx_state.duration_secs = now_duration;
-                            });
-
-                            trigger(cx)
-                        },
-                        content,
-                    )]
+                    vec![cx.provide(controller, move |cx| {
+                        collapsible.into_element_with_open_model(
+                            cx,
+                            move |cx, _open, _is_open| trigger(cx),
+                            move |cx| content(cx),
+                        )
+                    })]
                 },
             );
 
@@ -242,8 +268,93 @@ impl Reasoning {
     }
 }
 
+pub enum ReasoningChild {
+    Trigger(ReasoningTrigger),
+    Content(ReasoningContent),
+}
+
+impl std::fmt::Debug for ReasoningChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Trigger(_) => f.write_str("ReasoningChild::Trigger(..)"),
+            Self::Content(_) => f.write_str("ReasoningChild::Content(..)"),
+        }
+    }
+}
+
+impl From<ReasoningTrigger> for ReasoningChild {
+    fn from(value: ReasoningTrigger) -> Self {
+        Self::Trigger(value)
+    }
+}
+
+impl From<ReasoningContent> for ReasoningChild {
+    fn from(value: ReasoningContent) -> Self {
+        Self::Content(value)
+    }
+}
+
+#[derive(Debug)]
+pub struct ReasoningWithChildren {
+    root: Reasoning,
+    children: Vec<ReasoningChild>,
+}
+
+impl ReasoningWithChildren {
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<ReasoningChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn trigger(self, trigger: ReasoningTrigger) -> Self {
+        self.children([ReasoningChild::Trigger(trigger)])
+    }
+
+    pub fn content(self, content: ReasoningContent) -> Self {
+        self.children([ReasoningChild::Content(content)])
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self { root, children } = self;
+
+        let mut trigger: Option<ReasoningTrigger> = None;
+        let mut content: Option<ReasoningContent> = None;
+
+        for child in children {
+            match child {
+                ReasoningChild::Trigger(value) => {
+                    if trigger.is_some() {
+                        debug_assert!(false, "Reasoning expects a single ReasoningTrigger");
+                    }
+                    trigger = Some(value);
+                }
+                ReasoningChild::Content(value) => {
+                    if content.is_some() {
+                        debug_assert!(false, "Reasoning expects a single ReasoningContent");
+                    }
+                    content = Some(value);
+                }
+            }
+        }
+
+        let trigger = trigger.unwrap_or_else(ReasoningTrigger::new);
+        let content = content.unwrap_or_else(|| ReasoningContent::new(""));
+
+        root.into_element(
+            cx,
+            move |cx| trigger.into_element(cx),
+            move |cx| content.into_element(cx),
+        )
+    }
+}
+
 pub struct ReasoningTrigger {
     children: Option<Vec<AnyElement>>,
+    thinking_children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -252,6 +363,10 @@ impl std::fmt::Debug for ReasoningTrigger {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ReasoningTrigger")
             .field("children_len", &self.children.as_ref().map(|v| v.len()))
+            .field(
+                "thinking_children_len",
+                &self.thinking_children.as_ref().map(|v| v.len()),
+            )
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .finish()
@@ -262,13 +377,22 @@ impl ReasoningTrigger {
     pub fn new() -> Self {
         Self {
             children: None,
+            thinking_children: None,
             test_id: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
         }
     }
 
+    /// Overrides the full Trigger body (similar to JSX `children`).
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = Some(children.into_iter().collect());
+        self
+    }
+
+    /// Fret convenience API: override only the "thinking message" slot while retaining the
+    /// default Brain/Chevron affordances.
+    pub fn thinking_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.thinking_children = Some(children.into_iter().collect());
         self
     }
 
@@ -283,7 +407,7 @@ impl ReasoningTrigger {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let Some(ctx_state) = cx.inherited_state::<ReasoningContextState>() else {
+        let Some(controller) = use_reasoning_controller(cx) else {
             debug_assert!(
                 false,
                 "ReasoningTrigger must be rendered within a Reasoning scope"
@@ -291,19 +415,17 @@ impl ReasoningTrigger {
             return cx.container(Default::default(), |_| Vec::new());
         };
 
-        let Some(open) = ctx_state.open.clone() else {
-            return cx.container(Default::default(), |_| Vec::new());
-        };
-
         let theme = Theme::global(&*cx.app).clone();
         let muted_fg = theme.color_token("muted-foreground");
         let fg_hover = theme.color_token("foreground");
 
-        let is_open = ctx_state.is_open;
-        let is_streaming = ctx_state.is_streaming;
-        let duration_secs = ctx_state.duration_secs;
+        let open = controller.open.clone();
+        let is_open = controller.is_open;
+        let is_streaming = controller.is_streaming;
+        let duration_secs = controller.duration_secs;
 
         let children = self.children;
+        let thinking_children = self.thinking_children;
         let test_id = self.test_id;
         let layout = self.layout;
 
@@ -325,6 +447,17 @@ impl ReasoningTrigger {
 
                 let fg = if st.hovered { fg_hover } else { muted_fg };
                 let icon_size = Px(16.0);
+
+                if let Some(children) = children {
+                    let row = ui::h_row(move |_cx| children)
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .items(Items::Center)
+                        .gap(Space::N2)
+                        .into_element(cx);
+
+                    return vec![reasoning_message_scope(row, &theme, fg)];
+                }
+
                 let brain = decl_icon::icon_with(
                     cx,
                     fret_icons::IconId::new_static("lucide.brain"),
@@ -332,15 +465,19 @@ impl ReasoningTrigger {
                     Some(ColorRef::Color(fg)),
                 );
 
-                let thinking = if let Some(children) = children {
-                    cx.stack_props(
-                        fret_ui::element::StackProps {
-                            layout: fret_ui_kit::declarative::style::layout_style(
-                                &theme,
-                                LayoutRefinement::default().min_w_0(),
-                            ),
-                        },
-                        move |_cx| children,
+                let thinking = if let Some(children) = thinking_children {
+                    reasoning_message_scope(
+                        cx.stack_props(
+                            fret_ui::element::StackProps {
+                                layout: fret_ui_kit::declarative::style::layout_style(
+                                    &theme,
+                                    LayoutRefinement::default().min_w_0().flex_1(),
+                                ),
+                            },
+                            move |_cx| children,
+                        ),
+                        &theme,
+                        fg,
                     )
                 } else {
                     default_thinking_message(cx, &theme, fg, is_streaming, duration_secs)
@@ -581,6 +718,32 @@ mod tests {
             .any(|child| has_scoped_text_style(child, refinement, foreground))
     }
 
+    fn find_element_by_test_id<'a>(
+        element: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a AnyElement> {
+        if element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|dec| dec.test_id.as_deref())
+            == Some(test_id)
+        {
+            return Some(element);
+        }
+
+        match &element.kind {
+            ElementKind::Semantics(props) if props.test_id.as_deref() == Some(test_id) => {
+                return Some(element);
+            }
+            _ => {}
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_element_by_test_id(child, test_id))
+    }
+
     #[test]
     fn reasoning_trigger_default_streaming_message_scopes_inherited_typography_for_shimmer() {
         let window = AppWindowId::default();
@@ -589,13 +752,18 @@ mod tests {
 
         let element =
             fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-                cx.root_state(ReasoningContextState::default, |st| {
-                    st.open = Some(open.clone());
-                    st.is_open = true;
-                    st.is_streaming = true;
-                    st.duration_secs = None;
-                });
-                ReasoningTrigger::new().into_element(cx)
+                cx.provide(
+                    ReasoningController {
+                        open: open.clone(),
+                        is_open: true,
+                        is_streaming: true,
+                        duration_secs: None,
+                    },
+                    |cx| vec![ReasoningTrigger::new().into_element(cx)],
+                )
+                .into_iter()
+                .next()
+                .expect("reasoning trigger provide should yield one element")
             });
 
         let theme = fret_ui::Theme::global(&app).clone();
@@ -628,13 +796,18 @@ mod tests {
 
         let element =
             fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-                cx.root_state(ReasoningContextState::default, |st| {
-                    st.open = Some(open.clone());
-                    st.is_open = true;
-                    st.is_streaming = false;
-                    st.duration_secs = Some(3);
-                });
-                ReasoningTrigger::new().into_element(cx)
+                cx.provide(
+                    ReasoningController {
+                        open: open.clone(),
+                        is_open: true,
+                        is_streaming: false,
+                        duration_secs: Some(3),
+                    },
+                    |cx| vec![ReasoningTrigger::new().into_element(cx)],
+                )
+                .into_iter()
+                .next()
+                .expect("reasoning trigger provide should yield one element")
             });
 
         let theme = fret_ui::Theme::global(&app).clone();
@@ -657,5 +830,110 @@ mod tests {
         };
         assert!(props.style.is_none());
         assert!(props.color.is_none());
+    }
+
+    #[test]
+    fn reasoning_trigger_children_overrides_default_thinking_copy() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                let custom = cx.text("Custom Trigger");
+                cx.provide(
+                    ReasoningController {
+                        open: open.clone(),
+                        is_open: true,
+                        is_streaming: true,
+                        duration_secs: None,
+                    },
+                    |cx| vec![ReasoningTrigger::new().children([custom]).into_element(cx)],
+                )
+                .into_iter()
+                .next()
+                .expect("reasoning trigger provide should yield one element")
+            });
+
+        assert!(find_text_by_content(&element, "Custom Trigger").is_some());
+        assert!(find_text_by_content(&element, "Thinking...").is_none());
+    }
+
+    #[test]
+    fn reasoning_trigger_thinking_children_overrides_default_thinking_copy() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                let custom = cx.text("Custom Thinking");
+                cx.provide(
+                    ReasoningController {
+                        open: open.clone(),
+                        is_open: true,
+                        is_streaming: true,
+                        duration_secs: None,
+                    },
+                    |cx| {
+                        vec![
+                            ReasoningTrigger::new()
+                                .thinking_children([custom])
+                                .into_element(cx),
+                        ]
+                    },
+                )
+                .into_iter()
+                .next()
+                .expect("reasoning trigger provide should yield one element")
+            });
+
+        assert!(find_text_by_content(&element, "Custom Thinking").is_some());
+        assert!(find_text_by_content(&element, "Thinking...").is_none());
+    }
+
+    #[test]
+    fn reasoning_children_composition_renders_content_by_default_when_streaming() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Reasoning::new(true)
+                    .trigger(ReasoningTrigger::new())
+                    .content(ReasoningContent::new("Hello").test_id("content"))
+                    .into_element(cx)
+            });
+
+        assert!(find_element_by_test_id(&element, "content").is_some());
+    }
+
+    #[test]
+    fn reasoning_controller_is_available_inside_custom_parts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Reasoning::new(false).default_open(Some(true)).into_element(
+                    cx,
+                    |cx| {
+                        let controller = use_reasoning_controller(cx)
+                            .expect("reasoning controller should be provided to the trigger");
+                        cx.text(format!(
+                            "trigger open={} streaming={}",
+                            controller.is_open, controller.is_streaming
+                        ))
+                    },
+                    |cx| {
+                        let controller = use_reasoning_controller(cx)
+                            .expect("reasoning controller should be provided to the content");
+                        cx.text(format!("content duration={:?}", controller.duration_secs))
+                    },
+                )
+            });
+
+        assert!(find_text_by_content(&element, "trigger open=true streaming=false").is_some());
+        assert!(find_text_by_content(&element, "content duration=None").is_some());
     }
 }
