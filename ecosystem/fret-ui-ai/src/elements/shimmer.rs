@@ -92,6 +92,11 @@ impl Shimmer {
         }
     }
 
+    /// Docs-aligned alias for `duration_secs(...)`.
+    pub fn duration(self, secs: f32) -> Self {
+        self.duration_secs(secs)
+    }
+
     pub fn duration_secs(mut self, secs: f32) -> Self {
         self.duration_secs = secs;
         self
@@ -510,6 +515,14 @@ mod tests {
         fn unregister_material(&mut self, _id: MaterialId) -> bool {
             false
         }
+    }
+
+    #[test]
+    fn shimmer_duration_alias_matches_duration_secs() {
+        let alias = Shimmer::new("Alias").duration(3.5);
+        let explicit = Shimmer::new("Alias").duration_secs(3.5);
+
+        assert_eq!(alias.duration_secs, explicit.duration_secs);
     }
 
     #[test]

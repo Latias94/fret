@@ -3,24 +3,26 @@ pub const SOURCE: &str = include_str!("shimmer_duration_demo.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::typography;
 use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
+use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let theme = fret_ui::Theme::global(&*cx.app).snapshot();
+    let muted = ColorRef::Color(typography::muted_foreground_color(&theme));
+
     let item = |cx: &mut UiCx<'_>, label: &'static str, secs: f32, text: &'static str| {
+        let muted = muted.clone();
         ui::v_stack(move |cx| {
             vec![
-                shadcn::Badge::new(label)
-                    .variant(shadcn::BadgeVariant::Secondary)
+                ui::text(label)
+                    .text_sm()
+                    .text_color(muted.clone())
                     .into_element(cx),
-                ui_ai::Shimmer::new(Arc::<str>::from(text))
-                    .duration_secs(secs)
-                    .into_element(cx),
+                ui_ai::Shimmer::new(text).duration(secs).into_element(cx),
             ]
         })
-        .gap(Space::N2)
+        .gap(Space::N3)
         .items_center()
         .into_element(cx)
     };
