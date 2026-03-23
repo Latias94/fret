@@ -62,6 +62,24 @@ pub type OnPromptInputError = Arc<
         + 'static,
 >;
 
+/// Upstream parity data for AI Elements `PromptInput` submission.
+///
+/// Reference: `repo-ref/ai-elements/packages/elements/src/prompt-input.tsx` (`PromptInputMessage`).
+#[derive(Debug, Clone)]
+pub struct PromptInputMessage {
+    pub text: Arc<str>,
+    pub files: Vec<AttachmentData>,
+}
+
+pub type OnPromptInputSubmit = Arc<
+    dyn Fn(
+            &mut dyn fret_ui::action::UiActionHost,
+            fret_ui::action::ActionCx,
+            PromptInputMessage,
+            ActivateReason,
+        ) + 'static,
+>;
+
 #[derive(Debug, Clone)]
 pub struct PromptInputController {
     pub text: Model<String>,
@@ -85,9 +103,11 @@ pub struct PromptInputConfig {
     pub status: Option<PromptInputStatus>,
     pub clear_on_send: bool,
     pub clear_attachments_on_send: bool,
+    pub on_submit: Option<OnPromptInputSubmit>,
     pub on_send: Option<OnActivate>,
     pub on_stop: Option<OnActivate>,
     pub on_add_attachments: Option<OnActivate>,
+    pub on_add_screenshot: Option<OnActivate>,
     pub accept: Option<Arc<str>>,
     pub multiple: bool,
     pub max_files: Option<usize>,
@@ -224,6 +244,7 @@ fn prompt_input_send_activate(
     attachments: Option<Model<Vec<AttachmentData>>>,
     clear_on_send: bool,
     clear_attachments_on_send: bool,
+    on_submit: Option<OnPromptInputSubmit>,
     on_send: Option<OnActivate>,
 ) -> OnActivate {
     Arc::new(move |host, action_cx, reason| {
@@ -242,10 +263,21 @@ fn prompt_input_send_activate(
             return;
         }
 
-        let Some(on_send) = on_send.as_ref() else {
-            return;
+        let message = PromptInputMessage {
+            text: Arc::<str>::from(text_value.unwrap_or_default()),
+            files: attachments
+                .as_ref()
+                .and_then(|m| host.models_mut().read(m, Clone::clone).ok())
+                .unwrap_or_default(),
         };
-        on_send(host, action_cx, reason);
+
+        if let Some(on_submit) = on_submit.as_ref() {
+            on_submit(host, action_cx, message, reason);
+        } else if let Some(on_send) = on_send.as_ref() {
+            on_send(host, action_cx, reason);
+        } else {
+            return;
+        }
 
         if clear_on_send {
             let _ = host.models_mut().update(&text, |v| v.clear());
@@ -582,9 +614,11 @@ pub struct PromptInputRoot {
     status: Option<PromptInputStatus>,
     clear_on_send: bool,
     clear_attachments_on_send: bool,
+    on_submit: Option<OnPromptInputSubmit>,
     on_send: Option<OnActivate>,
     on_stop: Option<OnActivate>,
     on_add_attachments: Option<OnActivate>,
+    on_add_screenshot: Option<OnActivate>,
     accept: Option<Arc<str>>,
     multiple: bool,
     max_files: Option<usize>,
@@ -614,9 +648,11 @@ impl PromptInputRoot {
             status: None,
             clear_on_send: true,
             clear_attachments_on_send: true,
+            on_submit: None,
             on_send: None,
             on_stop: None,
             on_add_attachments: None,
+            on_add_screenshot: None,
             accept: None,
             multiple: false,
             max_files: None,
@@ -646,9 +682,11 @@ impl PromptInputRoot {
             status: None,
             clear_on_send: true,
             clear_attachments_on_send: true,
+            on_submit: None,
             on_send: None,
             on_stop: None,
             on_add_attachments: None,
+            on_add_screenshot: None,
             accept: None,
             multiple: false,
             max_files: None,
@@ -712,6 +750,11 @@ impl PromptInputRoot {
         self
     }
 
+    pub fn on_submit(mut self, on_submit: OnPromptInputSubmit) -> Self {
+        self.on_submit = Some(on_submit);
+        self
+    }
+
     pub fn on_send(mut self, on_send: OnActivate) -> Self {
         self.on_send = Some(on_send);
         self
@@ -724,6 +767,11 @@ impl PromptInputRoot {
 
     pub fn on_add_attachments(mut self, on_add_attachments: OnActivate) -> Self {
         self.on_add_attachments = Some(on_add_attachments);
+        self
+    }
+
+    pub fn on_add_screenshot(mut self, on_add_screenshot: OnActivate) -> Self {
+        self.on_add_screenshot = Some(on_add_screenshot);
         self
     }
 
@@ -849,9 +897,11 @@ impl PromptInputRoot {
             status: self.status,
             clear_on_send: self.clear_on_send,
             clear_attachments_on_send: self.clear_attachments_on_send,
+            on_submit: self.on_submit.clone(),
             on_send: self.on_send.clone(),
             on_stop: self.on_stop.clone(),
             on_add_attachments: self.on_add_attachments.clone(),
+            on_add_screenshot: self.on_add_screenshot.clone(),
             accept: self.accept.clone(),
             multiple: self.multiple,
             max_files: self.max_files,
@@ -896,6 +946,7 @@ impl PromptInputRoot {
                         attachments_model.clone(),
                         self.clear_on_send,
                         self.clear_attachments_on_send,
+                        self.on_submit.clone(),
                         self.on_send.clone(),
                     );
 
@@ -1277,9 +1328,11 @@ pub struct PromptInput {
     status: Option<PromptInputStatus>,
     clear_on_send: bool,
     clear_attachments_on_send: bool,
+    on_submit: Option<OnPromptInputSubmit>,
     on_send: Option<OnActivate>,
     on_stop: Option<OnActivate>,
     on_add_attachments: Option<OnActivate>,
+    on_add_screenshot: Option<OnActivate>,
     accept: Option<Arc<str>>,
     multiple: bool,
     max_files: Option<usize>,
@@ -1309,6 +1362,7 @@ impl std::fmt::Debug for PromptInput {
             .field("status", &self.status)
             .field("clear_on_send", &self.clear_on_send)
             .field("clear_attachments_on_send", &self.clear_attachments_on_send)
+            .field("on_submit", &self.on_submit.as_ref().map(|_| "<on_submit>"))
             .field("on_send", &self.on_send.as_ref().map(|_| "<on_send>"))
             .field("on_stop", &self.on_stop.as_ref().map(|_| "<on_stop>"))
             .field(
@@ -1317,6 +1371,13 @@ impl std::fmt::Debug for PromptInput {
                     .on_add_attachments
                     .as_ref()
                     .map(|_| "<on_add_attachments>"),
+            )
+            .field(
+                "on_add_screenshot",
+                &self
+                    .on_add_screenshot
+                    .as_ref()
+                    .map(|_| "<on_add_screenshot>"),
             )
             .field(
                 "attachments",
@@ -1359,9 +1420,11 @@ impl PromptInput {
             status: None,
             clear_on_send: true,
             clear_attachments_on_send: true,
+            on_submit: None,
             on_send: None,
             on_stop: None,
             on_add_attachments: None,
+            on_add_screenshot: None,
             accept: None,
             multiple: false,
             max_files: None,
@@ -1391,9 +1454,11 @@ impl PromptInput {
             status: None,
             clear_on_send: true,
             clear_attachments_on_send: true,
+            on_submit: None,
             on_send: None,
             on_stop: None,
             on_add_attachments: None,
+            on_add_screenshot: None,
             accept: None,
             multiple: false,
             max_files: None,
@@ -1452,6 +1517,15 @@ impl PromptInput {
         self
     }
 
+    /// Prefer this when app code needs upstream-like `onSubmit(message)` data.
+    ///
+    /// When both `on_submit(...)` and `on_send(...)` are provided, `on_submit(...)` wins and the
+    /// legacy `on_send(...)` compatibility hook is skipped for that activation.
+    pub fn on_submit(mut self, on_submit: OnPromptInputSubmit) -> Self {
+        self.on_submit = Some(on_submit);
+        self
+    }
+
     pub fn on_send(mut self, on_send: OnActivate) -> Self {
         self.on_send = Some(on_send);
         self
@@ -1468,6 +1542,15 @@ impl PromptInput {
     /// emits an intent.
     pub fn on_add_attachments(mut self, on_add_attachments: OnActivate) -> Self {
         self.on_add_attachments = Some(on_add_attachments);
+        self
+    }
+
+    /// Add a screenshot-capture affordance aligned with AI Elements `PromptInputActionAddScreenshot`.
+    ///
+    /// Screen-capture acquisition remains app-owned so the component layer does not grow
+    /// platform-specific capture policy.
+    pub fn on_add_screenshot(mut self, on_add_screenshot: OnActivate) -> Self {
+        self.on_add_screenshot = Some(on_add_screenshot);
         self
     }
 
@@ -1571,6 +1654,9 @@ impl PromptInput {
         if let Some(status) = self.status {
             root = root.status(status);
         }
+        if let Some(on_submit) = self.on_submit {
+            root = root.on_submit(on_submit);
+        }
         if let Some(on_send) = self.on_send {
             root = root.on_send(on_send);
         }
@@ -1579,6 +1665,9 @@ impl PromptInput {
         }
         if let Some(on_add_attachments) = self.on_add_attachments {
             root = root.on_add_attachments(on_add_attachments);
+        }
+        if let Some(on_add_screenshot) = self.on_add_screenshot {
+            root = root.on_add_screenshot(on_add_screenshot);
         }
         if let Some(accept) = self.accept {
             root = root.accept(accept);
@@ -1668,42 +1757,14 @@ impl PromptInput {
             });
             let attachments_len = attachments.as_ref().map(|v| v.len()).unwrap_or(0);
 
-            let text_model_for_handlers = text_model.clone();
-            let clear_on_send = self.clear_on_send;
-            let on_send = self.on_send.clone();
-            let attachments_model_for_send = attachments_model.clone();
-            let clear_attachments_on_send = self.clear_attachments_on_send;
-            let send_activate: OnActivate = Arc::new(move |host, action_cx, reason| {
-                let text = host
-                    .models_mut()
-                    .read(&text_model_for_handlers, Clone::clone)
-                    .ok();
-                let is_empty = text.as_deref().map(|v| v.trim().is_empty()).unwrap_or(true);
-
-                let attachments_len = attachments_model_for_send
-                    .as_ref()
-                    .and_then(|m| host.models_mut().read(m, |v| v.len()).ok())
-                    .unwrap_or(0);
-
-                if is_empty && attachments_len == 0 {
-                    return;
-                }
-
-                if let Some(on_send) = on_send.as_ref() {
-                    on_send(host, action_cx, reason);
-                }
-
-                if clear_on_send {
-                    let _ = host
-                        .models_mut()
-                        .update(&text_model_for_handlers, |v| v.clear());
-                }
-                if clear_attachments_on_send {
-                    if let Some(attachments_model) = attachments_model_for_send.as_ref() {
-                        let _ = host.models_mut().update(attachments_model, |v| v.clear());
-                    }
-                }
-            });
+            let send_activate = prompt_input_send_activate(
+                text_model.clone(),
+                attachments_model.clone(),
+                self.clear_on_send,
+                self.clear_attachments_on_send,
+                self.on_submit.clone(),
+                self.on_send.clone(),
+            );
 
             let stop_activate = self.on_stop.clone();
             let status = self.status.unwrap_or(if self.loading {
@@ -1713,7 +1774,10 @@ impl PromptInput {
             });
             let generating = status.is_generating();
 
-            let send_disabled = self.disabled || generating || (is_empty && attachments_len == 0);
+            let send_disabled = self.disabled
+                || generating
+                || (self.on_submit.is_none() && self.on_send.is_none())
+                || (is_empty && attachments_len == 0);
             let stop_disabled = self.disabled || !generating;
 
             let textarea_min_height = if self.textarea_min_height == Px(96.0) {
@@ -2120,16 +2184,59 @@ impl From<PromptInputSelectTrigger> for ShadcnSelectTrigger {
     }
 }
 
+/// Children accepted by [`PromptInputHeader`].
+///
+/// This enum exists so docs-shaped prompt-input composition can include prompt-scoped parts (like
+/// attachments chips) without forcing the caller to eagerly materialize `AnyElement` outside of the
+/// prompt-input config/controller scope.
+pub enum PromptInputHeaderChild {
+    Element(AnyElement),
+    AttachmentsRow(PromptInputAttachmentsRow),
+    ReferencedSourcesRow(PromptInputReferencedSourcesRow),
+}
+
+impl From<AnyElement> for PromptInputHeaderChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+impl From<PromptInputAttachmentsRow> for PromptInputHeaderChild {
+    fn from(value: PromptInputAttachmentsRow) -> Self {
+        Self::AttachmentsRow(value)
+    }
+}
+
+impl From<PromptInputReferencedSourcesRow> for PromptInputHeaderChild {
+    fn from(value: PromptInputReferencedSourcesRow) -> Self {
+        Self::ReferencedSourcesRow(value)
+    }
+}
+
+impl PromptInputHeaderChild {
+    fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        match self {
+            Self::Element(el) => el,
+            Self::AttachmentsRow(row) => row.into_element(cx),
+            Self::ReferencedSourcesRow(row) => row.into_element(cx),
+        }
+    }
+}
+
 /// Block-start header row aligned with AI Elements `PromptInputHeader`.
 pub struct PromptInputHeader {
-    children: Vec<AnyElement>,
+    children: Vec<PromptInputHeaderChild>,
     layout: LayoutRefinement,
 }
 
 impl PromptInputHeader {
-    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+    pub fn new<I, T>(children: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<PromptInputHeaderChild>,
+    {
         Self {
-            children: children.into_iter().collect(),
+            children: children.into_iter().map(Into::into).collect(),
             layout: LayoutRefinement::default().w_full(),
         }
     }
@@ -2142,6 +2249,7 @@ impl PromptInputHeader {
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
+        let children = self.children;
 
         cx.flex(
             FlexProps {
@@ -2153,26 +2261,65 @@ impl PromptInputHeader {
                 align: CrossAlign::Center,
                 wrap: true,
             },
-            move |_cx| self.children,
+            move |cx| {
+                children
+                    .into_iter()
+                    .map(|child| child.into_element(cx))
+                    .collect::<Vec<_>>()
+            },
         )
+    }
+}
+
+/// Children accepted by [`PromptInputFooter`].
+///
+/// Similar to [`PromptInputHeaderChild`], this keeps scope-sensitive prompt parts (like the submit
+/// affordance) inside the prompt-input scope so test ids and activation callbacks resolve
+/// correctly.
+pub enum PromptInputFooterChild {
+    Element(AnyElement),
+    Submit(PromptInputSubmit),
+}
+
+impl From<AnyElement> for PromptInputFooterChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+impl From<PromptInputSubmit> for PromptInputFooterChild {
+    fn from(value: PromptInputSubmit) -> Self {
+        Self::Submit(value)
+    }
+}
+
+impl PromptInputFooterChild {
+    fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        match self {
+            Self::Element(el) => el,
+            Self::Submit(submit) => submit.into_element(cx),
+        }
     }
 }
 
 /// Block-end footer row aligned with AI Elements `PromptInputFooter`.
 pub struct PromptInputFooter {
-    leading: Vec<AnyElement>,
-    trailing: Vec<AnyElement>,
+    leading: Vec<PromptInputFooterChild>,
+    trailing: Vec<PromptInputFooterChild>,
     layout: LayoutRefinement,
 }
 
 impl PromptInputFooter {
-    pub fn new(
-        leading: impl IntoIterator<Item = AnyElement>,
-        trailing: impl IntoIterator<Item = AnyElement>,
-    ) -> Self {
+    pub fn new<L, LT, T, TT>(leading: L, trailing: T) -> Self
+    where
+        L: IntoIterator<Item = LT>,
+        LT: Into<PromptInputFooterChild>,
+        T: IntoIterator<Item = TT>,
+        TT: Into<PromptInputFooterChild>,
+    {
         Self {
-            leading: leading.into_iter().collect(),
-            trailing: trailing.into_iter().collect(),
+            leading: leading.into_iter().map(Into::into).collect(),
+            trailing: trailing.into_iter().map(Into::into).collect(),
             layout: LayoutRefinement::default().w_full(),
         }
     }
@@ -2210,10 +2357,15 @@ impl PromptInputFooter {
                             ),
                             ..Default::default()
                         },
-                        move |_cx| leading,
+                        move |cx| {
+                            leading
+                                .into_iter()
+                                .map(|child| child.into_element(cx))
+                                .collect::<Vec<_>>()
+                        },
                     ));
                 }
-                out.extend(trailing);
+                out.extend(trailing.into_iter().map(|child| child.into_element(cx)));
                 out
             },
         )
@@ -2773,6 +2925,7 @@ impl PromptInputActionMenu {
 pub struct PromptInputActionAddAttachments {
     label: Arc<str>,
     test_id: Option<Arc<str>>,
+    on_activate: Option<OnActivate>,
 }
 
 impl PromptInputActionAddAttachments {
@@ -2780,6 +2933,7 @@ impl PromptInputActionAddAttachments {
         Self {
             label: Arc::<str>::from("Add photos or files"),
             test_id: None,
+            on_activate: None,
         }
     }
 
@@ -2793,16 +2947,25 @@ impl PromptInputActionAddAttachments {
         self
     }
 
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
+        self
+    }
+
     pub fn into_entry<H: UiHost + 'static>(
         self,
         cx: &mut ElementContext<'_, H>,
     ) -> DropdownMenuEntry {
         let cfg = use_prompt_input_config(cx);
+        let on_activate = self
+            .on_activate
+            .clone()
+            .or_else(|| cfg.as_ref().and_then(|c| c.on_add_attachments.clone()));
         let disabled = cfg
             .as_ref()
-            .map(|c| c.disabled || c.loading || c.on_add_attachments.is_none())
-            .unwrap_or(true);
-        let on_activate = cfg.as_ref().and_then(|c| c.on_add_attachments.clone());
+            .map(|c| c.disabled || c.loading)
+            .unwrap_or(false)
+            || on_activate.is_none();
 
         let mut item = PromptInputActionMenuItem::new(self.label)
             .leading_icon(IconId::new("lucide.image"))
@@ -2819,15 +2982,83 @@ impl PromptInputActionAddAttachments {
 }
 
 #[derive(Clone)]
+/// Menu item aligned with AI Elements `PromptInputActionAddScreenshot` (intent-driven).
+///
+/// The actual capture mechanism remains app-owned; this surface only exposes the upstream menu
+/// taxonomy and routes activation to the app callback.
+pub struct PromptInputActionAddScreenshot {
+    label: Arc<str>,
+    test_id: Option<Arc<str>>,
+    on_activate: Option<OnActivate>,
+}
+
+impl PromptInputActionAddScreenshot {
+    pub fn new() -> Self {
+        Self {
+            label: Arc::<str>::from("Take screenshot"),
+            test_id: None,
+            on_activate: None,
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = label.into();
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn into_entry<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> DropdownMenuEntry {
+        let cfg = use_prompt_input_config(cx);
+        let on_activate = self
+            .on_activate
+            .clone()
+            .or_else(|| cfg.as_ref().and_then(|c| c.on_add_screenshot.clone()));
+        let disabled = cfg
+            .as_ref()
+            .map(|c| c.disabled || c.loading)
+            .unwrap_or(false)
+            || on_activate.is_none();
+
+        let mut item = PromptInputActionMenuItem::new(self.label)
+            .leading_icon(IconId::new("lucide.monitor"))
+            .disabled(disabled);
+
+        if let Some(on_activate) = on_activate {
+            item = item.on_activate(on_activate);
+        }
+        if let Some(id) = self.test_id {
+            item = item.test_id(id);
+        }
+        item.into_entry()
+    }
+}
+
+#[derive(Clone)]
 /// Attachments chips row aligned with upstream prompt input attachment outcomes.
 pub struct PromptInputAttachmentsRow {
     variant: AttachmentVariant,
+    attachments: Option<Model<Vec<AttachmentData>>>,
+    test_id_root: Option<Arc<str>>,
 }
 
 impl PromptInputAttachmentsRow {
     pub fn new() -> Self {
         Self {
             variant: AttachmentVariant::Inline,
+            attachments: None,
+            test_id_root: None,
         }
     }
 
@@ -2836,11 +3067,25 @@ impl PromptInputAttachmentsRow {
         self
     }
 
+    /// Override the attachments model instead of resolving it from the nearest prompt input controller.
+    pub fn attachments_model(mut self, model: Model<Vec<AttachmentData>>) -> Self {
+        self.attachments = Some(model);
+        self
+    }
+
+    /// Provide a stable `test_id_root` when the prompt input config is not in scope.
+    ///
+    /// When a config is in scope, its `test_id_*` settings take precedence.
+    pub fn test_id_root(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_root = Some(id.into());
+        self
+    }
+
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let Some(controller) = use_prompt_input_controller(cx) else {
-            return cx.text("");
-        };
-        let Some(attachments_model) = controller.attachments else {
+        let attachments_model = self
+            .attachments
+            .or_else(|| use_prompt_input_controller(cx).and_then(|c| c.attachments));
+        let Some(attachments_model) = attachments_model else {
             return cx.text("");
         };
 
@@ -2862,6 +3107,10 @@ impl PromptInputAttachmentsRow {
                         .map(|id| Arc::<str>::from(format!("{id}-attachments")))
                 })
             });
+        let row_test_id = row_test_id.or_else(|| {
+            self.test_id_root
+                .map(|id| Arc::<str>::from(format!("{id}-attachments")))
+        });
 
         let on_remove: crate::elements::attachments::OnAttachmentRemove = {
             let model = attachments_model.clone();
@@ -3077,6 +3326,7 @@ impl PromptInputSubmit {
         } else {
             PromptInputStatus::Idle
         });
+        let on_submit = cfg.as_ref().and_then(|c| c.on_submit.clone());
         let on_send = cfg.as_ref().and_then(|c| c.on_send.clone());
         let on_stop = cfg.as_ref().and_then(|c| c.on_stop.clone());
 
@@ -3107,7 +3357,9 @@ impl PromptInputSubmit {
                 cfg.as_ref().and_then(|c| c.test_id_stop.clone()),
             )
         } else {
-            let send_disabled = disabled || on_send.is_none() || (is_empty && attachments_len == 0);
+            let send_disabled = disabled
+                || (on_submit.is_none() && on_send.is_none())
+                || (is_empty && attachments_len == 0);
             let icon = match status {
                 PromptInputStatus::Error => decl_icon::icon(cx, IconId::new("lucide.x")),
                 _ => decl_icon::icon(cx, IconId::new("lucide.corner-down-left")),
@@ -3115,17 +3367,18 @@ impl PromptInputSubmit {
             let activate = if send_disabled {
                 None
             } else {
-                match (text_model, on_send) {
-                    (Some(text_model), Some(on_send)) => Some(prompt_input_send_activate(
+                match text_model {
+                    Some(text_model) => Some(prompt_input_send_activate(
                         text_model,
                         attachments_model,
                         cfg.as_ref().map(|c| c.clear_on_send).unwrap_or(true),
                         cfg.as_ref()
                             .map(|c| c.clear_attachments_on_send)
                             .unwrap_or(true),
-                        Some(on_send),
+                        on_submit,
+                        on_send,
                     )),
-                    _ => None,
+                    None => None,
                 }
             };
             (
@@ -3160,7 +3413,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles,
-        ExternalDragKind, ExternalDropToken, MaterialDescriptor, MaterialId,
+        ExternalDragKind, ExternalDropToken, KeyCode, MaterialDescriptor, MaterialId,
         MaterialRegistrationError, MaterialService, Modifiers, MouseButton, PathCommand,
         PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point, PointerEvent,
         PointerId, PointerType, Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints,
@@ -3168,7 +3421,33 @@ mod tests {
     };
     use fret_ui::UiTree;
     use fret_ui::declarative::render_root;
-    use std::sync::Mutex;
+    use std::sync::{
+        Mutex,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
+        if element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+        {
+            return true;
+        }
+
+        if matches!(
+            &element.kind,
+            fret_ui::element::ElementKind::Semantics(props) if props.test_id.as_deref() == Some(test_id)
+        ) {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_test_id(child, test_id))
+    }
 
     #[derive(Default)]
     struct FakeServices;
@@ -3304,6 +3583,168 @@ mod tests {
             .read(&controlled_text, Clone::clone)
             .unwrap();
         assert_eq!(value, "a");
+    }
+
+    #[test]
+    fn prompt_input_children_lane_accepts_scoped_builtin_parts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let attachments = app.models_mut().insert(vec![AttachmentData::File(
+            AttachmentFileData::new("att-1")
+                .filename("design.png")
+                .media_type("image/png"),
+        )]);
+        let on_submit: OnPromptInputSubmit = Arc::new(|_host, _action_cx, _message, _reason| {});
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(180.0)),
+        );
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "prompt-input", |cx| {
+                PromptInput::new_uncontrolled()
+                    .attachments(attachments.clone())
+                    .on_submit(on_submit.clone())
+                    .test_id_root("pi-root")
+                    .test_id_send("pi-send")
+                    .children([
+                        PromptInputPart::from(PromptInputHeader::new([
+                            PromptInputAttachmentsRow::new(),
+                        ])),
+                        PromptInputPart::from(PromptInputBody::new([
+                            PromptInputTextarea::new().test_id("pi-textarea")
+                        ])),
+                        PromptInputPart::from(PromptInputFooter::new(
+                            std::iter::empty::<AnyElement>(),
+                            [PromptInputSubmit::new()],
+                        )),
+                    ])
+                    .into_element(cx)
+            });
+
+        assert!(has_test_id(&element, "pi-root-attachments-item-att-1"));
+    }
+
+    #[test]
+    fn prompt_input_on_submit_receives_message_and_supersedes_legacy_on_send() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let text = app.models_mut().insert(String::new());
+        let attachments = app.models_mut().insert(Vec::<AttachmentData>::new());
+        let submitted: Arc<Mutex<Vec<PromptInputMessage>>> = Arc::new(Mutex::new(Vec::new()));
+        let legacy_send_count = Arc::new(AtomicUsize::new(0));
+
+        let on_submit: OnPromptInputSubmit = {
+            let submitted = submitted.clone();
+            Arc::new(move |_host, _action_cx, message, _reason| {
+                submitted.lock().unwrap().push(message);
+            })
+        };
+        let on_send: OnActivate = {
+            let legacy_send_count = legacy_send_count.clone();
+            Arc::new(move |_host, _action_cx, _reason| {
+                legacy_send_count.fetch_add(1, Ordering::SeqCst);
+            })
+        };
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(180.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "prompt-input-submit-message-test",
+            |cx| {
+                vec![
+                    PromptInputRoot::new(text.clone())
+                        .attachments(attachments.clone())
+                        .on_submit(on_submit.clone())
+                        .on_send(on_send.clone())
+                        .test_id_root("pi-root")
+                        .test_id_textarea("pi-textarea")
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let click_pos = Point::new(Px(20.0), Px(20.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let _ = app.models_mut().update(&text, |value| {
+            *value = String::from("Hello Fret");
+        });
+        let _ = app.models_mut().update(&attachments, |items| {
+            items.push(AttachmentData::File(
+                AttachmentFileData::new("att-1")
+                    .filename("design.png")
+                    .media_type("image/png"),
+            ));
+        });
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let submissions = submitted.lock().unwrap().clone();
+        assert_eq!(submissions.len(), 1);
+        assert_eq!(submissions[0].text.as_ref(), "Hello Fret");
+        assert_eq!(submissions[0].files.len(), 1);
+        assert_eq!(
+            crate::elements::attachments::get_attachment_label(&submissions[0].files[0]).as_ref(),
+            "design.png"
+        );
+        assert_eq!(legacy_send_count.load(Ordering::SeqCst), 0);
+
+        let cleared_text = app.models_mut().read(&text, Clone::clone).unwrap();
+        assert!(cleared_text.is_empty());
+        let cleared_attachments_len = app
+            .models_mut()
+            .read(&attachments, |items| items.len())
+            .unwrap_or(usize::MAX);
+        assert_eq!(cleared_attachments_len, 0);
     }
 
     #[test]

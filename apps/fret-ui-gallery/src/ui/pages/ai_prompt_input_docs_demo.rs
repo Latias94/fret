@@ -27,7 +27,7 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "PromptInputProvider",
-                "Still the lifted-state lane today when app code needs to read text/attachments outside the root send hook.",
+                "Still the lifted-state lane for advanced external orchestration, but the docs page now prefers the closer-to-upstream `on_submit(message)` lane first.",
             ],
         ],
         false,
@@ -40,18 +40,18 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
 ) -> Vec<AnyElement> {
     let demo = snippets::prompt_input_docs_demo::render(cx);
     let features = crate::ui::doc_layout::notes_block([
-        "This page now teaches the docs-shaped children lane first: header, body textarea, footer tools, model picker, and submit.",
-        "The audit outcome was mainly public-surface drift, not a `crates/fret-ui` mechanism bug: the runtime/drop handling/test-id seams were already mostly healthy.",
-        "The prompt textarea now exposes placeholder authoring instead of forcing blank controls in first-party examples.",
-        "The prompt-input-scoped Select naming is now in place so examples can stay on the AI surface instead of teaching generic shadcn Select imports.",
+        "This page now teaches the docs-shaped children lane first: transcript shell, header attachments row, body textarea, footer tools, model picker, and submit.",
+        "The audit outcome remained mainly public-surface drift, not a `crates/fret-ui` mechanism bug: runtime drop handling and stable automation seams were already mostly healthy.",
+        "The prompt input now exposes an upstream-like `on_submit(message)` payload lane so first-party docs no longer have to teach `PromptInputProvider` just to read submit data.",
+        "The prompt action menu now includes `PromptInputActionAddScreenshot`, but capture itself stays app-owned to preserve the mechanism-vs-policy boundary.",
     ])
     .test_id("ui-gallery-ai-prompt-input-docs-features");
     let parts = parts_table(cx).test_id("ui-gallery-ai-prompt-input-docs-parts");
     let notes = crate::ui::doc_layout::notes_block([
-        "Remaining parity gaps versus the official AI Elements Prompt Input docs are still explicit: `PromptInputActionAddScreenshot`, file-paste attachments, and an upstream-like `onSubmit(message)` payload surface are not landed in this pass.",
+        "The remaining parity gap versus the official AI Elements Prompt Input docs is now mostly runtime-owned: file-paste attachments still need a clipboard-files contract in the platform/runner stack.",
+        "The screenshot action is intentionally intent-driven in Fret today: the menu taxonomy lives in `fret-ui-ai`, while actual capture policy stays app-owned instead of leaking platform behavior into the component layer.",
         "The low-level `PromptInputRoot::into_element_with_slots(...)` adapter remains for existing demos/diagnostics, but the docs page now avoids teaching that seam as the default copyable path.",
-        "When app code needs prompt text/attachments at submit time today, the practical Fret lane is still `PromptInputProvider` + lifted models rather than an upstream-style message payload callback.",
-        "Existing diagnostics coverage stays valid because the docs demo keeps stable `test_id` anchors for the search toggle, tooltip panel, and model trigger.",
+        "Diagnostics coverage now has stable anchors for transcript messages, screenshot/add-attachment menu items, the search tooltip, and the model trigger.",
     ])
     .test_id("ui-gallery-ai-prompt-input-docs-notes");
 
@@ -63,7 +63,7 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
         vec![
             DocSection::build(cx, "Usage with AI SDK", demo)
                 .test_id_prefix("ui-gallery-ai-prompt-input-docs-demo")
-                .description("Copyable prompt-input example using the docs-shaped children lane on the `fret_ui_ai` surface.")
+                .description("Copyable chat-like example using the docs-shaped children lane plus the upstream-like `on_submit(message)` payload surface on `fret_ui_ai`.")
                 .code_rust_from_file_region(snippets::prompt_input_docs_demo::SOURCE, "example"),
             DocSection::build(cx, "Features", features)
                 .description("High-signal parity notes for this Prompt Input pass.")

@@ -77,10 +77,15 @@ fn default_facing_ai_action_wrappers_keep_native_action_first_aliases() {
 #[test]
 fn prompt_input_public_surface_keeps_docs_shaped_children_and_select_lane() {
     for marker in [
+        "pub struct PromptInputMessage {",
         "pub struct PromptInputBody {",
         "pub struct PromptInputChildren {",
         "pub enum PromptInputPart {",
+        "pub enum PromptInputHeaderChild {",
+        "pub enum PromptInputFooterChild {",
         "pub fn children<I, P>(self, parts: I) -> PromptInputChildren",
+        "pub fn on_submit(mut self, on_submit: OnPromptInputSubmit) -> Self {",
+        "pub struct PromptInputActionAddScreenshot {",
         "pub type PromptInputSelect = ShadcnSelect;",
         "pub struct PromptInputSelectTrigger {",
         "const DEFAULT_PROMPT_INPUT_PLACEHOLDER: &str = \"What would you like to know?\";",

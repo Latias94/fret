@@ -76,6 +76,59 @@
       },
       "timeout_frames": 240
     },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-ai-prompt-input-docs-action-menu-trigger"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ai-prompt-input-docs-add-screenshot-item"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-ai-prompt-input-docs-add-screenshot-item"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ai-prompt-input-docs-attachments-item-docs-screenshot"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-prompt-input-docs-textarea" }
+    },
+    { "type": "type_text", "text": "Summarize the screenshot" },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-prompt-input-docs-send" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-prompt-input-docs-msg-0" }
+      },
+      "timeout_frames": 240
+    },
     { "type": "capture_bundle", "label": "ui-gallery-ai-prompt-input-docs-demo" }
   ]
 }
