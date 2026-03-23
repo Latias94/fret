@@ -105,7 +105,7 @@ impl Artifact {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let base_chrome = ChromeRefinement::default()
@@ -318,26 +318,43 @@ impl ArtifactTitle {
     }
 }
 
-#[derive(Clone)]
 /// Description text aligned with AI Elements `ArtifactDescription`.
 pub struct ArtifactDescription {
-    text: Arc<str>,
+    content: ArtifactDescriptionContent,
     test_id: Option<Arc<str>>,
+}
+
+enum ArtifactDescriptionContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl std::fmt::Debug for ArtifactDescription {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ArtifactDescription")
-            .field("text", &self.text.as_ref())
-            .field("test_id", &self.test_id.as_deref())
-            .finish()
+        let mut debug = f.debug_struct("ArtifactDescription");
+        match &self.content {
+            ArtifactDescriptionContent::Text(text) => {
+                debug.field("text", &text.as_ref());
+            }
+            ArtifactDescriptionContent::Children(children) => {
+                debug.field("children_len", &children.len());
+            }
+        }
+        debug.field("test_id", &self.test_id.as_deref()).finish()
     }
 }
 
 impl ArtifactDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
-            text: text.into(),
+            content: ArtifactDescriptionContent::Text(text.into()),
+            test_id: None,
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: ArtifactDescriptionContent::Children(children.into_iter().collect()),
             test_id: None,
         }
     }
@@ -349,23 +366,38 @@ impl ArtifactDescription {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-
-        let mut text = typography::scope_description_text_with_fallbacks(
-            cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: self.text,
-                style: None,
-                color: None,
-                wrap: fret_core::TextWrap::None,
-                overflow: fret_core::TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            }),
+        let refinement = typography::description_text_refinement_with_fallbacks(
             &theme,
             "component.artifact.description_text",
             Some("font.size"),
             Some("font.line_height"),
         );
+        let foreground = typography::muted_foreground_color(&theme);
+
+        let mut text = match self.content {
+            ArtifactDescriptionContent::Text(text) => {
+                typography::scope_description_text_with_fallbacks(
+                    cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text,
+                        style: None,
+                        color: None,
+                        wrap: fret_core::TextWrap::None,
+                        overflow: fret_core::TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
+                    }),
+                    &theme,
+                    "component.artifact.description_text",
+                    Some("font.size"),
+                    Some("font.line_height"),
+                )
+            }
+            ArtifactDescriptionContent::Children(children) => cx
+                .foreground_scope(foreground, move |_cx| children)
+                .inherit_foreground(foreground)
+                .inherit_text_style(refinement),
+        };
 
         if let Some(test_id) = self.test_id {
             text = text.attach_semantics(
@@ -413,7 +445,7 @@ impl ArtifactActions {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let children = self.children;
 
         let row = ui::h_row(move |_cx| children)
@@ -553,7 +585,7 @@ impl ArtifactAction {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let tooltip_text = self.tooltip.clone();
         let label = self
             .label
@@ -697,7 +729,7 @@ impl ArtifactClose {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut btn = Button::new("")
             .a11y_label("Close")
             .variant(self.variant)
@@ -1006,5 +1038,70 @@ mod tests {
                 Some("font.line_height"),
             ))
         );
+    }
+
+    #[test]
+    fn artifact_description_children_scope_inherited_description_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Artifact Description Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 14.0),
+                    ("font.line_height".to_string(), 20.0),
+                    ("component.artifact.description_text_px".to_string(), 12.0),
+                ]),
+                colors: std::collections::HashMap::from([(
+                    "muted-foreground".to_string(),
+                    "#778899".to_string(),
+                )]),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ArtifactDescription::new_children([cx.text("Artifact summary")])
+                    .test_id("artifact-description")
+                    .into_element(cx)
+            });
+
+        let text = element
+            .children
+            .iter()
+            .find_map(|child| match &child.kind {
+                ElementKind::Text(props) if props.text.as_ref() == "Artifact summary" => {
+                    Some(child)
+                }
+                _ => None,
+            })
+            .expect("expected nested artifact description text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected nested artifact description leaf to be text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("artifact-description")
+        );
+
+        let theme = Theme::global(&app).snapshot();
+        let expected_refinement = typography::description_text_refinement_with_fallbacks(
+            &theme,
+            "component.artifact.description_text",
+            Some("font.size"),
+            Some("font.line_height"),
+        );
+        let expected_foreground = typography::muted_foreground_color(&theme);
+        assert!(has_scoped_text_style(
+            &element,
+            &expected_refinement,
+            expected_foreground
+        ));
     }
 }

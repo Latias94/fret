@@ -3,13 +3,13 @@ pub const SOURCE: &str = include_str!("artifact_code_display.rs");
 // region: example
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
+use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
-use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
 fn status_action(
@@ -130,8 +130,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             disable_ligatures: true,
             disable_contextual_alternates: true,
             max_height: None,
-            windowed_lines: false,
-            windowed_lines_overscan: 6,
             show_scrollbar_x: true,
             scrollbar_x_on_hover: true,
             show_scrollbar_y: true,
@@ -152,16 +150,26 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .test_id_root("ui-ai-artifact-docs-root")
     .into_element(cx);
 
-    ui::v_flex(move |cx| {
-        vec![
-            artifact,
-            cx.text(format!("Status: {status_text}"))
-                .test_id("ui-ai-artifact-docs-status"),
-        ]
+    let hidden_status_marker = ui::v_flex(move |cx| {
+        vec![cx.opacity(0.0, |cx| {
+            vec![
+                cx.text(format!("Status: {status_text}"))
+                    .test_id("ui-ai-artifact-docs-status"),
+            ]
+        })]
     })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
-    .gap(Space::N3)
-    .items_start()
-    .into_element(cx)
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .h_px(Px(0.0))
+            .overflow_hidden(),
+    )
+    .into_element(cx);
+
+    ui::v_flex(move |_cx| vec![artifact, hidden_status_marker])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N0)
+        .items_start()
+        .into_element(cx)
 }
 // endregion: example
