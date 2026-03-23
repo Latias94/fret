@@ -7,10 +7,10 @@ use fret_core::{ImageColorSpace, ImageId, Px};
 use fret_icons::IconId;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
-use fret_ui_kit::declarative::ElementContextThemeExt;
+use fret_ui_assets::{ui::ImageSourceElementContextExt as _, ImageSource};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -104,6 +104,7 @@ fn model_name(model_id: &str) -> Arc<str> {
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let messages = cx.local_model_keyed("messages", Vec::<ui_ai::AiMessage>::new);
     let next_message_id = cx.local_model_keyed("next_message_id", || 1u64);
+    let text = cx.local_model_keyed("text", String::new);
     let attachments = cx.local_model_keyed("attachments", Vec::<ui_ai::AttachmentData>::new);
     let use_web_search = cx.local_model_keyed("use_web_search", || false);
     let model_value = cx.local_model_keyed("model_value", || Some(Arc::<str>::from(MODELS[0].id)));
@@ -257,15 +258,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .refine_layout(LayoutRefinement::default().w_full().flex_1().min_h_0())
         .into_element_with_children(cx, move |cx| {
             let content_children = if transcript_messages.is_empty() {
-                vec![
-                    ui_ai::ConversationEmptyState::new("Start a conversation")
-                        .description(
-                            "Submit a prompt below to preview the docs-shaped PromptInput flow.",
-                        )
-                        .icon(decl_icon::icon(cx, IconId::new("lucide.message-square")))
-                        .test_id("ui-gallery-ai-prompt-input-docs-empty")
-                        .into_element(cx),
-                ]
+                vec![ui_ai::ConversationEmptyState::new("Start a conversation")
+                    .description(
+                        "Submit a prompt below to preview the docs-shaped PromptInput flow.",
+                    )
+                    .icon(decl_icon::icon(cx, IconId::new("lucide.message-square")))
+                    .test_id("ui-gallery-ai-prompt-input-docs-empty")
+                    .into_element(cx)]
             } else {
                 transcript_messages
                     .iter()
@@ -304,86 +303,98 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         });
 
     let body = {
-        let menu = ui_ai::PromptInputActionMenu::new(ui_ai::PromptInputActionMenuContent::new([
-            ui_ai::PromptInputActionAddAttachments::new()
-                .on_activate(on_add_attachments.clone())
-                .test_id("ui-gallery-ai-prompt-input-docs-add-attachments-item")
-                .into_entry(cx),
-            ui_ai::PromptInputActionAddScreenshot::new()
-                .on_activate(on_add_screenshot.clone())
-                .test_id("ui-gallery-ai-prompt-input-docs-add-screenshot-item")
-                .into_entry(cx),
-        ]))
-        .trigger(
-            ui_ai::PromptInputActionMenuTrigger::new()
-                .test_id("ui-gallery-ai-prompt-input-docs-action-menu-trigger"),
-        )
-        .into_element(cx);
+        let prompt = ui_ai::PromptInputProvider::new()
+            .text_model(text.clone())
+            .attachments_model(attachments.clone())
+            .into_element_with_children(cx, move |cx, controller| {
+                let menu =
+                    ui_ai::PromptInputActionMenu::new(ui_ai::PromptInputActionMenuContent::new([
+                        ui_ai::PromptInputActionAddAttachments::new()
+                            .on_activate(on_add_attachments.clone())
+                            .test_id("ui-gallery-ai-prompt-input-docs-add-attachments-item")
+                            .into_entry(cx),
+                        ui_ai::PromptInputActionAddScreenshot::new()
+                            .on_activate(on_add_screenshot.clone())
+                            .test_id("ui-gallery-ai-prompt-input-docs-add-screenshot-item")
+                            .into_entry(cx),
+                    ]))
+                    .trigger(
+                        ui_ai::PromptInputActionMenuTrigger::new()
+                            .test_id("ui-gallery-ai-prompt-input-docs-action-menu-trigger"),
+                    )
+                    .into_element(cx);
 
-        let search_btn = ui_ai::PromptInputButton::new("Search")
-            .children([
-                decl_icon::icon(cx, IconId::new("lucide.globe")),
-                ui::text("Search").into_element(cx),
-            ])
-            .tooltip(
-                ui_ai::PromptInputButtonTooltip::new("Search the web")
-                    .shortcut("⌘K")
-                    .panel_test_id("ui-gallery-ai-prompt-input-docs-search-tooltip-panel"),
-            )
-            .variant(if searching {
-                shadcn::ButtonVariant::Default
-            } else {
-                shadcn::ButtonVariant::Ghost
-            })
-            .test_id("ui-gallery-ai-prompt-input-docs-search")
-            .action(act::ToggleSearch)
-            .into_element(cx);
+                let search_btn = ui_ai::PromptInputButton::new("Search")
+                    .children([
+                        decl_icon::icon(cx, IconId::new("lucide.globe")),
+                        ui::text("Search").into_element(cx),
+                    ])
+                    .tooltip(
+                        ui_ai::PromptInputButtonTooltip::new("Search the web")
+                            .shortcut("⌘K")
+                            .panel_test_id("ui-gallery-ai-prompt-input-docs-search-tooltip-panel"),
+                    )
+                    .variant(if searching {
+                        shadcn::ButtonVariant::Default
+                    } else {
+                        shadcn::ButtonVariant::Ghost
+                    })
+                    .test_id("ui-gallery-ai-prompt-input-docs-search")
+                    .action(act::ToggleSearch)
+                    .into_element(cx);
 
-        let select = ui_ai::PromptInputSelect::new(model_value.clone(), model_open.clone())
-            .trigger_test_id("ui-gallery-ai-prompt-input-docs-model-trigger")
-            .on_value_change({
-                let model_value = model_value.clone();
-                move |host, _action_cx, value| {
-                    let _ = host
-                        .models_mut()
-                        .update(&model_value, |current| *current = Some(value));
-                }
-            })
-            .trigger(ui_ai::PromptInputSelectTrigger::new().into())
-            .value(ui_ai::PromptInputSelectValue::new().placeholder("Model"))
-            .content(ui_ai::PromptInputSelectContent::new())
-            .entries([
-                ui_ai::PromptInputSelectItem::new("gpt-4o", "GPT-4o").into(),
-                ui_ai::PromptInputSelectItem::new("claude-opus-4-20250514", "Claude 4 Opus").into(),
-            ])
-            .into_element(cx);
+                let select = ui_ai::PromptInputSelect::new(model_value.clone(), model_open.clone())
+                    .trigger_test_id("ui-gallery-ai-prompt-input-docs-model-trigger")
+                    .on_value_change({
+                        let model_value = model_value.clone();
+                        move |host, _action_cx, value| {
+                            let _ = host
+                                .models_mut()
+                                .update(&model_value, |current| *current = Some(value));
+                        }
+                    })
+                    .trigger(ui_ai::PromptInputSelectTrigger::new().into())
+                    .value(ui_ai::PromptInputSelectValue::new().placeholder("Model"))
+                    .content(ui_ai::PromptInputSelectContent::new())
+                    .entries([
+                        ui_ai::PromptInputSelectItem::new("gpt-4o", "GPT-4o").into(),
+                        ui_ai::PromptInputSelectItem::new(
+                            "claude-opus-4-20250514",
+                            "Claude 4 Opus",
+                        )
+                        .into(),
+                    ])
+                    .into_element(cx);
 
-        let input = ui_ai::PromptInput::new_uncontrolled()
-            .attachments(attachments.clone())
-            .on_submit(on_submit)
-            .on_add_attachments(on_add_attachments)
-            .on_add_screenshot(on_add_screenshot)
-            .test_id_root("ui-gallery-ai-prompt-input-docs")
-            .test_id_send("ui-gallery-ai-prompt-input-docs-send")
-            .test_id_stop("ui-gallery-ai-prompt-input-docs-stop")
-            .children([
-                ui_ai::PromptInputPart::from(ui_ai::PromptInputHeader::new([
-                    ui_ai::PromptInputAttachmentsRow::new(),
-                ])),
-                ui_ai::PromptInputPart::from(ui_ai::PromptInputBody::new([
-                    ui_ai::PromptInputTextarea::new()
-                        .placeholder("What would you like to know?")
-                        .test_id("ui-gallery-ai-prompt-input-docs-textarea"),
-                ])),
-                ui_ai::PromptInputPart::from(ui_ai::PromptInputFooter::new(
-                    [ui_ai::PromptInputTools::new([menu, search_btn, select]).into_element(cx)],
-                    [ui_ai::PromptInputSubmit::new()
-                        .refine_layout(LayoutRefinement::default().ml_auto())],
-                )),
-            ])
-            .into_element(cx);
+                let input = ui_ai::PromptInput::new(controller.text)
+                    .on_submit(on_submit)
+                    .on_add_attachments(on_add_attachments)
+                    .on_add_screenshot(on_add_screenshot)
+                    .test_id_root("ui-gallery-ai-prompt-input-docs")
+                    .test_id_send("ui-gallery-ai-prompt-input-docs-send")
+                    .test_id_stop("ui-gallery-ai-prompt-input-docs-stop")
+                    .children([
+                        ui_ai::PromptInputPart::from(ui_ai::PromptInputHeader::new([
+                            ui_ai::PromptInputAttachmentsRow::new(),
+                        ])),
+                        ui_ai::PromptInputPart::from(ui_ai::PromptInputBody::new([
+                            ui_ai::PromptInputTextarea::new()
+                                .placeholder("What would you like to know?")
+                                .test_id("ui-gallery-ai-prompt-input-docs-textarea"),
+                        ])),
+                        ui_ai::PromptInputPart::from(ui_ai::PromptInputFooter::new(
+                            [ui_ai::PromptInputTools::new([menu, search_btn, select])
+                                .into_element(cx)],
+                            [ui_ai::PromptInputSubmit::new()
+                                .refine_layout(LayoutRefinement::default().ml_auto())],
+                        )),
+                    ])
+                    .into_element(cx);
 
-        ui::v_flex(move |_cx| vec![conversation, input])
+                vec![input]
+            });
+
+        ui::v_flex(move |_cx| vec![conversation, prompt])
             .layout(LayoutRefinement::default().w_full().h_full().min_h_0())
             .gap(Space::N4)
             .into_element(cx)
