@@ -6,8 +6,8 @@ use fret_icons_lucide::generated_ids::lucide::FILE_CODE;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
+use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -50,43 +50,34 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ),
     };
 
-    let language_select = shadcn::Select::new(language.clone(), language_open.clone())
-        .trigger_test_id("ui-ai-code-block-language-trigger")
-        .on_value_change({
-            let language = language.clone();
-            move |host, action_cx, value| {
-                let _ = host.models_mut().update(&language, |v| *v = Some(value));
-                host.notify(action_cx);
-            }
-        })
-        .trigger(
-            shadcn::SelectTrigger::new()
-                .size(shadcn::SelectTriggerSize::Sm)
-                .refine_style(
-                    ChromeRefinement::default()
-                        .border_width(Px(0.0))
-                        .bg(ColorRef::Color(fret_core::Color::TRANSPARENT))
-                        .px(Space::N2)
-                        .py(Space::N0p5),
-                ),
-        )
-        .value(shadcn::SelectValue::new().placeholder("Language"))
-        .content(shadcn::SelectContent::new())
-        .entries([
-            shadcn::SelectItem::new("typescript", "TypeScript")
-                .test_id("ui-ai-code-block-language-item-typescript")
-                .into(),
-            shadcn::SelectItem::new("python", "Python")
-                .test_id("ui-ai-code-block-language-item-python")
-                .into(),
-            shadcn::SelectItem::new("rust", "Rust")
-                .test_id("ui-ai-code-block-language-item-rust")
-                .into(),
-            shadcn::SelectItem::new("go", "Go")
-                .test_id("ui-ai-code-block-language-item-go")
-                .into(),
-        ])
-        .into_element(cx);
+    let language_select =
+        ui_ai::CodeBlockLanguageSelector::new(language.clone(), language_open.clone())
+            .trigger_test_id("ui-ai-code-block-language-trigger")
+            .on_value_change({
+                let language = language.clone();
+                move |host, action_cx, value| {
+                    let _ = host.models_mut().update(&language, |v| *v = Some(value));
+                    host.notify(action_cx);
+                }
+            })
+            .trigger(ui_ai::CodeBlockLanguageSelectorTrigger::new().into())
+            .value(ui_ai::CodeBlockLanguageSelectorValue::new().placeholder("Language"))
+            .content(ui_ai::CodeBlockLanguageSelectorContent::new().into())
+            .entries([
+                ui_ai::CodeBlockLanguageSelectorItem::new("typescript", "TypeScript")
+                    .test_id("ui-ai-code-block-language-item-typescript")
+                    .into(),
+                ui_ai::CodeBlockLanguageSelectorItem::new("python", "Python")
+                    .test_id("ui-ai-code-block-language-item-python")
+                    .into(),
+                ui_ai::CodeBlockLanguageSelectorItem::new("rust", "Rust")
+                    .test_id("ui-ai-code-block-language-item-rust")
+                    .into(),
+                ui_ai::CodeBlockLanguageSelectorItem::new("go", "Go")
+                    .test_id("ui-ai-code-block-language-item-go")
+                    .into(),
+            ])
+            .into_element(cx);
 
     let code_block = ui_ai::CodeBlock::new(code.clone())
         .language(language_value.clone())
@@ -120,11 +111,28 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ]
         });
 
+    let language_marker = ui::v_flex(move |cx| {
+        vec![cx.opacity(0.0, |cx| {
+            vec![
+                cx.text("")
+                    .test_id(format!("ui-ai-code-block-language-active-{language_value}")),
+            ]
+        })]
+    })
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .h_px(Px(0.0))
+            .overflow_hidden(),
+    )
+    .into_element(cx);
+
     ui::v_flex(|cx| {
         vec![
             cx.text("CodeBlock (AI Elements)"),
-            cx.text("Composable header/title/actions composition aligned with the official AI Elements example."),
+            cx.text("Composable header/title/actions composition aligned with the official AI Elements language-selector example."),
             code_block,
+            language_marker,
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())

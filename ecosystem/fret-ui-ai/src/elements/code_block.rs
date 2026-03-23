@@ -17,6 +17,12 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space, ui,
 };
+use fret_ui_shadcn::facade::{
+    Select as ShadcnSelect, SelectAlign, SelectContent as ShadcnSelectContent,
+    SelectItem as ShadcnSelectItem, SelectScrollButtons, SelectScrollDownButton,
+    SelectScrollUpButton, SelectSide, SelectTrigger as ShadcnSelectTrigger, SelectTriggerSize,
+    SelectValue as ShadcnSelectValue,
+};
 
 /// Nearest `CodeBlock` context in scope.
 #[derive(Debug, Clone)]
@@ -936,12 +942,157 @@ impl CodeBlockFilename {
     }
 }
 
+/// Docs-aligned `CodeBlockLanguageSelector` wrapper backed by shadcn `Select`.
+pub type CodeBlockLanguageSelector = ShadcnSelect;
+/// Docs-aligned `CodeBlockLanguageSelectorItem` wrapper backed by shadcn `SelectItem`.
+pub type CodeBlockLanguageSelectorItem = ShadcnSelectItem;
+/// Docs-aligned `CodeBlockLanguageSelectorValue` wrapper backed by shadcn `SelectValue`.
+pub type CodeBlockLanguageSelectorValue = ShadcnSelectValue;
+
+/// Docs-aligned `CodeBlockLanguageSelectorContent` wrapper with the official default
+/// `align="end"` surface.
+#[derive(Debug, Clone)]
+pub struct CodeBlockLanguageSelectorContent {
+    inner: ShadcnSelectContent,
+}
+
+impl Default for CodeBlockLanguageSelectorContent {
+    fn default() -> Self {
+        Self {
+            inner: ShadcnSelectContent::new().align(SelectAlign::End),
+        }
+    }
+}
+
+impl CodeBlockLanguageSelectorContent {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn align(mut self, align: SelectAlign) -> Self {
+        self.inner = self.inner.align(align);
+        self
+    }
+
+    pub fn side(mut self, side: SelectSide) -> Self {
+        self.inner = self.inner.side(side);
+        self
+    }
+
+    pub fn align_offset(mut self, offset: Px) -> Self {
+        self.inner = self.inner.align_offset(offset);
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.inner = self.inner.side_offset(offset);
+        self
+    }
+
+    pub fn arrow(mut self, arrow: bool) -> Self {
+        self.inner = self.inner.arrow(arrow);
+        self
+    }
+
+    pub fn arrow_size(mut self, size: Px) -> Self {
+        self.inner = self.inner.arrow_size(size);
+        self
+    }
+
+    pub fn arrow_padding(mut self, padding: Px) -> Self {
+        self.inner = self.inner.arrow_padding(padding);
+        self
+    }
+
+    pub fn scroll_buttons(mut self, buttons: SelectScrollButtons) -> Self {
+        self.inner = self.inner.scroll_buttons(buttons);
+        self
+    }
+
+    pub fn scroll_up_button(mut self, button: SelectScrollUpButton) -> Self {
+        self.inner = self.inner.scroll_up_button(button);
+        self
+    }
+
+    pub fn scroll_down_button(mut self, button: SelectScrollDownButton) -> Self {
+        self.inner = self.inner.scroll_down_button(button);
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnSelectContent {
+        self.inner
+    }
+}
+
+impl From<CodeBlockLanguageSelectorContent> for ShadcnSelectContent {
+    fn from(value: CodeBlockLanguageSelectorContent) -> Self {
+        value.into_inner()
+    }
+}
+
+/// Code-block-scoped Select trigger aligned with AI Elements header chrome.
+#[derive(Debug, Clone)]
+pub struct CodeBlockLanguageSelectorTrigger {
+    inner: ShadcnSelectTrigger,
+}
+
+impl Default for CodeBlockLanguageSelectorTrigger {
+    fn default() -> Self {
+        let transparent = ColorRef::Color(Color::TRANSPARENT);
+        let chrome = ChromeRefinement::default()
+            .shadow_none()
+            .bg(transparent.clone())
+            .border_width(Px(0.0))
+            .border_color(transparent)
+            .px(Space::N2)
+            .py(Space::N0p5);
+
+        Self {
+            inner: ShadcnSelectTrigger::new()
+                .size(SelectTriggerSize::Sm)
+                .refine_style(chrome),
+        }
+    }
+}
+
+impl CodeBlockLanguageSelectorTrigger {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn size(mut self, size: SelectTriggerSize) -> Self {
+        self.inner = self.inner.size(size);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.inner = self.inner.refine_style(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.inner = self.inner.refine_layout(layout);
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnSelectTrigger {
+        self.inner
+    }
+}
+
+impl From<CodeBlockLanguageSelectorTrigger> for ShadcnSelectTrigger {
+    fn from(value: CodeBlockLanguageSelectorTrigger) -> Self {
+        value.into_inner()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_runtime::Model;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -1029,5 +1180,52 @@ mod tests {
         assert!(has_test_id(&element, "header"));
         assert!(has_test_id(&element, "filename"));
         assert!(has_test_id(&element, "context-visible"));
+    }
+
+    #[test]
+    fn code_block_language_selector_wrappers_integrate_with_header_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let language: Model<Option<Arc<str>>> = app
+            .models_mut()
+            .insert(Some(Arc::<str>::from("typescript")));
+        let open: Model<bool> = app.models_mut().insert(false);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                CodeBlock::new("function greet() {}")
+                    .language("typescript")
+                    .test_id("root")
+                    .into_element_with_children(cx, |cx| {
+                        vec![
+                            CodeBlockHeader::new([CodeBlockActions::new([
+                                CodeBlockLanguageSelector::new(language.clone(), open.clone())
+                                    .trigger_test_id("language-trigger")
+                                    .trigger(CodeBlockLanguageSelectorTrigger::new().into())
+                                    .value(
+                                        CodeBlockLanguageSelectorValue::new()
+                                            .placeholder("Language"),
+                                    )
+                                    .content(CodeBlockLanguageSelectorContent::new().into())
+                                    .entries([
+                                        CodeBlockLanguageSelectorItem::new(
+                                            "typescript",
+                                            "TypeScript",
+                                        )
+                                        .into(),
+                                        CodeBlockLanguageSelectorItem::new("python", "Python")
+                                            .into(),
+                                    ])
+                                    .into_element(cx),
+                            ])
+                            .test_id("header")
+                            .into_element(cx)])
+                            .into_element(cx),
+                        ]
+                    })
+            });
+
+        assert!(has_test_id(&element, "root"));
+        assert!(has_test_id(&element, "header"));
     }
 }

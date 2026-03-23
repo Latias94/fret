@@ -1581,7 +1581,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_CODE_BLOCK_DEMO,
                 "AI Code Block (Demo)",
-                "AI Elements CodeBlock / Composable Header + Copy Demo",
+                "AI Elements CodeBlock / Usage + Language Selector",
                 "fret-ui-ai (code artifacts)",
                 CMD_NAV_AI_CODE_BLOCK_DEMO,
                 &["ai", "code", "block", "copy", "docs", "demo"],
@@ -1874,7 +1874,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_CODE_BLOCK_DEMO,
                 "AI Code Block (Demo)",
-                "AI Elements CodeBlock / Composable Header + Copy Demo",
+                "AI Elements CodeBlock / Usage + Language Selector",
                 "fret-ui-ai (code artifacts)",
                 CMD_NAV_AI_CODE_BLOCK_DEMO,
                 &["ai", "code", "block", "copy", "docs", "demo"],

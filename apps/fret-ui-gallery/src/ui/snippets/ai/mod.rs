@@ -4,6 +4,7 @@ pub mod artifact_demo;
 pub mod chain_of_thought_composable;
 pub mod chain_of_thought_demo;
 pub mod code_block_demo;
+pub mod code_block_usage;
 pub mod commit_custom_children;
 pub mod commit_demo;
 pub mod confirmation_accepted;
