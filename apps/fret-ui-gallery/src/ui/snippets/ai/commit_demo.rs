@@ -3,7 +3,6 @@ pub const SOURCE: &str = include_str!("commit_demo.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
-use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
@@ -80,7 +79,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .into_element(cx)])
     .test_id("ui-ai-commit-content");
 
-    let commit = ui_ai::Commit::new(header, content)
+    let commit = ui_ai::Commit::root()
+        .children([header.into(), content.into()])
         .default_open(false)
         .into_element(cx)
         .test_id("ui-ai-commit-root");

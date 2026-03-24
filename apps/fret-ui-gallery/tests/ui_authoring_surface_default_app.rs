@@ -5192,13 +5192,13 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_previews() {
             "let file_status = file_status_table(cx);",
             "let props = parts_props_table(cx);",
             "DocSection::build(cx, \"File Status\", file_status)",
-            "DocSection::build(cx, \"Parts & Props\", props)",
+            "DocSection::build(cx, \"Props\", props)",
         ],
         &[
             "let file_status = file_status_table(cx);let file_status = file_status.into_element(cx);",
             "let props = parts_props_table(cx);let props = props.into_element(cx);",
             "DocSection::new(\"File Status\", file_status)",
-            "DocSection::new(\"Parts & Props\", props)",
+            "DocSection::new(\"Props\", props)",
         ],
     );
 

@@ -129,21 +129,56 @@ impl CopyFeedbackRef {
 #[derive(Debug)]
 pub struct Commit {
     default_open: bool,
-    header: CommitHeader,
-    content: CommitContent,
+    header: Option<CommitHeader>,
+    content: Option<CommitContent>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
 }
 
 impl Commit {
-    pub fn new(header: CommitHeader, content: CommitContent) -> Self {
+    /// Docs-shaped compound root aligned with upstream `<Commit>...</Commit>`.
+    pub fn root() -> Self {
         Self {
             default_open: false,
-            header,
-            content,
+            header: None,
+            content: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    pub fn new(header: CommitHeader, content: CommitContent) -> Self {
+        Self::root().header(header).content(content)
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = CommitChild>) -> Self {
+        for child in children {
+            match child {
+                CommitChild::Header(header) => {
+                    if self.header.is_some() {
+                        debug_assert!(false, "Commit expects a single CommitHeader");
+                    }
+                    self.header = Some(header);
+                }
+                CommitChild::Content(content) => {
+                    if self.content.is_some() {
+                        debug_assert!(false, "Commit expects a single CommitContent");
+                    }
+                    self.content = Some(content);
+                }
+            }
+        }
+        self
+    }
+
+    pub fn header(mut self, header: CommitHeader) -> Self {
+        self.header = Some(header);
+        self
+    }
+
+    pub fn content(mut self, content: CommitContent) -> Self {
+        self.content = Some(content);
+        self
     }
 
     pub fn default_open(mut self, default_open: bool) -> Self {
@@ -162,6 +197,10 @@ impl Commit {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Some(header) = self.header else {
+            debug_assert!(false, "Commit requires a CommitHeader");
+            return cx.container(Default::default(), |_| Vec::new());
+        };
         let base_chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
             .border_1()
@@ -174,8 +213,9 @@ impl Commit {
                 fallback: ColorFallback::ThemePanelBorder,
             });
 
-        let header = self.header;
-        let content = self.content;
+        let content = self
+            .content
+            .unwrap_or_else(|| CommitContent::new(Vec::<AnyElement>::new()));
 
         Collapsible::uncontrolled(self.default_open)
             .refine_layout(self.layout)
@@ -185,6 +225,24 @@ impl Commit {
                 move |cx, open_model, is_open| header.into_trigger(cx, open_model, is_open),
                 move |cx| content.into_element(cx),
             )
+    }
+}
+
+#[derive(Debug)]
+pub enum CommitChild {
+    Header(CommitHeader),
+    Content(CommitContent),
+}
+
+impl From<CommitHeader> for CommitChild {
+    fn from(value: CommitHeader) -> Self {
+        Self::Header(value)
+    }
+}
+
+impl From<CommitContent> for CommitChild {
+    fn from(value: CommitContent) -> Self {
+        Self::Content(value)
     }
 }
 
@@ -1410,6 +1468,34 @@ mod tests {
                 .iter()
                 .find_map(|child| find_pressable_by_label(child, label)),
         }
+    }
+
+    #[test]
+    fn commit_root_children_compose_header_and_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "commit", |cx| {
+                Commit::root()
+                    .children([
+                        CommitHeader::new([cx.text("header-title")]).into(),
+                        CommitContent::new([cx.text("content-body")])
+                            .test_id("commit-content")
+                            .into(),
+                    ])
+                    .default_open(true)
+                    .into_element(cx)
+            });
+
+        assert!(
+            find_text_by_content(&element, "header-title").is_some(),
+            "root children should wire the header into the trigger row"
+        );
+        assert!(
+            find_text_by_content(&element, "content-body").is_some(),
+            "root children should wire the content into the collapsible body"
+        );
     }
 
     #[test]

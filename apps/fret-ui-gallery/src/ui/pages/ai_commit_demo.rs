@@ -25,8 +25,8 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         [
             [
                 "Commit",
-                "header, content, default_open",
-                "Collapsible root surface; mechanism stays in shadcn/fret-ui primitives.",
+                "root() | children(header/content) | new(header, content) | default_open",
+                "Collapsible root surface; docs-style children composition is supported, while the eager `new(header, content)` lane remains available.",
             ],
             [
                 "CommitHeader",
@@ -71,7 +71,7 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             [
                 "CommitCopyButton",
                 "new(hash) | children(...) | on_copy(...) | timeout(...)",
-                "Matches upstream copied-state suppression, keeps the icon slot overridable, and exposes a hook for app effects.",
+                "Matches upstream copied-state suppression, keeps the icon slot overridable, and exposes an app-owned success hook; `onError` is still not surfaced because clipboard writes are fire-and-forget today.",
             ],
             [
                 "CommitContent / CommitFiles / CommitFile / CommitFileInfo",
@@ -116,25 +116,27 @@ pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<A
     ]);
     let findings = doc_layout::notes_block([
         "Mechanism/lifecycle looks healthy here: existing copy + large-list diag gates already cover toggle, copy feedback, and scroll seams.",
-        "The remaining work here is public-surface parity, not runtime mechanism: `Commit` now exposes the upstream-style custom-content slots on both the documented parts and the common leaf surfaces used by the Gallery snippets.",
-        "There is still one intentional authoring-surface difference: the Rust root stays a typed `Commit::new(header, content)` builder instead of a raw DOM-like `children` bucket.",
+        "The remaining work here is public-surface parity, not runtime mechanism: `Commit` now exposes the upstream-style compound root plus the documented custom-content slots on the common leaf surfaces used by the Gallery snippets.",
+        "Rust now supports the docs-style `Commit::root().children([header, content])` lane; `Commit::new(header, content)` stays as the eager convenience builder.",
+        "The main intentional API gap versus the web source is `CommitCopyButton.onError`: Fret clipboard writes are currently fire-and-forget effects, so the component does not yet receive a structured failure callback.",
         "`CommitFilePath::on_click(...)` remains an intentional Fret-only seam so apps can own file-open effects without pushing policy into `fret-ui`.",
+        "This detail page is gated behind `gallery-dev`, which is also required for the wider `fret-ui-ai` surfaces in UI Gallery.",
     ]);
     let file_status = file_status_table(cx);
     let props = parts_props_table(cx);
-    let overview_section = DocSection::build(cx, "Overview", demo)
-        .description("Rust/Fret analogue of the official AI Elements preview.")
+    let overview_section = DocSection::build(cx, "Example", demo)
+        .description("Rust/Fret analogue of the official AI Elements commit example, using the docs-style compound root.")
         .test_id_prefix("ui-gallery-ai-commit-demo")
         .code_rust_from_file_region(snippets::commit_demo::SOURCE, "example");
     let features_section = DocSection::build(cx, "Features", features).no_shell();
     let file_status_section = DocSection::build(cx, "File Status", file_status).no_shell();
     let custom_children_section = DocSection::build(cx, "Custom Children", custom_children)
         .description(
-            "Covers the official custom-content slots plus leaf overrides that keep first-party Rust examples closer to the upstream JSX composition model.",
+            "Covers the official custom-content slots plus leaf overrides that keep first-party Rust examples close to the upstream JSX composition model.",
         )
         .test_id_prefix("ui-gallery-ai-commit-custom-children")
         .code_rust_from_file_region(snippets::commit_custom_children::SOURCE, "example");
-    let props_section = DocSection::build(cx, "Parts & Props", props).no_shell();
+    let props_section = DocSection::build(cx, "Props", props).no_shell();
     let notes_section = DocSection::build(cx, "Notes", findings)
         .description("Layering + parity findings for Commit.");
 
