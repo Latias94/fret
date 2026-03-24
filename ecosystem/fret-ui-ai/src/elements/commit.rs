@@ -348,14 +348,23 @@ impl CommitContent {
 }
 
 /// Monospace hash label aligned with AI Elements `CommitHash`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitHash {
     hash: Arc<str>,
+    children: Vec<AnyElement>,
 }
 
 impl CommitHash {
     pub fn new(hash: impl Into<Arc<str>>) -> Self {
-        Self { hash: hash.into() }
+        Self {
+            hash: hash.into(),
+            children: Vec::new(),
+        }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -368,22 +377,26 @@ impl CommitHash {
             Some(ColorRef::Color(color)),
         );
 
-        let text = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: self.hash,
-            style: Some(monospace_text_style(
-                &theme,
-                theme
-                    .metric_by_key("component.commit.hash_text_px")
-                    .unwrap_or(Px(12.0)),
-                FontWeight::NORMAL,
-            )),
-            color: Some(color),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let text = if self.children.is_empty() {
+            cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: self.hash,
+                style: Some(monospace_text_style(
+                    &theme,
+                    theme
+                        .metric_by_key("component.commit.hash_text_px")
+                        .unwrap_or(Px(12.0)),
+                    FontWeight::NORMAL,
+                )),
+                color: Some(color),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+            })
+        } else {
+            inline_children(cx, self.children)
+        };
 
         ui::h_row(move |_cx| vec![icon, text])
             .gap(Space::N1)
@@ -394,17 +407,30 @@ impl CommitHash {
 }
 
 /// Commit message label aligned with AI Elements `CommitMessage`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitMessage {
     text: Arc<str>,
+    children: Vec<AnyElement>,
 }
 
 impl CommitMessage {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            children: Vec::new(),
+        }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        if !self.children.is_empty() {
+            return inline_children(cx, self.children);
+        }
+
         let theme = Theme::global(&*cx.app).clone();
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
@@ -662,12 +688,12 @@ impl CommitActions {
 }
 
 /// Copy button aligned with AI Elements `CommitCopyButton`.
-#[derive(Clone)]
 pub struct CommitCopyButton {
     hash: Arc<str>,
     on_copy: Option<
         Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static>,
     >,
+    children: Vec<AnyElement>,
     timeout: Duration,
     test_id: Option<Arc<str>>,
     copied_marker_test_id: Option<Arc<str>>,
@@ -692,6 +718,7 @@ impl CommitCopyButton {
         Self {
             hash: hash.into(),
             on_copy: None,
+            children: Vec::new(),
             timeout: Duration::from_millis(2000),
             test_id: None,
             copied_marker_test_id: None,
@@ -709,6 +736,11 @@ impl CommitCopyButton {
         >,
     ) -> Self {
         self.on_copy = Some(on_copy);
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
         self
     }
 
@@ -736,6 +768,7 @@ impl CommitCopyButton {
 
         let hash = self.hash;
         let on_copy = self.on_copy;
+        let children = self.children;
         let timeout = self.timeout;
         let test_id = self.test_id;
         let copied_marker_test_id = self.copied_marker_test_id;
@@ -844,7 +877,12 @@ impl CommitCopyButton {
             chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
-                let row = ui::h_row(move |_cx| vec![icon])
+                let row_children = if children.is_empty() {
+                    vec![icon]
+                } else {
+                    children
+                };
+                let row = ui::h_row(move |_cx| row_children)
                     .items(Items::Center)
                     .justify(Justify::Center)
                     .layout(LayoutRefinement::default().w_full().h_full())
@@ -1085,9 +1123,9 @@ impl CommitFileIcon {
 }
 
 /// Monospace path label aligned with AI Elements `CommitFilePath`.
-#[derive(Clone)]
 pub struct CommitFilePath {
     path: Arc<str>,
+    children: Vec<AnyElement>,
     on_click: Option<OnCommitFilePathClick>,
     test_id: Option<Arc<str>>,
 }
@@ -1096,6 +1134,7 @@ impl std::fmt::Debug for CommitFilePath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CommitFilePath")
             .field("path_len", &self.path.len())
+            .field("children_len", &self.children.len())
             .field("has_on_click", &self.on_click.is_some())
             .field("test_id", &self.test_id.as_deref())
             .finish()
@@ -1106,9 +1145,15 @@ impl CommitFilePath {
     pub fn new(path: impl Into<Arc<str>>) -> Self {
         Self {
             path: path.into(),
+            children: Vec::new(),
             on_click: None,
             test_id: None,
         }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     pub fn on_click(mut self, on_click: OnCommitFilePathClick) -> Self {
@@ -1128,6 +1173,7 @@ impl CommitFilePath {
             .unwrap_or_else(|| theme.color_token("foreground"));
 
         let path = self.path;
+        let custom_children = self.children;
         let base_props = TextProps {
             layout: LayoutStyle {
                 size: SizeStyle {
@@ -1148,7 +1194,11 @@ impl CommitFilePath {
         };
 
         let Some(on_click) = self.on_click else {
-            let text = cx.text_props(base_props);
+            let text = if custom_children.is_empty() {
+                cx.text_props(base_props)
+            } else {
+                inline_children(cx, custom_children)
+            };
             let Some(test_id) = self.test_id else {
                 return text;
             };
@@ -1180,7 +1230,11 @@ impl CommitFilePath {
                 })
             });
 
-            vec![cx.text_props(text_props.clone())]
+            if custom_children.is_empty() {
+                vec![cx.text_props(text_props.clone())]
+            } else {
+                vec![inline_children(cx, custom_children)]
+            }
         });
 
         button
@@ -1210,19 +1264,32 @@ impl CommitFileChanges {
 }
 
 /// Additions count aligned with AI Elements `CommitFileAdditions`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitFileAdditions {
     count: u32,
+    children: Vec<AnyElement>,
 }
 
 impl CommitFileAdditions {
     pub fn new(count: u32) -> Self {
-        Self { count }
+        Self {
+            count,
+            children: Vec::new(),
+        }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         if self.count == 0 {
             return cx.text("");
+        }
+
+        if !self.children.is_empty() {
+            return inline_children(cx, self.children);
         }
 
         let theme = Theme::global(&*cx.app).clone();
@@ -1253,19 +1320,32 @@ impl CommitFileAdditions {
 }
 
 /// Deletions count aligned with AI Elements `CommitFileDeletions`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitFileDeletions {
     count: u32,
+    children: Vec<AnyElement>,
 }
 
 impl CommitFileDeletions {
     pub fn new(count: u32) -> Self {
-        Self { count }
+        Self {
+            count,
+            children: Vec::new(),
+        }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         if self.count == 0 {
             return cx.text("");
+        }
+
+        if !self.children.is_empty() {
+            return inline_children(cx, self.children);
         }
 
         let theme = Theme::global(&*cx.app).clone();
@@ -1292,5 +1372,157 @@ impl CommitFileDeletions {
             .items(Items::Center)
             .layout(LayoutRefinement::default())
             .into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, SemanticsRole, Size};
+    use fret_ui::element::{ElementKind, PressableProps, TextProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(220.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    fn find_pressable_by_label<'a>(el: &'a AnyElement, label: &str) -> Option<&'a PressableProps> {
+        match &el.kind {
+            ElementKind::Pressable(props) if props.a11y.label.as_deref() == Some(label) => {
+                Some(props)
+            }
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_pressable_by_label(child, label)),
+        }
+    }
+
+    #[test]
+    fn commit_hash_and_message_custom_children_replace_default_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "commit", |cx| {
+                ui::v_flex(move |cx| {
+                    vec![
+                        CommitHash::new("abc1234")
+                            .children([cx.text("custom-hash")])
+                            .into_element(cx),
+                        CommitMessage::new("default-message")
+                            .children([cx.text("custom-message")])
+                            .into_element(cx),
+                    ]
+                })
+                .into_element(cx)
+            });
+
+        assert!(
+            find_text_by_content(&element, "custom-hash").is_some(),
+            "custom hash children should render"
+        );
+        assert!(
+            find_text_by_content(&element, "abc1234").is_none(),
+            "default hash text should not render when custom children are provided"
+        );
+        assert!(
+            find_text_by_content(&element, "custom-message").is_some(),
+            "custom message children should render"
+        );
+        assert!(
+            find_text_by_content(&element, "default-message").is_none(),
+            "default message text should not render when custom children are provided"
+        );
+    }
+
+    #[test]
+    fn commit_file_path_custom_children_keep_button_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let on_click: OnCommitFilePathClick = Arc::new(|_, _, _| {});
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "commit", |cx| {
+                CommitFilePath::new("src/default.rs")
+                    .on_click(on_click.clone())
+                    .children([cx.text("src/custom.rs")])
+                    .into_element(cx)
+            });
+
+        assert!(
+            find_text_by_content(&element, "src/custom.rs").is_some(),
+            "custom path children should render"
+        );
+        assert!(
+            find_text_by_content(&element, "src/default.rs").is_none(),
+            "default path text should not render when custom children are provided"
+        );
+
+        let pressable =
+            find_pressable_by_label(&element, "Open commit file").expect("commit file path button");
+        assert_eq!(pressable.a11y.role, Some(SemanticsRole::Button));
+    }
+
+    #[test]
+    fn commit_copy_button_and_counts_support_custom_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "commit", |cx| {
+                ui::v_flex(move |cx| {
+                    vec![
+                        CommitCopyButton::new("deadbeef")
+                            .children([cx.text("copy-slot")])
+                            .into_element(cx),
+                        CommitFileAdditions::new(12)
+                            .children([cx.text("add-slot")])
+                            .into_element(cx),
+                        CommitFileDeletions::new(5)
+                            .children([cx.text("del-slot")])
+                            .into_element(cx),
+                    ]
+                })
+                .into_element(cx)
+            });
+
+        assert!(
+            find_text_by_content(&element, "copy-slot").is_some(),
+            "copy button custom children should render"
+        );
+        assert!(
+            find_text_by_content(&element, "add-slot").is_some(),
+            "custom additions content should render"
+        );
+        assert!(
+            find_text_by_content(&element, "del-slot").is_some(),
+            "custom deletions content should render"
+        );
+        assert!(
+            find_text_by_content(&element, "12").is_none(),
+            "default additions count should not render when custom children are provided"
+        );
+        assert!(
+            find_text_by_content(&element, "5").is_none(),
+            "default deletions count should not render when custom children are provided"
+        );
+
+        let pressable = find_pressable_by_label(&element, "Copy commit hash").expect("copy button");
+        assert_eq!(pressable.a11y.role, Some(SemanticsRole::Button));
     }
 }

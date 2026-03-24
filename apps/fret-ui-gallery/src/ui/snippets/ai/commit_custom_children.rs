@@ -18,9 +18,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ui_ai::CommitAuthor::new([ui_ai::CommitAuthorAvatar::new("FX").into_element(cx)])
             .into_element(cx),
         ui_ai::CommitInfo::new([
-            ui_ai::CommitMessage::new("docs: align commit compound-part API").into_element(cx),
+            ui_ai::CommitMessage::new("docs: align commit compound-part API")
+                .children([
+                    shadcn::raw::typography::muted("docs: align commit compound-part API")
+                        .into_element(cx),
+                ])
+                .into_element(cx),
             ui_ai::CommitMetadata::new([
-                ui_ai::CommitHash::new(short_hash).into_element(cx),
+                ui_ai::CommitHash::new(short_hash.clone())
+                    .children([shadcn::raw::typography::muted(short_hash).into_element(cx)])
+                    .into_element(cx),
                 ui_ai::CommitSeparator::default()
                     .children([shadcn::raw::typography::muted("/").into_element(cx)])
                     .into_element(cx),
@@ -73,12 +80,22 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ui_ai::CommitFileInfo::new([
                     status,
                     ui_ai::CommitFileIcon::default().into_element(cx),
-                    ui_ai::CommitFilePath::new(path).into_element(cx),
+                    ui_ai::CommitFilePath::new(path)
+                        .children([shadcn::raw::typography::muted(path).into_element(cx)])
+                        .into_element(cx),
                 ])
                 .into_element(cx),
                 ui_ai::CommitFileChanges::new([
-                    ui_ai::CommitFileAdditions::new(add).into_element(cx),
-                    ui_ai::CommitFileDeletions::new(del).into_element(cx),
+                    ui_ai::CommitFileAdditions::new(add)
+                        .children([
+                            shadcn::raw::typography::muted(format!("+{add}")).into_element(cx)
+                        ])
+                        .into_element(cx),
+                    ui_ai::CommitFileDeletions::new(del)
+                        .children([
+                            shadcn::raw::typography::muted(format!("-{del}")).into_element(cx)
+                        ])
+                        .into_element(cx),
                 ])
                 .into_element(cx),
             ])

@@ -192,7 +192,7 @@ effects/policy app-owned and to fit Fret’s action-hook model. If upstream beha
 this section as part of the “Version stamp” bump.
 
 - `CommitCopyButton` (`commit.tsx`): upstream suppresses repeated copy while `Copied` is active; Fret matches this and also exposes an `on_copy` hook so apps can own side effects.
-- `CommitSeparator`, `CommitTimestamp`, and `CommitFileStatus` (`commit.tsx`): Fret now exposes `children(...)` hooks for the three upstream custom-content slots, so the UI Gallery page can mirror the official docs composition model.
+- `Commit` leaf content slots (`commit.tsx`): Fret now exposes `children(...)` hooks for the documented custom-content slots (`CommitSeparator`, `CommitTimestamp`, `CommitFileStatus`) and the common leaf overrides (`CommitHash`, `CommitMessage`, `CommitFilePath`, `CommitFileAdditions`, `CommitFileDeletions`, `CommitCopyButton`), so the UI Gallery page can stay closer to the official docs composition model without changing runtime ownership.
 - `CodeBlock` (`code-block.tsx`): Fret keeps the compound-parts lane on closure-based `into_element_with_children(...)` so the provider context is installed before parts resolve inherited code state. The public surface now also exposes docs-aligned `CodeBlockLanguageSelector*` wrappers instead of teaching raw shadcn `Select` chrome in first-party examples.
 - `StackTraceCopyButton` (`stack-trace.tsx`): upstream allows repeated copy even while `Copied` is active; Fret preserves that semantic and exposes `on_copy`.
 - `StackTrace` compound parts are composed via closure-based `into_element_with_children(...)` instead of eager child collection so inherited provider state is established before parts resolve context.
