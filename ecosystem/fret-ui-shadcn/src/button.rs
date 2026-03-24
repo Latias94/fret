@@ -1329,27 +1329,29 @@ impl Button {
                             children.take().unwrap_or_default()
                         };
 
-                        let mut builder = ui::h_row(move |_cx| content)
-                            .justify(content_justify)
-                            .items_center()
-                            .gap(gap);
-                        if content_fill_w || content_fill_h {
-                            // Match shadcn/ui's `inline-flex items-center justify-center` behavior:
-                            // when the control resolves to a definite box (fixed size, `w-full`, or
-                            // flex-grow), let the content stack fill that box so cross-axis
-                            // centering behaves like CSS flexbox even when padding/border leave a
-                            // smaller content box (notably `outline`).
-                            let mut layout = LayoutRefinement::default();
-                            if content_fill_w {
-                                layout = layout.w_full();
-                            }
-                            if content_fill_h {
-                                layout = layout.h_full();
-                            }
-                            builder = builder.layout(layout);
+                        let mut flex_props = fret_ui::element::FlexProps {
+                            direction: fret_core::Axis::Horizontal,
+                            gap: fret_ui::element::SpacingLength::Px(
+                                MetricRef::space(gap).resolve(&theme),
+                            ),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: content_justify.to_main_align(),
+                            align: fret_ui::element::CrossAlign::Center,
+                            ..Default::default()
+                        };
+                        if content_fill_w {
+                            flex_props.layout.size.width = fret_ui::element::Length::Fill;
+                        }
+                        if content_fill_h {
+                            // Match shadcn/ui's `inline-flex items-center justify-center`
+                            // behavior: when the control resolves to a definite block height,
+                            // let the content row fill that height so cross-axis centering
+                            // happens inside the full control box instead of the intrinsic text
+                            // line box.
+                            flex_props.layout.size.height = fret_ui::element::Length::Fill;
                         }
 
-                        vec![builder.into_element(cx)]
+                        vec![cx.flex(flex_props, move |_cx| content)]
                     })
                 };
 
