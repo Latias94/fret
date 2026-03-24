@@ -5339,6 +5339,9 @@ fn web_vs_fret_switch_demo_track_chrome_matches() {
 
 #[test]
 fn web_vs_fret_switch_demo_focus_ring_matches() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
     let web = read_web_golden("switch-demo.focus");
     let theme = web
         .themes
@@ -5355,11 +5358,15 @@ fn web_vs_fret_switch_demo_focus_ring_matches() {
 
     let (expected_ring_color, expected_ring_spread) =
         web_box_shadow_focus_ring(web_switch).expect("web switch focus ring");
+    let model: Rc<RefCell<Option<fret_runtime::Model<bool>>>> = Rc::new(RefCell::new(None));
 
     let (snap, scene) = render_and_paint_with_focus_in_bounds(
         CoreSize::new(Px(1024.0), Px(768.0)),
         |cx| {
-            let model: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+            let model = model
+                .borrow_mut()
+                .get_or_insert_with(|| cx.app.models_mut().insert(false))
+                .clone();
             vec![
                 shadcn::Switch::new(model)
                     .a11y_label("SwitchFocus")

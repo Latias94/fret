@@ -101,52 +101,6 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": 0.0,
-          "y": 0.0
-        },
-        "size": {
-          "w": 72.0,
-          "h": 36.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 13.0,
-          "y": 1.0
-        },
-        "size": {
-          "w": 10.0,
-          "h": 34.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
           "x": 13.0,
           "y": 1.0
         },
@@ -211,17 +165,17 @@
       }
     },
     {
-      "role": "Generic",
+      "role": "Group",
       "label": null,
       "value": null,
       "bounds": {
         "origin": {
-          "x": 49.0,
-          "y": 1.0
+          "x": 0.0,
+          "y": 0.0
         },
         "size": {
-          "w": 10.0,
-          "h": 34.0
+          "w": 72.0,
+          "h": 36.0
         }
       },
       "flags": {

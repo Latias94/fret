@@ -3,11 +3,13 @@ use fret_core::{
     AppWindowId, Event, Modifiers, MouseButton, Paint, Point, PointerEvent, PointerType, Px, Rect,
     Scene, SceneOp, Size as CoreSize,
 };
+use fret_runtime::FrameId;
 use fret_ui::tree::UiTree;
 use fret_ui_shadcn::facade as shadcn;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::time::Duration;
 
 mod css_color;
 use css_color::{Rgba, color_to_rgba, parse_css_color};
@@ -62,6 +64,10 @@ fn parse_f32(s: &str) -> Option<f32> {
 
 fn round3(v: f32) -> f32 {
     (v * 1000.0).round() / 1000.0
+}
+
+fn button_motion_settle_frames() -> u64 {
+    fret_ui_kit::declarative::transition::ticks_60hz_for_duration(Duration::from_millis(150)) + 2
 }
 
 fn assert_rgba_close(label: &str, actual: Rgba, expected: Rgba, tol: f32) {
@@ -454,6 +460,7 @@ fn extract_fret_button_style_pressed(variant: shadcn::ButtonVariant) -> FretButt
         ui.layout_all(app, services, bounds, 1.0);
     };
 
+    app.set_frame_id(FrameId(1));
     render_frame(&mut ui, &mut app, &mut services);
 
     let semantics = ui.semantics_snapshot_arc().expect("semantics snapshot");
@@ -492,8 +499,13 @@ fn extract_fret_button_style_pressed(variant: shadcn::ButtonVariant) -> FretButt
         }),
     );
 
-    // Re-render after the interaction so pressable state is reflected in chrome props.
-    render_frame(&mut ui, &mut app, &mut services);
+    // Drive the hover/press transition to its settled state before comparing against the static
+    // web golden.
+    let settle_frames = button_motion_settle_frames();
+    for i in 0..settle_frames {
+        app.set_frame_id(FrameId(2 + i));
+        render_frame(&mut ui, &mut app, &mut services);
+    }
 
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
@@ -579,6 +591,7 @@ fn extract_fret_button_style_hovered(variant: shadcn::ButtonVariant) -> FretButt
         ui.layout_all(app, services, bounds, 1.0);
     };
 
+    app.set_frame_id(FrameId(1));
     render_frame(&mut ui, &mut app, &mut services);
 
     let semantics = ui.semantics_snapshot_arc().expect("semantics snapshot");
@@ -605,8 +618,13 @@ fn extract_fret_button_style_hovered(variant: shadcn::ButtonVariant) -> FretButt
         }),
     );
 
-    // Re-render so hover state is reflected in chrome props.
-    render_frame(&mut ui, &mut app, &mut services);
+    // Drive the hover transition to its settled state before comparing against the static web
+    // golden.
+    let settle_frames = button_motion_settle_frames();
+    for i in 0..settle_frames {
+        app.set_frame_id(FrameId(2 + i));
+        render_frame(&mut ui, &mut app, &mut services);
+    }
 
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);

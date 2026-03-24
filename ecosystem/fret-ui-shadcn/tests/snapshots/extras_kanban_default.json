@@ -34,6 +34,29 @@
           "y": 0.0
         },
         "size": {
+          "w": 872.0,
+          "h": 160.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
           "w": 920.0,
           "h": 160.0
         }
@@ -243,6 +266,29 @@
         "size": {
           "w": 262.0,
           "h": 36.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 9.0,
+          "y": 9.0
+        },
+        "size": {
+          "w": 262.0,
+          "h": 80.0
         }
       },
       "flags": {
@@ -514,6 +560,29 @@
       "bounds": {
         "origin": {
           "x": 305.0,
+          "y": 9.0
+        },
+        "size": {
+          "w": 262.0,
+          "h": 80.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 305.0,
           "y": 53.0
         },
         "size": {
@@ -634,6 +703,29 @@
         "size": {
           "w": 278.0,
           "h": 52.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 601.0,
+          "y": 9.0
+        },
+        "size": {
+          "w": 262.0,
+          "h": 36.0
         }
       },
       "flags": {

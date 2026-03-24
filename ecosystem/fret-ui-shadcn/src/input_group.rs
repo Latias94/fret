@@ -11,8 +11,9 @@ use fret_icons::IconId;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{OnKeyDown, UiPointerActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PointerRegionProps,
-    PressableA11y, PressableProps, SemanticsDecoration, TextAreaProps, TextInputProps, TextProps,
+    AnyElement, ContainerProps, ElementKind, FlexProps, LayoutStyle, Length, Overflow,
+    PointerRegionProps, PressableA11y, PressableProps, SemanticsDecoration, TextAreaProps,
+    TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost, focus_visible};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -498,7 +499,6 @@ impl InputGroup {
         let textarea_min_height = self.textarea_min_height;
         let textarea_max_height = self.textarea_max_height;
         let test_id = self.test_id;
-        let overlay_test_id = test_id.clone();
         let control_test_id = self.control_test_id;
         let control_id = self.control_id;
         let control_on_key_down = self.control_on_key_down;
@@ -528,790 +528,315 @@ impl InputGroup {
         let block_control_min_height =
             Px((resolved.min_height.0 - root_border.top.0 - root_border.bottom.0).max(0.0));
 
-        let root = cx.container(
-            fret_ui::element::ContainerProps {
-                layout: root_layout,
-                background: Some(resolved.background),
-                shadow: Some(root_shadow),
-                border: root_border,
-                border_color: None,
-                focus_ring: None,
-                focus_border_color: None,
-                focus_within: false,
-                corner_radii: root_corner_radii,
-                ..Default::default()
-            },
-            |cx| {
-                let has_a11y_label = a11y_label.is_some();
-                let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
-                let dir = crate::direction::use_direction(cx, None);
-                let build_inline_addon = |cx: &mut ElementContext<'_, H>,
-                                          children: Vec<AnyElement>,
-                                          is_start: bool,
-                                          has_button: bool,
-                                          has_kbd: bool,
-                                          control_focus_target: Option<
-                    fret_ui::elements::GlobalElementId,
-                >| {
-                    let (order_inline_start, order_inline_end) =
-                        rtl::inline_start_end_pair(dir, -1, 1);
-                    let order = if is_start {
-                        order_inline_start
+        let mut animated_control_id = None;
+        let mut root = cx.container(ContainerProps::default(), |cx| {
+            let has_a11y_label = a11y_label.is_some();
+            let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+            let dir = crate::direction::use_direction(cx, None);
+            let build_inline_addon = |cx: &mut ElementContext<'_, H>,
+                                      children: Vec<AnyElement>,
+                                      is_start: bool,
+                                      has_button: bool,
+                                      has_kbd: bool,
+                                      control_focus_target: Option<
+                fret_ui::elements::GlobalElementId,
+            >| {
+                let (order_inline_start, order_inline_end) = rtl::inline_start_end_pair(dir, -1, 1);
+                let order = if is_start {
+                    order_inline_start
+                } else {
+                    order_inline_end
+                };
+                let mut layout = LayoutRefinement::default().flex_none().order(order);
+                if has_button {
+                    layout = if is_start {
+                        rtl::layout_refinement_apply_margin_inline_start_neg(layout, dir, Space::N2)
                     } else {
-                        order_inline_end
+                        rtl::layout_refinement_apply_margin_inline_end_neg(layout, dir, Space::N2)
                     };
-                    let mut layout = LayoutRefinement::default().flex_none().order(order);
-                    if has_button {
-                        layout = if is_start {
-                            rtl::layout_refinement_apply_margin_inline_start_neg(
-                                layout,
-                                dir,
-                                Space::N2,
-                            )
-                        } else {
-                            rtl::layout_refinement_apply_margin_inline_end_neg(
-                                layout,
-                                dir,
-                                Space::N2,
-                            )
-                        };
-                    } else if has_kbd {
-                        layout = if is_start {
-                            rtl::layout_refinement_apply_margin_inline_start_neg(
-                                layout,
-                                dir,
-                                Space::N1p5,
-                            )
-                        } else {
-                            rtl::layout_refinement_apply_margin_inline_end_neg(
-                                layout,
-                                dir,
-                                Space::N1p5,
-                            )
-                        };
-                    }
-
-                    let (layout, gap) = {
-                        let theme = Theme::global(&*cx.app);
-                        (
-                            decl_style::layout_style(theme, layout),
-                            fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
-                        )
-                    };
-
-                    let padding = if is_start {
-                        rtl::padding_edges_with_inline_start_end(
-                            dir,
-                            addon_py,
-                            addon_py,
-                            addon_pl,
-                            Px(0.0),
-                        )
-                    } else {
-                        rtl::padding_edges_with_inline_start_end(
-                            dir,
-                            addon_py,
-                            addon_py,
-                            Px(0.0),
-                            addon_pl,
-                        )
-                    };
-
-                    let muted_foreground = {
-                        let theme = Theme::global(&*cx.app);
-                        theme.color_token("muted-foreground")
-                    };
-
-                    let should_click_to_focus = control_focus_target.is_some();
-
-                    let on_down = should_click_to_focus.then(|| {
-                        let control_focus_target =
-                            control_focus_target.expect("control_focus_target");
-
-                        Arc::new(
-                                move |host: &mut dyn UiPointerActionHost,
-                                      _cx: fret_ui::action::ActionCx,
-                                      down: fret_ui::action::PointerDownCx| {
-                                    if down.button == MouseButton::Left
-                                        && down.hit_pressable_target.is_none()
-                                    {
-                                        host.request_focus(control_focus_target);
-                                    }
-                                    false
-                                },
-                            )
-                    });
-
-                    let on_move = Arc::new(
-                        move |host: &mut dyn UiPointerActionHost,
-                              _cx: fret_ui::action::ActionCx,
-                              _mv: fret_ui::action::PointerMoveCx| {
-                            // Upstream uses `cursor-text` for addons, even though they can be
-                            // clickable for "focus the underlying input" behavior.
-                            host.set_cursor_icon(CursorIcon::Text);
-                            false
-                        },
-                    );
-
-                    let flex = cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle::default(),
-                            direction: Axis::Horizontal,
-                            gap: gap.into(),
-                            padding: padding.into(),
-                            justify: fret_ui::element::MainAlign::Center,
-                            align: fret_ui::element::CrossAlign::Center,
-                            wrap: false,
-                        },
-                        |_cx| children,
-                    );
-
-                    cx.pointer_region(
-                        PointerRegionProps {
+                } else if has_kbd {
+                    layout = if is_start {
+                        rtl::layout_refinement_apply_margin_inline_start_neg(
                             layout,
-                            enabled: true,
-                            // Prefer capture-phase move handlers so descendant widgets (buttons)
-                            // can still win cursor arbitration in bubble.
-                            capture_phase_pointer_moves: true,
-                        },
-                        move |cx| {
-                            if let Some(on_down) = on_down.clone() {
-                                cx.pointer_region_on_pointer_down(on_down);
-                            }
-                            cx.pointer_region_on_pointer_move(on_move.clone());
-                            let content = if disabled {
-                                cx.opacity(0.5, move |_cx| vec![flex])
-                            } else {
-                                flex
-                            };
-                            vec![content.inherit_foreground(muted_foreground)]
-                        },
+                            dir,
+                            Space::N1p5,
+                        )
+                    } else {
+                        rtl::layout_refinement_apply_margin_inline_end_neg(layout, dir, Space::N1p5)
+                    };
+                }
+
+                let (layout, gap) = {
+                    let theme = Theme::global(&*cx.app);
+                    (
+                        decl_style::layout_style(theme, layout),
+                        fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
                     )
                 };
 
-                let build_wrapper_motion_overlay =
-                    |cx: &mut ElementContext<'_, H>,
-                     control_id: fret_ui::elements::GlobalElementId| {
-                        let focus_visible_for_control = cx.is_focused_element(control_id)
-                            && focus_visible::is_focus_visible(cx.app, Some(cx.window));
+                let padding = if is_start {
+                    rtl::padding_edges_with_inline_start_end(
+                        dir,
+                        addon_py,
+                        addon_py,
+                        addon_pl,
+                        Px(0.0),
+                    )
+                } else {
+                    rtl::padding_edges_with_inline_start_end(
+                        dir,
+                        addon_py,
+                        addon_py,
+                        Px(0.0),
+                        addon_pl,
+                    )
+                };
 
-                        let duration = crate::overlay_motion::shadcn_motion_duration_150(cx);
-                        let ease = crate::overlay_motion::shadcn_ease;
+                let muted_foreground = {
+                    let theme = Theme::global(&*cx.app);
+                    theme.color_token("muted-foreground")
+                };
 
-                        let target_border_color = if aria_invalid {
-                            border_color
-                        } else if focus_visible_for_control {
-                            focus_border_color.unwrap_or(border_color)
+                let should_click_to_focus = control_focus_target.is_some();
+
+                let on_down = should_click_to_focus.then(|| {
+                    let control_focus_target = control_focus_target.expect("control_focus_target");
+
+                    Arc::new(
+                        move |host: &mut dyn UiPointerActionHost,
+                              _cx: fret_ui::action::ActionCx,
+                              down: fret_ui::action::PointerDownCx| {
+                            if down.button == MouseButton::Left
+                                && down.hit_pressable_target.is_none()
+                            {
+                                host.request_focus(control_focus_target);
+                            }
+                            false
+                        },
+                    )
+                });
+
+                let on_move = Arc::new(
+                    move |host: &mut dyn UiPointerActionHost,
+                          _cx: fret_ui::action::ActionCx,
+                          _mv: fret_ui::action::PointerMoveCx| {
+                        // Upstream uses `cursor-text` for addons, even though they can be
+                        // clickable for "focus the underlying input" behavior.
+                        host.set_cursor_icon(CursorIcon::Text);
+                        false
+                    },
+                );
+
+                let flex = cx.flex(
+                    FlexProps {
+                        layout: LayoutStyle::default(),
+                        direction: Axis::Horizontal,
+                        gap: gap.into(),
+                        padding: padding.into(),
+                        justify: fret_ui::element::MainAlign::Center,
+                        align: fret_ui::element::CrossAlign::Center,
+                        wrap: false,
+                    },
+                    |_cx| children,
+                );
+
+                cx.pointer_region(
+                    PointerRegionProps {
+                        layout,
+                        enabled: true,
+                        // Prefer capture-phase move handlers so descendant widgets (buttons)
+                        // can still win cursor arbitration in bubble.
+                        capture_phase_pointer_moves: true,
+                    },
+                    move |cx| {
+                        if let Some(on_down) = on_down.clone() {
+                            cx.pointer_region_on_pointer_down(on_down);
+                        }
+                        cx.pointer_region_on_pointer_move(on_move.clone());
+                        let content = if disabled {
+                            cx.opacity(0.5, move |_cx| vec![flex])
                         } else {
-                            border_color
+                            flex
                         };
+                        vec![content.inherit_foreground(muted_foreground)]
+                    },
+                )
+            };
 
-                        let border_motion = drive_tween_color_for_element(
-                            cx,
-                            control_id,
-                            "input-group-border-color",
-                            target_border_color,
-                            duration,
-                            ease,
-                        );
-
-                        let ring_alpha = drive_tween_f32_for_element(
-                            cx,
-                            control_id,
-                            "input-group-ring-alpha",
-                            if focus_visible_for_control { 1.0 } else { 0.0 },
-                            duration,
-                            ease,
-                        );
-
-                        let ring = focus_ring.map(|mut ring| {
-                            ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
-                            if let Some(offset) = ring.offset_color {
-                                ring.offset_color = Some(Color {
-                                    a: (offset.a * ring_alpha.value).clamp(0.0, 1.0),
-                                    ..offset
-                                });
-                            }
-                            ring
-                        });
-
-                        let overlay_layout = {
-                            let theme = Theme::global(&*cx.app);
-                            decl_style::layout_style(
-                                theme,
-                                LayoutRefinement::default().absolute().inset_px(Px(0.0)),
-                            )
-                        };
-
-                        let mut overlay = cx.container(
-                            ContainerProps {
-                                layout: overlay_layout,
-                                background: None,
-                                shadow: None,
-                                border: root_border,
-                                border_color: Some(border_motion.value),
-                                focus_ring: ring,
-                                focus_border_color: None,
-                                focus_within: false,
-                                focus_ring_always_paint: ring_alpha.animating
-                                    || ring_alpha.value > 1e-4,
-                                corner_radii: root_corner_radii,
-                                ..Default::default()
-                            },
-                            |_cx| Vec::<AnyElement>::new(),
-                        );
-
-                        overlay = overlay.attach_semantics(SemanticsDecoration {
-                            hidden: Some(true),
-                            ..Default::default()
-                        });
-
-                        if let Some(test_id) = overlay_test_id.as_ref() {
-                            overlay =
-                                overlay.test_id(Arc::<str>::from(format!("{test_id}.chrome")));
-                        }
-
-                        // The chrome overlay paints focus/border affordances but should not
-                        // participate in hit-testing; otherwise it can intercept pointer clicks
-                        // intended for the underlying input/textarea.
-                        cx.hit_test_gate(false, move |_cx| vec![overlay])
-                    };
-
-                if is_block_layout {
-                    let mut control_el = if let Some(mut custom_control) = custom_control {
-                        if let Some(test_id) = control_test_id.clone() {
-                            custom_control = custom_control.test_id(test_id);
-                        }
-                        if let Some(label) = a11y_label.clone() {
-                            custom_control = custom_control.a11y_label(label);
-                        }
-                        custom_control
-                    } else {
-                        match control {
-                            InputGroupControlKind::Input => {
-                                let (resolved_pad_inline_start, resolved_pad_inline_end) =
-                                    rtl::inline_start_end_pair(
-                                        dir,
-                                        resolved.padding.left,
-                                        resolved.padding.right,
-                                    );
-                                let pad_inline_start = if leading.is_empty() {
-                                    resolved_pad_inline_start
-                                } else {
-                                    compact_px
-                                };
-                                let pad_inline_end = if trailing.is_empty() {
-                                    resolved_pad_inline_end
-                                } else {
-                                    compact_px
-                                };
-
-                                let mut chrome =
-                                    TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
-                                chrome.padding = rtl::padding_edges_with_inline_start_end(
+            if is_block_layout {
+                let mut control_el = if let Some(mut custom_control) = custom_control {
+                    if let Some(test_id) = control_test_id.clone() {
+                        custom_control = custom_control.test_id(test_id);
+                    }
+                    if let Some(label) = a11y_label.clone() {
+                        custom_control = custom_control.a11y_label(label);
+                    }
+                    custom_control
+                } else {
+                    match control {
+                        InputGroupControlKind::Input => {
+                            let (resolved_pad_inline_start, resolved_pad_inline_end) =
+                                rtl::inline_start_end_pair(
                                     dir,
-                                    resolved.padding.top,
-                                    resolved.padding.bottom,
-                                    pad_inline_start,
-                                    pad_inline_end,
-                                );
-                                chrome.corner_radii = Corners::all(Px(0.0));
-                                chrome.border = Edges::all(Px(0.0));
-                                chrome.background = Color::TRANSPARENT;
-                                chrome.border_color = resolved.border_color;
-                                chrome.border_color_focused = resolved.border_color_focused;
-                                chrome.focus_ring = None;
-                                chrome.text_color = resolved.text_color;
-                                chrome.caret_color = resolved.text_color;
-                                chrome.selection_color = resolved.selection_color;
-                                chrome.preedit_color = chrome.text_color;
-                                chrome.preedit_underline_color = chrome.text_color;
-
-                                let mut input = TextInputProps::new(model.clone());
-                                input.a11y_label = a11y_label.clone();
-                                input.test_id = control_test_id.clone();
-                                input.placeholder = placeholder.clone();
-                                input.submit_command = submit_command;
-                                input.cancel_command = cancel_command;
-                                input.enabled = !disabled;
-                                input.focusable = !disabled;
-                                input.chrome = chrome;
-                                input.text_style = input_text_style.clone();
-                                input.layout = {
-                                    let theme = Theme::global(&*cx.app);
-                                    decl_style::layout_style(
-                                        theme,
-                                        LayoutRefinement::default()
-                                            .w_full()
-                                            .min_w_0()
-                                            .min_h(block_control_min_height),
-                                    )
-                                };
-                                cx.text_input(input)
-                            }
-                            InputGroupControlKind::Textarea => {
-                                let mut chrome = TextAreaStyle::default();
-                                chrome.padding_x = rtl::padding_x_from_physical_edges_max(
                                     resolved.padding.left,
                                     resolved.padding.right,
                                 );
-                                chrome.padding_y = textarea_py;
-                                chrome.background = Color::TRANSPARENT;
-                                chrome.border = Edges::all(Px(0.0));
-                                chrome.border_color = resolved.border_color;
-                                chrome.border_color_focused = resolved.border_color_focused;
-                                chrome.corner_radii = Corners::all(Px(0.0));
-                                chrome.text_color = resolved.text_color;
-                                chrome.selection_color = resolved.selection_color;
-                                chrome.caret_color = resolved.text_color;
-                                chrome.preedit_bg_color = resolved.selection_color;
-                                chrome.preedit_underline_color = resolved.selection_color;
-                                chrome.focus_ring = None;
+                            let pad_inline_start = if leading.is_empty() {
+                                resolved_pad_inline_start
+                            } else {
+                                compact_px
+                            };
+                            let pad_inline_end = if trailing.is_empty() {
+                                resolved_pad_inline_end
+                            } else {
+                                compact_px
+                            };
 
-                                let mut props = TextAreaProps::new(model.clone());
-                                props.a11y_label = a11y_label.clone();
-                                props.test_id = control_test_id.clone();
-                                props.placeholder = placeholder.clone();
-                                props.enabled = !disabled;
-                                props.focusable = !disabled;
-                                props.chrome = chrome;
-                                props.text_style = textarea_text_style.clone();
-                                props.min_height = textarea_min_height;
-                                props.layout = {
-                                    let theme = Theme::global(&*cx.app);
-                                    let mut layout = LayoutRefinement::default().w_full().min_w_0();
-                                    if let Some(max_h) = textarea_max_height {
-                                        layout = layout.max_h(max_h);
-                                    }
-                                    decl_style::layout_style(theme, layout)
-                                };
-                                cx.text_area(props)
-                            }
-                        }
-                    };
-
-                    let control_element_id = control_el.id;
-                    let control_focus_target = (!disabled).then_some(control_element_id);
-
-                    if let (Some(logical_control_id), Some(control_registry)) =
-                        (control_id.clone(), control_registry.clone())
-                    {
-                        let entry = ControlEntry {
-                            element: control_element_id,
-                            enabled: !disabled,
-                            action: ControlAction::FocusOnly,
-                        };
-                        let _ = cx.app.models_mut().update(&control_registry, |reg| {
-                            reg.register_control(
-                                cx.window,
-                                cx.frame_id,
-                                logical_control_id.clone(),
-                                entry,
+                            let mut chrome =
+                                TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
+                            chrome.padding = rtl::padding_edges_with_inline_start_end(
+                                dir,
+                                resolved.padding.top,
+                                resolved.padding.bottom,
+                                pad_inline_start,
+                                pad_inline_end,
                             );
-                        });
+                            chrome.corner_radii = Corners::all(Px(0.0));
+                            chrome.border = Edges::all(Px(0.0));
+                            chrome.background = Color::TRANSPARENT;
+                            chrome.border_color = resolved.border_color;
+                            chrome.border_color_focused = resolved.border_color_focused;
+                            chrome.focus_ring = None;
+                            chrome.text_color = resolved.text_color;
+                            chrome.caret_color = resolved.text_color;
+                            chrome.selection_color = resolved.selection_color;
+                            chrome.preedit_color = chrome.text_color;
+                            chrome.preedit_underline_color = chrome.text_color;
 
-                        let labelled_by_element = if has_a11y_label {
-                            None
-                        } else {
-                            cx.app
-                                .models()
-                                .read(&control_registry, |reg| {
-                                    reg.label_for(cx.window, &logical_control_id)
-                                        .map(|l| l.element)
-                                })
-                                .ok()
-                                .flatten()
-                        };
-
-                        let described_by_element = cx
-                            .app
-                            .models()
-                            .read(&control_registry, |reg| {
-                                reg.described_by_for(cx.window, &logical_control_id)
-                            })
-                            .ok()
-                            .flatten();
-
-                        if labelled_by_element.is_some() || described_by_element.is_some() {
-                            let mut decoration = SemanticsDecoration::default();
-                            if let Some(label) = labelled_by_element {
-                                decoration = decoration.labelled_by_element(label.0);
-                            }
-                            if let Some(desc) = described_by_element {
-                                decoration = decoration.described_by_element(desc.0);
-                            }
-                            control_el = control_el.attach_semantics(decoration);
-                        }
-                    }
-                    if let Some(handler) = control_on_key_down {
-                        // Run before the control's internal key handling so callers can
-                        // consume keys like Enter/Backspace and prevent default behavior.
-                        cx.key_prepend_on_key_down_for(control_element_id, handler);
-                    }
-
-                    let inline_start = (control == InputGroupControlKind::Input
-                        && !leading.is_empty())
-                    .then(|| {
-                        build_inline_addon(
-                            cx,
-                            leading,
-                            true,
-                            leading_has_button,
-                            leading_has_kbd,
-                            control_focus_target,
-                        )
-                    });
-
-                    let inline_end = (control == InputGroupControlKind::Input
-                        && !trailing.is_empty())
-                    .then(|| {
-                        build_inline_addon(
-                            cx,
-                            trailing,
-                            false,
-                            trailing_has_button,
-                            trailing_has_kbd,
-                            control_focus_target,
-                        )
-                    });
-
-                    let control_row_layout = {
-                        let theme = Theme::global(&*cx.app);
-                        decl_style::layout_style(
-                            theme,
-                            LayoutRefinement::default().w_full().min_w_0(),
-                        )
-                    };
-
-                    let control_row = cx.flex(
-                        FlexProps {
-                            layout: control_row_layout,
-                            direction: Axis::Horizontal,
-                            gap: Px(0.0).into(),
-                            padding: Edges::all(Px(0.0)).into(),
-                            justify: fret_ui::element::MainAlign::Start,
-                            align: fret_ui::element::CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |_cx| {
-                            let mut children = Vec::new();
-                            children.push(control_el);
-                            if let Some(inline_start) = inline_start {
-                                children.push(inline_start);
-                            }
-                            if let Some(inline_end) = inline_end {
-                                children.push(inline_end);
-                            }
-                            children
-                        },
-                    );
-
-                    let block_start = (!block_start.is_empty()).then(|| {
-                        let px_3 = addon_pl;
-                        let py_3 = addon_pl;
-                        let (gap, input_pt, layout) = {
-                            let theme = Theme::global(&*cx.app);
-                            (
-                                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
-                                fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
-                                decl_style::layout_style(
-                                    theme,
-                                    LayoutRefinement::default().w_full().min_w_0().order(-1),
-                                ),
-                            )
-                        };
-                        let pt = if control == InputGroupControlKind::Input {
-                            input_pt
-                        } else {
-                            py_3
-                        };
-                        let pb = if block_start_border_bottom {
-                            py_3
-                        } else {
-                            addon_py
-                        };
-
-                        cx.container(
-                            fret_ui::element::ContainerProps {
-                                layout,
-                                border: Edges {
-                                    top: Px(0.0),
-                                    right: Px(0.0),
-                                    bottom: if block_start_border_bottom {
-                                        resolved.border_width
-                                    } else {
-                                        Px(0.0)
-                                    },
-                                    left: Px(0.0),
-                                },
-                                border_color: Some(resolved.border_color),
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let muted_foreground =
-                                    Theme::global(&*cx.app).color_token("muted-foreground");
-                                let row = cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: Axis::Horizontal,
-                                        gap: gap.into(),
-                                        padding: Edges {
-                                            top: pt,
-                                            right: px_3,
-                                            bottom: pb,
-                                            left: px_3,
-                                        }
-                                        .into(),
-                                        justify: fret_ui::element::MainAlign::Start,
-                                        align: fret_ui::element::CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |_cx| block_start,
-                                );
-
-                                let row = if disabled {
-                                    cx.opacity(0.5, move |_cx| vec![row])
-                                } else {
-                                    row
-                                };
-                                vec![row.inherit_foreground(muted_foreground)]
-                            },
-                        )
-                    });
-
-                    let block_end = (!block_end.is_empty()).then(|| {
-                        let px_3 = addon_pl;
-                        let py_3 = addon_pl;
-                        let (gap, input_pb, layout) = {
-                            let theme = Theme::global(&*cx.app);
-                            (
-                                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
-                                fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
-                                decl_style::layout_style(
-                                    theme,
-                                    LayoutRefinement::default().w_full().min_w_0().order(1),
-                                ),
-                            )
-                        };
-                        let pt = if block_end_border_top { py_3 } else { addon_py };
-                        let pb = if control == InputGroupControlKind::Input {
-                            input_pb
-                        } else {
-                            py_3
-                        };
-
-                        cx.container(
-                            fret_ui::element::ContainerProps {
-                                layout,
-                                border: Edges {
-                                    top: if block_end_border_top {
-                                        resolved.border_width
-                                    } else {
-                                        Px(0.0)
-                                    },
-                                    right: Px(0.0),
-                                    bottom: Px(0.0),
-                                    left: Px(0.0),
-                                },
-                                border_color: Some(resolved.border_color),
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let muted_foreground =
-                                    Theme::global(&*cx.app).color_token("muted-foreground");
-                                let row = cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: Axis::Horizontal,
-                                        gap: gap.into(),
-                                        padding: Edges {
-                                            top: pt,
-                                            right: px_3,
-                                            bottom: pb,
-                                            left: px_3,
-                                        }
-                                        .into(),
-                                        justify: fret_ui::element::MainAlign::Start,
-                                        align: fret_ui::element::CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |_cx| block_end,
-                                );
-
-                                let row = if disabled {
-                                    cx.opacity(0.5, move |_cx| vec![row])
-                                } else {
-                                    row
-                                };
-                                vec![row.inherit_foreground(muted_foreground)]
-                            },
-                        )
-                    });
-
-                    let layout = cx.flex(
-                        FlexProps {
-                            layout: {
+                            let mut input = TextInputProps::new(model.clone());
+                            input.a11y_label = a11y_label.clone();
+                            input.test_id = control_test_id.clone();
+                            input.placeholder = placeholder.clone();
+                            input.submit_command = submit_command;
+                            input.cancel_command = cancel_command;
+                            input.enabled = !disabled;
+                            input.focusable = !disabled;
+                            input.chrome = chrome;
+                            input.text_style = input_text_style.clone();
+                            input.layout = {
                                 let theme = Theme::global(&*cx.app);
                                 decl_style::layout_style(
                                     theme,
-                                    LayoutRefinement::default().w_full().min_w_0(),
+                                    LayoutRefinement::default()
+                                        .w_full()
+                                        .min_w_0()
+                                        .min_h(block_control_min_height),
                                 )
-                            },
-                            direction: Axis::Vertical,
-                            gap: Px(0.0).into(),
-                            padding: Edges::all(Px(0.0)).into(),
-                            justify: fret_ui::element::MainAlign::Start,
-                            align: fret_ui::element::CrossAlign::Stretch,
-                            wrap: false,
-                        },
-                        move |_cx| {
-                            let mut children = Vec::new();
-                            children.push(control_row);
-                            if let Some(block_start) = block_start {
-                                children.push(block_start);
-                            }
-                            if let Some(block_end) = block_end {
-                                children.push(block_end);
-                            }
-                            children
-                        },
-                    );
-
-                    let overlay = build_wrapper_motion_overlay(cx, control_element_id);
-                    vec![layout, overlay]
-                } else {
-                    let mut control_el = if let Some(mut custom_control) = custom_control {
-                        if let Some(test_id) = control_test_id.clone() {
-                            custom_control = custom_control.test_id(test_id);
+                            };
+                            cx.text_input(input)
                         }
-                        if let Some(label) = a11y_label.clone() {
-                            custom_control = custom_control.a11y_label(label);
-                        }
-                        custom_control
-                    } else {
-                        let (resolved_pad_inline_start, resolved_pad_inline_end) =
-                            rtl::inline_start_end_pair(
-                                dir,
+                        InputGroupControlKind::Textarea => {
+                            let mut chrome = TextAreaStyle::default();
+                            chrome.padding_x = rtl::padding_x_from_physical_edges_max(
                                 resolved.padding.left,
                                 resolved.padding.right,
                             );
-                        let pad_inline_start = if leading.is_empty() {
-                            resolved_pad_inline_start
-                        } else {
-                            compact_px
-                        };
-                        let pad_inline_end = if trailing.is_empty() {
-                            resolved_pad_inline_end
-                        } else {
-                            compact_px
-                        };
+                            chrome.padding_y = textarea_py;
+                            chrome.background = Color::TRANSPARENT;
+                            chrome.border = Edges::all(Px(0.0));
+                            chrome.border_color = resolved.border_color;
+                            chrome.border_color_focused = resolved.border_color_focused;
+                            chrome.corner_radii = Corners::all(Px(0.0));
+                            chrome.text_color = resolved.text_color;
+                            chrome.selection_color = resolved.selection_color;
+                            chrome.caret_color = resolved.text_color;
+                            chrome.preedit_bg_color = resolved.selection_color;
+                            chrome.preedit_underline_color = resolved.selection_color;
+                            chrome.focus_ring = None;
 
-                        let mut chrome =
-                            TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
-                        chrome.padding = rtl::padding_edges_with_inline_start_end(
-                            dir,
-                            resolved.padding.top,
-                            resolved.padding.bottom,
-                            pad_inline_start,
-                            pad_inline_end,
-                        );
-                        chrome.corner_radii = Corners::all(Px(0.0));
-                        chrome.border = Edges::all(Px(0.0));
-                        chrome.background = Color::TRANSPARENT;
-                        chrome.border_color = resolved.border_color;
-                        chrome.border_color_focused = resolved.border_color_focused;
-                        chrome.focus_ring = None;
-                        chrome.text_color = resolved.text_color;
-                        chrome.caret_color = resolved.text_color;
-                        chrome.selection_color = resolved.selection_color;
-                        chrome.preedit_color = chrome.text_color;
-                        chrome.preedit_underline_color = chrome.text_color;
-
-                        let mut input = TextInputProps::new(model.clone());
-                        input.a11y_label = a11y_label.clone();
-                        input.test_id = control_test_id.clone();
-                        input.placeholder = placeholder.clone();
-                        input.submit_command = submit_command;
-                        input.cancel_command = cancel_command;
-                        input.enabled = !disabled;
-                        input.focusable = !disabled;
-                        input.chrome = chrome;
-                        input.text_style = input_text_style.clone();
-                        input.layout = {
-                            let theme = Theme::global(&*cx.app);
-                            decl_style::layout_style(
-                                theme,
-                                LayoutRefinement::default()
-                                    .flex_1()
-                                    .h_full()
-                                    .min_w_0()
-                                    .min_h(resolved.min_height),
-                            )
-                        };
-
-                        cx.text_input(input)
-                    };
-                    let control_element_id = control_el.id;
-                    let control_focus_target = (!disabled).then_some(control_element_id);
-
-                    if let (Some(logical_control_id), Some(control_registry)) =
-                        (control_id.clone(), control_registry.clone())
-                    {
-                        let entry = ControlEntry {
-                            element: control_element_id,
-                            enabled: !disabled,
-                            action: ControlAction::FocusOnly,
-                        };
-                        let _ = cx.app.models_mut().update(&control_registry, |reg| {
-                            reg.register_control(
-                                cx.window,
-                                cx.frame_id,
-                                logical_control_id.clone(),
-                                entry,
-                            );
-                        });
-
-                        let labelled_by_element = if has_a11y_label {
-                            None
-                        } else {
-                            cx.app
-                                .models()
-                                .read(&control_registry, |reg| {
-                                    reg.label_for(cx.window, &logical_control_id)
-                                        .map(|l| l.element)
-                                })
-                                .ok()
-                                .flatten()
-                        };
-
-                        let described_by_element = cx
-                            .app
-                            .models()
-                            .read(&control_registry, |reg| {
-                                reg.described_by_for(cx.window, &logical_control_id)
-                            })
-                            .ok()
-                            .flatten();
-
-                        if labelled_by_element.is_some() || described_by_element.is_some() {
-                            let mut decoration = SemanticsDecoration::default();
-                            if let Some(label) = labelled_by_element {
-                                decoration = decoration.labelled_by_element(label.0);
-                            }
-                            if let Some(desc) = described_by_element {
-                                decoration = decoration.described_by_element(desc.0);
-                            }
-                            control_el = control_el.attach_semantics(decoration);
+                            let mut props = TextAreaProps::new(model.clone());
+                            props.a11y_label = a11y_label.clone();
+                            props.test_id = control_test_id.clone();
+                            props.placeholder = placeholder.clone();
+                            props.enabled = !disabled;
+                            props.focusable = !disabled;
+                            props.chrome = chrome;
+                            props.text_style = textarea_text_style.clone();
+                            props.min_height = textarea_min_height;
+                            props.layout = {
+                                let theme = Theme::global(&*cx.app);
+                                let mut layout = LayoutRefinement::default().w_full().min_w_0();
+                                if let Some(max_h) = textarea_max_height {
+                                    layout = layout.max_h(max_h);
+                                }
+                                decl_style::layout_style(theme, layout)
+                            };
+                            cx.text_area(props)
                         }
                     }
+                };
 
-                    if let Some(handler) = control_on_key_down {
-                        // Run before the control's internal key handling so callers can
-                        // consume keys like Enter/Backspace and prevent default behavior.
-                        cx.key_prepend_on_key_down_for(control_element_id, handler);
+                let control_element_id = control_el.id;
+                let control_focus_target = (!disabled).then_some(control_element_id);
+
+                if let (Some(logical_control_id), Some(control_registry)) =
+                    (control_id.clone(), control_registry.clone())
+                {
+                    let entry = ControlEntry {
+                        element: control_element_id,
+                        enabled: !disabled,
+                        action: ControlAction::FocusOnly,
+                    };
+                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                        reg.register_control(
+                            cx.window,
+                            cx.frame_id,
+                            logical_control_id.clone(),
+                            entry,
+                        );
+                    });
+
+                    let labelled_by_element = if has_a11y_label {
+                        None
+                    } else {
+                        cx.app
+                            .models()
+                            .read(&control_registry, |reg| {
+                                reg.label_for(cx.window, &logical_control_id)
+                                    .map(|l| l.element)
+                            })
+                            .ok()
+                            .flatten()
+                    };
+
+                    let described_by_element = cx
+                        .app
+                        .models()
+                        .read(&control_registry, |reg| {
+                            reg.described_by_for(cx.window, &logical_control_id)
+                        })
+                        .ok()
+                        .flatten();
+
+                    if labelled_by_element.is_some() || described_by_element.is_some() {
+                        let mut decoration = SemanticsDecoration::default();
+                        if let Some(label) = labelled_by_element {
+                            decoration = decoration.labelled_by_element(label.0);
+                        }
+                        if let Some(desc) = described_by_element {
+                            decoration = decoration.described_by_element(desc.0);
+                        }
+                        control_el = control_el.attach_semantics(decoration);
                     }
+                }
+                if let Some(handler) = control_on_key_down {
+                    // Run before the control's internal key handling so callers can
+                    // consume keys like Enter/Backspace and prevent default behavior.
+                    cx.key_prepend_on_key_down_for(control_element_id, handler);
+                }
 
-                    let leading = (!leading.is_empty()).then(|| {
+                let inline_start = (control == InputGroupControlKind::Input && !leading.is_empty())
+                    .then(|| {
                         build_inline_addon(
                             cx,
                             leading,
@@ -1322,7 +847,8 @@ impl InputGroup {
                         )
                     });
 
-                    let trailing = (!trailing.is_empty()).then(|| {
+                let inline_end = (control == InputGroupControlKind::Input && !trailing.is_empty())
+                    .then(|| {
                         build_inline_addon(
                             cx,
                             trailing,
@@ -1333,39 +859,447 @@ impl InputGroup {
                         )
                     });
 
-                    let flex_layout = {
+                let control_row_layout = {
+                    let theme = Theme::global(&*cx.app);
+                    decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0())
+                };
+
+                let control_row = cx.flex(
+                    FlexProps {
+                        layout: control_row_layout,
+                        direction: Axis::Horizontal,
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: fret_ui::element::MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |_cx| {
+                        let mut children = Vec::new();
+                        children.push(control_el);
+                        if let Some(inline_start) = inline_start {
+                            children.push(inline_start);
+                        }
+                        if let Some(inline_end) = inline_end {
+                            children.push(inline_end);
+                        }
+                        children
+                    },
+                );
+
+                let block_start = (!block_start.is_empty()).then(|| {
+                    let px_3 = addon_pl;
+                    let py_3 = addon_pl;
+                    let (gap, input_pt, layout) = {
                         let theme = Theme::global(&*cx.app);
-                        decl_style::layout_style(theme, LayoutRefinement::default().size_full())
+                        (
+                            fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
+                            fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
+                            decl_style::layout_style(
+                                theme,
+                                LayoutRefinement::default().w_full().min_w_0().order(-1),
+                            ),
+                        )
+                    };
+                    let pt = if control == InputGroupControlKind::Input {
+                        input_pt
+                    } else {
+                        py_3
+                    };
+                    let pb = if block_start_border_bottom {
+                        py_3
+                    } else {
+                        addon_py
                     };
 
-                    let layout = cx.flex(
-                        FlexProps {
-                            layout: flex_layout,
-                            direction: Axis::Horizontal,
-                            gap: Px(0.0).into(),
-                            padding: Edges::all(Px(0.0)).into(),
-                            justify: fret_ui::element::MainAlign::Start,
-                            align: fret_ui::element::CrossAlign::Center,
-                            wrap: false,
+                    cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout,
+                            border: Edges {
+                                top: Px(0.0),
+                                right: Px(0.0),
+                                bottom: if block_start_border_bottom {
+                                    resolved.border_width
+                                } else {
+                                    Px(0.0)
+                                },
+                                left: Px(0.0),
+                            },
+                            border_color: Some(resolved.border_color),
+                            ..Default::default()
                         },
-                        move |_cx| {
-                            let mut children = Vec::new();
-                            children.push(control_el);
-                            if let Some(leading) = leading {
-                                children.push(leading);
-                            }
-                            if let Some(trailing) = trailing {
-                                children.push(trailing);
-                            }
-                            children
-                        },
-                    );
+                        move |cx| {
+                            let muted_foreground =
+                                Theme::global(&*cx.app).color_token("muted-foreground");
+                            let row = cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle::default(),
+                                    direction: Axis::Horizontal,
+                                    gap: gap.into(),
+                                    padding: Edges {
+                                        top: pt,
+                                        right: px_3,
+                                        bottom: pb,
+                                        left: px_3,
+                                    }
+                                    .into(),
+                                    justify: fret_ui::element::MainAlign::Start,
+                                    align: fret_ui::element::CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |_cx| block_start,
+                            );
 
-                    let overlay = build_wrapper_motion_overlay(cx, control_element_id);
-                    vec![layout, overlay]
+                            let row = if disabled {
+                                cx.opacity(0.5, move |_cx| vec![row])
+                            } else {
+                                row
+                            };
+                            vec![row.inherit_foreground(muted_foreground)]
+                        },
+                    )
+                });
+
+                let block_end = (!block_end.is_empty()).then(|| {
+                    let px_3 = addon_pl;
+                    let py_3 = addon_pl;
+                    let (gap, input_pb, layout) = {
+                        let theme = Theme::global(&*cx.app);
+                        (
+                            fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
+                            fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
+                            decl_style::layout_style(
+                                theme,
+                                LayoutRefinement::default().w_full().min_w_0().order(1),
+                            ),
+                        )
+                    };
+                    let pt = if block_end_border_top { py_3 } else { addon_py };
+                    let pb = if control == InputGroupControlKind::Input {
+                        input_pb
+                    } else {
+                        py_3
+                    };
+
+                    cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout,
+                            border: Edges {
+                                top: if block_end_border_top {
+                                    resolved.border_width
+                                } else {
+                                    Px(0.0)
+                                },
+                                right: Px(0.0),
+                                bottom: Px(0.0),
+                                left: Px(0.0),
+                            },
+                            border_color: Some(resolved.border_color),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let muted_foreground =
+                                Theme::global(&*cx.app).color_token("muted-foreground");
+                            let row = cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle::default(),
+                                    direction: Axis::Horizontal,
+                                    gap: gap.into(),
+                                    padding: Edges {
+                                        top: pt,
+                                        right: px_3,
+                                        bottom: pb,
+                                        left: px_3,
+                                    }
+                                    .into(),
+                                    justify: fret_ui::element::MainAlign::Start,
+                                    align: fret_ui::element::CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |_cx| block_end,
+                            );
+
+                            let row = if disabled {
+                                cx.opacity(0.5, move |_cx| vec![row])
+                            } else {
+                                row
+                            };
+                            vec![row.inherit_foreground(muted_foreground)]
+                        },
+                    )
+                });
+
+                let layout = cx.flex(
+                    FlexProps {
+                        layout: {
+                            let theme = Theme::global(&*cx.app);
+                            decl_style::layout_style(
+                                theme,
+                                LayoutRefinement::default().w_full().min_w_0(),
+                            )
+                        },
+                        direction: Axis::Vertical,
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: fret_ui::element::MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Stretch,
+                        wrap: false,
+                    },
+                    move |_cx| {
+                        let mut children = Vec::new();
+                        children.push(control_row);
+                        if let Some(block_start) = block_start {
+                            children.push(block_start);
+                        }
+                        if let Some(block_end) = block_end {
+                            children.push(block_end);
+                        }
+                        children
+                    },
+                );
+                animated_control_id = Some(control_element_id);
+                vec![layout]
+            } else {
+                let mut control_el = if let Some(mut custom_control) = custom_control {
+                    if let Some(test_id) = control_test_id.clone() {
+                        custom_control = custom_control.test_id(test_id);
+                    }
+                    if let Some(label) = a11y_label.clone() {
+                        custom_control = custom_control.a11y_label(label);
+                    }
+                    custom_control
+                } else {
+                    let (resolved_pad_inline_start, resolved_pad_inline_end) =
+                        rtl::inline_start_end_pair(
+                            dir,
+                            resolved.padding.left,
+                            resolved.padding.right,
+                        );
+                    let pad_inline_start = if leading.is_empty() {
+                        resolved_pad_inline_start
+                    } else {
+                        compact_px
+                    };
+                    let pad_inline_end = if trailing.is_empty() {
+                        resolved_pad_inline_end
+                    } else {
+                        compact_px
+                    };
+
+                    let mut chrome = TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
+                    chrome.padding = rtl::padding_edges_with_inline_start_end(
+                        dir,
+                        resolved.padding.top,
+                        resolved.padding.bottom,
+                        pad_inline_start,
+                        pad_inline_end,
+                    );
+                    chrome.corner_radii = Corners::all(Px(0.0));
+                    chrome.border = Edges::all(Px(0.0));
+                    chrome.background = Color::TRANSPARENT;
+                    chrome.border_color = resolved.border_color;
+                    chrome.border_color_focused = resolved.border_color_focused;
+                    chrome.focus_ring = None;
+                    chrome.text_color = resolved.text_color;
+                    chrome.caret_color = resolved.text_color;
+                    chrome.selection_color = resolved.selection_color;
+                    chrome.preedit_color = chrome.text_color;
+                    chrome.preedit_underline_color = chrome.text_color;
+
+                    let mut input = TextInputProps::new(model.clone());
+                    input.a11y_label = a11y_label.clone();
+                    input.test_id = control_test_id.clone();
+                    input.placeholder = placeholder.clone();
+                    input.submit_command = submit_command;
+                    input.cancel_command = cancel_command;
+                    input.enabled = !disabled;
+                    input.focusable = !disabled;
+                    input.chrome = chrome;
+                    input.text_style = input_text_style.clone();
+                    input.layout = {
+                        let theme = Theme::global(&*cx.app);
+                        decl_style::layout_style(
+                            theme,
+                            LayoutRefinement::default()
+                                .flex_1()
+                                .h_full()
+                                .min_w_0()
+                                .min_h(resolved.min_height),
+                        )
+                    };
+
+                    cx.text_input(input)
+                };
+                let control_element_id = control_el.id;
+                let control_focus_target = (!disabled).then_some(control_element_id);
+
+                if let (Some(logical_control_id), Some(control_registry)) =
+                    (control_id.clone(), control_registry.clone())
+                {
+                    let entry = ControlEntry {
+                        element: control_element_id,
+                        enabled: !disabled,
+                        action: ControlAction::FocusOnly,
+                    };
+                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                        reg.register_control(
+                            cx.window,
+                            cx.frame_id,
+                            logical_control_id.clone(),
+                            entry,
+                        );
+                    });
+
+                    let labelled_by_element = if has_a11y_label {
+                        None
+                    } else {
+                        cx.app
+                            .models()
+                            .read(&control_registry, |reg| {
+                                reg.label_for(cx.window, &logical_control_id)
+                                    .map(|l| l.element)
+                            })
+                            .ok()
+                            .flatten()
+                    };
+
+                    let described_by_element = cx
+                        .app
+                        .models()
+                        .read(&control_registry, |reg| {
+                            reg.described_by_for(cx.window, &logical_control_id)
+                        })
+                        .ok()
+                        .flatten();
+
+                    if labelled_by_element.is_some() || described_by_element.is_some() {
+                        let mut decoration = SemanticsDecoration::default();
+                        if let Some(label) = labelled_by_element {
+                            decoration = decoration.labelled_by_element(label.0);
+                        }
+                        if let Some(desc) = described_by_element {
+                            decoration = decoration.described_by_element(desc.0);
+                        }
+                        control_el = control_el.attach_semantics(decoration);
+                    }
                 }
-            },
+
+                if let Some(handler) = control_on_key_down {
+                    // Run before the control's internal key handling so callers can
+                    // consume keys like Enter/Backspace and prevent default behavior.
+                    cx.key_prepend_on_key_down_for(control_element_id, handler);
+                }
+
+                let leading = (!leading.is_empty()).then(|| {
+                    build_inline_addon(
+                        cx,
+                        leading,
+                        true,
+                        leading_has_button,
+                        leading_has_kbd,
+                        control_focus_target,
+                    )
+                });
+
+                let trailing = (!trailing.is_empty()).then(|| {
+                    build_inline_addon(
+                        cx,
+                        trailing,
+                        false,
+                        trailing_has_button,
+                        trailing_has_kbd,
+                        control_focus_target,
+                    )
+                });
+
+                let flex_layout = {
+                    let theme = Theme::global(&*cx.app);
+                    decl_style::layout_style(theme, LayoutRefinement::default().size_full())
+                };
+
+                let layout = cx.flex(
+                    FlexProps {
+                        layout: flex_layout,
+                        direction: Axis::Horizontal,
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: fret_ui::element::MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |_cx| {
+                        let mut children = Vec::new();
+                        children.push(control_el);
+                        if let Some(leading) = leading {
+                            children.push(leading);
+                        }
+                        if let Some(trailing) = trailing {
+                            children.push(trailing);
+                        }
+                        children
+                    },
+                );
+                animated_control_id = Some(control_element_id);
+                vec![layout]
+            }
+        });
+
+        let animated_control_id = animated_control_id.expect("input_group control element id");
+        let focus_visible_for_control = cx.is_focused_element(animated_control_id)
+            && focus_visible::is_focus_visible(cx.app, Some(cx.window));
+
+        let duration = crate::overlay_motion::shadcn_motion_duration_150(cx);
+        let ease = crate::overlay_motion::shadcn_ease;
+        let target_border_color = if aria_invalid {
+            border_color
+        } else if focus_visible_for_control {
+            focus_border_color.unwrap_or(border_color)
+        } else {
+            border_color
+        };
+
+        let border_motion = drive_tween_color_for_element(
+            cx,
+            animated_control_id,
+            "input-group-border-color",
+            target_border_color,
+            duration,
+            ease,
         );
+
+        let ring_alpha = drive_tween_f32_for_element(
+            cx,
+            animated_control_id,
+            "input-group-ring-alpha",
+            if focus_visible_for_control { 1.0 } else { 0.0 },
+            duration,
+            ease,
+        );
+
+        let ring = focus_ring.map(|mut ring| {
+            ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+            if let Some(offset) = ring.offset_color {
+                ring.offset_color = Some(Color {
+                    a: (offset.a * ring_alpha.value).clamp(0.0, 1.0),
+                    ..offset
+                });
+            }
+            ring
+        });
+
+        root.kind = ElementKind::Container(ContainerProps {
+            layout: root_layout,
+            background: Some(resolved.background),
+            shadow: Some(root_shadow),
+            border: root_border,
+            border_color: Some(border_motion.value),
+            focus_ring: ring,
+            focus_border_color: None,
+            focus_within: false,
+            focus_ring_always_paint: ring_alpha.animating || ring_alpha.value > 1e-4,
+            corner_radii: root_corner_radii,
+            ..Default::default()
+        });
 
         let mut semantics = SemanticsDecoration::default().role(SemanticsRole::Group);
         if let Some(test_id) = test_id {
@@ -3001,12 +2935,12 @@ mod tests {
                         .test_id("input_group")
                         .into_element(cx);
 
-                    let overlay = find_container_with_test_id(&el, "input_group.chrome")
-                        .expect("overlay container");
+                    let root = find_container_with_test_id(&el, "input_group")
+                        .expect("input group root container");
 
-                    let a = overlay.focus_ring.map(|ring| ring.color.a).unwrap_or(0.0);
+                    let a = root.focus_ring.map(|ring| ring.color.a).unwrap_or(0.0);
                     ring_alpha_out.set(Some(a));
-                    always_paint_out.set(Some(overlay.focus_ring_always_paint));
+                    always_paint_out.set(Some(root.focus_ring_always_paint));
 
                     vec![el]
                 },

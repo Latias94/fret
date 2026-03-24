@@ -1681,6 +1681,32 @@ mod tests {
     }
 
     #[test]
+    fn card_content_build_children_see_card_content_surface_slot() {
+        use std::cell::Cell;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+        let seen_slot = Cell::new(None::<crate::surface_slot::ShadcnSurfaceSlot>);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let seen_slot = &seen_slot;
+            let _ = CardContent::build(move |cx, _out| {
+                seen_slot.set(crate::surface_slot::surface_slot_in_scope(cx));
+            })
+            .into_element(cx);
+        });
+
+        assert_eq!(
+            seen_slot.get(),
+            Some(crate::surface_slot::ShadcnSurfaceSlot::CardContent)
+        );
+    }
+
+    #[test]
     fn card_header_border_bottom_adds_pb_6() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2085,17 +2111,33 @@ where
 
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let children = collect_built_card_children(
-            cx,
-            self.build.expect("expected card content build closure"),
-        );
-        let mut content = CardContent::new(children)
-            .refine_style(self.chrome)
-            .refine_layout(self.layout);
-        if let Some(size) = self.size {
-            content = content.size(size);
-        }
-        content.into_element(cx)
+        let size = self.size.unwrap_or_else(|| card_size_in_scope(cx));
+        let p = match size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
+        };
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                // Keep the build-path parity with `CardContent::into_element`: children built
+                // through `raw::card::card_content(...)` must observe the CardContent surface slot
+                // while they are rendered (e.g. Calendar -> bg-transparent inside CardContent).
+                ChromeRefinement::default().px(p).merge(self.chrome),
+                LayoutRefinement::default().w_full().merge(self.layout),
+            )
+        };
+        let build = self.build.expect("expected card content build closure");
+
+        with_surface_slot_provider(cx, ShadcnSurfaceSlot::CardContent, |cx| {
+            let children = collect_built_card_children(cx, build);
+            shadcn_layout::container_vstack_fill_width(
+                cx,
+                props,
+                shadcn_layout::VStackProps::default().items_start(),
+                children,
+            )
+        })
     }
 }
 

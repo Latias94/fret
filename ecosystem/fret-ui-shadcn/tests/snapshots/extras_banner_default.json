@@ -100,6 +100,29 @@
       "bounds": {
         "origin": {
           "x": 16.0,
+          "y": 8.0
+        },
+        "size": {
+          "w": 688.0,
+          "h": 36.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 16.0,
           "y": 13.0
         },
         "size": {
@@ -173,53 +196,7 @@
         },
         "size": {
           "w": 10.0,
-          "h": 16.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 637.0,
-          "y": 17.0
-        },
-        "size": {
-          "w": 10.0,
-          "h": 16.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 668.0,
-          "y": 8.0
-        },
-        "size": {
-          "w": 36.0,
-          "h": 36.0
+          "h": 18.0
         }
       },
       "flags": {
@@ -330,7 +307,7 @@
       "bounds": {
         "origin": {
           "x": 637.0,
-          "y": 17.0
+          "y": 18.0
         },
         "size": {
           "w": 10.0,
@@ -761,7 +738,7 @@
       "kind": "Text",
       "origin": {
         "x": 637.0,
-        "y": 28.0
+        "y": 29.0
       },
       "color": {
         "r": 0.68,

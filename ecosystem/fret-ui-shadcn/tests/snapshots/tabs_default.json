@@ -80,7 +80,7 @@
           "y": 3.0
         },
         "size": {
-          "w": 84.0,
+          "w": 28.0,
           "h": 30.0
         }
       },
@@ -100,11 +100,11 @@
       "bounds": {
         "origin": {
           "x": 3.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
-          "w": 28.0,
-          "h": 28.0
+          "w": 84.0,
+          "h": 30.0
         }
       },
       "flags": {
@@ -123,34 +123,11 @@
       "bounds": {
         "origin": {
           "x": 12.0,
-          "y": 9.0
+          "y": 8.0
         },
         "size": {
           "w": 10.0,
-          "h": 18.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 12.0,
-          "y": 9.0
-        },
-        "size": {
-          "w": 10.0,
-          "h": 18.0
+          "h": 20.0
         }
       },
       "flags": {
@@ -169,11 +146,11 @@
       "bounds": {
         "origin": {
           "x": 31.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "flags": {
@@ -192,34 +169,11 @@
       "bounds": {
         "origin": {
           "x": 40.0,
-          "y": 9.0
+          "y": 8.0
         },
         "size": {
           "w": 10.0,
-          "h": 18.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 40.0,
-          "y": 9.0
-        },
-        "size": {
-          "w": 10.0,
-          "h": 18.0
+          "h": 20.0
         }
       },
       "flags": {
@@ -238,11 +192,11 @@
       "bounds": {
         "origin": {
           "x": 59.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "flags": {
@@ -261,34 +215,11 @@
       "bounds": {
         "origin": {
           "x": 68.0,
-          "y": 9.0
+          "y": 8.0
         },
         "size": {
           "w": 10.0,
-          "h": 18.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 68.0,
-          "y": 9.0
-        },
-        "size": {
-          "w": 10.0,
-          "h": 18.0
+          "h": 20.0
         }
       },
       "flags": {
@@ -307,11 +238,11 @@
       "bounds": {
         "origin": {
           "x": 3.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "flags": {
@@ -330,11 +261,11 @@
       "bounds": {
         "origin": {
           "x": 31.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "flags": {
@@ -353,11 +284,11 @@
       "bounds": {
         "origin": {
           "x": 59.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "flags": {
@@ -390,6 +321,9 @@
         "selected": false,
         "expanded": false,
         "checked": null
+      },
+      "extra": {
+        "orientation": "Horizontal"
       }
     },
     {
@@ -422,11 +356,11 @@
       "bounds": {
         "origin": {
           "x": 12.0,
-          "y": 9.0
+          "y": 8.0
         },
         "size": {
           "w": 10.0,
-          "h": 18.0
+          "h": 20.0
         }
       },
       "flags": {
@@ -445,11 +379,11 @@
       "bounds": {
         "origin": {
           "x": 40.0,
-          "y": 9.0
+          "y": 8.0
         },
         "size": {
           "w": 10.0,
-          "h": 18.0
+          "h": 20.0
         }
       },
       "flags": {
@@ -468,11 +402,11 @@
       "bounds": {
         "origin": {
           "x": 68.0,
-          "y": 9.0
+          "y": 8.0
         },
         "size": {
           "w": 10.0,
-          "h": 18.0
+          "h": 20.0
         }
       },
       "flags": {
@@ -574,11 +508,11 @@
       "rect": {
         "origin": {
           "x": 1.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 32.0,
-          "h": 32.0
+          "h": 34.0
         }
       },
       "background": {
@@ -611,11 +545,11 @@
       "rect": {
         "origin": {
           "x": 2.0,
-          "y": 5.0
+          "y": 4.0
         },
         "size": {
           "w": 30.0,
-          "h": 30.0
+          "h": 32.0
         }
       },
       "background": {
@@ -648,11 +582,11 @@
       "rect": {
         "origin": {
           "x": 3.0,
-          "y": 6.0
+          "y": 5.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "background": {
@@ -685,11 +619,11 @@
       "rect": {
         "origin": {
           "x": 3.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "background": {
@@ -722,11 +656,11 @@
       "rect": {
         "origin": {
           "x": 3.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "corner_radii": {
@@ -757,11 +691,11 @@
       "rect": {
         "origin": {
           "x": 31.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "background": {
@@ -794,11 +728,11 @@
       "rect": {
         "origin": {
           "x": 31.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "corner_radii": {
@@ -829,11 +763,11 @@
       "rect": {
         "origin": {
           "x": 59.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "background": {
@@ -866,11 +800,11 @@
       "rect": {
         "origin": {
           "x": 59.0,
-          "y": 4.0
+          "y": 3.0
         },
         "size": {
           "w": 28.0,
-          "h": 28.0
+          "h": 30.0
         }
       },
       "corner_radii": {

@@ -76,12 +76,58 @@
       "value": null,
       "bounds": {
         "origin": {
+          "x": 13.0,
+          "y": 3.0
+        },
+        "size": {
+          "w": 48.0,
+          "h": 18.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
           "x": 51.0,
           "y": 3.0
         },
         "size": {
           "w": 10.0,
           "h": 18.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 51.0,
+          "y": 7.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 10.0
         }
       },
       "flags": {
