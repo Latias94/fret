@@ -277,7 +277,7 @@ fn team_switcher(
     };
 
     let trigger = shadcn::SidebarMenuButton::new(team.name)
-        .size(shadcn::raw::sidebar::SidebarMenuButtonSize::Lg)
+        .size(shadcn::SidebarMenuButtonSize::Lg)
         .children([
             sidebar_icon(cx, team.icon),
             copy_stack(cx, team.name, team.plan),
@@ -502,7 +502,7 @@ fn nav_user(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> AnyElement {
     };
 
     let trigger = shadcn::SidebarMenuButton::new("shadcn")
-        .size(shadcn::raw::sidebar::SidebarMenuButtonSize::Lg)
+        .size(shadcn::SidebarMenuButtonSize::Lg)
         .children([
             avatar_badge(cx, "SC"),
             copy_stack(cx, "shadcn", "m@example.com"),

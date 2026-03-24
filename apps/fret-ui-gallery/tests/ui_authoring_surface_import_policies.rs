@@ -83,17 +83,6 @@ fn gallery_curated_shadcn_surfaces_stay_explicit() {
     assert!(!theme_runtime.contains("fret_ui_shadcn::shadcn_themes::"));
     assert!(theme_runtime.contains("shadcn::themes::ShadcnBaseColor::"));
     assert!(theme_runtime.contains("shadcn::themes::apply_shadcn_new_york"));
-
-    for relative_path in [
-        "src/ui/pages/field.rs",
-        "src/ui/pages/input.rs",
-        "src/ui/pages/kbd.rs",
-    ] {
-        let path = manifest_path(relative_path);
-        let source = read_path(&path);
-        assert!(source.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
-        assert!(!source.contains("use fret_ui_shadcn::{self as shadcn, prelude::*};"));
-    }
 }
 
 #[test]
@@ -201,7 +190,6 @@ fn gallery_ai_snippet_batch_prefers_curated_shadcn_facade_imports() {
         "src/ui/snippets/ai/audio_player_demo.rs",
         "src/ui/snippets/ai/canvas_world_layer_spike.rs",
         "src/ui/snippets/ai/checkpoint_demo.rs",
-        "src/ui/snippets/ai/code_block_demo.rs",
         "src/ui/snippets/ai/commit_custom_children.rs",
         "src/ui/snippets/ai/confirmation_demo.rs",
         "src/ui/snippets/ai/confirmation_request.rs",

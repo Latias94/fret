@@ -509,9 +509,10 @@ pub mod facade {
         Sidebar, SidebarCollapsible, SidebarContent, SidebarFooter, SidebarGroup,
         SidebarGroupAction, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInput,
         SidebarInset, SidebarMenu, SidebarMenuAction, SidebarMenuBadge, SidebarMenuButton,
-        SidebarMenuButtonVariant, SidebarMenuItem, SidebarMenuSkeleton, SidebarMenuSub,
-        SidebarMenuSubButton, SidebarMenuSubButtonSize, SidebarMenuSubItem, SidebarProvider,
-        SidebarRail, SidebarSeparator, SidebarSide, SidebarTrigger, SidebarVariant, use_sidebar,
+        SidebarMenuButtonSize, SidebarMenuButtonVariant, SidebarMenuItem, SidebarMenuSkeleton,
+        SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubButtonSize, SidebarMenuSubItem,
+        SidebarProvider, SidebarRail, SidebarSeparator, SidebarSide, SidebarTrigger,
+        SidebarVariant, use_sidebar,
     };
     pub use crate::skeleton::Skeleton;
     pub use crate::slider::{Slider, slider};

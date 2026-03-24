@@ -23,7 +23,6 @@ use time::{Date, Weekday};
 
 use crate::rtl;
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
-use crate::test_id::attach_test_id_suffix;
 
 fn persian_digit(c: char) -> char {
     match c {
@@ -460,7 +459,11 @@ impl CalendarHijri {
                             });
                         },
                     );
-                    let prev = attach_test_id_suffix(prev, test_id_prefix.as_ref(), "nav-prev");
+                    let prev = if let Some(prefix) = test_id_prefix.as_ref() {
+                        prev.test_id(Arc::<str>::from(format!("{prefix}.nav-prev")))
+                    } else {
+                        prev
+                    };
                     let month_model_next = month_model.clone();
                     let next = calendar_nav_icon_button(
                         cx,
@@ -477,7 +480,11 @@ impl CalendarHijri {
                             });
                         },
                     );
-                    let next = attach_test_id_suffix(next, test_id_prefix.as_ref(), "nav-next");
+                    let next = if let Some(prefix) = test_id_prefix.as_ref() {
+                        next.test_id(Arc::<str>::from(format!("{prefix}.nav-next")))
+                    } else {
+                        next
+                    };
 
                     let mut title_props = TextProps::new(title.clone());
                     let size = theme_header.metric_token("font.size");

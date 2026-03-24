@@ -27,7 +27,9 @@ pub(super) fn preview_progress(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .test_id_prefix("ui-gallery-progress-api-reference")
         .description("Public surface summary, docs-parity notes, and children API ownership.");
-    let notes = DocSection::build(cx, "Notes", notes).description("Parity notes and owner split.");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .test_id_prefix("ui-gallery-progress-notes")
+        .description("Parity notes and owner split.");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("One-shot timer preview aligned with the upstream demo's 13% -> 66% update.")
         .test_id_prefix("ui-gallery-progress-demo")

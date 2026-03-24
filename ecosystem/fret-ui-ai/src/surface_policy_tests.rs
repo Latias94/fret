@@ -163,6 +163,11 @@ fn code_block_public_surface_keeps_docs_shaped_header_and_copy_parts() {
         "pub struct CodeBlockTitle {",
         "pub struct CodeBlockActions {",
         "pub struct CodeBlockCopyButton {",
+        "pub type CodeBlockLanguageSelector = ShadcnSelect;",
+        "pub struct CodeBlockLanguageSelectorContent {",
+        "pub struct CodeBlockLanguageSelectorTrigger {",
+        "pub type CodeBlockLanguageSelectorItem = ShadcnSelectItem;",
+        "pub type CodeBlockLanguageSelectorValue = ShadcnSelectValue;",
     ] {
         assert!(
             CODE_BLOCK_RS.contains(marker),

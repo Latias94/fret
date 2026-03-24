@@ -9350,14 +9350,14 @@ fn selected_ai_snippets_follow_selects_direct_recipe_root_lane() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/code_block_demo.rs",
         &[
-            "shadcn::Select::new(",
-            ".trigger(",
-            ".value(",
-            ".content(",
+            "ui_ai::CodeBlockLanguageSelector::new(",
+            ".trigger(ui_ai::CodeBlockLanguageSelectorTrigger::new().into())",
+            ".value(ui_ai::CodeBlockLanguageSelectorValue::new().placeholder(\"Language\"))",
+            ".content(ui_ai::CodeBlockLanguageSelectorContent::new().into())",
             ".entries(",
             ".into_element(cx)",
         ],
-        &[".into_element_parts("],
+        &["shadcn::Select::new(", ".into_element_parts("],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
