@@ -10,8 +10,7 @@ pub(super) fn preview_ai_prompt_input_referenced_sources_demo(
 ) -> Vec<AnyElement> {
     let demo = snippets::prompt_input_referenced_sources_demo::render(cx);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "AI Elements are policy-level compositions built on top of lower-level primitives.",
         ),
@@ -26,6 +25,7 @@ pub(super) fn preview_ai_prompt_input_referenced_sources_demo(
                     "example",
                 ),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

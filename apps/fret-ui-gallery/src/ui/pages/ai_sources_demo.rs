@@ -55,8 +55,7 @@ pub(super) fn preview_ai_sources_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
 
     let parts = parts_table(cx);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned Sources coverage for AI Elements: default preview, custom trigger/source rendering, and the current Fret authoring-surface notes.",
         ),
@@ -78,6 +77,7 @@ pub(super) fn preview_ai_sources_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
             DocSection::build(cx, "Notes", notes)
                 .description("Layering, diagnostics, and authoring-surface notes for Sources."),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

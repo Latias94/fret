@@ -42,8 +42,7 @@ pub(super) fn preview_ai_code_block_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
     let notes_section = DocSection::build(cx, "Notes", notes)
         .description("Layering and public-surface findings from the CodeBlock parity pass.");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Preview follows the official AI Elements Code Block page after skipping Installation/Props tables: About, Usage, Language Selector, Notes. Dark-mode validation is covered by the gallery theme preset switcher rather than a duplicate preview block.",
         ),
@@ -53,6 +52,7 @@ pub(super) fn preview_ai_code_block_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
             language_selector_section,
             notes_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

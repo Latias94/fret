@@ -22,8 +22,7 @@ pub(super) fn preview_ai_agent_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
     ])
     .test_id("ui-gallery-ai-agent-notes");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned Agent coverage for AI Elements: the same compound composition story as the official page, adapted to Fret's explicit Rust builder surface and JSON-schema tool definitions.",
         ),
@@ -46,6 +45,7 @@ pub(super) fn preview_ai_agent_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
             DocSection::build(cx, "Notes", notes)
                 .description("Parity findings and layering decision for Agent."),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

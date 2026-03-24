@@ -56,8 +56,7 @@ pub(super) fn preview_ai_inline_citation_demo(
         "Keep `ui-ai-inline-citation-demo-*` selectors stable; `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-inline-citation-demo-hovercard.json` depends on them.",
     ]);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Preview mirrors the official AI Elements Inline Citation example more closely, then documents the current Fret authoring surface and remaining API-shape tradeoffs.",
         ),
@@ -79,6 +78,7 @@ pub(super) fn preview_ai_inline_citation_demo(
                 .no_shell()
                 .test_id_prefix("ui-gallery-ai-inline-citation-notes"),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

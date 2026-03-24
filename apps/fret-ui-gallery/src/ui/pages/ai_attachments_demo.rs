@@ -69,8 +69,7 @@ pub(super) fn preview_ai_attachments_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
     ])
     .test_id("ui-gallery-ai-attachments-notes");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned Attachments coverage for AI Elements: complete usage first, then focused grid/inline/list examples, composable parts, and the remaining preview-transport gap.",
         ),
@@ -104,6 +103,7 @@ pub(super) fn preview_ai_attachments_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
             DocSection::build(cx, "Notes", notes)
                 .description("Parity findings and layering decision for Attachments."),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

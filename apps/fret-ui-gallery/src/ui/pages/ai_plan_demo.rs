@@ -20,12 +20,12 @@ pub(super) fn preview_ai_plan_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<Any
     let notes_section =
         DocSection::build(cx, "Notes", notes).description("Layering and parity notes for Plan.");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned Plan coverage for AI Elements: collapsible execution plans with streaming shimmer on title and description.",
         ),
         vec![usage_section, notes_section],
+        cx,
     );
 
     vec![body.into_element(cx)]

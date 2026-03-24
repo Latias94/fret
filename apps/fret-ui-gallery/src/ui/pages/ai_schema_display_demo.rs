@@ -10,10 +10,10 @@ pub(super) fn preview_ai_schema_display_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
         .test_id_prefix("ui-gallery-ai-schema-display-demo")
         .code_rust_from_file_region(snippets::schema_display_demo::SOURCE, "example");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![demo_section],
+        cx,
     );
 
     vec![body.into_element(cx)]

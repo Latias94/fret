@@ -73,8 +73,7 @@ pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
     let props = props_table(cx);
     let lifecycle = lifecycle_notes(cx);
 
-    let body = doc_layout::render_doc_page(
-        cx,
+    let body = doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned AI Elements Persona demo: interactive state controls, variant showcase, states/props reference, and a Fret-specific custom visual slot.",
         ),
@@ -117,6 +116,7 @@ pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
                 .max_w(Px(980.0))
                 .no_shell(),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

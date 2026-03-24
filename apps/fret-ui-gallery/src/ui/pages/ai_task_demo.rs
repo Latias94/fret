@@ -38,8 +38,7 @@ pub(super) fn preview_ai_task_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<Any
         .description("Parity findings, layering decision, and why this alignment stays out of the runtime mechanism layer.")
         .no_shell();
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "The `Task` family is a policy-level collapsible task-list surface in `fret-ui-ai`: semantics stay on shadcn/Radix `Collapsible`, while the docs-facing recipe owns trigger chrome, item typography, and file-pill presentation.",
         ),
@@ -49,6 +48,7 @@ pub(super) fn preview_ai_task_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<Any
             props_section,
             notes_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

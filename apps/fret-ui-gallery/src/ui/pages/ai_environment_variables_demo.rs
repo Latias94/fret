@@ -91,8 +91,7 @@ pub(super) fn preview_ai_environment_variables_demo(
     let notes_section = DocSection::build(cx, "Notes", findings)
         .description("Layering + parity findings for Environment Variables.");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Display environment variables with default masking, a visibility toggle, and per-row copy actions.",
         ),
@@ -103,6 +102,7 @@ pub(super) fn preview_ai_environment_variables_demo(
             props_section,
             notes_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

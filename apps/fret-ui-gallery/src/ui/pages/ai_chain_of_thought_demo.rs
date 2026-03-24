@@ -36,8 +36,7 @@ pub(super) fn preview_ai_chain_of_thought_demo(
     let props_section = DocSection::build(cx, "Props", props)
         .description("Fret API surface for `fret_ui_ai::ChainOfThought*` builders.");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Preview mirrors the official AI Elements Chain of Thought example, then documents the Fret-specific composition model used to keep compound parts safe in a move-only declarative tree.",
         ),
@@ -47,6 +46,7 @@ pub(super) fn preview_ai_chain_of_thought_demo(
             features_section,
             props_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

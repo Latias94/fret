@@ -316,11 +316,11 @@ pub(in crate::ui) fn preview_text_outline_stroke(
         },
     );
 
-    let page = doc_layout::wrap_preview_page(
-        cx,
+    let page = doc_layout::wrap_preview_page_after(
         None,
         "Text Outline/Stroke (v1)",
         vec![header, toolbar, panel],
+        cx,
     );
 
     vec![page.into_element(cx)]

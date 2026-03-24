@@ -7,8 +7,7 @@ use fret::UiCx;
 pub(super) fn preview_ai_transcript_torture(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::transcript_torture::render(cx);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some("AI transcript torture is a harness surface for long virtualized transcripts."),
         vec![
             DocSection::build(cx, "Transcript Torture", demo)
@@ -16,6 +15,7 @@ pub(super) fn preview_ai_transcript_torture(cx: &mut UiCx<'_>, _theme: &Theme) -
                 .test_id_prefix("ui-gallery-ai-transcript-torture")
                 .code_rust_from_file_region(snippets::transcript_torture::SOURCE, "example"),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

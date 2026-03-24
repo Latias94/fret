@@ -87,8 +87,7 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
         "What is aligned now, what remains intentionally explicit, and what is still missing.",
     );
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned PromptInput coverage for AI Elements: usage first, then the official example lanes, followed by public-surface findings and the remaining parity gaps.",
         ),
@@ -100,6 +99,7 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
             parts_section,
             notes_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

@@ -58,8 +58,7 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         "The main composition gap is now closed at the selector surface with a Rust closure-based `MicSelectorList::into_element_with_children(...)`, without pushing new policy into runtime contracts.",
     ]);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned preview keeps the AI Elements compound shape while intentionally leaving device enumeration and microphone permissions in app code.",
         ),
@@ -81,6 +80,7 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
                 .description("Layering and next-step parity notes.")
                 .no_shell(),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

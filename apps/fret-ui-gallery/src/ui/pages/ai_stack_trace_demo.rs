@@ -29,8 +29,7 @@ pub(super) fn preview_ai_stack_trace_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
     let notes_section = DocSection::build(cx, "Notes", notes)
         .description("Layering + parity findings for StackTrace.");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned StackTrace examples using the same compound-parts composition model as the official AI Elements page.",
         ),
@@ -40,6 +39,7 @@ pub(super) fn preview_ai_stack_trace_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
             no_internal_section,
             notes_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

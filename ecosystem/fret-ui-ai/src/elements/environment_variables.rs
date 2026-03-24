@@ -653,12 +653,12 @@ impl EnvironmentVariableGroup {
 }
 
 /// Name aligned with AI Elements `EnvironmentVariableName`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EnvironmentVariableName {
     content: EnvironmentVariableNameContent,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum EnvironmentVariableNameContent {
     Default,
     Text(Arc<str>),
@@ -731,12 +731,12 @@ fn masked_value(value: &str) -> Arc<str> {
 }
 
 /// Value aligned with AI Elements `EnvironmentVariableValue`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EnvironmentVariableValue {
     content: EnvironmentVariableValueContent,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum EnvironmentVariableValueContent {
     Default,
     Text(Arc<str>),
@@ -859,7 +859,6 @@ pub type OnEnvironmentVariableCopy =
     Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static>;
 
 /// Copy button aligned with AI Elements `EnvironmentVariableCopyButton`.
-#[derive(Clone)]
 pub struct EnvironmentVariableCopyButton {
     on_copy: Option<OnEnvironmentVariableCopy>,
     children: Vec<AnyElement>,
@@ -1107,12 +1106,12 @@ impl EnvironmentVariableCopyButton {
 }
 
 /// Badge aligned with AI Elements `EnvironmentVariableRequired`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EnvironmentVariableRequired {
     content: EnvironmentVariableRequiredContent,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum EnvironmentVariableRequiredContent {
     Default,
     Text(Arc<str>),

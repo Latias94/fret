@@ -46,8 +46,7 @@ pub(super) fn preview_ai_confirmation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
     let notes_section = DocSection::build(cx, "Notes", notes)
         .description("Layering and parity notes for Confirmation.");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned Confirmation coverage for AI Elements: a complete approval workflow first, then focused state examples that track the official preview scripts.",
         ),
@@ -58,6 +57,7 @@ pub(super) fn preview_ai_confirmation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
             rejected_section,
             notes_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

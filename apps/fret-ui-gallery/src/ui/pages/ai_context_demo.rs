@@ -72,8 +72,7 @@ pub(super) fn preview_ai_context_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         .description("Layering + remaining parity gap notes.")
         .no_shell();
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Preview starts with the docs-style compound example, then shows Fret's default convenience API for the same surface.",
         ),
@@ -84,6 +83,7 @@ pub(super) fn preview_ai_context_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
             parts_section,
             notes_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

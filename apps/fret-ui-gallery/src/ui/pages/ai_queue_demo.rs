@@ -73,8 +73,7 @@ pub(super) fn preview_ai_queue_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
         "Diagnostics gate (PromptInput): `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-queue-demo-prompt-input.json` covers content-only section + todo remove + add attachments + submit + model selector close.",
     ]);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "A comprehensive queue component system for displaying message lists, todos, and collapsible task sections in AI applications.",
         ),
@@ -101,6 +100,7 @@ pub(super) fn preview_ai_queue_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
                 .description("Intentional divergences, layering guidance, and regression gates.")
                 .no_shell(),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

@@ -158,6 +158,15 @@ pub(in crate::ui) fn render_doc_page(
     render_doc_page_raw(cx as *mut _, intro, sections)
 }
 
+// Keeps page-body assembly borrow-friendly when section builders also need `cx`.
+pub(in crate::ui) fn render_doc_page_after(
+    intro: Option<&'static str>,
+    sections: Vec<DocSection>,
+    cx: &mut UiCx<'_>,
+) -> impl UiChild + use<> {
+    render_doc_page_raw(cx as *mut _, intro, sections)
+}
+
 fn render_doc_page_raw(
     cx: *mut UiCx<'_>,
     intro: Option<&'static str>,
@@ -213,6 +222,17 @@ pub(in crate::ui) fn wrap_preview_page(
     wrap_preview_page_raw(cx as *mut _, intro, section_title, elements)
 }
 
+// Keeps preview vectors borrow-friendly when call sites still land elements with `cx`.
+#[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
+pub(in crate::ui) fn wrap_preview_page_after(
+    intro: Option<&'static str>,
+    section_title: &'static str,
+    elements: Vec<AnyElement>,
+    cx: &mut UiCx<'_>,
+) -> impl UiChild + use<> {
+    wrap_preview_page_raw(cx as *mut _, intro, section_title, elements)
+}
+
 #[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
 fn wrap_preview_page_raw(
     cx: *mut UiCx<'_>,
@@ -246,7 +266,7 @@ pub(in crate::ui) fn wrap_row<F>(
     gap: Space,
     align: fret_ui::element::CrossAlign,
     children: F,
-) -> impl UiChild + use<F>
+) -> AnyElement
 where
     F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
 {
@@ -264,6 +284,7 @@ where
         },
         children,
     )
+    .into_element(cx)
 }
 
 #[cfg(feature = "gallery-dev")]
@@ -272,7 +293,7 @@ pub(in crate::ui) fn wrap_controls_row<F>(
     theme: &Theme,
     gap: Space,
     children: F,
-) -> impl UiChild + use<F>
+) -> AnyElement
 where
     F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
 {

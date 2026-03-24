@@ -12,8 +12,7 @@ pub(super) fn preview_ai_speech_input_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         "Upstream `SpeechInput` is still a leaf button surface, so we intentionally keep this API non-compound for now instead of adding a children-first composition layer.",
     ]);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Preview stays close to the official AI Elements docs example while preserving Fret's UI-only seam: apps own microphone capture, transcription, and browser capability decisions.",
         ),
@@ -25,6 +24,7 @@ pub(super) fn preview_ai_speech_input_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
             DocSection::build(cx, "Notes", notes)
                 .description("Layering and parity notes for SpeechInput."),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

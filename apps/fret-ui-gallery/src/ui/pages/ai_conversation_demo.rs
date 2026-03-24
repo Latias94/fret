@@ -66,8 +66,7 @@ pub(super) fn preview_ai_conversation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         .max_w(Px(980.0))
         .no_shell();
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "The `Conversation` component wraps messages and automatically scrolls to the bottom. It also exposes overlay slots for transcript export and a scroll-to-latest affordance when the reader is away from the tail.",
         ),
@@ -79,6 +78,7 @@ pub(super) fn preview_ai_conversation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
             props_section,
             parity_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

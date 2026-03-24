@@ -7,14 +7,14 @@ use fret::UiCx;
 pub(super) fn preview_ai_audio_player_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::audio_player_demo::render(cx);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::build(cx, "Audio Player", demo)
                 .test_id_prefix("ui-gallery-ai-audio-player-demo")
                 .code_rust_from_file_region(snippets::audio_player_demo::SOURCE, "example"),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

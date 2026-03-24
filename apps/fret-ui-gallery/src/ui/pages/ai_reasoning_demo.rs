@@ -58,8 +58,7 @@ pub(super) fn preview_ai_reasoning_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Ve
         .description("Layering, diagnostics, and how to wire the demo to real streaming state.")
         .no_shell();
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned Reasoning disclosure: streaming-driven auto-open/close plus a compound Trigger/Content composition surface.",
         ),
@@ -71,6 +70,7 @@ pub(super) fn preview_ai_reasoning_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Ve
             hooks_section,
             notes_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

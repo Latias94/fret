@@ -120,8 +120,7 @@ pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         .code_rust_from_file_region(snippets::test_results_errors::SOURCE, "example");
     let props_section = DocSection::build(cx, "Parts & Props", props).no_shell();
 
-    let body = doc_layout::render_doc_page(
-        cx,
+    let body = doc_layout::render_doc_page_after(
         Some(
             "The TestResults component displays test suite results including summary statistics, progress, individual tests, and error details.",
         ),
@@ -134,6 +133,7 @@ pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
             errors_section,
             props_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

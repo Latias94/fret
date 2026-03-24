@@ -140,8 +140,7 @@ pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<A
     let notes_section = DocSection::build(cx, "Notes", findings)
         .description("Layering + parity findings for Commit.");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "The Commit component displays commit details including hash, message, author, timestamp, and changed files.",
         ),
@@ -153,6 +152,7 @@ pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<A
             props_section,
             notes_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

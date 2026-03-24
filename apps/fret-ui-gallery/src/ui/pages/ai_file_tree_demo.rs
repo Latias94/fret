@@ -10,8 +10,7 @@ pub(super) fn preview_ai_file_tree_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Ve
     let expanded = snippets::file_tree_expanded::preview(cx);
     let large = snippets::file_tree_large::preview(cx);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::build(cx, "Demo", demo)
@@ -31,6 +30,7 @@ pub(super) fn preview_ai_file_tree_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Ve
                 )
                 .code_rust_from_file_region(snippets::file_tree_large::SOURCE, "example"),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

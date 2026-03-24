@@ -54,8 +54,7 @@ pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
         "This component is intentionally richer than `ModelSelector`; its metadata and preview parts are selector policy, not a universal contract every AI selector must copy.",
     ]);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned preview keeps the official compound taxonomy while intentionally leaving voice inventory and preview transport in app code.",
         ),
@@ -77,6 +76,7 @@ pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
                 .description("Layering and next-step parity guidance.")
                 .no_shell(),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

@@ -10,7 +10,7 @@ use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::{LayoutRefinement, Space, ui};
 use std::sync::Arc;
 
-fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> impl UiChild + use<> {
+fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> AnyElement {
     cx.text_props(TextProps {
         layout: fret_ui::element::LayoutStyle {
             size: SizeStyle {

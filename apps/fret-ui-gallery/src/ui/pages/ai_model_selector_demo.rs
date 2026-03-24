@@ -83,8 +83,7 @@ pub(super) fn preview_ai_model_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
         "If you need the fully cmdk-aligned input semantics surface, prefer `ModelSelectorDialog` (shadcn `CommandDialog`) / `CommandPalette` rather than expanding selector policy in `crates/fret-ui`.",
     ]);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some("A searchable command palette for selecting AI models in your chat interface."),
         vec![
             DocSection::build(cx, "Compound API", demo)
@@ -104,6 +103,7 @@ pub(super) fn preview_ai_model_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
                 .description("Intentional divergences and layering guidance.")
                 .no_shell(),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

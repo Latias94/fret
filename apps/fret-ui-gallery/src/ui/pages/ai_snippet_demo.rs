@@ -20,10 +20,10 @@ pub(super) fn preview_ai_snippet_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         .test_id_prefix("ui-gallery-ai-snippet-plain")
         .code_rust_from_file_region(snippets::snippet_plain::SOURCE, "example");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some("Lightweight inline code display for terminal commands and short code references."),
         vec![demo_section, plain_section],
+        cx,
     );
 
     vec![body.into_element(cx)]

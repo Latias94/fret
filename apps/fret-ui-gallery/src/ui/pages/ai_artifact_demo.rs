@@ -112,12 +112,12 @@ pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec
             .description("Parity findings and current API notes for Artifact."),
     );
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned Artifact coverage for AI Elements: the official code-display example first, then the focused close interaction demo, features, and the current Rust surface map.",
         ),
         sections,
+        cx,
     );
 
     vec![body.into_element(cx)]

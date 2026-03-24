@@ -137,8 +137,7 @@ pub(super) fn preview_ai_tool_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<Any
     ])
     .test_id("ui-gallery-ai-tool-demo-notes");
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned Tool coverage for AI Elements: collapsible tool-call chrome, status mapping, and the public authoring surface that sits above shadcn/Radix collapsible primitives.",
         ),
@@ -159,6 +158,7 @@ pub(super) fn preview_ai_tool_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<Any
                 .description("Parity findings, layering decision, and why this pass stayed in `fret-ui-ai` + UI Gallery instead of the runtime mechanism layer.")
                 .no_shell(),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

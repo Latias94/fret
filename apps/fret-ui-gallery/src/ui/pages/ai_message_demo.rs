@@ -41,12 +41,12 @@ pub(super) fn preview_ai_message_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
             .description("Parity findings and current API trade-offs for Message."),
     );
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "Docs-aligned Message suite coverage for AI Elements: complete usage flow first, then focused surface examples and parity notes.",
         ),
         sections,
+        cx,
     );
 
     vec![body.into_element(cx)]

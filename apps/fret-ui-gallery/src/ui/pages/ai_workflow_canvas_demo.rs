@@ -10,8 +10,7 @@ pub(super) fn preview_ai_workflow_canvas_demo(
 ) -> Vec<AnyElement> {
     let demo = snippets::workflow_canvas_demo::render(cx);
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::build(cx, "Workflow Canvas", demo)
@@ -19,6 +18,7 @@ pub(super) fn preview_ai_workflow_canvas_demo(
                 .test_id_prefix("ui-gallery-ai-workflow-canvas-demo")
                 .code_rust_from_file_region(snippets::workflow_canvas_demo::SOURCE, "example"),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

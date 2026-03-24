@@ -46,8 +46,7 @@ pub(super) fn preview_ai_suggestions_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
         .max_w(Px(980.0))
         .no_shell();
 
-    let body = crate::ui::doc_layout::render_doc_page(
-        cx,
+    let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
             "The `Suggestion` family displays a horizontal row of clickable suggestion pills. In Fret, the component stays policy-level: the chip emits intent, and the app still owns prompt state, submission, and side effects.",
         ),
@@ -58,6 +57,7 @@ pub(super) fn preview_ai_suggestions_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
             props_section,
             notes_section,
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]

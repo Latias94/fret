@@ -31,8 +31,7 @@ pub(super) fn preview_ai_checkpoint_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
     ]);
     let props = checkpoint_props_table(cx).test_id("ui-gallery-ai-checkpoint-props");
 
-    let body = doc_layout::render_doc_page(
-        cx,
+    let body = doc_layout::render_doc_page_after(
         Some(
             "The `Checkpoint` component provides a way to mark specific points in a conversation history and restore the chat to that state. Inspired by VSCode's Copilot checkpoint feature, it allows users to revert to an earlier conversation state while maintaining a clear visual separation between different conversation segments.",
         ),
@@ -72,6 +71,7 @@ pub(super) fn preview_ai_checkpoint_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
                 .description("Fret builder surface corresponding to the official `Checkpoint*` component family.")
                 .max_w(Px(980.0)),
         ],
+        cx,
     );
 
     vec![body.into_element(cx)]
