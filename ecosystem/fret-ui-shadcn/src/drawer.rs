@@ -1937,10 +1937,12 @@ impl<H: UiHost> DrawerPart<H> {
         Self::Content(Box::new(move |cx| content.into_element(cx)))
     }
 
-    pub fn content_with(
-        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
-    ) -> Self {
-        Self::Content(Box::new(content))
+    pub fn content_with<F, C>(content: F) -> Self
+    where
+        F: FnOnce(&mut ElementContext<'_, H>) -> C + 'static,
+        C: IntoUiElement<H> + 'static,
+    {
+        Self::Content(Box::new(move |cx| content(cx).into_element(cx)))
     }
 }
 
@@ -2151,11 +2153,14 @@ impl<H: UiHost, TTrigger> DrawerComposition<H, TTrigger> {
         self
     }
 
-    pub fn content_with(
-        mut self,
-        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
-    ) -> Self {
-        self.content = Some(DrawerCompositionContent::Deferred(Box::new(content)));
+    pub fn content_with<F, C>(mut self, content: F) -> Self
+    where
+        F: FnOnce(&mut ElementContext<'_, H>) -> C + 'static,
+        C: IntoUiElement<H> + 'static,
+    {
+        self.content = Some(DrawerCompositionContent::Deferred(Box::new(move |cx| {
+            content(cx).into_element(cx)
+        })));
         self
     }
 

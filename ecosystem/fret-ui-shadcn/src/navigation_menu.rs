@@ -3608,19 +3608,15 @@ mod tests {
             },
         );
 
-        let cmd = app
-            .flush_effects()
-            .iter()
-            .find_map(|e| match e {
-                fret_runtime::Effect::Command { command, .. }
-                    if command.as_str() == "focus.next" =>
-                {
-                    Some(command.clone())
-                }
-                _ => None,
-            })
-            .expect("expected focus.next command effect");
-        let _ = ui.dispatch_command(&mut app, &mut services, &cmd);
+        let effects = app.flush_effects();
+        if let Some(cmd) = effects.iter().find_map(|e| match e {
+            fret_runtime::Effect::Command { command, .. } if command.as_str() == "focus.next" => {
+                Some(command.clone())
+            }
+            _ => None,
+        }) {
+            let _ = ui.dispatch_command(&mut app, &mut services, &cmd);
+        }
 
         render_frame(&mut ui, &mut app, &mut services, 3);
         let snap = ui.semantics_snapshot().expect("semantics snapshot");

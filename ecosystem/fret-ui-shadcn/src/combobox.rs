@@ -4377,7 +4377,9 @@ mod tests {
     }
 
     #[test]
-    fn combobox_search_input_exposes_combobox_role_active_descendant_and_value() {
+    fn combobox_search_input_exposes_combobox_role_active_descendant_after_navigation_and_value() {
+        use fret_core::{Event, KeyCode, Modifiers};
+
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -4465,6 +4467,53 @@ mod tests {
             "combobox input should control the listbox"
         );
 
+        let input_id = input.id;
+        ui.set_focus(Some(input_id));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyUp {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items(),
+        );
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == input_id)
+            .expect("combobox search input node after ArrowDown");
         let active = input
             .active_descendant
             .expect("active_descendant should be set");

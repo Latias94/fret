@@ -656,8 +656,7 @@ impl DropdownMenuItem {
         self
     }
 
-    /// Attach a payload for parameterized actions while staying on the native dropdown-menu item
-    /// surface.
+    /// Attach a payload for parameterized actions while staying on the native dropdown-menu item surface.
     pub fn action_payload<T>(mut self, payload: T) -> Self
     where
         T: Any + Send + Sync + Clone + 'static,

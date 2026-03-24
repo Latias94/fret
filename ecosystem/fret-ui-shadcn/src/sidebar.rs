@@ -963,7 +963,7 @@ impl Sidebar {
                                 on_command_availability.clone(),
                             );
 
-                            let surface = shadcn_layout::container_flow(
+                            let surface = shadcn_layout::container_flow_fill_width(
                                 cx,
                                 surface_props,
                                 vec![content_root],
@@ -1088,7 +1088,7 @@ impl Sidebar {
         let children = with_sidebar_surface_provider(cx, surface_context, |cx| {
             render_children(cx).into_iter().collect::<Vec<_>>()
         });
-        let surface = shadcn_layout::container_flow(cx, props, children);
+        let surface = shadcn_layout::container_flow_fill_width(cx, props, children);
         shadcn_layout::container_flow(cx, wrapper_props, vec![surface])
     }
 
@@ -1148,7 +1148,11 @@ impl Sidebar {
                         move |cx| {
                             let surface =
                                 with_sidebar_surface_provider(cx, surface_context, |cx| {
-                                    shadcn_layout::container_flow(cx, surface_props, children)
+                                    shadcn_layout::container_flow_fill_width(
+                                        cx,
+                                        surface_props,
+                                        children,
+                                    )
                                 });
 
                             SheetContent::new([surface])
@@ -1266,7 +1270,7 @@ impl Sidebar {
         props.layout.overflow = Overflow::Clip;
 
         let surface = with_sidebar_surface_provider(cx, surface_context, |cx| {
-            shadcn_layout::container_flow(cx, props, children)
+            shadcn_layout::container_flow_fill_width(cx, props, children)
         });
         shadcn_layout::container_flow(cx, wrapper_props, vec![surface])
     }
@@ -5931,16 +5935,18 @@ mod tests {
                 bounds,
                 "shadcn-sidebar-rail-side-matrix",
                 |cx| {
-                    let child = cx.spacer(SpacerProps {
-                        min: Px(0.0),
-                        ..Default::default()
-                    });
-                    let sidebar = Sidebar::new([child])
+                    let sidebar = Sidebar::new(Vec::<AnyElement>::new())
                         .side(side)
                         .collapsible(collapsible)
-                        .into_element(cx);
-                    let rail = SidebarRail::new().test_id(test_id).into_element(cx);
-                    vec![sidebar, rail]
+                        .into_element_with_children(cx, |cx| {
+                            let child = cx.spacer(SpacerProps {
+                                min: Px(0.0),
+                                ..Default::default()
+                            });
+                            let rail = SidebarRail::new().test_id(test_id).into_element(cx);
+                            vec![child, rail]
+                        });
+                    vec![sidebar]
                 },
             );
             ui.set_root(root);

@@ -318,8 +318,7 @@ impl MenubarItem {
         self
     }
 
-    /// Attach a payload for parameterized actions while staying on the native menubar item
-    /// surface.
+    /// Attach a payload for parameterized actions while staying on the native menubar item surface.
     pub fn action_payload<T>(mut self, payload: T) -> Self
     where
         T: Any + Send + Sync + Clone + 'static,
@@ -3293,7 +3292,6 @@ impl MenubarMenuEntries {
                                 )]
                             },
                         );
-
                         let content =
                             overlay_motion::wrap_opacity_and_render_transform(cx, opacity, transform, vec![content]);
 
