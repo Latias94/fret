@@ -84,6 +84,29 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 
+fn inline_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let mut iter = children.into_iter();
+    match (iter.next(), iter.next()) {
+        (None, _) => cx.text(""),
+        (Some(first), None) => first,
+        (Some(first), Some(second)) => {
+            let mut row_children = Vec::with_capacity(2 + iter.len());
+            row_children.push(first);
+            row_children.push(second);
+            row_children.extend(iter);
+
+            ui::h_row(move |_cx| row_children)
+                .gap(Space::N0)
+                .items(Items::Center)
+                .layout(LayoutRefinement::default())
+                .into_element(cx)
+        }
+    }
+}
+
 /// Root surface aligned with AI Elements `EnvironmentVariables`.
 #[derive(Clone)]
 pub struct EnvironmentVariables {
@@ -365,7 +388,7 @@ impl EnvironmentVariablesTitle {
                 .inherit_foreground(fg)
                 .inherit_text_style(refinement),
             EnvironmentVariablesTitleContent::Children(children) => cx
-                .foreground_scope(fg, move |_cx| children)
+                .foreground_scope(fg, move |cx| vec![inline_children(cx, children)])
                 .inherit_foreground(fg)
                 .inherit_text_style(refinement),
         };
@@ -375,7 +398,8 @@ impl EnvironmentVariablesTitle {
         };
         el = el.attach_semantics(
             SemanticsDecoration::default()
-                .role(SemanticsRole::Text)
+                .role(SemanticsRole::Heading)
+                .level(3)
                 .test_id(test_id),
         );
         el
@@ -631,41 +655,71 @@ impl EnvironmentVariableGroup {
 /// Name aligned with AI Elements `EnvironmentVariableName`.
 #[derive(Debug, Clone)]
 pub struct EnvironmentVariableName {
-    text: Option<Arc<str>>,
+    content: EnvironmentVariableNameContent,
+}
+
+#[derive(Debug, Clone)]
+enum EnvironmentVariableNameContent {
+    Default,
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl EnvironmentVariableName {
     pub fn new() -> Self {
-        Self { text: None }
+        Self {
+            content: EnvironmentVariableNameContent::Default,
+        }
     }
 
     pub fn text(mut self, text: impl Into<Arc<str>>) -> Self {
-        self.text = Some(text.into());
+        self.content = EnvironmentVariableNameContent::Text(text.into());
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.content = EnvironmentVariableNameContent::Children(children.into_iter().collect());
         self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let data = use_environment_variable_data(cx);
-        let text = self
-            .text
-            .or_else(|| data.as_ref().map(|d| d.name.clone()))
-            .unwrap_or_else(|| Arc::<str>::from(""));
-
         let fg = theme.color_token("foreground");
         let px = theme.metric_token("font.size");
         let style = monospace_style(&theme, px, FontWeight::NORMAL);
+        let refinement = typography::composable_refinement_from_style(&style);
 
-        cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text,
-            style: Some(style),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        })
+        match self.content {
+            EnvironmentVariableNameContent::Default => {
+                let text = use_environment_variable_data(cx)
+                    .map(|d| d.name)
+                    .unwrap_or_else(|| Arc::<str>::from(""));
+                cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text,
+                    style: Some(style),
+                    color: Some(fg),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
+                })
+            }
+            EnvironmentVariableNameContent::Text(text) => cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text,
+                style: Some(style),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+            }),
+            EnvironmentVariableNameContent::Children(children) => cx
+                .foreground_scope(fg, move |cx| vec![inline_children(cx, children)])
+                .inherit_foreground(fg)
+                .inherit_text_style(refinement),
+        }
     }
 }
 
@@ -679,66 +733,96 @@ fn masked_value(value: &str) -> Arc<str> {
 /// Value aligned with AI Elements `EnvironmentVariableValue`.
 #[derive(Debug, Clone)]
 pub struct EnvironmentVariableValue {
-    text: Option<Arc<str>>,
+    content: EnvironmentVariableValueContent,
+}
+
+#[derive(Debug, Clone)]
+enum EnvironmentVariableValueContent {
+    Default,
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl EnvironmentVariableValue {
     pub fn new() -> Self {
-        Self { text: None }
+        Self {
+            content: EnvironmentVariableValueContent::Default,
+        }
     }
 
     pub fn text(mut self, text: impl Into<Arc<str>>) -> Self {
-        self.text = Some(text.into());
+        self.content = EnvironmentVariableValueContent::Text(text.into());
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.content = EnvironmentVariableValueContent::Children(children.into_iter().collect());
         self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let data = use_environment_variable_data(cx);
-        let value = self
-            .text
-            .or_else(|| data.as_ref().map(|d| d.value.clone()))
-            .unwrap_or_else(|| Arc::<str>::from(""));
-
         let show_values = use_environment_variables_controller(cx)
             .and_then(|c| cx.get_model_copied(&c.show_values, Invalidation::Paint))
             .unwrap_or(false);
 
-        let display_value = if show_values {
-            value.clone()
-        } else {
-            masked_value(&value)
-        };
-
         let fg = theme.color_token("muted-foreground");
         let px = theme.metric_token("font.size");
         let style = monospace_style(&theme, px, FontWeight::NORMAL);
+        let refinement = typography::composable_refinement_from_style(&style);
 
-        if show_values {
-            let spans: Arc<[TextSpan]> = Arc::from([TextSpan::new(display_value.len())]);
-            let rich = AttributedText::new(display_value, spans);
-            cx.selectable_text_props(SelectableTextProps {
+        match self.content {
+            EnvironmentVariableValueContent::Default => {
+                let value = use_environment_variable_data(cx)
+                    .map(|d| d.value)
+                    .unwrap_or_else(|| Arc::<str>::from(""));
+                let display_value = if show_values {
+                    value.clone()
+                } else {
+                    masked_value(&value)
+                };
+
+                if show_values {
+                    let spans: Arc<[TextSpan]> = Arc::from([TextSpan::new(display_value.len())]);
+                    let rich = AttributedText::new(display_value, spans);
+                    return cx.selectable_text_props(SelectableTextProps {
+                        layout: LayoutStyle::default(),
+                        rich,
+                        style: Some(style),
+                        color: Some(fg),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
+                        interactive_spans: Arc::from([]),
+                    });
+                }
+
+                cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: display_value,
+                    style: Some(style),
+                    color: Some(fg),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
+                })
+            }
+            EnvironmentVariableValueContent::Text(text) => cx.text_props(TextProps {
                 layout: LayoutStyle::default(),
-                rich,
+                text,
                 style: Some(style),
                 color: Some(fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
                 ink_overflow: Default::default(),
-                interactive_spans: Arc::from([]),
-            })
-        } else {
-            cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: display_value,
-                style: Some(style),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            })
+            }),
+            EnvironmentVariableValueContent::Children(children) => cx
+                .foreground_scope(fg, move |cx| vec![inline_children(cx, children)])
+                .inherit_foreground(fg)
+                .inherit_text_style(refinement),
         }
     }
 }
@@ -778,6 +862,7 @@ pub type OnEnvironmentVariableCopy =
 #[derive(Clone)]
 pub struct EnvironmentVariableCopyButton {
     on_copy: Option<OnEnvironmentVariableCopy>,
+    children: Vec<AnyElement>,
     timeout: Duration,
     copy_format: EnvironmentVariableCopyFormat,
     test_id: Option<Arc<str>>,
@@ -789,6 +874,7 @@ impl std::fmt::Debug for EnvironmentVariableCopyButton {
         f.debug_struct("EnvironmentVariableCopyButton")
             .field("timeout_ms", &self.timeout.as_millis())
             .field("copy_format", &self.copy_format)
+            .field("children_len", &self.children.len())
             .field("test_id", &self.test_id.as_deref())
             .field(
                 "copied_marker_test_id",
@@ -802,6 +888,7 @@ impl EnvironmentVariableCopyButton {
     pub fn new() -> Self {
         Self {
             on_copy: None,
+            children: Vec::new(),
             timeout: Duration::from_millis(2000),
             copy_format: EnvironmentVariableCopyFormat::Value,
             test_id: None,
@@ -811,6 +898,11 @@ impl EnvironmentVariableCopyButton {
 
     pub fn on_copy(mut self, on_copy: OnEnvironmentVariableCopy) -> Self {
         self.on_copy = Some(on_copy);
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
         self
     }
 
@@ -845,6 +937,7 @@ impl EnvironmentVariableCopyButton {
         let name = data.name;
         let value = data.value;
         let on_copy = self.on_copy;
+        let custom_children = self.children;
         let timeout = self.timeout;
         let copy_format = self.copy_format;
         let test_id = self.test_id;
@@ -961,11 +1054,20 @@ impl EnvironmentVariableCopyButton {
             chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
-                let row = ui::h_row(move |_cx| vec![icon])
-                    .items(Items::Center)
-                    .justify(Justify::Center)
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .into_element(cx);
+                let content = if custom_children.is_empty() {
+                    ui::h_row(move |_cx| vec![icon])
+                        .items(Items::Center)
+                        .justify(Justify::Center)
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .into_element(cx)
+                } else {
+                    let inner = inline_children(cx, custom_children);
+                    ui::h_row(move |_cx| vec![inner])
+                        .items(Items::Center)
+                        .justify(Justify::Center)
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .into_element(cx)
+                };
 
                 let marker = copied_marker_test_id.clone().and_then(|marker_id| {
                     copied.then(|| {
@@ -994,7 +1096,7 @@ impl EnvironmentVariableCopyButton {
                     })
                 });
 
-                let mut children = vec![row];
+                let mut children = vec![content];
                 if let Some(marker) = marker {
                     children.push(marker);
                 }
@@ -1007,23 +1109,43 @@ impl EnvironmentVariableCopyButton {
 /// Badge aligned with AI Elements `EnvironmentVariableRequired`.
 #[derive(Debug, Clone)]
 pub struct EnvironmentVariableRequired {
-    text: Option<Arc<str>>,
+    content: EnvironmentVariableRequiredContent,
+}
+
+#[derive(Debug, Clone)]
+enum EnvironmentVariableRequiredContent {
+    Default,
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl EnvironmentVariableRequired {
     pub fn new() -> Self {
-        Self { text: None }
+        Self {
+            content: EnvironmentVariableRequiredContent::Default,
+        }
     }
 
     pub fn text(mut self, text: impl Into<Arc<str>>) -> Self {
-        self.text = Some(text.into());
+        self.content = EnvironmentVariableRequiredContent::Text(text.into());
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.content = EnvironmentVariableRequiredContent::Children(children.into_iter().collect());
         self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let label = self.text.unwrap_or_else(|| Arc::<str>::from("Required"));
+        let badge = match self.content {
+            EnvironmentVariableRequiredContent::Default => Badge::new("Required"),
+            EnvironmentVariableRequiredContent::Text(text) => Badge::new(text),
+            EnvironmentVariableRequiredContent::Children(children) => {
+                Badge::new("").children(children)
+            }
+        };
 
-        Badge::new(label)
+        badge
             .variant(BadgeVariant::Secondary)
             .refine_layout(LayoutRefinement::default().flex_shrink_0())
             .into_element(cx)
@@ -1217,6 +1339,14 @@ mod tests {
                 .and_then(|d| d.test_id.as_deref()),
             Some("env-title")
         );
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::Heading)
+        );
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.level),
+            Some(3)
+        );
 
         let theme = Theme::global(&app).clone();
         let style = typography::as_control_text(TextStyle {
@@ -1289,5 +1419,71 @@ mod tests {
             )),
             "expected hidden value to be non-selectable"
         );
+    }
+
+    #[test]
+    fn environment_variable_children_overrides_bypass_default_masking_and_labels() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let hidden_model = app.models_mut().insert(false);
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                EnvironmentVariables::new()
+                    .show_values_model(hidden_model)
+                    .into_element_with_children(cx, |cx, _controller| {
+                        let row = EnvironmentVariable::new("API_KEY", "secret-value")
+                            .into_element_with_children(cx, |cx| {
+                                vec![
+                                    EnvironmentVariableGroup::new([
+                                        EnvironmentVariableName::new()
+                                            .children([cx.text("Primary Key")])
+                                            .into_element(cx),
+                                        EnvironmentVariableRequired::new()
+                                            .children([cx.text("Secret")])
+                                            .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                    EnvironmentVariableGroup::new([EnvironmentVariableValue::new(
+                                    )
+                                    .children([cx.text("App-owned masked preview")])
+                                    .into_element(cx)])
+                                    .into_element(cx),
+                                ]
+                            });
+                        let content = EnvironmentVariablesContent::new([row]).into_element(cx);
+                        vec![content]
+                    })
+            });
+
+        assert!(find_text_element(&element, "Primary Key").is_some());
+        assert!(find_text_element(&element, "Secret").is_some());
+        assert!(find_text_element(&element, "App-owned masked preview").is_some());
+        assert!(find_text_element(&element, "secret-value").is_none());
+        assert!(find_text_element(&element, "••••••••••••").is_none());
+    }
+
+    #[test]
+    fn environment_variable_copy_button_supports_custom_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                EnvironmentVariables::new().into_element_with_children(cx, |cx, _controller| {
+                    let row = EnvironmentVariable::new("API_KEY", "secret-value")
+                        .into_element_with_children(cx, |cx| {
+                            vec![
+                                EnvironmentVariableCopyButton::new()
+                                    .children([cx.text("E")])
+                                    .into_element(cx),
+                            ]
+                        });
+                    let content = EnvironmentVariablesContent::new([row]).into_element(cx);
+                    vec![content]
+                })
+            });
+
+        assert!(find_text_element(&element, "E").is_some());
     }
 }

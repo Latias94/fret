@@ -376,17 +376,19 @@ impl ArtifactDescription {
         let foreground = typography::muted_foreground_color(&theme);
 
         let mut text = match self.content {
-            ArtifactDescriptionContent::Text(text) => typography::scope_description_text_with_fallbacks(
-                fret_ui_kit::ui::raw_text(text)
-                    .wrap(fret_core::TextWrap::Word)
-                    .w_full()
-                    .min_w_0()
-                    .into_element(cx),
-                &theme,
-                "component.artifact.description_text",
-                Some("font.size"),
-                Some("font.line_height"),
-            ),
+            ArtifactDescriptionContent::Text(text) => {
+                typography::scope_description_text_with_fallbacks(
+                    fret_ui_kit::ui::raw_text(text)
+                        .wrap(fret_core::TextWrap::Word)
+                        .w_full()
+                        .min_w_0()
+                        .into_element(cx),
+                    &theme,
+                    "component.artifact.description_text",
+                    Some("font.size"),
+                    Some("font.line_height"),
+                )
+            }
             ArtifactDescriptionContent::Children(children) => cx
                 .foreground_scope(foreground, move |_cx| children)
                 .inherit_foreground(foreground)
@@ -870,10 +872,16 @@ mod tests {
             .any(|child| has_scoped_text_style(child, refinement, foreground))
     }
 
-    fn find_text<'a>(element: &'a AnyElement, text: &str) -> Option<&'a fret_ui::element::TextProps> {
+    fn find_text<'a>(
+        element: &'a AnyElement,
+        text: &str,
+    ) -> Option<&'a fret_ui::element::TextProps> {
         match &element.kind {
             ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
-            _ => element.children.iter().find_map(|child| find_text(child, text)),
+            _ => element
+                .children
+                .iter()
+                .find_map(|child| find_text(child, text)),
         }
     }
 

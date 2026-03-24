@@ -57,6 +57,7 @@ pub mod confirmation_request;
 pub mod context_default;
 pub mod context_demo;
 pub mod conversation_demo;
+pub mod environment_variables_custom_children;
 pub mod environment_variables_demo;
 pub mod message_demo;
 pub mod message_usage;
