@@ -10,14 +10,22 @@ fn frame_button_ids(
     runtime: &mut ElementRuntime,
     insert_prefix: bool,
 ) -> Vec<GlobalElementId> {
+    frame_button_ids_for_root(app, runtime, insert_prefix, "identity-stability")
+}
+
+fn frame_button_ids_for_root(
+    app: &mut App,
+    runtime: &mut ElementRuntime,
+    insert_prefix: bool,
+    root_name: &str,
+) -> Vec<GlobalElementId> {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(500.0), Px(400.0)),
     );
 
-    let mut cx =
-        ElementContext::new_for_root_name(app, runtime, window, bounds, "identity-stability");
+    let mut cx = ElementContext::new_for_root_name(app, runtime, window, bounds, root_name);
 
     let mut ids = Vec::new();
 

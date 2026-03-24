@@ -9,6 +9,7 @@ use fret_core::{
 use fret_ui::element::{AnyElement, ScrollAxis, SemanticsDecoration, TextInkOverflow};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
+use std::panic::Location;
 use std::sync::Arc;
 
 /// Aggregated authoring patch applied by `UiBuilder`.
@@ -1248,6 +1249,18 @@ impl<H, B> UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>> {
     }
 }
 
+#[track_caller]
+fn render_ui_builder_target_into_element<H: UiHost, T>(
+    value: T,
+    cx: &mut ElementContext<'_, H>,
+) -> AnyElement
+where
+    T: IntoUiElement<H>,
+{
+    IntoUiElement::into_element(value, cx)
+}
+
+#[track_caller]
 fn finalize_ui_builder_element<H: UiHost, T: UiPatchTarget>(
     builder: UiBuilder<T>,
     cx: &mut ElementContext<'_, H>,
@@ -1282,7 +1295,10 @@ where
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        finalize_ui_builder_element(self, cx, |built, cx| IntoUiElement::into_element(built, cx))
+        let loc = Location::caller();
+        finalize_ui_builder_element(self, cx, move |built, cx| {
+            cx.scope_at(loc, |cx| render_ui_builder_target_into_element(built, cx))
+        })
     }
 }
 
@@ -1292,7 +1308,10 @@ impl<T: UiPatchTarget> UiBuilder<T> {
     where
         T: IntoUiElement<H>,
     {
-        finalize_ui_builder_element(self, cx, |built, cx| IntoUiElement::into_element(built, cx))
+        let loc = Location::caller();
+        finalize_ui_builder_element(self, cx, move |built, cx| {
+            cx.scope_at(loc, |cx| render_ui_builder_target_into_element(built, cx))
+        })
     }
 }
 
