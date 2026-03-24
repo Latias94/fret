@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("range.rs");
 
 // region: example
-use crate::ui::snippets::date_picker::{default_month, diag_calendar_roving, fixed_today};
+use super::{default_month, diag_calendar_roving, fixed_today};
 use fret::{UiChild, UiCx};
 use fret_ui_headless::calendar::DateRangeSelection;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};

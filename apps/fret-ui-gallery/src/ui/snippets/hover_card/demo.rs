@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use super::super::avatar::demo_image;
 use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -16,7 +17,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
     let muted_fg = theme.color_token("muted-foreground");
 
-    let avatar_image = crate::ui::snippets::avatar::demo_image(cx);
+    let avatar_image = demo_image(cx);
     let avatar_image_el = shadcn::AvatarImage::maybe(avatar_image).into_element(cx);
     let avatar_fallback = shadcn::AvatarFallback::new("VC")
         .when_image_missing(avatar_image)

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("meeting_notes.rs");
 
 // region: example
+use super::super::avatar::demo_image;
 use fret::{UiChild, UiCx};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
@@ -52,7 +53,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .min_w_0();
 
     let avatars = {
-        let avatar_image = crate::ui::snippets::avatar::demo_image(cx);
+        let avatar_image = demo_image(cx);
         let avatar_fallbacks = ["CN", "LR", "ER"];
         let avatars = avatar_fallbacks
             .iter()

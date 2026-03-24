@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("badge_icon.rs");
 
 // region: example
-use crate::ui::snippets::avatar::demo_image;
+use super::demo_image;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Theme;

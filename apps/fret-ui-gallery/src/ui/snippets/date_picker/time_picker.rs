@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("time_picker.rs");
 
 // region: example
-use crate::ui::snippets::date_picker::{default_month, fixed_today};
+use super::{default_month, fixed_today};
 use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;

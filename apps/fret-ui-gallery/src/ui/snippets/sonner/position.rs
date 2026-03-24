@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("position.rs");
 
 // region: example
-use crate::ui::snippets::sonner::{last_action_model, position_model, request};
+use super::{last_action_model, position_model, request};
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;

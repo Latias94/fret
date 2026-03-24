@@ -1,5 +1,7 @@
+pub const SOURCE: &str = include_str!("notes.rs");
+
 // region: example
-use crate::ui::snippets::sonner::last_action_model;
+use super::last_action_model;
 use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;

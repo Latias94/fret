@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("dropdowns.rs");
 
 // region: example
-use crate::ui::snippets::date_picker::fixed_today;
+use super::fixed_today;
 use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;

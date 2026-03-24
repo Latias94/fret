@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("group_count_icon.rs");
 
 // region: example
-use crate::ui::snippets::avatar::demo_image;
+use super::demo_image;
 use fret::{UiChild, UiCx};
 use fret_core::{ImageId, Px};
 use fret_ui::Theme;

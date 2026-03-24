@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("sizes.rs");
 
 // region: example
-use crate::ui::snippets::avatar::demo_image;
+use super::demo_image;
 use fret::{UiChild, UiCx};
 use fret_core::ImageId;
 use fret_ui_kit::IntoUiElement;

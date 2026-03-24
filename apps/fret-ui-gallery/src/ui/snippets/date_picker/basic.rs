@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
-use crate::ui::snippets::date_picker::{default_month, fixed_today};
+use super::{default_month, fixed_today};
 use fret::{UiChild, UiCx};
 use fret_core::FontWeight;
 use fret_ui_headless::calendar::CalendarMonth;

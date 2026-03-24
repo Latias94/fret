@@ -1,10 +1,10 @@
 pub const SOURCE: &str = include_str!("image.rs");
 
 // region: example
+use super::demo_cover_image;
 use fret::{UiChild, UiCx};
-use fret_core::Color as CoreColor;
+use fret_core::{Color as CoreColor, ImageId};
 use fret_ui::Theme;
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
@@ -31,12 +31,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .is_some_and(|v| !v.is_empty())
             });
 
-            let event_cover_request = crate::driver::demo_assets::ui_gallery_card_event_cover_request();
-            let event_cover_state =
-                cx.use_image_source_state_from_asset_request(&event_cover_request);
-            let event_cover = event_cover_state.image;
-            let event_cover_source_available = true;
-            let event_cover_state = Some(event_cover_state);
+            let event_cover: Option<ImageId> = demo_cover_image(cx);
+            let event_cover_source = "inline-rgba8";
 
             let image = shadcn::MediaImage::maybe(event_cover)
                 .loading(true)
@@ -60,30 +56,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .container(overlay_props, |_cx| Vec::new())
                 .test_id("ui-gallery-card-image-event-cover-overlay");
 
-            let debug_overlay = if debug_image_loading
-                || event_cover_state.as_ref().and_then(|s| s.error.as_deref()).is_some()
-            {
-                let status = event_cover_state
-                    .as_ref()
-                    .map(|s| format!("{:?}", s.status))
-                    .unwrap_or_else(|| "<no-state>".to_string());
-                let intrinsic = event_cover_state
-                    .as_ref()
-                    .and_then(|s| s.intrinsic_size_px)
-                    .map(|(w, h)| format!("{w}x{h}"))
-                    .unwrap_or_else(|| "-".to_string());
-                let has_image = event_cover_state
-                    .as_ref()
-                    .map(|s| s.image.is_some())
-                    .unwrap_or(false);
-                let error = event_cover_state
-                    .as_ref()
-                    .and_then(|s| s.error.as_deref())
-                    .unwrap_or("-");
-
+            let debug_overlay = if debug_image_loading {
                 let text: Arc<str> = Arc::from(format!(
-                    "event_cover: status={status} image={has_image} intrinsic={intrinsic} source_available={event_cover_source_available} locator={:?} err={error}",
-                    event_cover_request.locator
+                    "event_cover: image={} source={event_cover_source}",
+                    event_cover.is_some()
                 ));
                 Some(
                     shadcn::Badge::new(text)
@@ -130,7 +106,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::card_action(|cx| ui::children![cx; featured]),
                     shadcn::card_title("Design systems meetup"),
                     shadcn::card_description(
-                        "A practical talk on component APIs, accessibility, and shipping faster. The cover image resolves through a logical package bundle request instead of an inline demo buffer.",
+                        "A practical talk on component APIs, accessibility, and shipping faster. The cover image uses a self-contained demo buffer so the snippet stays copyable outside UI Gallery.",
                     ),
                 ]
             }),

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("avatar.rs");
 
 // region: example
-use crate::ui::snippets::avatar::demo_image;
+use super::super::avatar::demo_image;
 use fret::{UiChild, UiCx};
 use fret_core::{Corners, Px};
 use fret_ui_kit::IntoUiElement;

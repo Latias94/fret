@@ -1,3 +1,46 @@
+use fret::UiCx;
+use fret_core::{ImageColorSpace, ImageId};
+use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
+use std::sync::OnceLock;
+
+pub(crate) fn shared_preview_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
+    cx.use_image_source_state(shared_preview_source()).image
+}
+
+fn shared_preview_source() -> &'static ImageSource {
+    static SOURCE: OnceLock<ImageSource> = OnceLock::new();
+    SOURCE.get_or_init(|| {
+        ImageSource::rgba8(
+            320,
+            320,
+            shared_preview_rgba8(320, 320),
+            ImageColorSpace::Srgb,
+        )
+    })
+}
+
+fn shared_preview_rgba8(width: u32, height: u32) -> Vec<u8> {
+    let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
+    let width_f = (width.saturating_sub(1)).max(1) as f32;
+    let height_f = (height.saturating_sub(1)).max(1) as f32;
+
+    for y in 0..height {
+        for x in 0..width {
+            let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
+            let fx = x as f32 / width_f;
+            let fy = y as f32 / height_f;
+            let glow = (((fx * 6.0) + (fy * 4.0)).sin() * 0.5 + 0.5) * 26.0;
+
+            out[idx] = (26.0 + 58.0 * (1.0 - fy) + 108.0 * fx + glow).min(255.0) as u8;
+            out[idx + 1] = (34.0 + 68.0 * fy + 88.0 * (1.0 - fx) + glow * 0.65).min(255.0) as u8;
+            out[idx + 2] = (58.0 + 126.0 * (1.0 - fy) + 72.0 * fx + glow * 0.45).min(255.0) as u8;
+            out[idx + 3] = 255;
+        }
+    }
+
+    out
+}
+
 #[cfg(feature = "gallery-dev")]
 pub mod artifact_code_display;
 pub mod artifact_demo;

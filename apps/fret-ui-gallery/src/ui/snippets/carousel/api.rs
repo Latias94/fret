@@ -1,3 +1,4 @@
+pub const SOURCE: &str = DOCS_SOURCE;
 pub const DOCS_SOURCE: &str = include_str!("api.docs.rs.txt");
 
 // region: example

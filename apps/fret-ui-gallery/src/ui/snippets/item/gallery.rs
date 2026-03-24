@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("gallery.rs");
+
 // region: example
 use fret::{UiChild, UiCx};
 use fret_ui::Theme;

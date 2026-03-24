@@ -1,24 +1,21 @@
 pub const SOURCE: &str = include_str!("chain_of_thought_demo.rs");
 
 // region: example
+use super::shared_preview_image_id;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let request = crate::driver::demo_assets::ui_gallery_shared_media_preview_request();
-    let image_state = cx.use_image_source_state_from_asset_request(&request);
     let border = cx.with_theme(|theme| theme.color_token("border"));
 
-    let image = image_state
-        .image
+    let image = shared_preview_image_id(cx)
         .map(|id| {
             ui_ai::Image::new(id)
-                .alt("Example bundle-backed image")
+                .alt("Example self-contained demo image")
                 .refine_style(
                     ChromeRefinement::default()
                         .border_1()

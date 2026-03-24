@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("types.rs");
 
 // region: example
-use crate::ui::snippets::sonner::{last_action_model, message_request, request};
+use super::{last_action_model, message_request, request};
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;

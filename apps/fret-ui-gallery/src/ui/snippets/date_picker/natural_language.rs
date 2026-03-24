@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("natural_language.rs");
 
 // region: example
-use crate::ui::snippets::date_picker::fixed_today;
+use super::fixed_today;
 use fret::{UiChild, UiCx};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};

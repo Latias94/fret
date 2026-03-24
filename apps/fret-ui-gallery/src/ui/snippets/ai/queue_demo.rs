@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("queue_demo.rs");
 
 // region: example
+use super::shared_preview_image_id;
 use fret::{UiChild, UiCx};
 use fret_core::ImageId;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
@@ -34,8 +34,7 @@ struct DemoTodo {
 }
 
 fn demo_queue_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
-    let request = crate::driver::demo_assets::ui_gallery_shared_media_preview_request();
-    cx.use_image_source_state_from_asset_request(&request).image
+    shared_preview_image_id(cx)
 }
 
 fn default_messages() -> Vec<DemoMessage> {
