@@ -29,6 +29,42 @@ pub(super) fn preview_ai_conversation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         "Because Fret is GPU-first and cross-platform, DOM-style `...props` passthrough is translated into explicit builder methods (`refine_layout`, `test_id`, action hooks) instead of raw HTML attribute forwarding.",
     ]);
     let props = conversation_props_table(cx).test_id("ui-gallery-ai-conversation-props");
+    let usage_section = DocSection::build(cx, "Usage with AI SDK", demo)
+        .description("Docs-aligned Fret translation of the official AI Elements conversation example.")
+        .description(
+            "The live preview keeps transcript export app-owned: `ConversationDownload` emits an action, and the gallery harness formats the markdown with `messages_to_markdown`.",
+        )
+        .test_id_prefix("ui-gallery-ai-conversation-demo")
+        .max_w(Px(980.0))
+        .code_rust_from_file_region(snippets::conversation_demo::SOURCE, "example");
+    let features_section = DocSection::build(cx, "Features", features)
+        .description("Behavior and layering outcomes to preserve while aligning against the upstream docs surface.")
+        .max_w(Px(980.0))
+        .no_shell();
+    let composable_section = DocSection::build(cx, "Composable Children", composable_children)
+        .description("Compound children composition is supported on the core conversation slots and overlay affordances.")
+        .max_w(Px(980.0))
+        .code_rust_from_file_region(snippets::conversation_demo::SOURCE, "custom_scroll_button")
+        .no_shell();
+    let export_section = DocSection::build(cx, "messages_to_markdown", export_notes)
+        .description("Fret keeps transcript export pure and portable instead of embedding file IO directly inside the component.")
+        .max_w(Px(980.0))
+        .code_rust_from_file_region(
+            snippets::conversation_demo::SOURCE,
+            "messages_to_markdown_export",
+        )
+        .no_shell();
+    let props_section = DocSection::build(cx, "Builder Surface", props)
+        .description(
+            "Fret builder methods corresponding to the official `Conversation*` component family.",
+        )
+        .max_w(Px(980.0));
+    let parity_section = DocSection::build(cx, "Parity Notes", parity_notes)
+        .description(
+            "What is aligned today versus what still belongs to the semantics/runtime layer.",
+        )
+        .max_w(Px(980.0))
+        .no_shell();
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -36,40 +72,12 @@ pub(super) fn preview_ai_conversation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
             "The `Conversation` component wraps messages and automatically scrolls to the bottom. It also exposes overlay slots for transcript export and a scroll-to-latest affordance when the reader is away from the tail.",
         ),
         vec![
-            DocSection::build(cx, "Usage with AI SDK", demo)
-                .description(
-                    "Docs-aligned Fret translation of the official AI Elements conversation example.",
-                )
-                .description(
-                    "The live preview keeps transcript export app-owned: `ConversationDownload` emits an action, and the gallery harness formats the markdown with `messages_to_markdown`.",
-                )
-                .test_id_prefix("ui-gallery-ai-conversation-demo")
-                .max_w(Px(980.0))
-                .code_rust_from_file_region(snippets::conversation_demo::SOURCE, "example"),
-            DocSection::build(cx, "Features", features)
-                .description("Behavior and layering outcomes to preserve while aligning against the upstream docs surface.")
-                .max_w(Px(980.0))
-                .no_shell(),
-            DocSection::build(cx, "Composable Children", composable_children)
-                .description("Compound children composition is supported on the core conversation slots and overlay affordances.")
-                .max_w(Px(980.0))
-                .code_rust_from_file_region(snippets::conversation_demo::SOURCE, "custom_scroll_button")
-                .no_shell(),
-            DocSection::build(cx, "messages_to_markdown", export_notes)
-                .description("Fret keeps transcript export pure and portable instead of embedding file IO directly inside the component.")
-                .max_w(Px(980.0))
-                .code_rust_from_file_region(
-                    snippets::conversation_demo::SOURCE,
-                    "messages_to_markdown_export",
-                )
-                .no_shell(),
-            DocSection::build(cx, "Builder Surface", props)
-                .description("Fret builder methods corresponding to the official `Conversation*` component family.")
-                .max_w(Px(980.0)),
-            DocSection::build(cx, "Parity Notes", parity_notes)
-                .description("What is aligned today versus what still belongs to the semantics/runtime layer.")
-                .max_w(Px(980.0))
-                .no_shell(),
+            usage_section,
+            features_section,
+            composable_section,
+            export_section,
+            props_section,
+            parity_section,
         ],
     );
 

@@ -33,6 +33,30 @@ pub(super) fn preview_ai_reasoning_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Ve
         "Upstream `useReasoning()` maps to `use_reasoning_controller(cx)` in Fret. Because Fret's typed child lists are eager, the hook is most useful in the lower-level `Reasoning::into_element(cx, trigger, content)` lane for state-aware custom triggers.",
     ])
     .test_id("ui-gallery-ai-reasoning-demo-notes");
+    let usage_section = DocSection::build(cx, "Usage", demo)
+        .test_id_prefix("ui-gallery-ai-reasoning-demo")
+        .description(
+            "Minimal streaming-driven Reasoning preview with docs-shaped children composition.",
+        )
+        .code_rust_from_file_region(snippets::reasoning_demo::SOURCE, "example");
+    let compare_section = DocSection::build(cx, "Reasoning vs Chain of Thought", compare)
+        .description("Quick guidance for picking the right disclosure surface.")
+        .no_shell();
+    let features_section = DocSection::build(cx, "Features", features)
+        .description("Behavior and composition notes mapped from the official docs.")
+        .no_shell();
+    let props_section = DocSection::build(cx, "Props", props)
+        .description("Fret API surface for `fret_ui_ai::Reasoning*` builders.")
+        .no_shell();
+    let hooks_section = DocSection::build(cx, "Hooks", hooks)
+        .description(
+            "Fret equivalent of upstream `useReasoning()` for custom trigger/content authoring.",
+        )
+        .test_id_prefix("ui-gallery-ai-reasoning-demo-hooks")
+        .code_rust_from_file_region(snippets::reasoning_hooks::SOURCE, "example");
+    let notes_section = DocSection::build(cx, "Notes", notes)
+        .description("Layering, diagnostics, and how to wire the demo to real streaming state.")
+        .no_shell();
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -40,26 +64,12 @@ pub(super) fn preview_ai_reasoning_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Ve
             "Docs-aligned Reasoning disclosure: streaming-driven auto-open/close plus a compound Trigger/Content composition surface.",
         ),
         vec![
-            DocSection::build(cx, "Usage", demo)
-                .test_id_prefix("ui-gallery-ai-reasoning-demo")
-                .description("Minimal streaming-driven Reasoning preview with docs-shaped children composition.")
-                .code_rust_from_file_region(snippets::reasoning_demo::SOURCE, "example"),
-            DocSection::build(cx, "Reasoning vs Chain of Thought", compare)
-                .description("Quick guidance for picking the right disclosure surface.")
-                .no_shell(),
-            DocSection::build(cx, "Features", features)
-                .description("Behavior and composition notes mapped from the official docs.")
-                .no_shell(),
-            DocSection::build(cx, "Props", props)
-                .description("Fret API surface for `fret_ui_ai::Reasoning*` builders.")
-                .no_shell(),
-            DocSection::build(cx, "Hooks", hooks)
-                .description("Fret equivalent of upstream `useReasoning()` for custom trigger/content authoring.")
-                .test_id_prefix("ui-gallery-ai-reasoning-demo-hooks")
-                .code_rust_from_file_region(snippets::reasoning_hooks::SOURCE, "example"),
-            DocSection::build(cx, "Notes", notes)
-                .description("Layering, diagnostics, and how to wire the demo to real streaming state.")
-                .no_shell(),
+            usage_section,
+            compare_section,
+            features_section,
+            props_section,
+            hooks_section,
+            notes_section,
         ],
     );
 

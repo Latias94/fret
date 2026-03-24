@@ -294,7 +294,6 @@ mod gallery_dev_page_ids {
     pub(crate) const PAGE_AI_SOURCES_DEMO: &str = "ai_sources_demo";
     pub(crate) const PAGE_AI_QUEUE_DEMO: &str = "ai_queue_demo";
     pub(crate) const PAGE_AI_ATTACHMENTS_DEMO: &str = "ai_attachments_demo";
-    pub(crate) const PAGE_AI_SUGGESTIONS_DEMO: &str = "ai_suggestions_demo";
     pub(crate) const PAGE_AI_MESSAGE_BRANCH_DEMO: &str = "ai_message_branch_demo";
     pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
     pub(crate) const PAGE_AI_COMMIT_LARGE_DEMO: &str = "ai_commit_large_demo";
@@ -324,6 +323,7 @@ mod gallery_ai_page_ids {
     pub(crate) const PAGE_AI_ARTIFACT_DEMO: &str = "ai_artifact_demo";
     pub(crate) const PAGE_AI_SHIMMER_DEMO: &str = "ai_shimmer_demo";
     pub(crate) const PAGE_AI_REASONING_DEMO: &str = "ai_reasoning_demo";
+    pub(crate) const PAGE_AI_SUGGESTIONS_DEMO: &str = "ai_suggestions_demo";
     pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
     pub(crate) const PAGE_AI_SNIPPET_DEMO: &str = "ai_snippet_demo";
     pub(crate) const PAGE_AI_COMMIT_DEMO: &str = "ai_commit_demo";

@@ -20,6 +20,31 @@ pub(super) fn preview_ai_suggestions_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
         "This detail page is feature-gated behind `gallery-dev`, which also enables the `fret-ui-ai` demo surfaces in UI Gallery.",
     ]);
     let props = suggestions_props_table(cx).test_id("ui-gallery-ai-suggestions-props");
+    let usage_section = DocSection::build(cx, "Usage with PromptInput", usage)
+        .description("Rust/Fret analogue of the official AI Elements Suggestion usage example.")
+        .description("The preview intentionally keeps prompt filling app-owned: clicking a suggestion writes into the prompt model instead of hard-wiring an LLM transport into the component.")
+        .test_id_prefix("ui-gallery-ai-suggestions-demo")
+        .max_w(Px(980.0))
+        .code_rust_from_file_region(snippets::suggestions_demo::SOURCE, "example");
+    let custom_section = DocSection::build(cx, "Custom Content", custom)
+        .description("Docs-aligned composable children surface for icon + label chips while preserving the original suggestion payload.")
+        .test_id_prefix("ui-gallery-ai-suggestions-custom")
+        .max_w(Px(980.0))
+        .code_rust_from_file_region(
+            snippets::suggestions_demo::SOURCE,
+            "custom_children_example",
+        );
+    let features_section = DocSection::build(cx, "Features", features)
+        .description("Behavior and default-value outcomes worth preserving while aligning against the official docs surface.")
+        .max_w(Px(980.0))
+        .no_shell();
+    let props_section = DocSection::build(cx, "Builder Surface", props)
+        .description("Current Fret builder surface for `Suggestions` / `Suggestion`, including the new composable children lane.")
+        .max_w(Px(980.0));
+    let notes_section = DocSection::build(cx, "Notes", notes)
+        .description("Layering, parity, and responsive-behavior notes for Suggestion.")
+        .max_w(Px(980.0))
+        .no_shell();
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -27,31 +52,11 @@ pub(super) fn preview_ai_suggestions_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
             "The `Suggestion` family displays a horizontal row of clickable suggestion pills. In Fret, the component stays policy-level: the chip emits intent, and the app still owns prompt state, submission, and side effects.",
         ),
         vec![
-            DocSection::build(cx, "Usage with PromptInput", usage)
-                .description("Rust/Fret analogue of the official AI Elements Suggestion usage example.")
-                .description("The preview intentionally keeps prompt filling app-owned: clicking a suggestion writes into the prompt model instead of hard-wiring an LLM transport into the component.")
-                .test_id_prefix("ui-gallery-ai-suggestions-demo")
-                .max_w(Px(980.0))
-                .code_rust_from_file_region(snippets::suggestions_demo::SOURCE, "example"),
-            DocSection::build(cx, "Custom Content", custom)
-                .description("Docs-aligned composable children surface for icon + label chips while preserving the original suggestion payload.")
-                .test_id_prefix("ui-gallery-ai-suggestions-custom")
-                .max_w(Px(980.0))
-                .code_rust_from_file_region(
-                    snippets::suggestions_demo::SOURCE,
-                    "custom_children_example",
-                ),
-            DocSection::build(cx, "Features", features)
-                .description("Behavior and default-value outcomes worth preserving while aligning against the official docs surface.")
-                .max_w(Px(980.0))
-                .no_shell(),
-            DocSection::build(cx, "Builder Surface", props)
-                .description("Current Fret builder surface for `Suggestions` / `Suggestion`, including the new composable children lane.")
-                .max_w(Px(980.0)),
-            DocSection::build(cx, "Notes", notes)
-                .description("Layering, parity, and responsive-behavior notes for Suggestion.")
-                .max_w(Px(980.0))
-                .no_shell(),
+            usage_section,
+            custom_section,
+            features_section,
+            props_section,
+            notes_section,
         ],
     );
 

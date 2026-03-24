@@ -61,6 +61,31 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
         "Diagnostics coverage now has stable anchors for transcript messages, screenshot/add-attachment menu items, the search tooltip, and the model trigger.",
     ])
     .test_id("ui-gallery-ai-prompt-input-docs-notes");
+    let usage_section = DocSection::build(cx, "Usage with AI SDK", demo)
+        .test_id_prefix("ui-gallery-ai-prompt-input-docs-demo")
+        .description("Copyable chat-like example using the docs-shaped children lane plus the upstream-like `on_submit(message)` payload surface on `fret_ui_ai`.")
+        .code_rust_from_file_region(snippets::prompt_input_docs_demo::SOURCE, "example");
+    let features_section = DocSection::build(cx, "Features", features)
+        .description("High-signal parity notes for this Prompt Input pass.")
+        .no_shell();
+    let cursor_style_section = DocSection::build(cx, "Cursor Style", cursor_style)
+        .description("Current Fret mapping for the official `prompt-input-cursor` example and why it is still split across dedicated family demos.")
+        .no_shell();
+    let tooltips_section = DocSection::build(cx, "Button Tooltips", button_tooltips)
+        .description("Rust/Fret analogue of the official tooltip examples using `PromptInputButtonTooltip` instead of raw shadcn tooltip wiring.")
+        .test_id_prefix("ui-gallery-ai-prompt-input-docs-tooltips")
+        .code_rust_from_file_region(
+            snippets::prompt_input_tooltip_demo::SOURCE,
+            "example",
+        );
+    let parts_section = DocSection::build(cx, "Parts & Props", parts)
+        .description(
+            "Which layer owns the default authoring path and why the docs surface changed.",
+        )
+        .no_shell();
+    let notes_section = DocSection::build(cx, "Notes", notes).description(
+        "What is aligned now, what remains intentionally explicit, and what is still missing.",
+    );
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -68,28 +93,12 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
             "Docs-aligned PromptInput coverage for AI Elements: usage first, then the official example lanes, followed by public-surface findings and the remaining parity gaps.",
         ),
         vec![
-            DocSection::build(cx, "Usage with AI SDK", demo)
-                .test_id_prefix("ui-gallery-ai-prompt-input-docs-demo")
-                .description("Copyable chat-like example using the docs-shaped children lane plus the upstream-like `on_submit(message)` payload surface on `fret_ui_ai`.")
-                .code_rust_from_file_region(snippets::prompt_input_docs_demo::SOURCE, "example"),
-            DocSection::build(cx, "Features", features)
-                .description("High-signal parity notes for this Prompt Input pass.")
-                .no_shell(),
-            DocSection::build(cx, "Cursor Style", cursor_style)
-                .description("Current Fret mapping for the official `prompt-input-cursor` example and why it is still split across dedicated family demos.")
-                .no_shell(),
-            DocSection::build(cx, "Button Tooltips", button_tooltips)
-                .description("Rust/Fret analogue of the official tooltip examples using `PromptInputButtonTooltip` instead of raw shadcn tooltip wiring.")
-                .test_id_prefix("ui-gallery-ai-prompt-input-docs-tooltips")
-                .code_rust_from_file_region(
-                    snippets::prompt_input_tooltip_demo::SOURCE,
-                    "example",
-                ),
-            DocSection::build(cx, "Parts & Props", parts)
-                .description("Which layer owns the default authoring path and why the docs surface changed.")
-                .no_shell(),
-            DocSection::build(cx, "Notes", notes)
-                .description("What is aligned now, what remains intentionally explicit, and what is still missing."),
+            usage_section,
+            features_section,
+            cursor_style_section,
+            tooltips_section,
+            parts_section,
+            notes_section,
         ],
     );
 

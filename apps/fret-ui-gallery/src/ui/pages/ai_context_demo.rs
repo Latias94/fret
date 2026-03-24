@@ -54,6 +54,23 @@ pub(super) fn preview_ai_context_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         "Keep `ui-ai-context-demo-*` test IDs stable; `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-context-demo-hover.json` depends on them.",
     ]);
     let parts = parts_table(cx);
+    let compound_section = DocSection::build(cx, "Compound API", compound)
+        .description("Docs-aligned direct composition using `Context::children([...])`, `ContextTrigger`, `ContextContent`, and the usage parts.")
+        .test_id_prefix("ui-gallery-ai-context-demo")
+        .code_rust_from_file_region(snippets::context_demo::SOURCE, "example");
+    let default_api_section = DocSection::build(cx, "Default API", default_api)
+        .description("Fret convenience API renders the default trigger/content without repeating the part tree.")
+        .test_id_prefix("ui-gallery-ai-context-default")
+        .code_rust_from_file_region(snippets::context_default::SOURCE, "example");
+    let features_section = DocSection::build(cx, "Features", features)
+        .description("High-signal parity notes against the official docs.")
+        .no_shell();
+    let parts_section = DocSection::build(cx, "Parts & Props", parts)
+        .description("Which surface owns what, and where the Rust composition differs from JSX.")
+        .no_shell();
+    let notes_section = DocSection::build(cx, "Notes", notes)
+        .description("Layering + remaining parity gap notes.")
+        .no_shell();
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -61,23 +78,11 @@ pub(super) fn preview_ai_context_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
             "Preview starts with the docs-style compound example, then shows Fret's default convenience API for the same surface.",
         ),
         vec![
-            DocSection::build(cx, "Compound API", compound)
-                .description("Docs-aligned direct composition using `Context::children([...])`, `ContextTrigger`, `ContextContent`, and the usage parts.")
-                .test_id_prefix("ui-gallery-ai-context-demo")
-                .code_rust_from_file_region(snippets::context_demo::SOURCE, "example"),
-            DocSection::build(cx, "Default API", default_api)
-                .description("Fret convenience API renders the default trigger/content without repeating the part tree.")
-                .test_id_prefix("ui-gallery-ai-context-default")
-                .code_rust_from_file_region(snippets::context_default::SOURCE, "example"),
-            DocSection::build(cx, "Features", features)
-                .description("High-signal parity notes against the official docs.")
-                .no_shell(),
-            DocSection::build(cx, "Parts & Props", parts)
-                .description("Which surface owns what, and where the Rust composition differs from JSX.")
-                .no_shell(),
-            DocSection::build(cx, "Notes", notes)
-                .description("Layering + remaining parity gap notes.")
-                .no_shell(),
+            compound_section,
+            default_api_section,
+            features_section,
+            parts_section,
+            notes_section,
         ],
     );
 

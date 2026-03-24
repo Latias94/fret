@@ -98,6 +98,27 @@ pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
     let suites = snippets::test_results_suites::render(cx);
     let errors = snippets::test_results_errors::render(cx);
     let props = parts_props_table(cx);
+    let overview_section = DocSection::build(cx, "Overview", overview)
+        .description("Rust/Fret analogue of the official AI Elements all-in-one preview.")
+        .test_id_prefix("ui-gallery-ai-test-results-overview")
+        .code_rust_from_file_region(snippets::test_results_demo::SOURCE, "example");
+    let features_section = DocSection::build(cx, "Features", features).no_shell();
+    let status_colors_section = DocSection::build(cx, "Status Colors", status_colors).no_shell();
+    let basic_section = DocSection::build(cx, "Basic Usage", basic)
+        .description("Summary badges and duration only, matching the official basic example.")
+        .test_id_prefix("ui-gallery-ai-test-results-basic")
+        .code_rust_from_file_region(snippets::test_results_basic::SOURCE, "example");
+    let suites_section = DocSection::build(cx, "With Test Suites", suites)
+        .description("Expandable suites with individual test rows, matching the docs sample.")
+        .test_id_prefix("ui-gallery-ai-test-results-suites")
+        .code_rust_from_file_region(snippets::test_results_suites::SOURCE, "example");
+    let errors_section = DocSection::build(cx, "With Error Details", errors)
+        .description(
+            "Failed tests render inline error panels and stack traces for copyable repros.",
+        )
+        .test_id_prefix("ui-gallery-ai-test-results-errors")
+        .code_rust_from_file_region(snippets::test_results_errors::SOURCE, "example");
+    let props_section = DocSection::build(cx, "Parts & Props", props).no_shell();
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -105,31 +126,13 @@ pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
             "The TestResults component displays test suite results including summary statistics, progress, individual tests, and error details.",
         ),
         vec![
-            DocSection::build(cx, "Overview", overview)
-                .description("Rust/Fret analogue of the official AI Elements all-in-one preview.")
-                .test_id_prefix("ui-gallery-ai-test-results-overview")
-                .code_rust_from_file_region(snippets::test_results_demo::SOURCE, "example"),
-            DocSection::build(cx, "Features", features).no_shell(),
-            DocSection::build(cx, "Status Colors", status_colors).no_shell(),
-            DocSection::build(cx, "Basic Usage", basic)
-                .description(
-                    "Summary badges and duration only, matching the official basic example.",
-                )
-                .test_id_prefix("ui-gallery-ai-test-results-basic")
-                .code_rust_from_file_region(snippets::test_results_basic::SOURCE, "example"),
-            DocSection::build(cx, "With Test Suites", suites)
-                .description(
-                    "Expandable suites with individual test rows, matching the docs sample.",
-                )
-                .test_id_prefix("ui-gallery-ai-test-results-suites")
-                .code_rust_from_file_region(snippets::test_results_suites::SOURCE, "example"),
-            DocSection::build(cx, "With Error Details", errors)
-                .description(
-                    "Failed tests render inline error panels and stack traces for copyable repros.",
-                )
-                .test_id_prefix("ui-gallery-ai-test-results-errors")
-                .code_rust_from_file_region(snippets::test_results_errors::SOURCE, "example"),
-            DocSection::build(cx, "Parts & Props", props).no_shell(),
+            overview_section,
+            features_section,
+            status_colors_section,
+            basic_section,
+            suites_section,
+            errors_section,
+            props_section,
         ],
     );
 

@@ -24,6 +24,19 @@ pub(super) fn preview_ai_task_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<Any
     .test_id("ui-gallery-ai-task-demo-notes");
 
     let props = task_props_table(cx).test_id("ui-gallery-ai-task-demo-props");
+    let usage_section = DocSection::build(cx, "Usage", usage)
+        .description("Rust/Fret analogue of the official AI Elements Task example with docs-shaped compound composition.")
+        .test_id_prefix("ui-gallery-ai-task-demo")
+        .code_rust_from_file_region(snippets::task_demo::SOURCE, "example");
+    let features_section = DocSection::build(cx, "Features", features)
+        .description("Behavior and authoring outcomes preserved while aligning against the official source and docs surface.")
+        .no_shell();
+    let props_section = DocSection::build(cx, "Builder Surface", props)
+        .description("Current Fret API surface for `Task`, including the new compound children lane and the legacy explicit assembly lane.")
+        .no_shell();
+    let notes_section = DocSection::build(cx, "Notes", notes)
+        .description("Parity findings, layering decision, and why this alignment stays out of the runtime mechanism layer.")
+        .no_shell();
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -31,19 +44,10 @@ pub(super) fn preview_ai_task_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<Any
             "The `Task` family is a policy-level collapsible task-list surface in `fret-ui-ai`: semantics stay on shadcn/Radix `Collapsible`, while the docs-facing recipe owns trigger chrome, item typography, and file-pill presentation.",
         ),
         vec![
-            DocSection::build(cx, "Usage", usage)
-                .description("Rust/Fret analogue of the official AI Elements Task example with docs-shaped compound composition.")
-                .test_id_prefix("ui-gallery-ai-task-demo")
-                .code_rust_from_file_region(snippets::task_demo::SOURCE, "example"),
-            DocSection::build(cx, "Features", features)
-                .description("Behavior and authoring outcomes preserved while aligning against the official source and docs surface.")
-                .no_shell(),
-            DocSection::build(cx, "Builder Surface", props)
-                .description("Current Fret API surface for `Task`, including the new compound children lane and the legacy explicit assembly lane.")
-                .no_shell(),
-            DocSection::build(cx, "Notes", notes)
-                .description("Parity findings, layering decision, and why this alignment stays out of the runtime mechanism layer.")
-                .no_shell(),
+            usage_section,
+            features_section,
+            props_section,
+            notes_section,
         ],
     );
 

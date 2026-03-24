@@ -6,15 +6,14 @@ use fret::UiCx;
 
 pub(super) fn preview_ai_terminal_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::terminal_demo::render(cx);
+    let demo_section = DocSection::build(cx, "Terminal", demo)
+        .test_id_prefix("ui-gallery-ai-terminal-demo")
+        .code_rust_from_file_region(snippets::terminal_demo::SOURCE, "example");
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
-        vec![
-            DocSection::build(cx, "Terminal", demo)
-                .test_id_prefix("ui-gallery-ai-terminal-demo")
-                .code_rust_from_file_region(snippets::terminal_demo::SOURCE, "example"),
-        ],
+        vec![demo_section],
     );
 
     vec![body.into_element(cx)]

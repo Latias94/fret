@@ -45,8 +45,8 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "CommitMessage / CommitHash",
-                "new(text)",
-                "Text leaves for the message and short hash.",
+                "new(text) | children(...)",
+                "Text leaves for the message and short hash; children overrides keep the surface closer to upstream JSX composition.",
             ],
             [
                 "CommitMetadata",
@@ -70,8 +70,8 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "CommitCopyButton",
-                "new(hash), on_copy(...), timeout(...)",
-                "Matches upstream copied-state suppression and exposes a hook for app effects.",
+                "new(hash) | children(...) | on_copy(...) | timeout(...)",
+                "Matches upstream copied-state suppression, keeps the icon slot overridable, and exposes a hook for app effects.",
             ],
             [
                 "CommitContent / CommitFiles / CommitFile / CommitFileInfo",
@@ -90,13 +90,13 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "CommitFilePath",
-                "new(path), on_click(...), test_id(...)",
-                "Upstream is presentational; Fret adds an explicit file-open seam for apps.",
+                "new(path) | children(...) | on_click(...) | test_id(...)",
+                "Upstream is presentational; Fret adds an explicit file-open seam for apps while preserving a children-based content override.",
             ],
             [
                 "CommitFileChanges / CommitFileAdditions / CommitFileDeletions",
                 "children | new(count)",
-                "Monospace change counters aligned with the official preview.",
+                "Monospace change counters aligned with the official preview; additions/deletions also support children overrides like upstream.",
             ],
         ],
         false,
@@ -116,11 +116,27 @@ pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<A
     ]);
     let findings = doc_layout::notes_block([
         "Mechanism/lifecycle looks healthy here: existing copy + large-list diag gates already cover toggle, copy feedback, and scroll seams.",
-        "The main drift was component-layer parity: the Gallery page was less docs-aligned than other AI Elements surfaces, and `Commit` was missing the three upstream custom-children slots.",
+        "The remaining work here is public-surface parity, not runtime mechanism: `Commit` now exposes the upstream-style custom-content slots on both the documented parts and the common leaf surfaces used by the Gallery snippets.",
+        "There is still one intentional authoring-surface difference: the Rust root stays a typed `Commit::new(header, content)` builder instead of a raw DOM-like `children` bucket.",
         "`CommitFilePath::on_click(...)` remains an intentional Fret-only seam so apps can own file-open effects without pushing policy into `fret-ui`.",
     ]);
     let file_status = file_status_table(cx);
     let props = parts_props_table(cx);
+    let overview_section = DocSection::build(cx, "Overview", demo)
+        .description("Rust/Fret analogue of the official AI Elements preview.")
+        .test_id_prefix("ui-gallery-ai-commit-demo")
+        .code_rust_from_file_region(snippets::commit_demo::SOURCE, "example");
+    let features_section = DocSection::build(cx, "Features", features).no_shell();
+    let file_status_section = DocSection::build(cx, "File Status", file_status).no_shell();
+    let custom_children_section = DocSection::build(cx, "Custom Children", custom_children)
+        .description(
+            "Covers the official custom-content slots plus leaf overrides that keep first-party Rust examples closer to the upstream JSX composition model.",
+        )
+        .test_id_prefix("ui-gallery-ai-commit-custom-children")
+        .code_rust_from_file_region(snippets::commit_custom_children::SOURCE, "example");
+    let props_section = DocSection::build(cx, "Parts & Props", props).no_shell();
+    let notes_section = DocSection::build(cx, "Notes", findings)
+        .description("Layering + parity findings for Commit.");
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -128,21 +144,12 @@ pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<A
             "The Commit component displays commit details including hash, message, author, timestamp, and changed files.",
         ),
         vec![
-            DocSection::build(cx, "Overview", demo)
-                .description("Rust/Fret analogue of the official AI Elements preview.")
-                .test_id_prefix("ui-gallery-ai-commit-demo")
-                .code_rust_from_file_region(snippets::commit_demo::SOURCE, "example"),
-            DocSection::build(cx, "Features", features).no_shell(),
-            DocSection::build(cx, "File Status", file_status).no_shell(),
-            DocSection::build(cx, "Custom Children", custom_children)
-                .description(
-                    "Covers the three upstream custom-content slots: `CommitSeparator`, `CommitTimestamp`, and `CommitFileStatus`.",
-                )
-                .test_id_prefix("ui-gallery-ai-commit-custom-children")
-                .code_rust_from_file_region(snippets::commit_custom_children::SOURCE, "example"),
-            DocSection::build(cx, "Parts & Props", props).no_shell(),
-            DocSection::build(cx, "Notes", findings)
-                .description("Layering + parity findings for Commit."),
+            overview_section,
+            features_section,
+            file_status_section,
+            custom_children_section,
+            props_section,
+            notes_section,
         ],
     );
 

@@ -21,6 +21,20 @@ pub(super) fn preview_ai_chain_of_thought_demo(
     .test_id("ui-gallery-ai-chain-of-thought-features");
 
     let props = chain_of_thought_props_table(cx).test_id("ui-gallery-ai-chain-of-thought-props");
+    let usage_section = DocSection::build(cx, "Usage", usage)
+        .description("Official-example-aligned usage with the same search-result and image steps.")
+        .test_id_prefix("ui-gallery-ai-chain-of-thought-demo")
+        .code_rust_from_file_region(snippets::chain_of_thought_demo::SOURCE, "example");
+    let composable_section = DocSection::build(cx, "Composable Slots", composable)
+        .description(
+            "Demonstrates custom header content plus rich step label / description children.",
+        )
+        .test_id_prefix("ui-gallery-ai-chain-of-thought-composable")
+        .code_rust_from_file_region(snippets::chain_of_thought_composable::SOURCE, "example");
+    let features_section = DocSection::build(cx, "Features", features)
+        .description("Behavior and composition notes mapped from the official docs.");
+    let props_section = DocSection::build(cx, "Props", props)
+        .description("Fret API surface for `fret_ui_ai::ChainOfThought*` builders.");
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -28,21 +42,10 @@ pub(super) fn preview_ai_chain_of_thought_demo(
             "Preview mirrors the official AI Elements Chain of Thought example, then documents the Fret-specific composition model used to keep compound parts safe in a move-only declarative tree.",
         ),
         vec![
-            DocSection::build(cx, "Usage", usage)
-                .description("Official-example-aligned usage with the same search-result and image steps.")
-                .test_id_prefix("ui-gallery-ai-chain-of-thought-demo")
-                .code_rust_from_file_region(snippets::chain_of_thought_demo::SOURCE, "example"),
-            DocSection::build(cx, "Composable Slots", composable)
-                .description("Demonstrates custom header content plus rich step label / description children.")
-                .test_id_prefix("ui-gallery-ai-chain-of-thought-composable")
-                .code_rust_from_file_region(
-                    snippets::chain_of_thought_composable::SOURCE,
-                    "example",
-                ),
-            DocSection::build(cx, "Features", features)
-                .description("Behavior and composition notes mapped from the official docs."),
-            DocSection::build(cx, "Props", props)
-                .description("Fret API surface for `fret_ui_ai::ChainOfThought*` builders."),
+            usage_section,
+            composable_section,
+            features_section,
+            props_section,
         ],
     );
 

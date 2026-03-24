@@ -29,6 +29,28 @@ pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
     .test_id("ui-gallery-ai-shimmer-notes");
 
     let props = shimmer_props_table(cx).test_id("ui-gallery-ai-shimmer-props");
+    let usage_section = DocSection::build(cx, "Usage", usage)
+        .description("Rust/Fret analogue of the official AI Elements shimmer preview.")
+        .test_id_prefix("ui-gallery-ai-shimmer-demo")
+        .code_rust_from_file_region(snippets::shimmer_demo::SOURCE, "example");
+    let features_section =
+        DocSection::build(cx, "Features", features).description("Key behavior and API notes.");
+    let durations_section = DocSection::build(cx, "Different Durations", durations)
+        .description("Docs-aligned duration variants from the official AI Elements page.")
+        .test_id_prefix("ui-gallery-ai-shimmer-duration")
+        .code_rust_from_file_region(snippets::shimmer_duration_demo::SOURCE, "example");
+    let elements_section = DocSection::build(cx, "Custom Elements", elements)
+        .description("Paragraph, heading, inline, and custom block variants aligned with the official examples.")
+        .test_id_prefix("ui-gallery-ai-shimmer-elements")
+        .code_rust_from_file_region(snippets::shimmer_elements_demo::SOURCE, "example");
+    let typography_section = DocSection::build(cx, "Fret Typography Surface", typography)
+        .description("Fret-only authoring surface for explicit and inherited typography control.")
+        .test_id_prefix("ui-gallery-ai-shimmer-typography")
+        .code_rust_from_file_region(snippets::shimmer_typography_demo::SOURCE, "example");
+    let props_section = DocSection::build(cx, "Props", props)
+        .description("Fret API surface for `fret_ui_ai::Shimmer`; upstream JSX `children` maps to `Shimmer::new(text)`.");
+    let notes_section = DocSection::build(cx, "Notes", notes)
+        .description("Parity findings and authoring-surface decisions for Shimmer.");
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -36,27 +58,13 @@ pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
             "Docs-aligned Shimmer coverage for AI Elements: base preview, duration variants, custom element variants, and a separate Fret typography surface.",
         ),
         vec![
-            DocSection::build(cx, "Usage", usage)
-                .description("Rust/Fret analogue of the official AI Elements shimmer preview.")
-                .test_id_prefix("ui-gallery-ai-shimmer-demo")
-                .code_rust_from_file_region(snippets::shimmer_demo::SOURCE, "example"),
-            DocSection::build(cx, "Features", features).description("Key behavior and API notes."),
-            DocSection::build(cx, "Different Durations", durations)
-                .description("Docs-aligned duration variants from the official AI Elements page.")
-                .test_id_prefix("ui-gallery-ai-shimmer-duration")
-                .code_rust_from_file_region(snippets::shimmer_duration_demo::SOURCE, "example"),
-            DocSection::build(cx, "Custom Elements", elements)
-                .description("Paragraph, heading, inline, and custom block variants aligned with the official examples.")
-                .test_id_prefix("ui-gallery-ai-shimmer-elements")
-                .code_rust_from_file_region(snippets::shimmer_elements_demo::SOURCE, "example"),
-            DocSection::build(cx, "Fret Typography Surface", typography)
-                .description("Fret-only authoring surface for explicit and inherited typography control.")
-                .test_id_prefix("ui-gallery-ai-shimmer-typography")
-                .code_rust_from_file_region(snippets::shimmer_typography_demo::SOURCE, "example"),
-            DocSection::build(cx, "Props", props)
-                .description("Fret API surface for `fret_ui_ai::Shimmer`; upstream JSX `children` maps to `Shimmer::new(text)`."),
-            DocSection::build(cx, "Notes", notes)
-                .description("Parity findings and authoring-surface decisions for Shimmer."),
+            usage_section,
+            features_section,
+            durations_section,
+            elements_section,
+            typography_section,
+            props_section,
+            notes_section,
         ],
     );
 
