@@ -10094,7 +10094,7 @@ fn gallery_internal_wrapper_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/previews/pages/editors/code_editor/mvp/gates.rs",
         &[
-            "fn gate_panel<B>(cx: &mut UiCx<'_>, theme: &Theme, child: B,) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
+            "fn gate_panel<B>(cx: &mut UiCx<'_>, theme: &Theme, child: B) -> impl UiChild + use<B> where B: IntoUiElement<fret_app::App>",
         ],
         &["fn gate_panel(cx: &mut UiCx<'_>, theme: &Theme, child: AnyElement) -> AnyElement"],
     );
