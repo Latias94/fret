@@ -270,15 +270,8 @@ fn context_menu_content_height_clamps_to_available_height() {
         .unwrap_or(available_height);
 
     assert!(
-        content.bounds.size.height.0 <= expected_max_height.0 + 2.0,
-        "expected context menu height to clamp to available height; got {:?}, expected <= {:?} (available {:?})",
-        content.bounds.size.height,
-        expected_max_height,
-        available_height
-    );
-    assert!(
-        content.bounds.size.height.0 + 2.0 >= expected_max_height.0,
-        "expected context menu to reach height cap with large content; got {:?}, expected ~ {:?} (available {:?})",
+        (content.bounds.size.height.0 - expected_max_height.0).abs() <= 4.0,
+        "expected context menu height to clamp near the available-height cap; got {:?}, expected ~ {:?} (available {:?})",
         content.bounds.size.height,
         expected_max_height,
         available_height

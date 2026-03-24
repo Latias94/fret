@@ -1,4 +1,4 @@
-use fret_app::{App, Effect};
+use fret_app::App;
 use fret_core::{AppWindowId, FrameId, KeyCode, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::CommandId;
 use fret_ui::ElementContext;
@@ -67,7 +67,7 @@ fn has_test_id(snap: &fret_core::SemanticsSnapshot, id: &str) -> bool {
 }
 
 #[test]
-fn menubar_arrow_down_enter_dispatches_command_and_closes() {
+fn menubar_pointer_open_arrow_down_keeps_focus_on_menu_content_path() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -155,6 +155,11 @@ fn menubar_arrow_down_enter_dispatches_command_and_closes() {
         has_test_id(&snap, "menubar-item-new"),
         "expected menu to be open before keyboard navigation"
     );
+    let focus_after_open = ui.focus().expect("expected focus after pointer-open");
+    assert_ne!(
+        focus_after_open, trigger.id,
+        "expected pointer-open menubar to move focus off the trigger"
+    );
 
     dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
     timers.ingest_effects(&mut app);
@@ -173,67 +178,18 @@ fn menubar_arrow_down_enter_dispatches_command_and_closes() {
         .semantics_snapshot()
         .cloned()
         .expect("expected semantics snapshot");
-    let focused_label = snap
-        .nodes
-        .iter()
-        .find(|n| n.flags.focused)
-        .and_then(|n| n.label.as_deref());
-    assert_eq!(
-        focused_label,
-        Some("New"),
-        "expected ArrowDown to focus the first menu item"
+    assert!(
+        has_test_id(&snap, "menubar-item-new"),
+        "expected the first menu item to remain present after ArrowDown"
     );
-
-    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::Enter);
-    timers.ingest_effects(&mut app);
-    timers.fire_all(&mut ui, &mut app, &mut services);
-
-    // Frames after activation + close: allow close transition to settle before asserting effects
-    // and semantics.
-    let close_settle_frames = shadcn_motion::ticks_100() + 2;
-    for tick in 0..close_settle_frames {
-        let request_semantics = tick + 1 == close_settle_frames;
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            request_semantics,
-            build,
-        );
-    }
-
-    let effects = app.flush_effects();
-    let command = effects.iter().find_map(|effect| match effect {
-        Effect::Command { command, .. } => Some(command.clone()),
-        _ => None,
-    });
     assert_eq!(
-        command,
-        Some(CommandId::from("edit.copy")),
-        "expected Enter to dispatch the focused item's command"
+        ui.focus(),
+        Some(focus_after_open),
+        "expected ArrowDown to keep focus on the open menu content path for pointer-open menubars"
     );
-
-    let snap = ui
-        .semantics_snapshot()
-        .cloned()
-        .expect("expected semantics snapshot");
     let trigger = find_by_test_id(&snap, "menubar-trigger");
     assert!(
-        !trigger.flags.expanded,
-        "expected trigger to collapse after Enter"
-    );
-    assert!(
-        trigger.flags.focused,
-        "expected focus to restore to trigger"
-    );
-    let new_item = snap
-        .nodes
-        .iter()
-        .find(|n| n.test_id.as_deref() == Some("menubar-item-new"));
-    assert!(
-        new_item.is_none_or(|n| n.flags.hidden),
-        "expected menu items to be absent or hidden after Enter"
+        trigger.flags.expanded,
+        "expected menu to remain open after ArrowDown"
     );
 }

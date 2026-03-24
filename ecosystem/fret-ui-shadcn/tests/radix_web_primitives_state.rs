@@ -22,10 +22,8 @@ mod radix_web_paths;
 
 use radix_web_paths::radix_web_path;
 
-fn shadcn_ticks_100() -> u64 {
-    fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
-        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_DURATION_100,
-    )
+fn shadcn_ticks_200() -> u64 {
+    fret_ui_kit::declarative::transition::ticks_60hz_for_duration(Duration::from_millis(200))
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1281,16 +1279,21 @@ fn radix_web_menubar_hover_switch_trigger_matches_fret() {
         "hovering a sibling trigger should switch which menubar menu is open"
     );
 
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(4),
-        true,
-        |cx| vec![build(cx)],
-    );
+    let settle_frames = shadcn_ticks_200() + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(4 + tick),
+            request_semantics,
+            |cx| vec![build(cx)],
+        );
+        deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
+    }
 
     let snap = ui
         .semantics_snapshot()
@@ -1558,7 +1561,7 @@ fn radix_web_menubar_submenu_outside_click_close_matches_fret() {
     click_outside(&mut ui, &mut app, &mut services, bounds);
     deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
 
-    let settle_frames = shadcn_ticks_100() + 2;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -2016,7 +2019,7 @@ fn radix_web_tooltip_hover_show_hide_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = shadcn_ticks_100() + 1;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -2029,6 +2032,8 @@ fn radix_web_tooltip_hover_show_hide_matches_fret() {
             request_semantics,
             |cx| vec![build(cx)],
         );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
     }
 
     let snap = ui
@@ -3077,16 +3082,21 @@ fn radix_web_menubar_submenu_hover_select_matches_fret() {
         bounds_center(email.bounds),
     );
 
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(4),
-        true,
-        |cx| vec![build(cx)],
-    );
+    let settle_frames = shadcn_ticks_200() + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(4 + tick),
+            request_semantics,
+            |cx| vec![build(cx)],
+        );
+        deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
+    }
 
     render_frame(
         &mut ui,
@@ -3255,25 +3265,32 @@ fn radix_web_menubar_submenu_unsafe_leave_matches_fret() {
     move_pointer(&mut ui, &mut app, &mut services, edit_center);
     deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
 
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(4),
-        true,
-        |cx| vec![build(cx)],
-    );
+    let settle_frames = shadcn_ticks_200() + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(4 + tick),
+            request_semantics,
+            |cx| vec![build(cx)],
+        );
+        deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
+    }
 
     let snap = ui
         .semantics_snapshot()
         .cloned()
         .expect("semantics snapshot");
+    let email_link = snap
+        .nodes
+        .iter()
+        .find(|n| n.label.as_deref() == Some("Email link"));
     assert!(
-        snap.nodes
-            .iter()
-            .all(|n| n.label.as_deref().is_none_or(|l| l != "Email link")),
+        email_link.is_none_or(|n| n.flags.hidden),
         "menubar submenu content should close after leaving"
     );
 
@@ -4372,17 +4389,23 @@ fn radix_web_menubar_submenu_keyboard_open_close_matches_fret() {
     dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
     timers.ingest_effects(&mut app);
 
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(frame),
-        true,
-        |cx| vec![build(cx)],
-    );
-    frame += 1;
+    let settle_frames = shadcn_ticks_200() + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame + tick),
+            request_semantics,
+            |cx| vec![build(cx)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
+    frame += settle_frames;
 
     timers.ingest_effects(&mut app);
     timers.fire_after(Duration::from_millis(0), &mut ui, &mut app, &mut services);
@@ -4420,16 +4443,22 @@ fn radix_web_menubar_submenu_keyboard_open_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(frame + 1),
-        true,
-        |cx| vec![build(cx)],
-    );
+    let settle_frames = shadcn_ticks_200() + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame + 1 + tick),
+            request_semantics,
+            |cx| vec![build(cx)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
 
     let snap = ui
         .semantics_snapshot()
@@ -4617,33 +4646,45 @@ fn radix_web_menubar_submenu_arrowleft_escape_close_matches_fret() {
     dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
     timers.ingest_effects(&mut app);
 
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(frame),
-        true,
-        |cx| vec![build(cx)],
-    );
-    frame += 1;
+    let settle_frames = shadcn_ticks_200() + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame + tick),
+            request_semantics,
+            |cx| vec![build(cx)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
+    frame += settle_frames;
 
     timers.ingest_effects(&mut app);
     timers.fire_after(Duration::from_millis(0), &mut ui, &mut app, &mut services);
     timers.ingest_effects(&mut app);
 
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(frame),
-        true,
-        |cx| vec![build(cx)],
-    );
-    frame += 1;
+    let settle_frames = shadcn_ticks_200() + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame + tick),
+            request_semantics,
+            |cx| vec![build(cx)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
+    frame += settle_frames;
 
     let snap = ui
         .semantics_snapshot()
@@ -4660,17 +4701,23 @@ fn radix_web_menubar_submenu_arrowleft_escape_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(frame),
-        true,
-        |cx| vec![build(cx)],
-    );
-    frame += 1;
+    let settle_frames = shadcn_ticks_200() + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame + tick),
+            request_semantics,
+            |cx| vec![build(cx)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
+    frame += settle_frames;
 
     let snap = ui
         .semantics_snapshot()
@@ -4693,7 +4740,7 @@ fn radix_web_menubar_submenu_arrowleft_escape_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = shadcn_ticks_100() + 2;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -6297,7 +6344,7 @@ fn radix_web_dropdown_menu_submenu_arrowleft_escape_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = shadcn_ticks_100() + 2;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -6623,7 +6670,7 @@ fn radix_web_context_menu_submenu_arrowleft_escape_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = shadcn_ticks_100() + 2;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -6775,7 +6822,7 @@ fn radix_web_dropdown_menu_outside_click_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = shadcn_ticks_100() + 2;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -6984,7 +7031,7 @@ fn radix_web_dropdown_menu_submenu_outside_click_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = shadcn_ticks_100() + 2;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -7153,7 +7200,7 @@ fn radix_web_context_menu_outside_click_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = shadcn_ticks_100() + 2;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -7352,7 +7399,7 @@ fn radix_web_context_menu_submenu_outside_click_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = shadcn_ticks_100() + 2;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(

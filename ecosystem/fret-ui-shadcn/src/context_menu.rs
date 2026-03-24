@@ -700,8 +700,7 @@ impl ContextMenuItem {
         self
     }
 
-    /// Attach a payload for parameterized actions while staying on the native context-menu item
-    /// surface.
+    /// Attach a payload for parameterized actions while staying on the native context-menu item surface.
     pub fn action_payload<T>(mut self, payload: T) -> Self
     where
         T: Any + Send + Sync + Clone + 'static,
@@ -3601,7 +3600,26 @@ impl ContextMenu {
                 let content_focus_id_for_children = content_focus_id.clone();
                 let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let first_item_focus_id_for_children = first_item_focus_id.clone();
-                let first_item_focus_id_for_request = first_item_focus_id.clone();
+                let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let last_item_focus_id_for_children = last_item_focus_id.clone();
+                let first_item_focus_id_model = cx.local_model_keyed(
+                    ("context-menu-first-item-focus-id", open.id()),
+                    || None::<GlobalElementId>,
+                );
+                let last_item_focus_id_model = cx.local_model_keyed(
+                    ("context-menu-last-item-focus-id", open.id()),
+                    || None::<GlobalElementId>,
+                );
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&first_item_focus_id_model, |v| *v = None);
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&last_item_focus_id_model, |v| *v = None);
+                let first_item_focus_id_model_for_overlay = first_item_focus_id_model.clone();
+                let last_item_focus_id_model_for_overlay = last_item_focus_id_model.clone();
                 let direction = portal_ctx.direction;
 
                 let (overlay_children, dismissible_on_pointer_move) =
@@ -3863,6 +3881,10 @@ impl ContextMenu {
                     let open_for_submenu = open_for_overlay.clone();
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
+                    let first_item_focus_id_model_for_content =
+                        first_item_focus_id_model_for_overlay.clone();
+                    let last_item_focus_id_model_for_content =
+                        last_item_focus_id_model_for_overlay.clone();
                     let submenu_open_value_model_for_panel = submenu_for_panel.open_value.clone();
                     let submenu_open_value_model_for_panel_for_content =
                         submenu_open_value_model_for_panel.clone();
@@ -3893,6 +3915,7 @@ impl ContextMenu {
                         Rc::new(RefCell::new(None));
                     let submenu_entries_for_panel_cell_for_wrapper =
                         submenu_entries_for_panel_cell.clone();
+                    let content_focus_id_for_content = content_focus_id_for_children.clone();
 
                     let (content_id, content) =
                         menu::content_panel::menu_content_semantics_with_id_props(
@@ -3960,7 +3983,7 @@ impl ContextMenu {
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
-                                                content_focus_id_for_children.clone();
+                                                content_focus_id_for_content.clone();
                                             let roving = menu::content::menu_roving_group_apg_prefix_typeahead(
                                                 cx,
                                                 RovingFlexProps {
@@ -4151,6 +4174,14 @@ impl ContextMenu {
                                                             overlay_root_name_for_controls.clone();
                                                         let first_item_focus_id_for_items =
                                                             first_item_focus_id_for_children.clone();
+                                                        let last_item_focus_id_for_items =
+                                                            last_item_focus_id_for_children.clone();
+                                                        let first_item_focus_id_model_for_items =
+                                                            first_item_focus_id_model_for_content
+                                                                .clone();
+                                                        let last_item_focus_id_model_for_items =
+                                                            last_item_focus_id_model_for_content
+                                                                .clone();
 
                                                         out.push(cx.keyed(value.clone(), move |cx| {
                                                             cx.pressable_with_id_props(
@@ -4200,6 +4231,20 @@ impl ContextMenu {
                                                                             first_item_focus_id_for_items
                                                                                 .set(Some(item_id));
                                                                         }
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &first_item_focus_id_model_for_items,
+                                                                            |v| {
+                                                                                if v.is_none() {
+                                                                                    *v = Some(item_id);
+                                                                                }
+                                                                            },
+                                                                        );
+                                                                        last_item_focus_id_for_items
+                                                                            .set(Some(item_id));
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &last_item_focus_id_model_for_items,
+                                                                            |v| *v = Some(item_id),
+                                                                        );
                                                                     }
 
                                                                     if !has_submenu && !disabled {
@@ -4357,6 +4402,14 @@ impl ContextMenu {
                                                         let text_style = text_style.clone();
                                                         let first_item_focus_id_for_items =
                                                             first_item_focus_id_for_children.clone();
+                                                        let last_item_focus_id_for_items =
+                                                            last_item_focus_id_for_children.clone();
+                                                        let first_item_focus_id_model_for_items =
+                                                            first_item_focus_id_model_for_content
+                                                                .clone();
+                                                        let last_item_focus_id_model_for_items =
+                                                            last_item_focus_id_model_for_content
+                                                                .clone();
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
                                                             cx.pressable_with_id_props(
@@ -4372,6 +4425,20 @@ impl ContextMenu {
                                                                             first_item_focus_id_for_items
                                                                                 .set(Some(item_id));
                                                                         }
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &first_item_focus_id_model_for_items,
+                                                                            |v| {
+                                                                                if v.is_none() {
+                                                                                    *v = Some(item_id);
+                                                                                }
+                                                                            },
+                                                                        );
+                                                                        last_item_focus_id_for_items
+                                                                            .set(Some(item_id));
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &last_item_focus_id_model_for_items,
+                                                                            |v| *v = Some(item_id),
+                                                                        );
                                                                         let checked_for_activate =
                                                                             checked.clone();
                                                                         let on_checked_change_for_activate =
@@ -4507,6 +4574,14 @@ impl ContextMenu {
                                                         let text_style = text_style.clone();
                                                         let first_item_focus_id_for_items =
                                                             first_item_focus_id_for_children.clone();
+                                                        let last_item_focus_id_for_items =
+                                                            last_item_focus_id_for_children.clone();
+                                                        let first_item_focus_id_model_for_items =
+                                                            first_item_focus_id_model_for_content
+                                                                .clone();
+                                                        let last_item_focus_id_model_for_items =
+                                                            last_item_focus_id_model_for_content
+                                                                .clone();
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
                                                             let selected = group_value.snapshot(cx);
@@ -4524,6 +4599,20 @@ impl ContextMenu {
                                                                             first_item_focus_id_for_items
                                                                                 .set(Some(item_id));
                                                                         }
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &first_item_focus_id_model_for_items,
+                                                                            |v| {
+                                                                                if v.is_none() {
+                                                                                    *v = Some(item_id);
+                                                                                }
+                                                                            },
+                                                                        );
+                                                                        last_item_focus_id_for_items
+                                                                            .set(Some(item_id));
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &last_item_focus_id_model_for_items,
+                                                                            |v| *v = Some(item_id),
+                                                                        );
                                                                         let group_value_for_activate =
                                                                             group_value.clone();
                                                                         let value_for_activate =
@@ -4684,6 +4773,50 @@ impl ContextMenu {
                         Some(content_id),
                         placement_trace,
                     );
+                    content_focus_id_for_children.set(Some(content_id));
+                    let first_item_focus_id_model_for_handler =
+                        first_item_focus_id_model_for_overlay.clone();
+                    let last_item_focus_id_model_for_handler =
+                        last_item_focus_id_model_for_overlay.clone();
+                    cx.key_on_key_down_for(
+                        content_id,
+                        Arc::new({
+                            let first_item_focus_id_model = first_item_focus_id_model_for_handler;
+                            let last_item_focus_id_model = last_item_focus_id_model_for_handler;
+                            move |host, _cx, it| {
+                                if it.repeat {
+                                    return false;
+                                }
+                                match it.key {
+                                    fret_core::KeyCode::ArrowDown => {
+                                        let Some(target) = host
+                                            .models_mut()
+                                            .read(&first_item_focus_id_model, |v| *v)
+                                            .ok()
+                                            .flatten()
+                                        else {
+                                            return false;
+                                        };
+                                        host.request_focus(target);
+                                        true
+                                    }
+                                    fret_core::KeyCode::ArrowUp => {
+                                        let Some(target) = host
+                                            .models_mut()
+                                            .read(&last_item_focus_id_model, |v| *v)
+                                            .ok()
+                                            .flatten()
+                                        else {
+                                            return false;
+                                        };
+                                        host.request_focus(target);
+                                        true
+                                    }
+                                    _ => false,
+                                }
+                            }
+                        }),
+                    );
 
                     let content =
                         overlay_motion::wrap_opacity_and_render_transform(cx, opacity, transform, vec![content]);
@@ -4805,15 +4938,31 @@ impl ContextMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
+                let mut close_auto_focus_policy =
+                    menu::root::MenuCloseAutoFocusGuardPolicy::for_modal(modal)
+                        .prevent_on_escape(true);
+                // Radix context menu returns focus to the document/underlay after outside press
+                // dismissal instead of restoring the invocation target.
+                close_auto_focus_policy.prevent_on_outside_press = true;
                 let (on_dismiss_request, on_close_auto_focus) =
                     menu::root::menu_close_auto_focus_guard_hooks(
                         cx,
-                        menu::root::MenuCloseAutoFocusGuardPolicy::for_modal(modal)
-                            .prevent_on_escape(true),
+                        close_auto_focus_policy,
                         open.clone(),
                         on_dismiss_request.clone(),
                         on_close_auto_focus.clone(),
                     );
+                let first_item_focus_id_model_for_request = cx.local_model_keyed(
+                    ("context-menu-first-item-focus-id", open.id()),
+                    || None::<GlobalElementId>,
+                );
+                let keyboard_entry_focus = cx
+                    .app
+                    .models_mut()
+                    .read(&first_item_focus_id_model_for_request, |v| *v)
+                    .ok()
+                    .flatten()
+                    .or(first_item_focus_id.get());
 
                 let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                     cx,
@@ -4825,7 +4974,7 @@ impl ContextMenu {
                     overlay_root_name,
                     menu::root::MenuInitialFocusTargets::new()
                         .pointer_content_focus(content_focus_id.get())
-                        .keyboard_entry_focus(first_item_focus_id_for_request.get()),
+                        .keyboard_entry_focus(keyboard_entry_focus),
                     on_open_auto_focus.clone(),
                     on_close_auto_focus,
                     on_dismiss_request,
@@ -5373,6 +5522,12 @@ mod tests {
             fret_core::Size::new(Px(320.0), Px(240.0)),
         );
         let mut services = FakeServices::default();
+
+        menu::set_context_menu_anchor_for_open_model(
+            &mut app,
+            &open,
+            Point::new(Px(32.0), Px(24.0)),
+        );
 
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);

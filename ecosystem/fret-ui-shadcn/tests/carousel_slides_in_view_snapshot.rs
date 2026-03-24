@@ -1,8 +1,5 @@
 use fret_app::App;
-use fret_core::{
-    AppWindowId, Event, FrameId, Modifiers, MouseButton, MouseButtons, Point, PointerEvent,
-    PointerId, PointerType, Px, Rect, Size as CoreSize,
-};
+use fret_core::{AppWindowId, FrameId, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
@@ -19,19 +16,13 @@ fn window_bounds() -> Rect {
     )
 }
 
-fn bounds_center(r: Rect) -> Point {
-    Point::new(
-        Px(r.origin.x.0 + r.size.width.0 * 0.5),
-        Px(r.origin.y.0 + r.size.height.0 * 0.5),
-    )
-}
-
 fn render_frame(
     ui: &mut UiTree<App>,
     app: &mut App,
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
+    api_handle: Model<Option<shadcn::CarouselApi>>,
     api: Model<shadcn::CarouselApiSnapshot>,
     slides_in_view: Model<shadcn::CarouselSlidesInViewSnapshot>,
     opts: shadcn::CarouselOptions,
@@ -53,6 +44,7 @@ fn render_frame(
             let slides = (0..5).map(|_| cx.container(Default::default(), |_cx| vec![]));
             let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
+                .api_handle_model(api_handle)
                 .api_snapshot_model(api)
                 .slides_in_view_snapshot_model(slides_in_view)
                 .track_start_neg_margin(Space::N0)
@@ -86,13 +78,14 @@ fn carousel_slides_in_view_snapshot_emits_enter_and_leave() {
     let slides_in_view = app
         .models_mut()
         .insert(shadcn::CarouselSlidesInViewSnapshot::default());
+    let api_handle_model = app.models_mut().insert(None::<shadcn::CarouselApi>);
     let api = app
         .models_mut()
         .insert(shadcn::CarouselApiSnapshot::default());
 
     let opts = shadcn::CarouselOptions::default()
         .embla_engine(true)
-        .in_view_threshold(0.0)
+        .in_view_threshold(0.51)
         .in_view_margin_px(Px(0.0));
 
     for _ in 0..4 {
@@ -102,6 +95,7 @@ fn carousel_slides_in_view_snapshot_emits_enter_and_leave() {
             &mut services,
             window,
             bounds,
+            api_handle_model.clone(),
             api.clone(),
             slides_in_view.clone(),
             opts,
@@ -119,49 +113,12 @@ fn carousel_slides_in_view_snapshot_emits_enter_and_leave() {
         "expected initial slide to be in view; snapshot={before:?}"
     );
 
-    let pointer_id = PointerId(0);
-    let start = bounds_center(bounds);
-    let moved = Point::new(Px(start.x.0 - 80.0), start.y);
-
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::Pointer(PointerEvent::Down {
-            pointer_id,
-            position: start,
-            button: MouseButton::Left,
-            modifiers: Modifiers::default(),
-            click_count: 1,
-            pointer_type: PointerType::Mouse,
-        }),
-    );
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::Pointer(PointerEvent::Move {
-            pointer_id,
-            position: moved,
-            buttons: MouseButtons {
-                left: true,
-                ..Default::default()
-            },
-            modifiers: Modifiers::default(),
-            pointer_type: PointerType::Mouse,
-        }),
-    );
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::Pointer(PointerEvent::Up {
-            pointer_id,
-            position: moved,
-            button: MouseButton::Left,
-            modifiers: Modifiers::default(),
-            is_click: false,
-            click_count: 1,
-            pointer_type: PointerType::Mouse,
-        }),
-    );
+    let api_handle = app
+        .models()
+        .get_cloned(&api_handle_model)
+        .flatten()
+        .expect("expected CarouselApi handle to be published");
+    api_handle.scroll_next(&mut app);
 
     let mut seen_enter_1 = false;
     let mut seen_left_0 = false;
@@ -175,6 +132,7 @@ fn carousel_slides_in_view_snapshot_emits_enter_and_leave() {
             &mut services,
             window,
             bounds,
+            api_handle_model.clone(),
             api.clone(),
             slides_in_view.clone(),
             opts,

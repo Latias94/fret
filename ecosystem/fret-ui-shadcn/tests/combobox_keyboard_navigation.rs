@@ -229,8 +229,8 @@ fn combobox_arrow_down_enter_selects_item_and_closes() {
 
     assert_eq!(
         app.models().get_cloned(&value).flatten().as_deref(),
-        Some("svelte"),
-        "expected second item to be selected via keyboard after ArrowDown"
+        Some("next"),
+        "expected first item to be selected via keyboard after ArrowDown when auto_highlight is opt-in"
     );
     assert_eq!(
         app.models().get_copied(&open),
