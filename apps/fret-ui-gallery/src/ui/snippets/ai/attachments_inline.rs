@@ -10,7 +10,6 @@ use fret_ui_ai as ui_ai;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
-use fret_ui_shadcn::prelude::*;
 use std::sync::{Arc, OnceLock};
 
 fn attachment_preview_rgba8(width: u32, height: u32, accent: [u8; 3]) -> Vec<u8> {

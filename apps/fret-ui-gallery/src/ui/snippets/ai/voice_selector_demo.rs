@@ -8,7 +8,7 @@ use fret_ui::element::SemanticsDecoration;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, LayoutRefinement, Space};
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[derive(Clone, Copy)]

@@ -58,7 +58,7 @@ pub(in crate::ui) fn preview_text_outline_stroke(
             .gap(Space::N2).into_element(cx);
 
     fn toggle_button(
-        cx: &mut UiCx<'_>,
+        _cx: &mut UiCx<'_>,
         label: &'static str,
         value: bool,
         test_id: &'static str,

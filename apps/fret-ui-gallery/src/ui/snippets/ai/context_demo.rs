@@ -4,7 +4,6 @@ pub const SOURCE: &str = include_str!("context_demo.rs");
 use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::{LayoutRefinement, ui};
-use fret_ui_shadcn::prelude::*;
 
 fn centered<B>(cx: &mut UiCx<'_>, body: B) -> impl UiChild + use<B>
 where

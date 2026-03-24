@@ -24,7 +24,7 @@ fn row_end(_cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChi
         .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-pub(super) fn compose_body(cx: &mut UiCx<'_>, models: OverlayModels) -> impl UiChild + use<> {
+pub(super) fn compose_body(_cx: &mut UiCx<'_>, models: OverlayModels) -> impl UiChild + use<> {
     ui::v_flex(move |cx| {
         let gap = cx.with_theme(|theme| fret_ui_kit::MetricRef::space(Space::N2).resolve(theme));
         let underlay_row = {

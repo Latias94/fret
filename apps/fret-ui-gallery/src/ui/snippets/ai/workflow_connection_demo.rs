@@ -7,7 +7,6 @@ use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::prelude::*;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     use fret_core::Point;

@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub const SOURCE: &str = DOCS_SOURCE;
 pub const DOCS_SOURCE: &str = include_str!("plugin_autoplay.docs.rs.txt");
 

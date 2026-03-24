@@ -96,32 +96,39 @@ pub(crate) fn ui_gallery_demo_asset_bundle() -> AssetBundleId {
     AssetBundleId::package(UI_GALLERY_DEMO_ASSET_BUNDLE_NAME)
 }
 
+#[allow(dead_code)]
 pub(crate) fn ui_gallery_shared_media_preview_request() -> AssetRequest {
     ui_gallery_demo_bundle_request(UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY)
 }
 
+#[allow(dead_code)]
 pub(crate) fn ui_gallery_card_event_cover_request() -> AssetRequest {
     ui_gallery_demo_bundle_request(UI_GALLERY_CARD_EVENT_COVER_KEY)
 }
 
+#[allow(dead_code)]
 pub(crate) fn ui_gallery_aspect_ratio_landscape_request() -> AssetRequest {
     ui_gallery_demo_bundle_request(UI_GALLERY_ASPECT_RATIO_LANDSCAPE_KEY)
 }
 
+#[allow(dead_code)]
 pub(crate) fn ui_gallery_aspect_ratio_portrait_request() -> AssetRequest {
     ui_gallery_demo_bundle_request(UI_GALLERY_ASPECT_RATIO_PORTRAIT_KEY)
 }
 
 #[cfg(any(test, feature = "gallery-dev"))]
+#[allow(dead_code)]
 pub(crate) fn ui_gallery_ai_attachment_landscape_request() -> AssetRequest {
     ui_gallery_demo_bundle_request(UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_KEY)
 }
 
 #[cfg(any(test, feature = "gallery-dev"))]
+#[allow(dead_code)]
 pub(crate) fn ui_gallery_ai_attachment_portrait_request() -> AssetRequest {
     ui_gallery_demo_bundle_request(UI_GALLERY_AI_ATTACHMENT_PORTRAIT_KEY)
 }
 
+#[allow(dead_code)]
 fn ui_gallery_demo_bundle_request(key: &'static str) -> AssetRequest {
     AssetRequest::new(AssetLocator::bundle(ui_gallery_demo_asset_bundle(), key))
 }

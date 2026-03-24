@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub const SOURCE: &str = include_str!("notes.rs");
 
 // region: example

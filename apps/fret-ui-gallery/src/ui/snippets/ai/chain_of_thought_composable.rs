@@ -5,7 +5,7 @@ use fret::{UiChild, UiCx};
 use fret_core::FontWeight;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::{Items, LayoutRefinement, Space, ui};
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui_ai::ChainOfThought::new()

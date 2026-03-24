@@ -6,7 +6,6 @@ use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::prelude::*;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(move |cx| {

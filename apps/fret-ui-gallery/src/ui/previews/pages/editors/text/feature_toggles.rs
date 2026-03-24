@@ -52,7 +52,7 @@ pub(in crate::ui) fn preview_text_feature_toggles(
     .gap(Space::N2);
 
     fn toggle_button(
-        cx: &mut UiCx<'_>,
+        _cx: &mut UiCx<'_>,
         label: &'static str,
         value: bool,
         test_id: &'static str,

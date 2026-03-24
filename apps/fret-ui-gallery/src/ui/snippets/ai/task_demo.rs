@@ -9,7 +9,7 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::{icon, style as decl_style};
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let preset = cx.local_model_keyed("preset", || 0_u8);
