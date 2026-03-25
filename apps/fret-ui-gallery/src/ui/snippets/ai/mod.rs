@@ -64,6 +64,7 @@ pub mod message_usage;
 pub mod open_in_chat_demo;
 pub mod package_info_demo;
 pub mod plan_demo;
+pub mod prompt_input_cursor_demo;
 pub mod prompt_input_docs_demo;
 pub mod prompt_input_tooltip_demo;
 pub mod reasoning_demo;

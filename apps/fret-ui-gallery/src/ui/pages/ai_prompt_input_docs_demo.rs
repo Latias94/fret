@@ -26,6 +26,10 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 "Prompt-input-scoped Select now ships as a fully typed wrapper lane, so docs snippets do not need raw `shadcn::Select*` conversions for trigger/content/items/value.",
             ],
             [
+                "PromptInputHoverCard* / PromptInputTab* / PromptInputCommand*",
+                "Cursor-style header compounds now live on the typed `fret_ui_ai` surface, so the docs page no longer has to explain the official `prompt-input-cursor` example away as a missing policy layer.",
+            ],
+            [
                 "PromptInputProvider",
                 "Still the lifted-state lane for advanced external orchestration, but the docs page now prefers the closer-to-upstream `on_submit(message)` lane first.",
             ],
@@ -39,26 +43,22 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     let demo = snippets::prompt_input_docs_demo::render(cx);
+    let cursor_style = snippets::prompt_input_cursor_demo::render(cx);
     let button_tooltips = snippets::prompt_input_tooltip_demo::render(cx);
     let features = crate::ui::doc_layout::notes_block([
         "This page now teaches the docs-shaped children lane first: transcript shell, header attachments row, body textarea, footer tools, model picker, and submit.",
         "The audit outcome remained mainly public-surface drift, not a `crates/fret-ui` mechanism bug: runtime drop handling and stable automation seams were already mostly healthy.",
         "The prompt input now exposes an upstream-like `on_submit(message)` payload lane so first-party docs no longer have to teach `PromptInputProvider` just to read submit data.",
         "The prompt action menu content now accepts docs-shaped add-attachments / add-screenshot builders without explicit per-item callback wiring, while capture policy itself stays app-owned.",
+        "Cursor-style hover cards, tab groups, and inline command menus now have typed `PromptInput*` wrappers, so the docs page can render the official `prompt-input-cursor` family on the same surface instead of deferring to separate follow-up pages.",
     ])
     .test_id("ui-gallery-ai-prompt-input-docs-features");
-    let cursor_style = crate::ui::doc_layout::notes_block([
-        "The official AI Elements page includes a `prompt-input-cursor` example on the same docs surface.",
-        "Fret currently exposes the equivalent seams across dedicated Prompt Input family pages: `Prompt Input Provider` for lifted state ownership and `Prompt Input Referenced Sources` for the block-start sources row.",
-        "The remaining gap is policy-layer composition rather than runtime mechanism health: AI-specific `PromptInputHoverCard*` and `PromptInputTab*` compounds are not yet ported into `fret_ui_ai`.",
-    ])
-    .test_id("ui-gallery-ai-prompt-input-docs-cursor-style");
     let parts = parts_table(cx).test_id("ui-gallery-ai-prompt-input-docs-parts");
     let notes = crate::ui::doc_layout::notes_block([
         "The remaining parity gap versus the official AI Elements Prompt Input docs is now mostly runtime-owned: file-paste attachments still need a clipboard-files contract in the platform/runner stack.",
         "The screenshot action is intentionally intent-driven in Fret today: the menu taxonomy lives in `fret-ui-ai`, while actual capture policy stays app-owned instead of leaking platform behavior into the component layer.",
         "The low-level `PromptInputRoot::into_element_with_slots(...)` adapter remains for existing demos/diagnostics, but the docs page now avoids teaching that seam as the default copyable path.",
-        "Diagnostics coverage now has stable anchors for transcript messages, screenshot/add-attachment menu items, the search tooltip, and the model trigger.",
+        "Diagnostics coverage now has stable anchors for transcript messages, screenshot/add-attachment menu items, the search tooltip, the model trigger, and the cursor preview hover-card triggers.",
     ])
     .test_id("ui-gallery-ai-prompt-input-docs-notes");
     let usage_section = DocSection::build(cx, "Usage with AI SDK", demo)
@@ -69,8 +69,9 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
         .description("High-signal parity notes for this Prompt Input pass.")
         .no_shell();
     let cursor_style_section = DocSection::build(cx, "Cursor Style", cursor_style)
-        .description("Current Fret mapping for the official `prompt-input-cursor` example and why it is still split across dedicated family demos.")
-        .no_shell();
+        .description("Rust/Fret analogue of the official `prompt-input-cursor` example using typed `PromptInputHoverCard*`, `PromptInputTab*`, and `PromptInputCommand*` wrappers.")
+        .test_id_prefix("ui-gallery-ai-prompt-input-cursor-demo")
+        .code_rust_from_file_region(snippets::prompt_input_cursor_demo::SOURCE, "example");
     let tooltips_section = DocSection::build(cx, "Button Tooltips", button_tooltips)
         .description("Rust/Fret analogue of the official tooltip examples using `PromptInputButtonTooltip` instead of raw shadcn tooltip wiring.")
         .test_id_prefix("ui-gallery-ai-prompt-input-docs-tooltips")

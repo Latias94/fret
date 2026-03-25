@@ -9350,6 +9350,7 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
         "src/ui/snippets/ai/persona_state_management.rs",
         "src/ui/snippets/ai/persona_variants.rs",
         "src/ui/snippets/ai/prompt_input_action_menu_demo.rs",
+        "src/ui/snippets/ai/prompt_input_cursor_demo.rs",
         "src/ui/snippets/ai/prompt_input_docs_demo.rs",
         "src/ui/snippets/ai/prompt_input_provider_demo.rs",
         "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
@@ -9435,16 +9436,43 @@ fn prompt_input_docs_demo_prefers_children_lane_over_root_slots() {
 }
 
 #[test]
+fn prompt_input_cursor_demo_prefers_prompt_input_cursor_compounds() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/prompt_input_cursor_demo.rs",
+        &[
+            "ui_ai::PromptInputHoverCard::new()",
+            "ui_ai::PromptInputHoverCardTrigger::new(",
+            "ui_ai::PromptInputHoverCardContent::new([",
+            "ui_ai::PromptInputCommand::new()",
+            ".input(ui_ai::PromptInputCommandInput::new()",
+            ".list(ui_ai::PromptInputCommandList::new()",
+            "ui_ai::PromptInputTabsList::new()",
+            "ui_ai::PromptInputTab::new()",
+            "ui_ai::PromptInputTabLabel::new(\"Active Tabs\")",
+            "ui_ai::PromptInputTabBody::new()",
+            "ui_ai::PromptInputTabItem::new([",
+        ],
+        &[
+            "shadcn::HoverCard::new(",
+            "shadcn::CommandPalette::new(",
+            "shadcn::Command::new(",
+        ],
+    );
+}
+
+#[test]
 fn prompt_input_docs_page_tracks_official_examples_sections() {
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_prompt_input_docs_demo.rs",
         &[
+            "let cursor_style = snippets::prompt_input_cursor_demo::render(cx);",
             "DocSection::build(cx, \"Usage with AI SDK\", demo)",
             "DocSection::build(cx, \"Features\", features)",
             "DocSection::build(cx, \"Cursor Style\", cursor_style)",
             "DocSection::build(cx, \"Button Tooltips\", button_tooltips)",
             "DocSection::build(cx, \"Parts & Props\", parts)",
             "DocSection::build(cx, \"Notes\", notes)",
+            ".code_rust_from_file_region(snippets::prompt_input_cursor_demo::SOURCE, \"example\")",
         ],
         &[],
     );

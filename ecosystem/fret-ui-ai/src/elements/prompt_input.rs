@@ -1,7 +1,7 @@
 use std::any::Any;
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Edges, ExternalDragKind, Px};
+use fret_core::{Axis, Color, Edges, ExternalDragKind, FontWeight, Px};
 use fret_icons::IconId;
 use fret_runtime::{ActionId, Effect, Model};
 use fret_ui::action::{ActivateReason, OnActivate, OnExternalDrag, OnKeyDown};
@@ -17,13 +17,18 @@ use fret_ui_kit::{
 };
 
 use fret_ui_shadcn::facade::{
-    Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
-    DropdownMenuItem, DropdownMenuSide, InputGroup, IntoBoolModel, IntoOptionalTextValueModel, Kbd,
-    Select as ShadcnSelect, SelectAlign, SelectContent as ShadcnSelectContent,
-    SelectEntry as ShadcnSelectEntry, SelectItem as ShadcnSelectItem, SelectItemIndicator,
-    SelectItemText, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton, SelectSide,
-    SelectTrigger as ShadcnSelectTrigger, SelectTriggerSize, SelectValue as ShadcnSelectValue,
-    Spinner, Tooltip, TooltipContent, TooltipSide,
+    Button, ButtonSize, ButtonVariant, CommandEmpty as ShadcnCommandEmpty,
+    CommandEntry as ShadcnCommandEntry, CommandGroup as ShadcnCommandGroup,
+    CommandItem as ShadcnCommandItem, CommandPalette as ShadcnCommandPalette,
+    CommandSeparator as ShadcnCommandSeparator, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+    DropdownMenuItem, DropdownMenuSide, HoverCard as ShadcnHoverCard, HoverCardAlign,
+    HoverCardContent as ShadcnHoverCardContent, HoverCardSide, InputGroup, IntoBoolModel,
+    IntoOptionalTextValueModel, Kbd, Select as ShadcnSelect, SelectAlign,
+    SelectContent as ShadcnSelectContent, SelectEntry as ShadcnSelectEntry,
+    SelectItem as ShadcnSelectItem, SelectItemIndicator, SelectItemText, SelectScrollButtons,
+    SelectScrollDownButton, SelectScrollUpButton, SelectSide, SelectTrigger as ShadcnSelectTrigger,
+    SelectTriggerSize, SelectValue as ShadcnSelectValue, Spinner, Tooltip, TooltipContent,
+    TooltipSide,
 };
 use fret_ui_shadcn::raw::button::ButtonStyle;
 
@@ -2454,6 +2459,1127 @@ impl From<PromptInputSelectTrigger> for ShadcnSelectTrigger {
     }
 }
 
+#[derive(Debug)]
+pub enum PromptInputHoverCardChild {
+    Trigger(PromptInputHoverCardTrigger),
+    Content(PromptInputHoverCardContent),
+}
+
+impl From<PromptInputHoverCardTrigger> for PromptInputHoverCardChild {
+    fn from(value: PromptInputHoverCardTrigger) -> Self {
+        Self::Trigger(value)
+    }
+}
+
+impl From<PromptInputHoverCardContent> for PromptInputHoverCardChild {
+    fn from(value: PromptInputHoverCardContent) -> Self {
+        Self::Content(value)
+    }
+}
+
+#[derive(Debug)]
+pub struct PromptInputHoverCard {
+    children: Vec<PromptInputHoverCardChild>,
+    open_delay_frames: u32,
+    close_delay_frames: u32,
+    open_model: Option<Model<bool>>,
+}
+
+impl Default for PromptInputHoverCard {
+    fn default() -> Self {
+        Self {
+            children: Vec::new(),
+            open_delay_frames: 0,
+            close_delay_frames: 0,
+            open_model: None,
+        }
+    }
+}
+
+impl PromptInputHoverCard {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<PromptInputHoverCardChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn trigger(mut self, trigger: PromptInputHoverCardTrigger) -> Self {
+        self.children.push(trigger.into());
+        self
+    }
+
+    pub fn content(mut self, content: PromptInputHoverCardContent) -> Self {
+        self.children.push(content.into());
+        self
+    }
+
+    pub fn open_delay_frames(mut self, frames: u32) -> Self {
+        self.open_delay_frames = frames;
+        self
+    }
+
+    pub fn close_delay_frames(mut self, frames: u32) -> Self {
+        self.close_delay_frames = frames;
+        self
+    }
+
+    pub fn open_model(mut self, model: Model<bool>) -> Self {
+        self.open_model = Some(model);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut trigger: Option<PromptInputHoverCardTrigger> = None;
+        let mut content: Option<PromptInputHoverCardContent> = None;
+
+        for child in self.children {
+            match child {
+                PromptInputHoverCardChild::Trigger(next) => {
+                    assert!(
+                        trigger.replace(next).is_none(),
+                        "PromptInputHoverCard::children(...) accepts at most one PromptInputHoverCardTrigger"
+                    );
+                }
+                PromptInputHoverCardChild::Content(next) => {
+                    assert!(
+                        content.replace(next).is_none(),
+                        "PromptInputHoverCard::children(...) accepts at most one PromptInputHoverCardContent"
+                    );
+                }
+            }
+        }
+
+        let trigger = trigger
+            .expect("PromptInputHoverCard::children(...) requires one PromptInputHoverCardTrigger")
+            .into_element(cx);
+        let content = content
+            .expect("PromptInputHoverCard::children(...) requires one PromptInputHoverCardContent")
+            .into_element(cx);
+
+        let mut hover = ShadcnHoverCard::new(cx, trigger, content)
+            .open_delay_frames(self.open_delay_frames)
+            .close_delay_frames(self.close_delay_frames);
+
+        if let Some(open_model) = self.open_model {
+            hover = hover.open(Some(open_model));
+        }
+
+        hover.into_element(cx)
+    }
+}
+
+#[derive(Debug)]
+pub struct PromptInputHoverCardTrigger {
+    child: AnyElement,
+}
+
+impl PromptInputHoverCardTrigger {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.child
+    }
+}
+
+#[derive(Debug)]
+pub struct PromptInputHoverCardContent {
+    children: Vec<AnyElement>,
+    align: HoverCardAlign,
+    side: Option<HoverCardSide>,
+    side_offset: Option<Px>,
+    align_offset: Option<Px>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
+}
+
+impl PromptInputHoverCardContent {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            align: HoverCardAlign::Start,
+            side: None,
+            side_offset: None,
+            align_offset: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default().w_auto().min_w_0(),
+            test_id: None,
+        }
+    }
+
+    pub fn align(mut self, align: HoverCardAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn side(mut self, side: HoverCardSide) -> Self {
+        self.side = Some(side);
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.side_offset = Some(offset);
+        self
+    }
+
+    pub fn align_offset(mut self, offset: Px) -> Self {
+        self.align_offset = Some(offset);
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(chrome);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    fn into_builder(self) -> ShadcnHoverCardContent {
+        let mut content = ShadcnHoverCardContent::new(self.children)
+            .align(self.align)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout);
+
+        if let Some(side) = self.side {
+            content = content.side(side);
+        }
+        if let Some(side_offset) = self.side_offset {
+            content = content.side_offset(side_offset);
+        }
+        if let Some(align_offset) = self.align_offset {
+            content = content.align_offset(align_offset);
+        }
+        if let Some(test_id) = self.test_id {
+            content = content.test_id(test_id);
+        }
+
+        content
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_builder().into_element(cx)
+    }
+}
+
+pub enum PromptInputTabsListChild {
+    Tab(PromptInputTab),
+    Element(AnyElement),
+}
+
+impl From<PromptInputTab> for PromptInputTabsListChild {
+    fn from(value: PromptInputTab) -> Self {
+        Self::Tab(value)
+    }
+}
+
+impl From<AnyElement> for PromptInputTabsListChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+pub struct PromptInputTabsList {
+    children: Vec<PromptInputTabsListChild>,
+    test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for PromptInputTabsList {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PromptInputTabsList")
+            .field("children_len", &self.children.len())
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
+            .finish()
+    }
+}
+
+impl PromptInputTabsList {
+    pub fn new() -> Self {
+        Self {
+            children: Vec::new(),
+            test_id: None,
+        }
+    }
+
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<PromptInputTabsListChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn child(mut self, child: impl Into<PromptInputTabsListChild>) -> Self {
+        self.children.push(child.into());
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| match child {
+                PromptInputTabsListChild::Tab(tab) => tab.into_element(cx),
+                PromptInputTabsListChild::Element(element) => element,
+            })
+            .collect::<Vec<_>>();
+
+        let mut list = ui::v_flex(move |_cx| children)
+            .gap(Space::N0)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+
+        if let Some(test_id) = self.test_id {
+            list = list.test_id(test_id);
+        }
+
+        list
+    }
+}
+
+pub enum PromptInputTabChild {
+    Label(PromptInputTabLabel),
+    Body(PromptInputTabBody),
+    Element(AnyElement),
+}
+
+impl From<PromptInputTabLabel> for PromptInputTabChild {
+    fn from(value: PromptInputTabLabel) -> Self {
+        Self::Label(value)
+    }
+}
+
+impl From<PromptInputTabBody> for PromptInputTabChild {
+    fn from(value: PromptInputTabBody) -> Self {
+        Self::Body(value)
+    }
+}
+
+impl From<AnyElement> for PromptInputTabChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+pub struct PromptInputTab {
+    children: Vec<PromptInputTabChild>,
+    test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for PromptInputTab {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PromptInputTab")
+            .field("children_len", &self.children.len())
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
+            .finish()
+    }
+}
+
+impl PromptInputTab {
+    pub fn new() -> Self {
+        Self {
+            children: Vec::new(),
+            test_id: None,
+        }
+    }
+
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<PromptInputTabChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn child(mut self, child: impl Into<PromptInputTabChild>) -> Self {
+        self.children.push(child.into());
+        self
+    }
+
+    pub fn label(mut self, label: PromptInputTabLabel) -> Self {
+        self.children.push(label.into());
+        self
+    }
+
+    pub fn body(mut self, body: PromptInputTabBody) -> Self {
+        self.children.push(body.into());
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| match child {
+                PromptInputTabChild::Label(label) => label.into_element(cx),
+                PromptInputTabChild::Body(body) => body.into_element(cx),
+                PromptInputTabChild::Element(element) => element,
+            })
+            .collect::<Vec<_>>();
+
+        let mut tab = ui::v_flex(move |_cx| children)
+            .gap(Space::N0)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+
+        if let Some(test_id) = self.test_id {
+            tab = tab.test_id(test_id);
+        }
+
+        tab
+    }
+}
+
+pub struct PromptInputTabLabel {
+    text: Option<Arc<str>>,
+    children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for PromptInputTabLabel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PromptInputTabLabel")
+            .field("text", &self.text.as_ref().map(|s| s.as_ref()))
+            .field("children_len", &self.children.len())
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
+            .finish()
+    }
+}
+
+impl PromptInputTabLabel {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: Some(text.into()),
+            children: Vec::new(),
+            test_id: None,
+        }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut children = self.children;
+
+        if children.is_empty() {
+            if let Some(text) = self.text {
+                let theme = Theme::global(&*cx.app).snapshot();
+                let text = ui::text(text)
+                    .text_size_px(Px(12.0))
+                    .line_height_px(Px(16.0))
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
+                    .into_element(cx);
+                children.push(text);
+            } else {
+                children.push(cx.text(""));
+            }
+        }
+
+        let mut label = ui::v_flex(move |_cx| children)
+            .gap(Space::N0)
+            .px(Space::N3)
+            .pb(Space::N2)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+
+        if let Some(test_id) = self.test_id {
+            label = label.test_id(test_id);
+        }
+
+        label
+    }
+}
+
+pub enum PromptInputTabBodyChild {
+    Item(PromptInputTabItem),
+    Element(AnyElement),
+}
+
+impl From<PromptInputTabItem> for PromptInputTabBodyChild {
+    fn from(value: PromptInputTabItem) -> Self {
+        Self::Item(value)
+    }
+}
+
+impl From<AnyElement> for PromptInputTabBodyChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+pub struct PromptInputTabBody {
+    children: Vec<PromptInputTabBodyChild>,
+    test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for PromptInputTabBody {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PromptInputTabBody")
+            .field("children_len", &self.children.len())
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
+            .finish()
+    }
+}
+
+impl PromptInputTabBody {
+    pub fn new() -> Self {
+        Self {
+            children: Vec::new(),
+            test_id: None,
+        }
+    }
+
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<PromptInputTabBodyChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn child(mut self, child: impl Into<PromptInputTabBodyChild>) -> Self {
+        self.children.push(child.into());
+        self
+    }
+
+    pub fn item(mut self, item: PromptInputTabItem) -> Self {
+        self.children.push(item.into());
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| match child {
+                PromptInputTabBodyChild::Item(item) => item.into_element(cx),
+                PromptInputTabBodyChild::Element(element) => element,
+            })
+            .collect::<Vec<_>>();
+
+        let mut body = ui::v_flex(move |_cx| children)
+            .gap(Space::N1)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+
+        if let Some(test_id) = self.test_id {
+            body = body.test_id(test_id);
+        }
+
+        body
+    }
+}
+
+#[derive(Debug)]
+pub struct PromptInputTabItem {
+    children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+}
+
+impl PromptInputTabItem {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            test_id: None,
+        }
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut item = ui::h_flex(move |_cx| self.children)
+            .gap(Space::N2)
+            .items_center()
+            .px(Space::N3)
+            .py(Space::N2)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+
+        if let Some(test_id) = self.test_id {
+            item = item.test_id(test_id);
+        }
+
+        item
+    }
+}
+
+pub enum PromptInputCommandChild {
+    Input(PromptInputCommandInput),
+    List(PromptInputCommandList),
+}
+
+impl From<PromptInputCommandInput> for PromptInputCommandChild {
+    fn from(value: PromptInputCommandInput) -> Self {
+        Self::Input(value)
+    }
+}
+
+impl From<PromptInputCommandList> for PromptInputCommandChild {
+    fn from(value: PromptInputCommandList) -> Self {
+        Self::List(value)
+    }
+}
+
+pub struct PromptInputCommand {
+    query: Option<Model<String>>,
+    default_query: Arc<str>,
+    children: Vec<PromptInputCommandChild>,
+    disabled: bool,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl std::fmt::Debug for PromptInputCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PromptInputCommand")
+            .field("query", &self.query.as_ref().map(|model| model.id()))
+            .field("default_query", &self.default_query.as_ref())
+            .field("children_len", &self.children.len())
+            .field("disabled", &self.disabled)
+            .finish()
+    }
+}
+
+impl PromptInputCommand {
+    pub fn new() -> Self {
+        Self {
+            query: None,
+            default_query: Arc::<str>::from(""),
+            children: Vec::new(),
+            disabled: false,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn query_model(mut self, query: Model<String>) -> Self {
+        self.query = Some(query);
+        self
+    }
+
+    pub fn default_query(mut self, default_query: impl Into<Arc<str>>) -> Self {
+        self.default_query = default_query.into();
+        self
+    }
+
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<PromptInputCommandChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn input(mut self, input: PromptInputCommandInput) -> Self {
+        self.children.push(input.into());
+        self
+    }
+
+    pub fn list(mut self, list: PromptInputCommandList) -> Self {
+        self.children.push(list.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let query = controllable_state::use_controllable_model(cx, self.query, || {
+            self.default_query.to_string()
+        })
+        .model();
+
+        let mut input: Option<PromptInputCommandInput> = None;
+        let mut list: Option<PromptInputCommandList> = None;
+
+        for child in self.children {
+            match child {
+                PromptInputCommandChild::Input(next) => {
+                    assert!(
+                        input.replace(next).is_none(),
+                        "PromptInputCommand::children(...) accepts at most one PromptInputCommandInput"
+                    );
+                }
+                PromptInputCommandChild::List(next) => {
+                    assert!(
+                        list.replace(next).is_none(),
+                        "PromptInputCommand::children(...) accepts at most one PromptInputCommandList"
+                    );
+                }
+            }
+        }
+
+        let input = input.unwrap_or_default();
+        let (entries, empty, list_test_id, list_disabled) = list.unwrap_or_default().into_parts();
+
+        let mut command = ShadcnCommandPalette::new(query, [])
+            .entries(entries.into_iter().map(Into::into))
+            .disabled(self.disabled || input.disabled || list_disabled)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout);
+
+        if let Some(a11y_label) = input.a11y_label {
+            command = command.a11y_label(a11y_label);
+        }
+        if let Some(placeholder) = input.placeholder {
+            command = command.placeholder(placeholder);
+        }
+        if let Some(input_test_id) = input.input_test_id {
+            command = command.input_test_id(input_test_id);
+        }
+        if let Some(list_test_id) = list_test_id {
+            command = command.list_test_id(list_test_id);
+        }
+        if let Some(empty) = empty {
+            command = command.empty(empty.into_inner());
+        }
+
+        command.into_element(cx)
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct PromptInputCommandInput {
+    a11y_label: Option<Arc<str>>,
+    placeholder: Option<Arc<str>>,
+    input_test_id: Option<Arc<str>>,
+    disabled: bool,
+}
+
+impl PromptInputCommandInput {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn input_test_id(mut self, input_test_id: impl Into<Arc<str>>) -> Self {
+        self.input_test_id = Some(input_test_id.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+}
+
+#[derive(Debug)]
+pub enum PromptInputCommandListChild {
+    Entry(PromptInputCommandEntry),
+    Empty(PromptInputCommandEmpty),
+}
+
+impl From<PromptInputCommandEntry> for PromptInputCommandListChild {
+    fn from(value: PromptInputCommandEntry) -> Self {
+        Self::Entry(value)
+    }
+}
+
+impl From<PromptInputCommandItem> for PromptInputCommandListChild {
+    fn from(value: PromptInputCommandItem) -> Self {
+        Self::Entry(value.into())
+    }
+}
+
+impl From<PromptInputCommandGroup> for PromptInputCommandListChild {
+    fn from(value: PromptInputCommandGroup) -> Self {
+        Self::Entry(value.into())
+    }
+}
+
+impl From<PromptInputCommandSeparator> for PromptInputCommandListChild {
+    fn from(value: PromptInputCommandSeparator) -> Self {
+        Self::Entry(value.into())
+    }
+}
+
+impl From<PromptInputCommandEmpty> for PromptInputCommandListChild {
+    fn from(value: PromptInputCommandEmpty) -> Self {
+        Self::Empty(value)
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct PromptInputCommandList {
+    children: Vec<PromptInputCommandListChild>,
+    list_test_id: Option<Arc<str>>,
+    disabled: bool,
+}
+
+impl PromptInputCommandList {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<PromptInputCommandListChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn child(mut self, child: impl Into<PromptInputCommandListChild>) -> Self {
+        self.children.push(child.into());
+        self
+    }
+
+    pub fn entry(mut self, entry: PromptInputCommandEntry) -> Self {
+        self.children.push(entry.into());
+        self
+    }
+
+    pub fn item(mut self, item: PromptInputCommandItem) -> Self {
+        self.children.push(item.into());
+        self
+    }
+
+    pub fn group(mut self, group: PromptInputCommandGroup) -> Self {
+        self.children.push(group.into());
+        self
+    }
+
+    pub fn separator(mut self, separator: PromptInputCommandSeparator) -> Self {
+        self.children.push(separator.into());
+        self
+    }
+
+    pub fn empty(mut self, empty: PromptInputCommandEmpty) -> Self {
+        self.children.push(empty.into());
+        self
+    }
+
+    pub fn list_test_id(mut self, list_test_id: impl Into<Arc<str>>) -> Self {
+        self.list_test_id = Some(list_test_id.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    fn into_parts(
+        self,
+    ) -> (
+        Vec<PromptInputCommandEntry>,
+        Option<PromptInputCommandEmpty>,
+        Option<Arc<str>>,
+        bool,
+    ) {
+        let mut entries = Vec::new();
+        let mut empty = None;
+
+        for child in self.children {
+            match child {
+                PromptInputCommandListChild::Entry(entry) => entries.push(entry),
+                PromptInputCommandListChild::Empty(next) => {
+                    assert!(
+                        empty.replace(next).is_none(),
+                        "PromptInputCommandList::children(...) accepts at most one PromptInputCommandEmpty"
+                    );
+                }
+            }
+        }
+
+        (entries, empty, self.list_test_id, self.disabled)
+    }
+}
+
+#[derive(Debug)]
+pub enum PromptInputCommandEntry {
+    Item(PromptInputCommandItem),
+    Group(PromptInputCommandGroup),
+    Separator(PromptInputCommandSeparator),
+}
+
+impl From<PromptInputCommandItem> for PromptInputCommandEntry {
+    fn from(value: PromptInputCommandItem) -> Self {
+        Self::Item(value)
+    }
+}
+
+impl From<PromptInputCommandGroup> for PromptInputCommandEntry {
+    fn from(value: PromptInputCommandGroup) -> Self {
+        Self::Group(value)
+    }
+}
+
+impl From<PromptInputCommandSeparator> for PromptInputCommandEntry {
+    fn from(value: PromptInputCommandSeparator) -> Self {
+        Self::Separator(value)
+    }
+}
+
+impl From<PromptInputCommandEntry> for ShadcnCommandEntry {
+    fn from(value: PromptInputCommandEntry) -> Self {
+        match value {
+            PromptInputCommandEntry::Item(item) => item.into_inner().into(),
+            PromptInputCommandEntry::Group(group) => group.into_inner().into(),
+            PromptInputCommandEntry::Separator(separator) => separator.into_inner().into(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PromptInputCommandItem {
+    inner: ShadcnCommandItem,
+}
+
+impl PromptInputCommandItem {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            inner: ShadcnCommandItem::new(label),
+        }
+    }
+
+    pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.value(value);
+        self
+    }
+
+    pub fn keywords<I, S>(mut self, keywords: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<Arc<str>>,
+    {
+        self.inner = self.inner.keywords(keywords);
+        self
+    }
+
+    pub fn shortcut(mut self, shortcut: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.shortcut(shortcut);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.inner = self.inner.disabled(disabled);
+        self
+    }
+
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.inner = self.inner.force_mount(force_mount);
+        self
+    }
+
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.inner = self.inner.leading_icon(icon);
+        self
+    }
+
+    pub fn checkmark(mut self, checked: bool) -> Self {
+        self.inner = self.inner.checkmark(checked);
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.test_id(test_id);
+        self
+    }
+
+    pub fn on_select(mut self, command: impl Into<fret_runtime::CommandId>) -> Self {
+        self.inner = self.inner.on_select(command);
+        self
+    }
+
+    pub fn on_select_action(mut self, on_select: fret_ui::action::OnActivate) -> Self {
+        self.inner = self.inner.on_select_action(on_select);
+        self
+    }
+
+    pub fn on_select_value_action<F>(mut self, on_select: F) -> Self
+    where
+        F: Fn(
+                &mut dyn fret_ui::action::UiActionHost,
+                fret_ui::action::ActionCx,
+                ActivateReason,
+                Arc<str>,
+            ) + 'static,
+    {
+        self.inner = self.inner.on_select_value_action(on_select);
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.inner = self.inner.children(children);
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnCommandItem {
+        self.inner
+    }
+}
+
+impl From<PromptInputCommandItem> for ShadcnCommandItem {
+    fn from(value: PromptInputCommandItem) -> Self {
+        value.into_inner()
+    }
+}
+
+#[derive(Debug)]
+pub struct PromptInputCommandGroup {
+    inner: ShadcnCommandGroup,
+}
+
+impl PromptInputCommandGroup {
+    pub fn new() -> Self {
+        Self {
+            inner: ShadcnCommandGroup::new([]),
+        }
+    }
+
+    pub fn heading(mut self, heading: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.heading(heading);
+        self
+    }
+
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.inner = self.inner.force_mount(force_mount);
+        self
+    }
+
+    pub fn children(mut self, items: impl IntoIterator<Item = PromptInputCommandItem>) -> Self {
+        self.inner = self.inner.items(items.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn item(mut self, item: PromptInputCommandItem) -> Self {
+        self.inner = self.inner.item(item.into_inner());
+        self
+    }
+
+    pub fn items(mut self, items: impl IntoIterator<Item = PromptInputCommandItem>) -> Self {
+        self.inner = self.inner.items(items.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnCommandGroup {
+        self.inner
+    }
+}
+
+impl From<PromptInputCommandGroup> for ShadcnCommandGroup {
+    fn from(value: PromptInputCommandGroup) -> Self {
+        value.into_inner()
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct PromptInputCommandSeparator {
+    inner: ShadcnCommandSeparator,
+}
+
+impl PromptInputCommandSeparator {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn always_render(mut self, always_render: bool) -> Self {
+        self.inner = self.inner.always_render(always_render);
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.test_id(test_id);
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnCommandSeparator {
+        self.inner
+    }
+}
+
+impl From<PromptInputCommandSeparator> for ShadcnCommandSeparator {
+    fn from(value: PromptInputCommandSeparator) -> Self {
+        value.into_inner()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PromptInputCommandEmpty {
+    inner: ShadcnCommandEmpty,
+}
+
+impl PromptInputCommandEmpty {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            inner: ShadcnCommandEmpty::new(text),
+        }
+    }
+
+    pub fn into_inner(self) -> ShadcnCommandEmpty {
+        self.inner
+    }
+}
+
 /// Children accepted by [`PromptInputHeader`].
 ///
 /// This enum exists so docs-shaped prompt-input composition can include prompt-scoped parts (like
@@ -4094,6 +5220,81 @@ mod tests {
                         ])),
                         PromptInputPart::from(PromptInputFooter::new(
                             [tools],
+                            [PromptInputSubmit::new()],
+                        )),
+                    ])
+                    .into_element(cx)
+            });
+    }
+
+    #[test]
+    fn prompt_input_cursor_wrappers_integrate_with_docs_shaped_header_lane() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(220.0)),
+        );
+
+        let mut app = App::new();
+        let on_submit: OnPromptInputSubmit = Arc::new(|_host, _action_cx, _message, _reason| {});
+
+        let _element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "prompt-input", |cx| {
+                let command = PromptInputCommand::new()
+                    .input(
+                        PromptInputCommandInput::new().placeholder("Add files, folders, docs..."),
+                    )
+                    .list(
+                        PromptInputCommandList::new()
+                            .empty(PromptInputCommandEmpty::new("No results found."))
+                            .group(
+                                PromptInputCommandGroup::new()
+                                    .heading("Added")
+                                    .item(PromptInputCommandItem::new("Active Tabs")),
+                            )
+                            .separator(PromptInputCommandSeparator::new())
+                            .group(
+                                PromptInputCommandGroup::new()
+                                    .heading("Other Files")
+                                    .item(PromptInputCommandItem::new("prompt-input.rs")),
+                            ),
+                    )
+                    .into_element(cx);
+
+                let tabs = PromptInputTabsList::new().child(
+                    PromptInputTab::new()
+                        .label(PromptInputTabLabel::new("Active Tabs"))
+                        .body(
+                            PromptInputTabBody::new()
+                                .item(PromptInputTabItem::new([cx.text("src/prompt_input.rs")])),
+                        ),
+                );
+                assert_eq!(tabs.children.len(), 1);
+
+                let hover = PromptInputHoverCard::new()
+                    .trigger(PromptInputHoverCardTrigger::new(
+                        PromptInputButton::new("Tabs").into_element(cx),
+                    ))
+                    .content(PromptInputHoverCardContent::new([
+                        command,
+                        tabs.into_element(cx),
+                    ]));
+                let header = PromptInputHeader::new([hover.into_element(cx)]);
+                assert_eq!(header.children.len(), 1);
+                assert!(matches!(
+                    header.children[0],
+                    PromptInputHeaderChild::Element(_)
+                ));
+
+                PromptInput::new_uncontrolled()
+                    .on_submit(on_submit.clone())
+                    .children([
+                        PromptInputPart::from(header),
+                        PromptInputPart::from(PromptInputBody::new([
+                            PromptInputTextarea::new().test_id("pi-textarea")
+                        ])),
+                        PromptInputPart::from(PromptInputFooter::new(
+                            std::iter::empty::<AnyElement>(),
                             [PromptInputSubmit::new()],
                         )),
                     ])
