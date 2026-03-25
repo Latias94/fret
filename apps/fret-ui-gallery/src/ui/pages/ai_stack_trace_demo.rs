@@ -23,7 +23,7 @@ pub(super) fn preview_ai_stack_trace_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
         "Mechanism health looked good here: the parity issue was in component defaults and the Gallery teaching surface, not in `crates/fret-ui` overlay or routing contracts.",
         "`StackTraceErrorType` no longer fabricates a fallback `\"Error\"` label when the trace lacks an error-type prefix, matching the official component semantics.",
         "Controlled disclosure stays model-driven in Fret: `open(Model<bool>)` is the analogue of upstream `open` + `onOpenChange`, so this remains a component-surface mapping rather than a missing runtime primitive.",
-        "`StackTraceCopyButton` still models clipboard writes as best-effort effects, so the official `onError` callback is not exposed yet; that gap is infrastructure-facing, not a reason to widen `fret-ui`.",
+        "`StackTraceCopyButton` now exposes both `on_copy` and `on_error`, and the Gallery seam example reports real clipboard completion instead of optimistic copy intent.",
     ]);
 
     let usage_section = DocSection::build(cx, "Usage with Tool Errors", usage)
@@ -125,10 +125,10 @@ fn stack_trace_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "StackTraceCopyButton",
-                "on_copy / timeout",
+                "on_copy / on_error / timeout",
                 "builder methods",
-                "None / 2000ms",
-                "Observes copy success and controls how long the copied state stays visible.",
+                "None / None / 2000ms",
+                "Observes clipboard write success or failure and controls how long the copied state stays visible.",
             ],
             [
                 "StackTraceContent",

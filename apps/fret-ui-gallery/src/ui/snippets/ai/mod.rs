@@ -109,6 +109,8 @@ pub mod attachments_usage;
 #[cfg(feature = "gallery-dev")]
 pub mod audio_player_demo;
 #[cfg(feature = "gallery-dev")]
+pub mod audio_player_remote_demo;
+#[cfg(feature = "gallery-dev")]
 pub mod canvas_world_layer_spike;
 #[cfg(feature = "gallery-dev")]
 pub mod chat_demo;

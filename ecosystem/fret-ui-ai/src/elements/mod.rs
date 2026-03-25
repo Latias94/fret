@@ -6,6 +6,7 @@ mod attachments;
 mod audio_player;
 mod chain_of_thought;
 mod checkpoint;
+mod clipboard_copy;
 mod code_block;
 mod commit;
 mod confirmation;

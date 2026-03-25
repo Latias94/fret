@@ -15,7 +15,7 @@ use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, ui};
 use fret_ui_shadcn::facade::{
     Button, ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupText, ButtonSize,
     ButtonVariant, Slider,
@@ -90,8 +90,6 @@ fn muted_fg(theme: &Theme) -> Color {
 fn transparent_button_group_text_chrome(theme: &Theme) -> ChromeRefinement {
     ChromeRefinement::default()
         .bg(ColorRef::Color(Color::TRANSPARENT))
-        .shadow_none()
-        .border_width(MetricRef::Px(Px(0.0)))
         .text_color(ColorRef::Color(muted_fg(theme)))
 }
 
@@ -174,7 +172,7 @@ impl AudioPlayer {
             on_seek_to: None,
             on_volume_change: None,
             test_id_root: None,
-            layout: LayoutRefinement::default().w_full().min_w_0(),
+            layout: LayoutRefinement::default().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
     }
@@ -257,6 +255,25 @@ impl AudioPlayer {
     pub fn test_id_root(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id_root = Some(id.into());
         self
+    }
+
+    pub fn children<I, C>(self, children: I) -> AudioPlayerWithChildren
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<AudioPlayerChild>,
+    {
+        AudioPlayerWithChildren {
+            root: self,
+            children: children.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    pub fn element(self, element: AudioPlayerElement) -> AudioPlayerWithChildren {
+        self.children([AudioPlayerChild::Element(element)])
+    }
+
+    pub fn control_bar(self, control_bar: AudioPlayerControlBar) -> AudioPlayerWithChildren {
+        self.children([AudioPlayerChild::ControlBar(control_bar)])
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
@@ -378,21 +395,99 @@ impl Default for AudioPlayer {
     }
 }
 
+pub enum AudioPlayerChild {
+    Element(AudioPlayerElement),
+    ControlBar(AudioPlayerControlBar),
+    Node(AnyElement),
+}
+
+impl From<AudioPlayerElement> for AudioPlayerChild {
+    fn from(value: AudioPlayerElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+impl From<AudioPlayerControlBar> for AudioPlayerChild {
+    fn from(value: AudioPlayerControlBar) -> Self {
+        Self::ControlBar(value)
+    }
+}
+
+impl From<AnyElement> for AudioPlayerChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Node(value)
+    }
+}
+
+pub struct AudioPlayerWithChildren {
+    root: AudioPlayer,
+    children: Vec<AudioPlayerChild>,
+}
+
+impl AudioPlayerWithChildren {
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<AudioPlayerChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn element(self, element: AudioPlayerElement) -> Self {
+        self.children([AudioPlayerChild::Element(element)])
+    }
+
+    pub fn control_bar(self, control_bar: AudioPlayerControlBar) -> Self {
+        self.children([AudioPlayerChild::ControlBar(control_bar)])
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self { root, children } = self;
+        root.into_element_with_children(cx, move |cx, _controller| {
+            children
+                .into_iter()
+                .map(|child| match child {
+                    AudioPlayerChild::Element(value) => value.into_element(cx),
+                    AudioPlayerChild::ControlBar(value) => value.into_element(cx),
+                    AudioPlayerChild::Node(value) => value,
+                })
+                .collect()
+        })
+    }
+}
+
 /// Wrapper aligned with AI Elements `AudioPlayerControlBar`.
-#[derive(Debug)]
 pub struct AudioPlayerControlBar {
-    items: Vec<ButtonGroupItem>,
+    children: Vec<AudioPlayerControlBarChild>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
 
 impl AudioPlayerControlBar {
-    pub fn new(items: impl IntoIterator<Item = ButtonGroupItem>) -> Self {
+    pub fn empty() -> Self {
         Self {
-            items: items.into_iter().collect(),
+            children: Vec::new(),
             test_id: None,
-            layout: LayoutRefinement::default().w_full().min_w_0(),
+            layout: LayoutRefinement::default().min_w_0(),
         }
+    }
+
+    pub fn new<I, C>(children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<AudioPlayerControlBarChild>,
+    {
+        Self::empty().children(children)
+    }
+
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<AudioPlayerControlBarChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -405,8 +500,46 @@ impl AudioPlayerControlBar {
         self
     }
 
+    pub fn play_button(self, button: AudioPlayerPlayButton) -> Self {
+        self.children([AudioPlayerControlBarChild::PlayButton(button)])
+    }
+
+    pub fn seek_backward_button(self, button: AudioPlayerSeekBackwardButton) -> Self {
+        self.children([AudioPlayerControlBarChild::SeekBackwardButton(button)])
+    }
+
+    pub fn seek_forward_button(self, button: AudioPlayerSeekForwardButton) -> Self {
+        self.children([AudioPlayerControlBarChild::SeekForwardButton(button)])
+    }
+
+    pub fn time_display(self, display: AudioPlayerTimeDisplay) -> Self {
+        self.children([AudioPlayerControlBarChild::TimeDisplay(display)])
+    }
+
+    pub fn time_range(self, range: AudioPlayerTimeRange) -> Self {
+        self.children([AudioPlayerControlBarChild::TimeRange(range)])
+    }
+
+    pub fn duration_display(self, display: AudioPlayerDurationDisplay) -> Self {
+        self.children([AudioPlayerControlBarChild::DurationDisplay(display)])
+    }
+
+    pub fn mute_button(self, button: AudioPlayerMuteButton) -> Self {
+        self.children([AudioPlayerControlBarChild::MuteButton(button)])
+    }
+
+    pub fn volume_range(self, range: AudioPlayerVolumeRange) -> Self {
+        self.children([AudioPlayerControlBarChild::VolumeRange(range)])
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut el = ButtonGroup::new(self.items).orientation(ButtonGroupOrientation::Horizontal);
+        let items = self
+            .children
+            .into_iter()
+            .map(|child| child.into_group_item(cx))
+            .collect::<Vec<_>>();
+
+        let mut el = ButtonGroup::new(items).orientation(ButtonGroupOrientation::Horizontal);
         el = el.refine_layout(self.layout);
         let el = el.into_element(cx);
 
@@ -418,6 +551,102 @@ impl AudioPlayerControlBar {
                 .role(SemanticsRole::Group)
                 .test_id(test_id),
         )
+    }
+}
+
+impl Default for AudioPlayerControlBar {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
+pub enum AudioPlayerControlBarChild {
+    Item(ButtonGroupItem),
+    PlayButton(AudioPlayerPlayButton),
+    SeekBackwardButton(AudioPlayerSeekBackwardButton),
+    SeekForwardButton(AudioPlayerSeekForwardButton),
+    TimeDisplay(AudioPlayerTimeDisplay),
+    TimeRange(AudioPlayerTimeRange),
+    DurationDisplay(AudioPlayerDurationDisplay),
+    MuteButton(AudioPlayerMuteButton),
+    VolumeRange(AudioPlayerVolumeRange),
+    Node(AnyElement),
+}
+
+impl AudioPlayerControlBarChild {
+    fn into_group_item<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> ButtonGroupItem {
+        match self {
+            Self::Item(value) => value,
+            Self::PlayButton(value) => value.into_group_item(cx),
+            Self::SeekBackwardButton(value) => value.into_group_item(cx),
+            Self::SeekForwardButton(value) => value.into_group_item(cx),
+            Self::TimeDisplay(value) => value.into_group_item(cx),
+            Self::TimeRange(value) => value.into_group_item(cx),
+            Self::DurationDisplay(value) => value.into_group_item(cx),
+            Self::MuteButton(value) => value.into_group_item(cx),
+            Self::VolumeRange(value) => value.into_group_item(cx),
+            Self::Node(value) => value.into(),
+        }
+    }
+}
+
+impl From<ButtonGroupItem> for AudioPlayerControlBarChild {
+    fn from(value: ButtonGroupItem) -> Self {
+        Self::Item(value)
+    }
+}
+
+impl From<AudioPlayerPlayButton> for AudioPlayerControlBarChild {
+    fn from(value: AudioPlayerPlayButton) -> Self {
+        Self::PlayButton(value)
+    }
+}
+
+impl From<AudioPlayerSeekBackwardButton> for AudioPlayerControlBarChild {
+    fn from(value: AudioPlayerSeekBackwardButton) -> Self {
+        Self::SeekBackwardButton(value)
+    }
+}
+
+impl From<AudioPlayerSeekForwardButton> for AudioPlayerControlBarChild {
+    fn from(value: AudioPlayerSeekForwardButton) -> Self {
+        Self::SeekForwardButton(value)
+    }
+}
+
+impl From<AudioPlayerTimeDisplay> for AudioPlayerControlBarChild {
+    fn from(value: AudioPlayerTimeDisplay) -> Self {
+        Self::TimeDisplay(value)
+    }
+}
+
+impl From<AudioPlayerTimeRange> for AudioPlayerControlBarChild {
+    fn from(value: AudioPlayerTimeRange) -> Self {
+        Self::TimeRange(value)
+    }
+}
+
+impl From<AudioPlayerDurationDisplay> for AudioPlayerControlBarChild {
+    fn from(value: AudioPlayerDurationDisplay) -> Self {
+        Self::DurationDisplay(value)
+    }
+}
+
+impl From<AudioPlayerMuteButton> for AudioPlayerControlBarChild {
+    fn from(value: AudioPlayerMuteButton) -> Self {
+        Self::MuteButton(value)
+    }
+}
+
+impl From<AudioPlayerVolumeRange> for AudioPlayerControlBarChild {
+    fn from(value: AudioPlayerVolumeRange) -> Self {
+        Self::VolumeRange(value)
+    }
+}
+
+impl From<AnyElement> for AudioPlayerControlBarChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Node(value)
     }
 }
 
@@ -443,9 +672,9 @@ impl AudioPlayerPlayButton {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn build_button<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> Option<Button> {
         let Some(controller) = use_audio_player_controller(cx) else {
-            return hidden(cx);
+            return None;
         };
 
         let playing_now = cx
@@ -463,7 +692,7 @@ impl AudioPlayerPlayButton {
         let playing = controller.playing.clone();
         let on_playing_change = controller.on_playing_change.clone();
 
-        let mut btn = Button::new(label)
+        let mut button = Button::new(label)
             .variant(ButtonVariant::Outline)
             .size(ButtonSize::IconSm)
             .children([icon])
@@ -480,9 +709,21 @@ impl AudioPlayerPlayButton {
                 host.request_redraw(action_cx.window);
             }));
         if let Some(test_id) = self.test_id {
-            btn = btn.test_id(test_id);
+            button = button.test_id(test_id);
         }
-        btn.into_element(cx)
+        Some(button)
+    }
+
+    fn into_group_item<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> ButtonGroupItem {
+        self.build_button(cx)
+            .map(ButtonGroupItem::from)
+            .unwrap_or_else(|| hidden(cx).into())
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build_button(cx)
+            .map(|button| button.into_element(cx))
+            .unwrap_or_else(|| hidden(cx))
     }
 }
 
@@ -517,9 +758,9 @@ impl AudioPlayerSeekBackwardButton {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn build_button<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> Option<Button> {
         let Some(controller) = use_audio_player_controller(cx) else {
-            return hidden(cx);
+            return None;
         };
 
         let icon = decl_icon::icon(cx, fret_icons::IconId::new_static("lucide.rotate-ccw"));
@@ -534,7 +775,7 @@ impl AudioPlayerSeekBackwardButton {
             .unwrap_or(0.0);
         let max_now = duration_now.max(0.0);
 
-        let mut btn = Button::new("Seek backward")
+        let mut button = Button::new("Seek backward")
             .variant(ButtonVariant::Outline)
             .size(ButtonSize::IconSm)
             .children([icon])
@@ -556,9 +797,21 @@ impl AudioPlayerSeekBackwardButton {
                 host.request_redraw(action_cx.window);
             }));
         if let Some(test_id) = self.test_id {
-            btn = btn.test_id(test_id);
+            button = button.test_id(test_id);
         }
-        btn.into_element(cx)
+        Some(button)
+    }
+
+    fn into_group_item<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> ButtonGroupItem {
+        self.build_button(cx)
+            .map(ButtonGroupItem::from)
+            .unwrap_or_else(|| hidden(cx).into())
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build_button(cx)
+            .map(|button| button.into_element(cx))
+            .unwrap_or_else(|| hidden(cx))
     }
 }
 
@@ -593,9 +846,9 @@ impl AudioPlayerSeekForwardButton {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn build_button<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> Option<Button> {
         let Some(controller) = use_audio_player_controller(cx) else {
-            return hidden(cx);
+            return None;
         };
 
         let icon = decl_icon::icon(cx, fret_icons::IconId::new_static("lucide.rotate-cw"));
@@ -610,7 +863,7 @@ impl AudioPlayerSeekForwardButton {
             .unwrap_or(0.0);
         let max_now = duration_now.max(0.0);
 
-        let mut btn = Button::new("Seek forward")
+        let mut button = Button::new("Seek forward")
             .variant(ButtonVariant::Outline)
             .size(ButtonSize::IconSm)
             .children([icon])
@@ -632,9 +885,21 @@ impl AudioPlayerSeekForwardButton {
                 host.request_redraw(action_cx.window);
             }));
         if let Some(test_id) = self.test_id {
-            btn = btn.test_id(test_id);
+            button = button.test_id(test_id);
         }
-        btn.into_element(cx)
+        Some(button)
+    }
+
+    fn into_group_item<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> ButtonGroupItem {
+        self.build_button(cx)
+            .map(ButtonGroupItem::from)
+            .unwrap_or_else(|| hidden(cx).into())
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build_button(cx)
+            .map(|button| button.into_element(cx))
+            .unwrap_or_else(|| hidden(cx))
     }
 }
 
@@ -660,9 +925,9 @@ impl AudioPlayerTimeDisplay {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn build_text<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> Option<ButtonGroupText> {
         let Some(controller) = use_audio_player_controller(cx) else {
-            return hidden(cx);
+            return None;
         };
 
         let theme = Theme::global(&*cx.app).clone();
@@ -672,17 +937,24 @@ impl AudioPlayerTimeDisplay {
         let time_now = read_single(&time_values, 0.0);
         let text = format_clock(time_now);
 
-        let mut el = ButtonGroupText::new(text)
-            .refine_style(transparent_button_group_text_chrome(&theme))
-            .into_element(cx);
+        let mut text =
+            ButtonGroupText::new(text).refine_style(transparent_button_group_text_chrome(&theme));
         if let Some(test_id) = self.test_id {
-            el = el.attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Text)
-                    .test_id(test_id),
-            );
+            text = text.test_id(test_id);
         }
-        el
+        Some(text)
+    }
+
+    fn into_group_item<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> ButtonGroupItem {
+        self.build_text(cx)
+            .map(ButtonGroupItem::from)
+            .unwrap_or_else(|| hidden(cx).into())
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build_text(cx)
+            .map(|text| text.into_element(cx))
+            .unwrap_or_else(|| hidden(cx))
     }
 }
 
@@ -698,10 +970,9 @@ impl Default for AudioPlayerTimeRange {
         Self {
             test_id: None,
             layout: LayoutRefinement::default()
-                .w_full()
+                .w_px(Px(240.0))
                 .min_w_0()
-                .min_h_0()
-                .flex_1(),
+                .min_h_0(),
         }
     }
 }
@@ -721,11 +992,12 @@ impl AudioPlayerTimeRange {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let Some(controller) = use_audio_player_controller(cx) else {
-            return hidden(cx);
-        };
-
+    fn build_slider<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        controller: AudioPlayerController,
+        test_id: Option<Arc<str>>,
+        layout: LayoutRefinement,
+    ) -> Slider {
         let duration_now = cx
             .get_model_copied(&controller.duration_secs, Invalidation::Layout)
             .unwrap_or(0.0);
@@ -736,7 +1008,7 @@ impl AudioPlayerTimeRange {
             .range(0.0, max)
             .step(1.0)
             .a11y_label("Seek")
-            .refine_layout(self.layout)
+            .refine_layout(layout)
             .on_value_commit(move |host, action_cx, values| {
                 let secs = read_single(&values, 0.0);
                 if let Some(cb) = on_seek_to.clone() {
@@ -745,10 +1017,41 @@ impl AudioPlayerTimeRange {
                 host.notify(action_cx);
                 host.request_redraw(action_cx.window);
             });
-        if let Some(test_id) = self.test_id {
+        if let Some(test_id) = test_id {
             slider = slider.test_id(test_id);
         }
-        slider.into_element(cx)
+        slider
+    }
+
+    fn into_group_item<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> ButtonGroupItem {
+        let Some(controller) = use_audio_player_controller(cx) else {
+            return hidden(cx).into();
+        };
+        let theme = Theme::global(&*cx.app).clone();
+        let slider = Self::build_slider(
+            cx,
+            controller,
+            self.test_id,
+            LayoutRefinement::default().w_full().min_w_0().min_h_0(),
+        )
+        .into_element(cx);
+        let slider = ui::h_flex(move |_cx| [slider])
+            .layout(LayoutRefinement::default().w_full().h_full().min_w_0())
+            .items_center()
+            .into_element(cx);
+
+        ButtonGroupText::new_children([slider])
+            .refine_layout(self.layout)
+            .refine_style(transparent_button_group_text_chrome(&theme))
+            .into()
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Some(controller) = use_audio_player_controller(cx) else {
+            return hidden(cx);
+        };
+
+        Self::build_slider(cx, controller, self.test_id, self.layout).into_element(cx)
     }
 }
 
@@ -774,9 +1077,9 @@ impl AudioPlayerDurationDisplay {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn build_text<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> Option<ButtonGroupText> {
         let Some(controller) = use_audio_player_controller(cx) else {
-            return hidden(cx);
+            return None;
         };
 
         let theme = Theme::global(&*cx.app).clone();
@@ -785,17 +1088,24 @@ impl AudioPlayerDurationDisplay {
             .unwrap_or(0.0);
         let text = format_clock(duration_now);
 
-        let mut el = ButtonGroupText::new(text)
-            .refine_style(transparent_button_group_text_chrome(&theme))
-            .into_element(cx);
+        let mut text =
+            ButtonGroupText::new(text).refine_style(transparent_button_group_text_chrome(&theme));
         if let Some(test_id) = self.test_id {
-            el = el.attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Text)
-                    .test_id(test_id),
-            );
+            text = text.test_id(test_id);
         }
-        el
+        Some(text)
+    }
+
+    fn into_group_item<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> ButtonGroupItem {
+        self.build_text(cx)
+            .map(ButtonGroupItem::from)
+            .unwrap_or_else(|| hidden(cx).into())
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build_text(cx)
+            .map(|text| text.into_element(cx))
+            .unwrap_or_else(|| hidden(cx))
     }
 }
 
@@ -821,9 +1131,9 @@ impl AudioPlayerMuteButton {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn build_button<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> Option<Button> {
         let Some(controller) = use_audio_player_controller(cx) else {
-            return hidden(cx);
+            return None;
         };
 
         let muted_now = cx
@@ -841,8 +1151,8 @@ impl AudioPlayerMuteButton {
         let muted = controller.muted.clone();
         let on_mute_change = controller.on_mute_change.clone();
 
-        let mut btn = Button::new(label)
-            .variant(ButtonVariant::Outline)
+        let mut button = Button::new(label)
+            .variant(ButtonVariant::Ghost)
             .size(ButtonSize::IconSm)
             .children([icon])
             .on_activate(Arc::new(move |host, action_cx, _reason| {
@@ -858,9 +1168,21 @@ impl AudioPlayerMuteButton {
                 host.request_redraw(action_cx.window);
             }));
         if let Some(test_id) = self.test_id {
-            btn = btn.test_id(test_id);
+            button = button.test_id(test_id);
         }
-        btn.into_element(cx)
+        Some(button)
+    }
+
+    fn into_group_item<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> ButtonGroupItem {
+        self.build_button(cx)
+            .map(ButtonGroupItem::from)
+            .unwrap_or_else(|| hidden(cx).into())
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build_button(cx)
+            .map(|button| button.into_element(cx))
+            .unwrap_or_else(|| hidden(cx))
     }
 }
 
@@ -895,18 +1217,19 @@ impl AudioPlayerVolumeRange {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let Some(controller) = use_audio_player_controller(cx) else {
-            return hidden(cx);
-        };
-
+    fn build_slider<H: UiHost>(
+        _cx: &mut ElementContext<'_, H>,
+        controller: AudioPlayerController,
+        test_id: Option<Arc<str>>,
+        layout: LayoutRefinement,
+    ) -> Slider {
         let on_volume_change = controller.on_volume_change.clone();
 
         let mut slider = Slider::new(controller.volume.clone())
             .range(0.0, 1.0)
             .step(0.01)
             .a11y_label("Volume")
-            .refine_layout(self.layout)
+            .refine_layout(layout)
             .on_value_commit(move |host, action_cx, values| {
                 let v = clamp_f32(read_single(&values, 1.0), 0.0, 1.0);
                 if let Some(cb) = on_volume_change.clone() {
@@ -915,31 +1238,104 @@ impl AudioPlayerVolumeRange {
                 host.notify(action_cx);
                 host.request_redraw(action_cx.window);
             });
-        if let Some(test_id) = self.test_id {
+        if let Some(test_id) = test_id {
             slider = slider.test_id(test_id);
         }
-        slider.into_element(cx)
+        slider
     }
+
+    fn into_group_item<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> ButtonGroupItem {
+        let Some(controller) = use_audio_player_controller(cx) else {
+            return hidden(cx).into();
+        };
+        let theme = Theme::global(&*cx.app).clone();
+        let slider = Self::build_slider(
+            cx,
+            controller,
+            self.test_id,
+            LayoutRefinement::default().w_full().min_w_0(),
+        )
+        .into_element(cx);
+        let slider = ui::h_flex(move |_cx| [slider])
+            .layout(LayoutRefinement::default().w_full().h_full().min_w_0())
+            .items_center()
+            .into_element(cx);
+
+        ButtonGroupText::new_children([slider])
+            .refine_layout(self.layout)
+            .refine_style(transparent_button_group_text_chrome(&theme))
+            .into()
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Some(controller) = use_audio_player_controller(cx) else {
+            return hidden(cx);
+        };
+
+        Self::build_slider(cx, controller, self.test_id, self.layout).into_element(cx)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AudioPlayerSpeechData {
+    pub base64: Arc<str>,
+    pub format: Arc<str>,
+    pub media_type: Arc<str>,
+}
+
+impl AudioPlayerSpeechData {
+    pub fn new(
+        base64: impl Into<Arc<str>>,
+        format: impl Into<Arc<str>>,
+        media_type: impl Into<Arc<str>>,
+    ) -> Self {
+        Self {
+            base64: base64.into(),
+            format: format.into(),
+            media_type: media_type.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum AudioPlayerElementSource {
+    Remote(Arc<str>),
+    SpeechData(AudioPlayerSpeechData),
 }
 
 /// Minimal placeholder aligned with AI Elements `AudioPlayerElement`.
 ///
 /// Note: `fret-ui-ai` does not embed an audio backend. Apps are expected to own actual playback
-/// and drive the `AudioPlayerController` models.
+/// and drive the `AudioPlayerController` models. The source builders exist so the public
+/// authoring surface can stay aligned with the official AI Elements docs/examples.
 #[derive(Debug, Clone)]
 pub struct AudioPlayerElement {
+    source: Option<AudioPlayerElementSource>,
     test_id: Option<Arc<str>>,
 }
 
 impl Default for AudioPlayerElement {
     fn default() -> Self {
-        Self { test_id: None }
+        Self {
+            source: None,
+            test_id: None,
+        }
     }
 }
 
 impl AudioPlayerElement {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn src(mut self, src: impl Into<Arc<str>>) -> Self {
+        self.source = Some(AudioPlayerElementSource::Remote(src.into()));
+        self
+    }
+
+    pub fn speech_data(mut self, data: AudioPlayerSpeechData) -> Self {
+        self.source = Some(AudioPlayerElementSource::SpeechData(data));
+        self
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -984,6 +1380,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_ui::element::{AnyElement, ElementKind};
+    use fret_ui_kit::{LengthRefinement, MetricRef};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -1024,6 +1421,51 @@ mod tests {
     }
 
     #[test]
+    fn audio_player_docs_shaped_children_surface_renders_element_and_control_bar() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                AudioPlayer::new()
+                    .element(AudioPlayerElement::new().test_id("audio-player-element"))
+                    .control_bar(
+                        AudioPlayerControlBar::empty()
+                            .test_id("audio-player-controls")
+                            .play_button(AudioPlayerPlayButton::new().test_id("audio-player-play"))
+                            .time_display(AudioPlayerTimeDisplay::new()),
+                    )
+                    .into_element(cx)
+            });
+
+        assert!(has_test_id(&element, "audio-player-element"));
+        assert!(has_test_id(&element, "audio-player-controls"));
+    }
+
+    #[test]
+    fn audio_player_element_docs_shaped_sources_are_stored() {
+        let remote = AudioPlayerElement::new().src("https://example.com/audio.mp3");
+        assert_eq!(
+            remote.source,
+            Some(AudioPlayerElementSource::Remote(Arc::<str>::from(
+                "https://example.com/audio.mp3"
+            )))
+        );
+
+        let speech = AudioPlayerElement::new().speech_data(AudioPlayerSpeechData::new(
+            "ZGF0YQ==",
+            "mp3",
+            "audio/mpeg",
+        ));
+        assert_eq!(
+            speech.source,
+            Some(AudioPlayerElementSource::SpeechData(
+                AudioPlayerSpeechData::new("ZGF0YQ==", "mp3", "audio/mpeg",)
+            ))
+        );
+    }
+
+    #[test]
     fn audio_player_element_uses_shared_sm_typography_preset() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1047,5 +1489,69 @@ mod tests {
                 None,
             ))
         );
+    }
+
+    #[test]
+    fn audio_player_defaults_to_intrinsic_width_layout() {
+        let root = AudioPlayer::new();
+
+        assert!(matches!(
+            root.layout
+                .size
+                .as_ref()
+                .and_then(|size| size.width.as_ref()),
+            None
+        ));
+        assert!(matches!(
+            root.layout
+                .size
+                .as_ref()
+                .and_then(|size| size.min_width.as_ref()),
+            Some(LengthRefinement::Px(MetricRef::Px(px))) if *px == Px(0.0)
+        ));
+    }
+
+    #[test]
+    fn audio_player_control_bar_defaults_to_intrinsic_width_layout() {
+        let control_bar = AudioPlayerControlBar::empty();
+
+        assert!(matches!(
+            control_bar
+                .layout
+                .size
+                .as_ref()
+                .and_then(|size| size.width.as_ref()),
+            None
+        ));
+        assert!(matches!(
+            control_bar
+                .layout
+                .size
+                .as_ref()
+                .and_then(|size| size.min_width.as_ref()),
+            Some(LengthRefinement::Px(MetricRef::Px(px))) if *px == Px(0.0)
+        ));
+    }
+
+    #[test]
+    fn audio_player_time_range_defaults_to_docs_width_instead_of_flex_fill() {
+        let time_range = AudioPlayerTimeRange::new();
+
+        assert!(matches!(
+            time_range
+                .layout
+                .size
+                .as_ref()
+                .and_then(|size| size.width.as_ref()),
+            Some(LengthRefinement::Px(MetricRef::Px(px))) if *px == Px(240.0)
+        ));
+        assert!(matches!(
+            time_range
+                .layout
+                .flex_item
+                .as_ref()
+                .and_then(|item| item.grow),
+            None
+        ));
     }
 }

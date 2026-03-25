@@ -1,0 +1,89 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai stack trace" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-stack-trace-demo" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-stack-trace-demo" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-stack-trace-root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-ai-stack-trace-root" },
+      "delta_y": -180.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-stack-trace-copy" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "set_clipboard_force_unavailable", "enabled": true },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-ai-stack-trace-copy" }
+    },
+    {
+      "type": "assert_clipboard_write_result",
+      "outcome": "failure",
+      "error_kind": "unavailable",
+      "message_contains": "diagnostics forced clipboard unavailable",
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-ai-stack-trace-copied-marker" }
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-ai-stack-trace-status" },
+        "text": "Copy failed"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "set_clipboard_force_unavailable", "enabled": false },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-ai-stack-trace-demo-copy-write-failure"
+    }
+  ]
+}

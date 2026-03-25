@@ -181,6 +181,26 @@ impl MicSelector {
         self
     }
 
+    /// Docs-shaped compound children composition aligned with upstream `<MicSelector>...</MicSelector>`.
+    pub fn children<I, C>(self, children: I) -> MicSelectorWithChildren
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<MicSelectorChild>,
+    {
+        MicSelectorWithChildren {
+            root: self,
+            children: children.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    pub fn trigger(self, trigger: MicSelectorTrigger) -> MicSelectorWithChildren {
+        self.children([MicSelectorChild::Trigger(trigger)])
+    }
+
+    pub fn content(self, content: MicSelectorContent) -> MicSelectorWithChildren {
+        self.children([MicSelectorChild::Content(content)])
+    }
+
     /// Rust-friendly compound entrypoint for the upstream JSX children shape.
     ///
     /// This mirrors the existing AI Elements pattern used elsewhere in the repo: descendants are
@@ -285,9 +305,104 @@ impl MicSelector {
     }
 }
 
+pub enum MicSelectorChild {
+    Trigger(MicSelectorTrigger),
+    Content(MicSelectorContent),
+}
+
+impl std::fmt::Debug for MicSelectorChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Trigger(_) => f.write_str("MicSelectorChild::Trigger(..)"),
+            Self::Content(_) => f.write_str("MicSelectorChild::Content(..)"),
+        }
+    }
+}
+
+impl From<MicSelectorTrigger> for MicSelectorChild {
+    fn from(value: MicSelectorTrigger) -> Self {
+        Self::Trigger(value)
+    }
+}
+
+impl From<MicSelectorContent> for MicSelectorChild {
+    fn from(value: MicSelectorContent) -> Self {
+        Self::Content(value)
+    }
+}
+
+pub struct MicSelectorWithChildren {
+    root: MicSelector,
+    children: Vec<MicSelectorChild>,
+}
+
+impl std::fmt::Debug for MicSelectorWithChildren {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MicSelectorWithChildren")
+            .field("root", &self.root)
+            .field("children_len", &self.children.len())
+            .finish()
+    }
+}
+
+impl MicSelectorWithChildren {
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<MicSelectorChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn trigger(self, trigger: MicSelectorTrigger) -> Self {
+        self.children([MicSelectorChild::Trigger(trigger)])
+    }
+
+    pub fn content(self, content: MicSelectorContent) -> Self {
+        self.children([MicSelectorChild::Content(content)])
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut trigger = None;
+        let mut content = None;
+
+        for child in self.children {
+            match child {
+                MicSelectorChild::Trigger(value) => {
+                    if trigger.is_some() {
+                        debug_assert!(false, "MicSelector expects a single MicSelectorTrigger");
+                    }
+                    trigger = Some(value);
+                }
+                MicSelectorChild::Content(value) => {
+                    if content.is_some() {
+                        debug_assert!(false, "MicSelector expects a single MicSelectorContent");
+                    }
+                    content = Some(value);
+                }
+            }
+        }
+
+        let Some(trigger) = trigger else {
+            debug_assert!(false, "MicSelector requires a MicSelectorTrigger");
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
+        };
+
+        let content = content.unwrap_or_else(|| MicSelectorContent::new(Vec::<AnyElement>::new()));
+
+        self.root.into_element(
+            cx,
+            move |cx| trigger.into_element(cx),
+            move |cx| content.into_element(cx),
+        )
+    }
+}
+
 /// AI Elements-aligned `MicSelectorTrigger`.
 pub struct MicSelectorTrigger {
     children: Vec<AnyElement>,
+    value: Option<MicSelectorValue>,
     disabled: bool,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -297,6 +412,7 @@ impl std::fmt::Debug for MicSelectorTrigger {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MicSelectorTrigger")
             .field("children_len", &self.children.len())
+            .field("has_value", &self.value.is_some())
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
@@ -308,10 +424,16 @@ impl MicSelectorTrigger {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             children: children.into_iter().collect(),
+            value: None,
             disabled: false,
             test_id: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
         }
+    }
+
+    pub fn value(mut self, value: MicSelectorValue) -> Self {
+        self.value = Some(value);
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -340,6 +462,9 @@ impl MicSelectorTrigger {
             fret_icons::IconId::new_static("lucide.chevrons-up-down"),
         );
         let mut children = self.children;
+        if let Some(value) = self.value {
+            children.push(value.into_element(cx));
+        }
         children.push(icon);
 
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _| {
@@ -368,6 +493,8 @@ impl MicSelectorTrigger {
 /// AI Elements-aligned `MicSelectorContent` (PopoverContent + Command container).
 pub struct MicSelectorContent {
     children: Vec<AnyElement>,
+    input: Option<MicSelectorInput>,
+    list: Option<MicSelectorList>,
     popover_chrome: ChromeRefinement,
     popover_layout: LayoutRefinement,
     command_chrome: ChromeRefinement,
@@ -379,6 +506,8 @@ impl std::fmt::Debug for MicSelectorContent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MicSelectorContent")
             .field("children_len", &self.children.len())
+            .field("has_input", &self.input.is_some())
+            .field("has_list", &self.list.is_some())
             .field("popover_layout", &self.popover_layout)
             .field("test_id_root", &self.test_id_root.as_deref())
             .finish()
@@ -389,12 +518,24 @@ impl MicSelectorContent {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             children: children.into_iter().collect(),
+            input: None,
+            list: None,
             popover_chrome: ChromeRefinement::default().p(Space::N0),
             popover_layout: LayoutRefinement::default().min_w_0(),
             command_chrome: ChromeRefinement::default(),
             command_layout: LayoutRefinement::default().w_full().min_w_0(),
             test_id_root: None,
         }
+    }
+
+    pub fn input(mut self, input: MicSelectorInput) -> Self {
+        self.input = Some(input);
+        self
+    }
+
+    pub fn list(mut self, list: MicSelectorList) -> Self {
+        self.list = Some(list);
+        self
     }
 
     pub fn test_id_root(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -423,7 +564,20 @@ impl MicSelectorContent {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let command = Command::new(self.children)
+        let mut children = Vec::with_capacity(
+            self.children.len()
+                + usize::from(self.input.is_some())
+                + usize::from(self.list.is_some()),
+        );
+        if let Some(input) = self.input {
+            children.push(input.into_element(cx));
+        }
+        if let Some(list) = self.list {
+            children.push(list.into_element(cx));
+        }
+        children.extend(self.children);
+
+        let command = Command::new(children)
             .refine_style(self.command_chrome)
             .refine_layout(self.command_layout)
             .into_element(cx);
@@ -903,6 +1057,14 @@ impl MicSelectorList {
         self
     }
 
+    /// Rust-friendly render-prop equivalent of upstream `<MicSelectorList>{(devices) => ...}</MicSelectorList>`.
+    pub fn children<F>(self, children: F) -> MicSelectorListWithChildren<F> {
+        MicSelectorListWithChildren {
+            list: self,
+            children,
+        }
+    }
+
     fn auto_entries<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         devices: &[MicSelectorDevice],
@@ -953,7 +1115,7 @@ impl MicSelectorList {
     ) -> AnyElement
     where
         H: UiHost,
-        F: FnOnce(&mut ElementContext<'_, H>, Arc<[MicSelectorDevice]>) -> I,
+        F: for<'a> FnOnce(&mut ElementContext<'a, H>, Arc<[MicSelectorDevice]>) -> I,
         I: IntoIterator<Item = MicSelectorItem>,
     {
         let Some(controller) = use_mic_selector_controller(cx) else {
@@ -994,6 +1156,50 @@ impl MicSelectorList {
     }
 }
 
+pub struct MicSelectorListWithChildren<F> {
+    list: MicSelectorList,
+    children: F,
+}
+
+impl<F> std::fmt::Debug for MicSelectorListWithChildren<F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MicSelectorListWithChildren")
+            .field("list", &self.list)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<F> MicSelectorListWithChildren<F> {
+    pub fn empty(mut self, empty: MicSelectorEmpty) -> Self {
+        self.list = self.list.empty(empty);
+        self
+    }
+
+    pub fn empty_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.list = self.list.empty_text(text);
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.list = self.list.test_id_prefix(prefix);
+        self
+    }
+
+    pub fn refine_scroll_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.list = self.list.refine_scroll_layout(layout);
+        self
+    }
+
+    pub fn into_element<H, I>(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        H: UiHost,
+        F: for<'a> FnOnce(&mut ElementContext<'a, H>, Arc<[MicSelectorDevice]>) -> I,
+        I: IntoIterator<Item = MicSelectorItem>,
+    {
+        self.list.into_element_with_children(cx, self.children)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1017,6 +1223,17 @@ mod tests {
                 .iter()
                 .find_map(|child| find_text_by_content(child, needle)),
         }
+    }
+
+    fn explicit_mic_selector_entries<H: UiHost>(
+        _cx: &mut ElementContext<'_, H>,
+        devices: Arc<[MicSelectorDevice]>,
+    ) -> Vec<MicSelectorItem> {
+        devices
+            .iter()
+            .cloned()
+            .map(|device| MicSelectorItem::new(device.label.clone()).value(device.id.clone()))
+            .collect()
     }
 
     #[test]
@@ -1080,5 +1297,61 @@ mod tests {
 
         let device_id = find_text_by_content(&element, " (1234:abcd)").expect("device id text");
         assert_eq!(device_id.style, expected);
+    }
+
+    #[test]
+    fn mic_selector_compound_children_surface_builds() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let devices = Arc::from([MicSelectorDevice::new(
+            "default",
+            "Default Microphone (1234:abcd)",
+        )]);
+
+        let _element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                MicSelector::from_arc(devices)
+                    .default_open(true)
+                    .children([
+                        MicSelectorChild::Trigger(
+                            MicSelectorTrigger::new([])
+                                .value(MicSelectorValue::new())
+                                .test_id("mic-selector-trigger"),
+                        ),
+                        MicSelectorChild::Content(
+                            MicSelectorContent::new([])
+                                .input(MicSelectorInput::new())
+                                .list(
+                                    MicSelectorList::new_entries(Vec::<MicSelectorItem>::new())
+                                        .empty(MicSelectorEmpty::new()),
+                                )
+                                .test_id_root("mic-selector-content"),
+                        ),
+                    ])
+                    .into_element(cx)
+            });
+    }
+
+    #[test]
+    fn mic_selector_list_children_builder_builds() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let device = MicSelectorDevice::new("usb-mic", "Podcast Mic (1234:abcd)");
+        let controller = MicSelectorController {
+            devices: Arc::from([device.clone()]),
+            value: app.models_mut().insert(None),
+            open: app.models_mut().insert(false),
+            query: app.models_mut().insert(String::new()),
+            on_value_change: None,
+        };
+
+        let _element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                cx.provide(controller, |cx| {
+                    MicSelectorList::new()
+                        .children(explicit_mic_selector_entries::<App>)
+                        .into_element(cx)
+                })
+            });
     }
 }

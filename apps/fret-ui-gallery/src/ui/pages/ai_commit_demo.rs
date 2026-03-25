@@ -70,8 +70,8 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "CommitCopyButton",
-                "new(hash) | children(...) | on_copy(...) | timeout(...)",
-                "Matches upstream copied-state suppression, keeps the icon slot overridable, and exposes an app-owned success hook; `onError` is still not surfaced because clipboard writes are fire-and-forget today.",
+                "new(hash) | children(...) | on_copy(...) | on_error(...) | timeout(...)",
+                "Matches upstream copied-state suppression, keeps the icon slot overridable, and exposes app-owned success and failure hooks driven by real clipboard completion.",
             ],
             [
                 "CommitContent / CommitFiles / CommitFile / CommitFileInfo",
@@ -118,7 +118,7 @@ pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<A
         "Mechanism/lifecycle looks healthy here: existing copy + large-list diag gates already cover toggle, copy feedback, and scroll seams.",
         "The remaining work here is public-surface parity, not runtime mechanism: `Commit` now exposes the upstream-style compound root plus the documented custom-content slots on the common leaf surfaces used by the Gallery snippets.",
         "Rust now supports the docs-style `Commit::root().children([header, content])` lane; `Commit::new(header, content)` stays as the eager convenience builder.",
-        "The main intentional API gap versus the web source is `CommitCopyButton.onError`: Fret clipboard writes are currently fire-and-forget effects, so the component does not yet receive a structured failure callback.",
+        "`CommitCopyButton` now exposes `on_error`, so copy feedback can stay completion-driven without widening `crates/fret-ui`.",
         "`CommitFilePath::on_click(...)` remains an intentional Fret-only seam so apps can own file-open effects without pushing policy into `fret-ui`.",
         "This detail page is gated behind `gallery-dev`, which is also required for the wider `fret-ui-ai` surfaces in UI Gallery.",
     ]);

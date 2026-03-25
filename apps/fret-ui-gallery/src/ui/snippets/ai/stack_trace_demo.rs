@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("stack_trace_demo.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
+use fret_ui::element::SemanticsDecoration;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
@@ -23,6 +24,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let _ = host.models_mut().update(&status, |text| {
                 *text = Arc::<str>::from("Copied stack trace")
             });
+            host.notify(action_cx);
+        }
+    });
+    let on_error = Arc::new({
+        let status = status.clone();
+        move |host: &mut dyn fret_ui::action::UiActionHost,
+              action_cx: fret_ui::action::ActionCx,
+              error: fret_core::ClipboardAccessError| {
+            let label = error
+                .message
+                .unwrap_or_else(|| format!("Copy failed: {:?}", error.kind));
+            let _ = host
+                .models_mut()
+                .update(&status, |text| *text = Arc::<str>::from(label));
             host.notify(action_cx);
         }
     });
@@ -65,6 +80,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ui_ai::StackTraceActions::new([
                         ui_ai::StackTraceCopyButton::default()
                             .on_copy(on_copy)
+                            .on_error(on_error)
                             .test_id("ui-ai-stack-trace-copy")
                             .copied_marker_test_id("ui-ai-stack-trace-copied-marker")
                             .into_element(cx),
@@ -87,7 +103,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             cx.text("StackTrace (AI Elements)"),
             cx.text("Docs-aligned compound parts API with copy + file-open seams."),
             stack,
-            cx.text(format!("Status: {status_text}")),
+            cx.text(format!("Status: {status_text}")).attach_semantics(
+                SemanticsDecoration::default().test_id("ui-ai-stack-trace-status"),
+            ),
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())

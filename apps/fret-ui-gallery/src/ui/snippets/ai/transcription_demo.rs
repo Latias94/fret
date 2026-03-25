@@ -86,6 +86,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .update(&current_time, |v| *v = next.max(0.0));
             }
         }))
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .refine_style(ChromeRefinement::default().p(Space::N3))
         .into_element_with_children(cx, move |cx, _controller| {
             let transport_row = ui::h_flex(move |cx| {
@@ -93,6 +94,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ui_ai::AudioPlayerSeekBackwardButton::new().into_element(cx),
                     ui_ai::AudioPlayerTimeDisplay::new().into_element(cx),
                     ui_ai::AudioPlayerTimeRange::new()
+                        .refine_layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
                         .test_id("ui-ai-transcription-demo-scrubber")
                         .into_element(cx),
                     ui_ai::AudioPlayerDurationDisplay::new().into_element(cx),

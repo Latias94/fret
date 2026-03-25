@@ -15,7 +15,7 @@ pub(super) fn preview_ai_snippet_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         "SnippetCopyButton now also accepts caller-owned visual children while preserving the built-in copy/check icon as the zero-config path.",
     ]);
     let notes = doc_layout::notes_block([
-        "Remaining public-surface gap vs upstream props: Fret still does not expose an `onError` callback because clipboard writes remain best-effort runtime effects.",
+        "Clipboard copy semantics are now honest: `SnippetCopyButton.on_copy` runs after write success, and `on_error` exposes structured clipboard failures.",
         "This page now mirrors the official AI Elements Snippet docs path after skipping Installation: Usage, Features, Without Prefix, and Props. `Composable Children (Fret)` and `Notes` stay as explicit Fret follow-ups.",
         "`gallery-dev` enables the UI Gallery AI Elements surface by turning on `gallery-ai`, so this page only appears when that feature set is compiled in.",
     ]);
@@ -124,10 +124,10 @@ fn snippet_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "SnippetCopyButton",
-                "on_copy / timeout",
+                "on_copy / on_error / timeout",
                 "builder methods",
-                "None / 2s",
-                "Runs app-owned side effects after the copy intent and controls how long the copied state stays active.",
+                "None / None / 2s",
+                "Runs app-owned side effects after clipboard write success, exposes structured failure callbacks, and controls how long the copied state stays active.",
             ],
             [
                 "Snippet / CopyButton",

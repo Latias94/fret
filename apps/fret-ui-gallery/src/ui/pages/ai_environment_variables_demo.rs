@@ -41,8 +41,8 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "EnvironmentVariableCopyButton",
-                "new() | children(...) | copy_format(...) | on_copy(...) | timeout(...)",
-                "Custom button content is now supported. `onError` is still intentionally absent because clipboard writes remain fire-and-forget effects in Fret.",
+                "new() | children(...) | copy_format(...) | on_copy(...) | on_error(...) | timeout(...)",
+                "Custom button content is now supported, and copy callbacks are driven by real clipboard success/failure outcomes.",
             ],
         ],
         false,
@@ -63,11 +63,12 @@ pub(super) fn preview_ai_environment_variables_demo(
         "Required badge indicator",
     ]);
     let findings = doc_layout::notes_block([
-        "机制层看起来是健康的：显示/隐藏状态、复制反馈和可选文本切换都还停留在 `fret-ui-ai` 组件层，没有发现需要下沉到 `crates/fret-ui` 的问题。",
-        "当前主要问题在公共 surface 和教学面：`EnvironmentVariablesTitle` 之外，`EnvironmentVariableName` / `Value` / `Required` / `CopyButton` 现在也补上了 upstream-style children 覆盖能力。",
-        "根和行仍然保持 `into_element_with_children(...)` 的闭包式 authoring，这不是机制缺陷，而是为了先安装 provider/context，再让子部件读取继承状态。",
-        "自定义 `EnvironmentVariableValue` children 会接管可见内容，不再走默认的 mask/unmask 文本路径，这与官方实现的 `children ?? displayValue` 语义一致。",
-        "这页仍然要求 `gallery-dev` feature，AI Elements 的 wider surface 也依赖这个开关。",
+        "Mechanism health looks good here: show/hide state, copy feedback, and selectable text toggling all remain in `fret-ui-ai`, with no evidence that the behavior should move into `crates/fret-ui`.",
+        "The remaining work was public-surface and teaching alignment: beyond `EnvironmentVariablesTitle`, `EnvironmentVariableName` / `Value` / `Required` / `CopyButton` now expose upstream-style children overrides.",
+        "The root and row surfaces intentionally keep `into_element_with_children(...)` because provider/context state must exist before descendant parts resolve inherited values.",
+        "Custom `EnvironmentVariableValue` children take over the visible content instead of the default mask/unmask path, matching the official `children ?? displayValue` semantics.",
+        "`EnvironmentVariableCopyButton` now exposes `on_error`, so copy feedback can remain completion-driven on failure as well as success.",
+        "This page still requires the `gallery-dev` feature, which also gates the broader AI Elements surface in UI Gallery.",
     ]);
     let props = parts_props_table(cx);
 

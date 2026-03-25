@@ -1,11 +1,11 @@
 //! AI Elements-aligned `StackTrace` surfaces.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap, TimerToken, Transform2D,
+    ClipboardAccessError, Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole,
+    TextOverflow, TextStyle, TextWrap, Transform2D,
 };
 use fret_icons::ids;
 use fret_runtime::{Effect, Model};
@@ -27,6 +27,10 @@ use fret_ui_kit::{
     Space,
 };
 use fret_ui_shadcn::facade::{Collapsible, CollapsibleContent, CollapsibleTrigger, ScrollArea};
+
+use super::clipboard_copy::{
+    ClipboardCopyFeedbackRef, begin_request, finish_request, handle_reset_timer,
+};
 
 pub type OnStackTraceFilePathClick =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>, Option<u32>, Option<u32>) + 'static>;
@@ -224,27 +228,21 @@ pub fn parse_stack_trace(raw: impl Into<Arc<str>>) -> ParsedStackTrace {
     }
 }
 
-#[derive(Debug, Default)]
-struct CopyFeedback {
-    copied: bool,
-    token: Option<TimerToken>,
-}
-
-#[derive(Clone, Default)]
-struct CopyFeedbackRef(Arc<Mutex<CopyFeedback>>);
-
-impl CopyFeedbackRef {
-    fn lock(&self) -> std::sync::MutexGuard<'_, CopyFeedback> {
-        self.0.lock().unwrap_or_else(|e| e.into_inner())
-    }
-}
-
 /// Copy button aligned with AI Elements `StackTraceCopyButton`.
 #[derive(Clone)]
 pub struct StackTraceCopyButton {
     raw: Option<Arc<str>>,
     on_copy: Option<
         Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static>,
+    >,
+    on_error: Option<
+        Arc<
+            dyn Fn(
+                    &mut dyn fret_ui::action::UiActionHost,
+                    fret_ui::action::ActionCx,
+                    ClipboardAccessError,
+                ) + 'static,
+        >,
     >,
     timeout: Duration,
     test_id: Option<Arc<str>>,
@@ -270,6 +268,7 @@ impl Default for StackTraceCopyButton {
         Self {
             raw: None,
             on_copy: None,
+            on_error: None,
             timeout: Duration::from_millis(2000),
             test_id: None,
             copied_marker_test_id: None,
@@ -285,10 +284,7 @@ impl StackTraceCopyButton {
         }
     }
 
-    /// Called after the copy intent is issued.
-    ///
-    /// Note: this callback does not currently model "copy failed" (platform effects are
-    /// best-effort).
+    /// Called after clipboard write completion succeeds.
     pub fn on_copy(
         mut self,
         on_copy: Arc<
@@ -296,6 +292,21 @@ impl StackTraceCopyButton {
         >,
     ) -> Self {
         self.on_copy = Some(on_copy);
+        self
+    }
+
+    /// Called after clipboard write completion fails.
+    pub fn on_error(
+        mut self,
+        on_error: Arc<
+            dyn Fn(
+                    &mut dyn fret_ui::action::UiActionHost,
+                    fret_ui::action::ActionCx,
+                    ClipboardAccessError,
+                ) + 'static,
+        >,
+    ) -> Self {
+        self.on_error = Some(on_error);
         self
     }
 
@@ -325,15 +336,16 @@ impl StackTraceCopyButton {
             return hidden(cx);
         };
         let theme = Theme::global(&*cx.app).clone();
-        let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
+        let feedback = cx.slot_state(ClipboardCopyFeedbackRef::default, |st| st.clone());
 
         let on_copy = self.on_copy;
+        let on_error = self.on_error;
         let timeout = self.timeout;
         let test_id = self.test_id;
         let copied_marker_test_id = self.copied_marker_test_id;
 
         centered_fixed_chrome_pressable_with_id_props(cx, move |cx, st, id| {
-            let copied = feedback.lock().copied;
+            let copied = feedback.is_copied();
             let label: Arc<str> = if copied {
                 Arc::<str>::from("Copied")
             } else {
@@ -345,12 +357,9 @@ impl StackTraceCopyButton {
                 Arc::new({
                     let feedback = feedback.clone();
                     move |host, action_cx, token| {
-                        let mut feedback = feedback.lock();
-                        if feedback.token != Some(token) {
+                        if !handle_reset_timer(&feedback, token) {
                             return false;
                         }
-                        feedback.token = None;
-                        feedback.copied = false;
                         host.notify(action_cx);
                         host.request_redraw(action_cx.window);
                         true
@@ -358,38 +367,58 @@ impl StackTraceCopyButton {
                 }),
             );
 
+            cx.pressable_on_clipboard_write_completed({
+                let feedback = feedback.clone();
+                let on_copy = on_copy.clone();
+                let on_error = on_error.clone();
+                Arc::new(move |host, action_cx, token, outcome| {
+                    let Some(result) =
+                        finish_request(&feedback, token, outcome, || host.next_timer_token())
+                    else {
+                        return false;
+                    };
+
+                    if let Some(prev_reset) = result.prev_reset {
+                        host.push_effect(Effect::CancelTimer { token: prev_reset });
+                    }
+                    if let Some(reset_token) = result.next_reset {
+                        host.push_effect(Effect::SetTimer {
+                            window: Some(action_cx.window),
+                            token: reset_token,
+                            after: timeout,
+                            repeat: None,
+                        });
+                    }
+                    if let Some(error) = result.error {
+                        if let Some(on_error) = on_error.as_ref() {
+                            on_error(host, action_cx, error);
+                        }
+                    } else if let Some(on_copy) = on_copy.as_ref() {
+                        on_copy(host, action_cx);
+                    }
+                    host.notify(action_cx);
+                    host.request_redraw(action_cx.window);
+                    true
+                })
+            });
+
             cx.pressable_on_activate({
                 let raw = raw.clone();
                 let feedback = feedback.clone();
-                let on_copy = on_copy.clone();
                 Arc::new(move |host, action_cx, _reason| {
-                    host.push_effect(Effect::ClipboardSetText {
-                        text: raw.to_string(),
-                    });
-                    if let Some(on_copy) = on_copy.as_ref() {
-                        on_copy(host, action_cx);
-                    }
-
-                    let (prev, token) = {
-                        let mut feedback = feedback.lock();
-                        let prev = feedback.token.take();
-                        let token = host.next_timer_token();
-                        feedback.copied = true;
-                        feedback.token = Some(token);
-                        (prev, token)
+                    let Some(request) = begin_request(&feedback, || host.next_clipboard_token())
+                    else {
+                        return;
                     };
 
-                    if let Some(prev) = prev {
-                        host.push_effect(Effect::CancelTimer { token: prev });
+                    if let Some(prev_reset) = request.prev_reset {
+                        host.push_effect(Effect::CancelTimer { token: prev_reset });
                     }
-                    host.push_effect(Effect::SetTimer {
-                        window: Some(action_cx.window),
-                        token,
-                        after: timeout,
-                        repeat: None,
+                    host.push_effect(Effect::ClipboardWriteText {
+                        window: action_cx.window,
+                        token: request.clipboard_token,
+                        text: raw.to_string(),
                     });
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
                 })
             });
 

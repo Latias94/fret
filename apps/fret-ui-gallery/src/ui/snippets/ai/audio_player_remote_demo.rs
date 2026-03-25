@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("audio_player_demo.rs");
+pub const SOURCE: &str = include_str!("audio_player_remote_demo.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
@@ -10,9 +10,7 @@ use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-fn demo_speech_data() -> ui_ai::AudioPlayerSpeechData {
-    ui_ai::AudioPlayerSpeechData::new("ZGVtbw==", "mp3", "audio/mpeg")
-}
+const REMOTE_AUDIO_URL: &str = "https://ejiidnob33g9ap1r.public.blob.vercel-storage.com/ElevenLabs_2025-11-10T22_07_46_Hayden_pvc_sp108_s50_sb75_se0_b_m2.mp3";
 
 fn render_demo_audio_player(
     cx: &mut UiCx<'_>,
@@ -25,9 +23,9 @@ fn render_demo_audio_player(
 
     let playing = cx.local_model_keyed(format!("{model_key}-playing"), || false);
     let muted = cx.local_model_keyed(format!("{model_key}-muted"), || false);
-    let time = cx.local_model_keyed(format!("{model_key}-time"), || vec![0.0]);
+    let time = cx.local_model_keyed(format!("{model_key}-time"), || vec![18.0]);
     let duration = cx.local_model_keyed(format!("{model_key}-duration"), || duration_secs);
-    let volume = cx.local_model_keyed(format!("{model_key}-volume"), || vec![0.8]);
+    let volume = cx.local_model_keyed(format!("{model_key}-volume"), || vec![0.65]);
 
     let playing_now = cx
         .get_model_copied(&playing, Invalidation::Paint)
@@ -137,13 +135,13 @@ fn render_demo_audio_player(
     .into_element(cx)
 }
 
-pub fn render_speech_result(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render_remote_audio(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     render_demo_audio_player(
         cx,
-        ui_ai::AudioPlayerElement::new().speech_data(demo_speech_data()),
-        "ui-ai-audio-player-docs-speech",
-        "ui-ai-audio-player-demo",
-        126.0,
+        ui_ai::AudioPlayerElement::new().src(REMOTE_AUDIO_URL),
+        "ui-ai-audio-player-docs-remote",
+        "ui-ai-audio-player-remote",
+        94.0,
     )
 }
 // endregion: example

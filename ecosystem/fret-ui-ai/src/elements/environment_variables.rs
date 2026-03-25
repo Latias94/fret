@@ -4,8 +4,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret_core::{
-    AttributedText, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow,
-    TextSpan, TextStyle, TextWrap, TimerToken,
+    AttributedText, ClipboardAccessError, Color, Corners, Edges, FontId, FontWeight, Px,
+    SemanticsRole, TextOverflow, TextSpan, TextStyle, TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::{Effect, Model};
@@ -25,6 +25,9 @@ use fret_ui_kit::{
 };
 use fret_ui_shadcn::facade::{Badge, BadgeVariant, Switch};
 
+use super::clipboard_copy::{
+    ClipboardCopyFeedbackRef, begin_request, finish_request, handle_reset_timer,
+};
 pub type OnShowValuesChange =
     Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx, bool) + 'static>;
 
@@ -840,27 +843,17 @@ impl Default for EnvironmentVariableCopyFormat {
     }
 }
 
-#[derive(Debug, Default)]
-struct CopyFeedback {
-    copied: bool,
-    token: Option<TimerToken>,
-}
-
-#[derive(Clone, Default)]
-struct CopyFeedbackRef(Arc<std::sync::Mutex<CopyFeedback>>);
-
-impl CopyFeedbackRef {
-    fn lock(&self) -> std::sync::MutexGuard<'_, CopyFeedback> {
-        self.0.lock().unwrap_or_else(|e| e.into_inner())
-    }
-}
-
 pub type OnEnvironmentVariableCopy =
     Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static>;
+pub type OnEnvironmentVariableCopyError = Arc<
+    dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx, ClipboardAccessError)
+        + 'static,
+>;
 
 /// Copy button aligned with AI Elements `EnvironmentVariableCopyButton`.
 pub struct EnvironmentVariableCopyButton {
     on_copy: Option<OnEnvironmentVariableCopy>,
+    on_error: Option<OnEnvironmentVariableCopyError>,
     children: Vec<AnyElement>,
     timeout: Duration,
     copy_format: EnvironmentVariableCopyFormat,
@@ -887,6 +880,7 @@ impl EnvironmentVariableCopyButton {
     pub fn new() -> Self {
         Self {
             on_copy: None,
+            on_error: None,
             children: Vec::new(),
             timeout: Duration::from_millis(2000),
             copy_format: EnvironmentVariableCopyFormat::Value,
@@ -897,6 +891,11 @@ impl EnvironmentVariableCopyButton {
 
     pub fn on_copy(mut self, on_copy: OnEnvironmentVariableCopy) -> Self {
         self.on_copy = Some(on_copy);
+        self
+    }
+
+    pub fn on_error(mut self, on_error: OnEnvironmentVariableCopyError) -> Self {
+        self.on_error = Some(on_error);
         self
     }
 
@@ -931,11 +930,12 @@ impl EnvironmentVariableCopyButton {
         };
 
         let theme = Theme::global(&*cx.app).clone();
-        let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
+        let feedback = cx.slot_state(ClipboardCopyFeedbackRef::default, |st| st.clone());
 
         let name = data.name;
         let value = data.value;
         let on_copy = self.on_copy;
+        let on_error = self.on_error;
         let custom_children = self.children;
         let timeout = self.timeout;
         let copy_format = self.copy_format;
@@ -943,7 +943,7 @@ impl EnvironmentVariableCopyButton {
         let copied_marker_test_id = self.copied_marker_test_id;
 
         centered_fixed_chrome_pressable_with_id_props(cx, move |cx, st, id| {
-            let copied = feedback.lock().copied;
+            let copied = feedback.is_copied();
             let label: Arc<str> = if copied {
                 Arc::<str>::from("Copied")
             } else {
@@ -955,12 +955,9 @@ impl EnvironmentVariableCopyButton {
                 Arc::new({
                     let feedback = feedback.clone();
                     move |host, action_cx, token| {
-                        let mut feedback = feedback.lock();
-                        if feedback.token != Some(token) {
+                        if !handle_reset_timer(&feedback, token) {
                             return false;
                         }
-                        feedback.token = None;
-                        feedback.copied = false;
                         host.notify(action_cx);
                         host.request_redraw(action_cx.window);
                         true
@@ -968,11 +965,45 @@ impl EnvironmentVariableCopyButton {
                 }),
             );
 
+            cx.pressable_on_clipboard_write_completed({
+                let feedback = feedback.clone();
+                let on_copy = on_copy.clone();
+                let on_error = on_error.clone();
+                Arc::new(move |host, action_cx, token, outcome| {
+                    let Some(result) =
+                        finish_request(&feedback, token, outcome, || host.next_timer_token())
+                    else {
+                        return false;
+                    };
+
+                    if let Some(prev_reset) = result.prev_reset {
+                        host.push_effect(Effect::CancelTimer { token: prev_reset });
+                    }
+                    if let Some(reset_token) = result.next_reset {
+                        host.push_effect(Effect::SetTimer {
+                            window: Some(action_cx.window),
+                            token: reset_token,
+                            after: timeout,
+                            repeat: None,
+                        });
+                    }
+                    if let Some(error) = result.error {
+                        if let Some(on_error) = on_error.as_ref() {
+                            on_error(host, action_cx, error);
+                        }
+                    } else if let Some(on_copy) = on_copy.as_ref() {
+                        on_copy(host, action_cx);
+                    }
+                    host.notify(action_cx);
+                    host.request_redraw(action_cx.window);
+                    true
+                })
+            });
+
             cx.pressable_on_activate({
                 let name = name.clone();
                 let value = value.clone();
                 let feedback = feedback.clone();
-                let on_copy = on_copy.clone();
                 Arc::new(move |host, action_cx, _reason| {
                     let text = match copy_format {
                         EnvironmentVariableCopyFormat::Name => name.to_string(),
@@ -982,31 +1013,19 @@ impl EnvironmentVariableCopyButton {
                         }
                     };
 
-                    host.push_effect(Effect::ClipboardSetText { text });
-                    if let Some(on_copy) = on_copy.as_ref() {
-                        on_copy(host, action_cx);
-                    }
-
-                    let (prev, token) = {
-                        let mut feedback = feedback.lock();
-                        let prev = feedback.token.take();
-                        let token = host.next_timer_token();
-                        feedback.copied = true;
-                        feedback.token = Some(token);
-                        (prev, token)
+                    let Some(request) = begin_request(&feedback, || host.next_clipboard_token())
+                    else {
+                        return;
                     };
 
-                    if let Some(prev) = prev {
-                        host.push_effect(Effect::CancelTimer { token: prev });
+                    if let Some(prev_reset) = request.prev_reset {
+                        host.push_effect(Effect::CancelTimer { token: prev_reset });
                     }
-                    host.push_effect(Effect::SetTimer {
-                        window: Some(action_cx.window),
-                        token,
-                        after: timeout,
-                        repeat: None,
+                    host.push_effect(Effect::ClipboardWriteText {
+                        window: action_cx.window,
+                        token: request.clipboard_token,
+                        text,
                     });
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
                 })
             });
 

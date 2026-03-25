@@ -1286,8 +1286,8 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_AUDIO_PLAYER_DEMO,
                 "AI Audio Player (Demo)",
-                "AI Elements AudioPlayer / Media Controls Chrome Demo",
-                "fret-ui-ai (audio player chrome)",
+                "AI Elements AudioPlayer / Docs-Aligned Composable Audio Player",
+                "fret-ui-ai (audio player docs surface)",
                 CMD_NAV_AI_AUDIO_PLAYER_DEMO,
                 &["ai", "audio", "player", "seek", "mute", "volume", "demo"],
             ),

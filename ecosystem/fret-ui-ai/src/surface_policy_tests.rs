@@ -260,6 +260,30 @@ fn audio_player_surface_does_not_require_static_host() {
 }
 
 #[test]
+fn audio_player_public_surface_keeps_docs_shaped_children_and_source_builders() {
+    for marker in [
+        "pub enum AudioPlayerChild {",
+        "pub struct AudioPlayerWithChildren {",
+        "pub fn children<I, C>(self, children: I) -> AudioPlayerWithChildren",
+        "pub fn element(self, element: AudioPlayerElement) -> AudioPlayerWithChildren {",
+        "pub fn control_bar(self, control_bar: AudioPlayerControlBar) -> AudioPlayerWithChildren {",
+        "pub enum AudioPlayerControlBarChild {",
+        "pub fn empty() -> Self {",
+        "pub fn children<I, C>(mut self, children: I) -> Self",
+        "pub fn play_button(self, button: AudioPlayerPlayButton) -> Self {",
+        "pub fn time_range(self, range: AudioPlayerTimeRange) -> Self {",
+        "pub struct AudioPlayerSpeechData {",
+        "pub fn src(mut self, src: impl Into<Arc<str>>) -> Self {",
+        "pub fn speech_data(mut self, data: AudioPlayerSpeechData) -> Self {",
+    ] {
+        assert!(
+            AUDIO_PLAYER_RS.contains(marker),
+            "audio_player.rs should keep docs-shaped public surface marker `{marker}`"
+        );
+    }
+}
+
+#[test]
 fn attachments_surface_does_not_require_static_host() {
     assert!(
         !ATTACHMENTS_RS.contains("UiHost + 'static"),

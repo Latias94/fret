@@ -2,8 +2,9 @@ pub const SOURCE: &str = include_str!("mic_selector_demo.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
+use fret_core::{Px, SemanticsRole};
 use fret_ui::Invalidation;
-use fret_ui::element::SemanticsDecoration;
+use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
@@ -23,69 +24,61 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .get_model_cloned(&value, Invalidation::Layout)
         .unwrap_or(None);
 
-    let marker = cx
-        .text(format!(
-            "selected={}",
-            selected.as_deref().unwrap_or("<none>")
-        ))
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Generic)
-                .test_id(if selected.is_some() {
-                    "ui-ai-mic-selector-demo-selected"
-                } else {
-                    "ui-ai-mic-selector-demo-none"
-                }),
-        );
+    let marker = cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Generic,
+            test_id: Some(Arc::from(if selected.is_some() {
+                "ui-ai-mic-selector-demo-selected"
+            } else {
+                "ui-ai-mic-selector-demo-none"
+            })),
+            ..Default::default()
+        },
+        |cx| vec![cx.text("")],
+    );
 
-    let selector = ui_ai::MicSelector::from_arc(devices)
+    let selector = ui_ai::MicSelector::from_arc(devices.clone())
         .open_model(open.clone())
         .value_model(value.clone())
-        .into_element_with_children(cx, move |cx, slot| match slot {
-            ui_ai::MicSelectorChildSlot::Trigger => {
-                ui_ai::MicSelectorTrigger::new([ui_ai::MicSelectorValue::new().into_element(cx)])
+        .children([
+            ui_ai::MicSelectorChild::Trigger(
+                ui_ai::MicSelectorTrigger::new([])
+                    .value(ui_ai::MicSelectorValue::new())
                     .test_id("ui-ai-mic-selector-demo-trigger")
-                    .into_element(cx)
-            }
-            ui_ai::MicSelectorChildSlot::Content => ui_ai::MicSelectorContent::new([
-                ui_ai::MicSelectorInput::new()
-                    .test_id("ui-ai-mic-selector-demo-input")
-                    .into_element(cx),
-                ui_ai::MicSelectorList::new()
-                    .empty(ui_ai::MicSelectorEmpty::new())
-                    .into_element_with_children(cx, |cx, devices| {
-                        devices
-                            .iter()
-                            .cloned()
-                            .map(|device| {
-                                ui_ai::MicSelectorItem::new(device.label.clone())
-                                    .value(device.id.clone())
-                                    .test_id(format!(
-                                        "ui-ai-mic-selector-demo-item-{}",
-                                        device.id.as_ref().replace(' ', "-")
-                                    ))
-                                    .children([
-                                        ui_ai::MicSelectorLabel::new(device).into_element(cx)
-                                    ])
-                            })
-                            .collect::<Vec<_>>()
-                    }),
-            ])
-            .test_id_root("ui-ai-mic-selector-demo-content")
-            .into_element(cx),
-        });
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .min_w_0()
+                            .max_w(Px(384.0)),
+                    ),
+            ),
+            ui_ai::MicSelectorChild::Content(
+                ui_ai::MicSelectorContent::new([])
+                    .input(ui_ai::MicSelectorInput::new().test_id("ui-ai-mic-selector-demo-input"))
+                    .list(
+                        ui_ai::MicSelectorList::new()
+                            .empty(ui_ai::MicSelectorEmpty::new())
+                            .test_id_prefix("ui-ai-mic-selector-demo-item"),
+                    )
+                    .test_id_root("ui-ai-mic-selector-demo-content"),
+            ),
+        ])
+        .into_element(cx);
 
     let open_now = cx
         .get_model_copied(&open, Invalidation::Paint)
         .unwrap_or(false);
-    let open_marker = cx.text(format!("open={open_now}")).attach_semantics(
-        SemanticsDecoration::default()
-            .role(fret_core::SemanticsRole::Generic)
-            .test_id(if open_now {
+    let open_marker = cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Generic,
+            test_id: Some(Arc::from(if open_now {
                 "ui-ai-mic-selector-demo-open-true"
             } else {
                 "ui-ai-mic-selector-demo-open-false"
-            }),
+            })),
+            ..Default::default()
+        },
+        |cx| vec![cx.text("")],
     );
 
     ui::v_flex(move |cx| {
@@ -94,9 +87,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             cx.text(
                 "Docs-aligned compound example. Device enumeration + permissions stay app-owned.",
             ),
+            ui::h_flex(move |_cx| vec![selector])
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .justify_center()
+                .into_element(cx),
             marker,
             open_marker,
-            selector,
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
