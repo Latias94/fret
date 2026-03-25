@@ -1339,8 +1339,11 @@ fn selectable_text_interactive_span_activates_on_click() {
             vec![cx.selectable_text_with_id_props(|cx, id| {
                 cx.selectable_text_on_activate_span_for(
                     id,
-                    Arc::new(|host, _cx, _reason, activation| {
-                        host.push_effect(Effect::ClipboardSetText {
+                    Arc::new(|host, action_cx, _reason, activation| {
+                        let token = host.next_clipboard_token();
+                        host.push_effect(Effect::ClipboardWriteText {
+                            window: action_cx.window,
+                            token,
                             text: activation.tag.to_string(),
                         });
                     }),
@@ -1399,9 +1402,9 @@ fn selectable_text_interactive_span_activates_on_click() {
     );
 
     assert!(
-        app.take_effects()
-            .iter()
-            .any(|e| { matches!(e, Effect::ClipboardSetText { text } if text == "tag://link") }),
+        app.take_effects().iter().any(|e| {
+            matches!(e, Effect::ClipboardWriteText { text, .. } if text == "tag://link")
+        }),
         "expected interactive span activation to push a clipboard effect"
     );
 }
@@ -1510,8 +1513,11 @@ fn selectable_text_interactive_span_does_not_activate_on_drag_selection() {
             vec![cx.selectable_text_with_id_props(|cx, id| {
                 cx.selectable_text_on_activate_span_for(
                     id,
-                    Arc::new(|host, _cx, _reason, activation| {
-                        host.push_effect(Effect::ClipboardSetText {
+                    Arc::new(|host, action_cx, _reason, activation| {
+                        let token = host.next_clipboard_token();
+                        host.push_effect(Effect::ClipboardWriteText {
+                            window: action_cx.window,
+                            token,
                             text: activation.tag.to_string(),
                         });
                     }),
@@ -1587,7 +1593,7 @@ fn selectable_text_interactive_span_does_not_activate_on_drag_selection() {
     assert!(
         !app.take_effects()
             .iter()
-            .any(|e| matches!(e, Effect::ClipboardSetText { text } if text == "tag://link")),
+            .any(|e| matches!(e, Effect::ClipboardWriteText { text, .. } if text == "tag://link")),
         "expected drag selection to not activate the interactive span"
     );
 }
@@ -1696,8 +1702,11 @@ fn selectable_text_interactive_span_activates_on_enter() {
             vec![cx.selectable_text_with_id_props(|cx, id| {
                 cx.selectable_text_on_activate_span_for(
                     id,
-                    Arc::new(|host, _cx, _reason, activation| {
-                        host.push_effect(Effect::ClipboardSetText {
+                    Arc::new(|host, action_cx, _reason, activation| {
+                        let token = host.next_clipboard_token();
+                        host.push_effect(Effect::ClipboardWriteText {
+                            window: action_cx.window,
+                            token,
                             text: activation.tag.to_string(),
                         });
                     }),
@@ -1754,9 +1763,9 @@ fn selectable_text_interactive_span_activates_on_enter() {
     );
 
     assert!(
-        app.take_effects()
-            .iter()
-            .any(|e| { matches!(e, Effect::ClipboardSetText { text } if text == "tag://link") }),
+        app.take_effects().iter().any(|e| {
+            matches!(e, Effect::ClipboardWriteText { text, .. } if text == "tag://link")
+        }),
         "expected interactive span activation to push a clipboard effect"
     );
 }

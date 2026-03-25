@@ -738,8 +738,11 @@ fn code_block_shell(
 
     let copy_on_activate: fret_ui::action::OnActivate = {
         let code = code.clone();
-        Arc::new(move |host, _acx, _reason| {
-            host.push_effect(fret_runtime::Effect::ClipboardSetText {
+        Arc::new(move |host, acx, _reason| {
+            let token = host.next_clipboard_token();
+            host.push_effect(fret_runtime::Effect::ClipboardWriteText {
+                window: acx.window,
+                token,
                 text: code.to_string(),
             });
         })

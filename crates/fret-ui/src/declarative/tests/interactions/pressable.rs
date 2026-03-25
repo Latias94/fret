@@ -1,5 +1,109 @@
 use super::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+struct ClipboardWriteHookState {
+    pending: Option<fret_core::ClipboardToken>,
+    successes: u32,
+    failures: u32,
+    last_token: Option<fret_core::ClipboardToken>,
+    last_failure_kind: Option<fret_core::ClipboardAccessErrorKind>,
+}
+
+impl ClipboardWriteHookState {
+    fn pending(token: fret_core::ClipboardToken) -> Self {
+        Self {
+            pending: Some(token),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone)]
+struct ClipboardWriteHookPressable {
+    label: &'static str,
+    state: fret_runtime::Model<ClipboardWriteHookState>,
+}
+
+fn record_clipboard_write_completion(
+    host: &mut dyn crate::action::UiActionHost,
+    state: &fret_runtime::Model<ClipboardWriteHookState>,
+    token: fret_core::ClipboardToken,
+    outcome: &fret_core::ClipboardWriteOutcome,
+) -> bool {
+    let mut handled = false;
+    let _ = host
+        .models_mut()
+        .update(state, |hook_state: &mut ClipboardWriteHookState| {
+            if hook_state.pending != Some(token) {
+                return;
+            }
+
+            handled = true;
+            hook_state.pending = None;
+            hook_state.last_token = Some(token);
+            hook_state.last_failure_kind = None;
+            match outcome {
+                fret_core::ClipboardWriteOutcome::Succeeded => {
+                    hook_state.successes = hook_state.successes.saturating_add(1);
+                }
+                fret_core::ClipboardWriteOutcome::Failed { error } => {
+                    hook_state.failures = hook_state.failures.saturating_add(1);
+                    hook_state.last_failure_kind = Some(error.kind);
+                }
+            }
+        });
+    handled
+}
+
+fn render_clipboard_write_hook_pressables(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    name: &'static str,
+    pressables: Vec<ClipboardWriteHookPressable>,
+) -> NodeId {
+    render_root(ui, app, services, window, bounds, name, move |cx| {
+        vec![cx.column(crate::element::ColumnProps::default(), {
+            move |cx| {
+                let mut children = Vec::new();
+                for pressable in &pressables {
+                    let label = pressable.label;
+                    let state = pressable.state.clone();
+                    children.push(cx.pressable(
+                        crate::element::PressableProps::default(),
+                        move |cx, _state| {
+                            let state = state.clone();
+                            cx.pressable_on_clipboard_write_completed(Arc::new(
+                                move |host, _action_cx, token, outcome| {
+                                    record_clipboard_write_completion(host, &state, token, outcome)
+                                },
+                            ));
+                            vec![cx.text(label)]
+                        },
+                    ));
+                }
+                children
+            }
+        })]
+    })
+}
+
+fn dispatch_clipboard_write_completed(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    token: fret_core::ClipboardToken,
+    outcome: fret_core::ClipboardWriteOutcome,
+) {
+    ui.dispatch_event(
+        app,
+        services,
+        &fret_core::Event::ClipboardWriteCompleted { token, outcome },
+    );
+}
+
 #[test]
 fn pressable_state_reports_focused_when_focused() {
     use std::cell::Cell;
@@ -256,6 +360,232 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
     );
 
     assert_eq!(app.models().get_copied(&activated), Some(true));
+}
+
+#[test]
+fn pressable_clipboard_write_completed_hook_handles_matching_success_token() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let token = fret_core::ClipboardToken(41);
+    let hook_state = app
+        .models_mut()
+        .insert(ClipboardWriteHookState::pending(token));
+
+    let root = render_clipboard_write_hook_pressables(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-clipboard-write-matching-success",
+        vec![ClipboardWriteHookPressable {
+            label: "copy",
+            state: hook_state.clone(),
+        }],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    dispatch_clipboard_write_completed(
+        &mut ui,
+        &mut app,
+        &mut services,
+        token,
+        fret_core::ClipboardWriteOutcome::Succeeded,
+    );
+
+    assert_eq!(
+        app.models().get_copied(&hook_state),
+        Some(ClipboardWriteHookState {
+            pending: None,
+            successes: 1,
+            failures: 0,
+            last_token: Some(token),
+            last_failure_kind: None,
+        })
+    );
+}
+
+#[test]
+fn pressable_clipboard_write_completed_hook_ignores_non_matching_token() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let pending_token = fret_core::ClipboardToken(7);
+    let hook_state = app
+        .models_mut()
+        .insert(ClipboardWriteHookState::pending(pending_token));
+
+    let root = render_clipboard_write_hook_pressables(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-clipboard-write-non-matching-token",
+        vec![ClipboardWriteHookPressable {
+            label: "copy",
+            state: hook_state.clone(),
+        }],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    dispatch_clipboard_write_completed(
+        &mut ui,
+        &mut app,
+        &mut services,
+        fret_core::ClipboardToken(999),
+        fret_core::ClipboardWriteOutcome::Succeeded,
+    );
+
+    assert_eq!(
+        app.models().get_copied(&hook_state),
+        Some(ClipboardWriteHookState::pending(pending_token))
+    );
+}
+
+#[test]
+fn pressable_clipboard_write_completed_hook_routes_multiple_pending_tokens_across_pressables() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(80.0)));
+    let mut services = FakeTextService::default();
+
+    let first_token = fret_core::ClipboardToken(11);
+    let second_token = fret_core::ClipboardToken(29);
+    let first_state = app
+        .models_mut()
+        .insert(ClipboardWriteHookState::pending(first_token));
+    let second_state = app
+        .models_mut()
+        .insert(ClipboardWriteHookState::pending(second_token));
+
+    let root = render_clipboard_write_hook_pressables(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-clipboard-write-multiple-pending",
+        vec![
+            ClipboardWriteHookPressable {
+                label: "copy-a",
+                state: first_state.clone(),
+            },
+            ClipboardWriteHookPressable {
+                label: "copy-b",
+                state: second_state.clone(),
+            },
+        ],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    dispatch_clipboard_write_completed(
+        &mut ui,
+        &mut app,
+        &mut services,
+        second_token,
+        fret_core::ClipboardWriteOutcome::Succeeded,
+    );
+    dispatch_clipboard_write_completed(
+        &mut ui,
+        &mut app,
+        &mut services,
+        first_token,
+        fret_core::ClipboardWriteOutcome::Succeeded,
+    );
+
+    assert_eq!(
+        app.models().get_copied(&first_state),
+        Some(ClipboardWriteHookState {
+            pending: None,
+            successes: 1,
+            failures: 0,
+            last_token: Some(first_token),
+            last_failure_kind: None,
+        })
+    );
+    assert_eq!(
+        app.models().get_copied(&second_state),
+        Some(ClipboardWriteHookState {
+            pending: None,
+            successes: 1,
+            failures: 0,
+            last_token: Some(second_token),
+            last_failure_kind: None,
+        })
+    );
+}
+
+#[test]
+fn pressable_clipboard_write_completed_hook_routes_failure_without_success_side_effect() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let token = fret_core::ClipboardToken(61);
+    let hook_state = app
+        .models_mut()
+        .insert(ClipboardWriteHookState::pending(token));
+
+    let root = render_clipboard_write_hook_pressables(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-clipboard-write-failure",
+        vec![ClipboardWriteHookPressable {
+            label: "copy",
+            state: hook_state.clone(),
+        }],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    dispatch_clipboard_write_completed(
+        &mut ui,
+        &mut app,
+        &mut services,
+        token,
+        fret_core::ClipboardWriteOutcome::Failed {
+            error: fret_core::ClipboardAccessError {
+                kind: fret_core::ClipboardAccessErrorKind::Unavailable,
+                message: Some("clipboard unavailable".to_string()),
+            },
+        },
+    );
+
+    assert_eq!(
+        app.models().get_copied(&hook_state),
+        Some(ClipboardWriteHookState {
+            pending: None,
+            successes: 0,
+            failures: 1,
+            last_token: Some(token),
+            last_failure_kind: Some(fret_core::ClipboardAccessErrorKind::Unavailable),
+        })
+    );
 }
 
 #[test]

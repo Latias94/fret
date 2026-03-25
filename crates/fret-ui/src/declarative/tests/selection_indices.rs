@@ -475,7 +475,7 @@ fn selectable_text_clamps_selection_indices_before_copy_shortcut() {
 
     assert!(
         app.take_effects().iter().any(
-            |e| matches!(e, fret_runtime::Effect::ClipboardSetText { text: copied } if copied == text)
+            |e| matches!(e, fret_runtime::Effect::ClipboardWriteText { text: copied, .. } if copied == text)
         ),
         "expected ctrl+c to copy the clamped selection"
     );

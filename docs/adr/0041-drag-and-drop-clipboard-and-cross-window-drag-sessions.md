@@ -152,7 +152,7 @@ Tracking:
 - Treat “native external DnD backend (macOS/Windows) with DragOver position” as a future P0/P1 platform task
   once core editor workflows (docking, viewports, text) are solid.
 
-### 6) Clipboard is a platform service accessed via effects
+### 6) Clipboard is a platform service accessed via tokenized effects
 
 Clipboard is modeled as a platform capability (app-scoped service):
 
@@ -161,8 +161,42 @@ Clipboard is modeled as a platform capability (app-scoped service):
 
 Clipboard access is effect-driven to keep UI code platform-agnostic:
 
-- `Effect::ClipboardSetText { text: String }`
-- `Effect::ClipboardGetText { window: AppWindowId }` (delivers `Event::ClipboardText(String)` back into the window event stream)
+#### P0 text lane (normative)
+
+- `Effect::ClipboardWriteText { window: AppWindowId, token: ClipboardToken, text: String }`
+- `Effect::ClipboardReadText { window: AppWindowId, token: ClipboardToken }`
+- completion:
+  - `Event::ClipboardWriteCompleted { token, outcome }`
+  - `Event::ClipboardReadText { token, text }`
+  - `Event::ClipboardReadFailed { token, error }`
+
+Rules:
+
+- Explicit clipboard requests are token-addressable and window-aware.
+- Clipboard writes remain best-effort platform requests, but explicit write requests MUST complete
+  with an outcome rather than remaining diagnostics-only knowledge.
+- Write completion does not guarantee read-after-write will succeed across all platforms.
+
+#### P1 rich payload lane (future seam; non-normative)
+
+When richer clipboard representations are added, preserve the same portability rules:
+
+- `Effect::ClipboardWritePayload { window, token, payload }`
+- `Effect::ClipboardReadPayload { window, token, formats, limits }`
+- completion:
+  - `Event::ClipboardWriteCompleted { token, outcome }`
+  - `Event::ClipboardPayload { token, payload }`
+  - `Event::ClipboardReadFailed { token, error }`
+
+Portability rules:
+
+- no raw paths/URIs in `fret-core`,
+- portable typed payloads only,
+- bounded bytes for binary payloads,
+- file-like references must align with token/handle semantics used elsewhere (ADR 0053 / ADR 0264).
+
+See ADR 0266 for the mobile/privacy-oriented clipboard portability rules and the richer payload
+extension seam.
 
 ### 7) Modal overlays can block drops and input beneath
 

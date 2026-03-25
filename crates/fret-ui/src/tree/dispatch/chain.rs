@@ -473,4 +473,141 @@ impl<H: UiHost> UiTree<H> {
         );
         false
     }
+
+    pub(in crate::tree::dispatch) fn dispatch_event_to_subtree_bubble(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        input_ctx: &InputContext,
+        root: NodeId,
+        event: &Event,
+        invalidation_visited: &mut impl InvalidationVisited,
+    ) -> bool {
+        debug_assert!(
+            event_position(event).is_none(),
+            "subtree bubble dispatch expects an unmapped event"
+        );
+
+        let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
+            Event::Pointer(PointerEvent::Move { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Down { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Up { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Wheel { pointer_id, .. })
+            | Event::Pointer(PointerEvent::PinchGesture { pointer_id, .. }) => Some(*pointer_id),
+            Event::PointerCancel(e) => Some(e.pointer_id),
+            _ => None,
+        };
+
+        let mut pending_invalidations = HashMap::<NodeId, PendingInvalidation>::new();
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let event_window_position = event_position(event);
+        let event_window_wheel_delta = match event {
+            Event::Pointer(PointerEvent::Wheel { delta, .. }) => Some(*delta),
+            _ => None,
+        };
+
+        let mut stack = vec![(root, false)];
+        while let Some((node_id, children_visited)) = stack.pop() {
+            if !self.node_exists(node_id) {
+                continue;
+            }
+
+            if !children_visited {
+                let children = self
+                    .nodes
+                    .get(node_id)
+                    .map(|n| n.children.clone())
+                    .unwrap_or_default();
+                stack.push((node_id, true));
+                for child in children {
+                    stack.push((child, false));
+                }
+                continue;
+            }
+
+            let (invalidations, notify_requested, notify_requested_location, stop_propagation) =
+                self.with_widget_mut(node_id, |widget, tree| {
+                    let (children, bounds) = tree
+                        .nodes
+                        .get(node_id)
+                        .map(|n| (n.children.as_slice(), n.bounds))
+                        .unwrap_or((&[][..], Rect::default()));
+                    let mut cx = EventCx {
+                        app,
+                        services: &mut *services,
+                        node: node_id,
+                        layer_root: tree.node_root(node_id),
+                        window: tree.window,
+                        pointer_id: pointer_id_for_capture,
+                        scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                        event_window_position,
+                        event_window_wheel_delta,
+                        input_ctx: input_ctx.clone(),
+                        pointer_hit_is_text_input: false,
+                        pointer_hit_is_pressable: false,
+                        pointer_hit_pressable_target: None,
+                        pointer_hit_pressable_target_in_descendant_subtree: false,
+                        prevented_default_actions: &mut prevented_default_actions,
+                        children,
+                        focus: tree.focus,
+                        captured: pointer_id_for_capture
+                            .and_then(|p| tree.captured.get(&p).copied()),
+                        bounds,
+                        invalidations: Vec::new(),
+                        requested_focus: None,
+                        requested_capture: None,
+                        requested_cursor: None,
+                        notify_requested: false,
+                        notify_requested_location: None,
+                        stop_propagation: false,
+                    };
+                    widget.event(&mut cx, event);
+                    (
+                        cx.invalidations,
+                        cx.notify_requested,
+                        cx.notify_requested_location,
+                        cx.stop_propagation,
+                    )
+                });
+
+            for (id, inv) in invalidations {
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    id,
+                    inv,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::Unknown,
+                );
+            }
+
+            if notify_requested {
+                self.debug_record_notify_request(
+                    app.frame_id(),
+                    node_id,
+                    notify_requested_location,
+                );
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    node_id,
+                    Invalidation::Paint,
+                    UiDebugInvalidationSource::Notify,
+                    UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
+                );
+            }
+
+            if stop_propagation {
+                self.apply_pending_invalidations(
+                    std::mem::take(&mut pending_invalidations),
+                    invalidation_visited,
+                );
+                return true;
+            }
+        }
+
+        self.apply_pending_invalidations(
+            std::mem::take(&mut pending_invalidations),
+            invalidation_visited,
+        );
+        false
+    }
 }

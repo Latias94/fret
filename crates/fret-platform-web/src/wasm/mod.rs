@@ -25,7 +25,7 @@ fn document() -> Option<Document> {
     window().and_then(|w| w.document())
 }
 
-fn js_error_string(err: &JsValue) -> Option<String> {
+pub(super) fn js_error_string(err: &JsValue) -> Option<String> {
     let name = Reflect::get(err, &JsValue::from_str("name"))
         .ok()
         .and_then(|v| v.as_string());
@@ -38,6 +38,47 @@ fn js_error_string(err: &JsValue) -> Option<String> {
         (_, Some(message)) if !message.is_empty() => Some(message),
         _ => None,
     }
+}
+
+pub(super) fn js_error_name(err: &JsValue) -> Option<String> {
+    Reflect::get(err, &JsValue::from_str("name"))
+        .ok()
+        .and_then(|v| v.as_string())
+}
+
+pub(super) fn clipboard_error(
+    kind: fret_core::ClipboardAccessErrorKind,
+    message: impl Into<Option<String>>,
+) -> fret_core::ClipboardAccessError {
+    fret_core::ClipboardAccessError {
+        kind,
+        message: message.into(),
+    }
+}
+
+pub(super) fn clipboard_error_from_js(err: &JsValue) -> fret_core::ClipboardAccessError {
+    let name = js_error_name(err);
+    let message = js_error_string(err);
+    let lower = message.as_deref().unwrap_or_default().to_ascii_lowercase();
+    let kind = match name.as_deref() {
+        Some("NotAllowedError") | Some("SecurityError")
+            if lower.contains("user activation")
+                || lower.contains("gesture")
+                || lower.contains("activation") =>
+        {
+            fret_core::ClipboardAccessErrorKind::UserActivationRequired
+        }
+        Some("NotAllowedError") | Some("SecurityError") => {
+            fret_core::ClipboardAccessErrorKind::PermissionDenied
+        }
+        Some("TypeError") | Some("NotSupportedError") => {
+            fret_core::ClipboardAccessErrorKind::Unsupported
+        }
+        Some("NotFoundError") => fret_core::ClipboardAccessErrorKind::Unavailable,
+        Some(_) => fret_core::ClipboardAccessErrorKind::Unknown,
+        None => fret_core::ClipboardAccessErrorKind::Unknown,
+    };
+    clipboard_error(kind, message)
 }
 
 /// Web-specific platform services for `fret-runtime::Effect`s that require browser APIs.
@@ -219,33 +260,75 @@ impl WebPlatformServices {
                 Effect::CancelTimer { token } => {
                     timers::cancel_timer(token, &mut self.timers);
                 }
-                Effect::ClipboardSetText { text } => {
+                Effect::ClipboardWriteText {
+                    window: _,
+                    token,
+                    text,
+                } => {
                     let caps = app
                         .global::<PlatformCapabilities>()
                         .cloned()
                         .unwrap_or_default();
                     if !caps.clipboard.text.write {
+                        self.queued_events
+                            .borrow_mut()
+                            .push(Event::ClipboardWriteCompleted {
+                                token,
+                                outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                    error: clipboard_error(
+                                        fret_core::ClipboardAccessErrorKind::Unsupported,
+                                        Some("clipboard text write is unavailable".to_string()),
+                                    ),
+                                },
+                            });
                         continue;
                     }
                     let Some(window) = window() else {
+                        self.queued_events
+                            .borrow_mut()
+                            .push(Event::ClipboardWriteCompleted {
+                                token,
+                                outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                    error: clipboard_error(
+                                        fret_core::ClipboardAccessErrorKind::Unavailable,
+                                        Some(
+                                            "window is unavailable for clipboard write".to_string(),
+                                        ),
+                                    ),
+                                },
+                            });
                         continue;
                     };
                     let clipboard = window.navigator().clipboard();
+                    let queue = self.queued_events.clone();
                     let wake = self.waker.clone();
                     spawn_local(async move {
-                        if let Err(err) = JsFuture::from(clipboard.write_text(&text)).await {
-                            let msg = js_error_string(&err)
-                                .unwrap_or_else(|| "clipboard write failed".to_string());
-                            web_sys::console::warn_1(&JsValue::from_str(&format!(
-                                "fret: navigator.clipboard.writeText failed: {msg}"
-                            )));
-                        }
+                        let event = match JsFuture::from(clipboard.write_text(&text)).await {
+                            Ok(_) => Event::ClipboardWriteCompleted {
+                                token,
+                                outcome: fret_core::ClipboardWriteOutcome::Succeeded,
+                            },
+                            Err(err) => {
+                                let msg = js_error_string(&err)
+                                    .unwrap_or_else(|| "clipboard write failed".to_string());
+                                web_sys::console::warn_1(&JsValue::from_str(&format!(
+                                    "fret: navigator.clipboard.writeText failed: {msg}"
+                                )));
+                                Event::ClipboardWriteCompleted {
+                                    token,
+                                    outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                        error: clipboard_error_from_js(&err),
+                                    },
+                                }
+                            }
+                        };
+                        let _ = queue.try_borrow_mut().map(|mut q| q.push(event));
                         if let Some(wake) = wake.as_ref() {
                             wake();
                         }
                     });
                 }
-                Effect::ClipboardGetText { token, .. } => {
+                Effect::ClipboardReadText { token, .. } => {
                     let caps = app
                         .global::<PlatformCapabilities>()
                         .cloned()
@@ -253,9 +336,12 @@ impl WebPlatformServices {
                     if !caps.clipboard.text.read {
                         self.queued_events
                             .borrow_mut()
-                            .push(Event::ClipboardTextUnavailable {
+                            .push(Event::ClipboardReadFailed {
                                 token,
-                                message: Some("clipboard text read is unavailable".to_string()),
+                                error: clipboard_error(
+                                    fret_core::ClipboardAccessErrorKind::Unsupported,
+                                    Some("clipboard text read is unavailable".to_string()),
+                                ),
                             });
                         continue;
                     }
@@ -263,10 +349,11 @@ impl WebPlatformServices {
                     let Some(window) = window() else {
                         self.queued_events
                             .borrow_mut()
-                            .push(Event::ClipboardTextUnavailable {
+                            .push(Event::ClipboardReadFailed {
                                 token,
-                                message: Some(
-                                    "window is unavailable for clipboard read".to_string(),
+                                error: clipboard_error(
+                                    fret_core::ClipboardAccessErrorKind::Unavailable,
+                                    Some("window is unavailable for clipboard read".to_string()),
                                 ),
                             });
                         continue;
@@ -277,13 +364,13 @@ impl WebPlatformServices {
                     spawn_local(async move {
                         let result = JsFuture::from(clipboard.read_text()).await;
                         let event = match result {
-                            Ok(v) => Event::ClipboardText {
+                            Ok(v) => Event::ClipboardReadText {
                                 token,
                                 text: v.as_string().unwrap_or_default(),
                             },
-                            Err(err) => Event::ClipboardTextUnavailable {
+                            Err(err) => Event::ClipboardReadFailed {
                                 token,
-                                message: js_error_string(&err),
+                                error: clipboard_error_from_js(&err),
                             },
                         };
                         let _ = queue.try_borrow_mut().map(|mut q| q.push(event));

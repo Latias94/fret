@@ -69,7 +69,8 @@ pub use image::{
 };
 pub use incoming_open::{IncomingOpenDataEvent, IncomingOpenItem, IncomingOpenKind};
 pub use input::{
-    Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
+    ClipboardAccessError, ClipboardAccessErrorKind, ClipboardWriteOutcome, Event,
+    ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropReadLimits,
     ImageUpdateDropReason, ImeEvent, InternalDragEvent, InternalDragKind, KeyCode, Modifiers,
     MouseButton, PointerCancelEvent, PointerCancelReason, PointerEvent, PointerType,

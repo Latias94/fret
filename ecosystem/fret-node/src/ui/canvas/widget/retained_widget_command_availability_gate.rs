@@ -5,7 +5,7 @@ pub(super) fn should_handle_command<H: UiHost>(cx: &CommandAvailabilityCx<'_, H>
 }
 
 pub(super) fn can_write_clipboard<H: UiHost>(cx: &CommandAvailabilityCx<'_, H>) -> bool {
-    cx.input_ctx.caps.clipboard.text.write
+    cx.input_ctx.caps.clipboard.text.write && cx.window.is_some()
 }
 
 pub(super) fn can_paste<H: UiHost>(cx: &CommandAvailabilityCx<'_, H>) -> bool {

@@ -1,6 +1,6 @@
 use fret_app::Effect;
 use fret_core::Event;
-use fret_runtime::{PlatformCapabilities, WindowClipboardDiagnosticsStore, WindowRequest};
+use fret_runtime::{PlatformCapabilities, WindowRequest};
 use js_sys::{Array, Function, Object, Promise, Reflect, Uint8Array};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::{JsFuture, spawn_local};
@@ -96,6 +96,47 @@ fn js_error_string(err: &JsValue) -> String {
     }
 }
 
+fn js_error_name(err: &JsValue) -> Option<String> {
+    Reflect::get(err, &JsValue::from_str("name"))
+        .ok()
+        .and_then(|v| v.as_string())
+}
+
+fn clipboard_error(
+    kind: fret_core::ClipboardAccessErrorKind,
+    message: impl Into<Option<String>>,
+) -> fret_core::ClipboardAccessError {
+    fret_core::ClipboardAccessError {
+        kind,
+        message: message.into(),
+    }
+}
+
+fn clipboard_error_from_js(err: &JsValue) -> fret_core::ClipboardAccessError {
+    let name = js_error_name(err);
+    let message = js_error_string(err);
+    let message_lower = message.to_ascii_lowercase();
+    let kind = match name.as_deref() {
+        Some("NotAllowedError") | Some("SecurityError")
+            if message_lower.contains("user activation")
+                || message_lower.contains("gesture")
+                || message_lower.contains("activation") =>
+        {
+            fret_core::ClipboardAccessErrorKind::UserActivationRequired
+        }
+        Some("NotAllowedError") | Some("SecurityError") => {
+            fret_core::ClipboardAccessErrorKind::PermissionDenied
+        }
+        Some("TypeError") | Some("NotSupportedError") => {
+            fret_core::ClipboardAccessErrorKind::Unsupported
+        }
+        Some("NotFoundError") => fret_core::ClipboardAccessErrorKind::Unavailable,
+        Some(_) => fret_core::ClipboardAccessErrorKind::Unknown,
+        None => fret_core::ClipboardAccessErrorKind::Unknown,
+    };
+    clipboard_error(kind, Some(message))
+}
+
 fn share_outcome_from_error(err: JsValue) -> fret_core::ShareSheetOutcome {
     let name = Reflect::get(&err, &JsValue::from_str("name"))
         .ok()
@@ -122,31 +163,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         gfx: &mut GfxState,
         state: &mut D::WindowState,
     ) -> bool {
-        if !self.pending_clipboard_write_results.borrow().is_empty() {
-            let results: Vec<Result<(), String>> = self
-                .pending_clipboard_write_results
-                .borrow_mut()
-                .drain(..)
-                .collect();
-            let window = self.app_window;
-            let frame_id = self.frame_id;
-            self.app.with_global_mut_untracked(
-                WindowClipboardDiagnosticsStore::default,
-                |store, _app| {
-                    for result in results {
-                        match result {
-                            Ok(()) => store.record_write_ok(window, frame_id),
-                            Err(message) => store.record_write_unavailable(
-                                window,
-                                frame_id,
-                                (!message.is_empty()).then_some(message),
-                            ),
-                        }
-                    }
-                },
-            );
-        }
-
         let did_work = self.dispatcher.drain_turn() || self.drain_inboxes(Some(self.app_window));
         let effects = self.app.flush_effects();
         let effects = self.web_services.handle_effects(&mut self.app, effects);
@@ -337,49 +353,68 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         },
                     );
                 }
-                Effect::ClipboardSetText { text } => {
+                Effect::ClipboardWriteText {
+                    window: target_window,
+                    token,
+                    text,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+
                     if self.diag_clipboard_force_unavailable {
-                        self.app.with_global_mut_untracked(
-                            WindowClipboardDiagnosticsStore::default,
-                            |store, _app| {
-                                store.record_write_unavailable(
-                                    self.app_window,
-                                    self.frame_id,
-                                    Some("diagnostics forced clipboard unavailable".to_string()),
-                                );
+                        self.push_pending_event_and_request_redraw(
+                            window,
+                            Event::ClipboardWriteCompleted {
+                                token,
+                                outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                    error: clipboard_error(
+                                        fret_core::ClipboardAccessErrorKind::Unavailable,
+                                        Some(
+                                            "diagnostics forced clipboard unavailable".to_string(),
+                                        ),
+                                    ),
+                                },
                             },
                         );
                         continue;
                     }
 
-                    let Some(window) = web_sys::window() else {
-                        self.app.with_global_mut_untracked(
-                            WindowClipboardDiagnosticsStore::default,
-                            |store, _app| {
-                                store.record_write_unavailable(
-                                    self.app_window,
-                                    self.frame_id,
-                                    Some("window is unavailable for clipboard write".to_string()),
-                                );
+                    let Some(window_handle) = web_sys::window() else {
+                        self.push_pending_event_and_request_redraw(
+                            window,
+                            Event::ClipboardWriteCompleted {
+                                token,
+                                outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                    error: clipboard_error(
+                                        fret_core::ClipboardAccessErrorKind::Unavailable,
+                                        Some(
+                                            "window is unavailable for clipboard write".to_string(),
+                                        ),
+                                    ),
+                                },
                             },
                         );
                         continue;
                     };
                     let navigator =
-                        match Reflect::get(window.as_ref(), &JsValue::from_str("navigator")) {
+                        match Reflect::get(window_handle.as_ref(), &JsValue::from_str("navigator"))
+                        {
                             Ok(v) => v,
                             Err(_) => {
-                                self.app.with_global_mut_untracked(
-                                    WindowClipboardDiagnosticsStore::default,
-                                    |store, _app| {
-                                        store.record_write_unavailable(
-                                            self.app_window,
-                                            self.frame_id,
-                                            Some(
-                                                "navigator is unavailable for clipboard write"
-                                                    .to_string(),
+                                self.push_pending_event_and_request_redraw(
+                                    window,
+                                    Event::ClipboardWriteCompleted {
+                                        token,
+                                        outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                            error: clipboard_error(
+                                                fret_core::ClipboardAccessErrorKind::Unavailable,
+                                                Some(
+                                                    "navigator is unavailable for clipboard write"
+                                                        .to_string(),
+                                                ),
                                             ),
-                                        );
+                                        },
                                     },
                                 );
                                 continue;
@@ -389,14 +424,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     {
                         Ok(v) => v,
                         Err(_) => {
-                            self.app.with_global_mut_untracked(
-                                WindowClipboardDiagnosticsStore::default,
-                                |store, _app| {
-                                    store.record_write_unavailable(
-                                        self.app_window,
-                                        self.frame_id,
-                                        Some("navigator.clipboard is unavailable".to_string()),
-                                    );
+                            self.push_pending_event_and_request_redraw(
+                                window,
+                                Event::ClipboardWriteCompleted {
+                                    token,
+                                    outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                        error: clipboard_error(
+                                            fret_core::ClipboardAccessErrorKind::Unsupported,
+                                            Some("navigator.clipboard is unavailable".to_string()),
+                                        ),
+                                    },
                                 },
                             );
                             continue;
@@ -408,17 +445,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     {
                         Some(v) => v,
                         None => {
-                            self.app.with_global_mut_untracked(
-                                WindowClipboardDiagnosticsStore::default,
-                                |store, _app| {
-                                    store.record_write_unavailable(
-                                        self.app_window,
-                                        self.frame_id,
-                                        Some(
-                                            "navigator.clipboard.writeText is unavailable"
-                                                .to_string(),
+                            self.push_pending_event_and_request_redraw(
+                                window,
+                                Event::ClipboardWriteCompleted {
+                                    token,
+                                    outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                        error: clipboard_error(
+                                            fret_core::ClipboardAccessErrorKind::Unsupported,
+                                            Some(
+                                                "navigator.clipboard.writeText is unavailable"
+                                                    .to_string(),
+                                            ),
                                         ),
-                                    );
+                                    },
                                 },
                             );
                             continue;
@@ -432,55 +471,60 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         Ok(v) => match v.dyn_into::<Promise>() {
                             Ok(p) => p,
                             Err(_) => {
-                                self.app.with_global_mut_untracked(
-                                    WindowClipboardDiagnosticsStore::default,
-                                    |store, _app| {
-                                        store.record_write_unavailable(
-                                            self.app_window,
-                                            self.frame_id,
-                                            Some(
-                                                "navigator.clipboard.writeText did not return a Promise"
-                                                    .to_string(),
+                                self.push_pending_event_and_request_redraw(
+                                    window,
+                                    Event::ClipboardWriteCompleted {
+                                        token,
+                                        outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                            error: clipboard_error(
+                                                fret_core::ClipboardAccessErrorKind::Unknown,
+                                                Some(
+                                                    "navigator.clipboard.writeText did not return a Promise"
+                                                        .to_string(),
+                                                ),
                                             ),
-                                        );
+                                        },
                                     },
                                 );
                                 continue;
                             }
                         },
-                        Err(_) => {
-                            self.app.with_global_mut_untracked(
-                                WindowClipboardDiagnosticsStore::default,
-                                |store, _app| {
-                                    store.record_write_unavailable(
-                                        self.app_window,
-                                        self.frame_id,
-                                        Some(
-                                            "navigator.clipboard.writeText threw synchronously"
-                                                .to_string(),
-                                        ),
-                                    );
+                        Err(err) => {
+                            self.push_pending_event_and_request_redraw(
+                                window,
+                                Event::ClipboardWriteCompleted {
+                                    token,
+                                    outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                        error: clipboard_error_from_js(&err),
+                                    },
                                 },
                             );
                             continue;
                         }
                     };
 
-                    let pending = self.pending_clipboard_write_results.clone();
+                    let pending = self.pending_async_events.clone();
                     let proxy = self.event_loop_proxy.clone();
                     spawn_local(async move {
-                        let result = JsFuture::from(promise).await;
-                        let outcome = match result {
-                            Ok(_) => Ok(()),
-                            Err(err) => Err(js_error_string(&err)),
+                        let event = match JsFuture::from(promise).await {
+                            Ok(_) => Event::ClipboardWriteCompleted {
+                                token,
+                                outcome: fret_core::ClipboardWriteOutcome::Succeeded,
+                            },
+                            Err(err) => Event::ClipboardWriteCompleted {
+                                token,
+                                outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                    error: clipboard_error_from_js(&err),
+                                },
+                            },
                         };
-                        pending.borrow_mut().push(outcome);
+                        pending.borrow_mut().push(event);
                         if let Some(proxy) = proxy {
                             proxy.wake_up();
                         }
                     });
                 }
-                Effect::ClipboardGetText {
+                Effect::ClipboardReadText {
                     window: target_window,
                     token,
                 } => {
@@ -491,10 +535,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     if self.diag_clipboard_force_unavailable {
                         self.push_pending_event_and_request_redraw(
                             window,
-                            Event::ClipboardTextUnavailable {
+                            Event::ClipboardReadFailed {
                                 token,
-                                message: Some(
-                                    "diagnostics forced clipboard unavailable".to_string(),
+                                error: clipboard_error(
+                                    fret_core::ClipboardAccessErrorKind::Unavailable,
+                                    Some("diagnostics forced clipboard unavailable".to_string()),
                                 ),
                             },
                         );
@@ -504,10 +549,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     let Some(window_handle) = web_sys::window() else {
                         self.push_pending_event_and_request_redraw(
                             window,
-                            Event::ClipboardTextUnavailable {
+                            Event::ClipboardReadFailed {
                                 token,
-                                message: Some(
-                                    "window is unavailable for clipboard read".to_string(),
+                                error: clipboard_error(
+                                    fret_core::ClipboardAccessErrorKind::Unavailable,
+                                    Some("window is unavailable for clipboard read".to_string()),
                                 ),
                             },
                         );
@@ -520,11 +566,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             Err(_) => {
                                 self.push_pending_event_and_request_redraw(
                                     window,
-                                    Event::ClipboardTextUnavailable {
+                                    Event::ClipboardReadFailed {
                                         token,
-                                        message: Some(
-                                            "navigator is unavailable for clipboard read"
-                                                .to_string(),
+                                        error: clipboard_error(
+                                            fret_core::ClipboardAccessErrorKind::Unavailable,
+                                            Some(
+                                                "navigator is unavailable for clipboard read"
+                                                    .to_string(),
+                                            ),
                                         ),
                                     },
                                 );
@@ -537,9 +586,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         Err(_) => {
                             self.push_pending_event_and_request_redraw(
                                 window,
-                                Event::ClipboardTextUnavailable {
+                                Event::ClipboardReadFailed {
                                     token,
-                                    message: Some("navigator.clipboard is unavailable".to_string()),
+                                    error: clipboard_error(
+                                        fret_core::ClipboardAccessErrorKind::Unsupported,
+                                        Some("navigator.clipboard is unavailable".to_string()),
+                                    ),
                                 },
                             );
                             continue;
@@ -553,10 +605,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         None => {
                             self.push_pending_event_and_request_redraw(
                                 window,
-                                Event::ClipboardTextUnavailable {
+                                Event::ClipboardReadFailed {
                                     token,
-                                    message: Some(
-                                        "navigator.clipboard.readText is unavailable".to_string(),
+                                    error: clipboard_error(
+                                        fret_core::ClipboardAccessErrorKind::Unsupported,
+                                        Some(
+                                            "navigator.clipboard.readText is unavailable"
+                                                .to_string(),
+                                        ),
                                     ),
                                 },
                             );
@@ -573,26 +629,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             Err(_) => {
                                 self.push_pending_event_and_request_redraw(
                                     window,
-                                    Event::ClipboardTextUnavailable {
+                                    Event::ClipboardReadFailed {
                                         token,
-                                        message: Some(
-                                            "navigator.clipboard.readText did not return a Promise"
-                                                .to_string(),
+                                        error: clipboard_error(
+                                            fret_core::ClipboardAccessErrorKind::Unknown,
+                                            Some(
+                                                "navigator.clipboard.readText did not return a Promise"
+                                                    .to_string(),
+                                            ),
                                         ),
                                     },
                                 );
                                 continue;
                             }
                         },
-                        Err(_) => {
+                        Err(err) => {
                             self.push_pending_event_and_request_redraw(
                                 window,
-                                Event::ClipboardTextUnavailable {
+                                Event::ClipboardReadFailed {
                                     token,
-                                    message: Some(
-                                        "navigator.clipboard.readText threw synchronously"
-                                            .to_string(),
-                                    ),
+                                    error: clipboard_error_from_js(&err),
                                 },
                             );
                             continue;
@@ -605,11 +661,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         let event = match JsFuture::from(promise).await {
                             Ok(v) => {
                                 let text = v.as_string().unwrap_or_default();
-                                Event::ClipboardText { token, text }
+                                Event::ClipboardReadText { token, text }
                             }
-                            Err(err) => Event::ClipboardTextUnavailable {
+                            Err(err) => Event::ClipboardReadFailed {
                                 token,
-                                message: Some(js_error_string(&err)),
+                                error: clipboard_error_from_js(&err),
                             },
                         };
                         pending.borrow_mut().push(event);

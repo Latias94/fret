@@ -1921,6 +1921,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
+            cx.pressable_clear_on_clipboard_write_completed();
             cx.pressable_clear_on_hover_change();
             let built = f(
                 cx,
@@ -1955,6 +1956,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
+            cx.pressable_clear_on_clipboard_write_completed();
             cx.pressable_clear_on_hover_change();
             let built = f(
                 cx,
@@ -1989,6 +1991,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
+            cx.pressable_clear_on_clipboard_write_completed();
             cx.pressable_clear_on_pointer_down();
             cx.pressable_clear_on_hover_change();
             let (props, children) = f(
@@ -2114,6 +2117,15 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pressable_on_clipboard_write_completed(
+        &mut self,
+        handler: crate::action::OnPressableClipboardWriteCompleted,
+    ) {
+        self.root_state(PressableActionHooks::default, |hooks| {
+            hooks.on_clipboard_write_completed = Some(handler);
+        });
+    }
+
     pub fn pressable_on_pointer_down_for(
         &mut self,
         element: GlobalElementId,
@@ -2141,6 +2153,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ) {
         self.state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_pointer_up = Some(handler);
+        });
+    }
+
+    pub fn pressable_on_clipboard_write_completed_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: crate::action::OnPressableClipboardWriteCompleted,
+    ) {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
+            hooks.on_clipboard_write_completed = Some(handler);
         });
     }
 
@@ -2298,6 +2320,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pressable_clear_on_clipboard_write_completed(&mut self) {
+        self.root_state(PressableActionHooks::default, |hooks| {
+            hooks.on_clipboard_write_completed = None;
+        });
+    }
+
     /// Register a component-owned hover change handler for the current pressable element.
     ///
     /// This is a mechanism-only hook: the runtime tracks hover deterministically and invokes
@@ -2364,8 +2392,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let id = cx.root_id();
             cx.text_input_region_clear_on_text_input();
             cx.text_input_region_clear_on_ime();
-            cx.text_input_region_clear_on_clipboard_text();
-            cx.text_input_region_clear_on_clipboard_unavailable();
+            cx.text_input_region_clear_on_clipboard_read_text();
+            cx.text_input_region_clear_on_clipboard_read_failed();
             cx.text_input_region_clear_on_set_selection();
             let built = f(cx);
             let children = cx.collect_children(built);
@@ -2628,44 +2656,44 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         );
     }
 
-    pub fn text_input_region_on_clipboard_text(
+    pub fn text_input_region_on_clipboard_read_text(
         &mut self,
-        handler: crate::action::OnTextInputRegionClipboardText,
+        handler: crate::action::OnTextInputRegionClipboardReadText,
     ) {
         self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
-                hooks.on_clipboard_text = Some(handler);
+                hooks.on_clipboard_read_text = Some(handler);
             },
         );
     }
 
-    pub fn text_input_region_clear_on_clipboard_text(&mut self) {
+    pub fn text_input_region_clear_on_clipboard_read_text(&mut self) {
         self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
-                hooks.on_clipboard_text = None;
+                hooks.on_clipboard_read_text = None;
             },
         );
     }
 
-    pub fn text_input_region_on_clipboard_unavailable(
+    pub fn text_input_region_on_clipboard_read_failed(
         &mut self,
-        handler: crate::action::OnTextInputRegionClipboardUnavailable,
+        handler: crate::action::OnTextInputRegionClipboardReadFailed,
     ) {
         self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
-                hooks.on_clipboard_unavailable = Some(handler);
+                hooks.on_clipboard_read_failed = Some(handler);
             },
         );
     }
 
-    pub fn text_input_region_clear_on_clipboard_unavailable(&mut self) {
+    pub fn text_input_region_clear_on_clipboard_read_failed(&mut self) {
         self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
-                hooks.on_clipboard_unavailable = None;
+                hooks.on_clipboard_read_failed = None;
             },
         );
     }

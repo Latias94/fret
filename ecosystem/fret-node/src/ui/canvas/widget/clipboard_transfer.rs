@@ -3,9 +3,14 @@ use super::*;
 pub(super) fn copy_selection_to_clipboard<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     host: &mut H,
+    window: Option<AppWindowId>,
     selected_nodes: &[GraphNodeId],
     selected_groups: &[crate::core::GroupId],
 ) {
+    let Some(window) = window else {
+        return;
+    };
+
     if selected_nodes.is_empty() && selected_groups.is_empty() {
         return;
     }
@@ -26,7 +31,12 @@ pub(super) fn copy_selection_to_clipboard<H: UiHost, M: NodeGraphCanvasMiddlewar
         return;
     }
 
-    host.push_effect(Effect::ClipboardSetText { text });
+    let token = host.next_clipboard_token();
+    host.push_effect(Effect::ClipboardWriteText {
+        window,
+        token,
+        text,
+    });
 }
 
 pub(super) fn request_paste_at_canvas<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -41,5 +51,5 @@ pub(super) fn request_paste_at_canvas<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     let token = host.next_clipboard_token();
     canvas.interaction.pending_paste = Some(PendingPaste { token, at });
-    host.push_effect(Effect::ClipboardGetText { window, token });
+    host.push_effect(Effect::ClipboardReadText { window, token });
 }

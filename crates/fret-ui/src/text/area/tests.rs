@@ -1224,9 +1224,9 @@ fn text_area_copy_clamps_out_of_range_selection_indices() {
     );
 
     assert!(
-        app.take_effects()
-            .iter()
-            .any(|e| matches!(e, Effect::ClipboardSetText { text } if text == "hello\nworld")),
+        app.take_effects().iter().any(
+            |e| matches!(e, Effect::ClipboardWriteText { text, .. } if text == "hello\nworld")
+        ),
         "expected edit.copy to clamp indices and copy the selected text"
     );
     assert_eq!(area.selection_anchor, 0);
@@ -1729,7 +1729,7 @@ fn clipboard_text_normalizes_newlines_to_lf() {
     area.pending_clipboard_token = Some(token);
     area.event(
         &mut cx,
-        &Event::ClipboardText {
+        &Event::ClipboardReadText {
             token,
             text: "a\r\nb\rc".to_string(),
         },

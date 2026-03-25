@@ -73,7 +73,6 @@ pub struct WinitRunner<D: WinitAppDriver> {
 
     pending_events: Vec<Event>,
     pending_async_events: Rc<RefCell<Vec<Event>>>,
-    pending_clipboard_write_results: Rc<RefCell<Vec<Result<(), String>>>>,
     tick_id: TickId,
     frame_id: FrameId,
     raf_windows: crate::runner::common::frame_requests::AnimationFrameRequests,
@@ -193,7 +192,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             scene: Scene::default(),
             pending_events: Vec::new(),
             pending_async_events: Rc::new(RefCell::new(Vec::new())),
-            pending_clipboard_write_results: Rc::new(RefCell::new(Vec::new())),
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
             raf_windows: crate::runner::common::frame_requests::AnimationFrameRequests::default(),

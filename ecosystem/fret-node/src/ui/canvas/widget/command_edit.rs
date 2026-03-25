@@ -8,6 +8,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> bool {
         self.copy_selection_to_clipboard(
             cx.app,
+            cx.window,
             &snapshot.selected_nodes,
             &snapshot.selected_groups,
         );

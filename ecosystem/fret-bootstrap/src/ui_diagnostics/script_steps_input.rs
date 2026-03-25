@@ -618,6 +618,7 @@ pub(super) fn handle_paste_text_into_step(
             phase: 0,
             expected_node_id: None,
             expected_test_id: None,
+            clipboard_token: None,
         },
     };
 
@@ -768,13 +769,13 @@ pub(super) fn handle_paste_text_into_step(
                     step_index as u32,
                     state.expected_node_id,
                     state.expected_test_id.as_deref(),
-                    "paste_text_into.clipboard_set",
+                    "paste_text_into.clipboard_write_requested",
                 );
                 record_web_ime_trace(
                     &mut active.web_ime_trace,
                     app,
                     step_index as u32,
-                    "paste_text_into.clipboard_set",
+                    "paste_text_into.clipboard_write_requested",
                 );
 
                 if clear_before_paste {
@@ -784,7 +785,13 @@ pub(super) fn handle_paste_text_into_step(
                     });
                 }
 
-                output.effects.push(Effect::ClipboardSetText { text });
+                let token = svc.allocate_clipboard_token();
+                output.effects.push(Effect::ClipboardWriteText {
+                    window,
+                    token,
+                    text,
+                });
+                state.clipboard_token = Some(token);
                 state.phase = 3;
                 active.v2_step_state = Some(V2StepState::PasteTextInto(state));
                 output.request_redraw = true;
@@ -803,6 +810,109 @@ pub(super) fn handle_paste_text_into_step(
             }
         }
         3 => {
+            record_focus_trace(
+                &mut active.focus_trace,
+                app,
+                window,
+                element_runtime,
+                Some(snapshot),
+                ui.as_deref(),
+                step_index as u32,
+                state.expected_node_id,
+                state.expected_test_id.as_deref(),
+                "paste_text_into.wait_clipboard_write",
+            );
+            record_web_ime_trace(
+                &mut active.web_ime_trace,
+                app,
+                step_index as u32,
+                "paste_text_into.wait_clipboard_write",
+            );
+
+            let Some(token) = state.clipboard_token else {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-paste_text_into-missing-clipboard-token"
+                ));
+                *stop_script = true;
+                *failure_reason =
+                    Some("paste_text_into_internal_missing_clipboard_token".to_string());
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return true;
+            };
+
+            if let Some(outcome) = svc.clipboard_write_completion_for_token(token) {
+                match outcome {
+                    fret_core::ClipboardWriteOutcome::Succeeded => {
+                        record_focus_trace(
+                            &mut active.focus_trace,
+                            app,
+                            window,
+                            element_runtime,
+                            Some(snapshot),
+                            ui.as_deref(),
+                            step_index as u32,
+                            state.expected_node_id,
+                            state.expected_test_id.as_deref(),
+                            "paste_text_into.clipboard_write_succeeded",
+                        );
+                        record_web_ime_trace(
+                            &mut active.web_ime_trace,
+                            app,
+                            step_index as u32,
+                            "paste_text_into.clipboard_write_succeeded",
+                        );
+                        state.phase = 4;
+                        active.v2_step_state = Some(V2StepState::PasteTextInto(state));
+                        output.request_redraw = true;
+                    }
+                    fret_core::ClipboardWriteOutcome::Failed { error } => {
+                        let mut note = error
+                            .message
+                            .clone()
+                            .unwrap_or_else(|| format!("clipboard_write_failed:{:?}", error.kind));
+                        truncate_string_bytes(&mut note, 512);
+                        push_script_event_log(
+                            active,
+                            &svc.cfg,
+                            UiScriptEventLogEntryV1 {
+                                unix_ms: unix_ms_now(),
+                                kind: "clipboard_write_failed".to_string(),
+                                step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                                note: Some(note),
+                                bundle_dir: None,
+                                window: Some(window.data().as_ffi()),
+                                tick_id: Some(app.tick_id().0),
+                                frame_id: Some(app.frame_id().0),
+                                window_snapshot_seq: None,
+                            },
+                        );
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-paste_text_into-clipboard-write-failed"
+                        ));
+                        *stop_script = true;
+                        *failure_reason =
+                            Some("paste_text_into_clipboard_write_failed".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    }
+                }
+            } else if state.remaining_frames == 0 {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-paste_text_into-clipboard-write-timeout"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("paste_text_into_clipboard_write_timeout".to_string());
+                active.v2_step_state = None;
+                output.request_redraw = true;
+            } else {
+                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                active.v2_step_state = Some(V2StepState::PasteTextInto(state));
+                output.request_redraw = true;
+                output.effects.push(Effect::RequestAnimationFrame(window));
+            }
+        }
+        4 => {
             record_focus_trace(
                 &mut active.focus_trace,
                 app,

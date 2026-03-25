@@ -50,17 +50,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         completion: PlatformCompletion,
     ) {
         match completion {
-            PlatformCompletion::ClipboardText { token, text } => {
-                self.deliver_window_event_now(window, &Event::ClipboardText { token, text });
+            PlatformCompletion::ClipboardReadText { token, text } => {
+                self.deliver_window_event_now(window, &Event::ClipboardReadText { token, text });
             }
-            PlatformCompletion::ClipboardTextUnavailable { token } => {
-                self.deliver_window_event_now(
-                    window,
-                    &Event::ClipboardTextUnavailable {
-                        token,
-                        message: None,
-                    },
-                );
+            PlatformCompletion::ClipboardReadFailed { token, error } => {
+                self.deliver_window_event_now(window, &Event::ClipboardReadFailed { token, error });
             }
             PlatformCompletion::ExternalDropData(data) => {
                 self.deliver_window_event_now(window, &Event::ExternalDropData(data));

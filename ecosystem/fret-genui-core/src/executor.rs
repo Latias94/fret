@@ -213,7 +213,10 @@ impl GenUiActionExecutorV1 {
                     message: "clipboardSetText requires params.text".to_string(),
                 });
             };
-            host.push_effect(Effect::ClipboardSetText {
+            let token = host.next_clipboard_token();
+            host.push_effect(Effect::ClipboardWriteText {
+                window: inv.window,
+                token,
                 text: text.to_string(),
             });
             Ok(())

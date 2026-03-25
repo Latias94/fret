@@ -36,6 +36,7 @@ pub(super) struct ActiveScript {
     pub(super) click_stable_trace: Vec<UiClickStableTraceEntryV1>,
     pub(super) bounds_stable_trace: Vec<UiBoundsStableTraceEntryV1>,
     pub(super) focus_trace: Vec<UiFocusTraceEntryV1>,
+    pub(super) last_clipboard_write_completion: Option<ObservedClipboardWriteCompletion>,
     pub(super) shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
     pub(super) last_shortcut_routing_seq: u64,
     pub(super) command_dispatch_trace: Vec<UiScriptCommandDispatchTraceEntryV1>,
@@ -65,6 +66,13 @@ pub(super) struct ExplicitCursorOverridePos {
 pub(super) struct ScriptBaseRefState {
     pub(super) window: AppWindowId,
     pub(super) scope_root: u64,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct ObservedClipboardWriteCompletion {
+    pub(super) seq: u64,
+    pub(super) token: fret_core::ClipboardToken,
+    pub(super) outcome: fret_core::ClipboardWriteOutcome,
 }
 
 impl ActiveScript {
@@ -159,6 +167,8 @@ pub(super) enum V2StepState {
     PasteTextInto(V2PasteTextIntoState),
     MenuSelect(V2MenuSelectState),
     MenuSelectPath(V2MenuSelectPathState),
+    WaitClipboardWriteResult(V2ClipboardWriteResultState),
+    AssertClipboardWriteResult(V2ClipboardWriteResultState),
     AssertClipboardText(V2AssertClipboardTextState),
     InspectHelpLockBestMatchAndCopySelector(V2InspectHelpLockBestMatchAndCopySelectorState),
     InspectHelpTreeLockBestMatchAndCopySelector(V2InspectHelpTreeLockBestMatchAndCopySelectorState),
@@ -268,6 +278,7 @@ pub(super) struct V2PasteTextIntoState {
     pub(super) phase: u32,
     pub(super) expected_node_id: Option<u64>,
     pub(super) expected_test_id: Option<String>,
+    pub(super) clipboard_token: Option<fret_core::ClipboardToken>,
 }
 
 #[derive(Debug, Clone)]
@@ -283,6 +294,40 @@ pub(super) struct V2MenuSelectPathState {
     pub(super) remaining_frames: u32,
     pub(super) phase: u32,
     pub(super) next_index: usize,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2ClipboardWriteResultState {
+    pub(super) step_index: usize,
+    pub(super) remaining_frames: u32,
+    pub(super) expected_outcome: fret_diag_protocol::UiClipboardWriteResultV1,
+    pub(super) expected_error_kind: Option<fret_diag_protocol::UiClipboardAccessErrorKindV1>,
+    pub(super) expected_message_contains: Option<String>,
+    pub(super) start_after_seq: u64,
+    pub(super) last_seen_seq: u64,
+    pub(super) last_observed: Option<ObservedClipboardWriteCompletion>,
+}
+
+impl V2ClipboardWriteResultState {
+    pub(super) fn new(
+        step_index: usize,
+        expected_outcome: fret_diag_protocol::UiClipboardWriteResultV1,
+        expected_error_kind: Option<fret_diag_protocol::UiClipboardAccessErrorKindV1>,
+        expected_message_contains: Option<String>,
+        timeout_frames: u32,
+        start_after_seq: u64,
+    ) -> Self {
+        Self {
+            step_index,
+            remaining_frames: timeout_frames.max(1),
+            expected_outcome,
+            expected_error_kind,
+            expected_message_contains,
+            start_after_seq,
+            last_seen_seq: start_after_seq,
+            last_observed: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

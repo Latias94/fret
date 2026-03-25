@@ -141,6 +141,8 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::SetWindowInsets { .. }
         | UiActionStepV2::SetClipboardForceUnavailable { .. }
         | UiActionStepV2::SetClipboardText { .. }
+        | UiActionStepV2::WaitClipboardWriteResult { .. }
+        | UiActionStepV2::AssertClipboardWriteResult { .. }
         | UiActionStepV2::AssertClipboardText { .. }
         | UiActionStepV2::InjectIncomingOpen { .. }
         | UiActionStepV2::SetWindowOuterPosition { .. }
@@ -192,6 +194,8 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::CaptureLayoutSidecar { .. } => "capture_layout_sidecar",
         UiActionStepV2::ResetDiagnostics => "reset_diagnostics",
         UiActionStepV2::SetClipboardText { .. } => "set_clipboard_text",
+        UiActionStepV2::WaitClipboardWriteResult { .. } => "wait_clipboard_write_result",
+        UiActionStepV2::AssertClipboardWriteResult { .. } => "assert_clipboard_write_result",
         UiActionStepV2::AssertClipboardText { .. } => "assert_clipboard_text",
         UiActionStepV2::InspectHelpLockBestMatchAndCopySelector { .. } => {
             "inspect_help_lock_best_match_and_copy_selector"
@@ -442,8 +446,10 @@ pub(super) fn dispatch_drive_script_step(
                 script_steps::handle_effect_only_steps(service, window, step, active, output);
             debug_assert!(handled);
         }
-        step @ UiActionStepV2::AssertClipboardText { .. } => {
-            let handled = script_steps_clipboard::handle_assert_clipboard_text_step(
+        step @ (UiActionStepV2::WaitClipboardWriteResult { .. }
+        | UiActionStepV2::AssertClipboardWriteResult { .. }
+        | UiActionStepV2::AssertClipboardText { .. }) => {
+            let handled = script_steps_clipboard::handle_clipboard_steps(
                 service,
                 app,
                 window,
@@ -2220,6 +2226,21 @@ impl UiDiagnosticsService {
                     step,
                     &mut active,
                     &mut output,
+                );
+            }
+            step @ (UiActionStepV2::WaitClipboardWriteResult { .. }
+            | UiActionStepV2::AssertClipboardWriteResult { .. }) => {
+                handled = script_steps_clipboard::handle_clipboard_steps(
+                    self,
+                    app,
+                    window,
+                    step_index,
+                    step,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut stop_script,
+                    &mut failure_reason,
                 );
             }
             _ => {}

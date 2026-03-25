@@ -12,10 +12,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn copy_selection_to_clipboard<H: UiHost>(
         &mut self,
         host: &mut H,
+        window: Option<AppWindowId>,
         selected_nodes: &[GraphNodeId],
         selected_groups: &[crate::core::GroupId],
     ) {
-        clipboard_transfer::copy_selection_to_clipboard(self, host, selected_nodes, selected_groups)
+        clipboard_transfer::copy_selection_to_clipboard(
+            self,
+            host,
+            window,
+            selected_nodes,
+            selected_groups,
+        )
     }
 
     pub(super) fn request_paste_at_canvas<H: UiHost>(

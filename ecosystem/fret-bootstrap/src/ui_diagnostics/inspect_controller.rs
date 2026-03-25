@@ -182,13 +182,16 @@ impl InspectController {
     pub(super) fn script_finish_lock_and_copy_selector(
         &mut self,
         window: AppWindowId,
+        token: fret_core::ClipboardToken,
         node_id: u64,
         selector_json: String,
         toast_message: String,
     ) -> Effect {
         self.script_set_focus_and_best_selector_json(window, node_id, selector_json.clone());
         self.script_set_toast(window, toast_message);
-        Effect::ClipboardSetText {
+        Effect::ClipboardWriteText {
+            window,
+            token,
             text: selector_json,
         }
     }
@@ -806,7 +809,12 @@ impl InspectController {
                     app.request_redraw(window);
                     return true;
                 };
-                app.push_effect(Effect::ClipboardSetText { text: payload });
+                let token = app.next_clipboard_token();
+                app.push_effect(Effect::ClipboardWriteText {
+                    window,
+                    token,
+                    text: payload,
+                });
                 self.push_toast(window, "inspect: copied selector".to_string());
                 app.request_redraw(window);
                 true

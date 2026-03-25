@@ -274,10 +274,12 @@ pub(super) fn handle_inspect_help_lock_best_match_and_copy_selector_step(
 
     // Mirror the in-app inspector focus/lock semantics so overlay code can copy the selector and
     // subsequent steps can observe a stable `inspect_best_selector_json`.
+    let token = svc.allocate_clipboard_token();
     output
         .effects
         .push(svc.inspector.script_finish_lock_and_copy_selector(
             resolved_window,
+            token,
             node_id,
             selector_json,
             "inspect: locked match and copied selector".to_string(),
@@ -514,10 +516,12 @@ pub(super) fn handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
     };
 
     svc.inspector.script_lock_window(resolved_window);
+    let token = svc.allocate_clipboard_token();
     output
         .effects
         .push(svc.inspector.script_finish_lock_and_copy_selector(
             resolved_window,
+            token,
             node_id,
             selector_json,
             "inspect: locked tree match and copied selector".to_string(),

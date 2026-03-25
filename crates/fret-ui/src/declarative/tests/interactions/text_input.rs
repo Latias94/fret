@@ -1,5 +1,155 @@
 use super::*;
 
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+struct ClipboardReadHookState {
+    pending: Option<fret_core::ClipboardToken>,
+    reads: u32,
+    failures: u32,
+    last_token: Option<fret_core::ClipboardToken>,
+    last_text: Option<String>,
+    last_error_kind: Option<fret_core::ClipboardAccessErrorKind>,
+    last_error_message: Option<String>,
+}
+
+impl ClipboardReadHookState {
+    fn pending(token: fret_core::ClipboardToken) -> Self {
+        Self {
+            pending: Some(token),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone)]
+struct ClipboardReadHookRegion {
+    label: &'static str,
+    state: fret_runtime::Model<ClipboardReadHookState>,
+}
+
+fn record_clipboard_read_text(
+    host: &mut dyn crate::action::UiActionHost,
+    state: &fret_runtime::Model<ClipboardReadHookState>,
+    token: fret_core::ClipboardToken,
+    text: &str,
+) -> bool {
+    let mut handled = false;
+    let _ = host
+        .models_mut()
+        .update(state, |hook_state: &mut ClipboardReadHookState| {
+            if hook_state.pending != Some(token) {
+                return;
+            }
+
+            handled = true;
+            hook_state.pending = None;
+            hook_state.reads = hook_state.reads.saturating_add(1);
+            hook_state.last_token = Some(token);
+            hook_state.last_text = Some(text.to_string());
+            hook_state.last_error_kind = None;
+            hook_state.last_error_message = None;
+        });
+    handled
+}
+
+fn record_clipboard_read_failed(
+    host: &mut dyn crate::action::UiActionHost,
+    state: &fret_runtime::Model<ClipboardReadHookState>,
+    token: fret_core::ClipboardToken,
+    error: &fret_core::ClipboardAccessError,
+) -> bool {
+    let mut handled = false;
+    let _ = host
+        .models_mut()
+        .update(state, |hook_state: &mut ClipboardReadHookState| {
+            if hook_state.pending != Some(token) {
+                return;
+            }
+
+            handled = true;
+            hook_state.pending = None;
+            hook_state.failures = hook_state.failures.saturating_add(1);
+            hook_state.last_token = Some(token);
+            hook_state.last_text = None;
+            hook_state.last_error_kind = Some(error.kind);
+            hook_state.last_error_message = error.message.clone();
+        });
+    handled
+}
+
+fn render_clipboard_read_hook_regions(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    name: &'static str,
+    regions: Vec<ClipboardReadHookRegion>,
+) -> NodeId {
+    render_root(ui, app, services, window, bounds, name, move |cx| {
+        vec![cx.column(crate::element::ColumnProps::default(), {
+            move |cx| {
+                let mut children = Vec::new();
+                for region in &regions {
+                    let label = region.label;
+                    let state = region.state.clone();
+                    let mut props = crate::element::TextInputRegionProps::default();
+                    props.layout.size.width = crate::element::Length::Fill;
+                    props.layout.size.height = crate::element::Length::Px(Px(20.0));
+                    props.a11y_label = Some(Arc::<str>::from(label));
+                    props.a11y_value = Some(Arc::<str>::from(label));
+                    children.push(cx.text_input_region(props, move |cx| {
+                        let state_for_read = state.clone();
+                        cx.text_input_region_on_clipboard_read_text(Arc::new(
+                            move |host, _action_cx, token, text| {
+                                record_clipboard_read_text(host, &state_for_read, token, text)
+                            },
+                        ));
+                        let state_for_failure = state.clone();
+                        cx.text_input_region_on_clipboard_read_failed(Arc::new(
+                            move |host, _action_cx, token, error| {
+                                record_clipboard_read_failed(host, &state_for_failure, token, error)
+                            },
+                        ));
+                        vec![cx.text(label)]
+                    }));
+                }
+                children
+            }
+        })]
+    })
+}
+
+fn dispatch_clipboard_read_text(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    token: fret_core::ClipboardToken,
+    text: &str,
+) {
+    ui.dispatch_event(
+        app,
+        services,
+        &fret_core::Event::ClipboardReadText {
+            token,
+            text: text.to_string(),
+        },
+    );
+}
+
+fn dispatch_clipboard_read_failed(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    token: fret_core::ClipboardToken,
+    error: fret_core::ClipboardAccessError,
+) {
+    ui.dispatch_event(
+        app,
+        services,
+        &fret_core::Event::ClipboardReadFailed { token, error },
+    );
+}
+
 #[test]
 fn text_input_cut_updates_model_and_availability() {
     let mut app = TestHost::new();
@@ -72,8 +222,8 @@ fn text_input_cut_updates_model_and_availability() {
     assert!(
         app.take_effects()
             .iter()
-            .any(|e| matches!(e, fret_runtime::Effect::ClipboardSetText { .. })),
-        "expected text.cut to emit ClipboardSetText"
+            .any(|e| matches!(e, fret_runtime::Effect::ClipboardWriteText { .. })),
+        "expected text.cut to emit ClipboardWriteText"
     );
 }
 
@@ -120,8 +270,225 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
     assert!(
         app.take_effects()
             .iter()
-            .any(|e| matches!(e, fret_runtime::Effect::ClipboardGetText { .. })),
-        "expected text.paste to request ClipboardGetText"
+            .any(|e| matches!(e, fret_runtime::Effect::ClipboardReadText { .. })),
+        "expected text.paste to request ClipboardReadText"
+    );
+}
+
+#[test]
+fn text_input_region_clipboard_read_text_hook_handles_matching_token() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut services = FakeTextService::default();
+
+    let token = fret_core::ClipboardToken(101);
+    let hook_state = app
+        .models_mut()
+        .insert(ClipboardReadHookState::pending(token));
+
+    let root = render_clipboard_read_hook_regions(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-region-clipboard-read-match",
+        vec![ClipboardReadHookRegion {
+            label: "editor",
+            state: hook_state.clone(),
+        }],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    dispatch_clipboard_read_text(&mut ui, &mut app, &mut services, token, "hello");
+
+    assert_eq!(
+        app.models().get_cloned(&hook_state),
+        Some(ClipboardReadHookState {
+            pending: None,
+            reads: 1,
+            failures: 0,
+            last_token: Some(token),
+            last_text: Some("hello".to_string()),
+            last_error_kind: None,
+            last_error_message: None,
+        })
+    );
+}
+
+#[test]
+fn text_input_region_clipboard_read_hooks_ignore_non_matching_token() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut services = FakeTextService::default();
+
+    let pending_token = fret_core::ClipboardToken(202);
+    let hook_state = app
+        .models_mut()
+        .insert(ClipboardReadHookState::pending(pending_token));
+
+    let root = render_clipboard_read_hook_regions(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-region-clipboard-read-non-matching",
+        vec![ClipboardReadHookRegion {
+            label: "editor",
+            state: hook_state.clone(),
+        }],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    dispatch_clipboard_read_text(
+        &mut ui,
+        &mut app,
+        &mut services,
+        fret_core::ClipboardToken(999),
+        "ignored",
+    );
+
+    assert_eq!(
+        app.models().get_cloned(&hook_state),
+        Some(ClipboardReadHookState::pending(pending_token))
+    );
+}
+
+#[test]
+fn text_input_region_clipboard_read_failed_hook_handles_matching_token() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut services = FakeTextService::default();
+
+    let token = fret_core::ClipboardToken(303);
+    let hook_state = app
+        .models_mut()
+        .insert(ClipboardReadHookState::pending(token));
+
+    let root = render_clipboard_read_hook_regions(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-region-clipboard-read-failure",
+        vec![ClipboardReadHookRegion {
+            label: "editor",
+            state: hook_state.clone(),
+        }],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    dispatch_clipboard_read_failed(
+        &mut ui,
+        &mut app,
+        &mut services,
+        token,
+        fret_core::ClipboardAccessError {
+            kind: fret_core::ClipboardAccessErrorKind::Unavailable,
+            message: Some("clipboard unavailable".to_string()),
+        },
+    );
+
+    assert_eq!(
+        app.models().get_cloned(&hook_state),
+        Some(ClipboardReadHookState {
+            pending: None,
+            reads: 0,
+            failures: 1,
+            last_token: Some(token),
+            last_text: None,
+            last_error_kind: Some(fret_core::ClipboardAccessErrorKind::Unavailable),
+            last_error_message: Some("clipboard unavailable".to_string()),
+        })
+    );
+}
+
+#[test]
+fn text_input_region_clipboard_read_hooks_route_multiple_pending_tokens_across_regions() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let first_token = fret_core::ClipboardToken(401);
+    let second_token = fret_core::ClipboardToken(402);
+    let first_state = app
+        .models_mut()
+        .insert(ClipboardReadHookState::pending(first_token));
+    let second_state = app
+        .models_mut()
+        .insert(ClipboardReadHookState::pending(second_token));
+
+    let root = render_clipboard_read_hook_regions(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-region-clipboard-read-multiple-pending",
+        vec![
+            ClipboardReadHookRegion {
+                label: "editor-a",
+                state: first_state.clone(),
+            },
+            ClipboardReadHookRegion {
+                label: "editor-b",
+                state: second_state.clone(),
+            },
+        ],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    dispatch_clipboard_read_text(&mut ui, &mut app, &mut services, second_token, "beta");
+    dispatch_clipboard_read_text(&mut ui, &mut app, &mut services, first_token, "alpha");
+
+    assert_eq!(
+        app.models().get_cloned(&first_state),
+        Some(ClipboardReadHookState {
+            pending: None,
+            reads: 1,
+            failures: 0,
+            last_token: Some(first_token),
+            last_text: Some("alpha".to_string()),
+            last_error_kind: None,
+            last_error_message: None,
+        })
+    );
+    assert_eq!(
+        app.models().get_cloned(&second_state),
+        Some(ClipboardReadHookState {
+            pending: None,
+            reads: 1,
+            failures: 0,
+            last_token: Some(second_token),
+            last_text: Some("beta".to_string()),
+            last_error_kind: None,
+            last_error_message: None,
+        })
     );
 }
 
@@ -388,9 +755,9 @@ fn text_input_supports_edit_select_all_and_copy() {
     );
     assert!(
         app.take_effects().iter().any(
-            |e| matches!(e, fret_runtime::Effect::ClipboardSetText { text } if text == "hello")
+            |e| matches!(e, fret_runtime::Effect::ClipboardWriteText { text, .. } if text == "hello")
         ),
-        "expected edit.copy to emit ClipboardSetText for the selected text"
+        "expected edit.copy to emit ClipboardWriteText for the selected text"
     );
 }
 

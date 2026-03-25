@@ -2,7 +2,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use fret_core::{
-    Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap, TimerToken,
+    ClipboardToken, ClipboardWriteOutcome, Edges, FontId, FontWeight, Px, SemanticsRole,
+    TextOverflow, TextStyle, TextWrap, TimerToken,
 };
 use fret_runtime::Effect;
 use fret_ui::element::{
@@ -17,7 +18,8 @@ use fret_ui_kit::{MetricRef, Space};
 #[derive(Debug, Default)]
 struct CopyFeedback {
     copied: bool,
-    token: Option<TimerToken>,
+    reset_token: Option<TimerToken>,
+    pending_clipboard_token: Option<ClipboardToken>,
 }
 
 #[derive(Clone, Default)]
@@ -73,10 +75,10 @@ pub(crate) fn render_copy_button<H: UiHost>(
                 let feedback = feedback.clone();
                 move |host, action_cx, token| {
                     let mut feedback = feedback.lock();
-                    if feedback.token != Some(token) {
+                    if feedback.reset_token != Some(token) {
                         return false;
                     }
-                    feedback.token = None;
+                    feedback.reset_token = None;
                     feedback.copied = false;
                     host.notify(action_cx);
                     true
@@ -84,34 +86,75 @@ pub(crate) fn render_copy_button<H: UiHost>(
             }),
         );
 
+        cx.pressable_on_clipboard_write_completed({
+            let feedback = feedback.clone();
+            Arc::new(move |host, action_cx, token, outcome| {
+                let prev_reset = {
+                    let mut feedback = feedback.lock();
+                    if feedback.pending_clipboard_token != Some(token) {
+                        return false;
+                    }
+                    feedback.pending_clipboard_token = None;
+                    match outcome {
+                        ClipboardWriteOutcome::Succeeded => {
+                            let prev_reset = feedback.reset_token.take();
+                            let reset_token = host.next_timer_token();
+                            feedback.copied = true;
+                            feedback.reset_token = Some(reset_token);
+                            Some((prev_reset, Some(reset_token)))
+                        }
+                        ClipboardWriteOutcome::Failed { .. } => {
+                            let prev_reset = feedback.reset_token.take();
+                            feedback.copied = false;
+                            Some((prev_reset, None))
+                        }
+                    }
+                };
+
+                let Some((prev_reset, next_reset)) = prev_reset else {
+                    return false;
+                };
+
+                if let Some(prev_reset) = prev_reset {
+                    host.push_effect(Effect::CancelTimer { token: prev_reset });
+                }
+                if let Some(reset_token) = next_reset {
+                    host.push_effect(Effect::SetTimer {
+                        window: Some(action_cx.window),
+                        token: reset_token,
+                        after: Duration::from_secs(2),
+                        repeat: None,
+                    });
+                }
+                host.notify(action_cx);
+                host.request_redraw(action_cx.window);
+                true
+            })
+        });
+
         cx.pressable_on_activate({
             let code = code.clone();
             let feedback = feedback.clone();
             Arc::new(move |host, action_cx, _reason| {
-                host.push_effect(Effect::ClipboardSetText {
-                    text: code.to_string(),
-                });
-
-                let (prev, token) = {
+                let (prev_reset, clipboard_token) = {
                     let mut feedback = feedback.lock();
-                    let prev = feedback.token.take();
-                    let token = host.next_timer_token();
-                    feedback.copied = true;
-                    feedback.token = Some(token);
-                    (prev, token)
+                    if feedback.copied || feedback.pending_clipboard_token.is_some() {
+                        return;
+                    }
+                    let prev_reset = feedback.reset_token.take();
+                    let clipboard_token = host.next_clipboard_token();
+                    feedback.pending_clipboard_token = Some(clipboard_token);
+                    (prev_reset, clipboard_token)
                 };
 
-                if let Some(prev) = prev {
-                    host.push_effect(Effect::CancelTimer { token: prev });
+                if let Some(prev_reset) = prev_reset {
+                    host.push_effect(Effect::CancelTimer { token: prev_reset });
                 }
-                host.push_effect(Effect::SetTimer {
-                    window: Some(action_cx.window),
-                    token,
-                    after: Duration::from_secs(2),
-                    repeat: None,
+                host.push_effect(Effect::ClipboardWriteText {
+                    window: action_cx.window,
+                    token: clipboard_token,
+                    text: code.to_string(),
                 });
-                host.notify(action_cx);
-                host.request_redraw(action_cx.window);
             })
         });
 

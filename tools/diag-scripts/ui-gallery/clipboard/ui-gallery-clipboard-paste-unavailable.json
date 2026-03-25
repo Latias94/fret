@@ -26,7 +26,7 @@
 
     {
       "type": "wait_until",
-      "predicate": { "kind": "event_kind_seen", "event_kind": "ClipboardTextUnavailable" },
+      "predicate": { "kind": "event_kind_seen", "event_kind": "ClipboardReadFailed" },
       "timeout_frames": 240
     },
 

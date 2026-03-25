@@ -8,11 +8,11 @@ pub(super) fn route_lifecycle_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
     zoom: f32,
 ) -> bool {
     match event {
-        Event::ClipboardText { token, text } => {
+        Event::ClipboardReadText { token, text } => {
             canvas.handle_clipboard_text(cx, *token, text);
             true
         }
-        Event::ClipboardTextUnavailable { token, .. } => {
+        Event::ClipboardReadFailed { token, .. } => {
             canvas.handle_clipboard_text_unavailable(cx, *token);
             true
         }

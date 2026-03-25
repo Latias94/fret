@@ -925,9 +925,12 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                                             },
                                             move |cx, _st| {
                                                 cx.pressable_add_on_activate(std::sync::Arc::new(
-                                                    move |host, _action_cx, _| {
+                                                    move |host, action_cx, _| {
+                                                        let token = host.next_clipboard_token();
                                                         host.push_effect(
-                                                            Effect::ClipboardSetText {
+                                                            Effect::ClipboardWriteText {
+                                                                window: action_cx.window,
+                                                                token,
                                                                 text: text_for_copy.clone(),
                                                             },
                                                         );

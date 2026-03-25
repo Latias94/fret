@@ -60,7 +60,7 @@ To read data or resolve a concrete source, the app requests it via effects, e.g.
 - future: range/stream reads or “persist to project” effects.
 
 The runner/platform backend is responsible for producing the data and delivering it back as an event or callback
-message (similar to `ClipboardGetText -> Event::ClipboardText`).
+message (similar to `ClipboardReadText -> Event::ClipboardReadText`).
 
 ### 3) Desktop backends may still expose `PathBuf` *internally*
 

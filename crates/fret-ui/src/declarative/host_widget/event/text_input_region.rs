@@ -114,13 +114,13 @@ pub(super) fn handle_text_input_region<H: UiHost>(
                 cx.stop_propagation();
             }
         }
-        Event::ClipboardText { token, text } => {
+        Event::ClipboardReadText { token, text } => {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
                 this.element,
                 crate::action::TextInputRegionActionHooks::default,
-                |hooks| hooks.on_clipboard_text.clone(),
+                |hooks| hooks.on_clipboard_read_text.clone(),
             );
             let Some(hook) = hook else {
                 return;
@@ -134,13 +134,13 @@ pub(super) fn handle_text_input_region<H: UiHost>(
                 cx.stop_propagation();
             }
         }
-        Event::ClipboardTextUnavailable { token, message } => {
+        Event::ClipboardReadFailed { token, error } => {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
                 this.element,
                 crate::action::TextInputRegionActionHooks::default,
-                |hooks| hooks.on_clipboard_unavailable.clone(),
+                |hooks| hooks.on_clipboard_read_failed.clone(),
             );
             let Some(hook) = hook else {
                 return;
@@ -150,7 +150,7 @@ pub(super) fn handle_text_input_region<H: UiHost>(
                 notify_requested: &mut cx.notify_requested,
                 notify_requested_location: &mut cx.notify_requested_location,
             };
-            if hook(&mut host, action_cx, *token, message.clone()) {
+            if hook(&mut host, action_cx, *token, error) {
                 cx.stop_propagation();
             }
         }

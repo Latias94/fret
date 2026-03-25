@@ -558,7 +558,7 @@ impl TextArea {
         let token = cx.app.next_clipboard_token();
         self.pending_clipboard_token = Some(token);
         cx.app
-            .push_effect(Effect::ClipboardGetText { window, token });
+            .push_effect(Effect::ClipboardReadText { window, token });
         true
     }
 

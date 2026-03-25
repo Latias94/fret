@@ -14,9 +14,7 @@ use fret_platform::file_dialog::FileDialogProvider as _;
 use fret_platform::open_url::OpenUrl as _;
 use fret_platform_native::external_drop::NativeExternalDrop;
 use fret_platform_native::file_dialog::NativeFileDialog;
-use fret_runtime::{
-    PlatformCapabilities, PlatformCompletion, WindowClipboardDiagnosticsStore, WindowZLevel,
-};
+use fret_runtime::{PlatformCapabilities, PlatformCompletion, WindowZLevel};
 use tracing::error;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowLevel;
@@ -731,46 +729,53 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                             },
                         );
                     }
-                    Effect::ClipboardSetText { text } => {
-                        let window = self.main_window.or_else(|| self.windows.keys().next());
-                        let Some(window) = window else {
-                            continue;
+                    Effect::ClipboardWriteText {
+                        window,
+                        token,
+                        text,
+                    } => {
+                        let outcome = if self
+                            .diag_clipboard_force_unavailable_windows
+                            .contains(&window)
+                        {
+                            fret_core::ClipboardWriteOutcome::Failed {
+                                error: fret_core::ClipboardAccessError {
+                                    kind: fret_core::ClipboardAccessErrorKind::Unavailable,
+                                    message: Some(
+                                        "diagnostics forced clipboard unavailable".to_string(),
+                                    ),
+                                },
+                            }
+                        } else {
+                            match self.clipboard.set_text(&text) {
+                                Ok(()) => fret_core::ClipboardWriteOutcome::Succeeded,
+                                Err(error) => {
+                                    tracing::debug!(?error, "failed to set clipboard text");
+                                    fret_core::ClipboardWriteOutcome::Failed { error }
+                                }
+                            }
                         };
 
-                        match self.clipboard.set_text(&text) {
-                            Ok(()) => {
-                                self.app.with_global_mut_untracked(
-                                    WindowClipboardDiagnosticsStore::default,
-                                    |store, _app| {
-                                        store.record_write_ok(window, self.frame_id);
-                                    },
-                                );
-                            }
-                            Err(err) => {
-                                tracing::debug!(?err, "failed to set clipboard text");
-                                self.app.with_global_mut_untracked(
-                                    WindowClipboardDiagnosticsStore::default,
-                                    |store, _app| {
-                                        store.record_write_unavailable(
-                                            window,
-                                            self.frame_id,
-                                            Some(format!("{err:?}")),
-                                        );
-                                    },
-                                );
-                            }
-                        }
+                        self.deliver_window_event_now(
+                            window,
+                            &Event::ClipboardWriteCompleted { token, outcome },
+                        );
                     }
-                    Effect::ClipboardGetText { window, token } => {
+                    Effect::ClipboardReadText { window, token } => {
                         if self
                             .diag_clipboard_force_unavailable_windows
                             .contains(&window)
                         {
                             self.deliver_window_event_now(
                                 window,
-                                &Event::ClipboardTextUnavailable {
+                                &Event::ClipboardReadFailed {
                                     token,
-                                    message: None,
+                                    error: fret_core::ClipboardAccessError {
+                                        kind: fret_core::ClipboardAccessErrorKind::Unavailable,
+                                        message: Some(
+                                            "diagnostics forced clipboard unavailable".to_string(),
+                                        ),
+                                    },
                                 },
                             );
                             continue;
@@ -779,23 +784,23 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         match self.clipboard.get_text() {
                             Ok(Some(text)) => self.deliver_window_event_now(
                                 window,
-                                &Event::ClipboardText { token, text },
+                                &Event::ClipboardReadText { token, text },
                             ),
                             Ok(None) => self.deliver_window_event_now(
                                 window,
-                                &Event::ClipboardTextUnavailable {
+                                &Event::ClipboardReadFailed {
                                     token,
-                                    message: None,
+                                    error: fret_core::ClipboardAccessError {
+                                        kind: fret_core::ClipboardAccessErrorKind::Unavailable,
+                                        message: None,
+                                    },
                                 },
                             ),
-                            Err(err) => {
-                                tracing::debug!(?err, "failed to read clipboard text");
+                            Err(error) => {
+                                tracing::debug!(?error, "failed to read clipboard text");
                                 self.deliver_window_event_now(
                                     window,
-                                    &Event::ClipboardTextUnavailable {
-                                        token,
-                                        message: Some(format!("{err:?}")),
-                                    },
+                                    &Event::ClipboardReadFailed { token, error },
                                 );
                             }
                         }

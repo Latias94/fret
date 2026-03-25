@@ -408,7 +408,12 @@ pub(super) fn handle_effect_only_steps(
             true
         }
         UiActionStepV2::SetClipboardText { text } => {
-            output.effects.push(Effect::ClipboardSetText { text });
+            let token = svc.allocate_clipboard_token();
+            output.effects.push(Effect::ClipboardWriteText {
+                window,
+                token,
+                text,
+            });
             active.wait_until = None;
             active.screenshot_wait = None;
             active.next_step = active.next_step.saturating_add(1);
@@ -462,9 +467,11 @@ pub(super) fn handle_effect_only_steps(
         }
         UiActionStepV2::ResetDiagnostics => {
             svc.reset_diagnostics_ring_for_window(window);
+            svc.reset_clipboard_responses();
             ui_thread_cpu_time::reset();
             active.wait_until = None;
             active.screenshot_wait = None;
+            active.last_clipboard_write_completion = None;
             active.next_step = active.next_step.saturating_add(1);
             output.request_redraw = true;
             true

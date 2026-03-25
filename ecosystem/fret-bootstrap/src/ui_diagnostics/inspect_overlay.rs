@@ -25,11 +25,21 @@ pub(crate) fn render_diag_inspect_overlay(
         svc.take_inspect_overlay_clipboard_payloads(window)
     });
     if let Some(text) = clipboard.copy_details {
-        app.push_effect(Effect::ClipboardSetText { text });
+        let token = app.next_clipboard_token();
+        app.push_effect(Effect::ClipboardWriteText {
+            window,
+            token,
+            text,
+        });
     }
 
     if let Some(text) = clipboard.copy_selector {
-        app.push_effect(Effect::ClipboardSetText { text });
+        let token = app.next_clipboard_token();
+        app.push_effect(Effect::ClipboardWriteText {
+            window,
+            token,
+            text,
+        });
     }
 
     if !inspection_active {

@@ -17,6 +17,8 @@ Definition of done:
 
 - ADR 0265 and ADR 0266 exist, are cross-referenced by the mobile contract map, and are consistent
   with the existing effect/token patterns.
+- The clipboard reset direction is explicitly tracked by:
+  - `docs/workstreams/clipboard-write-completion-fearless-refactor-v1/DESIGN.md`
 
 ## M1 — Minimal implementation (one runner)
 
@@ -33,4 +35,3 @@ Definition of done:
 - A scripted diag scenario can:
   - trigger a clipboard paste request and observe success/unavailable behavior,
   - simulate an incoming-open token and validate bounded reads + explicit release semantics.
-

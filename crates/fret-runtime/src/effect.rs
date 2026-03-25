@@ -39,8 +39,8 @@ pub enum DiagIncomingOpenItem {
 ///
 /// Common mappings:
 ///
-/// - `ClipboardGetText { token, .. }` → `fret_core::Event::ClipboardText { token, .. }` or
-///   `fret_core::Event::ClipboardTextUnavailable { token, .. }`
+/// - `ClipboardReadText { token, .. }` → `fret_core::Event::ClipboardReadText { token, .. }` or
+///   `fret_core::Event::ClipboardReadFailed { token, .. }`
 /// - `PrimarySelectionGetText { token, .. }` → `fret_core::Event::PrimarySelectionText { token, .. }`
 ///   or `fret_core::Event::PrimarySelectionTextUnavailable { token, .. }`
 /// - `ShareSheetShow { token, .. }` → `fret_core::Event::ShareSheetCompleted { token, .. }`
@@ -105,21 +105,23 @@ pub enum Effect {
         window: Option<AppWindowId>,
         menu_bar: MenuBar,
     },
-    /// Sets the platform clipboard text (best-effort).
-    ClipboardSetText {
+    /// Requests writing platform clipboard text (best-effort).
+    ClipboardWriteText {
+        window: AppWindowId,
+        token: ClipboardToken,
         text: String,
     },
     /// Requests reading platform clipboard text (best-effort).
     ///
     /// Runners/backends should eventually complete this request by emitting a corresponding event
     /// carrying `token` (see `ClipboardToken` contract in `fret-core`).
-    ClipboardGetText {
+    ClipboardReadText {
         window: AppWindowId,
         token: ClipboardToken,
     },
     /// Set Linux primary selection text (copy-on-select).
     ///
-    /// This is intentionally separate from `ClipboardSetText` so selecting text does not
+    /// This is intentionally separate from `ClipboardWriteText` so selecting text does not
     /// overwrite the explicit clipboard used by `Ctrl+C` / `edit.copy`.
     PrimarySelectionSetText {
         text: String,
@@ -218,8 +220,10 @@ pub enum Effect {
     ///
     /// Notes:
     /// - Runners SHOULD treat this as a best-effort toggle and default to `enabled=false`.
-    /// - When enabled, clipboard reads (`ClipboardGetText`, `PrimarySelectionGetText`) SHOULD
+    /// - When enabled, clipboard reads (`ClipboardReadText`, `PrimarySelectionGetText`) SHOULD
     ///   complete as unavailable rather than attempting platform access.
+    /// - Clipboard writes (`ClipboardWriteText`) SHOULD complete with a failed outcome rather than
+    ///   attempting platform access.
     DiagClipboardForceUnavailable {
         window: AppWindowId,
         enabled: bool,

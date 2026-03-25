@@ -262,7 +262,7 @@ where
                 let copy_text_for_command = copy_text_at.clone();
                 cx.command_on_command_for(
                     list_root,
-                    Arc::new(move |host, _acx, command| {
+                    Arc::new(move |host, acx, command| {
                         if command.as_str() != "edit.copy" {
                             return false;
                         }
@@ -271,7 +271,12 @@ where
                         if let Some(selected) = selected
                             && let Some(text) = (copy_text_for_command)(&*models, selected)
                         {
-                            host.push_effect(Effect::ClipboardSetText { text });
+                            let token = host.next_clipboard_token();
+                            host.push_effect(Effect::ClipboardWriteText {
+                                window: acx.window,
+                                token,
+                                text,
+                            });
                         }
                         true
                     }),
@@ -411,7 +416,7 @@ where
                 let copy_text_for_command = copy_text_at.clone();
                 cx.command_on_command_for(
                     list_root,
-                    Arc::new(move |host, _acx, command| {
+                    Arc::new(move |host, acx, command| {
                         if command.as_str() != "edit.copy" {
                             return false;
                         }
@@ -420,7 +425,12 @@ where
                         if let Some(selected) = selected
                             && let Some(text) = (copy_text_for_command)(&*models, selected)
                         {
-                            host.push_effect(Effect::ClipboardSetText { text });
+                            let token = host.next_clipboard_token();
+                            host.push_effect(Effect::ClipboardWriteText {
+                                window: acx.window,
+                                token,
+                                text,
+                            });
                         }
                         true
                     }),
@@ -897,8 +907,8 @@ mod tests {
         assert!(
             !effects
                 .iter()
-                .any(|e| matches!(e, fret_runtime::Effect::ClipboardSetText { .. })),
-            "expected edit.copy to not emit ClipboardSetText when selection is empty"
+                .any(|e| matches!(e, fret_runtime::Effect::ClipboardWriteText { .. })),
+            "expected edit.copy to not emit ClipboardWriteText when selection is empty"
         );
 
         app.models_mut()
@@ -916,9 +926,9 @@ mod tests {
         let effects = app.flush_effects();
         assert!(
             effects.iter().any(|e| {
-                matches!(e, fret_runtime::Effect::ClipboardSetText { text } if text == "Item 1")
+                matches!(e, fret_runtime::Effect::ClipboardWriteText { text, .. } if text == "Item 1")
             }),
-            "expected edit.copy to emit ClipboardSetText for the selected row"
+            "expected edit.copy to emit ClipboardWriteText for the selected row"
         );
     }
 
@@ -1002,8 +1012,8 @@ mod tests {
         assert!(
             !effects
                 .iter()
-                .any(|e| matches!(e, fret_runtime::Effect::ClipboardSetText { .. })),
-            "expected edit.copy to not emit ClipboardSetText when selection is empty"
+                .any(|e| matches!(e, fret_runtime::Effect::ClipboardWriteText { .. })),
+            "expected edit.copy to not emit ClipboardWriteText when selection is empty"
         );
 
         app.models_mut()
@@ -1021,9 +1031,9 @@ mod tests {
         let effects = app.flush_effects();
         assert!(
             effects.iter().any(|e| {
-                matches!(e, fret_runtime::Effect::ClipboardSetText { text } if text == "Item 1")
+                matches!(e, fret_runtime::Effect::ClipboardWriteText { text, .. } if text == "Item 1")
             }),
-            "expected edit.copy to emit ClipboardSetText for the selected row"
+            "expected edit.copy to emit ClipboardWriteText for the selected row"
         );
     }
 }

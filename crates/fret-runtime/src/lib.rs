@@ -135,8 +135,9 @@ pub use fret_core::FrameId;
 pub use fret_core::ImageUpdateToken;
 pub use fret_core::ImageUploadToken;
 pub use fret_core::{
-    AlphaMode, ChromaSiting, ColorPrimaries, ColorRange, ImageColorInfo, ImageColorSpace,
-    ImageEncoding, TransferFunction, YuvMatrix,
+    AlphaMode, ChromaSiting, ClipboardAccessError, ClipboardAccessErrorKind, ClipboardWriteOutcome,
+    ColorPrimaries, ColorRange, ImageColorInfo, ImageColorSpace, ImageEncoding, TransferFunction,
+    YuvMatrix,
 };
 pub use fret_core::{
     ClipboardToken, ExternalDropToken, FileDialogToken, IncomingOpenToken, ShareSheetToken,

@@ -13,7 +13,8 @@ Workstream entry:
 ## ADR refinement
 
 - [ ] Review ADR 0265 for alignment with existing token-based read patterns (file dialog / external drop).
-- [ ] Review ADR 0266 for consistency with the existing clipboard effect surfaces (ADR 0041).
+- [x] Review ADR 0266 for consistency with the existing clipboard effect surfaces (ADR 0041).
+  - Follow-up tracked in `docs/workstreams/clipboard-write-completion-fearless-refactor-v1/DESIGN.md`.
 - [ ] Decide whether share/open-in needs a new token type or can reuse `FileDialogToken` semantics (naming vs reuse tradeoff).
 
 ## Implementation (future; not required for mobile bring-up)
@@ -25,6 +26,8 @@ Workstream entry:
 - [x] Implement incoming-open token plumbing (surface “open with…” requests to app code) with bounded reads + explicit release.
   - Currently diag-only injection (OS plumbing still pending): `crates/fret-runtime/src/effect.rs`, `crates/fret-launch/src/runner/{desktop,web}/*`
 - [ ] Extend `ClipboardCapabilities` if needed to expose mobile-specific read constraints (only if proven necessary).
+- [ ] Land the clipboard write-completion contract reset before public release.
+  - Track the detailed steps in `docs/workstreams/clipboard-write-completion-fearless-refactor-v1/todo.md`.
 
 ## Diagnostics & gates
 

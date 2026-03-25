@@ -24,7 +24,9 @@ pub struct UiDiagnosticsService {
     last_dump_artifact_stats: Option<UiArtifactStatsV1>,
     last_script_run_id: u64,
     clipboard_text_responses: std::collections::VecDeque<DiagClipboardTextResponse>,
+    clipboard_write_completions: std::collections::VecDeque<DiagClipboardWriteCompletion>,
     next_clipboard_token: u64,
+    next_clipboard_write_completion_seq: u64,
     script_keepalive_timer_token: Option<fret_core::TimerToken>,
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
@@ -46,6 +48,13 @@ pub struct UiDiagnosticsService {
 pub(super) struct DiagClipboardTextResponse {
     pub(super) token: fret_core::ClipboardToken,
     pub(super) kind: DiagClipboardTextResponseKind,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct DiagClipboardWriteCompletion {
+    pub(super) seq: u64,
+    pub(super) token: fret_core::ClipboardToken,
+    pub(super) outcome: fret_core::ClipboardWriteOutcome,
 }
 
 #[derive(Debug, Clone)]
@@ -74,6 +83,8 @@ struct CachedTestIdPredicateEval {
 thread_local! {
     static SCRIPT_INJECTION_SCOPE: std::cell::Cell<bool> = std::cell::Cell::new(false);
 }
+
+const DIAG_CLIPBOARD_TOKEN_NAMESPACE: u64 = 1u64 << 63;
 
 fn infer_pointer_source_test_id_from_semantics(
     window: AppWindowId,
@@ -110,7 +121,10 @@ impl UiDiagnosticsService {
     pub(super) fn allocate_clipboard_token(&mut self) -> fret_core::ClipboardToken {
         let next = self.next_clipboard_token.max(1);
         self.next_clipboard_token = next.saturating_add(1);
-        fret_core::ClipboardToken(next)
+        // Diagnostics script steps allocate clipboard tokens outside `App::next_clipboard_token`.
+        // Keep them in a reserved high-bit namespace so they do not collide with app-owned copy
+        // flows that may be emitting clipboard completions during the same run.
+        fret_core::ClipboardToken(DIAG_CLIPBOARD_TOKEN_NAMESPACE | next)
     }
 
     pub(super) fn clipboard_text_response_for_token(
@@ -124,9 +138,38 @@ impl UiDiagnosticsService {
             .map(|r| &r.kind)
     }
 
-    pub(super) fn reset_clipboard_text_responses(&mut self) {
+    pub(super) fn clipboard_write_completion_for_token(
+        &self,
+        token: fret_core::ClipboardToken,
+    ) -> Option<&fret_core::ClipboardWriteOutcome> {
+        self.clipboard_write_completions
+            .iter()
+            .rev()
+            .find(|r| r.token == token)
+            .map(|r| &r.outcome)
+    }
+
+    pub(super) fn latest_clipboard_write_completion_seq(&self) -> u64 {
+        self.clipboard_write_completions
+            .back()
+            .map(|completion| completion.seq)
+            .unwrap_or(0)
+    }
+
+    pub(super) fn clipboard_write_completions_after(
+        &self,
+        seq: u64,
+    ) -> impl Iterator<Item = &DiagClipboardWriteCompletion> {
+        self.clipboard_write_completions
+            .iter()
+            .filter(move |completion| completion.seq > seq)
+    }
+
+    pub(super) fn reset_clipboard_responses(&mut self) {
         self.clipboard_text_responses.clear();
+        self.clipboard_write_completions.clear();
         self.next_clipboard_token = 1;
+        self.next_clipboard_write_completion_seq = 0;
     }
 
     fn record_clipboard_text_response(&mut self, response: DiagClipboardTextResponse) {
@@ -137,6 +180,25 @@ impl UiDiagnosticsService {
             self.clipboard_text_responses.pop_front();
         }
         self.clipboard_text_responses.push_back(response);
+    }
+
+    fn record_clipboard_write_completion(
+        &mut self,
+        token: fret_core::ClipboardToken,
+        outcome: fret_core::ClipboardWriteOutcome,
+    ) {
+        const MAX_COMPLETIONS: usize = 128;
+        while self.clipboard_write_completions.len() >= MAX_COMPLETIONS {
+            self.clipboard_write_completions.pop_front();
+        }
+        let seq = self.next_clipboard_write_completion_seq.saturating_add(1);
+        self.next_clipboard_write_completion_seq = seq;
+        self.clipboard_write_completions
+            .push_back(DiagClipboardWriteCompletion {
+                seq,
+                token,
+                outcome,
+            });
     }
 
     pub fn with_script_injection_scope<R>(f: impl FnOnce() -> R) -> R {
@@ -994,17 +1056,20 @@ impl UiDiagnosticsService {
         ring.push_event(&self.cfg, recorded);
 
         match event {
-            Event::ClipboardText { token, text } => {
+            Event::ClipboardWriteCompleted { token, outcome } => {
+                self.record_clipboard_write_completion(*token, outcome.clone());
+            }
+            Event::ClipboardReadText { token, text } => {
                 self.record_clipboard_text_response(DiagClipboardTextResponse {
                     token: *token,
                     kind: DiagClipboardTextResponseKind::Text(text.clone()),
                 });
             }
-            Event::ClipboardTextUnavailable { token, message } => {
+            Event::ClipboardReadFailed { token, error } => {
                 self.record_clipboard_text_response(DiagClipboardTextResponse {
                     token: *token,
                     kind: DiagClipboardTextResponseKind::Unavailable {
-                        message: message.clone(),
+                        message: error.message.clone(),
                     },
                 });
             }

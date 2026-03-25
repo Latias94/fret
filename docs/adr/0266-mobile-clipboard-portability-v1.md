@@ -19,9 +19,12 @@ This ADR locks a mobile-friendly baseline for clipboard behavior without forcing
 ## Goals
 
 1. Keep clipboard access **effect-driven** and portable across desktop, web, and future mobile.
-2. Make clipboard reads explicitly **best-effort** and safe under mobile privacy constraints.
-3. Preserve a clear extension seam for rich clipboard formats and file-like payloads (future).
-4. Keep high-level policy (“when to request paste”, “paste button enablement”) in ecosystem/app code.
+2. Make clipboard reads and explicit writes token-completed so user-facing copy/paste flows can
+   react honestly to success and failure.
+3. Keep clipboard reads explicitly **best-effort** and safe under mobile privacy constraints.
+4. Preserve a clear extension seam for rich clipboard formats and file-like payloads (future).
+5. Keep high-level policy (“when to request paste”, “paste button enablement”, retry UX, toasts) in
+   ecosystem/app code.
 
 ## Non-goals (v1)
 
@@ -33,15 +36,33 @@ This ADR locks a mobile-friendly baseline for clipboard behavior without forcing
 
 ### D1 — Clipboard text remains the portable baseline
 
-The portable v1 surface is unchanged and remains normative:
+The portable v1 text lane is normative:
 
-- `Effect::ClipboardSetText { text }`
-- `Effect::ClipboardGetText { window, token }`
+- `Effect::ClipboardWriteText { window, token, text }`
+- `Effect::ClipboardReadText { window, token }`
 - Completion:
-  - `Event::ClipboardText { token, text }`
-  - `Event::ClipboardTextUnavailable { token }`
+  - `Event::ClipboardWriteCompleted { token, outcome }`
+  - `Event::ClipboardReadText { token, text }`
+  - `Event::ClipboardReadFailed { token, error }`
 
-This surface is intentionally minimal and keeps `crates/fret-ui` free of platform branching.
+Structured portable error payload:
+
+- `ClipboardAccessError { kind, message }`
+- `kind` is best-effort and portable:
+  - `Unavailable`
+  - `PermissionDenied`
+  - `UserActivationRequired`
+  - `Unsupported`
+  - `BackendError`
+  - `Unknown`
+
+Write completion outcome:
+
+- `ClipboardWriteOutcome::Succeeded`
+- `ClipboardWriteOutcome::Failed { error: ClipboardAccessError }`
+
+This surface is intentionally minimal and keeps `crates/fret-ui` free of platform branching while
+making explicit copy commands observable.
 
 ### D2 — Clipboard reads are best-effort and may be denied on mobile
 
@@ -53,7 +74,7 @@ Contract rules:
   - the platform restricts clipboard reads for privacy reasons,
   - or the backend is unavailable.
 - When denied/unavailable, runners MUST complete the request with:
-  - `Event::ClipboardTextUnavailable { token }`
+  - `Event::ClipboardReadFailed { token, error }`
   rather than blocking or panicking.
 
 Implication for ecosystem/app code:
@@ -61,13 +82,23 @@ Implication for ecosystem/app code:
 - Treat “paste” as a user action that can fail.
 - Do not poll the clipboard as a reactive data source.
 
-### D3 — Clipboard writes are best-effort (no read-back guarantee)
+### D3 — Clipboard writes are best-effort, but explicit writes are completed
 
 Contract rules:
 
-- `ClipboardSetText` is a best-effort request.
+- `ClipboardWriteText` is a best-effort request.
 - Runners MAY ignore or reject it in constrained environments.
+- Runners MUST complete the request with `Event::ClipboardWriteCompleted { token, outcome }`.
+- `ClipboardWriteOutcome::Succeeded` acknowledges that the platform accepted the explicit write
+  request.
+- `ClipboardWriteOutcome::Failed { error }` acknowledges that the request was denied, unavailable,
+  unsupported, or failed in the backend.
 - The contract does not require read-after-write to succeed across platforms.
+
+Implication for ecosystem/app code:
+
+- Treat “copy” as a user action that can fail.
+- Success UI such as copied/check state should react to write completion, not to write intent.
 
 ### D4 — Primary selection is capability-gated and is expected to be false on mobile
 
@@ -83,27 +114,35 @@ Mobile runners SHOULD report `clipboard.primary_text = false` and ignore these e
 When adding richer clipboard support, preserve the same principles:
 
 - token-based ownership,
+- completion-based writes,
 - effect-driven reads with explicit limits,
 - portable typed payloads (no raw paths/URIs).
 
 A likely future direction is:
 
-- `Effect::ClipboardRead { window, token, formats, limits }`
+- `Effect::ClipboardWritePayload { window, token, payload }`
+- `Effect::ClipboardReadPayload { window, token, formats, limits }`
 - Completion:
+  - `Event::ClipboardWriteCompleted { token, outcome }`
   - `Event::ClipboardPayload { token, payload }`
-  - `Event::ClipboardPayloadUnavailable { token }`
+  - `Event::ClipboardReadFailed { token, error }`
 
 Where `payload` can include:
 
 - text,
+- HTML / rich text equivalents,
+- image bytes (bounded),
 - MIME-typed byte blobs (bounded),
 - and file-like handles aligned with ADR 0264 (sandboxed mobile).
 
 ## Consequences
 
 - Mobile privacy constraints do not force breaking changes to the UI ecosystem.
-- Clipboard becomes a reliable “command-like” interaction surface (paste/copy) rather than a reactive data feed.
-- Future rich clipboard support can be layered without introducing paths/URIs into contract crates.
+- Clipboard becomes a reliable “command-like” interaction surface (paste/copy) rather than a
+  reactive data feed.
+- Explicit copy flows can expose honest success/failure semantics without platform-specific hacks.
+- Future rich clipboard support can be layered without introducing paths/URIs into contract crates
+  or renaming the text lane again.
 
 ## References
 
@@ -114,4 +153,4 @@ Where `payload` can include:
 - Read-only selection + clipboard commands: `docs/adr/0137-readonly-text-selection-and-clipboard.md`
 - Mobile file picker + sandbox handles: `docs/adr/0264-mobile-file-picker-and-sandbox-handles-v1.md`
 - Mobile shell ↔ runtime bridge: `docs/adr/0260-mobile-shell-runtime-bridge-v1.md`
-
+- Fearless-refactor planning notes: `docs/workstreams/clipboard-write-completion-fearless-refactor-v1/DESIGN.md`

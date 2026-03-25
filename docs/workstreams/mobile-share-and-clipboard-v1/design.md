@@ -36,4 +36,5 @@ glue with diagnostics gates so future Android/iOS support does not require cross
 
 - TODO list: `docs/workstreams/mobile-share-and-clipboard-v1/todo.md`
 - Milestones: `docs/workstreams/mobile-share-and-clipboard-v1/milestones.md`
-
+- Clipboard contract reset sub-workstream:
+  - `docs/workstreams/clipboard-write-completion-fearless-refactor-v1/DESIGN.md`

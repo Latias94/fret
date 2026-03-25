@@ -700,6 +700,15 @@ pub type OnPressablePointerUp = Arc<
     dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerUpCx) -> PressablePointerUpResult
         + 'static,
 >;
+pub type OnPressableClipboardWriteCompleted = Arc<
+    dyn Fn(
+            &mut dyn UiActionHost,
+            ActionCx,
+            fret_core::ClipboardToken,
+            &fret_core::ClipboardWriteOutcome,
+        ) -> bool
+        + 'static,
+>;
 
 #[derive(Default)]
 pub(crate) struct PressableActionHooks {
@@ -707,6 +716,7 @@ pub(crate) struct PressableActionHooks {
     pub on_pointer_down: Option<OnPressablePointerDown>,
     pub on_pointer_move: Option<OnPressablePointerMove>,
     pub on_pointer_up: Option<OnPressablePointerUp>,
+    pub on_clipboard_write_completed: Option<OnPressableClipboardWriteCompleted>,
 }
 
 pub type OnHoverChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;
@@ -744,11 +754,16 @@ pub type OnTextInputRegionTextInput =
 pub type OnTextInputRegionIme =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, &fret_core::ImeEvent) -> bool + 'static>;
 
-pub type OnTextInputRegionClipboardText =
+pub type OnTextInputRegionClipboardReadText =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, fret_core::ClipboardToken, &str) -> bool + 'static>;
 
-pub type OnTextInputRegionClipboardUnavailable = Arc<
-    dyn Fn(&mut dyn UiActionHost, ActionCx, fret_core::ClipboardToken, Option<String>) -> bool
+pub type OnTextInputRegionClipboardReadFailed = Arc<
+    dyn Fn(
+            &mut dyn UiActionHost,
+            ActionCx,
+            fret_core::ClipboardToken,
+            &fret_core::ClipboardAccessError,
+        ) -> bool
         + 'static,
 >;
 
@@ -802,8 +817,8 @@ pub type OnTextInputRegionPlatformTextInputReplaceAndMarkTextInRangeUtf16 = Arc<
 pub(crate) struct TextInputRegionActionHooks {
     pub on_text_input: Option<OnTextInputRegionTextInput>,
     pub on_ime: Option<OnTextInputRegionIme>,
-    pub on_clipboard_text: Option<OnTextInputRegionClipboardText>,
-    pub on_clipboard_unavailable: Option<OnTextInputRegionClipboardUnavailable>,
+    pub on_clipboard_read_text: Option<OnTextInputRegionClipboardReadText>,
+    pub on_clipboard_read_failed: Option<OnTextInputRegionClipboardReadFailed>,
     pub on_set_selection: Option<OnTextInputRegionSetSelection>,
     pub on_platform_text_input_query: Option<OnTextInputRegionPlatformTextInputQuery>,
     pub on_platform_text_input_replace_text_in_range_utf16:

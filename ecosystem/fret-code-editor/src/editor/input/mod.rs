@@ -262,7 +262,7 @@ pub(super) fn handle_key_down(
             }
             let _ = insert_text(&mut st, "\t");
         }
-        KeyCode::KeyC if ctrl_or_meta => copy_selection(host, &st),
+        KeyCode::KeyC if ctrl_or_meta => copy_selection(host, action_cx, &st),
         KeyCode::KeyV if ctrl_or_meta => {
             if st.interaction.editable {
                 request_paste(host, action_cx);
@@ -348,7 +348,11 @@ pub(super) fn move_caret_home_end(
     }
 }
 
-pub(super) fn copy_selection(host: &mut dyn UiActionHost, st: &CodeEditorState) {
+pub(super) fn copy_selection(
+    host: &mut dyn UiActionHost,
+    action_cx: ActionCx,
+    st: &CodeEditorState,
+) {
     let range = st.selection.normalized();
     if range.is_empty() {
         return;
@@ -358,12 +362,17 @@ pub(super) fn copy_selection(host: &mut dyn UiActionHost, st: &CodeEditorState) 
     let Some(text) = st.buffer.slice_to_string(start..end) else {
         return;
     };
-    host.push_effect(Effect::ClipboardSetText { text });
+    let token = host.next_clipboard_token();
+    host.push_effect(Effect::ClipboardWriteText {
+        window: action_cx.window,
+        token,
+        text,
+    });
 }
 
 pub(super) fn request_paste(host: &mut dyn UiActionHost, action_cx: ActionCx) {
     let token = host.next_clipboard_token();
-    host.push_effect(Effect::ClipboardGetText {
+    host.push_effect(Effect::ClipboardReadText {
         window: action_cx.window,
         token,
     });
@@ -1036,12 +1045,16 @@ fn clamp_byte_out_of_folds(st: &CodeEditorState, byte: usize, snap: FoldSnap) ->
     byte
 }
 
-pub(super) fn cut_selection(host: &mut dyn UiActionHost, st: &mut CodeEditorState) -> bool {
+pub(super) fn cut_selection(
+    host: &mut dyn UiActionHost,
+    action_cx: ActionCx,
+    st: &mut CodeEditorState,
+) -> bool {
     let range = st.selection.normalized();
     if range.is_empty() {
         return false;
     }
-    copy_selection(host, st);
+    copy_selection(host, action_cx, st);
     let start = range.start.min(st.buffer.len_bytes());
     let end = range.end.min(st.buffer.len_bytes());
     let out = apply_and_record_edit(

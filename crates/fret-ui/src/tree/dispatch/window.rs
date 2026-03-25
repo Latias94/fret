@@ -97,7 +97,7 @@ impl<H: UiHost> UiTree<H> {
                 .map(|s| s.now_monotonic);
 
             match event {
-                Event::ClipboardText { token, .. } => {
+                Event::ClipboardReadText { token, .. } => {
                     app.with_global_mut_untracked(
                         fret_runtime::WindowClipboardDiagnosticsStore::default,
                         |svc, _host| {
@@ -105,11 +105,33 @@ impl<H: UiHost> UiTree<H> {
                         },
                     );
                 }
-                Event::ClipboardTextUnavailable { token, message } => {
+                Event::ClipboardReadFailed { token, error } => {
                     app.with_global_mut_untracked(
                         fret_runtime::WindowClipboardDiagnosticsStore::default,
                         |svc, _host| {
-                            svc.record_read_unavailable(window, frame_id, *token, message.clone());
+                            svc.record_read_unavailable(
+                                window,
+                                frame_id,
+                                *token,
+                                error.message.clone(),
+                            );
+                        },
+                    );
+                }
+                Event::ClipboardWriteCompleted { outcome, .. } => {
+                    app.with_global_mut_untracked(
+                        fret_runtime::WindowClipboardDiagnosticsStore::default,
+                        |svc, _host| match outcome {
+                            fret_core::ClipboardWriteOutcome::Succeeded => {
+                                svc.record_write_ok(window, frame_id);
+                            }
+                            fret_core::ClipboardWriteOutcome::Failed { error } => {
+                                svc.record_write_unavailable(
+                                    window,
+                                    frame_id,
+                                    error.message.clone(),
+                                );
+                            }
                         },
                     );
                 }
@@ -632,6 +654,43 @@ impl<H: UiHost> UiTree<H> {
                 }
                 return;
             }
+        }
+
+        if matches!(
+            event,
+            Event::ClipboardReadText { .. }
+                | Event::ClipboardReadFailed { .. }
+                | Event::ClipboardWriteCompleted { .. }
+        ) {
+            for layer_id in self
+                .visible_layers_in_paint_order()
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+            {
+                let Some(layer_root) = self
+                    .layers
+                    .get(layer_id)
+                    .and_then(|layer| layer.visible.then_some(layer.root))
+                else {
+                    continue;
+                };
+
+                if self.dispatch_event_to_subtree_bubble(
+                    app,
+                    services,
+                    &input_ctx,
+                    layer_root,
+                    event,
+                    &mut invalidation_visited,
+                ) {
+                    break;
+                }
+            }
+            if needs_redraw {
+                self.request_redraw_coalesced(app);
+            }
+            return;
         }
 
         if let Event::TextInput(text) = event {

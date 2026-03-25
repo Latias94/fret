@@ -2458,14 +2458,14 @@ impl CodeEditor {
                                     if !st.interaction.selectable {
                                         return true;
                                     }
-                                    input::copy_selection(host, &st);
+                                    input::copy_selection(host, action_cx, &st);
                                     did = true;
                                 }
                                 "text.cut" | "edit.cut" => {
                                     if !st.interaction.editable {
                                         return true;
                                     }
-                                    if input::cut_selection(host, &mut st) {
+                                    if input::cut_selection(host, action_cx, &mut st) {
                                         did = true;
                                     }
                                 }
@@ -2956,7 +2956,7 @@ impl CodeEditor {
 
                 let clipboard_state = editor_state.clone();
                 let clipboard_scroll = scroll_handle.clone();
-                cx.text_input_region_on_clipboard_text(Arc::new(
+                cx.text_input_region_on_clipboard_read_text(Arc::new(
                     move |host: &mut dyn UiActionHost,
                           action_cx: ActionCx,
                           _token: ClipboardToken,

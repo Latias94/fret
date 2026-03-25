@@ -817,8 +817,8 @@ mod tests {
         assert!(
             !effects
                 .iter()
-                .any(|e| matches!(e, fret_runtime::Effect::ClipboardSetText { .. })),
-            "expected edit.copy to not emit ClipboardSetText when selection is empty"
+                .any(|e| matches!(e, fret_runtime::Effect::ClipboardWriteText { .. })),
+            "expected edit.copy to not emit ClipboardWriteText when selection is empty"
         );
 
         let _ = app.models_mut().update(&state, |st| {
@@ -836,9 +836,9 @@ mod tests {
         let effects = app.flush_effects();
         assert!(
             effects.iter().any(|e| {
-                matches!(e, fret_runtime::Effect::ClipboardSetText { text } if text == "Row 1")
+                matches!(e, fret_runtime::Effect::ClipboardWriteText { text, .. } if text == "Row 1")
             }),
-            "expected edit.copy to emit ClipboardSetText for the selected row"
+            "expected edit.copy to emit ClipboardWriteText for the selected row"
         );
     }
 
@@ -5159,7 +5159,7 @@ where
                 let row_meta_for_command = row_meta.clone();
                 cx.command_on_command_for(
                     list_id,
-                    Arc::new(move |host, _acx, command| {
+                    Arc::new(move |host, acx, command| {
                         if command.as_str() != "edit.copy" {
                             return false;
                         }
@@ -5190,7 +5190,10 @@ where
                         if lines.is_empty() {
                             return true;
                         }
-                        host.push_effect(Effect::ClipboardSetText {
+                        let token = host.next_clipboard_token();
+                        host.push_effect(Effect::ClipboardWriteText {
+                            window: acx.window,
+                            token,
                             text: lines.join("\n"),
                         });
                         true

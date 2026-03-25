@@ -53,10 +53,12 @@ impl Clipboard for NativeClipboard {
             let Some(cb) = self.inner.as_mut() else {
                 return Err(ClipboardError {
                     kind: ClipboardErrorKind::Unavailable,
+                    message: None,
                 });
             };
             cb.set_text(text.to_string()).map_err(|_| ClipboardError {
                 kind: ClipboardErrorKind::BackendError,
+                message: None,
             })
         }
 
@@ -68,6 +70,7 @@ impl Clipboard for NativeClipboard {
             let _ = text;
             Err(ClipboardError {
                 kind: ClipboardErrorKind::Unavailable,
+                message: None,
             })
         }
     }
@@ -81,12 +84,14 @@ impl Clipboard for NativeClipboard {
             let Some(cb) = self.inner.as_mut() else {
                 return Err(ClipboardError {
                     kind: ClipboardErrorKind::Unavailable,
+                    message: None,
                 });
             };
             match cb.get_text() {
                 Ok(text) => Ok(Some(text)),
                 Err(_) => Err(ClipboardError {
                     kind: ClipboardErrorKind::BackendError,
+                    message: None,
                 }),
             }
         }
@@ -98,6 +103,7 @@ impl Clipboard for NativeClipboard {
         {
             Err(ClipboardError {
                 kind: ClipboardErrorKind::Unavailable,
+                message: None,
             })
         }
     }
@@ -123,6 +129,7 @@ impl NativeClipboard {
                 let Some(cb) = self.inner.as_mut() else {
                     return Err(ClipboardError {
                         kind: ClipboardErrorKind::Unavailable,
+                        message: None,
                     });
                 };
                 cb.set()
@@ -130,6 +137,7 @@ impl NativeClipboard {
                     .text(text.to_string())
                     .map_err(|_| ClipboardError {
                         kind: ClipboardErrorKind::BackendError,
+                        message: None,
                     })
             }
 
@@ -146,6 +154,7 @@ impl NativeClipboard {
                 let _ = text;
                 Err(ClipboardError {
                     kind: ClipboardErrorKind::Unavailable,
+                    message: None,
                 })
             }
         }
@@ -158,6 +167,7 @@ impl NativeClipboard {
             let _ = text;
             Err(ClipboardError {
                 kind: ClipboardErrorKind::Unavailable,
+                message: None,
             })
         }
     }
@@ -181,6 +191,7 @@ impl NativeClipboard {
                 let Some(cb) = self.inner.as_mut() else {
                     return Err(ClipboardError {
                         kind: ClipboardErrorKind::Unavailable,
+                        message: None,
                     });
                 };
                 cb.get()
@@ -189,6 +200,7 @@ impl NativeClipboard {
                     .map(Some)
                     .map_err(|_| ClipboardError {
                         kind: ClipboardErrorKind::BackendError,
+                        message: None,
                     })
             }
 
@@ -204,6 +216,7 @@ impl NativeClipboard {
             {
                 Err(ClipboardError {
                     kind: ClipboardErrorKind::Unavailable,
+                    message: None,
                 })
             }
         }
@@ -215,6 +228,7 @@ impl NativeClipboard {
         {
             Err(ClipboardError {
                 kind: ClipboardErrorKind::Unavailable,
+                message: None,
             })
         }
     }

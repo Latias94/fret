@@ -465,7 +465,10 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 && end <= props.rich.text.len()
                 && let Some(sel) = props.rich.text.get(start..end)
             {
-                cx.app.push_effect(Effect::ClipboardSetText {
+                let token = cx.app.next_clipboard_token();
+                cx.app.push_effect(Effect::ClipboardWriteText {
+                    window,
+                    token,
                     text: sel.to_string(),
                 });
             }

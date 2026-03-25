@@ -1053,7 +1053,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 let delta = crate::text_edit::commands::multiline_ui_delta("text.insert", outcome);
                 self.apply_multiline_ui_delta(cx, delta);
             }
-            Event::ClipboardText { token, text } => {
+            Event::ClipboardReadText { token, text } => {
                 if cx.focus != Some(cx.node) {
                     return;
                 }
@@ -1084,7 +1084,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
                 self.apply_multiline_ui_delta(cx, delta);
             }
-            Event::ClipboardTextUnavailable { token, .. } => {
+            Event::ClipboardReadFailed { token, .. } => {
                 if self.pending_clipboard_token == Some(*token) {
                     self.pending_clipboard_token = None;
                 }
@@ -1264,8 +1264,14 @@ impl<H: UiHost> Widget<H> for TextArea {
                 );
                 if let Some(crate::text_edit::commands::ClipboardRequest::SetText { text }) =
                     result.request
+                    && let Some(window) = cx.window
                 {
-                    cx.app.push_effect(Effect::ClipboardSetText { text });
+                    let token = cx.app.next_clipboard_token();
+                    cx.app.push_effect(Effect::ClipboardWriteText {
+                        window,
+                        token,
+                        text,
+                    });
                 }
                 true
             }
@@ -1280,8 +1286,14 @@ impl<H: UiHost> Widget<H> for TextArea {
                 );
                 if let Some(crate::text_edit::commands::ClipboardRequest::SetText { text }) =
                     result.request
+                    && let Some(window) = cx.window
                 {
-                    cx.app.push_effect(Effect::ClipboardSetText { text });
+                    let token = cx.app.next_clipboard_token();
+                    cx.app.push_effect(Effect::ClipboardWriteText {
+                        window,
+                        token,
+                        text,
+                    });
                 }
                 if result.outcome.invalidate_layout {
                     self.bump_base_text_revision();

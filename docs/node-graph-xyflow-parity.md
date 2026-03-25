@@ -935,7 +935,7 @@ canonical data flow and invalidation boundaries:
   - XyFlow: userland; but many examples implement it
   - fret-node:
     - deterministic fragment payload: `ecosystem/fret-node/src/ops/fragment.rs` (`GraphFragment`)
-    - system clipboard integration: `ecosystem/fret-node/src/ui/canvas/widget.rs` (`ClipboardSetText` / `ClipboardGetText`)
+    - system clipboard integration: `ecosystem/fret-node/src/ui/canvas/widget.rs` (`ClipboardWriteText` / `ClipboardReadText`)
     - captures selected nodes + selected groups (including group children) + internal edges
     - subgraph payload hygiene: referenced imports are included for pasted subgraph nodes, and duplicated imports are filtered at apply points
       - conformance: `ecosystem/fret-node/src/ops/tests.rs` (`fragment_from_nodes_includes_referenced_subgraph_imports`, `fragment_paste_transaction_keeps_subgraph_target_graph_id_and_adds_import`)

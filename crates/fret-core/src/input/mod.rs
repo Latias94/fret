@@ -308,6 +308,28 @@ pub struct InternalDragEvent {
     pub modifiers: Modifiers,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClipboardAccessErrorKind {
+    Unavailable,
+    PermissionDenied,
+    UserActivationRequired,
+    Unsupported,
+    BackendError,
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClipboardAccessError {
+    pub kind: ClipboardAccessErrorKind,
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ClipboardWriteOutcome {
+    Succeeded,
+    Failed { error: ClipboardAccessError },
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
     Pointer(PointerEvent),
@@ -337,15 +359,20 @@ pub enum Event {
         anchor: u32,
         focus: u32,
     },
+    /// Clipboard write request completed.
+    ClipboardWriteCompleted {
+        token: ClipboardToken,
+        outcome: ClipboardWriteOutcome,
+    },
     /// Clipboard text payload delivered to the focused widget (typically as the result of a paste request).
-    ClipboardText {
+    ClipboardReadText {
         token: ClipboardToken,
         text: String,
     },
     /// Clipboard read completed without a text payload (clipboard empty/unavailable/error).
-    ClipboardTextUnavailable {
+    ClipboardReadFailed {
         token: ClipboardToken,
-        message: Option<String>,
+        error: ClipboardAccessError,
     },
     /// Share sheet request completed.
     ShareSheetCompleted {

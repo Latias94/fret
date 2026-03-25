@@ -1929,7 +1929,10 @@ fn center_panel(
     let selector_copy = {
         let selector_json = selector_json.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            host.push_effect(Effect::ClipboardSetText {
+            let token = host.next_clipboard_token();
+            host.push_effect(Effect::ClipboardWriteText {
+                window: action_cx.window,
+                token,
                 text: selector_json.clone(),
             });
             host.request_redraw(action_cx.window);
@@ -2059,7 +2062,10 @@ fn center_panel(
     let predicate_copy = {
         let predicate_json = predicate_json.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            host.push_effect(Effect::ClipboardSetText {
+            let token = host.next_clipboard_token();
+            host.push_effect(Effect::ClipboardWriteText {
+                window: action_cx.window,
+                token,
                 text: predicate_json.clone(),
             });
             host.request_redraw(action_cx.window);
@@ -2540,7 +2546,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     host.request_redraw(action_cx.window);
                 });
             let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                host.push_effect(Effect::ClipboardSetText {
+                let token = host.next_clipboard_token();
+                host.push_effect(Effect::ClipboardWriteText {
+                    window: action_cx.window,
+                    token,
                     text: copy_path.clone(),
                 });
                 host.request_redraw(action_cx.window);
@@ -2703,7 +2712,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         let mut out: Vec<AnyElement> = Vec::new();
         if let Some(path) = selected_summary_path.as_ref().map(|v| v.to_string()) {
             let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                host.push_effect(Effect::ClipboardSetText { text: path.clone() });
+                let token = host.next_clipboard_token();
+                host.push_effect(Effect::ClipboardWriteText {
+                    window: action_cx.window,
+                    token,
+                    text: path.clone(),
+                });
                 host.request_redraw(action_cx.window);
             });
             out.push(
@@ -2717,7 +2731,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if let Some(first_bundle_dir) = selected_bundle_dirs.first().map(|v| v.to_string()) {
             let on_copy_first: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
-                    host.push_effect(Effect::ClipboardSetText {
+                    let token = host.next_clipboard_token();
+                    host.push_effect(Effect::ClipboardWriteText {
+                        window: action_cx.window,
+                        token,
                         text: first_bundle_dir.clone(),
                     });
                     host.request_redraw(action_cx.window);
@@ -2735,7 +2752,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         {
             let on_copy_first: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
-                    host.push_effect(Effect::ClipboardSetText {
+                    let token = host.next_clipboard_token();
+                    host.push_effect(Effect::ClipboardWriteText {
+                        window: action_cx.window,
+                        token,
                         text: first_capability_check.clone(),
                     });
                     host.request_redraw(action_cx.window);
@@ -2753,7 +2773,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         {
             let on_copy_first: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
-                    host.push_effect(Effect::ClipboardSetText {
+                    let token = host.next_clipboard_token();
+                    host.push_effect(Effect::ClipboardWriteText {
+                        window: action_cx.window,
+                        token,
                         text: first_capability_source.clone(),
                     });
                     host.request_redraw(action_cx.window);
@@ -2777,7 +2800,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if !selected_bundle_dirs_text.trim().is_empty() {
             let bundle_dirs = selected_bundle_dirs_text.clone();
             let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                host.push_effect(Effect::ClipboardSetText {
+                let token = host.next_clipboard_token();
+                host.push_effect(Effect::ClipboardWriteText {
+                    window: action_cx.window,
+                    token,
                     text: bundle_dirs.clone(),
                 });
                 host.request_redraw(action_cx.window);
@@ -2793,7 +2819,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if !selected_capabilities_checks_text.trim().is_empty() {
             let capability_checks = selected_capabilities_checks_text.clone();
             let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                host.push_effect(Effect::ClipboardSetText {
+                let token = host.next_clipboard_token();
+                host.push_effect(Effect::ClipboardWriteText {
+                    window: action_cx.window,
+                    token,
                     text: capability_checks.clone(),
                 });
                 host.request_redraw(action_cx.window);
@@ -2809,7 +2838,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if !selected_capability_sources_text.trim().is_empty() {
             let capability_sources = selected_capability_sources_text.clone();
             let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                host.push_effect(Effect::ClipboardSetText {
+                let token = host.next_clipboard_token();
+                host.push_effect(Effect::ClipboardWriteText {
+                    window: action_cx.window,
+                    token,
                     text: capability_sources.clone(),
                 });
                 host.request_redraw(action_cx.window);
@@ -3428,10 +3460,18 @@ fn on_command(
                 st.cfg.ws_url.as_ref(),
                 st.cfg.token.as_ref()
             );
-            app.push_effect(Effect::ClipboardSetText { text });
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text,
+            });
         }
         CMD_COPY_TOKEN => {
-            app.push_effect(Effect::ClipboardSetText {
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
                 text: st.cfg.token.to_string(),
             });
         }
@@ -3562,7 +3602,10 @@ fn on_command(
                 push_log(app, &st.log_lines, "copy pack path refused (no pack yet)");
                 return;
             };
-            app.push_effect(Effect::ClipboardSetText {
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
                 text: path.to_string(),
             });
         }

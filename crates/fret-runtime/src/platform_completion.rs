@@ -4,12 +4,20 @@
 //! completion results (e.g. clipboard reads, external-drop reads) into the UI event stream.
 
 use crate::ClipboardToken;
-use fret_core::{ExternalDropDataEvent, FileDialogDataEvent, FileDialogSelection};
+use fret_core::{
+    ClipboardAccessError, ExternalDropDataEvent, FileDialogDataEvent, FileDialogSelection,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlatformCompletion {
-    ClipboardText { token: ClipboardToken, text: String },
-    ClipboardTextUnavailable { token: ClipboardToken },
+    ClipboardReadText {
+        token: ClipboardToken,
+        text: String,
+    },
+    ClipboardReadFailed {
+        token: ClipboardToken,
+        error: ClipboardAccessError,
+    },
     ExternalDropData(ExternalDropDataEvent),
     FileDialogSelection(FileDialogSelection),
     FileDialogData(FileDialogDataEvent),

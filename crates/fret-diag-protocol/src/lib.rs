@@ -414,6 +414,24 @@ pub enum UiIncomingOpenInjectItemV1 {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiClipboardWriteResultV1 {
+    Success,
+    Failure,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiClipboardAccessErrorKindV1 {
+    Unavailable,
+    PermissionDenied,
+    UserActivationRequired,
+    Unsupported,
+    BackendError,
+    Unknown,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UiActionStepV2 {
@@ -1047,6 +1065,40 @@ pub enum UiActionStepV2 {
     /// Requires capability `diag.clipboard_text`.
     SetClipboardText {
         text: String,
+    },
+    /// Wait until a clipboard write completion matching `outcome` is observed.
+    ///
+    /// This is intended for gating explicit copy-button success/failure without inferring from
+    /// clipboard contents alone.
+    ///
+    /// When `outcome = "failure"`, callers may additionally match on `error_kind` and/or a
+    /// substring of the structured error message.
+    WaitClipboardWriteResult {
+        outcome: UiClipboardWriteResultV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        error_kind: Option<UiClipboardAccessErrorKindV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        message_contains: Option<String>,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
+    /// Assert a clipboard write completion matches `outcome`.
+    ///
+    /// If a preceding `wait_clipboard_write_result` step already captured a completion, this step
+    /// asserts against that cached result. Otherwise it waits for a new completion up to
+    /// `timeout_frames`, which keeps the step usable as a single-shot gate after clicking a copy
+    /// button.
+    ///
+    /// When `outcome = "failure"`, callers may additionally match on `error_kind` and/or a
+    /// substring of the structured error message.
+    AssertClipboardWriteResult {
+        outcome: UiClipboardWriteResultV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        error_kind: Option<UiClipboardAccessErrorKindV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        message_contains: Option<String>,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
     },
     /// Assert that the OS clipboard text payload equals `text` (best-effort).
     ///
@@ -3921,6 +3973,60 @@ mod tests {
                 assert_eq!(timeout_frames, default_action_timeout_frames());
             }
             _ => panic!("expected set_text_value"),
+        }
+    }
+
+    #[test]
+    fn step_wait_clipboard_write_result_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "wait_clipboard_write_result",
+            "outcome": "success"
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::WaitClipboardWriteResult {
+                outcome,
+                error_kind,
+                message_contains,
+                timeout_frames,
+            } => {
+                assert_eq!(outcome, UiClipboardWriteResultV1::Success);
+                assert!(error_kind.is_none());
+                assert!(message_contains.is_none());
+                assert_eq!(timeout_frames, default_action_timeout_frames());
+            }
+            _ => panic!("expected wait_clipboard_write_result"),
+        }
+    }
+
+    #[test]
+    fn step_assert_clipboard_write_result_deserializes_with_failure_details() {
+        let value = serde_json::json!({
+            "type": "assert_clipboard_write_result",
+            "outcome": "failure",
+            "error_kind": "unavailable",
+            "message_contains": "forced clipboard unavailable",
+            "timeout_frames": 90
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::AssertClipboardWriteResult {
+                outcome,
+                error_kind,
+                message_contains,
+                timeout_frames,
+            } => {
+                assert_eq!(outcome, UiClipboardWriteResultV1::Failure);
+                assert_eq!(error_kind, Some(UiClipboardAccessErrorKindV1::Unavailable));
+                assert_eq!(
+                    message_contains.as_deref(),
+                    Some("forced clipboard unavailable")
+                );
+                assert_eq!(timeout_frames, 90);
+            }
+            _ => panic!("expected assert_clipboard_write_result"),
         }
     }
 

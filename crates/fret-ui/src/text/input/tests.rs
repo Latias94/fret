@@ -580,7 +580,7 @@ fn text_input_copy_clamps_out_of_range_selection_indices() {
     assert!(
         app.take_effects()
             .iter()
-            .any(|e| matches!(e, Effect::ClipboardSetText { text } if text == "hello")),
+            .any(|e| matches!(e, Effect::ClipboardWriteText { text, .. } if text == "hello")),
         "expected edit.copy to clamp indices and copy the selected text"
     );
     assert_eq!(input.selection_anchor, 0);

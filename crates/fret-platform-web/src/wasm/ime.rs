@@ -1369,27 +1369,69 @@ impl WebPlatformServices {
                     };
                     window.clear_timeout_with_handle(timer.id);
                 }
-                Effect::ClipboardSetText { text } => {
+                Effect::ClipboardWriteText {
+                    window: _,
+                    token,
+                    text,
+                } => {
                     let caps = app
                         .global::<PlatformCapabilities>()
                         .cloned()
                         .unwrap_or_default();
                     if !caps.clipboard.text.write {
+                        self.queued_events
+                            .borrow_mut()
+                            .push(Event::ClipboardWriteCompleted {
+                                token,
+                                outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                    error: super::clipboard_error(
+                                        fret_core::ClipboardAccessErrorKind::Unsupported,
+                                        Some("clipboard text write is unavailable".to_string()),
+                                    ),
+                                },
+                            });
                         continue;
                     }
                     let Some(window) = window() else {
+                        self.queued_events
+                            .borrow_mut()
+                            .push(Event::ClipboardWriteCompleted {
+                                token,
+                                outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                    error: super::clipboard_error(
+                                        fret_core::ClipboardAccessErrorKind::Unavailable,
+                                        Some(
+                                            "window is unavailable for clipboard write".to_string(),
+                                        ),
+                                    ),
+                                },
+                            });
                         continue;
                     };
                     let clipboard = window.navigator().clipboard();
+                    let queue = self.queued_events.clone();
                     let wake = self.waker.clone();
                     spawn_local(async move {
-                        let _ = JsFuture::from(clipboard.write_text(&text)).await;
+                        let result = JsFuture::from(clipboard.write_text(&text)).await;
+                        let event = match result {
+                            Ok(_) => Event::ClipboardWriteCompleted {
+                                token,
+                                outcome: fret_core::ClipboardWriteOutcome::Succeeded,
+                            },
+                            Err(err) => Event::ClipboardWriteCompleted {
+                                token,
+                                outcome: fret_core::ClipboardWriteOutcome::Failed {
+                                    error: super::clipboard_error_from_js(&err),
+                                },
+                            },
+                        };
+                        let _ = queue.try_borrow_mut().map(|mut q| q.push(event));
                         if let Some(wake) = wake.as_ref() {
                             wake();
                         }
                     });
                 }
-                Effect::ClipboardGetText { token, .. } => {
+                Effect::ClipboardReadText { token, .. } => {
                     let caps = app
                         .global::<PlatformCapabilities>()
                         .cloned()
@@ -1397,9 +1439,12 @@ impl WebPlatformServices {
                     if !caps.clipboard.text.read {
                         self.queued_events
                             .borrow_mut()
-                            .push(Event::ClipboardTextUnavailable {
+                            .push(Event::ClipboardReadFailed {
                                 token,
-                                message: None,
+                                error: super::clipboard_error(
+                                    fret_core::ClipboardAccessErrorKind::Unsupported,
+                                    None,
+                                ),
                             });
                         continue;
                     }
@@ -1407,9 +1452,12 @@ impl WebPlatformServices {
                     let Some(window) = window() else {
                         self.queued_events
                             .borrow_mut()
-                            .push(Event::ClipboardTextUnavailable {
+                            .push(Event::ClipboardReadFailed {
                                 token,
-                                message: None,
+                                error: super::clipboard_error(
+                                    fret_core::ClipboardAccessErrorKind::Unavailable,
+                                    None,
+                                ),
                             });
                         continue;
                     };
@@ -1419,13 +1467,13 @@ impl WebPlatformServices {
                     spawn_local(async move {
                         let result = JsFuture::from(clipboard.read_text()).await;
                         let event = match result {
-                            Ok(v) => Event::ClipboardText {
+                            Ok(v) => Event::ClipboardReadText {
                                 token,
                                 text: v.as_string().unwrap_or_default(),
                             },
-                            Err(_) => Event::ClipboardTextUnavailable {
+                            Err(err) => Event::ClipboardReadFailed {
                                 token,
-                                message: None,
+                                error: super::clipboard_error_from_js(&err),
                             },
                         };
                         let _ = queue.try_borrow_mut().map(|mut q| q.push(event));

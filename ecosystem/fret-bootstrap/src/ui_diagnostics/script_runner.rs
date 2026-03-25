@@ -76,6 +76,7 @@ impl UiDiagnosticsService {
             click_stable_trace: Vec::new(),
             bounds_stable_trace: Vec::new(),
             focus_trace: Vec::new(),
+            last_clipboard_write_completion: None,
             shortcut_routing_trace: Vec::new(),
             last_shortcut_routing_seq: 0,
             command_dispatch_trace: Vec::new(),
@@ -89,7 +90,7 @@ impl UiDiagnosticsService {
 
         // Avoid leaking clipboard responses across runs. Script steps that assert clipboard state
         // rely on a per-run token -> response map.
-        self.reset_clipboard_text_responses();
+        self.reset_clipboard_responses();
 
         push_script_event_log(
             &mut active_script,
@@ -637,6 +638,8 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::PasteTextInto { .. }
                 | UiActionStepV2::MenuSelect { .. }
                 | UiActionStepV2::MenuSelectPath { .. }
+                | UiActionStepV2::WaitClipboardWriteResult { .. }
+                | UiActionStepV2::AssertClipboardWriteResult { .. }
                 | UiActionStepV2::DragPointer { .. }
                 | UiActionStepV2::DragPointerUntil { .. }
                 | UiActionStepV2::DragTo { .. }
@@ -647,6 +650,13 @@ impl UiDiagnosticsService {
         );
         if !is_v2_intent_step {
             active.v2_step_state = None;
+        }
+        if !matches!(
+            step,
+            UiActionStepV2::WaitClipboardWriteResult { .. }
+                | UiActionStepV2::AssertClipboardWriteResult { .. }
+        ) {
+            active.last_clipboard_write_completion = None;
         }
         if !matches!(step, UiActionStepV2::WaitShortcutRoutingTrace { .. }) {
             active.wait_shortcut_routing_trace = None;

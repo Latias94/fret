@@ -598,8 +598,11 @@ pub struct RouterLink {
 impl RouterLink {
     pub fn copy_href_on_activate(href: impl Into<Arc<str>>) -> OnActivate {
         let href: Arc<str> = href.into();
-        Arc::new(move |host, _cx, _reason| {
-            host.push_effect(Effect::ClipboardSetText {
+        Arc::new(move |host, cx, _reason| {
+            let token = host.next_clipboard_token();
+            host.push_effect(Effect::ClipboardWriteText {
+                window: cx.window,
+                token,
                 text: href.to_string(),
             });
         })
