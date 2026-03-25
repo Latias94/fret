@@ -7,10 +7,11 @@ use fret::{UiChild, UiCx};
 pub(super) fn preview_ai_agent_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::agent_demo::render(cx);
     let features = doc_layout::notes_block([
-        "Root border, header chrome, spacing, and schema disclosure outcomes already align with the upstream AI Elements `Agent` component.",
-        "Tool schemas render through shadcn accordion semantics, so the expandable disclosure behavior stays in the component/policy layer instead of `crates/fret-ui`.",
-        "The copyable Fret example now follows the same compound structure as the official docs: `Agent -> AgentHeader + AgentContent -> AgentInstructions / AgentTools / AgentOutput`.",
-        "Existing eager constructors and the raw accordion-based `AgentTools::multiple_uncontrolled(...)` lane remain available as escape hatches when a caller needs lower-level control.",
+        "Model badge in the header.",
+        "Tools render as accordion items with expandable input schemas.",
+        "Output schema renders with syntax highlighting.",
+        "The compound structure stays copyable in Rust: `Agent -> AgentHeader + AgentContent -> AgentInstructions / AgentTools / AgentOutput`.",
+        "Works with AI SDK-style tool definitions via `AgentToolDefinition`.",
     ])
     .test_id("ui-gallery-ai-agent-features");
     let props = agent_parts_props_table(cx).test_id("ui-gallery-ai-agent-props");
@@ -19,6 +20,7 @@ pub(super) fn preview_ai_agent_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
         "`Agent`, `AgentContent`, and `AgentTools` now expose a docs-shaped `empty().children(...)` lane, so the Rust example maps more directly to the official JSX composition without pretending this is a DOM port.",
         "We intentionally keep this surface in `fret-ui-ai`: `agent` is UI chrome, not a runtime contract, and it does not need provider-owned closure state to match the upstream outcome.",
         "The tool-definition seam stays explicit in Rust. Upstream AI SDK `Tool` maps to `AgentToolDefinition` so callers can pass JSON Schema data without hiding serialization details behind framework magic.",
+        "Upstream docs prose currently says the instructions body is markdown, but the pinned source and tests in `repo-ref/ai-elements/packages/elements/src/agent.tsx` still render plain text inside a `<p>`; Fret follows that source behavior today.",
     ])
     .test_id("ui-gallery-ai-agent-notes");
 
@@ -27,7 +29,7 @@ pub(super) fn preview_ai_agent_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
             "Docs-aligned Agent coverage for AI Elements: the same compound composition story as the official page, adapted to Fret's explicit Rust builder surface and JSON-schema tool definitions.",
         ),
         vec![
-            DocSection::build(cx, "Usage with AI SDK-style Tool Definitions", demo)
+            DocSection::build(cx, "Usage with AI SDK", demo)
                 .description(
                     "Rust/Fret analogue of the official AI Elements Agent usage example.",
                 )
@@ -39,8 +41,8 @@ pub(super) fn preview_ai_agent_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
             DocSection::build(cx, "Features", features)
                 .description("Behavior and default-value outcomes preserved while aligning with the official Agent docs surface.")
                 .no_shell(),
-            DocSection::build(cx, "Builder Surface", props)
-                .description("Current Fret builder surface for the `Agent` family, including the new docs-shaped children lane and the accordion escape hatch.")
+            DocSection::build(cx, "Props", props)
+                .description("Current Fret builder surface for the `Agent` family, including the docs-shaped children lane and the accordion escape hatch.")
                 .no_shell(),
             DocSection::build(cx, "Notes", notes)
                 .description("Parity findings and layering decision for Agent."),
@@ -89,7 +91,7 @@ fn agent_parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 "new(text)",
                 "impl Into<Arc<str>>",
                 "-",
-                "Instruction text block; upstream string `children` maps to an explicit text payload in Rust.",
+                "Instruction body; the pinned upstream source currently renders plain string children inside a `<p>`, so Rust keeps an explicit text payload instead of a markdown-specific surface.",
             ],
             [
                 "AgentTools",
