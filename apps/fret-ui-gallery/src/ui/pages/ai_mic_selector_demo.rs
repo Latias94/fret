@@ -4,7 +4,7 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 use fret::{UiChild, UiCx};
 
-fn mic_selector_builder_surface_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Part", "Method", "Type", "Default", "Description"],
@@ -91,7 +91,7 @@ fn mic_selector_builder_surface_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>
     )
 }
 
-fn mic_selector_hooks_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn hooks_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Surface", "Return", "Description"],
@@ -124,9 +124,9 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
     ])
     .test_id("ui-gallery-ai-mic-selector-demo-behavior");
 
-    let props =
-        mic_selector_builder_surface_table(cx).test_id("ui-gallery-ai-mic-selector-demo-props");
-    let hooks = mic_selector_hooks_table(cx).test_id("ui-gallery-ai-mic-selector-demo-hooks");
+    let parts = parts_table(cx);
+    let parts = parts.test_id("ui-gallery-ai-mic-selector-demo-props");
+    let hooks = hooks_table(cx).test_id("ui-gallery-ai-mic-selector-demo-hooks");
 
     let notes = doc_layout::notes_block([
         "Diagnostics gate: `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-mic-selector-demo-select.json` should keep passing with the same stable test IDs.",
@@ -152,7 +152,7 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
             DocSection::build(cx, "Features", features)
                 .description("Behavior and composition outcomes preserved while aligning with the official Mic Selector docs surface.")
                 .no_shell(),
-            DocSection::build(cx, "Builder Surface", props)
+            DocSection::build(cx, "Parts & Props", parts)
                 .description("Current Fret API surface for `MicSelector`, including the new docs-shaped root children lane and the render-prop list lane.")
                 .no_shell(),
             DocSection::build(cx, "Hooks", hooks)

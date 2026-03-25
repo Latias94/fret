@@ -9,7 +9,9 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap};
+use fret_core::{
+    Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyleRefinement, TextWrap,
+};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, SemanticsDecoration, TextProps};
@@ -101,6 +103,29 @@ fn border_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("border")
         .unwrap_or_else(|| theme.color_required("foreground"))
+}
+
+fn inline_children_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutRefinement,
+    children: Vec<AnyElement>,
+    inherited_text_style: Option<TextStyleRefinement>,
+    inherited_foreground: Option<Color>,
+) -> AnyElement {
+    let mut element = ui::h_row(move |_cx| children)
+        .layout(layout)
+        .gap(Space::N0)
+        .items(Items::Center)
+        .into_element(cx);
+
+    if let Some(text_style) = inherited_text_style {
+        element = element.inherit_text_style(text_style);
+    }
+    if let Some(foreground) = inherited_foreground {
+        element = element.inherit_foreground(foreground);
+    }
+
+    element
 }
 
 fn voice_selector_gender_icon(value: Option<&str>) -> fret_icons::IconId {
@@ -219,6 +244,26 @@ impl VoiceSelector {
         self
     }
 
+    /// Docs-shaped compound children composition aligned with upstream `<VoiceSelector>...</VoiceSelector>`.
+    pub fn children<I, C>(self, children: I) -> VoiceSelectorWithChildren
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<VoiceSelectorChild>,
+    {
+        VoiceSelectorWithChildren {
+            root: self,
+            children: children.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    pub fn trigger(self, trigger: VoiceSelectorTrigger) -> VoiceSelectorWithChildren {
+        self.children([VoiceSelectorChild::Trigger(trigger)])
+    }
+
+    pub fn content(self, content: VoiceSelectorContent) -> VoiceSelectorWithChildren {
+        self.children([VoiceSelectorChild::Content(content)])
+    }
+
     /// Rust-friendly compound entrypoint for the upstream JSX children shape.
     pub fn into_element_with_children<H, F>(
         self,
@@ -304,6 +349,101 @@ impl VoiceSelector {
     }
 }
 
+pub enum VoiceSelectorChild {
+    Trigger(VoiceSelectorTrigger),
+    Content(VoiceSelectorContent),
+}
+
+impl std::fmt::Debug for VoiceSelectorChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Trigger(_) => f.write_str("VoiceSelectorChild::Trigger(..)"),
+            Self::Content(_) => f.write_str("VoiceSelectorChild::Content(..)"),
+        }
+    }
+}
+
+impl From<VoiceSelectorTrigger> for VoiceSelectorChild {
+    fn from(value: VoiceSelectorTrigger) -> Self {
+        Self::Trigger(value)
+    }
+}
+
+impl From<VoiceSelectorContent> for VoiceSelectorChild {
+    fn from(value: VoiceSelectorContent) -> Self {
+        Self::Content(value)
+    }
+}
+
+pub struct VoiceSelectorWithChildren {
+    root: VoiceSelector,
+    children: Vec<VoiceSelectorChild>,
+}
+
+impl std::fmt::Debug for VoiceSelectorWithChildren {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VoiceSelectorWithChildren")
+            .field("root", &self.root)
+            .field("children_len", &self.children.len())
+            .finish()
+    }
+}
+
+impl VoiceSelectorWithChildren {
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<VoiceSelectorChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn trigger(self, trigger: VoiceSelectorTrigger) -> Self {
+        self.children([VoiceSelectorChild::Trigger(trigger)])
+    }
+
+    pub fn content(self, content: VoiceSelectorContent) -> Self {
+        self.children([VoiceSelectorChild::Content(content)])
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut trigger = None;
+        let mut content = None;
+
+        for child in self.children {
+            match child {
+                VoiceSelectorChild::Trigger(value) => {
+                    if trigger.is_some() {
+                        debug_assert!(false, "VoiceSelector expects a single VoiceSelectorTrigger");
+                    }
+                    trigger = Some(value);
+                }
+                VoiceSelectorChild::Content(value) => {
+                    if content.is_some() {
+                        debug_assert!(false, "VoiceSelector expects a single VoiceSelectorContent");
+                    }
+                    content = Some(value);
+                }
+            }
+        }
+
+        let Some(trigger) = trigger else {
+            debug_assert!(false, "VoiceSelector requires a VoiceSelectorTrigger");
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
+        };
+
+        let content =
+            content.unwrap_or_else(|| VoiceSelectorContent::new(Vec::<AnyElement>::new()));
+
+        self.root.into_element(
+            cx,
+            move |cx| trigger.into_element(cx),
+            move |cx| content.into_element(cx),
+        )
+    }
+}
+
 /// AI Elements-aligned `VoiceSelectorTrigger` (button that opens the dialog).
 pub struct VoiceSelectorTrigger {
     child: AnyElement,
@@ -376,6 +516,8 @@ impl VoiceSelectorTrigger {
 pub struct VoiceSelectorContent {
     title: Arc<str>,
     children: Vec<AnyElement>,
+    input: Option<VoiceSelectorInput>,
+    list: Option<VoiceSelectorList>,
     test_id_root: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -398,6 +540,8 @@ impl VoiceSelectorContent {
         Self {
             title: Arc::from("Voice Selector"),
             children: children.into_iter().collect(),
+            input: None,
+            list: None,
             test_id_root: None,
             chrome: ChromeRefinement::default().p(Space::N0),
             layout: LayoutRefinement::default().w_full().min_w_0(),
@@ -415,6 +559,16 @@ impl VoiceSelectorContent {
 
     pub fn test_id_root(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id_root = Some(id.into());
+        self
+    }
+
+    pub fn input(mut self, input: VoiceSelectorInput) -> Self {
+        self.input = Some(input);
+        self
+    }
+
+    pub fn list(mut self, list: VoiceSelectorList) -> Self {
+        self.list = Some(list);
         self
     }
 
@@ -443,7 +597,15 @@ impl VoiceSelectorContent {
         let hidden_title =
             visually_hidden(cx, move |cx| vec![DialogTitle::new(title).into_element(cx)]);
 
-        let command = Command::new(self.children)
+        let mut command_children = self.children;
+        if let Some(input) = self.input {
+            command_children.push(input.into_element(cx));
+        }
+        if let Some(list) = self.list {
+            command_children.push(list.into_element(cx));
+        }
+
+        let command = Command::new(command_children)
             .refine_style(self.command_chrome)
             .refine_layout(self.command_layout)
             .into_element(cx);
@@ -583,15 +745,78 @@ impl VoiceSelectorList {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    /// Rust-friendly render-prop equivalent of upstream `<VoiceSelectorList>{voices => ...}</VoiceSelectorList>`.
+    pub fn children<F>(self, children: F) -> VoiceSelectorListWithChildren<F> {
+        VoiceSelectorListWithChildren {
+            list: self,
+            children,
+        }
+    }
+
+    fn into_element_with_entries<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        empty_text: Arc<str>,
+        scroll_layout: LayoutRefinement,
+        entries: Vec<CommandEntry>,
+    ) -> AnyElement {
         let Some(controller) = use_voice_selector_controller(cx) else {
             return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
-        let list = match self.mode {
+        CommandList::new_entries(entries)
+            .empty_text(empty_text)
+            .query_model(controller.query.clone())
+            .highlight_query_model(controller.query)
+            .refine_scroll_layout(scroll_layout)
+            .into_element(cx)
+    }
+
+    /// Rust-friendly equivalent of upstream `VoiceSelectorList(children(voices))`.
+    pub fn into_element_with_children<H, F, I, E>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: F,
+    ) -> AnyElement
+    where
+        H: UiHost,
+        F: FnOnce(Arc<[VoiceSelectorVoice]>) -> I,
+        I: IntoIterator<Item = E>,
+        E: Into<CommandEntry>,
+    {
+        let Some(controller) = use_voice_selector_controller(cx) else {
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
+        };
+
+        let Self {
+            empty_text,
+            scroll_layout,
+            ..
+        } = self;
+
+        let entries = children(controller.voices.clone())
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<_>>();
+
+        Self::into_element_with_entries(cx, empty_text, scroll_layout, entries)
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self {
+            empty_text,
+            test_id_prefix,
+            mode,
+            scroll_layout,
+        } = self;
+
+        let Some(controller) = use_voice_selector_controller(cx) else {
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
+        };
+
+        let entries = match mode {
             VoiceSelectorListMode::Auto => {
                 let theme = Theme::global(&*cx.app).clone();
-                let mut items: Vec<CommandItem> = Vec::new();
+                let mut entries: Vec<CommandEntry> = Vec::new();
                 for voice in controller.voices.iter() {
                     let id = voice.id.clone();
                     let name = voice.name.clone();
@@ -670,22 +895,57 @@ impl VoiceSelectorList {
                         .on_select_action(on_select)
                         .children([row]);
 
-                    if let Some(prefix) = self.test_id_prefix.as_deref() {
+                    if let Some(prefix) = test_id_prefix.as_deref() {
                         item = item.test_id(format!("{prefix}-{}", voice.id.as_ref()));
                     }
-                    items.push(item);
+                    entries.push(item.into());
                 }
-
-                CommandList::new(items)
+                entries
             }
-            VoiceSelectorListMode::Entries(entries) => CommandList::new_entries(entries),
+            VoiceSelectorListMode::Entries(entries) => entries,
         };
 
-        list.empty_text(self.empty_text)
-            .query_model(controller.query.clone())
-            .highlight_query_model(controller.query)
-            .refine_scroll_layout(self.scroll_layout)
-            .into_element(cx)
+        Self::into_element_with_entries(cx, empty_text, scroll_layout, entries)
+    }
+}
+
+pub struct VoiceSelectorListWithChildren<F> {
+    list: VoiceSelectorList,
+    children: F,
+}
+
+impl<F> std::fmt::Debug for VoiceSelectorListWithChildren<F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VoiceSelectorListWithChildren")
+            .field("list", &self.list)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<F> VoiceSelectorListWithChildren<F> {
+    pub fn empty_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.list = self.list.empty_text(text);
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.list = self.list.test_id_prefix(prefix);
+        self
+    }
+
+    pub fn refine_scroll_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.list = self.list.refine_scroll_layout(layout);
+        self
+    }
+
+    pub fn into_element<H, I, E>(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        H: UiHost,
+        F: FnOnce(Arc<[VoiceSelectorVoice]>) -> I,
+        I: IntoIterator<Item = E>,
+        E: Into<CommandEntry>,
+    {
+        self.list.into_element_with_children(cx, self.children)
     }
 }
 
@@ -697,9 +957,9 @@ pub type VoiceSelectorShortcut = CommandShortcut;
 pub type VoiceSelectorSeparator = CommandSeparator;
 
 /// AI Elements-aligned `VoiceSelectorName`.
-#[derive(Clone)]
 pub struct VoiceSelectorName {
     text: Arc<str>,
+    children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -708,6 +968,10 @@ impl std::fmt::Debug for VoiceSelectorName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("VoiceSelectorName")
             .field("text", &self.text.as_ref())
+            .field(
+                "children_len",
+                &self.children.as_ref().map(|children| children.len()),
+            )
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .finish()
@@ -718,9 +982,15 @@ impl VoiceSelectorName {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
             text: text.into(),
+            children: None,
             test_id: None,
             layout: LayoutRefinement::default().flex_1().min_w_0(),
         }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -735,21 +1005,32 @@ impl VoiceSelectorName {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let mut element = cx.text_props(TextProps {
-            layout: decl_style::layout_style(&theme, self.layout),
-            text: self.text,
-            style: Some(typography::preset_text_style_with_overrides(
-                &theme,
-                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
-                Some(FontWeight::MEDIUM),
-                None,
-            )),
-            color: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
-            align: TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let name_style = typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+            Some(FontWeight::MEDIUM),
+            None,
+        );
+        let mut name_refinement = typography::preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+        );
+        name_refinement.weight = Some(FontWeight::MEDIUM);
+        let mut element = match self.children {
+            Some(children) => {
+                inline_children_element(cx, self.layout, children, Some(name_refinement), None)
+            }
+            None => cx.text_props(TextProps {
+                layout: decl_style::layout_style(&theme, self.layout),
+                text: self.text,
+                style: Some(name_style),
+                color: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Ellipsis,
+                align: TextAlign::Start,
+                ink_overflow: Default::default(),
+            }),
+        };
 
         if let Some(test_id) = self.test_id {
             element = element.attach_semantics(SemanticsDecoration::default().test_id(test_id));
@@ -759,9 +1040,9 @@ impl VoiceSelectorName {
 }
 
 /// AI Elements-aligned `VoiceSelectorDescription`.
-#[derive(Clone)]
 pub struct VoiceSelectorDescription {
     text: Arc<str>,
+    children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -770,6 +1051,10 @@ impl std::fmt::Debug for VoiceSelectorDescription {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("VoiceSelectorDescription")
             .field("text", &self.text.as_ref())
+            .field(
+                "children_len",
+                &self.children.as_ref().map(|children| children.len()),
+            )
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .finish()
@@ -780,9 +1065,15 @@ impl VoiceSelectorDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
             text: text.into(),
+            children: None,
             test_id: None,
             layout: LayoutRefinement::default().min_w_0(),
         }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -797,22 +1088,36 @@ impl VoiceSelectorDescription {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let mut element = typography::scope_description_text_with_fallbacks(
-            cx.text_props(TextProps {
-                layout: decl_style::layout_style(&theme, self.layout),
-                text: self.text,
-                style: None,
-                color: None,
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-                align: TextAlign::Start,
-                ink_overflow: Default::default(),
-            }),
-            &theme,
-            "component.voice_selector.description",
-            Some("component.text.xs_px"),
-            Some("component.text.xs_line_height"),
-        );
+        let mut element = match self.children {
+            Some(children) => inline_children_element(
+                cx,
+                self.layout,
+                children,
+                Some(typography::description_text_refinement_with_fallbacks(
+                    &theme,
+                    "component.voice_selector.description",
+                    Some("component.text.xs_px"),
+                    Some("component.text.xs_line_height"),
+                )),
+                Some(typography::muted_foreground_color(&theme)),
+            ),
+            None => typography::scope_description_text_with_fallbacks(
+                cx.text_props(TextProps {
+                    layout: decl_style::layout_style(&theme, self.layout),
+                    text: self.text,
+                    style: None,
+                    color: None,
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Ellipsis,
+                    align: TextAlign::Start,
+                    ink_overflow: Default::default(),
+                }),
+                &theme,
+                "component.voice_selector.description",
+                Some("component.text.xs_px"),
+                Some("component.text.xs_line_height"),
+            ),
+        };
 
         if let Some(test_id) = self.test_id {
             element = element.attach_semantics(SemanticsDecoration::default().test_id(test_id));
@@ -822,9 +1127,9 @@ impl VoiceSelectorDescription {
 }
 
 /// AI Elements-aligned `VoiceSelectorAge`.
-#[derive(Clone)]
 pub struct VoiceSelectorAge {
     text: Arc<str>,
+    children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
 }
 
@@ -832,6 +1137,10 @@ impl std::fmt::Debug for VoiceSelectorAge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("VoiceSelectorAge")
             .field("text", &self.text.as_ref())
+            .field(
+                "children_len",
+                &self.children.as_ref().map(|children| children.len()),
+            )
             .field("test_id", &self.test_id.as_deref())
             .finish()
     }
@@ -841,8 +1150,14 @@ impl VoiceSelectorAge {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
             text: text.into(),
+            children: None,
             test_id: None,
         }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -852,21 +1167,35 @@ impl VoiceSelectorAge {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let mut element = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(typography::preset_text_style_with_overrides(
-                &theme,
-                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
-                Some(FontWeight::NORMAL),
-                None,
-            )),
-            color: Some(muted_fg(&theme)),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
-            align: TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let age_style = typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+            Some(FontWeight::NORMAL),
+            None,
+        );
+        let age_refinement = typography::preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+        );
+        let mut element = match self.children {
+            Some(children) => inline_children_element(
+                cx,
+                LayoutRefinement::default(),
+                children,
+                Some(age_refinement),
+                Some(muted_fg(&theme)),
+            ),
+            None => cx.text_props(TextProps {
+                layout: Default::default(),
+                text: self.text,
+                style: Some(age_style),
+                color: Some(muted_fg(&theme)),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Ellipsis,
+                align: TextAlign::Start,
+                ink_overflow: Default::default(),
+            }),
+        };
 
         if let Some(test_id) = self.test_id {
             element = element.attach_semantics(SemanticsDecoration::default().test_id(test_id));
@@ -934,14 +1263,19 @@ impl VoiceSelectorAttributes {
 }
 
 /// AI Elements-aligned `VoiceSelectorBullet`.
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct VoiceSelectorBullet {
+    children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for VoiceSelectorBullet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("VoiceSelectorBullet")
+            .field(
+                "children_len",
+                &self.children.as_ref().map(|children| children.len()),
+            )
             .field("test_id", &self.test_id.as_deref())
             .finish()
     }
@@ -952,6 +1286,11 @@ impl VoiceSelectorBullet {
         Self::default()
     }
 
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
@@ -959,21 +1298,35 @@ impl VoiceSelectorBullet {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let mut element = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: Arc::<str>::from("•"),
-            style: Some(typography::preset_text_style_with_overrides(
-                &theme,
-                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
-                Some(FontWeight::NORMAL),
-                None,
-            )),
-            color: Some(border_fg(&theme)),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let bullet_style = typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+            Some(FontWeight::NORMAL),
+            None,
+        );
+        let bullet_refinement = typography::preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+        );
+        let mut element = match self.children {
+            Some(children) => inline_children_element(
+                cx,
+                LayoutRefinement::default(),
+                children,
+                Some(bullet_refinement),
+                Some(border_fg(&theme)),
+            ),
+            None => cx.text_props(TextProps {
+                layout: Default::default(),
+                text: Arc::<str>::from("•"),
+                style: Some(bullet_style),
+                color: Some(border_fg(&theme)),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: TextAlign::Start,
+                ink_overflow: Default::default(),
+            }),
+        };
 
         if let Some(test_id) = self.test_id {
             element = element.attach_semantics(
@@ -987,9 +1340,10 @@ impl VoiceSelectorBullet {
 }
 
 /// AI Elements-aligned `VoiceSelectorGender`.
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct VoiceSelectorGender {
     value: Option<Arc<str>>,
+    children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
 }
 
@@ -997,6 +1351,10 @@ impl std::fmt::Debug for VoiceSelectorGender {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("VoiceSelectorGender")
             .field("value", &self.value.as_deref())
+            .field(
+                "children_len",
+                &self.children.as_ref().map(|children| children.len()),
+            )
             .field("test_id", &self.test_id.as_deref())
             .finish()
     }
@@ -1012,6 +1370,11 @@ impl VoiceSelectorGender {
         self
     }
 
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
@@ -1019,24 +1382,37 @@ impl VoiceSelectorGender {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let icon = decl_icon::icon_with(
-            cx,
-            voice_selector_gender_icon(self.value.as_deref()),
-            Some(Px(16.0)),
-            Some(ColorRef::Color(muted_fg(&theme))),
-        );
+        let mut element = match self.children {
+            Some(children) => inline_children_element(
+                cx,
+                LayoutRefinement::default(),
+                children,
+                Some(typography::preset_text_refinement(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                )),
+                Some(muted_fg(&theme)),
+            ),
+            None => decl_icon::icon_with(
+                cx,
+                voice_selector_gender_icon(self.value.as_deref()),
+                Some(Px(16.0)),
+                Some(ColorRef::Color(muted_fg(&theme))),
+            ),
+        };
 
         if let Some(test_id) = self.test_id {
-            return icon.attach_semantics(SemanticsDecoration::default().test_id(test_id));
+            element = element.attach_semantics(SemanticsDecoration::default().test_id(test_id));
         }
-        icon
+        element
     }
 }
 
 /// AI Elements-aligned `VoiceSelectorAccent`.
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct VoiceSelectorAccent {
     value: Option<Arc<str>>,
+    children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
 }
 
@@ -1044,6 +1420,10 @@ impl std::fmt::Debug for VoiceSelectorAccent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("VoiceSelectorAccent")
             .field("value", &self.value.as_deref())
+            .field(
+                "children_len",
+                &self.children.as_ref().map(|children| children.len()),
+            )
             .field("test_id", &self.test_id.as_deref())
             .finish()
     }
@@ -1059,32 +1439,49 @@ impl VoiceSelectorAccent {
         self
     }
 
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let Some(emoji) = voice_selector_accent_emoji(self.value.as_deref()) else {
-            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
-        };
-
         let theme = Theme::global(&*cx.app).clone();
-        let mut element = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: Arc::<str>::from(emoji),
-            style: Some(typography::preset_text_style_with_overrides(
-                &theme,
-                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
-                Some(FontWeight::NORMAL),
-                None,
-            )),
-            color: Some(muted_fg(&theme)),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let accent_style = typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+            Some(FontWeight::NORMAL),
+            None,
+        );
+        let accent_refinement = typography::preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+        );
+        let mut element = match self.children {
+            Some(children) => inline_children_element(
+                cx,
+                LayoutRefinement::default(),
+                children,
+                Some(accent_refinement),
+                Some(muted_fg(&theme)),
+            ),
+            None => cx.text_props(TextProps {
+                layout: Default::default(),
+                text: Arc::<str>::from(
+                    voice_selector_accent_emoji(self.value.as_deref()).unwrap_or(""),
+                ),
+                style: Some(accent_style),
+                color: Some(muted_fg(&theme)),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: TextAlign::Start,
+                ink_overflow: Default::default(),
+            }),
+        };
 
         if let Some(test_id) = self.test_id {
             element = element.attach_semantics(SemanticsDecoration::default().test_id(test_id));
@@ -1094,11 +1491,12 @@ impl VoiceSelectorAccent {
 }
 
 /// AI Elements-aligned `VoiceSelectorPreview`.
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct VoiceSelectorPreview {
     playing: bool,
     loading: bool,
     on_play: Option<fret_ui::action::OnActivate>,
+    children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
 }
 
@@ -1108,6 +1506,10 @@ impl std::fmt::Debug for VoiceSelectorPreview {
             .field("playing", &self.playing)
             .field("loading", &self.loading)
             .field("has_on_play", &self.on_play.is_some())
+            .field(
+                "children_len",
+                &self.children.as_ref().map(|children| children.len()),
+            )
             .field("test_id", &self.test_id.as_deref())
             .finish()
     }
@@ -1133,6 +1535,11 @@ impl VoiceSelectorPreview {
         self
     }
 
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
@@ -1145,7 +1552,7 @@ impl VoiceSelectorPreview {
             "Play preview"
         };
 
-        let icon = if self.loading {
+        let default_icon = if self.loading {
             Spinner::new()
                 .refine_layout(LayoutRefinement::default().w_px(Px(12.0)).h_px(Px(12.0)))
                 .into_element(cx)
@@ -1158,11 +1565,12 @@ impl VoiceSelectorPreview {
             decl_icon::icon_with(cx, icon_id, Some(Px(12.0)), None)
         };
 
+        let button_children = self.children.unwrap_or_else(|| vec![default_icon]);
         let mut button = Button::new(label)
             .variant(ButtonVariant::Outline)
             .size(ButtonSize::IconSm)
             .disabled(self.loading)
-            .children([icon]);
+            .children(button_children);
 
         if let Some(on_play) = self.on_play {
             button = button.on_activate(on_play);
@@ -1392,6 +1800,141 @@ mod tests {
         assert_eq!(voice_selector_accent_emoji(Some("american")), Some("🇺🇸"));
         assert_eq!(voice_selector_accent_emoji(Some("british")), Some("🇬🇧"));
         assert_eq!(voice_selector_accent_emoji(Some("unknown")), None);
+    }
+
+    #[test]
+    fn voice_selector_compound_children_surface_builds() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let voices = Arc::from([VoiceSelectorVoice::new("alloy", "Alloy")]);
+
+        let built = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(400.0), Px(240.0)),
+            ),
+            "test",
+            |cx| {
+                VoiceSelector::from_arc(voices)
+                    .children([
+                        VoiceSelectorChild::Trigger(VoiceSelectorTrigger::new(
+                            cx.text("Select Voice"),
+                        )),
+                        VoiceSelectorChild::Content(
+                            VoiceSelectorContent::new(Vec::<AnyElement>::new())
+                                .input(VoiceSelectorInput::new())
+                                .list(VoiceSelectorList::new_entries(Vec::<CommandEntry>::new())),
+                        ),
+                    ])
+                    .into_element(cx)
+            },
+        );
+
+        assert!(
+            !built.children.is_empty(),
+            "expected compound VoiceSelector children surface to build a non-empty tree"
+        );
+    }
+
+    #[test]
+    fn voice_selector_list_children_builder_builds() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controller = VoiceSelectorController {
+            voices: Arc::from([VoiceSelectorVoice::new("alloy", "Alloy")]),
+            value: app.models_mut().insert(None),
+            open: app.models_mut().insert(false),
+            query: app.models_mut().insert(String::new()),
+            on_value_change: None,
+        };
+
+        let built = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(400.0), Px(240.0)),
+            ),
+            "test",
+            |cx| {
+                cx.provide(controller.clone(), |cx| {
+                    VoiceSelectorList::new()
+                        .children(|voices: Arc<[VoiceSelectorVoice]>| {
+                            voices
+                                .iter()
+                                .map(|voice| VoiceSelectorItem::new(voice.name.clone()))
+                                .collect::<Vec<_>>()
+                        })
+                        .into_element(cx)
+                })
+            },
+        );
+
+        assert!(
+            find_text_by_content(&built, "Alloy").is_some(),
+            "expected render-prop list builder to render the explicit row"
+        );
+    }
+
+    #[test]
+    fn voice_selector_leaf_children_overrides_render_custom_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let built = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(400.0), Px(240.0)),
+            ),
+            "test",
+            |cx| {
+                ui::v_stack(|cx| {
+                    vec![
+                        VoiceSelectorGender::new()
+                            .children([cx.text("Custom Gender")])
+                            .into_element(cx),
+                        VoiceSelectorAccent::new()
+                            .value("american")
+                            .children([cx.text("US English")])
+                            .into_element(cx),
+                        VoiceSelectorPreview::new()
+                            .children([cx.text("Preview")])
+                            .into_element(cx),
+                    ]
+                })
+                .into_element(cx)
+            },
+        );
+
+        assert!(find_text_by_content(&built, "Custom Gender").is_some());
+        assert!(find_text_by_content(&built, "US English").is_some());
+        assert!(find_text_by_content(&built, "Preview").is_some());
+    }
+
+    #[test]
+    fn voice_selector_accent_unknown_renders_empty_text_node() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let built = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(320.0), Px(120.0)),
+            ),
+            "test",
+            |cx| VoiceSelectorAccent::new().value("unknown").into_element(cx),
+        );
+
+        let ElementKind::Text(props) = &built.kind else {
+            panic!("expected unknown accent to render an empty text node");
+        };
+        assert_eq!(props.text.as_ref(), "");
     }
 
     #[test]

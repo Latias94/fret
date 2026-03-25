@@ -151,7 +151,7 @@ pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         )
         .test_id_prefix("ui-gallery-ai-test-results-composable")
         .code_rust_from_file_region(snippets::test_results_composable::SOURCE, "example");
-    let props_section = DocSection::build(cx, "Props", props)
+    let props_section = DocSection::build(cx, "Parts & Props", props)
         .description(
             "Official props-table coverage translated into Rust builder APIs and compound parts.",
         )

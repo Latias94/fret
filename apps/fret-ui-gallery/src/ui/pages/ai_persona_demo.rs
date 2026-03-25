@@ -69,7 +69,7 @@ fn features_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ])
 }
 
-fn runtime_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn lifecycle_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     crate::ui::doc_layout::notes_block([
         "Upstream AI Elements binds `Persona` to Rive/WebGL2, includes a React Strict Mode guard, and exposes load / ready / play / pause / stop callbacks.",
         "Fret intentionally keeps animation-engine IO and lifecycle ownership app-side, so `fret-ui-ai::Persona` stays a self-drawn shell instead of pretending the Rive callback surface already exists.",
@@ -88,7 +88,7 @@ pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
     let features = features_notes(cx);
     let states = states_notes(cx);
     let props = props_table(cx);
-    let runtime = runtime_notes(cx);
+    let lifecycle = lifecycle_notes(cx);
 
     let body = doc_layout::render_doc_page_after(
         Some(
@@ -116,7 +116,7 @@ pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
                 .description("Persona responds to the same five high-level states described in the upstream docs.")
                 .max_w(Px(980.0))
                 .no_shell(),
-            DocSection::build(cx, "Runtime & Ownership", runtime)
+            DocSection::build(cx, "Lifecycle & Ownership", lifecycle)
                 .description("Why lifecycle/Strict-Mode parity is intentionally deferred to a future app-owned animation adapter.")
                 .max_w(Px(980.0))
                 .no_shell(),
