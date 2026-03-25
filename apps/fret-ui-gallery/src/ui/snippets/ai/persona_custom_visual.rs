@@ -16,19 +16,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .variant(ui_ai::PersonaVariant::Command)
                 .size(Px(112.0))
                 .show_label(true)
-                .into_element_with_children(cx, |cx, controller| {
+                .children([ui::v_flex(move |cx| {
                     vec![
-                        ui::v_flex(move |cx| {
-                            vec![
-                                decl_icon::icon(cx, IconId::new_static("lucide.bot")),
-                                cx.text(controller.variant.label()),
-                            ]
-                        })
-                        .gap(Space::N1)
-                        .items_center()
-                        .into_element(cx),
+                        decl_icon::icon(cx, IconId::new_static("lucide.bot")),
+                        cx.text("Command"),
                     ]
-                }),
+                })
+                .gap(Space::N1)
+                .items_center()
+                .into_element(cx)])
+                .into_element(cx),
         ]
     })
     .gap(Space::N4)

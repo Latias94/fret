@@ -264,8 +264,20 @@ impl Persona {
         self
     }
 
+    /// Returns a move-only wrapper that replaces the default center indicator with caller-owned
+    /// children while keeping the outer Persona shell intact.
+    pub fn children<I>(self, children: I) -> PersonaWithChildren
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        PersonaWithChildren {
+            root: self,
+            children: children.into_iter().collect(),
+        }
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.into_element_with_children(cx, |_cx, _controller| Vec::new())
+        self.render_with_children(cx, Vec::new())
     }
 
     pub fn into_element_with_children<H: UiHost>(
@@ -278,8 +290,7 @@ impl Persona {
             variant: self.variant,
             size: self.size,
         };
-        let custom_children = children(cx, controller);
-        self.render_with_children(cx, custom_children)
+        self.children(children(cx, controller)).into_element(cx)
     }
 
     fn render_with_children<H: UiHost>(
@@ -470,6 +481,64 @@ impl Persona {
     }
 }
 
+pub struct PersonaWithChildren {
+    root: Persona,
+    children: Vec<AnyElement>,
+}
+
+impl std::fmt::Debug for PersonaWithChildren {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PersonaWithChildren")
+            .field("root", &self.root)
+            .field("children_len", &self.children.len())
+            .finish()
+    }
+}
+
+impl PersonaWithChildren {
+    pub fn variant(mut self, variant: PersonaVariant) -> Self {
+        self.root = self.root.variant(variant);
+        self
+    }
+
+    pub fn size(mut self, size: Px) -> Self {
+        self.root = self.root.size(size);
+        self
+    }
+
+    pub fn show_label(mut self, show: bool) -> Self {
+        self.root = self.root.show_label(show);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.root = self.root.test_id(id);
+        self
+    }
+
+    pub fn children<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.root = self.root.refine_layout(layout);
+        self
+    }
+
+    pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+        self.root = self.root.refine_style(chrome);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.root.render_with_children(cx, self.children)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -540,6 +609,23 @@ mod tests {
                 Persona::new(PersonaState::Thinking)
                     .show_label(true)
                     .into_element_with_children(cx, |cx, _controller| vec![cx.text("Custom orb")])
+            });
+
+        assert!(contains_text(&element, "Custom orb"));
+        assert!(contains_text(&element, "Obsidian / Thinking"));
+    }
+
+    #[test]
+    fn persona_children_builder_replaces_default_indicator() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Persona::new(PersonaState::Thinking)
+                    .show_label(true)
+                    .children([cx.text("Custom orb")])
+                    .into_element(cx)
             });
 
         assert!(contains_text(&element, "Custom orb"));

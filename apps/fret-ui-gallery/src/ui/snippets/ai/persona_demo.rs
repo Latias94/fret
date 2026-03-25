@@ -107,7 +107,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             state_model.clone(),
             current_state,
             ui_ai::PersonaState::Speaking,
-            "lucide.volume-2",
+            "lucide.megaphone",
             "Speaking",
         )
         .into(),
