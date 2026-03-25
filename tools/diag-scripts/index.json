@@ -2461,8 +2461,8 @@
       "id": "ui-gallery-ai-inline-citation-demo-hovercard",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-inline-citation-demo-hovercard.json",
       "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
+        "diag.screenshot_png",
+        "diag.script_v2"
       ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
@@ -2471,12 +2471,38 @@
         "ai-elements",
         "hovercard",
         "inline-citation",
+        "screenshots",
         "ui-gallery"
       ],
       "target_hints": [
         "Navigates to the AI Inline Citation detail page.",
-        "Opens the hostname badge hover card and captures a screenshot.",
-        "Pages the inline citation next/prev controls, then captures a bundle."
+        "Opens the hostname badge hover card, captures a screenshot, then pages next/prev.",
+        "Captures a bundle for interaction triage."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-model-selector-demo-open-filter-select",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-model-selector-demo-open-filter-select.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [
+        "ai-elements",
+        "command",
+        "dialog",
+        "model-selector",
+        "screenshots",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the AI Elements ModelSelector demo page (requires `fret-ui-gallery --features gallery-dev`).",
+        "Asserts dialog open auto-focus lands on the input.",
+        "Filters for \"claude\" and selects an item.",
+        "Captures screenshots + a final bundle for regression triage."
       ]
     },
     {
@@ -2511,6 +2537,16 @@
         "Navigates to the AI Elements package info demo.",
         "Captures a screenshot to gate badge and version contrast."
       ]
+    },
+    {
+      "id": "ui-gallery-ai-plan-demo-toggle",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-plan-demo-toggle.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-ai-sandbox-demo-screenshots-zinc-dark",
@@ -4898,7 +4934,7 @@
       "target_hints": [
         "Sets theme preset to zinc/light.",
         "Navigates to Command page and scrolls to the Docs Demo section.",
-        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. ⌘P) without tofu squares."
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
       ]
     },
     {
@@ -4921,7 +4957,7 @@
       "target_hints": [
         "Sets theme preset to zinc/dark.",
         "Navigates to Command page and scrolls to the Docs Demo section.",
-        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. ⌘P) without tofu squares."
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
       ]
     },
     {
