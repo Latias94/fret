@@ -59,6 +59,7 @@ shadcn/ui v4 Radix guide, the guide demos, and the existing table layout gates.
 - `CARGO_TARGET_DIR=target-codex-data-table cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app data_table_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface data_table_page_uses_typed_doc_sections_for_app_facing_snippets`
 - `CARGO_TARGET_DIR=target-codex-data-table cargo nextest run -p fret-ui-gallery --test data_table_action_first_surface`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-smoke.json --dir target/fret-diag/data-table-reusable-components-smoke --timeout-ms 240000 --pack --ai-packet --launch -- env CARGO_TARGET_DIR=target-codex-data-table cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-reusable-view-options-toggle.json --dir target/fret-diag/data-table-reusable-view-options-toggle --timeout-ms 240000 --pack --ai-packet --launch -- env CARGO_TARGET_DIR=target-codex-data-table cargo run -p fret-ui-gallery`
 - Existing geometry gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/table.rs`
 - `cargo nextest run -p fret-ui-kit table_virtualized_nested_pressable_remains_hittable_when_pointer_row_selection_disabled`
 - `cargo nextest run -p fret-ui-kit table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled`

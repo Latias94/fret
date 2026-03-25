@@ -34,6 +34,13 @@ where
         .justify_end()
 }
 
+fn reusable_cell_test_id(row: &PaymentRow, column_id: &str) -> Arc<str> {
+    Arc::<str>::from(format!(
+        "ui-gallery-data-table-reusable-cell-{}-{column_id}",
+        row.key
+    ))
+}
+
 fn reusable_view_options(
     cx: &mut UiCx<'_>,
     open: Model<bool>,
@@ -92,8 +99,12 @@ fn reusable_table(
                 _ => col.id.clone(),
             },
             |cx, col, row| match col.id.as_ref() {
-                "status" => cx.text(row.status.as_ref()),
-                "email" => cx.text(row.email.as_ref()),
+                "status" => cx
+                    .text(row.status.as_ref())
+                    .test_id(reusable_cell_test_id(row, "status")),
+                "email" => cx
+                    .text(row.email.as_ref())
+                    .test_id(reusable_cell_test_id(row, "email")),
                 "amount" => {
                     let amount = Arc::<str>::from(format!("${}.00", row.amount_usd));
                     let amount_text = ui::text(amount)
