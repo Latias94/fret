@@ -9,8 +9,8 @@ use fret_core::{
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, PressableProps, SemanticsDecoration,
-    SizeStyle, StyledTextProps, TextProps,
+    AnyElement, ContainerProps, InteractivityGateProps, LayoutStyle, Length, PressableProps,
+    SemanticsDecoration, SizeStyle, StyledTextProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -53,6 +53,17 @@ fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
         letter_spacing_em: None,
         ..Default::default()
     })
+}
+
+fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    cx.interactivity_gate_props(
+        InteractivityGateProps {
+            layout: LayoutStyle::default(),
+            present: false,
+            interactive: false,
+        },
+        |_cx| Vec::new(),
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -142,6 +153,39 @@ impl std::fmt::Display for SchemaParameterLocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.as_str())
     }
+}
+
+#[derive(Debug, Clone)]
+struct SchemaDisplayContext {
+    method: HttpMethod,
+    path: Arc<str>,
+    description: Option<Arc<str>>,
+    parameters: Arc<[SchemaParameter]>,
+    request_body: Arc<[SchemaProperty]>,
+    response_body: Arc<[SchemaProperty]>,
+    default_open_parameters: bool,
+    default_open_request: bool,
+    default_open_response: bool,
+    test_id_parameters_trigger: Option<Arc<str>>,
+    test_id_request_trigger: Option<Arc<str>>,
+    test_id_response_trigger: Option<Arc<str>>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct SchemaDisplayLocalState {
+    context: Option<SchemaDisplayContext>,
+}
+
+fn schema_display_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<SchemaDisplayContext> {
+    cx.inherited_state::<SchemaDisplayLocalState>()
+        .and_then(|state| state.context.clone())
+}
+
+#[track_caller]
+fn require_schema_display_context<H: UiHost>(cx: &ElementContext<'_, H>) -> SchemaDisplayContext {
+    schema_display_context(cx).unwrap_or_else(|| {
+        panic!("SchemaDisplay context is missing. Use SchemaDisplay::into_element_with_children(...) when composing context-aware children such as SchemaDisplayMethod::from_context().")
+    })
 }
 
 #[derive(Debug, Clone)]
@@ -337,6 +381,37 @@ impl SchemaDisplay {
         self
     }
 
+    fn context(&self) -> SchemaDisplayContext {
+        SchemaDisplayContext {
+            method: self.method,
+            path: self.path.clone(),
+            description: self.description.clone(),
+            parameters: self.parameters.clone(),
+            request_body: self.request_body.clone(),
+            response_body: self.response_body.clone(),
+            default_open_parameters: self.default_open_parameters,
+            default_open_request: self.default_open_request,
+            default_open_response: self.default_open_response,
+            test_id_parameters_trigger: self.test_id_parameters_trigger.clone(),
+            test_id_request_trigger: self.test_id_request_trigger.clone(),
+            test_id_response_trigger: self.test_id_response_trigger.clone(),
+        }
+    }
+
+    pub fn into_element_with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        let context = self.context();
+        cx.root_state(SchemaDisplayLocalState::default, |state| {
+            state.context = Some(context);
+        });
+
+        self.children = Some(children(cx));
+        self.into_element(cx)
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -510,17 +585,33 @@ impl SchemaDisplayHeader {
 #[derive(Debug, Clone, Copy)]
 pub struct SchemaDisplayMethod {
     method: HttpMethod,
+    from_context: bool,
 }
 
 impl SchemaDisplayMethod {
     pub fn new(method: HttpMethod) -> Self {
-        Self { method }
+        Self {
+            method,
+            from_context: false,
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            method: HttpMethod::Get,
+            from_context: true,
+        }
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let method = if self.from_context {
+            require_schema_display_context(cx).method
+        } else {
+            self.method
+        };
 
-        let accent = self.method.accent_color(&theme);
+        let accent = method.accent_color(&theme);
         let bg = alpha(accent, 0.18);
 
         let text_px = theme
@@ -543,7 +634,7 @@ impl SchemaDisplayMethod {
         props.border_color = Some(border_color(&theme));
         props.corner_radii = Corners::all(MetricRef::radius(Radius::Full).resolve(&theme));
 
-        let label: Arc<str> = Arc::from(self.method.as_str());
+        let label: Arc<str> = Arc::from(method.as_str());
         cx.container(props, move |cx| {
             vec![cx.text_props(TextProps {
                 layout: LayoutStyle {
@@ -573,23 +664,40 @@ impl SchemaDisplayMethod {
 /// Path label aligned with AI Elements `SchemaDisplayPath` (with `{param}` highlighting).
 #[derive(Debug, Clone)]
 pub struct SchemaDisplayPath {
-    path: Arc<str>,
+    path: Option<Arc<str>>,
+    from_context: bool,
 }
 
 impl SchemaDisplayPath {
     pub fn new(path: impl Into<Arc<str>>) -> Self {
-        Self { path: path.into() }
+        Self {
+            path: Some(path.into()),
+            from_context: false,
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            path: None,
+            from_context: true,
+        }
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let path = if self.from_context {
+            require_schema_display_context(cx).path
+        } else {
+            self.path
+                .expect("SchemaDisplayPath::new(...) should always provide a path.")
+        };
         let base_color = theme.color_token("foreground");
         let highlight = theme
             .color_by_key("primary")
             // Tailwind: blue-600 (#2563eb).
             .unwrap_or_else(|| fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb));
 
-        let (text, spans) = highlighted_path_attributed_text(&self.path, base_color, highlight);
+        let (text, spans) = highlighted_path_attributed_text(&path, base_color, highlight);
 
         let mut props = StyledTextProps::new(AttributedText::new(text, spans));
         props.layout.size.width = Length::Auto;
@@ -655,14 +763,24 @@ fn highlighted_path_attributed_text(
 /// Description paragraph aligned with AI Elements `SchemaDisplayDescription`.
 #[derive(Debug, Clone)]
 pub struct SchemaDisplayDescription {
-    text: Arc<str>,
+    text: Option<Arc<str>>,
+    from_context: bool,
     layout: LayoutRefinement,
 }
 
 impl SchemaDisplayDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
-            text: text.into(),
+            text: Some(text.into()),
+            from_context: false,
+            layout: LayoutRefinement::default().w_full().min_w_0(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            text: None,
+            from_context: true,
             layout: LayoutRefinement::default().w_full().min_w_0(),
         }
     }
@@ -674,6 +792,14 @@ impl SchemaDisplayDescription {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let text = if self.from_context {
+            require_schema_display_context(cx).description
+        } else {
+            self.text
+        };
+        let Some(text) = text else {
+            return hidden(cx);
+        };
 
         let mut props = ContainerProps::default();
         props.layout = decl_style::layout_style(&theme, self.layout);
@@ -690,7 +816,6 @@ impl SchemaDisplayDescription {
         };
         props.border_color = Some(border_color(&theme));
 
-        let text = self.text;
         typography::scope_description_text_with_fallbacks(
             cx.container(props, move |cx| vec![ui::raw_text(text).into_element(cx)]),
             &theme,
@@ -755,8 +880,9 @@ impl SchemaDisplayContent {
 #[derive(Debug)]
 pub struct SchemaDisplayParameters {
     parameters: Arc<[SchemaParameter]>,
+    from_context: bool,
     children: Option<Vec<AnyElement>>,
-    default_open: bool,
+    default_open: Option<bool>,
     test_id_trigger: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -765,8 +891,20 @@ impl SchemaDisplayParameters {
     pub fn new(parameters: impl Into<Arc<[SchemaParameter]>>) -> Self {
         Self {
             parameters: parameters.into(),
+            from_context: false,
             children: None,
-            default_open: true,
+            default_open: Some(true),
+            test_id_trigger: None,
+            layout: LayoutRefinement::default().w_full().min_w_0(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            parameters: Arc::from([]),
+            from_context: true,
+            children: None,
+            default_open: None,
             test_id_trigger: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
         }
@@ -778,7 +916,7 @@ impl SchemaDisplayParameters {
     }
 
     pub fn default_open(mut self, default_open: bool) -> Self {
-        self.default_open = default_open;
+        self.default_open = Some(default_open);
         self
     }
 
@@ -800,13 +938,35 @@ impl SchemaDisplayParameters {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let params = self.parameters;
-        let children_override = self.children;
-        let count: Arc<str> = Arc::from(params.len().to_string());
-        let test_id = self.test_id_trigger;
-        let layout = self.layout;
+        let SchemaDisplayParameters {
+            parameters,
+            from_context,
+            children,
+            default_open,
+            test_id_trigger,
+            layout,
+        } = self;
 
-        Collapsible::uncontrolled(self.default_open)
+        let (params, inherited_default_open, inherited_test_id_trigger) = if from_context {
+            let context = require_schema_display_context(cx);
+            (
+                context.parameters,
+                context.default_open_parameters,
+                context.test_id_parameters_trigger,
+            )
+        } else {
+            (parameters, true, None)
+        };
+
+        if from_context && params.is_empty() && children.is_none() {
+            return hidden(cx);
+        }
+
+        let count: Arc<str> = Arc::from(params.len().to_string());
+        let default_open = default_open.unwrap_or(inherited_default_open);
+        let test_id = test_id_trigger.or(inherited_test_id_trigger);
+
+        Collapsible::uncontrolled(default_open)
             .refine_layout(layout)
             .into_element_with_open_model(
                 cx,
@@ -821,7 +981,7 @@ impl SchemaDisplayParameters {
                     )
                 },
                 move |cx| {
-                    let list = if let Some(children) = children_override {
+                    let list = if let Some(children) = children {
                         ui::v_stack(move |_cx| children)
                             .layout(LayoutRefinement::default().w_full().min_w_0())
                             .gap(Space::N0)
@@ -839,8 +999,9 @@ impl SchemaDisplayParameters {
 #[derive(Debug)]
 pub struct SchemaDisplayRequest {
     properties: Arc<[SchemaProperty]>,
+    from_context: bool,
     children: Option<Vec<AnyElement>>,
-    default_open: bool,
+    default_open: Option<bool>,
     test_id_trigger: Option<Arc<str>>,
     test_id_first_property_trigger: Option<Arc<str>>,
     test_id_first_property_child0_trigger: Option<Arc<str>>,
@@ -851,8 +1012,22 @@ impl SchemaDisplayRequest {
     pub fn new(properties: impl Into<Arc<[SchemaProperty]>>) -> Self {
         Self {
             properties: properties.into(),
+            from_context: false,
             children: None,
-            default_open: true,
+            default_open: Some(true),
+            test_id_trigger: None,
+            test_id_first_property_trigger: None,
+            test_id_first_property_child0_trigger: None,
+            layout: LayoutRefinement::default().w_full().min_w_0(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            properties: Arc::from([]),
+            from_context: true,
+            children: None,
+            default_open: None,
             test_id_trigger: None,
             test_id_first_property_trigger: None,
             test_id_first_property_child0_trigger: None,
@@ -861,7 +1036,7 @@ impl SchemaDisplayRequest {
     }
 
     pub fn default_open(mut self, default_open: bool) -> Self {
-        self.default_open = default_open;
+        self.default_open = Some(default_open);
         self
     }
 
@@ -898,14 +1073,36 @@ impl SchemaDisplayRequest {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let props = self.properties;
-        let children_override = self.children;
-        let test_id = self.test_id_trigger;
-        let test_id_first_property_trigger = self.test_id_first_property_trigger;
-        let test_id_first_property_child0_trigger = self.test_id_first_property_child0_trigger;
-        let layout = self.layout;
+        let SchemaDisplayRequest {
+            properties,
+            from_context,
+            children,
+            default_open,
+            test_id_trigger,
+            test_id_first_property_trigger,
+            test_id_first_property_child0_trigger,
+            layout,
+        } = self;
 
-        Collapsible::uncontrolled(self.default_open)
+        let (props, inherited_default_open, inherited_test_id_trigger) = if from_context {
+            let context = require_schema_display_context(cx);
+            (
+                context.request_body,
+                context.default_open_request,
+                context.test_id_request_trigger,
+            )
+        } else {
+            (properties, true, None)
+        };
+
+        if from_context && props.is_empty() && children.is_none() {
+            return hidden(cx);
+        }
+
+        let default_open = default_open.unwrap_or(inherited_default_open);
+        let test_id = test_id_trigger.or(inherited_test_id_trigger);
+
+        Collapsible::uncontrolled(default_open)
             .refine_layout(layout)
             .into_element_with_open_model(
                 cx,
@@ -920,7 +1117,7 @@ impl SchemaDisplayRequest {
                     )
                 },
                 move |cx| {
-                    let list = if let Some(children) = children_override {
+                    let list = if let Some(children) = children {
                         ui::v_stack(move |_cx| children)
                             .layout(LayoutRefinement::default().w_full().min_w_0())
                             .gap(Space::N0)
@@ -945,8 +1142,9 @@ impl SchemaDisplayRequest {
 #[derive(Debug)]
 pub struct SchemaDisplayResponse {
     properties: Arc<[SchemaProperty]>,
+    from_context: bool,
     children: Option<Vec<AnyElement>>,
-    default_open: bool,
+    default_open: Option<bool>,
     test_id_trigger: Option<Arc<str>>,
     test_id_first_property_trigger: Option<Arc<str>>,
     test_id_first_property_child0_trigger: Option<Arc<str>>,
@@ -957,8 +1155,22 @@ impl SchemaDisplayResponse {
     pub fn new(properties: impl Into<Arc<[SchemaProperty]>>) -> Self {
         Self {
             properties: properties.into(),
+            from_context: false,
             children: None,
-            default_open: true,
+            default_open: Some(true),
+            test_id_trigger: None,
+            test_id_first_property_trigger: None,
+            test_id_first_property_child0_trigger: None,
+            layout: LayoutRefinement::default().w_full().min_w_0(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            properties: Arc::from([]),
+            from_context: true,
+            children: None,
+            default_open: None,
             test_id_trigger: None,
             test_id_first_property_trigger: None,
             test_id_first_property_child0_trigger: None,
@@ -967,7 +1179,7 @@ impl SchemaDisplayResponse {
     }
 
     pub fn default_open(mut self, default_open: bool) -> Self {
-        self.default_open = default_open;
+        self.default_open = Some(default_open);
         self
     }
 
@@ -1004,14 +1216,36 @@ impl SchemaDisplayResponse {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let props = self.properties;
-        let children_override = self.children;
-        let test_id = self.test_id_trigger;
-        let test_id_first_property_trigger = self.test_id_first_property_trigger;
-        let test_id_first_property_child0_trigger = self.test_id_first_property_child0_trigger;
-        let layout = self.layout;
+        let SchemaDisplayResponse {
+            properties,
+            from_context,
+            children,
+            default_open,
+            test_id_trigger,
+            test_id_first_property_trigger,
+            test_id_first_property_child0_trigger,
+            layout,
+        } = self;
 
-        Collapsible::uncontrolled(self.default_open)
+        let (props, inherited_default_open, inherited_test_id_trigger) = if from_context {
+            let context = require_schema_display_context(cx);
+            (
+                context.response_body,
+                context.default_open_response,
+                context.test_id_response_trigger,
+            )
+        } else {
+            (properties, true, None)
+        };
+
+        if from_context && props.is_empty() && children.is_none() {
+            return hidden(cx);
+        }
+
+        let default_open = default_open.unwrap_or(inherited_default_open);
+        let test_id = test_id_trigger.or(inherited_test_id_trigger);
+
+        Collapsible::uncontrolled(default_open)
             .refine_layout(layout)
             .into_element_with_open_model(
                 cx,
@@ -1026,7 +1260,7 @@ impl SchemaDisplayResponse {
                     )
                 },
                 move |cx| {
-                    let list = if let Some(children) = children_override {
+                    let list = if let Some(children) = children {
                         ui::v_stack(move |_cx| children)
                             .layout(LayoutRefinement::default().w_full().min_w_0())
                             .gap(Space::N0)
@@ -1827,6 +2061,44 @@ mod tests {
         );
         assert!(find_text_element(&element, "Custom header").is_some());
         assert!(find_text_element(&element, "Custom body").is_some());
+    }
+
+    #[test]
+    fn schema_display_context_driven_children_can_consume_root_context() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                SchemaDisplay::new(HttpMethod::Delete, "/api/posts/{postId}")
+                    .description("Delete a post")
+                    .parameters([SchemaParameter::new("postId", "string").required(true)])
+                    .request_body([SchemaProperty::new("reason", "string")])
+                    .response_body([SchemaProperty::new("deleted", "boolean").required(true)])
+                    .into_element_with_children(cx, |cx| {
+                        vec![
+                            SchemaDisplayHeader::new([
+                                SchemaDisplayMethod::from_context().into_element(cx),
+                                SchemaDisplayPath::from_context().into_element(cx),
+                            ])
+                            .into_element(cx),
+                            SchemaDisplayDescription::from_context().into_element(cx),
+                            SchemaDisplayContent::new([
+                                SchemaDisplayParameters::from_context().into_element(cx),
+                                SchemaDisplayRequest::from_context().into_element(cx),
+                                SchemaDisplayResponse::from_context().into_element(cx),
+                            ])
+                            .into_element(cx),
+                        ]
+                    })
+            });
+
+        assert!(find_text_element(&element, "DELETE").is_some());
+        assert!(find_text_element(&element, "/api/posts/{postId}").is_some());
+        assert!(find_text_element(&element, "Delete a post").is_some());
+        assert!(find_text_element(&element, "Parameters").is_some());
+        assert!(find_text_element(&element, "Request Body").is_some());
+        assert!(find_text_element(&element, "Response").is_some());
     }
 
     #[test]

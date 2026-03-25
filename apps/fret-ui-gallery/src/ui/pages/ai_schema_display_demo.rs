@@ -15,7 +15,7 @@ pub(super) fn preview_ai_schema_display_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
     let features = doc_layout::notes_block([
         "Mechanism health looks good after the audit: the existing `gallery-dev` diag script passed, and the visible breakage traced back to `fret-ui-ai` recipe code rather than a `crates/fret-ui` runtime contract gap.",
         "This page now follows the official AI Elements docs surface more closely: one full usage example first, then focused examples for parameters, request/response bodies, and nested properties.",
-        "The component now keeps root children stacked correctly, uses the upstream orange default for `PUT`, and exposes section-level `children([...])` overrides on `SchemaDisplayParameters`, `SchemaDisplayRequest`, and `SchemaDisplayResponse`.",
+        "The component now keeps root children stacked correctly, uses the upstream orange default for `PUT`, exposes section-level `children([...])` overrides on `SchemaDisplayParameters`, `SchemaDisplayRequest`, and `SchemaDisplayResponse`, and mirrors the official context-driven root composition lane.",
     ]);
     let method_colors = doc_layout::text_table(
         cx,
@@ -30,7 +30,7 @@ pub(super) fn preview_ai_schema_display_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
         false,
     );
     let notes = doc_layout::notes_block([
-        "Remaining public-surface gap: Fret still does not provide an upstream-style context-driven `SchemaDisplayMethod()` / `SchemaDisplayPath()` lane, so fully custom root composition repeats method/path/description values.",
+        "Custom root composition now follows the upstream context-driven lane: `SchemaDisplay::into_element_with_children(cx, |cx| ...)` lets `SchemaDisplayMethod::from_context()`, `SchemaDisplayPath::from_context()`, and the section surfaces consume root data without repeating method/path/description values.",
         "The main usage example keeps stable diagnostics anchors on the root plus the request/response property trees, so the existing screenshot and bundle gates continue to work under `gallery-dev`.",
         "This detail page is feature-gated behind `gallery-dev`, which also enables the `fret-ui-ai` surfaces in UI Gallery.",
     ]);
@@ -63,17 +63,17 @@ pub(super) fn preview_ai_schema_display_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
             .test_id_prefix("ui-gallery-ai-schema-display-nested")
             .code_rust_from_file_region(snippets::schema_display_nested::SOURCE, "example"),
         DocSection::build(cx, "Composable Children", composable)
-            .description("Fret-specific custom composition lane: keep the shared chrome, then override only the section body you need.")
+            .description("Keep the shared root chrome and context, then override only the section body you need.")
             .test_id_prefix("ui-gallery-ai-schema-display-composable")
             .code_rust_from_file_region(snippets::schema_display_composable::SOURCE, "example"),
         DocSection::build(cx, "Notes", notes)
-            .description("What is aligned now, what remains explicit in Fret, and why.")
+            .description("What is aligned now, how the root context lane works, and which diagnostics anchors remain stable.")
             .no_shell(),
     ];
 
     let body = crate::ui::doc_layout::render_doc_page_after(
         Some(
-            "Docs-aligned SchemaDisplay coverage for AI Elements: full usage first, then focused examples, method-color defaults, and the current Fret composability trade-offs.",
+            "Docs-aligned SchemaDisplay coverage for AI Elements: full usage first, then focused examples, method-color defaults, and the context-driven custom root lane.",
         ),
         sections,
         cx,

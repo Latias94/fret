@@ -9461,6 +9461,52 @@ fn prompt_input_cursor_demo_prefers_prompt_input_cursor_compounds() {
 }
 
 #[test]
+fn schema_display_demo_prefers_context_driven_root_children_lane() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/schema_display_demo.rs",
+        &[
+            "ui_ai::SchemaDisplay::new(method, path.clone())",
+            ".into_element_with_children(cx, |cx| {",
+            "ui_ai::SchemaDisplayMethod::from_context().into_element(cx)",
+            "ui_ai::SchemaDisplayPath::from_context().into_element(cx)",
+            "ui_ai::SchemaDisplayDescription::from_context().into_element(cx)",
+            "ui_ai::SchemaDisplayParameters::from_context().into_element(cx)",
+            "ui_ai::SchemaDisplayRequest::from_context()",
+            "ui_ai::SchemaDisplayResponse::from_context()",
+            ".test_id_parameters_trigger(\"ui-ai-schema-display-parameters-trigger\")",
+            ".test_id_request_trigger(\"ui-ai-schema-display-request-trigger\")",
+            ".test_id_response_trigger(\"ui-ai-schema-display-response-trigger\")",
+        ],
+        &[
+            "ui_ai::SchemaDisplayMethod::new(method)",
+            "ui_ai::SchemaDisplayPath::new(path)",
+            "ui_ai::SchemaDisplayDescription::new(description)",
+        ],
+    );
+}
+
+#[test]
+fn schema_display_composable_prefers_context_driven_request_override() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/schema_display_composable.rs",
+        &[
+            ".into_element_with_children(cx, |cx| {",
+            "ui_ai::SchemaDisplayMethod::from_context().into_element(cx)",
+            "ui_ai::SchemaDisplayPath::from_context().into_element(cx)",
+            "ui_ai::SchemaDisplayDescription::from_context().into_element(cx)",
+            "ui_ai::SchemaDisplayRequest::from_context()",
+            ".children([",
+        ],
+        &[
+            "ui_ai::SchemaDisplayMethod::new(method)",
+            "ui_ai::SchemaDisplayPath::new(path)",
+            "ui_ai::SchemaDisplayDescription::new(description)",
+            "ui_ai::SchemaDisplayRequest::new(request_body)",
+        ],
+    );
+}
+
+#[test]
 fn prompt_input_docs_page_tracks_official_examples_sections() {
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_prompt_input_docs_demo.rs",

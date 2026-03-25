@@ -489,10 +489,21 @@ fn schema_display_surface_does_not_require_static_host() {
         "schema_display.rs should not require `H: UiHost + 'static` on collapsible section surfaces"
     );
     assert!(
+        SCHEMA_DISPLAY_RS.contains("pub fn into_element_with_children<H: UiHost>("),
+        "schema_display.rs should keep the root context-driven children lane available to non-static hosts"
+    );
+    assert!(
         SCHEMA_DISPLAY_RS.contains(
             "pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {"
         ),
         "schema_display.rs should keep non-static host entry points"
+    );
+    assert!(
+        SCHEMA_DISPLAY_RS
+            .matches("pub fn from_context() -> Self")
+            .count()
+            >= 6,
+        "schema_display.rs should expose context-aware subcomponent entry points for the root authoring lane"
     );
 }
 
