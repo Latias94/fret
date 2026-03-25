@@ -45,20 +45,36 @@ fn props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 "Typed equivalent to upstream `className` customization.",
             ],
             [
+                "children([...])",
+                "IntoIterator<Item = AnyElement>",
+                "Fret-specific eager custom-visual lane that replaces the default center indicator while keeping the Persona shell intact.",
+            ],
+            [
                 "into_element_with_children(...)",
-                "custom center visual",
-                "Fret-specific extension for composable custom visuals without forking the shell.",
+                "(cx, controller) -> Vec<AnyElement>",
+                "Lower-level escape hatch when custom visuals need the current state / variant / size at build time.",
             ],
         ],
         false,
     )
 }
 
-fn lifecycle_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn features_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     crate::ui::doc_layout::notes_block([
-        "Upstream AI Elements binds `Persona` to Rive/WebGL2 and therefore exposes load / ready / play / pause / stop callbacks.",
-        "Fret intentionally keeps runtime IO and animation engine ownership app-side, so `fret-ui-ai::Persona` does not pretend to expose callback hooks it cannot honor yet.",
-        "If we later add an app-owned Rive adapter, callback parity should land as ecosystem policy/runtime integration work rather than inside `crates/fret-ui`.",
+        "Six visual variants and five high-level states stay aligned with the official AI Elements taxonomy.",
+        "Default output remains `obsidian` at 64px so the basic example stays close to upstream `<Persona state=\"...\" />` usage.",
+        "Typed `size(...)`, `refine_layout(...)`, and `refine_style(...)` cover the same teaching space as upstream `className` sizing/chrome tweaks.",
+        "Fret now also exposes a higher-level `children([...])` lane for custom center visuals, while preserving `into_element_with_children(...)` for controller-aware assembly.",
+        "Existing UI Gallery diagnostics already cover preview + state/variant switching for this page, so docs-surface drift is easier to lock down than before.",
+    ])
+}
+
+fn runtime_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    crate::ui::doc_layout::notes_block([
+        "Upstream AI Elements binds `Persona` to Rive/WebGL2, includes a React Strict Mode guard, and exposes load / ready / play / pause / stop callbacks.",
+        "Fret intentionally keeps animation-engine IO and lifecycle ownership app-side, so `fret-ui-ai::Persona` stays a self-drawn shell instead of pretending the Rive callback surface already exists.",
+        "Audit result: this is not a `crates/fret-ui` mechanism bug. The remaining drift for `persona` was public-surface and docs-surface parity in `ecosystem/fret-ui-ai` + UI Gallery.",
+        "If we later add an app-owned Rive adapter, Strict Mode handling and callback parity should land there as ecosystem/runtime integration work rather than inside the base UI mechanism layer.",
     ])
 }
 
@@ -69,52 +85,57 @@ pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
     let state_management = snippets::persona_state_management::render(cx);
     let custom_styling = snippets::persona_custom_styling::render(cx);
     let custom_visual = snippets::persona_custom_visual::render(cx);
+    let features = features_notes(cx);
     let states = states_notes(cx);
     let props = props_table(cx);
-    let lifecycle = lifecycle_notes(cx);
+    let runtime = runtime_notes(cx);
 
     let body = doc_layout::render_doc_page_after(
         Some(
-            "Docs-aligned AI Elements Persona demo: interactive state controls, variant showcase, states/props reference, and a Fret-specific custom visual slot.",
+            "Docs-aligned AI Elements Persona coverage: preview, features/variants/props/states, runtime ownership notes, and copyable usage examples including a Fret-specific custom visual lane.",
         ),
         vec![
-            DocSection::build(cx, "Interactive Demo", interactive)
-                .description("Mirrors the official docs preview shape more closely: one current persona with state controls plus variant switching.")
+            DocSection::build(cx, "Preview", interactive)
+                .description("Gallery-specific combined preview: one current persona with state controls plus variant switching so the upstream state/variant matrix is easy to compare on a single surface.")
                 .test_id_prefix("ui-gallery-ai-persona-demo")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_demo::SOURCE, "example"),
+            DocSection::build(cx, "Features", features)
+                .description("High-signal parity notes against the official Persona docs plus the new Fret custom-visual lane.")
+                .max_w(Px(980.0))
+                .no_shell(),
             DocSection::build(cx, "Variants", variants)
                 .description("Six variant shells with the same idle state so visual drift is easy to compare at a glance.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_variants::SOURCE, "example"),
+            DocSection::build(cx, "Props & Extensions", props)
+                .description("Upstream-facing props plus the Fret-specific custom-visual surfaces.")
+                .max_w(Px(980.0))
+                .no_shell(),
+            DocSection::build(cx, "States", states)
+                .description("Persona responds to the same five high-level states described in the upstream docs.")
+                .max_w(Px(980.0))
+                .no_shell(),
+            DocSection::build(cx, "Runtime & Ownership", runtime)
+                .description("Why lifecycle/Strict-Mode parity is intentionally deferred to a future app-owned animation adapter.")
+                .max_w(Px(980.0))
+                .no_shell(),
             DocSection::build(cx, "Basic Usage", basic)
                 .description("Minimal surface aligned to the upstream basic example: a single Persona with explicit state + variant.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_basic::SOURCE, "example"),
             DocSection::build(cx, "With State Management", state_management)
-                .description("Copyable state-driven example matching the official docs intent without relying on DOM buttons.")
+                .description("Copyable state-driven example matching the official icon-button control pattern while staying backend-agnostic in Rust.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_state_management::SOURCE, "example"),
             DocSection::build(cx, "Custom Styling", custom_styling)
-                .description("Equivalent to upstream `className`-driven styling, expressed as typed Fret chrome/layout refinements.")
+                .description("Typed equivalent to the upstream `className=\"size-64 rounded-full border border-border\"` customization example.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_custom_styling::SOURCE, "example"),
             DocSection::build(cx, "Custom Visual Slot", custom_visual)
-                .description("Fret-specific extension: replace the center visual without forking the shell or losing stable selectors.")
+                .description("Fret-specific extension: prefer `.children([...])` for eager custom center content, and keep `into_element_with_children(...)` for controller-aware assembly.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_custom_visual::SOURCE, "example"),
-            DocSection::build(cx, "States", states)
-                .description("Persona responds to the same five high-level states described in the upstream docs.")
-                .max_w(Px(980.0))
-                .no_shell(),
-            DocSection::build(cx, "Props & Extensions", props)
-                .description("Upstream-facing props plus Fret-specific typed customization seams.")
-                .max_w(Px(980.0))
-                .no_shell(),
-            DocSection::build(cx, "Lifecycle & Ownership", lifecycle)
-                .description("Why callback parity is intentionally deferred until a concrete runtime adapter exists.")
-                .max_w(Px(980.0))
-                .no_shell(),
         ],
         cx,
     );
