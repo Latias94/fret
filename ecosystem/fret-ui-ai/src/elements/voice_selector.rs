@@ -25,8 +25,8 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, Command, CommandDialog, CommandEmpty, CommandEntry,
-    CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut,
-    Dialog, DialogContent, DialogTitle, Spinner,
+    CommandGroup, CommandInput, CommandItem, CommandList, CommandLoading, CommandSeparator,
+    CommandShortcut, Dialog, DialogContent, DialogTitle, Spinner,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -567,8 +567,11 @@ impl VoiceSelectorContent {
         self
     }
 
-    pub fn list(mut self, list: VoiceSelectorList) -> Self {
-        self.list = Some(list);
+    pub fn list<L>(mut self, list: L) -> Self
+    where
+        L: Into<VoiceSelectorList>,
+    {
+        self.list = Some(list.into());
         self
     }
 
@@ -678,9 +681,40 @@ impl VoiceSelectorInput {
     }
 }
 
+fn voice_selector_select_action(
+    controller: &VoiceSelectorController,
+    value: Arc<str>,
+) -> fret_ui::action::OnActivate {
+    let value_model = controller.value.clone();
+    let open_model = controller.open.clone();
+    let query_model = controller.query.clone();
+    let on_value_change = controller.on_value_change.clone();
+
+    Arc::new(move |host, action_cx, _| {
+        let _ = host
+            .models_mut()
+            .update(&value_model, |v| *v = Some(value.clone()));
+        let _ = host.models_mut().update(&query_model, |v| v.clear());
+        let _ = host.models_mut().update(&open_model, |v| *v = false);
+        if let Some(cb) = on_value_change.clone() {
+            cb(host, action_cx, Some(value.clone()));
+        }
+        host.notify(action_cx);
+        host.request_redraw(action_cx.window);
+    })
+}
+
+fn default_voice_selector_item_test_id(
+    prefix: Option<&Arc<str>>,
+    value: &Arc<str>,
+) -> Option<Arc<str>> {
+    prefix.map(|prefix| Arc::from(format!("{prefix}-{}", value.as_ref().replace(' ', "-"))))
+}
+
 enum VoiceSelectorListMode {
     Auto,
-    Entries(Vec<CommandEntry>),
+    Entries(Vec<VoiceSelectorListEntry>),
+    Builder(Box<dyn FnOnce(Arc<[VoiceSelectorVoice]>) -> Vec<VoiceSelectorListEntry> + 'static>),
 }
 
 /// Renders a filtered voice list and commits selection on activate.
@@ -713,7 +747,7 @@ impl VoiceSelectorList {
     pub fn new_entries<I, E>(entries: I) -> Self
     where
         I: IntoIterator<Item = E>,
-        E: Into<CommandEntry>,
+        E: Into<VoiceSelectorListEntry>,
     {
         Self {
             mode: VoiceSelectorListMode::Entries(entries.into_iter().map(Into::into).collect()),
@@ -734,7 +768,7 @@ impl VoiceSelectorList {
     pub fn entries<I, E>(mut self, entries: I) -> Self
     where
         I: IntoIterator<Item = E>,
-        E: Into<CommandEntry>,
+        E: Into<VoiceSelectorListEntry>,
     {
         self.mode = VoiceSelectorListMode::Entries(entries.into_iter().map(Into::into).collect());
         self
@@ -772,6 +806,23 @@ impl VoiceSelectorList {
     }
 
     /// Rust-friendly equivalent of upstream `VoiceSelectorList(children(voices))`.
+    fn resolve_entries<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        controller: &VoiceSelectorController,
+        test_id_prefix: Option<&Arc<str>>,
+        entries: Vec<VoiceSelectorListEntry>,
+    ) -> Vec<CommandEntry> {
+        entries
+            .into_iter()
+            .map(|entry| match entry {
+                VoiceSelectorListEntry::Item(item) => item
+                    .into_command_item(cx, controller, test_id_prefix)
+                    .into(),
+                VoiceSelectorListEntry::Shared(entry) => entry,
+            })
+            .collect()
+    }
+
     pub fn into_element_with_children<H, F, I, E>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -781,7 +832,7 @@ impl VoiceSelectorList {
         H: UiHost,
         F: FnOnce(Arc<[VoiceSelectorVoice]>) -> I,
         I: IntoIterator<Item = E>,
-        E: Into<CommandEntry>,
+        E: Into<VoiceSelectorListEntry>,
     {
         let Some(controller) = use_voice_selector_controller(cx) else {
             return visually_hidden(cx, |_| Vec::<AnyElement>::new());
@@ -790,13 +841,19 @@ impl VoiceSelectorList {
         let Self {
             empty_text,
             scroll_layout,
+            test_id_prefix,
             ..
         } = self;
 
-        let entries = children(controller.voices.clone())
-            .into_iter()
-            .map(Into::into)
-            .collect::<Vec<_>>();
+        let entries = Self::resolve_entries(
+            cx,
+            &controller,
+            test_id_prefix.as_ref(),
+            children(controller.voices.clone())
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        );
 
         Self::into_element_with_entries(cx, empty_text, scroll_layout, entries)
     }
@@ -822,24 +879,7 @@ impl VoiceSelectorList {
                     let name = voice.name.clone();
                     let desc = voice.description.clone();
 
-                    let value_model = controller.value.clone();
-                    let open_model = controller.open.clone();
-                    let query_model = controller.query.clone();
-                    let on_value_change = controller.on_value_change.clone();
-
-                    let on_select: fret_ui::action::OnActivate =
-                        Arc::new(move |host, action_cx, _| {
-                            let _ = host
-                                .models_mut()
-                                .update(&value_model, |v| *v = Some(id.clone()));
-                            let _ = host.models_mut().update(&query_model, |v| v.clear());
-                            let _ = host.models_mut().update(&open_model, |v| *v = false);
-                            if let Some(cb) = on_value_change.clone() {
-                                cb(host, action_cx, Some(id.clone()));
-                            }
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
-                        });
+                    let on_select = voice_selector_select_action(&controller, id.clone());
 
                     let row = {
                         let name_el = cx.text_props(TextProps {
@@ -895,14 +935,24 @@ impl VoiceSelectorList {
                         .on_select_action(on_select)
                         .children([row]);
 
-                    if let Some(prefix) = test_id_prefix.as_deref() {
-                        item = item.test_id(format!("{prefix}-{}", voice.id.as_ref()));
+                    if let Some(test_id) =
+                        default_voice_selector_item_test_id(test_id_prefix.as_ref(), &voice.id)
+                    {
+                        item = item.test_id(test_id);
                     }
                     entries.push(item.into());
                 }
                 entries
             }
-            VoiceSelectorListMode::Entries(entries) => entries,
+            VoiceSelectorListMode::Entries(entries) => {
+                Self::resolve_entries(cx, &controller, test_id_prefix.as_ref(), entries)
+            }
+            VoiceSelectorListMode::Builder(children) => Self::resolve_entries(
+                cx,
+                &controller,
+                test_id_prefix.as_ref(),
+                children(controller.voices.clone()),
+            ),
         };
 
         Self::into_element_with_entries(cx, empty_text, scroll_layout, entries)
@@ -943,18 +993,319 @@ impl<F> VoiceSelectorListWithChildren<F> {
         H: UiHost,
         F: FnOnce(Arc<[VoiceSelectorVoice]>) -> I,
         I: IntoIterator<Item = E>,
-        E: Into<CommandEntry>,
+        E: Into<VoiceSelectorListEntry>,
     {
         self.list.into_element_with_children(cx, self.children)
+    }
+}
+
+impl<F, I, E> From<VoiceSelectorListWithChildren<F>> for VoiceSelectorList
+where
+    F: FnOnce(Arc<[VoiceSelectorVoice]>) -> I + 'static,
+    I: IntoIterator<Item = E>,
+    E: Into<VoiceSelectorListEntry>,
+{
+    fn from(value: VoiceSelectorListWithChildren<F>) -> Self {
+        let VoiceSelectorListWithChildren { mut list, children } = value;
+        list.mode = VoiceSelectorListMode::Builder(Box::new(move |voices| {
+            children(voices).into_iter().map(Into::into).collect()
+        }));
+        list
     }
 }
 
 pub type VoiceSelectorDialog = CommandDialog;
 pub type VoiceSelectorEmpty = CommandEmpty;
 pub type VoiceSelectorGroup = CommandGroup;
-pub type VoiceSelectorItem = CommandItem;
 pub type VoiceSelectorShortcut = CommandShortcut;
 pub type VoiceSelectorSeparator = CommandSeparator;
+
+pub enum VoiceSelectorListEntry {
+    Item(VoiceSelectorItem),
+    Shared(CommandEntry),
+}
+
+impl std::fmt::Debug for VoiceSelectorListEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Item(item) => f.debug_tuple("Item").field(item).finish(),
+            Self::Shared(_) => f.write_str("Shared(..)"),
+        }
+    }
+}
+
+impl From<VoiceSelectorItem> for VoiceSelectorListEntry {
+    fn from(value: VoiceSelectorItem) -> Self {
+        Self::Item(value)
+    }
+}
+
+impl From<CommandItem> for VoiceSelectorListEntry {
+    fn from(value: CommandItem) -> Self {
+        Self::Shared(value.into())
+    }
+}
+
+impl From<CommandGroup> for VoiceSelectorListEntry {
+    fn from(value: CommandGroup) -> Self {
+        Self::Shared(value.into())
+    }
+}
+
+impl From<CommandSeparator> for VoiceSelectorListEntry {
+    fn from(value: CommandSeparator) -> Self {
+        Self::Shared(value.into())
+    }
+}
+
+impl From<CommandLoading> for VoiceSelectorListEntry {
+    fn from(value: CommandLoading) -> Self {
+        Self::Shared(value.into())
+    }
+}
+
+impl From<CommandEntry> for VoiceSelectorListEntry {
+    fn from(value: CommandEntry) -> Self {
+        Self::Shared(value)
+    }
+}
+
+pub enum VoiceSelectorItemChild {
+    Preview(VoiceSelectorPreview),
+    Name(VoiceSelectorName),
+    Description(VoiceSelectorDescription),
+    Age(VoiceSelectorAge),
+    Attributes(VoiceSelectorAttributes),
+    Bullet(VoiceSelectorBullet),
+    Gender(VoiceSelectorGender),
+    Accent(VoiceSelectorAccent),
+    Shortcut(VoiceSelectorShortcut),
+    Custom(AnyElement),
+}
+
+impl std::fmt::Debug for VoiceSelectorItemChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Preview(value) => f.debug_tuple("Preview").field(value).finish(),
+            Self::Name(value) => f.debug_tuple("Name").field(value).finish(),
+            Self::Description(value) => f.debug_tuple("Description").field(value).finish(),
+            Self::Age(value) => f.debug_tuple("Age").field(value).finish(),
+            Self::Attributes(value) => f.debug_tuple("Attributes").field(value).finish(),
+            Self::Bullet(value) => f.debug_tuple("Bullet").field(value).finish(),
+            Self::Gender(value) => f.debug_tuple("Gender").field(value).finish(),
+            Self::Accent(value) => f.debug_tuple("Accent").field(value).finish(),
+            Self::Shortcut(value) => f.debug_tuple("Shortcut").field(value).finish(),
+            Self::Custom(_) => f.write_str("Custom(..)"),
+        }
+    }
+}
+
+impl VoiceSelectorItemChild {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        match self {
+            Self::Preview(value) => value.into_element(cx),
+            Self::Name(value) => value.into_element(cx),
+            Self::Description(value) => value.into_element(cx),
+            Self::Age(value) => value.into_element(cx),
+            Self::Attributes(value) => value.into_element(cx),
+            Self::Bullet(value) => value.into_element(cx),
+            Self::Gender(value) => value.into_element(cx),
+            Self::Accent(value) => value.into_element(cx),
+            Self::Shortcut(value) => value.into_element(cx),
+            Self::Custom(value) => value,
+        }
+    }
+}
+
+impl From<VoiceSelectorPreview> for VoiceSelectorItemChild {
+    fn from(value: VoiceSelectorPreview) -> Self {
+        Self::Preview(value)
+    }
+}
+
+impl From<VoiceSelectorName> for VoiceSelectorItemChild {
+    fn from(value: VoiceSelectorName) -> Self {
+        Self::Name(value)
+    }
+}
+
+impl From<VoiceSelectorDescription> for VoiceSelectorItemChild {
+    fn from(value: VoiceSelectorDescription) -> Self {
+        Self::Description(value)
+    }
+}
+
+impl From<VoiceSelectorAge> for VoiceSelectorItemChild {
+    fn from(value: VoiceSelectorAge) -> Self {
+        Self::Age(value)
+    }
+}
+
+impl From<VoiceSelectorAttributes> for VoiceSelectorItemChild {
+    fn from(value: VoiceSelectorAttributes) -> Self {
+        Self::Attributes(value)
+    }
+}
+
+impl From<VoiceSelectorBullet> for VoiceSelectorItemChild {
+    fn from(value: VoiceSelectorBullet) -> Self {
+        Self::Bullet(value)
+    }
+}
+
+impl From<VoiceSelectorGender> for VoiceSelectorItemChild {
+    fn from(value: VoiceSelectorGender) -> Self {
+        Self::Gender(value)
+    }
+}
+
+impl From<VoiceSelectorAccent> for VoiceSelectorItemChild {
+    fn from(value: VoiceSelectorAccent) -> Self {
+        Self::Accent(value)
+    }
+}
+
+impl From<VoiceSelectorShortcut> for VoiceSelectorItemChild {
+    fn from(value: VoiceSelectorShortcut) -> Self {
+        Self::Shortcut(value)
+    }
+}
+
+impl From<AnyElement> for VoiceSelectorItemChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Custom(value)
+    }
+}
+
+pub struct VoiceSelectorItem {
+    label: Arc<str>,
+    value: Arc<str>,
+    disabled: bool,
+    force_mount: bool,
+    keywords: Vec<Arc<str>>,
+    test_id: Option<Arc<str>>,
+    on_select: Option<fret_ui::action::OnActivate>,
+    children: Vec<VoiceSelectorItemChild>,
+}
+
+impl std::fmt::Debug for VoiceSelectorItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VoiceSelectorItem")
+            .field("label", &self.label.as_ref())
+            .field("value", &self.value.as_ref())
+            .field("disabled", &self.disabled)
+            .field("force_mount", &self.force_mount)
+            .field("keywords_len", &self.keywords.len())
+            .field("test_id", &self.test_id.as_deref())
+            .field("has_on_select", &self.on_select.is_some())
+            .field("children_len", &self.children.len())
+            .finish()
+    }
+}
+
+impl VoiceSelectorItem {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        let label = label.into();
+        Self {
+            label: label.clone(),
+            value: label,
+            disabled: false,
+            force_mount: false,
+            keywords: Vec::new(),
+            test_id: None,
+            on_select: None,
+            children: Vec::new(),
+        }
+    }
+
+    pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.value = value.into();
+        self
+    }
+
+    pub fn keywords<I, S>(mut self, keywords: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<Arc<str>>,
+    {
+        self.keywords = keywords.into_iter().map(Into::into).collect();
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.force_mount = force_mount;
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn on_select_action(mut self, on_select: fret_ui::action::OnActivate) -> Self {
+        self.on_select = Some(on_select);
+        self
+    }
+
+    pub fn child<C>(mut self, child: C) -> Self
+    where
+        C: Into<VoiceSelectorItemChild>,
+    {
+        self.children.push(child.into());
+        self
+    }
+
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<VoiceSelectorItemChild>,
+    {
+        self.children = children.into_iter().map(Into::into).collect();
+        self
+    }
+
+    fn into_command_item<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        controller: &VoiceSelectorController,
+        test_id_prefix: Option<&Arc<str>>,
+    ) -> CommandItem {
+        let value = self.value.clone();
+        let on_select = self
+            .on_select
+            .unwrap_or_else(|| voice_selector_select_action(controller, value.clone()));
+
+        let mut item = CommandItem::new(self.label)
+            .value(value.clone())
+            .keywords(self.keywords)
+            .disabled(self.disabled)
+            .force_mount(self.force_mount)
+            .on_select_action(on_select);
+
+        if !self.children.is_empty() {
+            item = item.children(
+                self.children
+                    .into_iter()
+                    .map(|child| child.into_element(cx))
+                    .collect::<Vec<_>>(),
+            );
+        }
+
+        if let Some(test_id) = self
+            .test_id
+            .or_else(|| default_voice_selector_item_test_id(test_id_prefix, &value))
+        {
+            item = item.test_id(test_id);
+        }
+
+        item
+    }
+}
 
 /// AI Elements-aligned `VoiceSelectorName`.
 pub struct VoiceSelectorName {
@@ -1735,10 +2086,11 @@ mod tests {
 
     #[test]
     fn voice_selector_list_entries_mode_captures_entries() {
-        let list = VoiceSelectorList::new_entries([CommandItem::new("Alloy")]);
+        let list = VoiceSelectorList::new_entries([VoiceSelectorItem::new("Alloy")]);
         match list.mode {
             VoiceSelectorListMode::Entries(entries) => assert_eq!(entries.len(), 1),
             VoiceSelectorListMode::Auto => panic!("expected entries mode"),
+            VoiceSelectorListMode::Builder(_) => panic!("expected entries mode"),
         }
     }
 
@@ -1839,7 +2191,7 @@ mod tests {
     }
 
     #[test]
-    fn voice_selector_list_children_builder_builds() {
+    fn voice_selector_list_children_builder_builds_typed_item_rows() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let controller = VoiceSelectorController {
@@ -1864,7 +2216,13 @@ mod tests {
                         .children(|voices: Arc<[VoiceSelectorVoice]>| {
                             voices
                                 .iter()
-                                .map(|voice| VoiceSelectorItem::new(voice.name.clone()))
+                                .map(|voice| {
+                                    VoiceSelectorItem::new(voice.name.clone())
+                                        .value(voice.id.clone())
+                                        .child(VoiceSelectorName::new(voice.name.clone()))
+                                        .child(VoiceSelectorBullet::new())
+                                        .child(VoiceSelectorDescription::new("Balanced"))
+                                })
                                 .collect::<Vec<_>>()
                         })
                         .into_element(cx)
@@ -1875,6 +2233,33 @@ mod tests {
         assert!(
             find_text_by_content(&built, "Alloy").is_some(),
             "expected render-prop list builder to render the explicit row"
+        );
+        assert!(
+            find_text_by_content(&built, "Balanced").is_some(),
+            "expected typed VoiceSelectorItem children to render without a prebuilt AnyElement row"
+        );
+    }
+
+    #[test]
+    fn voice_selector_content_list_accepts_list_children_builder() {
+        let content = VoiceSelectorContent::new(Vec::<AnyElement>::new()).list(
+            VoiceSelectorList::new()
+                .children(|voices: Arc<[VoiceSelectorVoice]>| {
+                    voices
+                        .iter()
+                        .map(|voice| VoiceSelectorItem::new(voice.name.clone()))
+                        .collect::<Vec<_>>()
+                })
+                .empty_text("No voices found."),
+        );
+
+        let list = content
+            .list
+            .as_ref()
+            .expect("expected VoiceSelectorContent::list(...) to store a list");
+        assert!(
+            matches!(list.mode, VoiceSelectorListMode::Builder(_)),
+            "expected VoiceSelectorContent::list(...) to accept the render-prop list builder"
         );
     }
 

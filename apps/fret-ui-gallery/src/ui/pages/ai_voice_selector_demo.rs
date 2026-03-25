@@ -56,7 +56,7 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 "new(children) / input(...) / list(...)",
                 "IntoIterator<Item = AnyElement> / typed builder",
                 "DialogContent + Command shell",
-                "Dialog body wrapper with typed `VoiceSelectorInput` and `VoiceSelectorList` lanes for docs-style composition.",
+                "Dialog body wrapper with typed `VoiceSelectorInput` and `VoiceSelectorList` lanes; `list(...)` also accepts the render-prop `VoiceSelectorList::children(...)` builder for docs-shaped list composition.",
             ],
             [
                 "VoiceSelectorInput",
@@ -70,11 +70,18 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 "new / children(...) / new_entries(...)",
                 "builder / render-prop closure / explicit entries",
                 "auto rows",
-                "Supports automatic rows, explicit `CommandEntry` lists, or a Rust render-prop equivalent of upstream `children(voices)` composition.",
+                "Supports automatic rows, explicit typed/shared entries, or a Rust render-prop equivalent of upstream `children(voices)` composition.",
             ],
             [
-                "Group / Item / Separator / Shortcut / Dialog",
-                "shared `Command*` / `Dialog` surfaces",
+                "VoiceSelectorItem",
+                "new / value / child / children / on_select_action",
+                "typed builder",
+                "label-derived value + selector-driven default selection",
+                "Selector-owned row builder. By default it commits selection through the shared `VoiceSelector` controller, while `child(...)` composes typed metadata parts without a prebuilt row container.",
+            ],
+            [
+                "Group / Separator / Shortcut / Dialog",
+                "shared `Command*` / `Dialog` aliases",
                 "type aliases",
                 "-",
                 "These stay intentionally aligned with shared command/dialog behavior so selector parity does not fork overlay semantics.",
@@ -108,7 +115,7 @@ pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
     let usage = snippets::voice_selector_demo::render(cx);
     let features = doc_layout::notes_block([
         "Behavior baseline is healthy: searchable selection, close-on-select, shared query highlight, and preview action embedding all live in `fret-ui-ai` / shared `Command` surfaces rather than `crates/fret-ui` mechanisms.",
-        "The root now exposes a docs-shaped `children([...])` lane plus typed `input(...)` / `list(...)` content lanes, so the Rust example maps much more directly onto the official AI Elements composition.",
+        "The root now exposes a docs-shaped `children([...])` lane plus typed `input(...)` / `list(...)` content lanes, and the list render-prop can now yield selector-owned `VoiceSelectorItem` rows instead of forcing an eager `AnyElement` row seam.",
         "Leaf parts that upstream exposes as `children ?? default` now keep that escape hatch in Fret as well, which matters for icon/text overrides on `Gender`, `Accent`, `Bullet`, and `Preview`.",
         "Voice inventory and preview playback remain app-owned so the example stays backend-agnostic and copy-paste friendly.",
         "This detail page is feature-gated behind `gallery-dev`, which is also required for the wider `fret-ui-ai` surface in UI Gallery.",
@@ -118,6 +125,7 @@ pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
     let hooks = hooks_table(cx).test_id("ui-gallery-ai-voice-selector-demo-hooks");
     let behavior = doc_layout::notes_block([
         "This is not a `crates/fret-ui` mechanism bug. The remaining drift was public-surface/docs-surface parity in `ecosystem/fret-ui-ai` + UI Gallery.",
+        "The key long-term correction is item ownership: selection/close policy now has a selector-owned default path on `VoiceSelectorItem`, so docs-style list composition no longer has to hand-roll `CommandItem` actions per row.",
         "Shared `Command*` and `Dialog` parts still own filtering, list semantics, and overlay behavior; `VoiceSelector` only layers voice-specific policy such as metadata affordances and preview chrome.",
         "Compared with the React docs, Fret keeps `use_voice_selector_controller(cx)` instead of the exact hook name `useVoiceSelector()`, but the descendant-state intent is the same.",
         "The only deliberately retained product seam is transport: audio preview playback and voice inventory fetching stay in app code instead of being hidden inside the component.",
@@ -137,7 +145,7 @@ pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
         vec![
             DocSection::build(cx, "Usage", usage)
                 .descriptions([
-                    "Rust/Fret analogue of the official AI Elements Voice Selector example, now using a docs-shaped compound root plus typed `VoiceSelectorContent::input(...)` / `list(...)` convenience lanes.",
+                    "Rust/Fret analogue of the official AI Elements Voice Selector example, now using a docs-shaped compound root plus typed `VoiceSelectorContent::input(...)` / `list(...)` convenience lanes and selector-owned `VoiceSelectorItem` rows.",
                     "The example stays deterministic and copyable by keeping voice inventory and preview transport in app code instead of hiding them behind browser-only or provider-owned seams.",
                 ])
                 .test_id_prefix("ui-gallery-ai-voice-selector-demo")
@@ -146,7 +154,7 @@ pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
                 .description("Behavior and composition outcomes preserved while aligning with the official Voice Selector docs surface.")
                 .no_shell(),
             DocSection::build(cx, "Parts & Props", parts)
-                .description("Current Fret API surface for `VoiceSelector`, including the docs-shaped root children lane and the render-prop list lane.")
+                .description("Current Fret API surface for `VoiceSelector`, including the docs-shaped root children lane, typed list render-prop lane, and selector-owned item builder.")
                 .no_shell(),
             DocSection::build(cx, "Hooks", hooks)
                 .description("Fret hook surface corresponding to descendant state access under `VoiceSelector`.")

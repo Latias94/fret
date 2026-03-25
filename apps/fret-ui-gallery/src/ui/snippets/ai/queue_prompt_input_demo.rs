@@ -261,122 +261,113 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .test_id("ui-ai-queue-prompt-input-search")
                 .into_element(cx);
 
+            let trigger_children = {
+                let mut children: Vec<AnyElement> = Vec::new();
+                if let Some(model) = selected_model {
+                    children.push(ui_ai::ModelSelectorLogo::new(model.chef_slug).into_element(cx));
+                    children.push(ui_ai::ModelSelectorName::new(model.name).into_element(cx));
+                }
+                children
+            };
+
+            let on_select = |value: &'static str| -> fret_ui::action::OnActivate {
+                let model_selected = model_selected.clone();
+                let model_query = model_query.clone();
+                let model_open = model_open.clone();
+                Arc::new(move |host, action_cx, _reason| {
+                    let _ = host
+                        .models_mut()
+                        .update(&model_selected, |v| *v = Arc::<str>::from(value));
+                    let _ = host.models_mut().update(&model_query, |v| v.clear());
+                    let _ = host.models_mut().update(&model_open, |v| *v = false);
+                    host.notify(action_cx);
+                    host.request_redraw(action_cx.window);
+                })
+            };
+
+            let make_item = |cx: &mut UiCx<'_>, m: DemoModel| {
+                let is_selected = m.id == selected_now.as_ref();
+
+                let check = decl_icon::icon_with(
+                    cx,
+                    fret_icons::ids::ui::CHECK,
+                    Some(fret_core::Px(16.0)),
+                    None,
+                );
+                let check = cx.opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| vec![check]);
+                let check = ui::h_row(move |_cx| vec![check])
+                    .layout(
+                        LayoutRefinement::default()
+                            .ml_auto()
+                            .w_px(fret_core::Px(16.0))
+                            .h_px(fret_core::Px(16.0)),
+                    )
+                    .justify_center()
+                    .items_center()
+                    .into_element(cx);
+
+                let mut item = ui_ai::ModelSelectorItem::new(m.name)
+                    .value(m.id)
+                    .child(ui_ai::ModelSelectorLogo::new(m.chef_slug))
+                    .child(ui_ai::ModelSelectorName::new(m.name))
+                    .child(ui_ai::ModelSelectorLogoGroup::new(
+                        m.providers
+                            .iter()
+                            .copied()
+                            .map(ui_ai::ModelSelectorLogo::new),
+                    ))
+                    .child(check)
+                    .on_select_action(on_select(m.id));
+                if m.id == "claude-opus-4-20250514" {
+                    item = item.test_id("ui-ai-queue-prompt-input-model-item-claude-opus-4");
+                }
+                item
+            };
+
+            let mut chefs: Vec<&'static str> = Vec::new();
+            for m in MODELS {
+                if !chefs.contains(&m.chef) {
+                    chefs.push(m.chef);
+                }
+            }
+
+            let mut groups = Vec::new();
+            for chef in chefs {
+                let mut items = Vec::new();
+                for m in MODELS.iter().copied().filter(|m| m.chef == chef) {
+                    items.push(make_item(cx, m));
+                }
+                groups.push(ui_ai::ModelSelectorGroup::new(items).heading(chef));
+            }
+
+            let trigger_btn = ui_ai::PromptInputButton::new("Model")
+                .children(trigger_children)
+                .test_id("ui-ai-queue-prompt-input-model-trigger-button")
+                .into_element(cx);
+
             let model_selector = ui_ai::ModelSelector::new()
                 .open_model(model_open.clone())
-                .into_element_with_children(cx, move |cx, slot, open| match slot {
-                    ui_ai::ModelSelectorChildSlot::Trigger => {
-                        let logo = selected_model
-                            .map(|m| ui_ai::ModelSelectorLogo::new(m.chef_slug).into_element(cx));
-                        let name = selected_model
-                            .map(|m| ui_ai::ModelSelectorName::new(m.name).into_element(cx));
-
-                        let mut trigger_children: Vec<AnyElement> = Vec::new();
-                        if let Some(logo) = logo {
-                            trigger_children.push(logo);
-                        }
-                        if let Some(name) = name {
-                            trigger_children.push(name);
-                        }
-
-                        let trigger_btn = ui_ai::PromptInputButton::new("Model")
-                            .children(trigger_children)
-                            .test_id("ui-ai-queue-prompt-input-model-trigger-button")
-                            .into_element(cx);
-
-                        ui_ai::ModelSelectorTrigger::new(open, trigger_btn)
-                            .test_id("ui-ai-queue-prompt-input-model-trigger")
-                            .into_element(cx)
-                    }
-                    ui_ai::ModelSelectorChildSlot::Content => {
-                        let on_select = |value: &'static str| -> fret_ui::action::OnActivate {
-                            let model_selected = model_selected.clone();
-                            let model_query = model_query.clone();
-                            let model_open = model_open.clone();
-                            Arc::new(move |host, action_cx, _reason| {
-                                let _ = host
-                                    .models_mut()
-                                    .update(&model_selected, |v| *v = Arc::<str>::from(value));
-                                let _ = host.models_mut().update(&model_query, |v| v.clear());
-                                let _ = host.models_mut().update(&model_open, |v| *v = false);
-                                host.notify(action_cx);
-                                host.request_redraw(action_cx.window);
-                            })
-                        };
-
-                        let make_item = |cx: &mut UiCx<'_>, m: DemoModel| {
-                            let is_selected = m.id == selected_now.as_ref();
-                            let chef_logo =
-                                ui_ai::ModelSelectorLogo::new(m.chef_slug).into_element(cx);
-                            let name = ui_ai::ModelSelectorName::new(m.name).into_element(cx);
-                            let provider_logos = ui_ai::ModelSelectorLogoGroup::new(
-                                m.providers
-                                    .iter()
-                                    .map(|p| ui_ai::ModelSelectorLogo::new(*p).into_element(cx)),
+                .children([
+                    ui_ai::ModelSelectorChild::Trigger(
+                        ui_ai::ModelSelectorTrigger::new(trigger_btn)
+                            .test_id("ui-ai-queue-prompt-input-model-trigger"),
+                    ),
+                    ui_ai::ModelSelectorChild::Content(
+                        ui_ai::ModelSelectorContent::new([])
+                            .input(
+                                ui_ai::ModelSelectorInput::new(model_query.clone())
+                                    .placeholder("Search models...")
+                                    .input_test_id("ui-ai-queue-prompt-input-model-input"),
                             )
-                            .into_element(cx);
-
-                            let check = decl_icon::icon_with(
-                                cx,
-                                fret_icons::ids::ui::CHECK,
-                                Some(fret_core::Px(16.0)),
-                                None,
-                            );
-                            let check = cx
-                                .opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| {
-                                    vec![check]
-                                });
-                            let check = ui::h_row(move |_cx| vec![check])
-                                .layout(
-                                    LayoutRefinement::default()
-                                        .ml_auto()
-                                        .w_px(fret_core::Px(16.0))
-                                        .h_px(fret_core::Px(16.0)),
-                                )
-                                .justify_center()
-                                .items_center()
-                                .into_element(cx);
-
-                            let mut item = ui_ai::ModelSelectorItem::new(m.name)
-                                .value(m.id)
-                                .children([chef_logo, name, provider_logos, check])
-                                .on_select_action(on_select(m.id));
-                            if m.id == "claude-opus-4-20250514" {
-                                item = item
-                                    .test_id("ui-ai-queue-prompt-input-model-item-claude-opus-4");
-                            }
-                            item
-                        };
-
-                        let mut chefs: Vec<&'static str> = Vec::new();
-                        for m in MODELS {
-                            if !chefs.contains(&m.chef) {
-                                chefs.push(m.chef);
-                            }
-                        }
-
-                        let mut groups = Vec::new();
-                        for chef in chefs {
-                            let mut items = Vec::new();
-                            for m in MODELS.iter().copied().filter(|m| m.chef == chef) {
-                                items.push(make_item(cx, m));
-                            }
-                            groups.push(ui_ai::ModelSelectorGroup::new(items).heading(chef).into());
-                        }
-
-                        ui_ai::ModelSelectorContent::new([
-                            ui_ai::ModelSelectorInput::new(model_query.clone())
-                                .placeholder("Search models...")
-                                .input_test_id("ui-ai-queue-prompt-input-model-input")
-                                .into_element(cx),
-                            ui_ai::ModelSelectorList::new_entries(groups)
-                                .empty_text("No models found.")
-                                .query_model(model_query.clone())
-                                .into_element(cx),
-                        ])
-                        .test_id_root("ui-ai-queue-prompt-input-model-content")
-                        .into_element(cx)
-                    }
-                });
+                            .list(
+                                ui_ai::ModelSelectorList::new_entries(groups)
+                                    .empty_text("No models found.")
+                                    .query_model(model_query.clone()),
+                            )
+                            .test_id_root("ui-ai-queue-prompt-input-model-content"),
+                    ),
+                ])
+                .into_element(cx);
 
             let input = ui_ai::PromptInputRoot::new(controller.text)
                 .attachments(controller.attachments.expect("provider sets attachments"))

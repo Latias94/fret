@@ -57,6 +57,17 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .input(ui_ai::MicSelectorInput::new().test_id("ui-ai-mic-selector-demo-input"))
                     .list(
                         ui_ai::MicSelectorList::new()
+                            .children(|devices: Arc<[ui_ai::MicSelectorDevice]>| {
+                                devices
+                                    .iter()
+                                    .cloned()
+                                    .map(|device| {
+                                        ui_ai::MicSelectorItem::new(device.label.clone())
+                                            .value(device.id.clone())
+                                            .child(ui_ai::MicSelectorLabel::new(device))
+                                    })
+                                    .collect::<Vec<_>>()
+                            })
                             .empty(ui_ai::MicSelectorEmpty::new())
                             .test_id_prefix("ui-ai-mic-selector-demo-item"),
                     )
@@ -84,9 +95,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(move |cx| {
         vec![
             cx.text("MicSelector (AI Elements)"),
-            cx.text(
-                "Docs-aligned compound example. Device enumeration + permissions stay app-owned.",
-            ),
+            cx.text("Docs-shaped compound example with typed item rows. Device inventory + permissions stay app-owned."),
             ui::h_flex(move |_cx| vec![selector])
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .justify_center()

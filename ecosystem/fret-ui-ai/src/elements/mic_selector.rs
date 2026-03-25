@@ -20,8 +20,8 @@ use fret_ui_kit::declarative::visually_hidden::visually_hidden;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade::{
-    Button, ButtonSize, ButtonVariant, Command, CommandInput, CommandItem, CommandList, Popover,
-    PopoverContent,
+    Button, ButtonSize, ButtonVariant, Command, CommandEntry, CommandGroup, CommandInput,
+    CommandItem, CommandList, CommandSeparator, Popover, PopoverContent,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -533,8 +533,11 @@ impl MicSelectorContent {
         self
     }
 
-    pub fn list(mut self, list: MicSelectorList) -> Self {
-        self.list = Some(list);
+    pub fn list<L>(mut self, list: L) -> Self
+    where
+        L: Into<MicSelectorList>,
+    {
+        self.list = Some(list.into());
         self
     }
 
@@ -889,6 +892,41 @@ impl MicSelectorEmpty {
     }
 }
 
+pub enum MicSelectorItemChild {
+    Label(MicSelectorLabel),
+    Custom(AnyElement),
+}
+
+impl std::fmt::Debug for MicSelectorItemChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Label(value) => f.debug_tuple("Label").field(value).finish(),
+            Self::Custom(_) => f.write_str("Custom(..)"),
+        }
+    }
+}
+
+impl MicSelectorItemChild {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        match self {
+            Self::Label(value) => value.into_element(cx),
+            Self::Custom(value) => value,
+        }
+    }
+}
+
+impl From<MicSelectorLabel> for MicSelectorItemChild {
+    fn from(value: MicSelectorLabel) -> Self {
+        Self::Label(value)
+    }
+}
+
+impl From<AnyElement> for MicSelectorItemChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Custom(value)
+    }
+}
+
 pub struct MicSelectorItem {
     label: Arc<str>,
     value: Arc<str>,
@@ -896,7 +934,8 @@ pub struct MicSelectorItem {
     force_mount: bool,
     keywords: Vec<Arc<str>>,
     test_id: Option<Arc<str>>,
-    children: Vec<AnyElement>,
+    on_select: Option<fret_ui::action::OnActivate>,
+    children: Vec<MicSelectorItemChild>,
 }
 
 impl std::fmt::Debug for MicSelectorItem {
@@ -908,6 +947,7 @@ impl std::fmt::Debug for MicSelectorItem {
             .field("force_mount", &self.force_mount)
             .field("keywords_len", &self.keywords.len())
             .field("test_id", &self.test_id.as_deref())
+            .field("has_on_select", &self.on_select.is_some())
             .field("children_len", &self.children.len())
             .finish()
     }
@@ -923,6 +963,7 @@ impl MicSelectorItem {
             force_mount: false,
             keywords: Vec::new(),
             test_id: None,
+            on_select: None,
             children: Vec::new(),
         }
     }
@@ -956,18 +997,38 @@ impl MicSelectorItem {
         self
     }
 
-    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
-        self.children = children.into_iter().collect();
+    pub fn on_select_action(mut self, on_select: fret_ui::action::OnActivate) -> Self {
+        self.on_select = Some(on_select);
         self
     }
 
-    fn into_command_item(
+    pub fn child<C>(mut self, child: C) -> Self
+    where
+        C: Into<MicSelectorItemChild>,
+    {
+        self.children.push(child.into());
+        self
+    }
+
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<MicSelectorItemChild>,
+    {
+        self.children = children.into_iter().map(Into::into).collect();
+        self
+    }
+
+    fn into_command_item<H: UiHost>(
         self,
+        cx: &mut ElementContext<'_, H>,
         controller: &MicSelectorController,
         test_id_prefix: Option<&Arc<str>>,
     ) -> CommandItem {
         let value = self.value.clone();
-        let on_select = mic_selector_select_action(controller, value.clone());
+        let on_select = self
+            .on_select
+            .unwrap_or_else(|| mic_selector_select_action(controller, value.clone()));
 
         let mut item = CommandItem::new(self.label)
             .value(value.clone())
@@ -977,7 +1038,12 @@ impl MicSelectorItem {
             .on_select_action(on_select);
 
         if !self.children.is_empty() {
-            item = item.children(self.children);
+            item = item.children(
+                self.children
+                    .into_iter()
+                    .map(|child| child.into_element(cx))
+                    .collect::<Vec<_>>(),
+            );
         }
 
         if let Some(test_id) = self
@@ -991,10 +1057,64 @@ impl MicSelectorItem {
     }
 }
 
-#[derive(Debug)]
 enum MicSelectorListMode {
     Auto,
-    Entries(Vec<MicSelectorItem>),
+    Entries(Vec<MicSelectorListEntry>),
+    Builder(Box<dyn FnOnce(Arc<[MicSelectorDevice]>) -> Vec<MicSelectorListEntry> + 'static>),
+}
+
+impl std::fmt::Debug for MicSelectorListMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Auto => f.write_str("Auto"),
+            Self::Entries(entries) => f.debug_tuple("Entries").field(entries).finish(),
+            Self::Builder(_) => f.write_str("Builder(..)"),
+        }
+    }
+}
+
+pub enum MicSelectorListEntry {
+    Item(MicSelectorItem),
+    Shared(CommandEntry),
+}
+
+impl std::fmt::Debug for MicSelectorListEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Item(item) => f.debug_tuple("Item").field(item).finish(),
+            Self::Shared(_) => f.write_str("Shared(..)"),
+        }
+    }
+}
+
+impl From<MicSelectorItem> for MicSelectorListEntry {
+    fn from(value: MicSelectorItem) -> Self {
+        Self::Item(value)
+    }
+}
+
+impl From<CommandItem> for MicSelectorListEntry {
+    fn from(value: CommandItem) -> Self {
+        Self::Shared(value.into())
+    }
+}
+
+impl From<CommandGroup> for MicSelectorListEntry {
+    fn from(value: CommandGroup) -> Self {
+        Self::Shared(value.into())
+    }
+}
+
+impl From<CommandSeparator> for MicSelectorListEntry {
+    fn from(value: CommandSeparator) -> Self {
+        Self::Shared(value.into())
+    }
+}
+
+impl From<CommandEntry> for MicSelectorListEntry {
+    fn from(value: CommandEntry) -> Self {
+        Self::Shared(value)
+    }
 }
 
 /// List renderer aligned with upstream `MicSelectorList` outcomes.
@@ -1025,9 +1145,13 @@ impl MicSelectorList {
         }
     }
 
-    pub fn new_entries(entries: impl IntoIterator<Item = MicSelectorItem>) -> Self {
+    pub fn new_entries<I, E>(entries: I) -> Self
+    where
+        I: IntoIterator<Item = E>,
+        E: Into<MicSelectorListEntry>,
+    {
         Self {
-            mode: MicSelectorListMode::Entries(entries.into_iter().collect()),
+            mode: MicSelectorListMode::Entries(entries.into_iter().map(Into::into).collect()),
             ..Self::new()
         }
     }
@@ -1047,8 +1171,12 @@ impl MicSelectorList {
         self
     }
 
-    pub fn entries(mut self, entries: impl IntoIterator<Item = MicSelectorItem>) -> Self {
-        self.mode = MicSelectorListMode::Entries(entries.into_iter().collect());
+    pub fn entries<I, E>(mut self, entries: I) -> Self
+    where
+        I: IntoIterator<Item = E>,
+        E: Into<MicSelectorListEntry>,
+    {
+        self.mode = MicSelectorListMode::Entries(entries.into_iter().map(Into::into).collect());
         self
     }
 
@@ -1065,38 +1193,46 @@ impl MicSelectorList {
         }
     }
 
-    fn auto_entries<H: UiHost>(
-        cx: &mut ElementContext<'_, H>,
-        devices: &[MicSelectorDevice],
-    ) -> Vec<MicSelectorItem> {
+    fn auto_entries(devices: &[MicSelectorDevice]) -> Vec<MicSelectorListEntry> {
         devices
             .iter()
             .cloned()
             .map(|device| {
                 MicSelectorItem::new(device.label.clone())
                     .value(device.id.clone())
-                    .children([MicSelectorLabel::new(device).into_element(cx)])
+                    .child(MicSelectorLabel::new(device))
+                    .into()
             })
             .collect()
     }
 
-    fn into_element_with_item_entries<H: UiHost>(
+    fn resolve_entries<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        controller: &MicSelectorController,
+        test_id_prefix: Option<&Arc<str>>,
+        entries: Vec<MicSelectorListEntry>,
+    ) -> Vec<CommandEntry> {
+        entries
+            .into_iter()
+            .map(|entry| match entry {
+                MicSelectorListEntry::Item(item) => item
+                    .into_command_item(cx, controller, test_id_prefix)
+                    .into(),
+                MicSelectorListEntry::Shared(entry) => entry,
+            })
+            .collect()
+    }
+
+    fn into_element_with_entries<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         empty_text: Arc<str>,
-        test_id_prefix: Option<Arc<str>>,
         scroll_layout: LayoutRefinement,
-        entries: Vec<MicSelectorItem>,
+        entries: Vec<CommandEntry>,
     ) -> AnyElement {
         let Some(controller) = use_mic_selector_controller(cx) else {
             return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
-
-        let items = entries
-            .into_iter()
-            .map(|entry| entry.into_command_item(&controller, test_id_prefix.as_ref()))
-            .collect::<Vec<_>>();
-
-        CommandList::new(items)
+        CommandList::new_entries(entries)
             .empty_text(empty_text)
             .query_model(controller.query.clone())
             .highlight_query_model(controller.query)
@@ -1115,8 +1251,9 @@ impl MicSelectorList {
     ) -> AnyElement
     where
         H: UiHost,
-        F: for<'a> FnOnce(&mut ElementContext<'a, H>, Arc<[MicSelectorDevice]>) -> I,
-        I: IntoIterator<Item = MicSelectorItem>,
+        F: FnOnce(Arc<[MicSelectorDevice]>) -> I,
+        I: IntoIterator,
+        I::Item: Into<MicSelectorListEntry>,
     {
         let Some(controller) = use_mic_selector_controller(cx) else {
             return visually_hidden(cx, |_| Vec::<AnyElement>::new());
@@ -1129,9 +1266,17 @@ impl MicSelectorList {
             ..
         } = self;
 
-        let devices = controller.devices.clone();
-        let entries = children(cx, devices).into_iter().collect::<Vec<_>>();
-        Self::into_element_with_item_entries(cx, empty_text, test_id_prefix, scroll_layout, entries)
+        let entries = Self::resolve_entries(
+            cx,
+            &controller,
+            test_id_prefix.as_ref(),
+            children(controller.devices.clone())
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        );
+
+        Self::into_element_with_entries(cx, empty_text, scroll_layout, entries)
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1142,17 +1287,29 @@ impl MicSelectorList {
             scroll_layout,
         } = self;
 
-        let entries = match mode {
-            MicSelectorListMode::Auto => {
-                let Some(controller) = use_mic_selector_controller(cx) else {
-                    return visually_hidden(cx, |_| Vec::<AnyElement>::new());
-                };
-                Self::auto_entries(cx, controller.devices.as_ref())
-            }
-            MicSelectorListMode::Entries(entries) => entries,
+        let Some(controller) = use_mic_selector_controller(cx) else {
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
-        Self::into_element_with_item_entries(cx, empty_text, test_id_prefix, scroll_layout, entries)
+        let entries = match mode {
+            MicSelectorListMode::Auto => Self::resolve_entries(
+                cx,
+                &controller,
+                test_id_prefix.as_ref(),
+                Self::auto_entries(controller.devices.as_ref()),
+            ),
+            MicSelectorListMode::Entries(entries) => {
+                Self::resolve_entries(cx, &controller, test_id_prefix.as_ref(), entries)
+            }
+            MicSelectorListMode::Builder(children) => Self::resolve_entries(
+                cx,
+                &controller,
+                test_id_prefix.as_ref(),
+                children(controller.devices.clone()),
+            ),
+        };
+
+        Self::into_element_with_entries(cx, empty_text, scroll_layout, entries)
     }
 }
 
@@ -1193,10 +1350,26 @@ impl<F> MicSelectorListWithChildren<F> {
     pub fn into_element<H, I>(self, cx: &mut ElementContext<'_, H>) -> AnyElement
     where
         H: UiHost,
-        F: for<'a> FnOnce(&mut ElementContext<'a, H>, Arc<[MicSelectorDevice]>) -> I,
-        I: IntoIterator<Item = MicSelectorItem>,
+        F: FnOnce(Arc<[MicSelectorDevice]>) -> I,
+        I: IntoIterator,
+        I::Item: Into<MicSelectorListEntry>,
     {
         self.list.into_element_with_children(cx, self.children)
+    }
+}
+
+impl<F, I> From<MicSelectorListWithChildren<F>> for MicSelectorList
+where
+    F: FnOnce(Arc<[MicSelectorDevice]>) -> I + 'static,
+    I: IntoIterator,
+    I::Item: Into<MicSelectorListEntry>,
+{
+    fn from(value: MicSelectorListWithChildren<F>) -> Self {
+        let MicSelectorListWithChildren { mut list, children } = value;
+        list.mode = MicSelectorListMode::Builder(Box::new(move |devices| {
+            children(devices).into_iter().map(Into::into).collect()
+        }));
+        list
     }
 }
 
@@ -1225,15 +1398,26 @@ mod tests {
         }
     }
 
-    fn explicit_mic_selector_entries<H: UiHost>(
-        _cx: &mut ElementContext<'_, H>,
-        devices: Arc<[MicSelectorDevice]>,
-    ) -> Vec<MicSelectorItem> {
+    fn explicit_mic_selector_entries(devices: Arc<[MicSelectorDevice]>) -> Vec<MicSelectorItem> {
         devices
             .iter()
             .cloned()
-            .map(|device| MicSelectorItem::new(device.label.clone()).value(device.id.clone()))
+            .map(|device| {
+                MicSelectorItem::new(device.label.clone())
+                    .value(device.id.clone())
+                    .child(MicSelectorLabel::new(device))
+            })
             .collect()
+    }
+
+    #[test]
+    fn mic_selector_list_entries_mode_captures_entries() {
+        let list = MicSelectorList::new_entries([MicSelectorItem::new("Default Microphone")]);
+        match list.mode {
+            MicSelectorListMode::Entries(entries) => assert_eq!(entries.len(), 1),
+            MicSelectorListMode::Auto => panic!("expected entries mode"),
+            MicSelectorListMode::Builder(_) => panic!("expected entries mode"),
+        }
     }
 
     #[test]
@@ -1333,7 +1517,7 @@ mod tests {
     }
 
     #[test]
-    fn mic_selector_list_children_builder_builds() {
+    fn mic_selector_list_children_builder_builds_typed_item_rows() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let device = MicSelectorDevice::new("usb-mic", "Podcast Mic (1234:abcd)");
@@ -1345,13 +1529,39 @@ mod tests {
             on_value_change: None,
         };
 
-        let _element =
-            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-                cx.provide(controller, |cx| {
-                    MicSelectorList::new()
-                        .children(explicit_mic_selector_entries::<App>)
-                        .into_element(cx)
-                })
-            });
+        let built = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            cx.provide(controller.clone(), |cx| {
+                MicSelectorList::new()
+                    .children(explicit_mic_selector_entries)
+                    .into_element(cx)
+            })
+        });
+
+        assert!(
+            find_text_by_content(&built, "Podcast Mic").is_some(),
+            "expected render-prop list builder to render the explicit row"
+        );
+        assert!(
+            find_text_by_content(&built, " (1234:abcd)").is_some(),
+            "expected typed MicSelectorItem children to render MicSelectorLabel without prebuilt AnyElement rows"
+        );
+    }
+
+    #[test]
+    fn mic_selector_content_list_accepts_list_children_builder() {
+        let content = MicSelectorContent::new(Vec::<AnyElement>::new()).list(
+            MicSelectorList::new()
+                .children(explicit_mic_selector_entries)
+                .empty_text("No microphones found."),
+        );
+
+        let list = content
+            .list
+            .as_ref()
+            .expect("expected MicSelectorContent::list(...) to store a list");
+        assert!(
+            matches!(list.mode, MicSelectorListMode::Builder(_)),
+            "expected MicSelectorContent::list(...) to accept the render-prop list builder"
+        );
     }
 }

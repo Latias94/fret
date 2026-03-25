@@ -7,80 +7,119 @@ use fret::{UiChild, UiCx};
 fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
-        ["Part", "Fret surface"],
+        ["Part", "Method", "Type", "Default", "Description"],
         [
             [
                 "ModelSelector",
-                "Thin wrapper over shadcn `Dialog`. Owns open state only via `open_model(...)` / `default_open(...)`.",
+                "new / open_model / default_open",
+                "builder",
+                "closed dialog",
+                "Thin wrapper over shadcn `Dialog`. Owns open state via `open_model(...)` / `default_open(...)`.",
+            ],
+            [
+                "ModelSelector",
+                "children([...]) / trigger(...) / content(...)",
+                "ModelSelectorChild",
+                "-",
+                "Docs-shaped compound root aligned with upstream `<ModelSelector>...</ModelSelector>` composition.",
+            ],
+            [
+                "ModelSelector",
+                "into_element_with_children(cx, ...)",
+                "slot closure",
+                "-",
+                "Lower-level escape hatch when trigger/content need to be built under a live scope instead of an eager child list.",
             ],
             [
                 "ModelSelectorTrigger",
+                "new(child)",
+                "AnyElement",
+                "caller-owned child",
                 "Pressable wrapper that flips `open=true` on activate while letting apps fully own trigger visuals.",
             ],
             [
                 "ModelSelectorContent",
-                "Dialog content shell with an accessible title (rendered as `sr-only`) and a `Command` container. Default title is \"Model Selector\".",
-            ],
-            [
-                "ModelSelectorDialog",
-                "Alias for shadcn `CommandDialog` (full dialog + cmdk-aligned palette). Use when you want the canonical command-dialog assembly.",
+                "new(children) / input(...) / list(...)",
+                "IntoIterator<Item = AnyElement> / typed builder",
+                "DialogContent + Command shell",
+                "Dialog content shell with an accessible title (`sr-only`) plus typed `ModelSelectorInput` / `ModelSelectorList` convenience lanes.",
             ],
             [
                 "ModelSelectorInput",
-                "Alias for shadcn `CommandInput`. In Rust it is bound to an explicit query `Model<String>`.",
+                "new(model) / placeholder / input_test_id",
+                "builder",
+                "query-bound input",
+                "Thin wrapper over shadcn `CommandInput` with the official `h-auto py-3.5` defaults.",
             ],
             [
                 "ModelSelectorList",
-                "Alias for shadcn `CommandList`. Supports cmdk-style fuzzy scoring + grouping with `query_model(...)`, plus `empty_text(...)` for empty-state text.",
+                "new / new_entries / entries / query_model",
+                "typed builder",
+                "\"No results.\"",
+                "Typed list wrapper over shadcn `CommandList` that accepts selector-owned groups/items while preserving cmdk query and empty-state behavior.",
             ],
             [
-                "ModelSelectorEmpty",
-                "Alias for shadcn `CommandEmpty` (used internally by `CommandList` via `empty_text(...)`).",
-            ],
-            ["ModelSelectorGroup", "Alias for shadcn `CommandGroup`."],
-            ["ModelSelectorItem", "Alias for shadcn `CommandItem`."],
-            [
-                "ModelSelectorShortcut",
-                "Alias for shadcn `CommandShortcut` (right-aligned shortcut hint).",
+                "ModelSelectorGroup",
+                "new / heading / items",
+                "typed builder",
+                "no heading",
+                "Selector-owned group wrapper that keeps docs-shaped grouping without forcing `CommandGroup` at the call site.",
             ],
             [
-                "ModelSelectorSeparator",
-                "Alias for shadcn `CommandSeparator` (cmdk `always_render(...)` supported).",
+                "ModelSelectorItem",
+                "new / value / child / children / on_select_action",
+                "typed builder",
+                "label-derived value",
+                "Selector-owned row builder with typed metadata children and app-owned selection action.",
+            ],
+            [
+                "ModelSelectorEmpty / Shortcut / Separator / Dialog",
+                "shared shadcn aliases",
+                "type aliases",
+                "-",
+                "These stay aligned with shared `Command*` behavior so selector parity does not fork overlay or cmdk semantics.",
             ],
             [
                 "ModelSelectorLogo",
+                "new(provider)",
+                "builder",
+                "local placeholder badge",
                 "Provider identity helper. Upstream loads SVGs from `models.dev`; the Fret port renders a local placeholder badge by default.",
             ],
             [
                 "ModelSelectorLogoGroup",
-                "Provider logo strip helper. Matches upstream's overlapping layout (Tailwind `-space-x-1`) via a small negative margin shim.",
+                "new(children)",
+                "typed builder",
+                "overlapping logo strip",
+                "Provider logo strip helper. Now accepts typed `ModelSelectorLogo` children directly instead of forcing prebuilt `AnyElement`s.",
             ],
             [
                 "ModelSelectorName",
+                "new(text)",
+                "builder",
+                "flex-1 truncate label",
                 "Small name label helper (e.g. \"GPT-4o\").",
             ],
         ],
-        false,
+        true,
     )
 }
 
 pub(super) fn preview_ai_model_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::model_selector_demo::render(cx);
     let features = doc_layout::notes_block([
-        "Searchable interface with keyboard navigation.",
-        "Fuzzy search filtering across model names (cmdk-style scoring).",
-        "Grouped model organization by provider.",
-        "Keyboard shortcuts support via `ModelSelectorShortcut`.",
-        "Empty state handling via `ModelSelectorList::empty_text(...)`.",
-        "Customizable styling via `Theme` tokens plus `refine_style(...)` / `refine_layout(...)` surfaces.",
-        "Built from the same shadcn `Dialog` + `Command*` composition as the official AI Elements component.",
-        "Rust-native API with typed builders plus explicit `Model<T>` state ownership in app code.",
+        "Behavior baseline remains healthy: searchable list filtering, grouped provider organization, open/close flow, and empty-state text all stay on shared shadcn `Dialog` + `Command*` surfaces.",
+        "The root now exposes a docs-shaped `children([...])` lane, so the first-party example no longer has to teach slot-based composition as the only path.",
+        "List/group/item are now selector-owned typed builders, which removes the old `CommandItem` alias cliff and lets the example stay closer to the official docs structure.",
+        "Provider logo strips now accept typed `ModelSelectorLogo` children directly, so the example does not have to prebuild a row of `AnyElement`s just to express upstream composition.",
+        "Selection state, model inventory, and provider grouping remain app-owned by design; this pass only corrected the public authoring surface.",
     ]);
     let parts = parts_table(cx);
     let notes = doc_layout::notes_block([
-        "Selection state, model inventory, and provider grouping are intentionally app-owned; `ModelSelector` stays a thin UI wrapper.",
-        "The current `ModelSelectorLogo` avoids remote network fetches and renders a local placeholder badge instead.",
+        "This is not a `crates/fret-ui` mechanism bug. The drift was still in `ecosystem/fret-ui-ai` public surface and gallery teaching surface.",
+        "The current `ModelSelectorLogo` intentionally avoids remote network fetches and renders a local placeholder badge instead.",
         "If you need the fully cmdk-aligned input semantics surface, prefer `ModelSelectorDialog` (shadcn `CommandDialog`) / `CommandPalette` rather than expanding selector policy in `crates/fret-ui`.",
+        "The slot-based `into_element_with_children(...)` escape hatch remains available for host-generic call sites, but it is no longer the recommended first teaching surface.",
     ]);
 
     let body = crate::ui::doc_layout::render_doc_page_after(
@@ -88,8 +127,8 @@ pub(super) fn preview_ai_model_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
         vec![
             DocSection::build(cx, "Compound API", demo)
                 .descriptions([
-                    "Uses the same dialog + command decomposition as the official AI Elements docs.",
-                    "Shows a Rust-friendly compound entrypoint via `ModelSelector::into_element_with_children(...)` and slot-based composition.",
+                    "Uses the same dialog + command decomposition as the official AI Elements docs, but now teaches the docs-shaped compound root first.",
+                    "The example keeps selection state and model inventory in app code while the selector surface itself stays typed and copyable.",
                 ])
                 .test_id_prefix("ui-gallery-ai-model-selector-demo")
                 .code_rust_from_file_region(snippets::model_selector_demo::SOURCE, "example"),
@@ -97,7 +136,7 @@ pub(super) fn preview_ai_model_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
                 .description("Key features, aligned with the official AI Elements docs.")
                 .no_shell(),
             DocSection::build(cx, "Parts & Props", parts)
-                .description("Mapping from AI Elements parts to Fret surfaces.")
+                .description("Current Fret API surface for `ModelSelector`, including the docs-shaped root and typed list/group/item wrappers.")
                 .no_shell(),
             DocSection::build(cx, "Notes", notes)
                 .description("Intentional divergences and layering guidance.")

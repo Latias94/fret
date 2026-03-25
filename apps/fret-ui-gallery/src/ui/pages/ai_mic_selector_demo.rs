@@ -67,17 +67,24 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "MicSelectorList",
-                "new / children(...) / new_entries(...)",
-                "builder / render-prop closure / explicit entries",
+                "new / children(...) / new_entries(...) / entries(...)",
+                "typed builder / docs-shaped render-prop / explicit entries",
                 "auto rows",
-                "Supports automatic rows, explicit item entries, or a Rust render-prop equivalent of upstream `children(devices)`.",
+                "Supports automatic typed rows, explicit selector/shared command entries, or a docs-shaped render-prop builder that receives `Arc<[MicSelectorDevice]>` without requiring a live `cx`.",
             ],
             [
-                "MicSelectorItem + MicSelectorEmpty",
-                "new / value / children / empty",
+                "MicSelectorItem",
+                "new / value / child / children / on_select_action",
                 "builder",
-                "label-as-value / \"No microphone found.\"",
-                "Thin selector-level wrappers over shadcn command rows and empty-state text.",
+                "label-derived value",
+                "Selector-owned row builder. Typed `MicSelectorLabel` is the primary child lane, and selection clears query + closes the popover by default unless explicitly overridden.",
+            ],
+            [
+                "MicSelectorEmpty + MicSelectorLabel",
+                "new / text / new(device)",
+                "builder",
+                "\"No microphone found.\" / parsed device label",
+                "Empty-state text plus the typed label renderer that splits `(XXXX:XXXX)` hardware IDs into muted trailing text.",
             ],
             [
                 "Hook",
@@ -110,7 +117,8 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
     let features = doc_layout::notes_block([
         "Behavior baseline is already healthy: controlled/uncontrolled value + open state, search/filtering, width sync, and close-on-select all match the intended AI Elements outcome.",
         "The root now exposes a docs-shaped `children([...])` lane, so the Rust example maps directly onto upstream `<MicSelector><MicSelectorTrigger /><MicSelectorContent /></MicSelector>` composition.",
-        "The list surface now supports both a Rust render-prop builder (`children(...)`) and the older explicit `into_element_with_children(...)` escape hatch for host-generic call sites.",
+        "The list surface now teaches selector-owned typed rows first: `children(...)` receives devices only, while `MicSelectorItem` + `MicSelectorLabel` handle row construction without leaking `cx` or prebuilt `AnyElement` rows into app code.",
+        "Advanced escape hatches still exist through explicit entries and the root `into_element_with_children(cx, ...)` compound lane, but they are no longer the default teaching surface for ordinary examples.",
         "Device labels ending in `(XXXX:XXXX)` still split the hardware ID into muted trailing text, matching the official `MicSelectorLabel` outcome.",
         "The Gallery preview keeps stable `test_id` anchors, and the existing diag script already covers open -> select -> close behavior for this page.",
     ])
@@ -119,6 +127,7 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
     let behavior = doc_layout::notes_block([
         "This is not a `crates/fret-ui` mechanism bug. The mismatch here was authoring-surface and docs-surface parity in `ecosystem/fret-ui-ai` + UI Gallery.",
         "Upstream owns `navigator.mediaDevices` enumeration and permission prompting inside the component. Fret intentionally keeps those concerns in app code and only renders selector chrome plus selection intent.",
+        "The render-prop seam is now data-only: app code supplies device inventory, while the selector-owned typed row builders own actual row composition and default selection behavior.",
         "Trigger width is mirrored into the popover content, preserving the official docs outcome without baking page-level layout policy into `fret-ui`.",
         "The example keeps the selector visually centered with a `max-w-sm` style width cap on the trigger, matching the official docs composition more closely than the older full-width preview.",
     ])
@@ -131,6 +140,7 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
     let notes = doc_layout::notes_block([
         "Diagnostics gate: `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-mic-selector-demo-select.json` should keep passing with the same stable test IDs.",
         "The docs page intentionally documents app-owned device inventory instead of pretending Fret ports the browser-only `useAudioDevices()` hook verbatim.",
+        "The root `into_element_with_children(cx, ...)` escape hatch remains available for advanced trigger/content composition under a live provider scope, but day-to-day examples should stay on `children([...])` plus typed list/item builders.",
         "If future parity work touches dismissal, focus restore, or overlay routing, re-check the runtime contract layer; this pass did not find evidence that those mechanisms are currently wrong for `MicSelector`.",
     ])
     .test_id("ui-gallery-ai-mic-selector-demo-notes");
@@ -142,7 +152,7 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         vec![
             DocSection::build(cx, "Usage", usage)
                 .description(
-                    "Rust/Fret analogue of the official AI Elements Mic Selector example, now using a docs-shaped compound root plus typed trigger/content convenience lanes for `Value`, `Input`, and `List`.",
+                    "Rust/Fret analogue of the official AI Elements Mic Selector example, now using a docs-shaped compound root plus typed trigger/content/list/item lanes around `MicSelectorValue`, `MicSelectorInput`, `MicSelectorItem`, and `MicSelectorLabel`.",
                 )
                 .description(
                     "The example stays deterministic and copyable by using app-owned mock devices instead of browser-only media APIs inside the preview.",
@@ -153,7 +163,7 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
                 .description("Behavior and composition outcomes preserved while aligning with the official Mic Selector docs surface.")
                 .no_shell(),
             DocSection::build(cx, "Parts & Props", parts)
-                .description("Current Fret API surface for `MicSelector`, including the new docs-shaped root children lane and the render-prop list lane.")
+                .description("Current Fret API surface for `MicSelector`, including the docs-shaped root and selector-owned typed list/item builders.")
                 .no_shell(),
             DocSection::build(cx, "Hooks", hooks)
                 .description("Fret hook surface corresponding to descendant state access under `MicSelector`.")
