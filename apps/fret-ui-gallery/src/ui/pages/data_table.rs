@@ -9,20 +9,22 @@ pub(super) fn preview_data_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let basic_demo = snippets::basic_demo::render(cx);
     let guide_demo = snippets::guide_demo::render(cx);
     let rtl_demo = snippets::rtl_demo::render(cx);
-    let code_preview = snippets::code_outline::render(cx);
+    let reusable_components = snippets::code_outline::render(cx);
 
     let api_reference = doc_layout::notes_block([
         "Data Table in shadcn is a guide recipe (TanStack Table + table primitives), not a single fixed widget; treat this page as a living parity surface.",
         "Default Recipe (Fret) here means: explicit TableState + TableViewOutput + one toolbar + one footer, without pretending business-table state can be hidden.",
         "Everything after Default Recipe (Fret) should be read as guide-aligned reference material, not as the baseline authoring path.",
-        "Prefer small, explicit recipe surfaces (toolbar/pagination/column header) that can be reused by apps and gated by diag scripts.",
+        "Prefer small, explicit recipe surfaces (view options/pagination/default sortable headers) that can be reused by apps and gated by diag scripts.",
+        "No extra root `children` API is required here: the main composition seams are `header_label` / `header_cell_at`, extracted helper functions, and companion recipes such as `DataTableViewOptions` and `DataTablePagination`.",
         "Ownership: recipe owns chrome/row heights/selection/pagination/column-action menus; callers own data shape, filtering rules, and page width/height negotiation.",
         "Selection-column examples now keep typed `.action(...)` / `.action_payload(...)` on the checkbox surface and grouped `cx.actions().models::<A>(...)` / `payload_models::<A>(...)` at the view layer instead of routing through root command ids.",
         "`DataGrid` remains the canvas-first option for dense editor surfaces; use `experimental::DataGridElement` when you need richer per-cell UI than the guide-style table surface.",
     ]);
     let notes = doc_layout::notes_block([
-        "This page intentionally starts with a curated Fret default recipe, then mirrors the shadcn guide with Basic Table, Guide Demo, RTL, and Guide Outline follow-ups.",
-        "Prefer Default Recipe (Fret) when you want a copyable business-table baseline; reach for the guide-aligned sections when you need explicit sorting, selection, actions, or pagination composition.",
+        "This page intentionally starts with a curated Fret default recipe, then mirrors the shadcn guide with Basic Table, Guide Demo, Reusable Components, and RTL follow-ups.",
+        "Prefer Default Recipe (Fret) when you want a copyable business-table baseline; reach for the guide-aligned sections when you need explicit sorting, selection, actions, pagination, or extracted helper seams.",
+        "Upstream's reusable-components chapter maps here to default sortable headers on `DataTable`, `DataTableViewOptions` for column toggle, and `DataTablePagination` for footer controls.",
         "Layout and diagnostics regressions here usually come from viewport ownership, column sizing, or row chrome, so keep page-scoped `ui-gallery-data-table-*` ids stable when extending the page.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -55,18 +57,18 @@ pub(super) fn preview_data_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Integrated sorting, filtering, visibility, row selection, row actions, and pagination recipe backed by Fret's headless table state.",
         )
         .code_rust_from_file_region(snippets::guide_demo::SOURCE, "example");
+    let reusable_components = DocSection::build(cx, "Reusable Components", reusable_components)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-data-table-reusable-components")
+        .description(
+            "Guide-aligned extracted helper surface: keep DataTable guide-shaped, reuse DataTableViewOptions for column toggle, and reuse DataTablePagination for footer controls.",
+        )
+        .code_rust_from_file_region(snippets::code_outline::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl_demo)
         .max_w(Px(980.0))
         .test_id_prefix("ui-gallery-data-table-rtl")
         .description("Guide-aligned data table layout under an RTL direction provider.")
         .code_rust_from_file_region(snippets::rtl_demo::SOURCE, "example");
-    let guide_outline = DocSection::build(cx, "Guide Outline", code_preview)
-        .max_w(Px(980.0))
-        .test_id_prefix("ui-gallery-data-table-guide-outline")
-        .description(
-            "Compact map of the reusable pieces that correspond to the upstream guide chapters.",
-        )
-        .code_rust_from_file_region(snippets::code_outline::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -77,8 +79,8 @@ pub(super) fn preview_data_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             default_recipe,
             basic_table,
             guide_demo,
+            reusable_components,
             rtl,
-            guide_outline,
             api_reference,
             notes,
         ],

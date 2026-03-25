@@ -4831,14 +4831,14 @@ fn data_table_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Basic Table\", basic_demo)",
             "DocSection::build(cx, \"Guide Demo\", guide_demo)",
             "DocSection::build(cx, \"RTL\", rtl_demo)",
-            "DocSection::build(cx, \"Guide Outline\", code_preview)",
+            "DocSection::build(cx, \"Reusable Components\", reusable_components)",
         ],
         &[
             "DocSection::new(\"Default Recipe (Fret)\", default_demo)",
             "DocSection::new(\"Basic Table\", basic_demo)",
             "DocSection::new(\"Guide Demo\", guide_demo)",
             "DocSection::new(\"RTL\", rtl_demo)",
-            "DocSection::new(\"Guide Outline\", code_preview)",
+            "DocSection::new(\"Reusable Components\", reusable_components)",
         ],
     );
 }

@@ -43,17 +43,22 @@ shadcn/ui v4 Radix guide, the guide demos, and the existing table layout gates.
 
 ### Gallery / docs parity
 
-- Pass: the gallery now keeps `Default Recipe (Fret)` as an explicit repo golden path, then presents the guide-aligned follow-ups as `Basic Table`, `Guide Demo`, `RTL`, `Guide Outline`, and `API Reference`, making both the repo-specific baseline and the compressed upstream guide mapping explicit.
+- Pass: the gallery now keeps `Default Recipe (Fret)` as an explicit repo golden path, then presents the guide-aligned follow-ups as `Basic Table`, `Guide Demo`, `Reusable Components`, `RTL`, and `API Reference`, making both the repo-specific baseline and the upstream guide's reusable-parts story explicit.
 - Pass: the selection column examples now stay on typed `.action(...)` / `.action_payload(...)` plus grouped `cx.actions().models::<A>(...)` / `payload_models::<A>(...)` instead of teaching root command routing for select-all and row toggles.
 - Pass: the row-action dropdown menus in `Basic Table`, `Guide Demo`, and `RTL` now also stay on typed `.action(...)` / `.action_payload(...)` instead of falling back to per-row `CommandId::new(...)` strings for menu items.
-- Pass: `Guide Outline` remains a compact Fret follow-up that points to reusable pieces instead of copying every upstream chapter verbatim.
+- Pass: `Reusable Components` now leaves behind a full copyable helper-extraction example instead of a prose-only outline, and the standalone `DataTableViewOptions::from_table_state(...)` builder maps the upstream `Column toggle` companion surface more directly than routing everything through `DataTableToolbar`.
+- Pass: this audit still does not find enough pressure for a generic root `children` API on `DataTable`; helper extraction plus `header_label` / `header_cell_at` and companion recipes remain the correct composition seams.
 - Pass: this work is docs/public-surface parity for an extension surface, not a mechanism-layer fix.
 
 ## Validation
 
-- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
-- `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --lib data_table`
-- `cargo test -p fret-ui-gallery --test data_table_action_first_surface`
+- `CARGO_TARGET_DIR=target-codex-data-table cargo check -p fret-ui-shadcn --message-format short`
+- `CARGO_TARGET_DIR=target-codex-data-table cargo check -p fret-ui-gallery --message-format short`
+- `CARGO_TARGET_DIR=target-codex-data-table cargo nextest run -p fret-ui-shadcn --test data_table_view_options`
+- `CARGO_TARGET_DIR=target-codex-data-table cargo nextest run -p fret-ui-shadcn --test ui_builder_smoke`
+- `CARGO_TARGET_DIR=target-codex-data-table cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app data_table_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface data_table_page_uses_typed_doc_sections_for_app_facing_snippets`
+- `CARGO_TARGET_DIR=target-codex-data-table cargo nextest run -p fret-ui-gallery --test data_table_action_first_surface`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-smoke.json --dir target/fret-diag/data-table-reusable-components-smoke --timeout-ms 240000 --pack --ai-packet --launch -- env CARGO_TARGET_DIR=target-codex-data-table cargo run -p fret-ui-gallery`
 - Existing geometry gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/table.rs`
 - `cargo nextest run -p fret-ui-kit table_virtualized_nested_pressable_remains_hittable_when_pointer_row_selection_disabled`
 - `cargo nextest run -p fret-ui-kit table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled`

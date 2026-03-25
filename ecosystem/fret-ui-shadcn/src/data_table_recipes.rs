@@ -18,6 +18,7 @@ use serde_json::Value;
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
 use crate::command::{CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator};
+use crate::data_table_controls::{is_column_visible, sync_column_visibility};
 use crate::direction::{LayoutDirection, use_direction};
 use crate::dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuEntry,
@@ -37,10 +38,6 @@ fn sanitize_test_id_segment(s: &str) -> String {
         }
     }
     out.trim_matches('-').to_string()
-}
-
-fn is_column_visible(state: &TableState, id: &ColumnId) -> bool {
-    state.column_visibility.get(id).copied().unwrap_or(true)
 }
 
 fn column_pin_position(state: &TableState, id: &ColumnId) -> Option<ColumnPinPosition> {
@@ -121,40 +118,6 @@ fn column_filter_text(state: &TableState, column_id: &ColumnId) -> String {
         .and_then(|f| f.value.as_str())
         .unwrap_or_default()
         .to_string()
-}
-
-fn apply_column_visibility_change(
-    state: &mut TableState,
-    desired: &HashMap<ColumnId, bool>,
-) -> bool {
-    let mut changed = false;
-    for (id, visible) in desired {
-        let current = is_column_visible(state, id);
-        if current == *visible {
-            continue;
-        }
-        changed = true;
-        if *visible {
-            state.column_visibility.remove(id);
-        } else {
-            state.column_visibility.insert(id.clone(), false);
-        }
-    }
-
-    if changed {
-        state.pagination.page_index = 0;
-    }
-    changed
-}
-
-fn sync_column_visibility(
-    app: &mut impl UiHost,
-    state: &Model<TableState>,
-    desired: &HashMap<ColumnId, bool>,
-) {
-    let _ = app.models_mut().update(state, |st| {
-        let _ = apply_column_visibility_change(st, desired);
-    });
 }
 
 fn apply_column_pinning_change(

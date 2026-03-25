@@ -143,12 +143,20 @@ fn ui_builder_overlay_roots_compile<H: UiHost>(
         cx,
         data,
         0,
-        data_table_state,
-        columns,
+        data_table_state.clone(),
+        columns.clone(),
         |_row, index, _parent| RowKey::from_index(index),
         |col| Arc::clone(&col.id),
         |cx, _col, _row| cx.text("cell"),
     );
+    let data_table_view_options_open = cx.local_model(|| false);
+    let _ = DataTableViewOptions::from_table_state(
+        data_table_view_options_open,
+        data_table_state.clone(),
+        columns,
+        |col| Arc::clone(&col.id),
+    )
+    .into_element(cx);
 
     let _ = Alert::new(Vec::new())
         .ui()
