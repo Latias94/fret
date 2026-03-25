@@ -73,6 +73,7 @@ pub mod shimmer_demo;
 pub mod shimmer_duration_demo;
 pub mod shimmer_elements_demo;
 pub mod shimmer_typography_demo;
+pub mod snippet_composable;
 pub mod snippet_demo;
 pub mod snippet_plain;
 pub mod stack_trace_collapsed;

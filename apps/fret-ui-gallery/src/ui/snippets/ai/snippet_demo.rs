@@ -4,14 +4,13 @@ pub const SOURCE: &str = include_str!("snippet_demo.rs");
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_kit::LayoutRefinement;
 use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let snippet_code: Arc<str> = Arc::from("npx ai-elements add snippet");
 
-    let snippet = ui_ai::Snippet::with_code(snippet_code)
+    ui_ai::Snippet::with_code(snippet_code)
         .test_id("ui-ai-snippet-root")
         .refine_layout(LayoutRefinement::default().max_w(Px(384.0)))
         .into_element_with_children(cx, |cx| {
@@ -26,17 +25,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .align(ui_ai::SnippetAddonAlign::InlineEnd)
                 .into_element(cx),
             ]
-        });
-
-    ui::v_flex(move |cx| {
-        vec![
-            cx.text("Snippet (AI Elements)"),
-            cx.text("Terminal-style inline command snippet with composable add-ons and copy affordance."),
-            snippet,
-        ]
-    })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
-    .gap(Space::N4)
-    .into_element(cx)
+        })
 }
 // endregion: example

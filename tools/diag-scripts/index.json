@@ -2547,6 +2547,18 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-snippet-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-snippet-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-ai-sources-demo",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-sources-demo.json",
       "required_capabilities": [

@@ -16,7 +16,7 @@ use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_pr
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{
-    InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
+    input_chrome_container_props, resolve_input_chrome, InputTokenKeys,
 };
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
@@ -133,23 +133,19 @@ impl Snippet {
         props.focus_border_color = Some(chrome.border_color_focused);
         props.focus_ring = Some(decl_style::focus_ring(&theme, chrome.radius));
         let el = cx.container(props, move |cx| {
-            vec![
-                ui::h_row(move |_cx| children)
-                    .gap(Space::N0)
-                    .items(Items::Center)
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .into_element(cx),
-            ]
+            vec![ui::h_row(move |_cx| children)
+                .gap(Space::N0)
+                .items(Items::Center)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)]
         });
 
-        let Some(test_id) = test_id else {
-            return el;
-        };
-        el.attach_semantics(
-            fret_ui::element::SemanticsDecoration::default()
-                .role(SemanticsRole::Group)
-                .test_id(test_id),
-        )
+        let mut semantics =
+            fret_ui::element::SemanticsDecoration::default().role(SemanticsRole::Group);
+        if let Some(test_id) = test_id {
+            semantics = semantics.test_id(test_id);
+        }
+        el.attach_semantics(semantics)
     }
 
     pub fn into_element_with_children<H: UiHost>(
@@ -224,12 +220,10 @@ impl SnippetAddon {
                 ..Default::default()
             },
             move |cx| {
-                vec![
-                    ui::h_row(move |_cx| children)
-                        .gap(Space::N0)
-                        .items(Items::Center)
-                        .into_element(cx),
-                ]
+                vec![ui::h_row(move |_cx| children)
+                    .gap(Space::N0)
+                    .items(Items::Center)
+                    .into_element(cx)]
             },
         )
     }
@@ -248,20 +242,15 @@ impl SnippetText {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let pad_x = theme
-            .metric_by_key("component.input.padding_x")
-            .unwrap_or_else(|| fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme));
-        let pad_y = theme
-            .metric_by_key("component.input.padding_y")
-            .unwrap_or_else(|| fret_ui_kit::MetricRef::space(Space::N1).resolve(&theme));
+        let pad_left = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
 
         cx.container(
             ContainerProps {
                 padding: Edges {
-                    top: pad_y,
-                    right: pad_x,
-                    bottom: pad_y,
-                    left: Px(pad_x.0.max(0.0) * 0.75),
+                    top: Px(0.0),
+                    right: Px(0.0),
+                    bottom: Px(0.0),
+                    left: pad_left,
                 }
                 .into(),
                 ..Default::default()
@@ -387,9 +376,9 @@ impl CopyFeedbackRef {
 }
 
 /// Copy button aligned with AI Elements `SnippetCopyButton`.
-#[derive(Clone)]
 pub struct SnippetCopyButton {
     code: Option<Arc<str>>,
+    children: Vec<AnyElement>,
     on_copy: Option<
         Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static>,
     >,
@@ -402,6 +391,7 @@ impl std::fmt::Debug for SnippetCopyButton {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SnippetCopyButton")
             .field("code_len", &self.code.as_ref().map(|code| code.len()))
+            .field("children_len", &self.children.len())
             .field("timeout_ms", &self.timeout.as_millis())
             .field("test_id", &self.test_id.as_deref())
             .field(
@@ -416,6 +406,7 @@ impl SnippetCopyButton {
     pub fn new(code: impl Into<Arc<str>>) -> Self {
         Self {
             code: Some(code.into()),
+            children: Vec::new(),
             on_copy: None,
             timeout: Duration::from_millis(2000),
             test_id: None,
@@ -426,11 +417,18 @@ impl SnippetCopyButton {
     pub fn from_context() -> Self {
         Self {
             code: None,
+            children: Vec::new(),
             on_copy: None,
             timeout: Duration::from_millis(2000),
             test_id: None,
             copied_marker_test_id: None,
         }
+    }
+
+    /// Overrides the default copy/check icon with caller-owned button content.
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     /// Called after the copy intent is issued.
@@ -470,6 +468,7 @@ impl SnippetCopyButton {
             .code
             .or_else(|| use_snippet_context(cx).map(|context| context.code))
             .unwrap_or_else(|| Arc::<str>::from(""));
+        let custom_children = self.children;
         let on_copy = self.on_copy;
         let timeout = self.timeout;
         let test_id = self.test_id;
@@ -572,12 +571,6 @@ impl SnippetCopyButton {
             // AI Elements uses InputGroupButton size="icon-sm" (8x8 Tailwind => 32px).
             let size = Px(32.0);
             let radius = theme.metric_token("metric.radius.md");
-            let icon_id = if copied {
-                fret_icons::ids::ui::CHECK
-            } else {
-                fret_icons::ids::ui::COPY
-            };
-            let icon = decl_icon::icon_with(cx, icon_id, Some(Px(14.0)), Some(ColorRef::Color(fg)));
 
             let mut chrome_props = ContainerProps::default();
             chrome_props.layout.size.width = Length::Px(size);
@@ -588,11 +581,28 @@ impl SnippetCopyButton {
             chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (props, chrome_props, move |cx| {
-                let row = ui::h_row(move |_cx| vec![icon])
+                let visual_children = if custom_children.is_empty() {
+                    let icon_id = if copied {
+                        fret_icons::ids::ui::CHECK
+                    } else {
+                        fret_icons::ids::ui::COPY
+                    };
+                    vec![decl_icon::icon_with(
+                        cx,
+                        icon_id,
+                        Some(Px(14.0)),
+                        Some(ColorRef::Color(fg)),
+                    )]
+                } else {
+                    custom_children
+                };
+
+                let row = ui::h_row(move |_cx| visual_children)
                     .items(Items::Center)
                     .justify(Justify::Center)
                     .layout(LayoutRefinement::default().w_full().h_full())
-                    .into_element(cx);
+                    .into_element(cx)
+                    .inherit_foreground(fg);
 
                 let marker = copied_marker_test_id.clone().and_then(|marker_id| {
                     copied.then(|| {
@@ -675,6 +685,13 @@ mod tests {
             .any(|child| has_pressable_test_id(child, test_id))
     }
 
+    fn has_text(element: &AnyElement, text: &str) -> bool {
+        if matches!(&element.kind, ElementKind::Text(props) if props.text.as_ref() == text) {
+            return true;
+        }
+        element.children.iter().any(|child| has_text(child, text))
+    }
+
     #[test]
     fn snippet_children_can_consume_inherited_code_context() {
         let window = AppWindowId::default();
@@ -710,5 +727,22 @@ mod tests {
             "cargo nextest run -p fret-ui-ai"
         ));
         assert!(has_pressable_test_id(&element, "ui-ai-snippet-copy"));
+    }
+
+    #[test]
+    fn snippet_copy_button_accepts_custom_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                SnippetCopyButton::new("cargo run -p fret-ui-ai")
+                    .children([cx.text("X")])
+                    .test_id("ui-ai-snippet-copy-custom")
+                    .into_element(cx)
+            });
+
+        assert!(has_pressable_test_id(&element, "ui-ai-snippet-copy-custom"));
+        assert!(has_text(&element, "X"));
     }
 }
