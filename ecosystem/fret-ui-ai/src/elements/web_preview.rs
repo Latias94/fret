@@ -145,7 +145,6 @@ fn base_chrome(theme: &Theme) -> ChromeRefinement {
 }
 
 /// Root provider aligned with AI Elements `WebPreview`.
-#[derive(Clone)]
 pub struct WebPreview {
     url: Option<Model<String>>,
     default_url: Arc<str>,
@@ -156,6 +155,7 @@ pub struct WebPreview {
     test_id_root: Option<Arc<str>>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
+    children: Vec<WebPreviewChild>,
 }
 
 impl WebPreview {
@@ -174,6 +174,7 @@ impl WebPreview {
                 .min_w_0()
                 .min_h_0(),
             chrome: ChromeRefinement::default(),
+            children: Vec::new(),
         }
     }
 
@@ -208,6 +209,36 @@ impl WebPreview {
         self
     }
 
+    pub fn child<C>(mut self, child: C) -> Self
+    where
+        C: Into<WebPreviewChild>,
+    {
+        self.children.push(child.into());
+        self
+    }
+
+    /// Docs-shaped eager compound children composition aligned with upstream `<WebPreview>...</WebPreview>`.
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<WebPreviewChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn navigation(self, navigation: WebPreviewNavigation) -> Self {
+        self.child(navigation)
+    }
+
+    pub fn body(self, body: WebPreviewBody) -> Self {
+        self.child(body)
+    }
+
+    pub fn console(self, console: WebPreviewConsole) -> Self {
+        self.child(console)
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -234,6 +265,7 @@ impl WebPreview {
         #[cfg(feature = "webview")]
         let backend = self.backend.clone();
         let test_id_root = self.test_id_root.clone();
+        let eager_children = self.children;
 
         let root = cx.container(
             decl_style::container_props(&theme, chrome, layout),
@@ -409,8 +441,15 @@ impl WebPreview {
                     }
                 }
 
-                cx.provide(controller.clone(), |cx| {
-                    let body = children(cx, controller);
+                cx.provide(controller.clone(), move |cx| {
+                    let mut body: Vec<AnyElement> = eager_children
+                        .into_iter()
+                        .map(|child| child.into_element(cx))
+                        .collect();
+                    body.extend(children(cx, controller));
+                    if body.is_empty() {
+                        body.push(hidden(cx));
+                    }
 
                     let body = ui::v_stack(move |_cx| body)
                         .layout(
@@ -446,7 +485,7 @@ impl WebPreview {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.into_element_with_children(cx, |cx, _controller| vec![hidden(cx)])
+        self.into_element_with_children(cx, |_cx, _controller| Vec::new())
     }
 }
 
@@ -456,23 +495,115 @@ impl Default for WebPreview {
     }
 }
 
+pub enum WebPreviewChild {
+    Navigation(WebPreviewNavigation),
+    Body(WebPreviewBody),
+    Console(WebPreviewConsole),
+    Element(AnyElement),
+}
+
+impl std::fmt::Debug for WebPreviewChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Navigation(_) => f.write_str("WebPreviewChild::Navigation(..)"),
+            Self::Body(_) => f.write_str("WebPreviewChild::Body(..)"),
+            Self::Console(_) => f.write_str("WebPreviewChild::Console(..)"),
+            Self::Element(_) => f.write_str("WebPreviewChild::Element(..)"),
+        }
+    }
+}
+
+impl From<WebPreviewNavigation> for WebPreviewChild {
+    fn from(value: WebPreviewNavigation) -> Self {
+        Self::Navigation(value)
+    }
+}
+
+impl From<WebPreviewBody> for WebPreviewChild {
+    fn from(value: WebPreviewBody) -> Self {
+        Self::Body(value)
+    }
+}
+
+impl From<WebPreviewConsole> for WebPreviewChild {
+    fn from(value: WebPreviewConsole) -> Self {
+        Self::Console(value)
+    }
+}
+
+impl From<AnyElement> for WebPreviewChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+impl WebPreviewChild {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        match self {
+            Self::Navigation(navigation) => navigation.into_element(cx),
+            Self::Body(body) => body.into_element(cx),
+            Self::Console(console) => console.into_element(cx),
+            Self::Element(element) => element,
+        }
+    }
+}
+
+impl Default for WebPreviewNavigation {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
 /// Navigation bar aligned with AI Elements `WebPreviewNavigation`.
 #[derive(Debug)]
 pub struct WebPreviewNavigation {
-    children: Vec<AnyElement>,
+    children: Vec<WebPreviewNavigationChild>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
 }
 
 impl WebPreviewNavigation {
-    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+    pub fn empty() -> Self {
         Self {
-            children: children.into_iter().collect(),
+            children: Vec::new(),
             test_id: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    pub fn new<I, C>(children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<WebPreviewNavigationChild>,
+    {
+        Self::empty().children(children)
+    }
+
+    pub fn child<C>(mut self, child: C) -> Self
+    where
+        C: Into<WebPreviewNavigationChild>,
+    {
+        self.children.push(child.into());
+        self
+    }
+
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<WebPreviewNavigationChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn button(self, button: WebPreviewNavigationButton) -> Self {
+        self.child(button)
+    }
+
+    pub fn url(self, url: WebPreviewUrl) -> Self {
+        self.child(url)
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -492,7 +623,12 @@ impl WebPreviewNavigation {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let row = ui::h_row(move |_cx| self.children)
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| child.into_element(cx))
+            .collect::<Vec<_>>();
+        let row = ui::h_row(move |_cx| children)
             .layout(self.layout)
             .gap(Space::N1)
             .items_center()
@@ -521,6 +657,50 @@ impl WebPreviewNavigation {
                 .role(SemanticsRole::Group)
                 .test_id(test_id),
         )
+    }
+}
+
+pub enum WebPreviewNavigationChild {
+    Button(WebPreviewNavigationButton),
+    Url(WebPreviewUrl),
+    Element(AnyElement),
+}
+
+impl std::fmt::Debug for WebPreviewNavigationChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Button(_) => f.write_str("WebPreviewNavigationChild::Button(..)"),
+            Self::Url(_) => f.write_str("WebPreviewNavigationChild::Url(..)"),
+            Self::Element(_) => f.write_str("WebPreviewNavigationChild::Element(..)"),
+        }
+    }
+}
+
+impl From<WebPreviewNavigationButton> for WebPreviewNavigationChild {
+    fn from(value: WebPreviewNavigationButton) -> Self {
+        Self::Button(value)
+    }
+}
+
+impl From<WebPreviewUrl> for WebPreviewNavigationChild {
+    fn from(value: WebPreviewUrl) -> Self {
+        Self::Url(value)
+    }
+}
+
+impl From<AnyElement> for WebPreviewNavigationChild {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+impl WebPreviewNavigationChild {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        match self {
+            Self::Button(button) => button.into_element(cx),
+            Self::Url(url) => url.into_element(cx),
+            Self::Element(element) => element,
+        }
     }
 }
 
@@ -561,6 +741,27 @@ impl WebPreviewNavigationButton {
             children: children.into_iter().collect(),
             test_id: None,
         }
+    }
+
+    pub fn go_back(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let button = Self::new(children).tooltip("Go back");
+        #[cfg(feature = "webview")]
+        let button = button.backend_action(WebPreviewBackendAction::GoBack);
+        button
+    }
+
+    pub fn go_forward(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let button = Self::new(children).tooltip("Go forward");
+        #[cfg(feature = "webview")]
+        let button = button.backend_action(WebPreviewBackendAction::GoForward);
+        button
+    }
+
+    pub fn reload(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let button = Self::new(children).tooltip("Reload");
+        #[cfg(feature = "webview")]
+        let button = button.backend_action(WebPreviewBackendAction::Reload);
+        button
     }
 
     pub fn tooltip(mut self, tooltip: impl Into<Arc<str>>) -> Self {
@@ -1385,6 +1586,23 @@ mod tests {
                 .any(|child| has_test_id(child, expected))
     }
 
+    fn has_label(element: &AnyElement, expected: &str) -> bool {
+        element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|decoration| decoration.label.as_deref())
+            .is_some_and(|label| label == expected)
+            || match &element.kind {
+                ElementKind::Pressable(props) => props.a11y.label.as_deref() == Some(expected),
+                ElementKind::Semantics(props) => props.label.as_deref() == Some(expected),
+                _ => false,
+            }
+            || element
+                .children
+                .iter()
+                .any(|child| has_label(child, expected))
+    }
+
     #[test]
     fn web_preview_root_provides_controller_to_children() {
         let window = AppWindowId::default();
@@ -1405,6 +1623,55 @@ mod tests {
         assert!(has_test_id(&el, "web-url"));
         assert!(has_test_id(&el, "web-body"));
         assert!(find_text_by_content(&el, "Preview: https://example.com").is_some());
+    }
+
+    #[test]
+    fn web_preview_root_children_builder_lands_compound_parts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "web-preview", |cx| {
+                WebPreview::new()
+                    .default_url("https://example.com/docs")
+                    .navigation(
+                        WebPreviewNavigation::default()
+                            .button(WebPreviewNavigationButton::new([cx.text("↺")]))
+                            .url(WebPreviewUrl::new().test_id("web-url")),
+                    )
+                    .body(WebPreviewBody::new().test_id("web-body"))
+                    .console(
+                        WebPreviewConsole::new().logs(Arc::from([WebPreviewConsoleLog::new(
+                            WebPreviewConsoleLogLevel::Log,
+                            "Console output",
+                        )])),
+                    )
+                    .into_element(cx)
+            });
+
+        assert!(has_test_id(&el, "web-url"));
+        assert!(has_test_id(&el, "web-body"));
+        assert!(find_text_by_content(&el, "Preview: https://example.com/docs").is_some());
+        assert!(find_text_by_content(&el, "Console").is_some());
+    }
+
+    #[test]
+    fn web_preview_navigation_shortcuts_install_default_labels() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "web-preview", |cx| {
+                WebPreviewNavigation::default()
+                    .button(WebPreviewNavigationButton::go_back([cx.text("←")]))
+                    .button(WebPreviewNavigationButton::go_forward([cx.text("→")]))
+                    .button(WebPreviewNavigationButton::reload([cx.text("↺")]))
+                    .into_element(cx)
+            });
+
+        assert!(has_label(&el, "Go back"));
+        assert!(has_label(&el, "Go forward"));
+        assert!(has_label(&el, "Reload"));
     }
 
     #[test]

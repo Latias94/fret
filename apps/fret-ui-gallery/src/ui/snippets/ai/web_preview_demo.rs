@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("web_preview_demo.rs");
 // region: example
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
+use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
@@ -130,64 +131,107 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         }
     });
 
-    let view = ui_ai::WebPreview::new()
+    let back = ui_ai::WebPreviewNavigationButton::go_back([cx.text("←")])
+        .disabled(!can_back)
+        .test_id("ui-ai-web-preview-demo-nav-back")
+        .action(act::NavigateBack);
+
+    let forward = ui_ai::WebPreviewNavigationButton::go_forward([cx.text("→")])
+        .disabled(!can_forward)
+        .test_id("ui-ai-web-preview-demo-nav-forward")
+        .action(act::NavigateForward);
+
+    let nav = ui_ai::WebPreviewNavigation::default()
+        .button(back)
+        .button(forward)
+        .url(ui_ai::WebPreviewUrl::new().test_id("ui-ai-web-preview-demo-url"));
+
+    let console = ui_ai::WebPreviewConsole::new()
+        .logs(Arc::from([
+            ui_ai::WebPreviewConsoleLog::new(
+                ui_ai::WebPreviewConsoleLogLevel::Log,
+                "Console output (demo)",
+            ),
+            ui_ai::WebPreviewConsoleLog::new(
+                ui_ai::WebPreviewConsoleLogLevel::Warn,
+                "Warning output (demo)",
+            ),
+            ui_ai::WebPreviewConsoleLog::new(
+                ui_ai::WebPreviewConsoleLogLevel::Error,
+                "Error output (demo)",
+            ),
+        ]))
+        .test_id_trigger("ui-ai-web-preview-demo-console-trigger")
+        .test_id_marker("ui-ai-web-preview-demo-console-content-marker");
+
+    ui_ai::WebPreview::new()
         .on_url_change(on_url_change)
         .url_model(url_model.clone())
         .test_id_root("ui-ai-web-preview-demo-root")
-        .into_element_with_children(cx, move |cx, _controller| {
-            let back = ui_ai::WebPreviewNavigationButton::new([cx.text("←")])
-                .disabled(!can_back)
-                .test_id("ui-ai-web-preview-demo-nav-back")
-                .action(act::NavigateBack)
-                .into_element(cx);
+        .navigation(nav)
+        .body(ui_ai::WebPreviewBody::new())
+        .console(console)
+        .children(markers)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .h_px(Px(360.0)),
+        )
+        .into_element(cx)
+}
+// endregion: example
 
-            let forward = ui_ai::WebPreviewNavigationButton::new([cx.text("→")])
-                .disabled(!can_forward)
-                .test_id("ui-ai-web-preview-demo-nav-forward")
-                .action(act::NavigateForward)
-                .into_element(cx);
-
-            let url = ui_ai::WebPreviewUrl::new()
-                .test_id("ui-ai-web-preview-demo-url")
-                .into_element(cx);
-
-            let nav = ui_ai::WebPreviewNavigation::new([back, forward, url]).into_element(cx);
-
-            let console = ui_ai::WebPreviewConsole::new()
-                .logs(Arc::from([
-                    ui_ai::WebPreviewConsoleLog::new(
-                        ui_ai::WebPreviewConsoleLogLevel::Log,
-                        "Console output (demo)",
-                    ),
-                    ui_ai::WebPreviewConsoleLog::new(
-                        ui_ai::WebPreviewConsoleLogLevel::Warn,
-                        "Warning output (demo)",
-                    ),
-                    ui_ai::WebPreviewConsoleLog::new(
-                        ui_ai::WebPreviewConsoleLogLevel::Error,
-                        "Error output (demo)",
-                    ),
-                ]))
-                .test_id_trigger("ui-ai-web-preview-demo-console-trigger")
-                .test_id_marker("ui-ai-web-preview-demo-console-content-marker")
-                .into_element(cx);
-
-            let body = ui_ai::WebPreviewBody::new().into_element(cx);
-
-            let mut out: Vec<AnyElement> = vec![nav, body, console];
-            out.extend(markers);
-            out
-        });
-
-    ui::v_flex(move |cx| {
+// region: composable_children
+pub fn render_composable_children(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let custom_body = ui::v_flex(move |cx| {
         vec![
-            cx.text("Web Preview (AI Elements)"),
-            cx.text("URL commit + simple history markers for diag scripts."),
-            view,
+            cx.text("Custom body content"),
+            cx.text("Use this lane when preview chrome is enough for the current build."),
+        ]
+    })
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .h_full()
+            .min_h_0(),
+    )
+    .gap(Space::N2)
+    .into_element(cx);
+
+    let custom_console_note = ui::v_flex(move |cx| {
+        vec![
+            cx.text("Custom console footer"),
+            cx.text("Backend navigation is app-owned and optional in Fret."),
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
-    .gap(Space::N4)
-    .into_element(cx)
+    .gap(Space::N1)
+    .into_element(cx);
+
+    ui_ai::WebPreview::new()
+        .default_url("https://fret.dev/docs")
+        .navigation(
+            ui_ai::WebPreviewNavigation::default()
+                .button(ui_ai::WebPreviewNavigationButton::reload([cx.text("↺")]))
+                .url(ui_ai::WebPreviewUrl::new()),
+        )
+        .body(ui_ai::WebPreviewBody::new().child(custom_body))
+        .console(
+            ui_ai::WebPreviewConsole::new()
+                .logs(Arc::from([ui_ai::WebPreviewConsoleLog::new(
+                    ui_ai::WebPreviewConsoleLogLevel::Log,
+                    "Console rows can also host caller-owned footer content.",
+                )]))
+                .children([custom_console_note]),
+        )
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .h_px(Px(320.0)),
+        )
+        .into_element(cx)
 }
-// endregion: example
+// endregion: composable_children
