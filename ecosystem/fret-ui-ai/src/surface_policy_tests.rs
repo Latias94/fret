@@ -119,8 +119,11 @@ fn prompt_input_public_surface_keeps_docs_shaped_children_and_select_lane() {
         "pub fn add_attachments(mut self, item: PromptInputActionAddAttachments) -> Self {",
         "pub fn add_screenshot(mut self, item: PromptInputActionAddScreenshot) -> Self {",
         "pub struct PromptInputActionAddScreenshot {",
-        "pub type PromptInputSelect = ShadcnSelect;",
+        "pub struct PromptInputSelect {",
+        "pub struct PromptInputSelectContent {",
+        "pub struct PromptInputSelectItem {",
         "pub struct PromptInputSelectTrigger {",
+        "pub struct PromptInputSelectValue {",
         "const DEFAULT_PROMPT_INPUT_PLACEHOLDER: &str = \"What would you like to know?\";",
     ] {
         assert!(
@@ -163,11 +166,11 @@ fn code_block_public_surface_keeps_docs_shaped_header_and_copy_parts() {
         "pub struct CodeBlockTitle {",
         "pub struct CodeBlockActions {",
         "pub struct CodeBlockCopyButton {",
-        "pub type CodeBlockLanguageSelector = ShadcnSelect;",
+        "pub struct CodeBlockLanguageSelector {",
         "pub struct CodeBlockLanguageSelectorContent {",
         "pub struct CodeBlockLanguageSelectorTrigger {",
-        "pub type CodeBlockLanguageSelectorItem = ShadcnSelectItem;",
-        "pub type CodeBlockLanguageSelectorValue = ShadcnSelectValue;",
+        "pub struct CodeBlockLanguageSelectorItem {",
+        "pub struct CodeBlockLanguageSelectorValue {",
     ] {
         assert!(
             CODE_BLOCK_RS.contains(marker),

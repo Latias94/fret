@@ -53,6 +53,15 @@
       "timeout_frames": 240
     },
     {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-ai-code-block-language-trigger" },
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 240
+    },
+    {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-ai-code-block-language-trigger" }
     },
@@ -92,4 +101,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-ai-code-block-demo-language-switch" }
   ]
 }
-

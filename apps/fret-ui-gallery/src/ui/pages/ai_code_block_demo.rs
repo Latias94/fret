@@ -14,7 +14,7 @@ pub(super) fn preview_ai_code_block_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
     ]);
     let notes = doc_layout::notes_block([
         "Mechanism/defaults looked healthy here: the parity gap was the public surface and the doc page shape, not a missing `fret-ui` runtime contract.",
-        "`CodeBlockLanguageSelector*` now gives the docs-aligned wrapper lane instead of teaching raw `shadcn::Select` wiring in the copyable snippet.",
+        "`CodeBlockLanguageSelector*` now gives a fully typed wrapper lane, so the copyable snippet no longer has to spell raw `shadcn::Select*` conversions just to wire trigger/content/items together.",
         "`into_element_with_children(...)` remains the composable children lane because provider context must be installed before parts like `CodeBlockCopyButton::from_context()` resolve inherited code state.",
     ]);
     let about_section = DocSection::build(cx, "About", about)
@@ -32,7 +32,7 @@ pub(super) fn preview_ai_code_block_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
         .tabs_sizing(DocTabsSizing::FillRemaining)
         .max_w(Px(680.0))
         .descriptions([
-            "Matches the official multi-language example with a docs-aligned `CodeBlockLanguageSelector*` wrapper surface.",
+            "Matches the official multi-language example with a docs-aligned `CodeBlockLanguageSelector*` typed wrapper surface.",
             "Language switching stays in the policy layer while `CodeBlock` continues to delegate syntax rendering and scrolling to `fret-code-view`.",
             "Copy affordance consumes the nearest CodeBlock context instead of duplicating code props.",
             "The hidden language marker exists only for deterministic diag gating and does not affect the visible teaching surface.",

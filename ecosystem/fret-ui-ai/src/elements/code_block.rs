@@ -18,10 +18,11 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space, ui,
 };
 use fret_ui_shadcn::facade::{
-    Select as ShadcnSelect, SelectAlign, SelectContent as ShadcnSelectContent,
-    SelectItem as ShadcnSelectItem, SelectScrollButtons, SelectScrollDownButton,
-    SelectScrollUpButton, SelectSide, SelectTrigger as ShadcnSelectTrigger, SelectTriggerSize,
-    SelectValue as ShadcnSelectValue,
+    IntoBoolModel, IntoOptionalTextValueModel, Select as ShadcnSelect, SelectAlign,
+    SelectContent as ShadcnSelectContent, SelectEntry as ShadcnSelectEntry,
+    SelectItem as ShadcnSelectItem, SelectItemIndicator, SelectItemText, SelectScrollButtons,
+    SelectScrollDownButton, SelectScrollUpButton, SelectSide, SelectTrigger as ShadcnSelectTrigger,
+    SelectTriggerSize, SelectValue as ShadcnSelectValue,
 };
 
 use super::clipboard_copy::{
@@ -969,11 +970,202 @@ impl CodeBlockFilename {
 }
 
 /// Docs-aligned `CodeBlockLanguageSelector` wrapper backed by shadcn `Select`.
-pub type CodeBlockLanguageSelector = ShadcnSelect;
+#[derive(Clone)]
+pub struct CodeBlockLanguageSelector {
+    inner: ShadcnSelect,
+}
+
+impl std::fmt::Debug for CodeBlockLanguageSelector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CodeBlockLanguageSelector")
+            .finish_non_exhaustive()
+    }
+}
+
+impl CodeBlockLanguageSelector {
+    pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {
+        Self {
+            inner: ShadcnSelect::new(model, open),
+        }
+    }
+
+    pub fn on_value_change(
+        mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx, Arc<str>)
+        + 'static,
+    ) -> Self {
+        self.inner = self.inner.on_value_change(f);
+        self
+    }
+
+    pub fn trigger(mut self, trigger: CodeBlockLanguageSelectorTrigger) -> Self {
+        self.inner = self.inner.trigger(trigger.into_inner());
+        self
+    }
+
+    pub fn value(mut self, value: CodeBlockLanguageSelectorValue) -> Self {
+        self.inner = self.inner.value(value.into_inner());
+        self
+    }
+
+    pub fn content(mut self, content: CodeBlockLanguageSelectorContent) -> Self {
+        self.inner = self.inner.content(content.into_inner());
+        self
+    }
+
+    pub fn item(mut self, item: CodeBlockLanguageSelectorItem) -> Self {
+        self.inner = self.inner.item(item.into_inner());
+        self
+    }
+
+    pub fn entry<E>(mut self, entry: E) -> Self
+    where
+        E: Into<ShadcnSelectEntry>,
+    {
+        self.inner = self.inner.entry(entry);
+        self
+    }
+
+    pub fn entries<I, E>(mut self, entries: I) -> Self
+    where
+        I: IntoIterator<Item = E>,
+        E: Into<ShadcnSelectEntry>,
+    {
+        self.inner = self.inner.entries(entries.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.trigger_test_id(id);
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.test_id_prefix(prefix);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.inner = self.inner.disabled(disabled);
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.a11y_label(label);
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnSelect {
+        self.inner
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.inner.into_element(cx)
+    }
+}
+
+impl From<CodeBlockLanguageSelector> for ShadcnSelect {
+    fn from(value: CodeBlockLanguageSelector) -> Self {
+        value.into_inner()
+    }
+}
+
 /// Docs-aligned `CodeBlockLanguageSelectorItem` wrapper backed by shadcn `SelectItem`.
-pub type CodeBlockLanguageSelectorItem = ShadcnSelectItem;
+#[derive(Debug, Clone)]
+pub struct CodeBlockLanguageSelectorItem {
+    inner: ShadcnSelectItem,
+}
+
+impl CodeBlockLanguageSelectorItem {
+    pub fn new(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
+        Self {
+            inner: ShadcnSelectItem::new(value, label),
+        }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.test_id(id);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.inner = self.inner.disabled(disabled);
+        self
+    }
+
+    pub fn show_value_in_list(mut self, show: bool) -> Self {
+        self.inner = self.inner.show_value_in_list(show);
+        self
+    }
+
+    pub fn item_text(mut self, text: SelectItemText) -> Self {
+        self.inner = self.inner.item_text(text);
+        self
+    }
+
+    pub fn indicator(mut self, indicator: SelectItemIndicator) -> Self {
+        self.inner = self.inner.indicator(indicator);
+        self
+    }
+
+    pub fn label_font_feature(mut self, tag: impl Into<String>, value: u32) -> Self {
+        self.inner = self.inner.label_font_feature(tag, value);
+        self
+    }
+
+    pub fn label_font_axis(mut self, tag: impl Into<String>, value: f32) -> Self {
+        self.inner = self.inner.label_font_axis(tag, value);
+        self
+    }
+
+    pub fn label_tabular_nums(mut self) -> Self {
+        self.inner = self.inner.label_tabular_nums();
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnSelectItem {
+        self.inner
+    }
+}
+
+impl From<CodeBlockLanguageSelectorItem> for ShadcnSelectItem {
+    fn from(value: CodeBlockLanguageSelectorItem) -> Self {
+        value.into_inner()
+    }
+}
+
+impl From<CodeBlockLanguageSelectorItem> for ShadcnSelectEntry {
+    fn from(value: CodeBlockLanguageSelectorItem) -> Self {
+        value.into_inner().into()
+    }
+}
+
 /// Docs-aligned `CodeBlockLanguageSelectorValue` wrapper backed by shadcn `SelectValue`.
-pub type CodeBlockLanguageSelectorValue = ShadcnSelectValue;
+#[derive(Debug, Clone, Default)]
+pub struct CodeBlockLanguageSelectorValue {
+    inner: ShadcnSelectValue,
+}
+
+impl CodeBlockLanguageSelectorValue {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.placeholder(placeholder);
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnSelectValue {
+        self.inner
+    }
+}
+
+impl From<CodeBlockLanguageSelectorValue> for ShadcnSelectValue {
+    fn from(value: CodeBlockLanguageSelectorValue) -> Self {
+        value.into_inner()
+    }
+}
 
 /// Docs-aligned `CodeBlockLanguageSelectorContent` wrapper with the official default
 /// `align="end"` surface.
@@ -1227,20 +1419,18 @@ mod tests {
                             CodeBlockHeader::new([CodeBlockActions::new([
                                 CodeBlockLanguageSelector::new(language.clone(), open.clone())
                                     .trigger_test_id("language-trigger")
-                                    .trigger(CodeBlockLanguageSelectorTrigger::new().into())
+                                    .trigger(CodeBlockLanguageSelectorTrigger::new())
                                     .value(
                                         CodeBlockLanguageSelectorValue::new()
                                             .placeholder("Language"),
                                     )
-                                    .content(CodeBlockLanguageSelectorContent::new().into())
+                                    .content(CodeBlockLanguageSelectorContent::new())
                                     .entries([
                                         CodeBlockLanguageSelectorItem::new(
                                             "typescript",
                                             "TypeScript",
-                                        )
-                                        .into(),
-                                        CodeBlockLanguageSelectorItem::new("python", "Python")
-                                            .into(),
+                                        ),
+                                        CodeBlockLanguageSelectorItem::new("python", "Python"),
                                     ])
                                     .into_element(cx),
                             ])

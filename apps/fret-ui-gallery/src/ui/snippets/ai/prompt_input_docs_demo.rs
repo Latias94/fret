@@ -353,16 +353,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 .update(&model_value, |current| *current = Some(value));
                         }
                     })
-                    .trigger(ui_ai::PromptInputSelectTrigger::new().into())
+                    .trigger(ui_ai::PromptInputSelectTrigger::new())
                     .value(ui_ai::PromptInputSelectValue::new().placeholder("Model"))
                     .content(ui_ai::PromptInputSelectContent::new())
                     .entries([
-                        ui_ai::PromptInputSelectItem::new("gpt-4o", "GPT-4o").into(),
+                        ui_ai::PromptInputSelectItem::new("gpt-4o", "GPT-4o"),
                         ui_ai::PromptInputSelectItem::new(
                             "claude-opus-4-20250514",
                             "Claude 4 Opus",
-                        )
-                        .into(),
+                        ),
                     ])
                     .into_element(cx);
 

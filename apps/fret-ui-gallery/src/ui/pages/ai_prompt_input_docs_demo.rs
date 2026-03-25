@@ -23,7 +23,7 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "PromptInputSelect*",
-                "Prompt-input-scoped Select naming now exists so docs snippets do not fall back to generic `shadcn::Select*` names.",
+                "Prompt-input-scoped Select now ships as a fully typed wrapper lane, so docs snippets do not need raw `shadcn::Select*` conversions for trigger/content/items/value.",
             ],
             [
                 "PromptInputProvider",

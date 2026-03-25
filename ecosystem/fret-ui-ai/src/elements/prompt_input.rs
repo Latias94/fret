@@ -18,8 +18,10 @@ use fret_ui_kit::{
 
 use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
-    DropdownMenuItem, DropdownMenuSide, InputGroup, Kbd, Select as ShadcnSelect,
-    SelectContent as ShadcnSelectContent, SelectItem as ShadcnSelectItem,
+    DropdownMenuItem, DropdownMenuSide, InputGroup, IntoBoolModel, IntoOptionalTextValueModel, Kbd,
+    Select as ShadcnSelect, SelectAlign, SelectContent as ShadcnSelectContent,
+    SelectEntry as ShadcnSelectEntry, SelectItem as ShadcnSelectItem, SelectItemIndicator,
+    SelectItemText, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton, SelectSide,
     SelectTrigger as ShadcnSelectTrigger, SelectTriggerSize, SelectValue as ShadcnSelectValue,
     Spinner, Tooltip, TooltipContent, TooltipSide,
 };
@@ -2126,10 +2128,278 @@ impl PromptInput {
     }
 }
 
-pub type PromptInputSelect = ShadcnSelect;
-pub type PromptInputSelectContent = ShadcnSelectContent;
-pub type PromptInputSelectItem = ShadcnSelectItem;
-pub type PromptInputSelectValue = ShadcnSelectValue;
+#[derive(Clone)]
+pub struct PromptInputSelect {
+    inner: ShadcnSelect,
+}
+
+impl std::fmt::Debug for PromptInputSelect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PromptInputSelect").finish_non_exhaustive()
+    }
+}
+
+impl PromptInputSelect {
+    pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {
+        Self {
+            inner: ShadcnSelect::new(model, open),
+        }
+    }
+
+    pub fn on_value_change(
+        mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx, Arc<str>)
+        + 'static,
+    ) -> Self {
+        self.inner = self.inner.on_value_change(f);
+        self
+    }
+
+    pub fn trigger(mut self, trigger: PromptInputSelectTrigger) -> Self {
+        self.inner = self.inner.trigger(trigger.into_inner());
+        self
+    }
+
+    pub fn value(mut self, value: PromptInputSelectValue) -> Self {
+        self.inner = self.inner.value(value.into_inner());
+        self
+    }
+
+    pub fn content(mut self, content: PromptInputSelectContent) -> Self {
+        self.inner = self.inner.content(content.into_inner());
+        self
+    }
+
+    pub fn item(mut self, item: PromptInputSelectItem) -> Self {
+        self.inner = self.inner.item(item.into_inner());
+        self
+    }
+
+    pub fn entry<E>(mut self, entry: E) -> Self
+    where
+        E: Into<ShadcnSelectEntry>,
+    {
+        self.inner = self.inner.entry(entry);
+        self
+    }
+
+    pub fn entries<I, E>(mut self, entries: I) -> Self
+    where
+        I: IntoIterator<Item = E>,
+        E: Into<ShadcnSelectEntry>,
+    {
+        self.inner = self.inner.entries(entries.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.trigger_test_id(id);
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.test_id_prefix(prefix);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.inner = self.inner.disabled(disabled);
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.a11y_label(label);
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnSelect {
+        self.inner
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.inner.into_element(cx)
+    }
+}
+
+impl From<PromptInputSelect> for ShadcnSelect {
+    fn from(value: PromptInputSelect) -> Self {
+        value.into_inner()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PromptInputSelectContent {
+    inner: ShadcnSelectContent,
+}
+
+impl Default for PromptInputSelectContent {
+    fn default() -> Self {
+        Self {
+            inner: ShadcnSelectContent::new(),
+        }
+    }
+}
+
+impl PromptInputSelectContent {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn align(mut self, align: SelectAlign) -> Self {
+        self.inner = self.inner.align(align);
+        self
+    }
+
+    pub fn side(mut self, side: SelectSide) -> Self {
+        self.inner = self.inner.side(side);
+        self
+    }
+
+    pub fn align_offset(mut self, offset: Px) -> Self {
+        self.inner = self.inner.align_offset(offset);
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.inner = self.inner.side_offset(offset);
+        self
+    }
+
+    pub fn arrow(mut self, arrow: bool) -> Self {
+        self.inner = self.inner.arrow(arrow);
+        self
+    }
+
+    pub fn arrow_size(mut self, size: Px) -> Self {
+        self.inner = self.inner.arrow_size(size);
+        self
+    }
+
+    pub fn arrow_padding(mut self, padding: Px) -> Self {
+        self.inner = self.inner.arrow_padding(padding);
+        self
+    }
+
+    pub fn scroll_buttons(mut self, buttons: SelectScrollButtons) -> Self {
+        self.inner = self.inner.scroll_buttons(buttons);
+        self
+    }
+
+    pub fn scroll_up_button(mut self, button: SelectScrollUpButton) -> Self {
+        self.inner = self.inner.scroll_up_button(button);
+        self
+    }
+
+    pub fn scroll_down_button(mut self, button: SelectScrollDownButton) -> Self {
+        self.inner = self.inner.scroll_down_button(button);
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnSelectContent {
+        self.inner
+    }
+}
+
+impl From<PromptInputSelectContent> for ShadcnSelectContent {
+    fn from(value: PromptInputSelectContent) -> Self {
+        value.into_inner()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PromptInputSelectItem {
+    inner: ShadcnSelectItem,
+}
+
+impl PromptInputSelectItem {
+    pub fn new(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
+        Self {
+            inner: ShadcnSelectItem::new(value, label),
+        }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.test_id(id);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.inner = self.inner.disabled(disabled);
+        self
+    }
+
+    pub fn show_value_in_list(mut self, show: bool) -> Self {
+        self.inner = self.inner.show_value_in_list(show);
+        self
+    }
+
+    pub fn item_text(mut self, text: SelectItemText) -> Self {
+        self.inner = self.inner.item_text(text);
+        self
+    }
+
+    pub fn indicator(mut self, indicator: SelectItemIndicator) -> Self {
+        self.inner = self.inner.indicator(indicator);
+        self
+    }
+
+    pub fn label_font_feature(mut self, tag: impl Into<String>, value: u32) -> Self {
+        self.inner = self.inner.label_font_feature(tag, value);
+        self
+    }
+
+    pub fn label_font_axis(mut self, tag: impl Into<String>, value: f32) -> Self {
+        self.inner = self.inner.label_font_axis(tag, value);
+        self
+    }
+
+    pub fn label_tabular_nums(mut self) -> Self {
+        self.inner = self.inner.label_tabular_nums();
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnSelectItem {
+        self.inner
+    }
+}
+
+impl From<PromptInputSelectItem> for ShadcnSelectItem {
+    fn from(value: PromptInputSelectItem) -> Self {
+        value.into_inner()
+    }
+}
+
+impl From<PromptInputSelectItem> for ShadcnSelectEntry {
+    fn from(value: PromptInputSelectItem) -> Self {
+        value.into_inner().into()
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct PromptInputSelectValue {
+    inner: ShadcnSelectValue,
+}
+
+impl PromptInputSelectValue {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.placeholder(placeholder);
+        self
+    }
+
+    pub fn into_inner(self) -> ShadcnSelectValue {
+        self.inner
+    }
+}
+
+impl From<PromptInputSelectValue> for ShadcnSelectValue {
+    fn from(value: PromptInputSelectValue) -> Self {
+        value.into_inner()
+    }
+}
 
 /// Prompt-input-scoped Select trigger aligned with AI Elements toolbar chrome.
 #[derive(Debug, Clone)]
@@ -3771,6 +4041,53 @@ mod tests {
                     .on_submit(on_submit.clone())
                     .on_add_attachments(on_add_attachments.clone())
                     .test_id_root("pi-root")
+                    .children([
+                        PromptInputPart::from(PromptInputBody::new([
+                            PromptInputTextarea::new().test_id("pi-textarea")
+                        ])),
+                        PromptInputPart::from(PromptInputFooter::new(
+                            [tools],
+                            [PromptInputSubmit::new()],
+                        )),
+                    ])
+                    .into_element(cx)
+            });
+    }
+
+    #[test]
+    fn prompt_input_select_wrappers_integrate_with_docs_shaped_tools_lane() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(180.0)),
+        );
+
+        let mut app = App::new();
+        let value = app.models_mut().insert(Some(Arc::<str>::from("gpt-4o")));
+        let open = app.models_mut().insert(false);
+        let on_submit: OnPromptInputSubmit = Arc::new(|_host, _action_cx, _message, _reason| {});
+
+        let _element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "prompt-input", |cx| {
+                let select = PromptInputSelect::new(value.clone(), open.clone())
+                    .trigger_test_id("pi-model-trigger")
+                    .trigger(PromptInputSelectTrigger::new())
+                    .value(PromptInputSelectValue::new().placeholder("Model"))
+                    .content(PromptInputSelectContent::new())
+                    .entries([
+                        PromptInputSelectItem::new("gpt-4o", "GPT-4o"),
+                        PromptInputSelectItem::new("claude-opus-4-20250514", "Claude 4 Opus"),
+                    ])
+                    .into_element(cx);
+                let tools = PromptInputTools::empty().child(select);
+                assert_eq!(tools.children.len(), 1);
+                assert!(matches!(
+                    tools.children[0],
+                    PromptInputToolsChild::Element(_)
+                ));
+
+                PromptInput::new_uncontrolled()
+                    .on_submit(on_submit.clone())
                     .children([
                         PromptInputPart::from(PromptInputBody::new([
                             PromptInputTextarea::new().test_id("pi-textarea")

@@ -60,22 +60,18 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     host.notify(action_cx);
                 }
             })
-            .trigger(ui_ai::CodeBlockLanguageSelectorTrigger::new().into())
+            .trigger(ui_ai::CodeBlockLanguageSelectorTrigger::new())
             .value(ui_ai::CodeBlockLanguageSelectorValue::new().placeholder("Language"))
-            .content(ui_ai::CodeBlockLanguageSelectorContent::new().into())
+            .content(ui_ai::CodeBlockLanguageSelectorContent::new())
             .entries([
                 ui_ai::CodeBlockLanguageSelectorItem::new("typescript", "TypeScript")
-                    .test_id("ui-ai-code-block-language-item-typescript")
-                    .into(),
+                    .test_id("ui-ai-code-block-language-item-typescript"),
                 ui_ai::CodeBlockLanguageSelectorItem::new("python", "Python")
-                    .test_id("ui-ai-code-block-language-item-python")
-                    .into(),
+                    .test_id("ui-ai-code-block-language-item-python"),
                 ui_ai::CodeBlockLanguageSelectorItem::new("rust", "Rust")
-                    .test_id("ui-ai-code-block-language-item-rust")
-                    .into(),
+                    .test_id("ui-ai-code-block-language-item-rust"),
                 ui_ai::CodeBlockLanguageSelectorItem::new("go", "Go")
-                    .test_id("ui-ai-code-block-language-item-go")
-                    .into(),
+                    .test_id("ui-ai-code-block-language-item-go"),
             ])
             .into_element(cx);
 
