@@ -196,9 +196,12 @@ fn inline_citation_public_surface_keeps_docs_shaped_compound_and_custom_children
 }
 
 #[test]
-fn file_tree_public_surface_keeps_docs_shaped_item_and_action_types() {
+fn file_tree_public_surface_keeps_docs_shaped_children_and_action_types() {
     for marker in [
         "pub struct FileTree {",
+        "pub fn empty() -> Self {",
+        "pub fn child(mut self, child: impl Into<FileTreeItem>) -> Self {",
+        "pub fn children<I, T>(mut self, children: I) -> Self",
         "pub enum FileTreeItem {",
         "pub struct FileTreeFolder {",
         "pub struct FileTreeFile {",

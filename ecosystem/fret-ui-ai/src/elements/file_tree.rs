@@ -187,6 +187,10 @@ impl std::fmt::Debug for FileTree {
 }
 
 impl FileTree {
+    pub fn empty() -> Self {
+        Self::new([])
+    }
+
     pub fn new(items: impl IntoIterator<Item = FileTreeItem>) -> Self {
         Self {
             items: items.into_iter().collect(),
@@ -199,6 +203,20 @@ impl FileTree {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn child(mut self, child: impl Into<FileTreeItem>) -> Self {
+        self.items.push(child.into());
+        self
+    }
+
+    pub fn children<I, T>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<FileTreeItem>,
+    {
+        self.items = children.into_iter().map(Into::into).collect();
+        self
     }
 
     pub fn expanded_paths(mut self, expanded_paths: Model<HashSet<Arc<str>>>) -> Self {

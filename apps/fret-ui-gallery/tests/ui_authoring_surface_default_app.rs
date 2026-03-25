@@ -5171,16 +5171,20 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_previews() {
         "src/ui/pages/ai_file_tree_demo.rs",
         &[
             "let basic = snippets::file_tree_basic::preview(cx);",
+            "let selection = snippets::file_tree_selection::preview(cx);",
             "let expanded = snippets::file_tree_expanded::preview(cx);",
             "let large = snippets::file_tree_large::preview(cx);",
             "DocSection::build(cx, \"Basic Usage\", basic)",
+            "DocSection::build(cx, \"With Selection\", selection)",
             "DocSection::build(cx, \"Default Expanded\", expanded)",
             "DocSection::build(cx, \"Large (Virtualized)\", large)",
         ],
         &[
             "let basic = snippets::file_tree_basic::preview(cx).into_element(cx);",
+            "let selection = snippets::file_tree_selection::preview(cx).into_element(cx);",
             "let expanded = snippets::file_tree_expanded::preview(cx).into_element(cx);",
             "DocSection::new(\"Basic Usage\", basic)",
+            "DocSection::new(\"With Selection\", selection)",
             "DocSection::new(\"Default Expanded\", expanded)",
             "DocSection::new(\"Large (Virtualized)\", large)",
         ],
@@ -7445,6 +7449,7 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         "src/ui/snippets/ai/file_tree_basic.rs",
         "src/ui/snippets/ai/file_tree_expanded.rs",
         "src/ui/snippets/ai/file_tree_large.rs",
+        "src/ui/snippets/ai/file_tree_selection.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -7478,7 +7483,7 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/file_tree_demo.rs",
-        &["fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> impl UiChild + use<>"],
+        &["fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> AnyElement"],
         &[
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> AnyElement",
@@ -7487,7 +7492,7 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/file_tree_large.rs",
-        &["fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> impl UiChild + use<>"],
+        &["fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> AnyElement"],
         &[
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> AnyElement",
@@ -9197,6 +9202,7 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/ai/file_tree_demo.rs",
             "src/ui/snippets/ai/file_tree_expanded.rs",
             "src/ui/snippets/ai/file_tree_large.rs",
+            "src/ui/snippets/ai/file_tree_selection.rs",
             "src/ui/snippets/ai/image_demo.rs",
             "src/ui/snippets/ai/inline_citation_demo.rs",
             "src/ui/snippets/ai/message_branch_demo.rs",
@@ -9294,6 +9300,7 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
         "src/ui/snippets/ai/file_tree_expanded.rs",
         "src/ui/snippets/ai/file_tree_large.rs",
         "src/ui/snippets/ai/inline_citation_demo.rs",
+        "src/ui/snippets/ai/file_tree_selection.rs",
         "src/ui/snippets/ai/message_demo.rs",
         "src/ui/snippets/ai/mic_selector_demo.rs",
         "src/ui/snippets/ai/model_selector_demo.rs",

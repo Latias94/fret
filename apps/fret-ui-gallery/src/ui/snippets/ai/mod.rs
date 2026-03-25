@@ -124,6 +124,8 @@ pub mod inline_citation_demo;
 #[cfg(feature = "gallery-dev")]
 pub mod message_branch_demo;
 #[cfg(feature = "gallery-dev")]
+pub mod file_tree_selection;
+#[cfg(feature = "gallery-dev")]
 pub mod mic_selector_demo;
 #[cfg(feature = "gallery-dev")]
 pub mod model_selector_demo;
