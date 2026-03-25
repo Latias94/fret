@@ -9,8 +9,8 @@ use fret_core::{
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, PressableProps, SelectableTextProps,
-    SemanticsDecoration, SizeStyle, TextProps,
+    AnyElement, ContainerProps, LayoutStyle, Length, PressableProps, SemanticsDecoration,
+    SizeStyle, StyledTextProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -96,8 +96,8 @@ impl HttpMethod {
             Self::Put => token(
                 theme,
                 "component.schema_display.method.put",
-                // Tailwind: yellow-600 (#ca8a04).
-                fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04),
+                // Tailwind: orange-600 (#ea580c).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xea_58_0c),
             ),
             Self::Patch => token(
                 theme,
@@ -377,63 +377,70 @@ impl SchemaDisplay {
         let children_override = self.children;
 
         let el = cx.container(wrapper, move |cx| {
-            if let Some(children) = children_override {
-                return children;
-            }
+            let body_children = if let Some(children) = children_override {
+                children
+            } else {
+                let header_row = ui::h_row(move |cx| {
+                    vec![
+                        SchemaDisplayMethod::new(method).into_element(cx),
+                        SchemaDisplayPath::new(path.clone()).into_element(cx),
+                    ]
+                })
+                .gap(Space::N3)
+                .items(Items::Center)
+                .layout(LayoutRefinement::default().min_w_0())
+                .into_element(cx);
 
-            let header_row = ui::h_row(move |cx| {
-                vec![
-                    SchemaDisplayMethod::new(method).into_element(cx),
-                    SchemaDisplayPath::new(path.clone()).into_element(cx),
-                ]
-            })
-            .gap(Space::N3)
-            .items(Items::Center)
-            .layout(LayoutRefinement::default().min_w_0())
-            .into_element(cx);
+                let header = SchemaDisplayHeader::new([header_row]).into_element(cx);
 
-            let header = SchemaDisplayHeader::new([header_row]).into_element(cx);
+                let mut out = vec![header];
 
-            let mut out = vec![header];
+                if let Some(description) = description.clone() {
+                    out.push(SchemaDisplayDescription::new(description).into_element(cx));
+                }
 
-            if let Some(description) = description.clone() {
-                out.push(SchemaDisplayDescription::new(description).into_element(cx));
-            }
+                let mut sections: Vec<AnyElement> = Vec::new();
 
-            let mut sections: Vec<AnyElement> = Vec::new();
+                if !parameters.is_empty() {
+                    sections.push(
+                        SchemaDisplayParameters::new(parameters.clone())
+                            .default_open(default_open_parameters)
+                            .test_id_trigger_opt(test_id_parameters_trigger.clone())
+                            .into_element(cx),
+                    );
+                }
 
-            if !parameters.is_empty() {
-                sections.push(
-                    SchemaDisplayParameters::new(parameters.clone())
-                        .default_open(default_open_parameters)
-                        .test_id_trigger_opt(test_id_parameters_trigger.clone())
-                        .into_element(cx),
-                );
-            }
+                if !request_body.is_empty() {
+                    sections.push(
+                        SchemaDisplayRequest::new(request_body.clone())
+                            .default_open(default_open_request)
+                            .test_id_trigger_opt(test_id_request_trigger.clone())
+                            .into_element(cx),
+                    );
+                }
 
-            if !request_body.is_empty() {
-                sections.push(
-                    SchemaDisplayRequest::new(request_body.clone())
-                        .default_open(default_open_request)
-                        .test_id_trigger_opt(test_id_request_trigger.clone())
-                        .into_element(cx),
-                );
-            }
+                if !response_body.is_empty() {
+                    sections.push(
+                        SchemaDisplayResponse::new(response_body.clone())
+                            .default_open(default_open_response)
+                            .test_id_trigger_opt(test_id_response_trigger.clone())
+                            .into_element(cx),
+                    );
+                }
 
-            if !response_body.is_empty() {
-                sections.push(
-                    SchemaDisplayResponse::new(response_body.clone())
-                        .default_open(default_open_response)
-                        .test_id_trigger_opt(test_id_response_trigger.clone())
-                        .into_element(cx),
-                );
-            }
+                if !sections.is_empty() {
+                    out.push(SchemaDisplayContent::new(sections).into_element(cx));
+                }
 
-            if !sections.is_empty() {
-                out.push(SchemaDisplayContent::new(sections).into_element(cx));
-            }
+                out
+            };
 
-            out
+            vec![
+                ui::v_stack(move |_cx| body_children)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N0)
+                    .into_element(cx),
+            ]
         });
 
         let Some(test_id) = test_id_root else {
@@ -584,7 +591,7 @@ impl SchemaDisplayPath {
 
         let (text, spans) = highlighted_path_attributed_text(&self.path, base_color, highlight);
 
-        let mut props = SelectableTextProps::new(AttributedText::new(text, spans));
+        let mut props = StyledTextProps::new(AttributedText::new(text, spans));
         props.layout.size.width = Length::Auto;
         props.layout.size.height = Length::Auto;
         props.style = Some(monospace_style(
@@ -596,7 +603,7 @@ impl SchemaDisplayPath {
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Clip;
 
-        cx.selectable_text_props(props)
+        cx.styled_text_props(props)
     }
 }
 
@@ -745,9 +752,10 @@ impl SchemaDisplayContent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SchemaDisplayParameters {
     parameters: Arc<[SchemaParameter]>,
+    children: Option<Vec<AnyElement>>,
     default_open: bool,
     test_id_trigger: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -757,10 +765,16 @@ impl SchemaDisplayParameters {
     pub fn new(parameters: impl Into<Arc<[SchemaParameter]>>) -> Self {
         Self {
             parameters: parameters.into(),
+            children: None,
             default_open: true,
             test_id_trigger: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
         }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self
     }
 
     pub fn default_open(mut self, default_open: bool) -> Self {
@@ -787,6 +801,7 @@ impl SchemaDisplayParameters {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let params = self.parameters;
+        let children_override = self.children;
         let count: Arc<str> = Arc::from(params.len().to_string());
         let test_id = self.test_id_trigger;
         let layout = self.layout;
@@ -806,7 +821,14 @@ impl SchemaDisplayParameters {
                     )
                 },
                 move |cx| {
-                    let list = schema_parameter_list(cx, params.clone());
+                    let list = if let Some(children) = children_override {
+                        ui::v_stack(move |_cx| children)
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N0)
+                            .into_element(cx)
+                    } else {
+                        schema_parameter_list(cx, params.clone())
+                    };
                     let wrapper = with_top_divider(cx, list);
                     CollapsibleContent::new([wrapper]).into_element(cx)
                 },
@@ -814,9 +836,10 @@ impl SchemaDisplayParameters {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SchemaDisplayRequest {
     properties: Arc<[SchemaProperty]>,
+    children: Option<Vec<AnyElement>>,
     default_open: bool,
     test_id_trigger: Option<Arc<str>>,
     test_id_first_property_trigger: Option<Arc<str>>,
@@ -828,6 +851,7 @@ impl SchemaDisplayRequest {
     pub fn new(properties: impl Into<Arc<[SchemaProperty]>>) -> Self {
         Self {
             properties: properties.into(),
+            children: None,
             default_open: true,
             test_id_trigger: None,
             test_id_first_property_trigger: None,
@@ -838,6 +862,11 @@ impl SchemaDisplayRequest {
 
     pub fn default_open(mut self, default_open: bool) -> Self {
         self.default_open = default_open;
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
         self
     }
 
@@ -870,6 +899,7 @@ impl SchemaDisplayRequest {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = self.properties;
+        let children_override = self.children;
         let test_id = self.test_id_trigger;
         let test_id_first_property_trigger = self.test_id_first_property_trigger;
         let test_id_first_property_child0_trigger = self.test_id_first_property_child0_trigger;
@@ -890,14 +920,21 @@ impl SchemaDisplayRequest {
                     )
                 },
                 move |cx| {
-                    let vec: Vec<SchemaProperty> = props.iter().cloned().collect();
-                    let list = schema_property_list_from_vec(
-                        cx,
-                        vec,
-                        0,
-                        test_id_first_property_trigger.clone(),
-                        test_id_first_property_child0_trigger.clone(),
-                    );
+                    let list = if let Some(children) = children_override {
+                        ui::v_stack(move |_cx| children)
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N0)
+                            .into_element(cx)
+                    } else {
+                        let vec: Vec<SchemaProperty> = props.iter().cloned().collect();
+                        schema_property_list_from_vec(
+                            cx,
+                            vec,
+                            0,
+                            test_id_first_property_trigger.clone(),
+                            test_id_first_property_child0_trigger.clone(),
+                        )
+                    };
                     let wrapper = with_top_divider(cx, list);
                     CollapsibleContent::new([wrapper]).into_element(cx)
                 },
@@ -905,9 +942,10 @@ impl SchemaDisplayRequest {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SchemaDisplayResponse {
     properties: Arc<[SchemaProperty]>,
+    children: Option<Vec<AnyElement>>,
     default_open: bool,
     test_id_trigger: Option<Arc<str>>,
     test_id_first_property_trigger: Option<Arc<str>>,
@@ -919,6 +957,7 @@ impl SchemaDisplayResponse {
     pub fn new(properties: impl Into<Arc<[SchemaProperty]>>) -> Self {
         Self {
             properties: properties.into(),
+            children: None,
             default_open: true,
             test_id_trigger: None,
             test_id_first_property_trigger: None,
@@ -929,6 +968,11 @@ impl SchemaDisplayResponse {
 
     pub fn default_open(mut self, default_open: bool) -> Self {
         self.default_open = default_open;
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
         self
     }
 
@@ -961,6 +1005,7 @@ impl SchemaDisplayResponse {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = self.properties;
+        let children_override = self.children;
         let test_id = self.test_id_trigger;
         let test_id_first_property_trigger = self.test_id_first_property_trigger;
         let test_id_first_property_child0_trigger = self.test_id_first_property_child0_trigger;
@@ -981,14 +1026,21 @@ impl SchemaDisplayResponse {
                     )
                 },
                 move |cx| {
-                    let vec: Vec<SchemaProperty> = props.iter().cloned().collect();
-                    let list = schema_property_list_from_vec(
-                        cx,
-                        vec,
-                        0,
-                        test_id_first_property_trigger.clone(),
-                        test_id_first_property_child0_trigger.clone(),
-                    );
+                    let list = if let Some(children) = children_override {
+                        ui::v_stack(move |_cx| children)
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N0)
+                            .into_element(cx)
+                    } else {
+                        let vec: Vec<SchemaProperty> = props.iter().cloned().collect();
+                        schema_property_list_from_vec(
+                            cx,
+                            vec,
+                            0,
+                            test_id_first_property_trigger.clone(),
+                            test_id_first_property_child0_trigger.clone(),
+                        )
+                    };
                     let wrapper = with_top_divider(cx, list);
                     CollapsibleContent::new([wrapper]).into_element(cx)
                 },
@@ -1052,9 +1104,8 @@ impl SchemaDisplayParameter {
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx);
 
-        let desc = description.map(|d| {
-            schema_inline_description(cx, &theme, d, Px(pad_x.0 + 24.0), Px(4.0), Px(0.0))
-        });
+        let desc = description
+            .map(|d| schema_inline_description(cx, &theme, d, Px(0.0), Px(4.0), Px(0.0)));
 
         let mut props = ContainerProps::default();
         props.layout.size.width = Length::Fill;
@@ -1067,12 +1118,17 @@ impl SchemaDisplayParameter {
         }
         .into();
 
-        cx.container(props, move |_cx| {
+        cx.container(props, move |cx| {
             let mut children = vec![line];
             if let Some(desc) = desc {
                 children.push(desc);
             }
-            children
+            vec![
+                ui::v_stack(move |_cx| children)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N0)
+                    .into_element(cx),
+            ]
         })
     }
 }
@@ -1422,7 +1478,10 @@ fn schema_section_trigger<H: UiHost>(
         let chevron =
             decl_icon::icon_with(cx, chevron_id, Some(Px(16.0)), Some(ColorRef::Color(fg)));
 
-        let title_text = ui::text(title_arc.clone()).font_medium().into_element(cx);
+        let title_text = ui::text(title_arc.clone())
+            .font_medium()
+            .nowrap()
+            .into_element(cx);
 
         let count_badge = count.clone().map(|c| {
             Badge::new(c)
@@ -1626,7 +1685,14 @@ fn schema_property_leaf<H: UiHost>(
     }
     .into();
 
-    let el = cx.container(props, move |_cx| inner);
+    let el = cx.container(props, move |cx| {
+        vec![
+            ui::v_stack(move |_cx| inner)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N0)
+                .into_element(cx),
+        ]
+    });
     let Some(test_id) = test_id else {
         return el;
     };
@@ -1684,6 +1750,100 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(720.0), Px(480.0)),
         )
+    }
+
+    fn find_text_element<'a>(element: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        match &element.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(element),
+            ElementKind::StyledText(props) if props.rich.text.as_ref() == needle => Some(element),
+            _ => element
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, needle)),
+        }
+    }
+
+    #[test]
+    fn schema_display_put_method_uses_orange_accent() {
+        let app = App::new();
+        let theme = Theme::global(&app).clone();
+        assert_eq!(
+            HttpMethod::Put.accent_color(&theme),
+            fret_ui_kit::colors::linear_from_hex_rgb(0xea_58_0c)
+        );
+        assert_ne!(
+            HttpMethod::Put.accent_color(&theme),
+            HttpMethod::Patch.accent_color(&theme)
+        );
+    }
+
+    #[test]
+    fn schema_display_root_wraps_default_sections_in_single_stacked_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                SchemaDisplay::new(HttpMethod::Post, "/api/posts")
+                    .description("Create a post")
+                    .request_body([SchemaProperty::new("title", "string").required(true)])
+                    .response_body([SchemaProperty::new("id", "string").required(true)])
+                    .into_element(cx)
+            });
+
+        let ElementKind::Container(_) = &element.kind else {
+            panic!("expected SchemaDisplay root to build a Container");
+        };
+        assert_eq!(
+            element.children.len(),
+            1,
+            "SchemaDisplay should stack header/description/content inside one body child"
+        );
+        assert!(find_text_element(&element, "POST").is_some());
+        assert!(find_text_element(&element, "Create a post").is_some());
+        assert!(find_text_element(&element, "Request Body").is_some());
+        assert!(find_text_element(&element, "Response").is_some());
+    }
+
+    #[test]
+    fn schema_display_children_override_is_stacked_in_single_body_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                SchemaDisplay::new(HttpMethod::Get, "/api/users")
+                    .children([cx.text("Custom header"), cx.text("Custom body")])
+                    .into_element(cx)
+            });
+
+        let ElementKind::Container(_) = &element.kind else {
+            panic!("expected SchemaDisplay override root to build a Container");
+        };
+        assert_eq!(
+            element.children.len(),
+            1,
+            "SchemaDisplay override content should still flow through a single stacked body"
+        );
+        assert!(find_text_element(&element, "Custom header").is_some());
+        assert!(find_text_element(&element, "Custom body").is_some());
+    }
+
+    #[test]
+    fn schema_display_request_children_override_replaces_default_property_rows() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                SchemaDisplayRequest::new([SchemaProperty::new("title", "string").required(true)])
+                    .children([cx.text("Custom request row")])
+                    .into_element(cx)
+            });
+
+        assert!(find_text_element(&element, "Request Body").is_some());
+        assert!(find_text_element(&element, "Custom request row").is_some());
+        assert!(find_text_element(&element, "title").is_none());
     }
 
     #[test]
