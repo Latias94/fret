@@ -58,6 +58,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let active_index = segments
         .iter()
+        .filter(|s| !s.text.trim().is_empty())
         .position(|s| time_now >= s.start_second && time_now < s.end_second)
         .unwrap_or(0);
     let active_test_id: Arc<str> =

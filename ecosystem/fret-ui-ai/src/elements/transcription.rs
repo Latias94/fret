@@ -205,14 +205,17 @@ impl Transcription {
 
                 cx.provide(controller.clone(), |cx| {
                     let mut out: Vec<AnyElement> = Vec::new();
+                    let mut rendered_index = 0usize;
                     for (raw_index, seg) in segments.iter().cloned().enumerate() {
                         if is_blank(seg.text.as_ref()) {
                             continue;
                         }
+                        let visible_index = rendered_index;
+                        rendered_index += 1;
                         let children = children.clone();
                         out.push(
                             cx.keyed(format!("transcription-seg-{raw_index}"), move |cx| {
-                                children(cx, seg.clone(), raw_index)
+                                children(cx, seg.clone(), visible_index)
                             }),
                         );
                     }
@@ -521,5 +524,45 @@ mod tests {
                 None,
             ))
         );
+    }
+
+    #[test]
+    fn transcription_children_indices_follow_rendered_order_after_blank_filtering() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let segments: Arc<[TranscriptionSegmentData]> = Arc::from(vec![
+            TranscriptionSegmentData::new(0.0, 1.0, "Hello"),
+            TranscriptionSegmentData::new(1.0, 2.0, " "),
+            TranscriptionSegmentData::new(2.0, 3.0, "world"),
+        ]);
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "transcription-custom-children",
+            |cx| {
+                Transcription::from_arc(segments.clone())
+                    .into_element_with_children(cx, |cx, seg, index| {
+                        cx.text(format!("{index}:{}", seg.text))
+                    })
+            },
+        );
+
+        assert_eq!(
+            el.children.len(),
+            2,
+            "expected whitespace-only segments to stay filtered from the rendered tree"
+        );
+
+        let ElementKind::Text(first) = &el.children[0].kind else {
+            panic!("expected first custom child to render as text");
+        };
+        let ElementKind::Text(second) = &el.children[1].kind else {
+            panic!("expected second custom child to render as text");
+        };
+
+        assert_eq!(first.text.as_ref(), "0:Hello");
+        assert_eq!(second.text.as_ref(), "1:world");
     }
 }
