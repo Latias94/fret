@@ -20,13 +20,13 @@ Use `fret-diag-workflow` when your main goal is simply “run a script, capture 
 
 1) Run a suite with normalization hooks (recommended defaults):
 
-- `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+- `cargo run -p fretboard --release -- diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release`
 
 2) When a perf gate fails, go straight to per-failure evidence:
 
 - Open `target/fret-diag/check.perf_thresholds.json`
 - For each item in `failures[]`, run:
-  - `target/release/fretboard.exe diag stats <evidence_bundle> --sort cpu_cycles --top 30`
+  - `cargo run -p fretboard --release -- diag stats <evidence_bundle> --sort cpu_cycles --top 30`
 
 3) If you need node-level layout attribution:
 

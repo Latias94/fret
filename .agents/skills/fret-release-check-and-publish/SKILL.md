@@ -28,7 +28,7 @@ Defaults if unclear:
 
 ## Smallest starting point (one command)
 
-- `cargo run -p release-plz -- --help`
+- `python3 tools/release_closure_check.py --config release-plz.toml --print-publish-commands`
 
 ## Quick start
 

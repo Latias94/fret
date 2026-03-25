@@ -2,15 +2,17 @@
 
 If the issue is “it feels janky” (resize/scroll/pointer-move) rather than a correctness regression:
 
-1. Switch to `fret-perf-workflow` and run an appropriate gate/suite (`ui-gallery-steady`, `ui-resize-probes`, etc).
+1. Switch to `fret-perf-optimization` and run an appropriate gate/suite (`ui-gallery-steady`, `ui-resize-probes`, etc).
 2. When a `diag perf` run fails, start with the thresholds evidence:
    - `<out-dir>/check.perf_thresholds.json` (or `attempt-N/check.perf_thresholds.json` for gate scripts)
-   - Tip: `fret-perf-workflow` includes a compact gate triage helper:
-     `.agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir>`
+   - Tip: use the cross-platform gate triage helper:
+     `python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir>`
 3. Use the worst bundle for root cause:
-   - `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
+   - `cargo run -p fretboard -- diag stats <bundle.json> --sort cpu_cycles --top 30`
+   - If CPU signal is near-zero but wall time is high, re-run with `--sort time` to separate scheduling noise from real UI-thread work.
 4. Turn the hitch class into a stable probe or a stricter gate once it is explainable:
    - Add a `tools/diag-scripts/*.json` script (stable `test_id` targets), then baseline/gate it.
+5. If the worst bundle still is not enough to explain the spike, escalate to `fret-perf-tracy-bridge`.
 
 ## “Resize jank” fast path (copy/paste)
 
@@ -24,11 +26,11 @@ tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --att
 If a gate fails (or you want the worst bundles even on PASS):
 
 ```bash
-.agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir> --all --app-snapshot
+python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir> --all --app-snapshot
 ```
 
 Then inspect the worst bundle:
 
 ```bash
-cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
+cargo run -p fretboard -- diag stats <bundle.json> --sort cpu_cycles --top 30
 ```

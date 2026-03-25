@@ -99,7 +99,21 @@ When you fix a tricky issue, record:
 - the smallest script/test added,
 - the conclusion (“what changed” + “why it’s correct”).
 
-### 6) External app repos (framework users)
+### 6) Skill testing discipline (triggering + behavior)
+
+When creating or refreshing a skill, run a small manual test set before calling it done:
+
+- 2-3 positive trigger prompts:
+  - an obvious phrasing,
+  - a paraphrased phrasing,
+  - a repo-specific phrasing when the skill is Fret-only
+- 1-2 negative prompts that should **not** load the skill
+- 1 functional path:
+  - the skill's main workflow completes with the expected repo command / artifact / code change
+- 1 failure path when applicable:
+  - missing tool, missing repo-ref mirror, or unsupported platform leads to a bounded fallback instead of hand-wavy output
+
+### 7) External app repos (framework users)
 
 If you are using these skills outside the Fret mono-repo:
 
@@ -121,6 +135,7 @@ Minimum deliverables (3-pack):
 - Layering and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
 - Crate/layer usage map: `docs/crate-usage-guide.md`
 - Canonical shadcn migration status: `docs/shadcn-declarative-progress.md`
+- Upstream local-mirror policy: `docs/repo-ref.md`
 - Diag scripts and workflows: `tools/diag-scripts/`, `.agents/skills/fret-diag-workflow/SKILL.md`
 - UI Gallery exemplar + evidence note: `.agents/skills/fret-shadcn-source-alignment/references/ui-gallery-exemplar-and-evidence.md`
 - UI Gallery authoring gates: `apps/fret-ui-gallery/src/lib.rs`
@@ -146,7 +161,9 @@ Minimum deliverables (3-pack):
 - Symptom: `validate --strict` fails.
   - Fix: ensure frontmatter has `---` delimiters, `name` matches the folder, and required headings exist.
 - Symptom: anchor checks fail in the mono-repo.
-  - Fix: replace directory-only anchors with stable file paths; avoid `repo-ref/` paths.
+  - Fix: replace directory-only anchors with stable file paths.
+- Symptom: a shared/meta skill points to `repo-ref/` paths and becomes noisy in external repos.
+  - Fix: keep `repo-ref/` anchors for source-alignment skills only; when they are required, pair them with `docs/repo-ref.md` and state that the mirrors are optional local state.
 
 ## Related skills
 

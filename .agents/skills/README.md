@@ -40,10 +40,12 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 
 ## Notes on upstream references
 
-- Skills point to **public upstream docs and source URLs** by default.
+- Generic/shared skills should prefer stable in-repo docs and code anchors.
+- Source-alignment skills may prefer local `repo-ref/` mirrors when available, and fall back to public upstream docs/source URLs only when the mirror is absent or insufficient.
 - If you are using these skills in an external app repo (not inside the Fret mono-repo), consider keeping a lightweight Fret source checkout available so “evidence anchors” (paths) remain clickable.
   - Option A (recommended): add the Fret repo as a git submodule or keep a sibling checkout for browsing.
   - Option B (fallback): browse dependency sources in the Cargo registry (`~/.cargo/registry/src/...`) for published crates.
+  - See `docs/repo-ref.md` for the local-mirror policy and why `repo-ref/` is optional local state.
 
 ## Validate skills
 
@@ -123,6 +125,15 @@ Maintainer mode (recommended in the mono-repo; validates anchor paths and a smal
 ```bash
 python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
 ```
+
+### 7) Test triggering and task fit
+
+- Before calling a skill update “done”, test:
+  - one obvious trigger prompt,
+  - one paraphrased trigger prompt,
+  - one negative prompt that should not trigger.
+- For workflow-heavy skills, also test one happy path and one bounded failure/fallback path.
+- If a skill depends on optional local mirrors (`repo-ref/`) or external tools, state the fallback explicitly in `SKILL.md`.
 
 ## Public distribution (recommended approach)
 
