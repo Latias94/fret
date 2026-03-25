@@ -2539,6 +2539,29 @@
       ]
     },
     {
+      "id": "ui-gallery-ai-persona-custom-visual-slot",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-persona-custom-visual-slot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [
+        "ai-elements",
+        "custom-visual",
+        "docs",
+        "persona",
+        "smoke",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev` so AI pages are wired.",
+        "Navigates to the Persona docs page, scrolls to the Custom Visual Slot section, and verifies the custom center content anchor."
+      ]
+    },
+    {
       "id": "ui-gallery-ai-plan-demo-toggle",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-plan-demo-toggle.json",
       "required_capabilities": [],

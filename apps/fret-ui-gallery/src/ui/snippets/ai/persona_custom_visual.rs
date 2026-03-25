@@ -11,22 +11,22 @@ use fret_ui_kit::{LayoutRefinement, Space};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(move |cx| {
-        vec![
-            ui_ai::Persona::new(ui_ai::PersonaState::Speaking)
-                .variant(ui_ai::PersonaVariant::Command)
-                .size(Px(112.0))
-                .show_label(true)
-                .children([ui::v_flex(move |cx| {
-                    vec![
-                        decl_icon::icon(cx, IconId::new_static("lucide.bot")),
-                        cx.text("Command"),
-                    ]
-                })
-                .gap(Space::N1)
-                .items_center()
-                .into_element(cx)])
-                .into_element(cx),
-        ]
+        vec![ui_ai::Persona::new(ui_ai::PersonaState::Speaking)
+            .variant(ui_ai::PersonaVariant::Command)
+            .size(Px(112.0))
+            .show_label(true)
+            .test_id("ui-ai-persona-custom-visual-root")
+            .children([ui::v_flex(move |cx| {
+                vec![
+                    decl_icon::icon(cx, IconId::new_static("lucide.bot")),
+                    cx.text("Command"),
+                ]
+            })
+            .gap(Space::N1)
+            .items_center()
+            .test_id("ui-ai-persona-custom-visual-center")
+            .into_element(cx)])
+            .into_element(cx)]
     })
     .gap(Space::N4)
     .items_center()
