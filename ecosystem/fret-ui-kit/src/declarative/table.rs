@@ -5497,8 +5497,6 @@ where
                                                                                                         Length::Fill;
                                                                                                     layout.size.height =
                                                                                                         Length::Fill;
-                                                                                                    layout.overflow =
-                                                                                                        Overflow::Clip;
                                                                                                     layout
                                                                                                 },
                                                                                                 ..Default::default()

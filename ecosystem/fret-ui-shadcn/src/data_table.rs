@@ -765,7 +765,7 @@ impl DataTable {
                             FlexProps {
                                 layout: decl_style::layout_style(
                                     &theme,
-                                    LayoutRefinement::default().w_full().h_full(),
+                                    LayoutRefinement::default().w_full(),
                                 ),
                                 direction: Axis::Horizontal,
                                 gap: Px(8.0).into(),
@@ -790,13 +790,12 @@ impl DataTable {
                                                     shrink: 1.0,
                                                     ..Default::default()
                                                 },
-                                                overflow: Overflow::Clip,
                                                 ..Default::default()
                                             },
                                             ..Default::default()
                                         },
                                         move |cx| {
-                                            let mut text = ui::label( label.clone())
+                                            let mut text = ui::label(label.clone())
                                                 .text_size_px(style.size)
                                                 .font_weight(style.weight)
                                                 .text_color(ColorRef::Color(header_fg))
@@ -880,7 +879,7 @@ impl DataTable {
                         FlexProps {
                             layout: decl_style::layout_style(
                                 &theme,
-                                LayoutRefinement::default().w_full().h_full(),
+                                LayoutRefinement::default().w_full(),
                             ),
                             direction: Axis::Horizontal,
                             gap: Px(4.0).into(),
@@ -894,7 +893,7 @@ impl DataTable {
                                 FlexProps {
                                     layout: decl_style::layout_style(
                                         &theme,
-                                        LayoutRefinement::default().min_w_0().h_full().flex_1(),
+                                        LayoutRefinement::default().min_w_0().flex_1(),
                                     ),
                                     direction: Axis::Horizontal,
                                     gap: Px(8.0).into(),
@@ -924,13 +923,12 @@ impl DataTable {
                                                             shrink: 1.0,
                                                             ..Default::default()
                                                         },
-                                                        overflow: Overflow::Clip,
                                                         ..Default::default()
                                                     },
                                                     ..Default::default()
                                                 },
                                                 move |cx| {
-                                                    let mut text = ui::label( label.clone())
+                                                    let mut text = ui::label(label.clone())
                                                         .text_size_px(style.size)
                                                         .font_weight(style.weight)
                                                         .text_color(ColorRef::Color(header_fg))
