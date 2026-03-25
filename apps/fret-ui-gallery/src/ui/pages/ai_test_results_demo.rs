@@ -12,7 +12,7 @@ fn status_colors_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ["passed", "Green", "Test succeeded"],
             ["failed", "Red", "Test failed"],
             ["skipped", "Yellow", "Test skipped"],
-            ["running", "Blue", "Test in progress"],
+            ["running", "Blue (animated)", "Test in progress"],
         ],
         false,
     )
@@ -25,8 +25,8 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         [
             [
                 "TestResults",
-                "summary",
-                "Root surface; summary-driven parts can read from the root provider.",
+                "summary | into_element_with_children(...)",
+                "Root surface; use the closure-based lane when summary-driven child parts read from root context.",
             ],
             [
                 "TestResultsHeader",
@@ -35,18 +35,18 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "TestResultsSummary",
-                "summary | from_context()",
-                "Renders pass/fail/skip badges.",
+                "summary | from_context() | children(...)",
+                "Renders pass/fail/skip badges, or a custom summary row.",
             ],
             [
                 "TestResultsDuration",
-                "summary | from_context()",
-                "Renders formatted duration when present.",
+                "summary | from_context() | children(...)",
+                "Renders formatted duration when present, or custom duration content.",
             ],
             [
                 "TestResultsProgress",
-                "summary | from_context()",
-                "Progress bar + pass ratio labels.",
+                "summary | from_context() | children(...)",
+                "Progress bar + pass ratio labels, or a custom progress body.",
             ],
             [
                 "TestResultsContent",
@@ -65,18 +65,38 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ],
             [
                 "TestSuiteStats",
-                "passed, failed, skipped",
-                "Optional trailing stats helper for custom suite rows.",
+                "passed, failed, skipped | children(...)",
+                "Optional trailing stats helper, or a custom trailing suite summary.",
+            ],
+            [
+                "TestSuiteContent",
+                "children",
+                "Collapsible content wrapper with dividers between test rows.",
             ],
             [
                 "Test",
-                "name, status, duration_ms, details, on_activate",
-                "Row surface with optional error details and activation seam.",
+                "name, status, duration_ms, details, on_activate | into_element_with_children(...)",
+                "Row surface with optional custom content, error details, and activation seam.",
             ],
             [
                 "TestStatus / TestName / TestDuration",
-                "new(...) | from_context()",
+                "new(...) | from_context() | children(...)",
                 "Composable row parts for custom `Test::children(...)` layouts.",
+            ],
+            [
+                "TestError",
+                "children",
+                "Error panel wrapper for message + optional stack trace content.",
+            ],
+            [
+                "TestErrorMessage",
+                "new(text)",
+                "Primary failed-test copy block.",
+            ],
+            [
+                "TestErrorStack",
+                "new(text) | max_height(...)",
+                "Scrollable monospace stack trace body.",
             ],
         ],
         false,
@@ -84,7 +104,7 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 }
 
 pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
-    let overview = snippets::test_results_demo::render(cx);
+    let usage = snippets::test_results_demo::render(cx);
     let features = crate::ui::doc_layout::notes_block([
         "Summary statistics (passed/failed/skipped)",
         "Progress bar visualization",
@@ -97,10 +117,17 @@ pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
     let basic = snippets::test_results_basic::render(cx);
     let suites = snippets::test_results_suites::render(cx);
     let errors = snippets::test_results_errors::render(cx);
+    let composable = snippets::test_results_composable::render(cx);
     let props = parts_props_table(cx);
-    let overview_section = DocSection::build(cx, "Overview", overview)
-        .description("Rust/Fret analogue of the official AI Elements all-in-one preview.")
-        .test_id_prefix("ui-gallery-ai-test-results-overview")
+    let notes = crate::ui::doc_layout::notes_block([
+        "Mechanism health looks good after the audit: the existing toggle diag covers the interaction path, and the remaining mismatch was a `fret-ui-ai` public-surface/docs-teaching gap rather than a `crates/fret-ui` runtime contract bug.",
+        "This pass closes the biggest upstream drift by adding `children(...)` overrides to the summary, duration, progress, suite stats, and test leaf parts, so custom composition can stay compound-first instead of rebuilding the whole card.",
+        "Fret keeps one intentional divergence: `Test::on_activate(...)` remains an explicit app-owned effect seam for editor-style \"open failing test output\" flows.",
+        "This detail page is feature-gated behind `gallery-dev`, which also enables the wider `fret-ui-ai` surfaces in UI Gallery.",
+    ]);
+    let usage_section = DocSection::build(cx, "Usage", usage)
+        .description("Rust/Fret analogue of the official AI Elements full Test Results preview.")
+        .test_id_prefix("ui-gallery-ai-test-results-usage")
         .code_rust_from_file_region(snippets::test_results_demo::SOURCE, "example");
     let features_section = DocSection::build(cx, "Features", features).no_shell();
     let status_colors_section = DocSection::build(cx, "Status Colors", status_colors).no_shell();
@@ -118,20 +145,35 @@ pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         )
         .test_id_prefix("ui-gallery-ai-test-results-errors")
         .code_rust_from_file_region(snippets::test_results_errors::SOURCE, "example");
-    let props_section = DocSection::build(cx, "Parts & Props", props).no_shell();
+    let composable_section = DocSection::build(cx, "Composable Children", composable)
+        .description(
+            "Fret-specific custom composition lane: override only the leaf content you need while keeping the shared Test Results chrome and context wiring.",
+        )
+        .test_id_prefix("ui-gallery-ai-test-results-composable")
+        .code_rust_from_file_region(snippets::test_results_composable::SOURCE, "example");
+    let props_section = DocSection::build(cx, "Props", props)
+        .description(
+            "Official props-table coverage translated into Rust builder APIs and compound parts.",
+        )
+        .no_shell();
+    let notes_section = DocSection::build(cx, "Notes", notes)
+        .description("Parity findings, ownership, and the remaining Fret-specific seam.")
+        .no_shell();
 
     let body = doc_layout::render_doc_page_after(
         Some(
             "The TestResults component displays test suite results including summary statistics, progress, individual tests, and error details.",
         ),
         vec![
-            overview_section,
+            usage_section,
             features_section,
             status_colors_section,
             basic_section,
             suites_section,
             errors_section,
+            composable_section,
             props_section,
+            notes_section,
         ],
         cx,
     );

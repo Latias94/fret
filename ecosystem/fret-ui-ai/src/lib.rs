@@ -162,7 +162,7 @@ pub use elements::{
     TestError, TestErrorMessage, TestErrorStack, TestName, TestResults, TestResultsContent,
     TestResultsDuration, TestResultsHeader, TestResultsProgress, TestResultsSummary,
     TestResultsSummaryData, TestStatus, TestStatusKind, TestSuite, TestSuiteContent, TestSuiteName,
-    Tool, ToolCallBlock, ToolChild, ToolContent, ToolHeader, ToolInput, ToolOutput,
+    TestSuiteStats, Tool, ToolCallBlock, ToolChild, ToolContent, ToolHeader, ToolInput, ToolOutput,
     ToolSectionTitle, ToolStatus, ToolUiPartApproval, ToolUiPartState, Transcription,
     TranscriptionController, TranscriptionSegment, TranscriptionSegmentData, VoiceSelector,
     VoiceSelectorAccent, VoiceSelectorAge, VoiceSelectorAttributes, VoiceSelectorBullet,

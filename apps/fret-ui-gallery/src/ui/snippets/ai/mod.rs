@@ -89,6 +89,7 @@ pub mod suggestions_demo;
 pub mod task_demo;
 pub mod terminal_demo;
 pub mod test_results_basic;
+pub mod test_results_composable;
 pub mod test_results_demo;
 pub mod test_results_errors;
 pub mod test_results_suites;
@@ -124,13 +125,13 @@ pub mod file_tree_expanded;
 #[cfg(feature = "gallery-dev")]
 pub mod file_tree_large;
 #[cfg(feature = "gallery-dev")]
+pub mod file_tree_selection;
+#[cfg(feature = "gallery-dev")]
 pub mod image_demo;
 #[cfg(feature = "gallery-dev")]
 pub mod inline_citation_demo;
 #[cfg(feature = "gallery-dev")]
 pub mod message_branch_demo;
-#[cfg(feature = "gallery-dev")]
-pub mod file_tree_selection;
 #[cfg(feature = "gallery-dev")]
 pub mod mic_selector_demo;
 #[cfg(feature = "gallery-dev")]

@@ -21,11 +21,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .content(ui_ai::TestSuiteContent::new([
             ui_ai::Test::new("should fetch data", ui_ai::TestStatusKind::Passed)
                 .duration_ms(45)
-                .children(test_parts(cx))
-                .into_element(cx),
+                .into_element_with_children(cx, test_parts),
             ui_ai::Test::new("should update", ui_ai::TestStatusKind::Failed)
                 .duration_ms(85)
-                .children(test_parts(cx))
                 .details([
                     ui_ai::TestError::new([
                         ui_ai::TestErrorMessage::new("Expected 200, got 500").into_element(cx),
@@ -36,20 +34,21 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ])
                     .into_element(cx),
                 ])
-                .into_element(cx),
+                .into_element_with_children(cx, test_parts),
         ]))
     .default_open(true)
     .into_element(cx);
 
     ui_ai::TestResults::new()
         .summary(summary)
-        .children([
-            ui_ai::TestResultsHeader::new([
-                ui_ai::TestResultsSummary::from_context().into_element(cx)
-            ])
-            .into_element(cx),
-            ui_ai::TestResultsContent::new([suite]).into_element(cx),
-        ])
-        .into_element(cx)
+        .into_element_with_children(cx, |cx| {
+            vec![
+                ui_ai::TestResultsHeader::new([
+                    ui_ai::TestResultsSummary::from_context().into_element(cx)
+                ])
+                .into_element(cx),
+                ui_ai::TestResultsContent::new([suite]).into_element(cx),
+            ]
+        })
 }
 // endregion: example

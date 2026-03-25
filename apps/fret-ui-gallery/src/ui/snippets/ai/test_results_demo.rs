@@ -50,22 +50,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ui_ai::TestStatusKind::Passed,
                 )
                 .duration_ms(45)
-                .children(test_parts(cx))
-                .into_element(cx),
+                .into_element_with_children(cx, test_parts),
                 ui_ai::Test::new(
                     "should reject invalid password",
                     ui_ai::TestStatusKind::Passed,
                 )
                 .duration_ms(32)
-                .children(test_parts(cx))
-                .into_element(cx),
+                .into_element_with_children(cx, test_parts),
                 ui_ai::Test::new(
                     "should handle expired tokens",
                     ui_ai::TestStatusKind::Passed,
                 )
                 .duration_ms(28)
-                .children(test_parts(cx))
-                .into_element(cx),
+                .into_element_with_children(cx, test_parts),
             ])
             .test_id("ui-ai-test-suite-1-content"),
         )
@@ -77,14 +74,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .content(ui_ai::TestSuiteContent::new([
             ui_ai::Test::new("should create new user", ui_ai::TestStatusKind::Passed)
                 .duration_ms(120)
-                .children(test_parts(cx))
-                .into_element(cx),
+                .into_element_with_children(cx, test_parts),
             ui_ai::Test::new(
                 "should update user profile",
                 ui_ai::TestStatusKind::Failed,
             )
             .duration_ms(85)
-            .children(test_parts(cx))
             .details([
                 ui_ai::TestError::new([
                     ui_ai::TestErrorMessage::new("Expected status 200 but received 500")
@@ -96,10 +91,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ])
                 .into_element(cx),
             ])
-            .into_element(cx),
+            .into_element_with_children(cx, test_parts),
             ui_ai::Test::new("should delete user", ui_ai::TestStatusKind::Skipped)
-                .children(test_parts(cx))
-                .into_element(cx),
+                .into_element_with_children(cx, test_parts),
         ]))
     .default_open(true)
     .into_element(cx);
@@ -110,20 +104,18 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ui_ai::TestSuiteContent::new([
                 ui_ai::Test::new("should connect to database", ui_ai::TestStatusKind::Passed)
                     .duration_ms(200)
-                    .children(test_parts(cx))
-                    .into_element(cx),
+                    .into_element_with_children(cx, test_parts),
                 ui_ai::Test::new(
                     "should handle connection timeout",
                     ui_ai::TestStatusKind::Failed,
                 )
                 .duration_ms(5000)
-                .children(test_parts(cx))
                 .details([ui_ai::TestError::new([ui_ai::TestErrorMessage::new(
                     "Connection timed out after 5000ms",
                 )
                 .into_element(cx)])
                 .into_element(cx)])
-                .into_element(cx),
+                .into_element_with_children(cx, test_parts),
             ])
             .test_id("ui-ai-test-suite-database-content"),
         )
@@ -134,16 +126,17 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     ui_ai::TestResults::new()
         .summary(summary)
-        .children([
-            ui_ai::TestResultsHeader::new([
-                ui_ai::TestResultsSummary::from_context().into_element(cx),
-                ui_ai::TestResultsDuration::from_context().into_element(cx),
-            ])
-            .into_element(cx),
-            progress_section(cx).into_element(cx),
-            content,
-        ])
         .test_id_root("ui-ai-test-results-root")
-        .into_element(cx)
+        .into_element_with_children(cx, |cx| {
+            vec![
+                ui_ai::TestResultsHeader::new([
+                    ui_ai::TestResultsSummary::from_context().into_element(cx),
+                    ui_ai::TestResultsDuration::from_context().into_element(cx),
+                ])
+                .into_element(cx),
+                progress_section(cx).into_element(cx),
+                content,
+            ]
+        })
 }
 // endregion: example
