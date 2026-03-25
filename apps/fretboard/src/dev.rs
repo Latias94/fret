@@ -1132,6 +1132,15 @@ fn is_hotpatch_ready_native_demo(name: &str) -> bool {
     matches!(name, "todo_demo" | "assets_demo" | "hotpatch_smoke_demo")
 }
 
+fn configure_trunk_web_command(cmd: &mut Command, web_dir: &Path, port: Option<u16>) {
+    cmd.current_dir(web_dir).args(["serve", "--no-color"]);
+    cmd.env_remove("NO_COLOR");
+
+    if let Some(port) = port {
+        cmd.args(["--port", &port.to_string()]);
+    }
+}
+
 pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
     let mut port: Option<u16> = None;
     let mut demo: Option<String> = None;
@@ -1227,10 +1236,7 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
     eprintln!("Starting Trunk dev server in `{}`", display_path(&web_dir));
 
     let mut cmd = Command::new("trunk");
-    cmd.current_dir(&web_dir).args(["serve"]);
-    if let Some(port) = port {
-        cmd.args(["--port", &port.to_string()]);
-    }
+    configure_trunk_web_command(&mut cmd, &web_dir, port);
 
     let mut child = cmd.spawn().map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
@@ -1557,4 +1563,32 @@ fn parse_ws_endpoint_addr(ws: &str) -> Result<(String, u16), String> {
         .map_err(|e| format!("invalid ws endpoint `{ws}` (invalid port `{port_raw}`): {e}"))?;
 
     Ok((host.to_string(), port))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::OsStr;
+
+    #[test]
+    fn configure_trunk_web_command_removes_no_color_and_sets_flag() {
+        let web_dir = Path::new("/tmp/fret-demo-web");
+        let mut cmd = Command::new("trunk");
+        cmd.env("NO_COLOR", "1");
+
+        configure_trunk_web_command(&mut cmd, web_dir, Some(9001));
+
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(cmd.get_current_dir(), Some(web_dir));
+        assert_eq!(args, vec!["serve", "--no-color", "--port", "9001"]);
+
+        let no_color = cmd
+            .get_envs()
+            .find(|(key, _)| *key == OsStr::new("NO_COLOR"))
+            .expect("NO_COLOR should be explicitly removed for trunk");
+        assert!(no_color.1.is_none());
+    }
 }
