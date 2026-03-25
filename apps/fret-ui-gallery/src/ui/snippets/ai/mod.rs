@@ -84,6 +84,7 @@ pub mod snippet_plain;
 pub mod stack_trace_collapsed;
 pub mod stack_trace_demo;
 pub mod stack_trace_no_internal;
+pub mod stack_trace_usage;
 pub mod suggestions_demo;
 pub mod task_demo;
 pub mod terminal_demo;

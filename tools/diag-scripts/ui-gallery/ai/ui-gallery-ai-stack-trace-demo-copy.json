@@ -34,6 +34,15 @@
       "timeout_frames": 240
     },
     {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-ai-stack-trace-root" },
+      "delta_y": -180.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",

@@ -645,7 +645,7 @@ impl StackTraceErrorType {
         let text = self
             .text
             .or_else(|| context.and_then(|ctx| ctx.parsed.error_type))
-            .unwrap_or_else(|| Arc::<str>::from("Error"));
+            .unwrap_or_default();
 
         let text_px = theme
             .metric_by_key("fret.ai.stack_trace.header.text_px")
@@ -1642,5 +1642,21 @@ mod tests {
         assert!(has_test_id(&element, "stack-frames"));
         assert!(find_text_by_content(&element, "TypeError").is_some());
         assert!(find_text_by_content(&element, "Boom").is_some());
+    }
+
+    #[test]
+    fn stack_trace_error_type_stays_empty_when_trace_has_no_type_prefix() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                StackTrace::new("Something went wrong\nat foo (/a/b/c.js:10:20)")
+                    .into_element_with_children(cx, |cx| {
+                        vec![StackTraceErrorType::default().into_element(cx)]
+                    })
+            });
+
+        assert!(find_text_by_content(&element, "Error").is_none());
     }
 }
