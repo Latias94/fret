@@ -45,12 +45,15 @@ pub(super) fn preview_ai_package_info_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
                     "custom_children",
                 ),
             DocSection::build(cx, "Features", features)
+                .test_id_prefix("ui-gallery-ai-package-info-features")
                 .description("High-signal parity notes against the official AI Elements docs surface.")
                 .no_shell(),
             DocSection::build(cx, "Change Types", change_types)
+                .test_id_prefix("ui-gallery-ai-package-info-change-types")
                 .description("Color intent and use cases carried over from the upstream docs.")
                 .no_shell(),
             DocSection::build(cx, "Builder Surface", builder_surface)
+                .test_id_prefix("ui-gallery-ai-package-info-builder-surface")
                 .description("Current Fret authoring surface for the `PackageInfo*` family.")
                 .no_shell(),
             DocSection::build(cx, "Notes", notes)
