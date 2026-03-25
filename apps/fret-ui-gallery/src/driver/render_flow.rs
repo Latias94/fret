@@ -2471,6 +2471,7 @@ mod tests {
 
         for target in [
             "ui-gallery-command-behavior-demos-title",
+            "ui-gallery-command-composable-shell-title",
             "ui-gallery-command-loading-title",
             "ui-gallery-command-action-first-view-runtime-title",
         ] {

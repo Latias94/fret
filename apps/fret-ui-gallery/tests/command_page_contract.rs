@@ -23,9 +23,15 @@ fn command_page_records_shell_vs_cmdk_split_children_contract() {
     let source = read("src/ui/pages/command.rs");
     assert!(
         source.contains(
-            "`CommandInput` / `CommandList` stay available for shell-level composition and legacy roving lists, but they do not share the cmdk query + active-descendant state machine."
+            "`CommandInput` / `CommandList` stay available for lower-level shell composition and legacy roving lists, but they do not share the cmdk query + active-descendant state machine."
         ),
         "src/ui/pages/command.rs should keep the lower-level shell status of CommandInput/CommandList explicit"
+    );
+    assert!(
+        source.contains(
+            "`Composable Shell (Fret)` shows the current explicit manual lane: share a query model between `CommandInput` and `CommandList` when you need a custom shell, but keep cmdk-style active-descendant, committed selection, and dialog lifecycle on `CommandPalette` / `CommandDialog`."
+        ),
+        "src/ui/pages/command.rs should explain the current explicit manual shell lane for Command"
     );
     assert!(
         source.contains(

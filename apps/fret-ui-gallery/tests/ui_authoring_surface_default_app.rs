@@ -3491,6 +3491,7 @@ fn command_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/command/action_first_view.rs",
             "src/ui/snippets/command/basic.rs",
             "src/ui/snippets/command/docs_demo.rs",
+            "src/ui/snippets/command/composable_shell.rs",
             "src/ui/snippets/command/groups.rs",
             "src/ui/snippets/command/loading.rs",
             "src/ui/snippets/command/rtl.rs",
@@ -3506,9 +3507,40 @@ fn command_snippets_prefer_ui_cx_on_the_default_app_surface() {
     );
 
     assert_sources_absent("src/ui/snippets/command", &["pub fn render<H: UiHost>("]);
-    assert_sources_absent(
-        "src/ui/snippets/command",
-        &["CommandInput::new(", "CommandList::new("],
+    for relative_path in [
+        "src/ui/snippets/command/action_first_view.rs",
+        "src/ui/snippets/command/basic.rs",
+        "src/ui/snippets/command/docs_demo.rs",
+        "src/ui/snippets/command/groups.rs",
+        "src/ui/snippets/command/loading.rs",
+        "src/ui/snippets/command/rtl.rs",
+        "src/ui/snippets/command/scrollable.rs",
+        "src/ui/snippets/command/shortcuts.rs",
+        "src/ui/snippets/command/usage.rs",
+    ] {
+        let normalized = read(relative_path).replace(char::is_whitespace, "");
+        assert!(
+            !normalized.contains("CommandInput::new(") && !normalized.contains("CommandList::new("),
+            "{relative_path} should stay on the default CommandPalette lane instead of the manual shell parts lane"
+        );
+    }
+}
+
+#[test]
+fn command_composable_shell_snippet_keeps_manual_parts_lane_explicit() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/command/composable_shell.rs",
+        &[
+            "shadcn::Command::new(vec![",
+            "shadcn::CommandInput::new(query.clone())",
+            "shadcn::CommandList::new_entries(entries)",
+            ".query_model(query.clone())",
+            ".highlight_query_model(query.clone())",
+        ],
+    );
+    assert!(
+        normalized.contains(".test_id(\"ui-gallery-command-composable-shell\")"),
+        "src/ui/snippets/command/composable_shell.rs should keep a stable root test_id for the manual shell lane"
     );
 }
 
@@ -3524,6 +3556,7 @@ fn command_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Groups\", groups_palette)",
             "DocSection::build(cx, \"Scrollable\", scrollable_palette)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Composable Shell (Fret)\", composable_shell)",
             "DocSection::build(cx, \"Loading\", loading_palette)",
             "DocSection::build(cx, \"Action-first (View runtime)\", action_first_view_runtime)",
             "DocSection::build(cx, \"Notes\", notes_stack)",
@@ -3536,6 +3569,7 @@ fn command_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Groups\", groups_palette)",
             "DocSection::new(\"Scrollable\", scrollable_palette)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Composable Shell (Fret)\", composable_shell)",
             "DocSection::new(\"Loading\", loading_palette)",
             "preview_command_palette(cx, last_action)",
         ],

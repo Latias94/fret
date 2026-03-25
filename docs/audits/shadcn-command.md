@@ -143,6 +143,10 @@ Key upstream semantics:
   (`Demo`, `About`, `Usage`, `Basic`, `Shortcuts`, `Groups`, `Scrollable`, `RTL`, `API Reference`)
   before Fret-only `Loading` / `Action-first` follow-ups; the default copyable `Usage` lane stays
   explicit about the root-story divergence (`CommandPalette` instead of literal split children).
+- Manual shell lane: UI Gallery now also exposes an explicit `Composable Shell (Fret)` follow-up
+  that demonstrates the current lower-level `Command` + `CommandInput` + `CommandList` split lane
+  with a shared query model for filtering/highlighting, while keeping the page explicit that this is
+  not yet a full cmdk-equivalent shared-context API.
 - Source axes: the Gallery page now states explicitly that the lead `Demo` follows the public docs
   example surface, while recipe-owned chrome/defaults stay aligned and tested against the registry
   source separately. This avoids conflating docs-example width caps with sink/demo-local registry

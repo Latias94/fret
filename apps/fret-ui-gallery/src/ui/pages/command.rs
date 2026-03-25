@@ -8,6 +8,7 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let usage_palette = snippets::usage::render(cx);
     let docs_demo_palette = snippets::docs_demo::render(cx);
     let basic_dialog = snippets::basic::render(cx);
+    let composable_shell = snippets::composable_shell::render(cx);
     let shortcuts_section = snippets::shortcuts::render(cx);
     let action_first_view_runtime = snippets::action_first_view::render(cx);
     let behavior_demos = snippets::behavior_demos::render(cx);
@@ -19,18 +20,21 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "shadcn's `Command` is built on `cmdk`: focus stays in the input while the active row is exposed through active-descendant semantics.",
         "Use `CommandPalette` for embedded filtering/search surfaces, and `CommandDialog` for global discovery overlays such as Ctrl/Cmd+P.",
         "Filtering and ranking use the visible label plus optional `value` and `keywords`, so cmdk-style fuzzy matching stays available without depending on DOM internals.",
+        "Base UI's command-palette example also treats this space as an autocomplete + dialog composition problem, which reinforces that the remaining gap here is public-surface teaching, not a missing overlay/runtime mechanism.",
     ]);
     let api_reference = doc_layout::notes_block([
-        "`command(...)` is the direct visual shell helper. `CommandInput` / `CommandList` stay available for shell-level composition and legacy roving lists, but they do not share the cmdk query + active-descendant state machine.",
+        "`command(...)` is the direct visual shell helper. `CommandInput` / `CommandList` stay available for lower-level shell composition and legacy roving lists, but they do not share the cmdk query + active-descendant state machine.",
         "`CommandPalette::new(query, items)` and `.entries(...)` therefore remain the default embedded interactive lane for first-party Fret code when the goal is cmdk-aligned behavior rather than a custom shell.",
         "`CommandDialog::new(open, query, items)` wraps that palette with dialog lifecycle, close-on-select behavior, and open-change reason hooks for global command menus.",
         "`CommandItem` owns row-level affordances such as `leading_icon(...)`, `shortcut(...)`, `keywords(...)`, `checkmark(...)`, `force_mount(...)`, and `children(...)`.",
+        "`Composable Shell (Fret)` shows the current explicit manual lane: share a query model between `CommandInput` and `CommandList` when you need a custom shell, but keep cmdk-style active-descendant, committed selection, and dialog lifecycle on `CommandPalette` / `CommandDialog`.",
         "A fully composable split `Command` + `CommandInput` + `CommandList` children API is still deferred: upstream cmdk composes those parts through shared internal state, so promoting the same shape in Fret would first require an explicit shared context contract for query, active row, and selection rather than ad-hoc glue.",
     ]);
 
     let notes_stack = doc_layout::notes_block([
         "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
         "`command(...)` / `CommandPalette` remain the default recipe root story; split `CommandInput` / `CommandList` / `CommandItem` authoring stays out of the default surface until a shared context contract is explicitly introduced.",
+        "No new runtime/mechanism bug was identified in this pass: Base UI and cmdk both support the conclusion that the remaining drift is teaching-surface ergonomics, not missing dialog/focus/dismiss infrastructure.",
         "Attach either `on_select`, `on_select_action`, or `on_select_value_action` for every interactive item; otherwise entries are treated as disabled.",
         "Mirror docs order even when APIs differ so parity gaps stay explicit and testable. For Command, root chrome is recipe-owned while width caps such as `max-w-sm` remain caller-owned.",
         "For long command catalogs, constrain list height via `refine_scroll_layout` to keep dialog geometry stable.",
@@ -45,6 +49,13 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .test_id_prefix("ui-gallery-command-api-reference")
         .description("Authoring lanes, ownership notes, and the current children-API decision.");
+    let composable_shell = DocSection::build(cx, "Composable Shell (Fret)", composable_shell)
+        .test_id_prefix("ui-gallery-command-composable-shell")
+        .descriptions([
+            "Explicit lower-level `Command` + `CommandInput` + `CommandList` composition for custom shells.",
+            "This shared-query shell can filter and highlight rows, but it is intentionally not promoted as a cmdk-equivalent children API: active-descendant, active-row state, and dialog lifecycle still belong to `CommandPalette` / `CommandDialog`.",
+        ])
+        .code_rust_from_file_region(snippets::composable_shell::SOURCE, "example");
     let docs_demo = DocSection::build(cx, "Demo", docs_demo_palette)
         .test_id_prefix("ui-gallery-command-docs-demo")
         .descriptions([
@@ -102,7 +113,7 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Command docs order after skipping `Installation`: Demo, About, Usage, Basic, Shortcuts, Groups, Scrollable, RTL, API Reference. Fret-specific Behavior Demos, Loading, and Action-first sections stay explicit follow-ups.",
+            "Preview follows shadcn Command docs order after skipping `Installation`: Demo, About, Usage, Basic, Shortcuts, Groups, Scrollable, RTL, API Reference. Fret-specific Composable Shell, Behavior Demos, Loading, and Action-first sections stay explicit follow-ups.",
         ),
         vec![
             docs_demo,
@@ -114,6 +125,7 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             scrollable,
             rtl,
             api_reference,
+            composable_shell,
             behavior_demos,
             loading,
             action_first_view_runtime,
