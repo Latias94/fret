@@ -19,31 +19,30 @@ pub(super) fn preview_accordion(
     let card = snippets::card::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes_block([
-        "Gallery sections mirror shadcn Accordion docs directly: Demo, Usage, Basic, Multiple, Disabled, Borders, Card, RTL.",
-        "API reference: `ecosystem/fret-ui-shadcn/src/accordion.rs`.",
-        "`accordion_single_uncontrolled(cx, default, |cx| ..)` and `accordion_multiple_uncontrolled(cx, default, |cx| ..)` are the default first-party helpers; the `Usage` section keeps the composable Radix-shaped surface as the explicit advanced seam.",
-        "Measured-height motion and roving focus behavior are framework-owned; these gallery sections focus on the public authoring surface and recipe outcomes.",
+    let api_reference = doc_layout::notes_block([
+        "`accordion_single_uncontrolled(cx, default, |cx| ..)` and `accordion_multiple_uncontrolled(cx, default, |cx| ..)` stay the terse builder helpers for the upstream Demo/Basic/Multiple lanes.",
+        "`AccordionRoot`, `AccordionItemPart`, `AccordionTriggerPart`, and `AccordionContentPart` now provide the curated composable lane on the facade, so the copyable `Usage` section no longer needs the raw `shadcn::raw::accordion::composable` escape hatch.",
+        "Measured-height motion, roving focus, and the trigger/content accessibility relationships remain primitive-owned; caller-owned width, card shells, and bordered wrappers stay explicit page-level composition.",
+        "The raw composable module still exists for source-alignment work, but first-party docs should prefer the curated facade aliases unless they are intentionally documenting a lower-level seam.",
     ]);
-    let notes = DocSection::build(cx, "Notes", notes)
-        .test_id_prefix("ui-gallery-accordion-notes")
-        .description("Parity notes and references.");
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-accordion-api-reference")
+        .description("Public surface summary and ownership notes.");
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("Upstream shadcn AccordionDemo structure.")
+        .description("Official shadcn `AccordionDemo` structure.")
         .test_id_prefix("ui-gallery-accordion-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Composable Radix-shaped usage for parity-heavy or slot-level composition.")
+        .description("Copyable curated composable usage on the shadcn facade via `AccordionRoot` and the part aliases.")
         .test_id_prefix("ui-gallery-accordion-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let basic = DocSection::build(cx, "Basic", basic)
-        .description("A basic accordion using the builder-preserving single-open helper.")
+        .description("Basic single-open accordion with the first item expanded by default.")
         .test_id_prefix("ui-gallery-accordion-basic")
         .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let multiple = DocSection::build(cx, "Multiple", multiple)
-        .description(
-            "Use the builder-preserving multi-open helper when several items may stay open.",
-        )
+        .description("Use `accordion_multiple_uncontrolled` when multiple items may stay open.")
         .test_id_prefix("ui-gallery-accordion-multiple")
         .code_rust_from_file_region(snippets::multiple::SOURCE, "example");
     let disabled = DocSection::build(cx, "Disabled", disabled)
@@ -66,10 +65,18 @@ pub(super) fn preview_accordion(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "A vertically stacked set of interactive headings that each reveal a section of content.",
+            "Preview mirrors the shadcn Accordion docs path first: Demo, Usage, Basic, Multiple, Disabled, Borders, Card, RTL, and API Reference. The usage lane keeps the composable children-style surface copyable on the curated facade, while the builder helpers cover the compact docs examples.",
         ),
         vec![
-            demo, usage, basic, multiple, disabled, borders, card, rtl, notes,
+            demo,
+            usage,
+            basic,
+            multiple,
+            disabled,
+            borders,
+            card,
+            rtl,
+            api_reference,
         ],
     );
 

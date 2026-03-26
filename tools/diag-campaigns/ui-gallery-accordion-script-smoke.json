@@ -8,7 +8,7 @@
   "items": [
     {
       "kind": "script",
-      "value": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-basic-long-text-wraps.json"
+      "value": "tools/diag-scripts/ui-gallery-accordion-docs-smoke.json"
     }
   ],
   "owner": "diag",

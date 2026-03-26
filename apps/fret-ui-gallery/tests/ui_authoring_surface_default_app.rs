@@ -6025,7 +6025,7 @@ fn selected_card_snippets_prefer_card_wrapper_family() {
         "src/ui/snippets/motion_presets/preset_selector.rs",
         "src/ui/snippets/motion_presets/token_snapshot.rs",
         "src/ui/snippets/skeleton/card.rs",
-        "src/ui/snippets/accordion/extras.rs",
+        "src/ui/snippets/accordion/showcase.rs",
         "src/ui/snippets/collapsible/settings_panel.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
@@ -8139,7 +8139,7 @@ fn accordion_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/accordion/card.rs",
             "src/ui/snippets/accordion/demo.rs",
             "src/ui/snippets/accordion/disabled.rs",
-            "src/ui/snippets/accordion/extras.rs",
+            "src/ui/snippets/accordion/showcase.rs",
             "src/ui/snippets/accordion/multiple.rs",
             "src/ui/snippets/accordion/rtl.rs",
             "src/ui/snippets/accordion/usage.rs",
@@ -8185,7 +8185,7 @@ fn selected_accordion_snippets_prefer_builder_preserving_helpers() {
     }
 
     assert_selected_generic_helpers_prefer_into_ui_element(
-        "src/ui/snippets/accordion/extras.rs",
+        "src/ui/snippets/accordion/showcase.rs",
         &[
             "shadcn::accordion_single_uncontrolled(",
             "shadcn::accordion_multiple_uncontrolled(",
@@ -8201,8 +8201,11 @@ fn selected_accordion_snippets_prefer_builder_preserving_helpers() {
 fn accordion_usage_snippet_keeps_the_composable_advanced_seam() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/accordion/usage.rs",
-        &["acc::AccordionRoot::single_uncontrolled("],
-        &["shadcn::Accordion::single_uncontrolled("],
+        &["shadcn::AccordionRoot::single_uncontrolled("],
+        &[
+            "shadcn::Accordion::single_uncontrolled(",
+            "shadcn::raw::accordion::composable",
+        ],
     );
 }
 

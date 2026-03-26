@@ -2223,22 +2223,13 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-accordion-basic-long-text-wraps",
-      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-basic-long-text-wraps.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
+      "id": "ui-gallery-accordion-borders-card-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-borders-card-screenshots.json",
+      "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
-      "tags": [
-        "accordion",
-        "layout",
-        "shadcn",
-        "ui_gallery",
-        "wrap"
-      ],
+      "tags": [],
       "target_hints": []
     },
     {
@@ -2252,20 +2243,9 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-accordion-extras-borders-card-screenshots",
-      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-borders-card-screenshots.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-accordion-extras-multiple-compact-layout",
-      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-multiple-compact-layout.json",
+      "id": "ui-gallery-accordion-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-docs-smoke.json",
       "required_capabilities": [
-        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "suite_memberships": [
@@ -2273,21 +2253,10 @@
       ],
       "tags": [
         "accordion",
-        "extras",
-        "layout",
+        "docs-smoke",
         "shadcn",
-        "ui_gallery"
+        "ui-gallery"
       ],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-accordion-extras-rtl-trigger-non-overlap",
-      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-rtl-trigger-non-overlap.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [],
       "target_hints": []
     },
     {
@@ -2301,8 +2270,36 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-multiple-compact-layout",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-multiple-compact-layout.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "accordion",
+        "layout",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-accordion-returns-first-open-height",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-returns-first-open-height.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-accordion-rtl-trigger-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-rtl-trigger-non-overlap.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
@@ -2736,6 +2733,24 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-alert-dialog-destructive-inline-link-activate",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "alert_dialog",
+        "links",
+        "overlay",
+        "shadcn",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {

@@ -333,6 +333,40 @@ fn gallery_collapsible_usage_snippet_prefers_curated_parts_aliases() {
 }
 
 #[test]
+fn gallery_accordion_usage_snippet_prefers_curated_parts_aliases() {
+    let relative_path = "src/ui/snippets/accordion/usage.rs";
+    assert_curated_facade_only(&[relative_path]);
+
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    assert!(
+        source.contains("shadcn::AccordionRoot::single_uncontrolled("),
+        "{} should teach the curated accordion root alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::AccordionItemPart::new("),
+        "{} should teach the curated accordion item alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::AccordionTriggerPart::new("),
+        "{} should teach the curated accordion trigger alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::AccordionContentPart::new("),
+        "{} should teach the curated accordion content alias",
+        path.display()
+    );
+    assert!(
+        !source.contains("shadcn::raw::accordion::composable"),
+        "{} should not require the raw accordion composable escape hatch for the copyable usage lane",
+        path.display()
+    );
+}
+
+#[test]
 fn gallery_source_tree_limits_raw_shadcn_escape_hatches() {
     for path in gallery_rust_sources() {
         let source = read_path(&path);
