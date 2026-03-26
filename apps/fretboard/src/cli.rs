@@ -110,6 +110,8 @@ Examples:
   fretboard diag poke
   fretboard diag latest
   fretboard diag run tools/diag-scripts/todo-baseline.json --dir target/fret-diag-todo-auto --launch -- cargo run -p fret-demo --bin todo_demo
+  fretboard diag suite ui-gallery --launch -- cargo run -p fret-ui-gallery --release
+  fretboard diag repro ui-gallery --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag campaign list --lane smoke --tag ui-gallery --platform native
   fretboard dev native --hotpatch-devserver ws://127.0.0.1:8080/_dioxus
