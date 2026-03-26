@@ -1,6 +1,6 @@
 # Diag CLI First-party Migration v1
 
-Status: In progress
+Status: Closeout-ready
 Last updated: 2026-03-26
 
 Source lane:
@@ -24,6 +24,8 @@ current prewarm/prelude surface:
 - current maintainer workstream docs now teach the renamed `diag perf` flags instead of the deleted
   suite-prefixed prewarm/prelude spellings
 - historical logs were intentionally left unchanged in this slice
+- repo grep for deleted caller spellings now only returns historical logs or explicit warning notes
+  about deleted aliases
 
 ## Carries
 
@@ -55,3 +57,11 @@ Evidence anchors:
 - `docs/workstreams/diag-v2-hardening-and-switches-v1/todo.md`
 - `docs/workstreams/ui-perf-windows-rtx4090-smoothness-v1/ui-perf-windows-rtx4090-smoothness-v1.md`
 - `docs/workstreams/standalone/ui-perf-resize-path-v1.md`
+
+## Closeout decision
+
+This lane is closeout-ready.
+
+The repo-owned first-party callers that were still teaching deleted `diag perf` spellings have
+been migrated. Remaining deleted-syntax mentions are intentionally historical or explicitly
+documented as warnings not to use those aliases.
