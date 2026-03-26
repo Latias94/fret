@@ -2586,8 +2586,8 @@ mod tests {
     };
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
     use fret_core::{
-        AppWindowId, FrameId, Modifiers, MouseButton, NodeId, Point, PointerEvent, PointerType,
-        Px, Rect, Size, TextConstraints, TextMetrics,
+        AppWindowId, FrameId, Modifiers, MouseButton, NodeId, Point, PointerEvent, PointerType, Px,
+        Rect, Size, TextConstraints, TextMetrics,
     };
     use fret_runtime::{
         ActionId, CommandId, Effect, ModelStore, TimerToken, WindowPendingActionPayloadService,
@@ -3384,8 +3384,10 @@ mod tests {
                 });
 
                 vec![
-                    cx.container(fret_ui::element::ContainerProps::default(), |_cx| Vec::new())
-                        .into(),
+                    cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
+                        Vec::new()
+                    })
+                    .into(),
                 ]
             },
         );
@@ -3449,7 +3451,9 @@ mod tests {
                 vec![
                     fret_ui_shadcn::facade::Checkbox::new(checkbox_checked.clone())
                         .test_id("payload-checkbox")
-                        .action(<RuntimePayloadAppendAction as fret_runtime::TypedAction>::action_id())
+                        .action(
+                            <RuntimePayloadAppendAction as fret_runtime::TypedAction>::action_id(),
+                        )
                         .action_payload(41u64)
                         .into_element(cx),
                 ]

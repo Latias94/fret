@@ -7,9 +7,9 @@ use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::Theme;
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
-use fret_ui_kit::declarative::table::TableViewOutput;
-use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -350,11 +350,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     let model = cx.local_model_keyed("select_all_checked", || checked);
                     let _ = cx.app.models_mut().update(&model, |v| *v = checked);
 
-                    Some(vec![shadcn::Checkbox::new_optional(model)
-                        .a11y_label("Select all")
-                        .test_id("ui-gallery-data-table-basic-select-all")
-                        .action(act::ToggleAllPageRows)
-                        .into_element(cx)])
+                    Some(vec![
+                        shadcn::Checkbox::new_optional(model)
+                            .a11y_label("Select all")
+                            .test_id("ui-gallery-data-table-basic-select-all")
+                            .action(act::ToggleAllPageRows)
+                            .into_element(cx),
+                    ])
                 },
                 move |cx, col, row| match col.id.as_ref() {
                     "select" => {
