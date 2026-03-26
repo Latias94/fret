@@ -3655,6 +3655,7 @@ mod tests {
         );
     }
 
+    #[test]
     fn combobox_show_clear_renders_only_when_selected() {
         let window = AppWindowId::default();
         let mut app = App::new();

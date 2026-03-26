@@ -458,7 +458,6 @@ impl CommandShortcut {
 
 #[cfg(test)]
 mod command_shortcut_tests {
-    use super::*;
     use crate::shortcut_display::shortcut_needs_symbol_font;
 
     #[test]

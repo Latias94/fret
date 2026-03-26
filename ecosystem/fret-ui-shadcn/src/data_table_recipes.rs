@@ -1733,6 +1733,7 @@ impl DataTablePagination {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::data_table_controls::apply_column_visibility_change;
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     enum PageSizeAction {

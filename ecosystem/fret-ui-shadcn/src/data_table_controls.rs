@@ -20,7 +20,7 @@ pub(crate) fn is_column_visible(state: &TableState, id: &ColumnId) -> bool {
     state.column_visibility.get(id).copied().unwrap_or(true)
 }
 
-fn apply_column_visibility_change(
+pub(crate) fn apply_column_visibility_change(
     state: &mut TableState,
     desired: &HashMap<ColumnId, bool>,
 ) -> bool {
