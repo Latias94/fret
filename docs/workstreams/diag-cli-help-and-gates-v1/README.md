@@ -1,6 +1,6 @@
 # Diag CLI Help And Gates v1
 
-Status: In progress
+Status: Closeout-ready
 Last updated: 2026-03-26
 
 Source lane:
@@ -48,3 +48,17 @@ Evidence anchors:
 - `crates/fret-diag/src/cli/contracts/mod.rs`
 - `crates/fret-diag/src/cli/cutover.rs`
 - `apps/fretboard/src/cli.rs`
+
+## Closeout decision
+
+This lane is closeout-ready.
+
+The highest-risk user-facing help surfaces now have focused drift guards, and the first-party
+`fretboard` help examples have been updated to match the generated `diag` contract surface.
+
+If broader snapshot coverage is added later, it should land as a new narrow follow-up instead of
+reopening this lane.
+
+Evidence for the landed slice is tracked in:
+
+- `4b4635153` (`test(diag): harden help drift guards`)

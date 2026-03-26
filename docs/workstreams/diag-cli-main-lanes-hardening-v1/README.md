@@ -1,6 +1,6 @@
 # Diag CLI Main Lanes Hardening v1
 
-Status: In progress
+Status: Closeout-ready
 Last updated: 2026-03-26
 
 Source lane:
@@ -66,8 +66,23 @@ Evidence anchors:
 - `crates/fret-diag/src/diag_repro.rs`
 - `crates/fret-diag/src/diag_repro/scripts.rs`
 
-## Remaining work
+## Closeout notes
 
-- tighten generated help/examples for `run` / `suite` / `repro` / `repeat`
-- extend focused invalid-combination coverage where the current cutover still relies on runtime
-  rejection
+This lane is closeout-ready.
+
+The originally named hardening targets for `run`, `suite`, `repro`, and `repeat` now land at the
+parser-local contract + cutover boundary, and the highest-risk help/example drift is now covered by
+focused contract tests.
+
+If further invalid-combination tightening is needed later, it should land as a new narrow follow-up
+instead of reopening this lane.
+
+## Closeout decision
+
+This lane is closed out as the main execution hardening pass.
+
+Evidence for the landed slices is tracked in:
+
+- `208131db8` (`fix(diag): harden main lane cli validation`)
+- `cbd1c5fa4` (`fix(diag): frontload repro cli validation`)
+- `4b4635153` (`test(diag): harden help drift guards`)
