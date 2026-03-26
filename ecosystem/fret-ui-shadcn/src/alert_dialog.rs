@@ -3095,6 +3095,125 @@ mod tests {
     }
 
     #[test]
+    fn alert_dialog_selectable_description_test_id_resolves_to_same_node_as_element() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(480.0)),
+        );
+        let mut services = ByteIndexTextService::default();
+        let open = app.models_mut().insert(true);
+        let description_id_out = Rc::new(Cell::new(None));
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(&mut app, window);
+
+            let description_id_out = description_id_out.clone();
+            let open_for_dialog = open.clone();
+            let open_for_cancel = open.clone();
+
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "alert-dialog-selectable-description-test-id-node",
+                move |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st, _id| Vec::new(),
+                    );
+
+                    let description_id_out = description_id_out.clone();
+                    let open_for_cancel = open_for_cancel.clone();
+
+                    let alert = AlertDialog::new(open_for_dialog.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let rich = fret_core::AttributedText::new(
+                                Arc::<str>::from("Settings"),
+                                Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(8)]),
+                            );
+                            let mut props = fret_ui::element::SelectableTextProps::new(rich);
+                            props.interactive_spans =
+                                Arc::from([fret_ui::element::SelectableTextInteractiveSpan {
+                                    range: 0..8,
+                                    tag: Arc::<str>::from("https://example.com/settings"),
+                                }]);
+
+                            let description = AlertDialogDescription::new_selectable(props)
+                                .into_element(cx)
+                                .test_id("alert-dialog-selectable-description-link");
+                            description_id_out.set(Some(description.id));
+
+                            let header = AlertDialogHeader::new(vec![
+                                AlertDialogTitle::new("Delete chat?").into_element(cx),
+                                description,
+                            ])
+                            .into_element(cx);
+                            let cancel = AlertDialogCancel::new("Cancel", open_for_cancel.clone())
+                                .into_element(cx);
+
+                            AlertDialogContent::new(vec![
+                                header,
+                                AlertDialogFooter::new(vec![cancel]).into_element(cx),
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                    vec![alert]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        let description_id = description_id_out
+            .get()
+            .expect("selectable description element id");
+        let description_node = fret_ui::elements::node_for_element(&mut app, window, description_id)
+            .expect("selectable description node");
+        let semantics_node = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.test_id.as_deref() == Some("alert-dialog-selectable-description-link")
+                    && n.role == fret_core::SemanticsRole::Text
+            })
+            .expect("semantics node by test_id");
+
+        assert_eq!(
+            semantics_node.id, description_node,
+            "expected test_id semantics node to map to the selectable description element node"
+        );
+    }
+
+    #[test]
     fn alert_dialog_compose_content_with_supports_from_scope_buttons() {
         let window = AppWindowId::default();
         let mut app = App::new();
