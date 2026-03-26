@@ -105,10 +105,65 @@ pub(super) fn glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vect
     parley::swash::zeno::Vector::new(subpixel_bin_as_float(x_bin), subpixel_bin_as_float(y_bin))
 }
 
-pub(super) fn glyph_render_sources() -> [parley::swash::scale::Source; 3] {
-    [
-        parley::swash::scale::Source::ColorOutline(0),
-        parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
-        parley::swash::scale::Source::Outline,
-    ]
+const GLYPH_RENDER_SOURCES: [parley::swash::scale::Source; 3] = [
+    parley::swash::scale::Source::ColorOutline(0),
+    parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
+    parley::swash::scale::Source::Outline,
+];
+
+pub(super) fn glyph_render_sources() -> &'static [parley::swash::scale::Source; 3] {
+    &GLYPH_RENDER_SOURCES
+}
+
+pub(super) fn glyph_render_at_bins(x_bin: u8, y_bin: u8) -> parley::swash::scale::Render<'static> {
+    let mut render = parley::swash::scale::Render::new(glyph_render_sources());
+    render.offset(glyph_offset_px(x_bin, y_bin));
+    render
+}
+
+pub(super) fn render_glyph_image(
+    render: parley::swash::scale::Render<'_>,
+    scaler: &mut parley::swash::scale::Scaler<'_>,
+    glyph_id: u16,
+) -> Option<parley::swash::scale::image::Image> {
+    render.render(scaler, glyph_id)
+}
+
+pub(super) fn font_ref_from_face_bytes<'a>(
+    font_bytes: &'a [u8],
+    face_index: u32,
+) -> Option<parley::swash::FontRef<'a>> {
+    parley::swash::FontRef::from_index(font_bytes, face_index as usize)
+}
+
+pub(super) fn build_glyph_scaler<'a>(
+    parley_scale: &'a mut parley::swash::scale::ScaleContext,
+    font_ref: parley::swash::FontRef<'a>,
+    font_size: f32,
+    normalized_coords: Option<&'a [i16]>,
+) -> parley::swash::scale::Scaler<'a> {
+    let mut scaler_builder = parley_scale
+        .builder(font_ref)
+        .size(font_size.max(1.0))
+        .hint(false);
+    if let Some(coords) = normalized_coords.filter(|coords| !coords.is_empty()) {
+        scaler_builder = scaler_builder.normalized_coords(coords.iter());
+    }
+    scaler_builder.build()
+}
+
+pub(super) fn build_glyph_scaler_from_face_bytes<'a>(
+    parley_scale: &'a mut parley::swash::scale::ScaleContext,
+    font_bytes: &'a [u8],
+    face_index: u32,
+    font_size: f32,
+    normalized_coords: Option<&'a [i16]>,
+) -> Option<parley::swash::scale::Scaler<'a>> {
+    let font_ref = font_ref_from_face_bytes(font_bytes, face_index)?;
+    Some(build_glyph_scaler(
+        parley_scale,
+        font_ref,
+        font_size,
+        normalized_coords,
+    ))
 }

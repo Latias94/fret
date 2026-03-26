@@ -1,5 +1,4 @@
 use super::super::TextSystem;
-use super::glyph_render::prepared_glyph_has_normalized_coords;
 use fret_render_text::{FontFaceKey, ParleyGlyph, variation_key_from_normalized_coords};
 use std::collections::HashMap;
 
@@ -27,41 +26,22 @@ impl TextSystem {
     ) -> FontFaceKey {
         let (font_data_id, face_index) = prepared_glyph_font_identity(glyph);
         let face_key = prepared_glyph_face_key(glyph, font_data_id, face_index);
-        self.cache_prepared_glyph_face_data(glyph, face_key, font_data_id, face_index);
+        self.cache_prepared_glyph_face_data(glyph, face_key);
         record_prepared_glyph_face_usage(face_usage, face_key, glyph.id());
         face_key
     }
 
-    fn cache_prepared_glyph_face_data(
-        &mut self,
-        glyph: &ParleyGlyph,
-        face_key: FontFaceKey,
-        font_data_id: u64,
-        face_index: u32,
-    ) {
-        self.cache_prepared_glyph_font_data(glyph, font_data_id, face_index);
+    fn cache_prepared_glyph_face_data(&mut self, glyph: &ParleyGlyph, face_key: FontFaceKey) {
+        self.cache_prepared_glyph_font_data(glyph);
         self.cache_prepared_glyph_instance_coords(glyph, face_key);
     }
 
-    fn cache_prepared_glyph_font_data(
-        &mut self,
-        glyph: &ParleyGlyph,
-        font_data_id: u64,
-        face_index: u32,
-    ) {
-        self.face_cache
-            .font_data_by_face
-            .entry((font_data_id, face_index))
-            .or_insert_with(|| glyph.font().clone());
+    fn cache_prepared_glyph_font_data(&mut self, glyph: &ParleyGlyph) {
+        self.cache_face_font_data(glyph.font());
     }
 
     fn cache_prepared_glyph_instance_coords(&mut self, glyph: &ParleyGlyph, face_key: FontFaceKey) {
-        if prepared_glyph_has_normalized_coords(glyph) {
-            self.face_cache
-                .font_instance_coords_by_face
-                .entry(face_key)
-                .or_insert_with(|| glyph.normalized_coords().clone());
-        }
+        self.cache_face_normalized_coords(face_key, glyph.normalized_coords());
     }
 }
 
