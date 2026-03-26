@@ -594,6 +594,17 @@ impl AlertTitle {
         }
     }
 
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> AlertTitleBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        AlertTitleBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
@@ -702,6 +713,44 @@ fn patch_alert_title_text_style_recursive(el: &mut AnyElement, px: Px, line_heig
     );
 }
 
+pub struct AlertTitleBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> AlertTitleBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_alert_children(
+            cx,
+            self.build.expect("expected alert title build closure"),
+        );
+        AlertTitle::new_children(children).into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for AlertTitleBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for AlertTitleBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertTitleBuild::into_element(self, cx)
+    }
+}
+
 #[derive(Debug)]
 pub struct AlertDescription {
     content: AlertDescriptionContent,
@@ -723,6 +772,17 @@ impl AlertDescription {
     pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             content: AlertDescriptionContent::Children(children.into_iter().collect()),
+        }
+    }
+
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> AlertDescriptionBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        AlertDescriptionBuild {
+            build: Some(build),
+            _phantom: PhantomData,
         }
     }
 
@@ -749,6 +809,45 @@ impl AlertDescription {
                 "component.alert.description",
             ),
         }
+    }
+}
+
+pub struct AlertDescriptionBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> AlertDescriptionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_alert_children(
+            cx,
+            self.build
+                .expect("expected alert description build closure"),
+        );
+        AlertDescription::new_children(children).into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for AlertDescriptionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for AlertDescriptionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDescriptionBuild::into_element(self, cx)
     }
 }
 
@@ -1089,6 +1188,62 @@ mod tests {
             element.inherited_foreground,
             Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
+    }
+
+    #[test]
+    fn alert_title_build_collects_children_on_builder_path() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(260.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertTitle::build(|cx, out| {
+                out.push(cx.text("Builder title content"));
+            })
+            .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Builder title content")
+            .expect("expected AlertTitle::build to retain nested text content");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected AlertTitle::build child to resolve to a text node");
+        };
+
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+    }
+
+    #[test]
+    fn alert_description_build_collects_children_on_builder_path() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(260.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertDescription::build(|cx, out| {
+                out.push(cx.text("Builder description content"));
+            })
+            .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Builder description content")
+            .expect("expected AlertDescription::build to retain nested text content");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected AlertDescription::build child to resolve to a text node");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
     }
 
     #[test]

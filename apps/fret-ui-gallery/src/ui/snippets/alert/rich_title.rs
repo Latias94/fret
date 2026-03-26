@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("rich_title.rs");
 
 // region: example
+use fret::children::UiElementSinkExt as _;
 use fret::{UiChild, UiCx};
 use std::sync::Arc;
 
@@ -34,9 +35,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 cx,
                 fret_icons::IconId::new_static("lucide.circle-alert"),
             ),
-            shadcn::AlertTitle::new_children([cx.styled_text(rich_title_text())]),
+            shadcn::AlertTitle::build(|cx, out| {
+                let rich = cx.styled_text(rich_title_text());
+                out.push_ui(cx, rich);
+            }),
             shadcn::AlertDescription::new(
-                "Use `AlertTitle::new_children(...)` when the title needs an attributed or precomposed subtree.",
+                "Use `AlertTitle::build(...)` when the title needs an attributed or precomposed subtree.",
             ),
         ]
     })

@@ -19,7 +19,7 @@ Last updated: 2026-03-02.
 | Component | Upstream doc | Upstream base | Fret module | Gates | Status |
 |---|---|---|---|---|---|
 | `accordion` | `repo-ref/ui/apps/v4/content/docs/components/radix/accordion.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/accordion.tsx` | `ecosystem/fret-ui-shadcn/src/accordion.rs` | (none yet) | Not audited |
-| `alert` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/alert.tsx` | `ecosystem/fret-ui-shadcn/src/alert.rs` | (none yet) | Not audited |
+| `alert` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/alert.tsx` | `ecosystem/fret-ui-shadcn/src/alert.rs` | `docs/audits/shadcn-alert.md`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/alert.rs`, `tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-docs-smoke.json`, `tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json` | Done (with known gaps) |
 | `alert-dialog` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/alert-dialog.tsx` | `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` | (none yet) | Not audited |
 | `aspect-ratio` | `repo-ref/ui/apps/v4/content/docs/components/radix/aspect-ratio.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/aspect-ratio.tsx` | `ecosystem/fret-ui-shadcn/src/aspect_ratio.rs` | (none yet) | Not audited |
 | `avatar` | `repo-ref/ui/apps/v4/content/docs/components/radix/avatar.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/avatar.tsx` | `ecosystem/fret-ui-shadcn/src/avatar.rs` | (none yet) | Not audited |

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::children::UiElementSinkExt as _;
 use fret::{UiChild, UiCx};
 use std::sync::Arc;
 
@@ -10,7 +11,6 @@ use fret_core::{
 };
 use fret_runtime::Effect;
 use fret_ui::element::{PressableKeyActivation, PressableProps, StyledTextProps};
-use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn is_diag_mode() -> bool {
@@ -124,14 +124,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         cx,
                         fret_icons::IconId::new_static("lucide.circle-alert"),
                     ),
-                    shadcn::AlertTitle::new_children([interactive_link_text(
-                        cx,
-                        "Let's try one with icon, title and a link.",
-                        "link",
-                        "https://example.com/alert-title-link",
-                        "ui-gallery-alert-demo-title-link-inline",
-                    )
-                    .into_element(cx)]),
+                    shadcn::AlertTitle::build(|cx, out| {
+                        let link = interactive_link_text(
+                            cx,
+                            "Let's try one with icon, title and a link.",
+                            "link",
+                            "https://example.com/alert-title-link",
+                            "ui-gallery-alert-demo-title-link-inline",
+                        );
+                        out.push_ui(cx, link);
+                    }),
                 ]
             })
             .variant(shadcn::AlertVariant::Default)
@@ -145,24 +147,25 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         cx,
                         fret_icons::IconId::new_static("lucide.circle-alert"),
                     ),
-                    shadcn::AlertDescription::new_children([
-                        interactive_link_text(
+                    shadcn::AlertDescription::build(|cx, out| {
+                        let primary_link = interactive_link_text(
                             cx,
                             "This one has an icon and a description only. No title. But it has a link and a second link.",
                             "link",
                             "https://example.com/alert-description-link",
                             "ui-gallery-alert-demo-description-link-primary",
-                        )
-                        .into_element(cx),
-                        interactive_link_text(
+                        );
+                        out.push_ui(cx, primary_link);
+
+                        let secondary_link = interactive_link_text(
                             cx,
                             "It also demonstrates a second link in the same description block.",
                             "second link",
                             "https://example.com/alert-description-second-link",
                             "ui-gallery-alert-demo-description-link-secondary",
-                        )
-                        .into_element(cx),
-                    ]),
+                        );
+                        out.push_ui(cx, secondary_link);
+                    }),
                 ]
             })
             .variant(shadcn::AlertVariant::Default)
