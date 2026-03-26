@@ -43,6 +43,24 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 20 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-trigger" },
+      "delta_x": 0.0,
+      "delta_y": -360.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-trigger" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
 
     {
       "type": "click",
