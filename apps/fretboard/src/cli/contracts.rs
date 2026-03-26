@@ -1,0 +1,245 @@
+use clap::{Args, CommandFactory, Parser, Subcommand};
+
+use crate::dev::contracts::{DevNativeCommandArgs, DevWebCommandArgs};
+
+#[derive(Debug, Parser)]
+#[command(
+    name = "fretboard",
+    about = "Dev tooling for the Fret workspace.",
+    disable_help_subcommand = true,
+    subcommand_required = true
+)]
+pub(crate) struct FretboardCliContract {
+    #[command(subcommand)]
+    pub command: FretboardCommandContract,
+}
+
+#[derive(Debug, Subcommand)]
+pub(crate) enum FretboardCommandContract {
+    /// Manage generated asset manifests and Rust glue.
+    Assets(ForwardedSubcommandArgs),
+    /// Configure workspace-local settings and generated config files.
+    Config(ForwardedSubcommandArgs),
+    /// Run workspace demos and shells.
+    Dev(DevCommandArgs),
+    /// Run diagnostics tooling.
+    Diag(ForwardedSubcommandArgs),
+    /// Manage developer hotpatch helpers.
+    Hotpatch(ForwardedSubcommandArgs),
+    /// Create a new app from a starter template.
+    Init(ForwardedSubcommandArgs),
+    /// List discoverable demos and cookbook examples.
+    List(ListCommandArgs),
+    /// Create a new app from a starter template.
+    New(ForwardedSubcommandArgs),
+    /// Import and convert theme sources.
+    Theme(ForwardedSubcommandArgs),
+}
+
+#[derive(Debug, Clone, Args, PartialEq, Eq)]
+#[command(disable_help_flag = true, disable_help_subcommand = true)]
+pub(crate) struct ForwardedSubcommandArgs {
+    /// Remaining arguments forwarded to the legacy handler.
+    #[arg(
+        value_name = "ARG",
+        num_args = 0..,
+        allow_hyphen_values = true,
+        trailing_var_arg = true
+    )]
+    pub args: Vec<String>,
+}
+
+#[derive(Debug, Clone, Args, PartialEq, Eq)]
+#[command(arg_required_else_help = true)]
+pub(crate) struct DevCommandArgs {
+    #[command(subcommand)]
+    pub target: DevTargetContract,
+}
+
+#[derive(Debug, Clone, Subcommand, PartialEq, Eq)]
+pub(crate) enum DevTargetContract {
+    /// Run native workspace apps and demos.
+    Native(DevNativeCommandArgs),
+    /// Run the web demo shell.
+    Web(DevWebCommandArgs),
+}
+
+#[derive(Debug, Clone, Args, PartialEq, Eq)]
+#[command(arg_required_else_help = true)]
+pub(crate) struct ListCommandArgs {
+    #[command(subcommand)]
+    pub target: ListTargetContract,
+}
+
+#[derive(Debug, Clone, Subcommand, PartialEq, Eq)]
+pub(crate) enum ListTargetContract {
+    /// List native demos.
+    NativeDemos(ListAllArgs),
+    /// List web demos.
+    WebDemos(NoArgs),
+    /// List cookbook examples.
+    CookbookExamples(ListAllArgs),
+}
+
+#[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
+pub(crate) struct NoArgs {}
+
+#[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
+pub(crate) struct ListAllArgs {
+    /// Include maintainer-only or lab targets.
+    #[arg(long)]
+    pub all: bool,
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn try_parse_contract<I, T>(args: I) -> Result<FretboardCliContract, clap::Error>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<std::ffi::OsString> + Clone,
+{
+    FretboardCliContract::try_parse_from(args)
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn render_command_help_path(path: &[&str]) -> Result<String, String> {
+    let mut cmd = FretboardCliContract::command();
+    let mut current = &mut cmd;
+    for segment in path {
+        current = current
+            .find_subcommand_mut(segment)
+            .ok_or_else(|| format!("missing clap help for {}", full_bin_name(path)))?;
+    }
+
+    let mut renderable = current.clone().bin_name(full_bin_name(path));
+    let mut out = Vec::new();
+    renderable
+        .write_long_help(&mut out)
+        .map_err(|err| err.to_string())?;
+    String::from_utf8(out).map_err(|err| err.to_string())
+}
+
+fn full_bin_name(path: &[&str]) -> String {
+    if path.is_empty() {
+        "fretboard".to_string()
+    } else {
+        format!("fretboard {}", path.join(" "))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::error::ErrorKind;
+
+    use super::{
+        DevTargetContract, FretboardCommandContract, ListTargetContract, render_command_help_path,
+        try_parse_contract,
+    };
+
+    #[test]
+    fn diag_contract_forwards_help_flags_to_fret_diag() {
+        let cli = try_parse_contract(["fretboard", "diag", "--help"])
+            .expect("diag --help should forward to fret-diag");
+
+        let FretboardCommandContract::Diag(args) = cli.command else {
+            panic!("expected diag command");
+        };
+
+        assert_eq!(args.args, vec!["--help"]);
+    }
+
+    #[test]
+    fn dev_native_contract_captures_selection_and_passthrough_args() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "dev",
+            "native",
+            "--bin",
+            "todo_demo",
+            "--watch",
+            "--",
+            "--help",
+        ])
+        .expect("dev native should parse typed args");
+
+        let FretboardCommandContract::Dev(dev) = cli.command else {
+            panic!("expected dev command");
+        };
+
+        let DevTargetContract::Native(args) = dev.target else {
+            panic!("expected native dev target");
+        };
+
+        assert_eq!(args.bin.as_deref(), Some("todo_demo"));
+        assert!(args.watch);
+        assert_eq!(args.passthrough, vec!["--help"]);
+    }
+
+    #[test]
+    fn dev_web_contract_captures_targeting_args() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "dev",
+            "web",
+            "--port",
+            "9001",
+            "--demo",
+            "plot_demo",
+            "--no-open",
+        ])
+        .expect("dev web should parse typed args");
+
+        let FretboardCommandContract::Dev(dev) = cli.command else {
+            panic!("expected dev command");
+        };
+
+        let DevTargetContract::Web(args) = dev.target else {
+            panic!("expected web dev target");
+        };
+
+        assert_eq!(args.port, Some(9001));
+        assert_eq!(args.demo.as_deref(), Some("plot_demo"));
+        assert!(args.no_open);
+    }
+
+    #[test]
+    fn list_native_demos_contract_captures_all_flag() {
+        let cli = try_parse_contract(["fretboard", "list", "native-demos", "--all"])
+            .expect("list native-demos --all should parse");
+
+        let FretboardCommandContract::List(list) = cli.command else {
+            panic!("expected list command");
+        };
+
+        let ListTargetContract::NativeDemos(args) = list.target else {
+            panic!("expected native-demos target");
+        };
+
+        assert!(args.all);
+    }
+
+    #[test]
+    fn list_contract_requires_a_target() {
+        let err =
+            try_parse_contract(["fretboard", "list"]).expect_err("list should require a target");
+        assert_eq!(
+            err.kind(),
+            ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+        );
+    }
+
+    #[test]
+    fn dev_help_lists_native_and_web_targets() {
+        let help = render_command_help_path(&["dev"]).expect("dev help should render");
+        assert!(help.contains("native"));
+        assert!(help.contains("web"));
+    }
+
+    #[test]
+    fn dev_native_help_lists_hotpatch_flags() {
+        let help =
+            render_command_help_path(&["dev", "native"]).expect("dev native help should render");
+        assert!(help.contains("--hotpatch"));
+        assert!(help.contains("--hotpatch-dx"));
+        assert!(help.contains("--profile"));
+    }
+}

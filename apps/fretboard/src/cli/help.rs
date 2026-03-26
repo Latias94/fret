@@ -1,54 +1,4 @@
-use std::path::PathBuf;
-use std::process::ExitCode;
-
-pub(crate) fn main() -> ExitCode {
-    match run() {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(err) => {
-            eprintln!("error: {err}");
-            ExitCode::from(2)
-        }
-    }
-}
-
-fn run() -> Result<(), String> {
-    let mut args = std::env::args().skip(1);
-    let Some(cmd) = args.next() else {
-        return help();
-    };
-
-    match cmd.as_str() {
-        "help" | "-h" | "--help" => help(),
-        "assets" => crate::assets::assets_cmd(args.collect()),
-        "init" => crate::scaffold::init_cmd(args.collect()),
-        "new" => crate::scaffold::new_cmd(args.collect()),
-        "config" => crate::config::config_cmd(args.collect()),
-        "theme" => crate::theme::theme_cmd(args.collect()),
-        "hotpatch" => crate::hotpatch::hotpatch_cmd(args.collect()),
-        "diag" => crate::diag::diag_cmd(args.collect()),
-        "list" => match args.next().as_deref() {
-            Some("native-demos") => crate::demos::list_native_demos(args.collect()),
-            Some("web-demos") => crate::demos::list_web_demos(args.collect()),
-            Some("cookbook-examples") => crate::demos::list_cookbook_examples(args.collect()),
-            Some(other) => Err(format!("unknown list target: {other}")),
-            None => Err("missing list target (try: list native-demos)".to_string()),
-        },
-        "dev" => match args.next().as_deref() {
-            Some("native") => crate::dev::dev_native(args.collect()),
-            Some("web") => crate::dev::dev_web(args.collect()),
-            Some(other) => Err(format!("unknown dev target: {other}")),
-            None => Err("missing dev target (try: dev native)".to_string()),
-        },
-        other => Err(format!("unknown command: {other}")),
-    }
-}
-
-pub(crate) fn help() -> Result<(), String> {
-    println!(
-        r#"fretboard dev tooling for the Fret workspace
-
-Usage:
-  fretboard help
+const ROOT_USAGE: &str = r#"  fretboard help
   fretboard assets manifest write --dir <dir> --out <path> (--app-bundle <name> | --package-bundle <name> | --bundle <id>) [--force]
   fretboard assets rust write --dir <dir> --out <path> (--app-bundle <name> | --package-bundle <name> | --bundle <id>) [--surface <fret|framework>] [--crate-root <dir>] [--force]
   fretboard new [template] [--path <path>] [--name <name>] [--ui-assets] [--icons <lucide|radix|none>] [--command-palette] [--no-check]
@@ -77,10 +27,9 @@ Usage:
   fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] --hotpatch-devserver <ws_endpoint> [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
   fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] --hotpatch-dx [--hotpatch-dx-ws <ws_endpoint>] [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
   fretboard dev web [--no-open] [--port <port>] [--demo <demo> | --choose] [--devtools-ws-url <ws://.../> --devtools-token <token>]
-  fretboard dev web --open [--no-open] [--port <port>] [--demo <demo> | --choose]
+  fretboard dev web --open [--no-open] [--port <port>] [--demo <demo> | --choose]"#;
 
-Examples:
-  fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-todo
+const ROOT_EXAMPLES: &str = r#"  fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-todo
   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle my-todo
     # `--surface fret` modules expose both `register(app)` and `mount(builder)`
   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle my-todo --surface framework
@@ -118,18 +67,21 @@ Examples:
   fretboard dev native --bin hotpatch_smoke_demo --hotpatch
   fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx
   fretboard dev web --demo plot_demo
-  fretboard dev web --demo custom_effect_v2_web_demo
-"#
+  fretboard dev web --demo custom_effect_v2_web_demo"#;
+
+pub(crate) fn print_root_help() {
+    println!(
+        "fretboard dev tooling for the Fret workspace\n\nUsage:\n{ROOT_USAGE}\n\nExamples:\n{ROOT_EXAMPLES}"
     );
-    Ok(())
 }
 
-pub(crate) fn workspace_root() -> Result<PathBuf, String> {
-    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-    for dir in cwd.ancestors() {
-        if dir.join("Cargo.toml").is_file() {
-            return Ok(dir.to_path_buf());
-        }
+#[cfg(test)]
+mod tests {
+    use super::{ROOT_EXAMPLES, ROOT_USAGE};
+
+    #[test]
+    fn root_help_keeps_diag_examples_visible() {
+        assert!(ROOT_USAGE.contains("fretboard diag --help"));
+        assert!(ROOT_EXAMPLES.contains("fretboard diag perf ui-gallery"));
     }
-    Err("failed to locate workspace root (Cargo.toml not found in ancestors)".to_string())
 }

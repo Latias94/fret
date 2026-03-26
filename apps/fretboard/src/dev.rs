@@ -2,7 +2,9 @@ use std::path::Path;
 use std::process::{Child, Command};
 use std::time::{Duration, Instant, SystemTime};
 
-use crate::cli::{help, workspace_root};
+pub(crate) mod contracts;
+
+use crate::cli::workspace_root;
 use crate::demos::{
     cookbook_example_feature_hint, display_path, list_cookbook_examples_from,
     list_native_demos_from, official_native_demos, prompt_choose_demo, validate_cookbook_example,
@@ -12,6 +14,8 @@ use crate::hotpatch::{
     HotpatchBuildIdArg, ensure_hotpatch_trigger_file_initialized, parse_hotpatch_build_id,
     resolve_workspace_relative,
 };
+
+use self::contracts::{DevNativeCommandArgs, DevWebCommandArgs};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum HotpatchModeSummary {
@@ -207,115 +211,42 @@ fn append_subsecond_main_export_rustflags(cmd: &mut Command) {
     cmd.env("RUSTFLAGS", rustflags);
 }
 
-pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
+fn resolve_bool_override(enabled: bool, disabled: bool) -> Option<bool> {
+    match (enabled, disabled) {
+        (true, false) => Some(true),
+        (false, true) => Some(false),
+        _ => None,
+    }
+}
+
+pub(crate) fn run_native_contract(args: DevNativeCommandArgs) -> Result<(), String> {
     let root = workspace_root()?;
     let demos = list_native_demos_from(&root)?;
     let cookbook_examples = list_cookbook_examples_from(&root)?;
 
-    let mut bin: Option<String> = None;
-    let mut demo: Option<String> = None;
-    let mut example: Option<String> = None;
-    let mut cargo_profile: Option<String> = None;
-    let mut choose = false;
-    let mut include_maintainer = false;
-    let mut hotpatch = false;
-    let mut hotpatch_reload_only = false;
-    let mut hotpatch_trigger_path: Option<String> = None;
-    let mut hotpatch_poll_ms: Option<u64> = None;
-    let mut hotpatch_devserver_ws: Option<String> = None;
-    let mut hotpatch_build_id: Option<HotpatchBuildIdArg> = None;
-    let mut hotpatch_dx = false;
-    let mut hotpatch_dx_ws: Option<String> = None;
-    let mut supervise: Option<bool> = None;
-    let mut watch: Option<bool> = None;
-    let mut watch_poll_ms: Option<u64> = None;
-    let mut dev_state_reset = false;
-    let mut passthrough: Vec<String> = Vec::new();
-
-    let mut it = args.into_iter();
-    while let Some(a) = it.next() {
-        match a.as_str() {
-            "--bin" => {
-                bin = Some(
-                    it.next()
-                        .ok_or_else(|| "--bin requires a value".to_string())?,
-                );
-            }
-            "--demo" => {
-                demo = Some(
-                    it.next()
-                        .ok_or_else(|| "--demo requires a value".to_string())?,
-                );
-            }
-            "--example" => {
-                example = Some(
-                    it.next()
-                        .ok_or_else(|| "--example requires a value".to_string())?,
-                );
-            }
-            "--cargo-profile" | "--profile" => {
-                cargo_profile = Some(
-                    it.next()
-                        .ok_or_else(|| "--profile requires a value".to_string())?,
-                );
-            }
-            "--choose" => choose = true,
-            "--all" => include_maintainer = true,
-            "--hotpatch" => hotpatch = true,
-            "--hotpatch-reload" => {
-                hotpatch = true;
-                hotpatch_reload_only = true;
-            }
-            "--hotpatch-trigger-path" => {
-                hotpatch_trigger_path = Some(
-                    it.next()
-                        .ok_or_else(|| "--hotpatch-trigger-path requires a value".to_string())?,
-                );
-            }
-            "--hotpatch-poll-ms" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--hotpatch-poll-ms requires a value".to_string())?;
-                hotpatch_poll_ms = Some(raw.parse::<u64>().map_err(|e| e.to_string())?);
-            }
-            "--hotpatch-devserver" => {
-                hotpatch_devserver_ws = Some(
-                    it.next()
-                        .ok_or_else(|| "--hotpatch-devserver requires a value".to_string())?,
-                );
-            }
-            "--hotpatch-dx" => hotpatch_dx = true,
-            "--hotpatch-dx-ws" => {
-                hotpatch_dx_ws = Some(
-                    it.next()
-                        .ok_or_else(|| "--hotpatch-dx-ws requires a value".to_string())?,
-                );
-            }
-            "--supervise" => supervise = Some(true),
-            "--no-supervise" => supervise = Some(false),
-            "--watch" => watch = Some(true),
-            "--no-watch" => watch = Some(false),
-            "--dev-state-reset" => dev_state_reset = true,
-            "--watch-poll-ms" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--watch-poll-ms requires a value".to_string())?;
-                watch_poll_ms = Some(raw.parse::<u64>().map_err(|e| e.to_string())?);
-            }
-            "--hotpatch-build-id" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--hotpatch-build-id requires a value".to_string())?;
-                hotpatch_build_id = Some(parse_hotpatch_build_id(&raw)?);
-            }
-            "--" => {
-                passthrough.extend(it);
-                break;
-            }
-            "--help" | "-h" => return help(),
-            other => return Err(format!("unknown argument for dev native: {other}")),
-        }
-    }
+    let mut bin = args.bin;
+    let mut demo = args.demo;
+    let example = args.example;
+    let cargo_profile = args.profile;
+    let choose = args.choose;
+    let include_maintainer = args.all;
+    let hotpatch = args.hotpatch || args.hotpatch_reload;
+    let hotpatch_reload_only = args.hotpatch_reload;
+    let hotpatch_trigger_path = args.hotpatch_trigger_path;
+    let hotpatch_poll_ms = args.hotpatch_poll_ms;
+    let hotpatch_devserver_ws = args.hotpatch_devserver;
+    let hotpatch_build_id = args
+        .hotpatch_build_id
+        .as_deref()
+        .map(parse_hotpatch_build_id)
+        .transpose()?;
+    let hotpatch_dx = args.hotpatch_dx;
+    let hotpatch_dx_ws = args.hotpatch_dx_ws;
+    let supervise = resolve_bool_override(args.supervise, args.no_supervise);
+    let watch = resolve_bool_override(args.watch, args.no_watch);
+    let watch_poll_ms = args.watch_poll_ms;
+    let dev_state_reset = args.dev_state_reset;
+    let passthrough = args.passthrough;
 
     let selection_count = demo.is_some() as u32 + bin.is_some() as u32 + example.is_some() as u32;
     if selection_count > 1 {
@@ -1141,51 +1072,16 @@ fn configure_trunk_web_command(cmd: &mut Command, web_dir: &Path, port: Option<u
     }
 }
 
-pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
-    let mut port: Option<u16> = None;
-    let mut demo: Option<String> = None;
-    let mut choose = false;
+pub(crate) fn run_web_contract(args: DevWebCommandArgs) -> Result<(), String> {
+    let port = args.port;
+    let demo = args.demo;
+    let choose = args.choose;
     // Dev web is primarily an interactive workflow; default to opening the browser
     // once the server is reachable. Use `--no-open` for CI or when you explicitly
     // do not want the auto-open behavior.
-    let mut open = true;
-    let mut devtools_ws_url: Option<String> = None;
-    let mut devtools_token: Option<String> = None;
-
-    let mut it = args.into_iter();
-    while let Some(a) = it.next() {
-        match a.as_str() {
-            "--port" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--port requires a value".to_string())?;
-                port = Some(raw.parse::<u16>().map_err(|e| e.to_string())?);
-            }
-            "--demo" => {
-                demo = Some(
-                    it.next()
-                        .ok_or_else(|| "--demo requires a value".to_string())?,
-                );
-            }
-            "--choose" => choose = true,
-            "--open" => open = true,
-            "--no-open" => open = false,
-            "--devtools-ws-url" => {
-                devtools_ws_url = Some(
-                    it.next()
-                        .ok_or_else(|| "--devtools-ws-url requires a value".to_string())?,
-                );
-            }
-            "--devtools-token" => {
-                devtools_token = Some(
-                    it.next()
-                        .ok_or_else(|| "--devtools-token requires a value".to_string())?,
-                );
-            }
-            "--help" | "-h" => return help(),
-            other => return Err(format!("unknown argument for dev web: {other}")),
-        }
-    }
+    let open = resolve_bool_override(args.open, args.no_open).unwrap_or(true);
+    let devtools_ws_url = args.devtools_ws_url;
+    let devtools_token = args.devtools_token;
 
     let root = workspace_root()?;
     let web_dir = root.join("apps").join("fret-demo-web");
