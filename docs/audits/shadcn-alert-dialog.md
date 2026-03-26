@@ -125,8 +125,15 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   (`web_vs_fret_alert_dialog_demo_overlay_center_matches`).
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_alert_dialog_open_geometry_matches_fret`).
+- Overlay selectable-span state gate:
+  `cargo test -p fret-ui-shadcn --lib alert_dialog::tests::alert_dialog_selectable_description_records_interactive_span_bounds_in_overlay_state -- --exact`
+  (proves the alert dialog description keeps interactive span bounds after overlay paint).
 - UI Gallery docs-example screenshot gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-docs-example-open-screenshots.json`
   (covers `Small`, `Media`, `Small with Media`, and `Destructive` on the first-party docs page).
+- UI Gallery destructive inline-link click gate was attempted but not promoted:
+  native `click_selectable_text_span_stable` still times out on this docs surface even though the
+  recipe-level overlay state retains span bounds, so the remaining gap appears to be diagnostics /
+  real-text-service integration rather than `fret-ui-shadcn` authoring.
 
 ## Authoring note: `from_scope(...)`
 

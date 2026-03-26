@@ -5,12 +5,12 @@ use fret_core::{
     Color, Corners, Edges, FontWeight, Point, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::GlobalElementId;
 use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus, OnSelectableTextActivateSpan};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
     RenderTransformProps, SemanticFlexProps, SemanticsDecoration, SizeStyle,
 };
+use fret_ui::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -18,8 +18,8 @@ use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
-    OverlayPresence, Radius, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    ui, ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
+    OverlayPresence, Radius, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
 use crate::layout as shadcn_layout;
@@ -1446,13 +1446,11 @@ impl AlertDialogHeader {
                 .into_element(cx);
 
             return cx.container(props, move |cx| {
-                vec![
-                    ui::h_flex(move |_cx| vec![media, text])
-                        .gap(Space::N6)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .into_element(cx),
-                ]
+                vec![ui::h_flex(move |_cx| vec![media, text])
+                    .gap(Space::N6)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx)]
             });
         }
 
@@ -1467,13 +1465,11 @@ impl AlertDialogHeader {
             .into_element(cx);
 
         cx.container(props, move |cx| {
-            vec![
-                ui::v_flex(move |_cx| vec![media, text])
-                    .gap(Space::N1p5)
-                    .items_center()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .into_element(cx),
-            ]
+            vec![ui::v_flex(move |_cx| vec![media, text])
+                .gap(Space::N1p5)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)]
         })
     }
 }
@@ -1655,13 +1651,11 @@ impl AlertDialogFooter {
                 .collect();
 
             cx.container(props, move |cx| {
-                vec![
-                    ui::h_flex(move |_cx| children)
-                        .gap(Space::N2)
-                        .items_stretch()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .into_element(cx),
-                ]
+                vec![ui::h_flex(move |_cx| children)
+                    .gap(Space::N2)
+                    .items_stretch()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx)]
             })
         } else if sm_breakpoint {
             shadcn_layout::container_hstack(
@@ -2319,18 +2313,18 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
-    use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
     use fret_ui::elements::bounds_for_element;
+    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     fn find_first_styled_text(el: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
@@ -2614,19 +2608,17 @@ mod tests {
                     }]);
 
                 let activated = activated.clone();
-                vec![
-                    AlertDialogDescription::new_selectable_with(
-                        props,
-                        Some(Arc::new(move |host, action_cx, _reason, activation| {
-                            let _ = host
-                                .models_mut()
-                                .update(&activated, |value| *value = Some(activation.tag.clone()));
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
-                        })),
-                    )
-                    .into_element(cx),
-                ]
+                vec![AlertDialogDescription::new_selectable_with(
+                    props,
+                    Some(Arc::new(move |host, action_cx, _reason, activation| {
+                        let _ = host
+                            .models_mut()
+                            .update(&activated, |value| *value = Some(activation.tag.clone()));
+                        host.notify(action_cx);
+                        host.request_redraw(action_cx.window);
+                    })),
+                )
+                .into_element(cx)]
             },
         );
         ui.set_root(root);
@@ -2837,6 +2829,23 @@ mod tests {
             )
         }
 
+        fn selection_rects(
+            &mut self,
+            _blob: TextBlobId,
+            range: (usize, usize),
+            out: &mut Vec<Rect>,
+        ) {
+            let (start, end) = range;
+            if start >= end {
+                return;
+            }
+
+            out.push(Rect::new(
+                Point::new(Px(start as f32), Px(0.0)),
+                Size::new(Px((end - start) as f32), Px(10.0)),
+            ));
+        }
+
         fn hit_test_point(&mut self, _blob: TextBlobId, point: Point) -> fret_core::HitTestResult {
             let idx = point.x.0.floor().max(0.0) as usize;
             fret_core::HitTestResult {
@@ -2960,6 +2969,132 @@ mod tests {
     }
 
     #[test]
+    fn alert_dialog_selectable_description_records_interactive_span_bounds_in_overlay_state() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(480.0)),
+        );
+        let mut services = ByteIndexTextService::default();
+        let open = app.models_mut().insert(true);
+        let description_id_out = Rc::new(Cell::new(None));
+
+        let link_text: Arc<str> = Arc::from("Settings");
+        let link_tag: Arc<str> = Arc::from("https://example.com/settings");
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(&mut app, window);
+
+            let description_id_out = description_id_out.clone();
+            let open_for_dialog = open.clone();
+            let open_for_cancel = open.clone();
+            let link_text = link_text.clone();
+            let link_tag = link_tag.clone();
+
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "alert-dialog-selectable-description-overlay-runtime",
+                move |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st, _id| Vec::new(),
+                    );
+
+                    let description_id_out = description_id_out.clone();
+                    let open_for_cancel = open_for_cancel.clone();
+                    let link_text = link_text.clone();
+                    let link_tag = link_tag.clone();
+
+                    let alert = AlertDialog::new(open_for_dialog.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let rich = fret_core::AttributedText::new(
+                                link_text.clone(),
+                                Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(
+                                    link_text.len(),
+                                )]),
+                            );
+                            let mut props = fret_ui::element::SelectableTextProps::new(rich);
+                            props.interactive_spans =
+                                Arc::from([fret_ui::element::SelectableTextInteractiveSpan {
+                                    range: 0..link_text.len(),
+                                    tag: link_tag.clone(),
+                                }]);
+
+                            let description =
+                                AlertDialogDescription::new_selectable(props).into_element(cx);
+                            description_id_out.set(Some(description.id));
+
+                            let header = AlertDialogHeader::new(vec![
+                                AlertDialogTitle::new("Delete chat?").into_element(cx),
+                                description,
+                            ])
+                            .into_element(cx);
+                            let cancel = AlertDialogCancel::new("Cancel", open_for_cancel.clone())
+                                .into_element(cx);
+
+                            AlertDialogContent::new(vec![
+                                header,
+                                AlertDialogFooter::new(vec![cancel]).into_element(cx),
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                    vec![alert]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let mut scene = fret_core::scene::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let description_id = description_id_out
+            .get()
+            .expect("selectable description element id");
+        let spans = fret_ui::elements::with_element_state(
+            &mut app,
+            window,
+            description_id,
+            fret_ui::element::SelectableTextState::default,
+            |state| state.interactive_span_bounds.clone(),
+        );
+
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].tag.as_ref(), link_tag.as_ref());
+        assert!(
+            spans[0].bounds_local.size.width.0 > 0.0,
+            "expected overlay runtime to retain positive selectable span bounds, got {:?}",
+            spans[0]
+        );
+    }
+
+    #[test]
     fn alert_dialog_compose_content_with_supports_from_scope_buttons() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2985,23 +3120,21 @@ mod tests {
                 let trigger =
                     AlertDialogTrigger::new(crate::button::Button::new("Open").into_element(cx));
 
-                vec![
-                    AlertDialog::new(open.clone())
-                        .compose()
-                        .trigger(trigger)
-                        .portal(AlertDialogPortal::new())
-                        .overlay(AlertDialogOverlay::new())
-                        .content_with(|cx| {
-                            let footer = AlertDialogFooter::new(vec![
-                                AlertDialogCancel::from_scope("Cancel").into_element(cx),
-                                AlertDialogAction::from_scope("Continue").into_element(cx),
-                            ])
-                            .into_element(cx);
+                vec![AlertDialog::new(open.clone())
+                    .compose()
+                    .trigger(trigger)
+                    .portal(AlertDialogPortal::new())
+                    .overlay(AlertDialogOverlay::new())
+                    .content_with(|cx| {
+                        let footer = AlertDialogFooter::new(vec![
+                            AlertDialogCancel::from_scope("Cancel").into_element(cx),
+                            AlertDialogAction::from_scope("Continue").into_element(cx),
+                        ])
+                        .into_element(cx);
 
-                            AlertDialogContent::new(vec![footer]).into_element(cx)
-                        })
-                        .into_element(cx),
-                ]
+                        AlertDialogContent::new(vec![footer]).into_element(cx)
+                    })
+                    .into_element(cx)]
             },
         );
         ui.set_root(root);
@@ -3103,41 +3236,39 @@ mod tests {
             bounds,
             "shadcn-alert-dialog-children-api-from-scope",
             |cx| {
-                vec![
-                    AlertDialog::new(open.clone())
-                        .children([
-                            AlertDialogPart::trigger(AlertDialogTrigger::build(
-                                crate::button::Button::new("Open"),
-                            )),
-                            AlertDialogPart::portal(AlertDialogPortal::new()),
-                            AlertDialogPart::overlay(AlertDialogOverlay::new()),
-                            AlertDialogPart::content_with(|cx| {
-                                AlertDialogContent::new([]).with_children(cx, |cx| {
-                                    vec![
-                                        AlertDialogHeader::new([]).with_children(cx, |cx| {
-                                            vec![
-                                                AlertDialogTitle::new("Delete project?")
-                                                    .into_element(cx),
-                                                AlertDialogDescription::new(
-                                                    "This action cannot be undone.",
-                                                )
+                vec![AlertDialog::new(open.clone())
+                    .children([
+                        AlertDialogPart::trigger(AlertDialogTrigger::build(
+                            crate::button::Button::new("Open"),
+                        )),
+                        AlertDialogPart::portal(AlertDialogPortal::new()),
+                        AlertDialogPart::overlay(AlertDialogOverlay::new()),
+                        AlertDialogPart::content_with(|cx| {
+                            AlertDialogContent::new([]).with_children(cx, |cx| {
+                                vec![
+                                    AlertDialogHeader::new([]).with_children(cx, |cx| {
+                                        vec![
+                                            AlertDialogTitle::new("Delete project?")
                                                 .into_element(cx),
-                                            ]
-                                        }),
-                                        AlertDialogFooter::new([]).with_children(cx, |cx| {
-                                            vec![
-                                                AlertDialogCancel::from_scope("Cancel")
-                                                    .into_element(cx),
-                                                AlertDialogAction::from_scope("Continue")
-                                                    .into_element(cx),
-                                            ]
-                                        }),
-                                    ]
-                                })
-                            }),
-                        ])
-                        .into_element(cx),
-                ]
+                                            AlertDialogDescription::new(
+                                                "This action cannot be undone.",
+                                            )
+                                            .into_element(cx),
+                                        ]
+                                    }),
+                                    AlertDialogFooter::new([]).with_children(cx, |cx| {
+                                        vec![
+                                            AlertDialogCancel::from_scope("Cancel")
+                                                .into_element(cx),
+                                            AlertDialogAction::from_scope("Continue")
+                                                .into_element(cx),
+                                        ]
+                                    }),
+                                ]
+                            })
+                        }),
+                    ])
+                    .into_element(cx)]
             },
         );
         ui.set_root(root);

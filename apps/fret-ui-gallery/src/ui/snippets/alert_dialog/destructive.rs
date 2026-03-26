@@ -9,8 +9,8 @@ use fret_core::{
     AttributedText, DecorationLineStyle, Px, TextPaintStyle, TextSpan, UnderlineStyle,
 };
 use fret_runtime::Effect;
-use fret_ui::Theme;
 use fret_ui::element::{SelectableTextInteractiveSpan, SelectableTextProps};
+use fret_ui::Theme;
 use fret_ui_kit::{ChromeRefinement, ColorRef};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -135,7 +135,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                                 },
                                             )),
                                         )
-                                        .into_element(cx),
+                                        .into_element(cx)
+                                        .test_id(
+                                            "ui-gallery-alert-dialog-destructive-description-link",
+                                        ),
                                     ]
                                 }),
                             shadcn::AlertDialogFooter::new([]).with_children(cx, |cx| {
