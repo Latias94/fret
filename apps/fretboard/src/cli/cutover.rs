@@ -6,14 +6,14 @@ use super::contracts::{
 pub(crate) fn dispatch(contract: FretboardCliContract) -> Result<(), String> {
     match contract.command {
         FretboardCommandContract::Assets(args) => crate::assets::run_assets_contract(args),
-        FretboardCommandContract::Config(args) => crate::config::config_cmd(args.args),
+        FretboardCommandContract::Config(args) => crate::config::run_config_contract(args),
         FretboardCommandContract::Dev(args) => dispatch_dev(args),
         FretboardCommandContract::Diag(args) => crate::diag::diag_cmd(args.args),
         FretboardCommandContract::Hotpatch(args) => crate::hotpatch::run_hotpatch_contract(args),
         FretboardCommandContract::Init(args) => crate::scaffold::init_cmd(args.args),
         FretboardCommandContract::List(args) => dispatch_list(args),
         FretboardCommandContract::New(args) => crate::scaffold::new_cmd(args.args),
-        FretboardCommandContract::Theme(args) => crate::theme::theme_cmd(args.args),
+        FretboardCommandContract::Theme(args) => crate::theme::run_theme_contract(args),
     }
 }
 

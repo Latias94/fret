@@ -1,8 +1,10 @@
 use clap::{Args, CommandFactory, Parser, Subcommand};
 
 use crate::assets::contracts::AssetsCommandArgs;
+use crate::config::contracts::ConfigCommandArgs;
 use crate::dev::contracts::{DevNativeCommandArgs, DevWebCommandArgs};
 use crate::hotpatch::contracts::HotpatchCommandArgs;
+use crate::theme::contracts::ThemeCommandArgs;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -21,7 +23,7 @@ pub(crate) enum FretboardCommandContract {
     /// Manage generated asset manifests and Rust glue.
     Assets(AssetsCommandArgs),
     /// Configure workspace-local settings and generated config files.
-    Config(ForwardedSubcommandArgs),
+    Config(ConfigCommandArgs),
     /// Run workspace demos and shells.
     Dev(DevCommandArgs),
     /// Run diagnostics tooling.
@@ -35,7 +37,7 @@ pub(crate) enum FretboardCommandContract {
     /// Create a new app from a starter template.
     New(ForwardedSubcommandArgs),
     /// Import and convert theme sources.
-    Theme(ForwardedSubcommandArgs),
+    Theme(ThemeCommandArgs),
 }
 
 #[derive(Debug, Clone, Args, PartialEq, Eq)]
@@ -277,6 +279,36 @@ mod tests {
 
         let FretboardCommandContract::Assets(_) = cli.command else {
             panic!("expected assets command");
+        };
+    }
+
+    #[test]
+    fn config_help_lists_menubar_target() {
+        let help = render_command_help_path(&["config"]).expect("config help should render");
+        assert!(help.contains("menubar"));
+    }
+
+    #[test]
+    fn theme_help_lists_import_vscode_target() {
+        let help = render_command_help_path(&["theme"]).expect("theme help should render");
+        assert!(help.contains("import-vscode"));
+    }
+
+    #[test]
+    fn theme_import_vscode_contract_captures_positional_input_and_sets() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "theme",
+            "import-vscode",
+            "theme.json",
+            "--set",
+            "color.syntax.keyword=#ff00aa",
+            "--all-tags",
+        ])
+        .expect("theme import-vscode should parse");
+
+        let FretboardCommandContract::Theme(_) = cli.command else {
+            panic!("expected theme command");
         };
     }
 }
