@@ -2,10 +2,11 @@ use std::path::{Path, PathBuf};
 
 use serde_json::json;
 
-use super::args::{looks_like_path, resolve_bundle_artifact_path_or_latest};
+use super::args::resolve_bundle_artifact_path_or_latest;
 
 pub(crate) fn cmd_agent(
-    rest: &[String],
+    bundle_source: Option<&str>,
+    out: Option<PathBuf>,
     pack_after_run: bool,
     workspace_root: &Path,
     out_dir: &Path,
@@ -16,43 +17,8 @@ pub(crate) fn cmd_agent(
         return Err("--pack is only supported with `diag run`".to_string());
     }
 
-    let mut bundle_arg: Option<String> = None;
-    let mut out: Option<PathBuf> = None;
-
-    let mut i: usize = 0;
-    while i < rest.len() {
-        match rest[i].as_str() {
-            "--out" => {
-                i += 1;
-                let Some(v) = rest.get(i).cloned() else {
-                    return Err("missing value for --out".to_string());
-                };
-                out = Some(PathBuf::from(v));
-                i += 1;
-            }
-            other if other.starts_with("--") => {
-                return Err(format!("unknown flag for agent: {other}"));
-            }
-            other => {
-                if bundle_arg.is_none() && looks_like_path(other) {
-                    bundle_arg = Some(other.to_string());
-                } else if bundle_arg.is_none() {
-                    let p = crate::resolve_path(workspace_root, PathBuf::from(other));
-                    if p.is_file() || p.is_dir() {
-                        bundle_arg = Some(other.to_string());
-                    } else {
-                        return Err(format!("unexpected argument: {other}"));
-                    }
-                } else {
-                    return Err(format!("unexpected argument: {other}"));
-                }
-                i += 1;
-            }
-        }
-    }
-
     let bundle_path =
-        resolve_bundle_artifact_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
+        resolve_bundle_artifact_path_or_latest(bundle_source, workspace_root, out_dir)?;
     let bundle_dir = crate::resolve_bundle_root_dir(&bundle_path)?;
 
     let out = out

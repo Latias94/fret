@@ -276,11 +276,6 @@ pub(crate) fn cmd_memory_summary(
                 top_sessions = Some(n);
                 i += 2;
             }
-            "--help" | "-h" => {
-                return Err(
-                    "usage: fretboard diag memory-summary [<base_or_session_out_dir>] [--within-session <id|latest|all>] [--top-sessions <n>] [--sort-key <key>] [--fit-linear <y_key>:<x_key>] [--top <n>] [--vmmap-regions-sorted-top] [--vmmap-regions-sorted-agg] [--vmmap-regions-sorted-agg-top <n>] [--vmmap-regions-sorted-detail-agg] [--vmmap-regions-sorted-detail-agg-top <n>] [--footprint-categories-agg] [--footprint-categories-agg-top <n>] [--no-recursive] [--max-depth <n>] [--max-samples <n>] [--json] [--out <path>]".to_string(),
-                );
-            }
             other if other.starts_with('-') => {
                 return Err(format!("unknown diag memory-summary flag: {other}"));
             }

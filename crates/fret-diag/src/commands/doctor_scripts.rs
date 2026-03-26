@@ -145,21 +145,6 @@ pub(crate) fn cmd_doctor_scripts(
     let mut i: usize = 0;
     while i < rest.len() {
         match rest[i].as_str() {
-            "--help" | "-h" => {
-                println!(
-                    "Usage: fretboard diag doctor scripts [--max-examples N] [--strict] [--json]\n\
-                     \n\
-                     Checks the diag script library for common drift issues:\n\
-                     - canonical scripts accidentally committed under tools/diag-scripts/*.json\n\
-                     - broken script_redirect stubs (missing/invalid targets)\n\
-                     - promoted registry (index.json) drift (missing paths, duplicate ids)\n\
-                     \n\
-                     Notes:\n\
-                     - This command is read-only; it prints suggested repair commands.\n\
-                     - Use --json (top-level flag) for structured output."
-                );
-                return Ok(());
-            }
             "--strict" => {
                 strict = true;
                 i += 1;

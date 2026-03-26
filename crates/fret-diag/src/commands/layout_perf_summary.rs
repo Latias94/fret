@@ -30,11 +30,6 @@ pub(crate) fn cmd_layout_perf_summary(
                 }
                 i += 1;
             }
-            "--help" | "-h" => {
-                return Err(
-                    "usage: fretboard diag layout-perf-summary [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] [--top <n>] [--warmup-frames <n>] [--json] [--out <path>]".to_string(),
-                );
-            }
             other if other.starts_with('-') => {
                 return Err(format!("unknown diag layout-perf-summary flag: {other}"));
             }

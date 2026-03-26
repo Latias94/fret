@@ -5,21 +5,6 @@ use serde_json::json;
 use crate::promoted_registry_builder::promoted_registry_expected_bytes;
 use crate::script_registry::promoted_registry_default_path;
 
-fn help() {
-    println!(
-        "Usage: fretboard diag registry <check|write|print> [--path <path>] [--json]\n\
-         \n\
-         Commands:\n\
-           check  Validate tools/diag-scripts/index.json matches expected content\n\
-           write  Rewrite tools/diag-scripts/index.json to expected content\n\
-           print  Print expected JSON to stdout\n\
-         \n\
-         Notes:\n\
-           - This command is tooling-only; it does not affect runtime contracts.\n\
-           - The registry scope is suites + _prelude (not the full script library)."
-    );
-}
-
 fn normalize_text_bytes(bytes: &[u8]) -> Vec<u8> {
     let mut s = String::from_utf8_lossy(bytes).to_string();
     s = s.replace("\r\n", "\n");
@@ -64,8 +49,7 @@ pub(crate) fn cmd_registry(
     stats_json: bool,
 ) -> Result<(), String> {
     let Some(sub) = rest.first().map(|s| s.as_str()) else {
-        help();
-        return Ok(());
+        return Err("internal error: diag registry requires a subcommand".to_string());
     };
 
     let (path_override, passthrough) = parse_path_flag(&rest[1..])?;
@@ -80,10 +64,6 @@ pub(crate) fn cmd_registry(
     let path = path_override.unwrap_or(default_path);
 
     match sub {
-        "help" | "-h" | "--help" => {
-            help();
-            Ok(())
-        }
         "print" => {
             let expected = promoted_registry_expected_bytes(workspace_root)?;
             print!("{}", String::from_utf8_lossy(&expected));

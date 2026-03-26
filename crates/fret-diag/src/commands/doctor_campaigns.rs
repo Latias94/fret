@@ -241,22 +241,6 @@ pub(crate) fn cmd_doctor_campaigns(
     let mut index = 0usize;
     while index < rest.len() {
         match rest[index].as_str() {
-            "--help" | "-h" => {
-                println!(
-                    "Usage: fretboard diag doctor campaigns [--strict] [--json]\n\
-                     \n\
-                     Checks repo-owned campaign manifests under tools/diag-campaigns/:\n\
-                     - invalid or unreadable manifests\n\
-                     - duplicate campaign ids across manifests\n\
-                     - legacy top-level `suites` / `scripts` authoring shape\n\
-                     \n\
-                     Notes:\n\
-                     - This command is read-only; it reports errors, warnings, and suggested next steps.\n\
-                     - Use `diag campaign validate <manifest.json>` for explicit ad hoc manifest paths.\n\
-                     - Use --json (top-level flag) for structured output."
-                );
-                return Ok(());
-            }
             "--strict" => {
                 strict = true;
                 index += 1;

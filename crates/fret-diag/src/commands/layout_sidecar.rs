@@ -24,11 +24,6 @@ pub(crate) fn cmd_layout_sidecar(
                 print = true;
                 i += 1;
             }
-            "--help" | "-h" => {
-                return Err(
-                    "usage: fretboard diag layout-sidecar [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] [--print] [--json] [--out <path>]".to_string(),
-                );
-            }
             other if other.starts_with('-') => {
                 return Err(format!("unknown diag layout-sidecar flag: {other}"));
             }

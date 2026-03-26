@@ -8,6 +8,7 @@ use super::{
 };
 
 enum MigratedDiagCommand {
+    Agent(AgentCmdContext),
     AiPacket(AiPacketCmdContext),
     Artifact(ArtifactCmdContext),
     BundleV2(BundleV2CmdContext),
@@ -23,6 +24,7 @@ enum MigratedDiagCommand {
     Hotspots(HotspotsCmdContext),
     Index(IndexCmdContext),
     Inspect(InspectCmdContext),
+    Latest(LatestCmdContext),
     LayoutSidecar(LayoutSidecarCmdContext),
     LayoutPerfSummary(LayoutPerfSummaryCmdContext),
     Lint(LintCmdContext),
@@ -31,8 +33,10 @@ enum MigratedDiagCommand {
     Meta(MetaCmdContext),
     Matrix(crate::diag_matrix::MatrixCmdContext),
     Pack(PackCmdContext),
+    Path(PathCmdContext),
     Perf(crate::diag_perf::PerfCmdContext),
     PerfBaselineFromBundles(crate::diag_perf_baseline::PerfBaselineFromBundlesContext),
+    Poke(PokeCmdContext),
     Pick(PickCmdContext),
     PickApply(PickApplyCmdContext),
     PickArm(PickArmCmdContext),
@@ -55,6 +59,15 @@ enum MigratedDiagCommand {
     Trace(TraceCmdContext),
     Triage(TriageCmdContext),
     Windows(WindowsCmdContext),
+}
+
+struct AgentCmdContext {
+    bundle_source: Option<String>,
+    workspace_root: PathBuf,
+    resolved_out_dir: PathBuf,
+    warmup_frames: u64,
+    stats_json: bool,
+    out: Option<PathBuf>,
 }
 
 struct AiPacketCmdContext {
@@ -169,6 +182,10 @@ struct InspectCmdContext {
     inspect_consume_clicks: Option<bool>,
 }
 
+struct LatestCmdContext {
+    resolved_out_dir: PathBuf,
+}
+
 struct LayoutSidecarCmdContext {
     rest: Vec<String>,
     workspace_root: PathBuf,
@@ -240,6 +257,18 @@ struct PackCmdContext {
     stats_top: usize,
     sort_override: Option<crate::BundleStatsSort>,
     warmup_frames: u64,
+}
+
+struct PathCmdContext {
+    resolved_trigger_path: PathBuf,
+}
+
+struct PokeCmdContext {
+    rest: Vec<String>,
+    resolved_out_dir: PathBuf,
+    resolved_trigger_path: PathBuf,
+    timeout_ms: u64,
+    poll_ms: u64,
 }
 
 struct PickArmCmdContext {
@@ -351,101 +380,12 @@ struct WindowsCmdContext {
     stats_json: bool,
 }
 
-fn should_fallback_to_legacy(sub: &str, err: &clap::Error) -> bool {
-    match err.kind() {
-        ErrorKind::DisplayVersion => true,
-        ErrorKind::DisplayHelp => {
-            sub != "ai-packet"
-                && sub != "artifact"
-                && sub != "bundle-v2"
-                && sub != "campaign"
-                && sub != "compare"
-                && sub != "config"
-                && sub != "dashboard"
-                && sub != "dock-graph"
-                && sub != "dock-routing"
-                && sub != "doctor"
-                && sub != "extensions"
-                && sub != "frames-index"
-                && sub != "hotspots"
-                && sub != "index"
-                && sub != "inspect"
-                && sub != "layout-sidecar"
-                && sub != "layout-perf-summary"
-                && sub != "lint"
-                && sub != "list"
-                && sub != "memory-summary"
-                && sub != "meta"
-                && sub != "matrix"
-                && sub != "pack"
-                && sub != "perf"
-                && sub != "perf-baseline-from-bundles"
-                && sub != "pick"
-                && sub != "pick-apply"
-                && sub != "pick-arm"
-                && sub != "pick-script"
-                && sub != "query"
-                && sub != "registry"
-                && sub != "resolve"
-                && sub != "script"
-                && sub != "screenshots"
-                && sub != "sessions"
-                && sub != "slice"
-                && sub != "stats"
-                && sub != "summarize"
-                && sub != "test-ids"
-                && sub != "test-ids-index"
-                && sub != "trace"
-                && sub != "triage"
-                && sub != "windows"
-        }
-        ErrorKind::UnknownArgument => {
-            sub != "ai-packet"
-                && sub != "artifact"
-                && sub != "bundle-v2"
-                && sub != "campaign"
-                && sub != "compare"
-                && sub != "config"
-                && sub != "dashboard"
-                && sub != "dock-graph"
-                && sub != "dock-routing"
-                && sub != "doctor"
-                && sub != "extensions"
-                && sub != "frames-index"
-                && sub != "hotspots"
-                && sub != "index"
-                && sub != "inspect"
-                && sub != "layout-sidecar"
-                && sub != "layout-perf-summary"
-                && sub != "lint"
-                && sub != "list"
-                && sub != "memory-summary"
-                && sub != "meta"
-                && sub != "matrix"
-                && sub != "pack"
-                && sub != "perf"
-                && sub != "perf-baseline-from-bundles"
-                && sub != "pick"
-                && sub != "pick-apply"
-                && sub != "pick-arm"
-                && sub != "pick-script"
-                && sub != "query"
-                && sub != "registry"
-                && sub != "resolve"
-                && sub != "script"
-                && sub != "screenshots"
-                && sub != "sessions"
-                && sub != "slice"
-                && sub != "stats"
-                && sub != "summarize"
-                && sub != "test-ids"
-                && sub != "test-ids-index"
-                && sub != "trace"
-                && sub != "triage"
-                && sub != "windows"
-        }
-        _ => false,
-    }
+fn clap_error_to_string(err: clap::Error) -> String {
+    let rendered = err.to_string();
+    rendered
+        .strip_prefix("error: ")
+        .unwrap_or(rendered.as_str())
+        .to_string()
 }
 
 fn parse_env_assignments(values: &[String]) -> Result<Vec<(String, String)>, String> {
@@ -1215,6 +1155,21 @@ fn parse_ai_packet_command(
     }))
 }
 
+fn parse_agent_command(
+    args: contracts::commands::agent::AgentCommandArgs,
+    workspace_root: &Path,
+) -> Result<MigratedDiagCommand, String> {
+    let resolved_out_dir = resolve_diag_out_dir(workspace_root, "agent", None, None)?;
+    Ok(MigratedDiagCommand::Agent(AgentCmdContext {
+        bundle_source: args.source,
+        workspace_root: workspace_root.to_path_buf(),
+        resolved_out_dir,
+        warmup_frames: args.warmup.warmup_frames,
+        stats_json: args.output.json,
+        out: args.output.out,
+    }))
+}
+
 fn parse_dock_graph_command(
     args: contracts::commands::dock_graph::DockGraphCommandArgs,
     workspace_root: &Path,
@@ -1354,6 +1309,16 @@ fn parse_inspect_command(
         resolved_inspect_path,
         resolved_inspect_trigger_path,
         inspect_consume_clicks: args.consume_clicks,
+    }))
+}
+
+fn parse_latest_command(
+    args: contracts::commands::latest::LatestCommandArgs,
+    workspace_root: &Path,
+) -> Result<MigratedDiagCommand, String> {
+    let resolved_out_dir = resolve_diag_out_dir(workspace_root, "latest", None, args.dir)?;
+    Ok(MigratedDiagCommand::Latest(LatestCmdContext {
+        resolved_out_dir,
     }))
 }
 
@@ -1604,6 +1569,31 @@ fn parse_pack_command(
     }))
 }
 
+fn parse_path_command(
+    args: contracts::commands::path::PathCommandArgs,
+    workspace_root: &Path,
+) -> Result<MigratedDiagCommand, String> {
+    let ResolvedDiagCliPaths {
+        resolved_run_context,
+        ..
+    } = resolve_diag_cli_paths(ResolveDiagCliPathsRequest {
+        workspace_root,
+        sub: "path",
+        launch: None,
+        session_auto: false,
+        session_id: None,
+        overrides: DiagPathOverrides {
+            out_dir: args.dir,
+            trigger_path: args.trigger_path,
+            ..DiagPathOverrides::default()
+        },
+    })?;
+
+    Ok(MigratedDiagCommand::Path(PathCmdContext {
+        resolved_trigger_path: resolved_run_context.paths.trigger_path,
+    }))
+}
+
 fn parse_pick_arm_command(workspace_root: &Path) -> Result<MigratedDiagCommand, String> {
     let ResolvedDiagCliPaths {
         resolved_pick_trigger_path,
@@ -1709,6 +1699,60 @@ fn parse_pick_apply_command(
         pick_apply_out: args.out,
         timeout_ms: args.wait.timeout_ms,
         poll_ms: args.wait.poll_ms,
+    }))
+}
+
+fn parse_poke_command(
+    args: contracts::commands::poke::PokeCommandArgs,
+    workspace_root: &Path,
+) -> Result<MigratedDiagCommand, String> {
+    let ResolvedDiagCliPaths {
+        resolved_out_dir,
+        resolved_run_context,
+        ..
+    } = resolve_diag_cli_paths(ResolveDiagCliPathsRequest {
+        workspace_root,
+        sub: "poke",
+        launch: None,
+        session_auto: false,
+        session_id: None,
+        overrides: DiagPathOverrides {
+            out_dir: args.dir,
+            trigger_path: args.trigger_path,
+            ..DiagPathOverrides::default()
+        },
+    })?;
+
+    let mut rest = Vec::new();
+    if let Some(label) = args.label {
+        rest.push("--label".to_string());
+        rest.push(label);
+    }
+    if let Some(max_snapshots) = args.max_snapshots {
+        rest.push("--max-snapshots".to_string());
+        rest.push(max_snapshots.to_string());
+    }
+    if let Some(request_id) = args.request_id {
+        rest.push("--request-id".to_string());
+        rest.push(request_id.to_string());
+    }
+    if args.wait {
+        rest.push("--wait".to_string());
+    }
+    if args.record_run {
+        rest.push("--record-run".to_string());
+    }
+    if let Some(run_id) = args.run_id {
+        rest.push("--run-id".to_string());
+        rest.push(run_id.to_string());
+    }
+
+    Ok(MigratedDiagCommand::Poke(PokeCmdContext {
+        rest,
+        resolved_out_dir,
+        resolved_trigger_path: resolved_run_context.paths.trigger_path,
+        timeout_ms: args.wait_args.timeout_ms,
+        poll_ms: args.wait_args.poll_ms,
     }))
 }
 
@@ -2772,59 +2816,11 @@ fn maybe_parse_migrated_command_with_workspace(
     args: &[String],
     workspace_root: &Path,
 ) -> Option<Result<MigratedDiagCommand, String>> {
-    let sub = args.first()?.as_str();
+    if args.is_empty() {
+        return None;
+    }
     if let Some(err) = retired_diag_alias_error(args) {
         return Some(Err(err));
-    }
-    if sub != "ai-packet"
-        && sub != "artifact"
-        && sub != "bundle-v2"
-        && sub != "campaign"
-        && sub != "compare"
-        && sub != "config"
-        && sub != "dashboard"
-        && sub != "dock-graph"
-        && sub != "dock-routing"
-        && sub != "doctor"
-        && sub != "extensions"
-        && sub != "frames-index"
-        && sub != "hotspots"
-        && sub != "index"
-        && sub != "inspect"
-        && sub != "layout-sidecar"
-        && sub != "layout-perf-summary"
-        && sub != "lint"
-        && sub != "list"
-        && sub != "memory-summary"
-        && sub != "meta"
-        && sub != "matrix"
-        && sub != "pack"
-        && sub != "perf"
-        && sub != "perf-baseline-from-bundles"
-        && sub != "pick"
-        && sub != "pick-apply"
-        && sub != "pick-arm"
-        && sub != "pick-script"
-        && sub != "query"
-        && sub != "registry"
-        && sub != "resolve"
-        && sub != "run"
-        && sub != "repeat"
-        && sub != "repro"
-        && sub != "screenshots"
-        && sub != "script"
-        && sub != "sessions"
-        && sub != "slice"
-        && sub != "stats"
-        && sub != "summarize"
-        && sub != "suite"
-        && sub != "test-ids"
-        && sub != "test-ids-index"
-        && sub != "trace"
-        && sub != "triage"
-        && sub != "windows"
-    {
-        return None;
     }
 
     let argv = std::iter::once("fretboard diag".to_string())
@@ -2832,11 +2828,11 @@ fn maybe_parse_migrated_command_with_workspace(
         .collect::<Vec<_>>();
     let parsed = match contracts::try_parse_contract(argv) {
         Ok(parsed) => parsed,
-        Err(err) if should_fallback_to_legacy(sub, &err) => return None,
-        Err(err) => return Some(Err(err.to_string())),
+        Err(err) => return Some(Err(clap_error_to_string(err))),
     };
 
     Some(match parsed.command {
+        contracts::DiagCommandContract::Agent(agent) => parse_agent_command(agent, workspace_root),
         contracts::DiagCommandContract::AiPacket(ai_packet) => {
             parse_ai_packet_command(ai_packet, workspace_root)
         }
@@ -2880,6 +2876,9 @@ fn maybe_parse_migrated_command_with_workspace(
         contracts::DiagCommandContract::Inspect(inspect) => {
             parse_inspect_command(inspect, workspace_root)
         }
+        contracts::DiagCommandContract::Latest(latest) => {
+            parse_latest_command(latest, workspace_root)
+        }
         contracts::DiagCommandContract::LayoutSidecar(layout_sidecar) => {
             parse_layout_sidecar_command(layout_sidecar, workspace_root)
         }
@@ -2896,10 +2895,12 @@ fn maybe_parse_migrated_command_with_workspace(
             parse_matrix_command(matrix, workspace_root)
         }
         contracts::DiagCommandContract::Pack(pack) => parse_pack_command(pack, workspace_root),
+        contracts::DiagCommandContract::Path(path) => parse_path_command(path, workspace_root),
         contracts::DiagCommandContract::Perf(perf) => parse_perf_command(perf, workspace_root),
         contracts::DiagCommandContract::PerfBaselineFromBundles(perf_baseline) => {
             parse_perf_baseline_from_bundles_command(perf_baseline, workspace_root)
         }
+        contracts::DiagCommandContract::Poke(poke) => parse_poke_command(poke, workspace_root),
         contracts::DiagCommandContract::Pick(pick) => parse_pick_command(pick, workspace_root),
         contracts::DiagCommandContract::PickApply(pick_apply) => {
             parse_pick_apply_command(pick_apply, workspace_root)
@@ -2953,14 +2954,46 @@ fn maybe_parse_migrated_command_with_workspace(
     })
 }
 
-pub(crate) fn maybe_dispatch_migrated_command(args: &[String]) -> Option<Result<(), String>> {
-    let workspace_root = match workspace_root() {
-        Ok(workspace_root) => workspace_root,
-        Err(err) => return Some(Err(err)),
-    };
+pub(crate) fn dispatch_diag_command(args: &[String]) -> Result<(), String> {
+    if args.is_empty() {
+        let err = contracts::try_parse_contract(["fretboard diag", "--help"])
+            .expect_err("diag --help should render clap help");
+        print!("{err}");
+        return Ok(());
+    }
 
-    let parsed = maybe_parse_migrated_command_with_workspace(args, &workspace_root)?;
-    Some(match parsed {
+    if let Some(err) = retired_diag_alias_error(args) {
+        return Err(err);
+    }
+
+    let argv = std::iter::once("fretboard diag".to_string())
+        .chain(args.iter().cloned())
+        .collect::<Vec<_>>();
+    match contracts::try_parse_contract(argv) {
+        Ok(_) => {}
+        Err(err)
+            if err.kind() == ErrorKind::DisplayHelp || err.kind() == ErrorKind::DisplayVersion =>
+        {
+            print!("{err}");
+            return Ok(());
+        }
+        Err(err) => return Err(clap_error_to_string(err)),
+    }
+
+    let workspace_root = workspace_root()?;
+    let parsed = maybe_parse_migrated_command_with_workspace(args, &workspace_root)
+        .ok_or_else(|| "internal error: diag contract parser produced no command".to_string())?;
+
+    match parsed {
+        Ok(MigratedDiagCommand::Agent(ctx)) => crate::commands::agent::cmd_agent(
+            ctx.bundle_source.as_deref(),
+            ctx.out,
+            false,
+            &ctx.workspace_root,
+            &ctx.resolved_out_dir,
+            ctx.warmup_frames,
+            ctx.stats_json,
+        ),
         Ok(MigratedDiagCommand::AiPacket(ctx)) => crate::commands::ai_packet::cmd_ai_packet(
             &ctx.rest,
             false,
@@ -3055,6 +3088,9 @@ pub(crate) fn maybe_dispatch_migrated_command(args: &[String]) -> Option<Result<
             &ctx.resolved_inspect_trigger_path,
             ctx.inspect_consume_clicks,
         ),
+        Ok(MigratedDiagCommand::Latest(ctx)) => {
+            crate::commands::session::cmd_latest(&[], false, &ctx.resolved_out_dir)
+        }
         Ok(MigratedDiagCommand::LayoutSidecar(ctx)) => {
             crate::commands::layout_sidecar::cmd_layout_sidecar(
                 &ctx.rest,
@@ -3126,10 +3162,21 @@ pub(crate) fn maybe_dispatch_migrated_command(args: &[String]) -> Option<Result<
             ctx.sort_override,
             ctx.warmup_frames,
         ),
+        Ok(MigratedDiagCommand::Path(ctx)) => {
+            crate::commands::session::cmd_path(&[], false, &ctx.resolved_trigger_path)
+        }
         Ok(MigratedDiagCommand::Perf(ctx)) => crate::diag_perf::cmd_perf(ctx),
         Ok(MigratedDiagCommand::PerfBaselineFromBundles(ctx)) => {
             crate::diag_perf_baseline::cmd_perf_baseline_from_bundles(ctx)
         }
+        Ok(MigratedDiagCommand::Poke(ctx)) => crate::commands::session::cmd_poke(
+            &ctx.rest,
+            false,
+            &ctx.resolved_out_dir,
+            &ctx.resolved_trigger_path,
+            ctx.timeout_ms,
+            ctx.poll_ms,
+        ),
         Ok(MigratedDiagCommand::Pick(ctx)) => crate::commands::pick::cmd_pick(
             &[],
             &ctx.resolved_pick_trigger_path,
@@ -3272,7 +3319,7 @@ pub(crate) fn maybe_dispatch_migrated_command(args: &[String]) -> Option<Result<
             ctx.stats_json,
         ),
         Err(err) => Err(err),
-    })
+    }
 }
 
 #[cfg(test)]
@@ -3288,6 +3335,11 @@ mod tests {
             .parent()
             .expect("workspace root should exist")
             .to_path_buf()
+    }
+
+    #[test]
+    fn dispatch_diag_command_accepts_empty_args_as_root_help() {
+        dispatch_diag_command(&[]).expect("empty diag args should render root help");
     }
 
     #[test]
@@ -3767,6 +3819,143 @@ mod tests {
         );
         assert!(ctx.stats_json);
         assert_eq!(ctx.workspace_root, workspace_root);
+    }
+
+    #[test]
+    fn migrated_path_builds_a_real_trigger_context() {
+        let workspace_root = workspace_root_for_tests();
+        let args = vec![
+            "path".to_string(),
+            "--dir".to_string(),
+            "target/fret-diag-cutover-path".to_string(),
+            "--trigger-path".to_string(),
+            "target/fret-diag-cutover-path/custom.trigger".to_string(),
+        ];
+
+        let parsed = maybe_parse_migrated_command_with_workspace(&args, &workspace_root)
+            .expect("path should be intercepted")
+            .expect("path should parse");
+
+        let MigratedDiagCommand::Path(ctx) = parsed else {
+            panic!("expected path context");
+        };
+
+        assert!(
+            ctx.resolved_trigger_path
+                .ends_with("target/fret-diag-cutover-path/custom.trigger")
+        );
+    }
+
+    #[test]
+    fn migrated_agent_builds_a_real_output_context() {
+        let workspace_root = workspace_root_for_tests();
+        let args = vec![
+            "agent".to_string(),
+            "target/fret-diag/demo".to_string(),
+            "--warmup-frames".to_string(),
+            "7".to_string(),
+            "--json".to_string(),
+            "--out".to_string(),
+            "target/agent.plan.json".to_string(),
+        ];
+
+        let parsed = maybe_parse_migrated_command_with_workspace(&args, &workspace_root)
+            .expect("agent should be intercepted")
+            .expect("agent should parse");
+
+        let MigratedDiagCommand::Agent(ctx) = parsed else {
+            panic!("expected agent context");
+        };
+
+        assert_eq!(ctx.bundle_source.as_deref(), Some("target/fret-diag/demo"));
+        assert_eq!(ctx.workspace_root, workspace_root);
+        assert!(ctx.resolved_out_dir.ends_with("target/fret-diag"));
+        assert_eq!(ctx.warmup_frames, 7);
+        assert!(ctx.stats_json);
+        assert_eq!(ctx.out, Some(PathBuf::from("target/agent.plan.json")));
+    }
+
+    #[test]
+    fn migrated_poke_builds_a_real_poke_context() {
+        let workspace_root = workspace_root_for_tests();
+        let args = vec![
+            "poke".to_string(),
+            "--dir".to_string(),
+            "target/fret-diag-cutover-poke".to_string(),
+            "--trigger-path".to_string(),
+            "target/fret-diag-cutover-poke/custom.trigger".to_string(),
+            "--label".to_string(),
+            "manual-dump".to_string(),
+            "--max-snapshots".to_string(),
+            "8".to_string(),
+            "--request-id".to_string(),
+            "42".to_string(),
+            "--wait".to_string(),
+            "--record-run".to_string(),
+            "--run-id".to_string(),
+            "99".to_string(),
+            "--timeout-ms".to_string(),
+            "9".to_string(),
+            "--poll-ms".to_string(),
+            "3".to_string(),
+        ];
+
+        let parsed = maybe_parse_migrated_command_with_workspace(&args, &workspace_root)
+            .expect("poke should be intercepted")
+            .expect("poke should parse");
+
+        let MigratedDiagCommand::Poke(ctx) = parsed else {
+            panic!("expected poke context");
+        };
+
+        assert_eq!(
+            ctx.rest,
+            vec![
+                "--label".to_string(),
+                "manual-dump".to_string(),
+                "--max-snapshots".to_string(),
+                "8".to_string(),
+                "--request-id".to_string(),
+                "42".to_string(),
+                "--wait".to_string(),
+                "--record-run".to_string(),
+                "--run-id".to_string(),
+                "99".to_string(),
+            ]
+        );
+        assert!(
+            ctx.resolved_out_dir
+                .ends_with("target/fret-diag-cutover-poke")
+        );
+        assert!(
+            ctx.resolved_trigger_path
+                .ends_with("target/fret-diag-cutover-poke/custom.trigger")
+        );
+        assert_eq!(ctx.timeout_ms, 9);
+        assert_eq!(ctx.poll_ms, 3);
+    }
+
+    #[test]
+    fn migrated_latest_builds_a_real_output_context() {
+        let workspace_root = workspace_root_for_tests();
+        let args = vec![
+            "latest".to_string(),
+            "--dir".to_string(),
+            "target/fret-diag-cutover-latest".to_string(),
+        ];
+
+        let parsed = maybe_parse_migrated_command_with_workspace(&args, &workspace_root)
+            .expect("latest should be intercepted")
+            .expect("latest should parse");
+
+        let MigratedDiagCommand::Latest(ctx) = parsed else {
+            panic!("expected latest context");
+        };
+
+        assert!(
+            ctx.resolved_out_dir
+                .ends_with("target/fret-diag-cutover-latest")
+        );
     }
 
     #[test]
@@ -6070,7 +6259,7 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_run_or_suite_flags_fall_back_to_legacy_parser() {
+    fn unsupported_run_or_suite_flags_are_rejected() {
         let workspace_root = workspace_root_for_tests();
         let args = vec![
             "suite".to_string(),
@@ -6079,12 +6268,16 @@ mod tests {
             "tools/diag-scripts/ui-gallery-intro-idle-screenshot.json".to_string(),
         ];
 
-        let parsed = maybe_parse_migrated_command_with_workspace(&args, &workspace_root);
-        assert!(parsed.is_none());
+        let err = match maybe_parse_migrated_command_with_workspace(&args, &workspace_root) {
+            Some(Err(err)) => err,
+            Some(Ok(_)) => panic!("unsupported suite flags should be rejected"),
+            None => panic!("suite should stay on migrated parser"),
+        };
+        assert!(err.contains("--suite-prewarm"));
     }
 
     #[test]
-    fn unsupported_repeat_flags_fall_back_to_legacy_parser() {
+    fn unsupported_repeat_flags_are_rejected() {
         let workspace_root = workspace_root_for_tests();
         let args = vec![
             "repeat".to_string(),
@@ -6092,12 +6285,16 @@ mod tests {
             "--pack".to_string(),
         ];
 
-        let parsed = maybe_parse_migrated_command_with_workspace(&args, &workspace_root);
-        assert!(parsed.is_none());
+        let err = match maybe_parse_migrated_command_with_workspace(&args, &workspace_root) {
+            Some(Err(err)) => err,
+            Some(Ok(_)) => panic!("unsupported repeat flags should be rejected"),
+            None => panic!("repeat should stay on migrated parser"),
+        };
+        assert!(err.contains("--pack"));
     }
 
     #[test]
-    fn unsupported_repro_flags_fall_back_to_legacy_parser() {
+    fn unsupported_repro_flags_are_rejected() {
         let workspace_root = workspace_root_for_tests();
         let args = vec![
             "repro".to_string(),
@@ -6106,7 +6303,11 @@ mod tests {
             "tracy".to_string(),
         ];
 
-        let parsed = maybe_parse_migrated_command_with_workspace(&args, &workspace_root);
-        assert!(parsed.is_none());
+        let err = match maybe_parse_migrated_command_with_workspace(&args, &workspace_root) {
+            Some(Err(err)) => err,
+            Some(Ok(_)) => panic!("unsupported repro flags should be rejected"),
+            None => panic!("repro should stay on migrated parser"),
+        };
+        assert!(err.contains("--with"));
     }
 }

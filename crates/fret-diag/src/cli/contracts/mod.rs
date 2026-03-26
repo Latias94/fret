@@ -6,8 +6,10 @@ pub(crate) mod shared;
 #[derive(Debug, Parser)]
 #[command(
     name = "fretboard diag",
-    about = "Contract scaffold for the upcoming clap-based diag CLI reset.",
-    disable_help_subcommand = true
+    about = "Diagnostics tooling for the Fret workspace.",
+    after_help = "Examples:\n  fretboard diag poke\n  fretboard diag latest\n  fretboard diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag campaign list --lane smoke --tag ui-gallery",
+    disable_help_subcommand = true,
+    arg_required_else_help = true
 )]
 pub(crate) struct DiagCliContract {
     #[command(subcommand)]
@@ -16,6 +18,7 @@ pub(crate) struct DiagCliContract {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum DiagCommandContract {
+    Agent(commands::agent::AgentCommandArgs),
     AiPacket(commands::ai_packet::AiPacketCommandArgs),
     Artifact(commands::artifact::ArtifactCommandArgs),
     BundleV2(commands::bundle_v2::BundleV2CommandArgs),
@@ -31,6 +34,7 @@ pub(crate) enum DiagCommandContract {
     Hotspots(commands::hotspots::HotspotsCommandArgs),
     Index(commands::index::IndexCommandArgs),
     Inspect(commands::inspect::InspectCommandArgs),
+    Latest(commands::latest::LatestCommandArgs),
     LayoutSidecar(commands::layout_sidecar::LayoutSidecarCommandArgs),
     LayoutPerfSummary(commands::layout_perf_summary::LayoutPerfSummaryCommandArgs),
     Lint(commands::lint::LintCommandArgs),
@@ -39,10 +43,12 @@ pub(crate) enum DiagCommandContract {
     Meta(commands::meta::MetaCommandArgs),
     Matrix(commands::matrix::MatrixCommandArgs),
     Pack(commands::pack::PackCommandArgs),
+    Path(commands::path::PathCommandArgs),
     Perf(commands::perf::PerfCommandArgs),
     PerfBaselineFromBundles(
         commands::perf_baseline_from_bundles::PerfBaselineFromBundlesCommandArgs,
     ),
+    Poke(commands::poke::PokeCommandArgs),
     Pick(commands::pick::PickCommandArgs),
     PickApply(commands::pick_apply::PickApplyCommandArgs),
     PickArm(commands::pick_arm::PickArmCommandArgs),
@@ -105,93 +111,6 @@ fn full_diag_bin_name(path: &[&str]) -> String {
     }
 }
 
-fn help_path_from_args(args: &[String]) -> Vec<String> {
-    let mut cmd = DiagCliContract::command();
-    let mut current = &mut cmd;
-    let mut path = Vec::new();
-
-    for arg in args {
-        if arg == "-h" || arg == "--help" || arg.starts_with('-') {
-            break;
-        }
-        let Some(next) = current.find_subcommand_mut(arg.as_str()) else {
-            break;
-        };
-        path.push(arg.clone());
-        current = next;
-    }
-
-    path
-}
-
-pub(crate) fn maybe_render_migrated_help(args: &[String]) -> Option<Result<(), String>> {
-    let sub = args.first()?.as_str();
-    if sub != "ai-packet"
-        && sub != "artifact"
-        && sub != "bundle-v2"
-        && sub != "campaign"
-        && sub != "compare"
-        && sub != "config"
-        && sub != "dashboard"
-        && sub != "dock-graph"
-        && sub != "dock-routing"
-        && sub != "doctor"
-        && sub != "extensions"
-        && sub != "frames-index"
-        && sub != "hotspots"
-        && sub != "index"
-        && sub != "inspect"
-        && sub != "layout-sidecar"
-        && sub != "layout-perf-summary"
-        && sub != "lint"
-        && sub != "list"
-        && sub != "memory-summary"
-        && sub != "meta"
-        && sub != "matrix"
-        && sub != "pack"
-        && sub != "perf"
-        && sub != "perf-baseline-from-bundles"
-        && sub != "pick"
-        && sub != "pick-apply"
-        && sub != "pick-arm"
-        && sub != "pick-script"
-        && sub != "query"
-        && sub != "registry"
-        && sub != "resolve"
-        && sub != "run"
-        && sub != "repeat"
-        && sub != "repro"
-        && sub != "screenshots"
-        && sub != "script"
-        && sub != "sessions"
-        && sub != "slice"
-        && sub != "stats"
-        && sub != "summarize"
-        && sub != "suite"
-        && sub != "test-ids"
-        && sub != "test-ids-index"
-        && sub != "trace"
-        && sub != "triage"
-        && sub != "windows"
-    {
-        return None;
-    }
-    let wants_help = args
-        .iter()
-        .skip(1)
-        .any(|arg| arg == "-h" || arg == "--help");
-    if !wants_help {
-        return None;
-    }
-
-    let path = help_path_from_args(args);
-    let path = path.iter().map(String::as_str).collect::<Vec<_>>();
-
-    Some(render_command_help_path(&path).map(|help| {
-        println!("{help}");
-    }))
-}
-
 #[cfg(test)]
 mod tests {
     use std::path::{Path, PathBuf};
@@ -201,11 +120,15 @@ mod tests {
     use super::{
         DiagCommandContract,
         commands::{
+            agent::AgentCommandArgs,
             artifact::ArtifactSubcommandArgs,
             campaign::CampaignSubcommandArgs,
             config::ConfigSubcommandArgs,
             doctor::DoctorSubcommandArgs,
+            latest::LatestCommandArgs,
             list::ListSubcommandArgs,
+            path::PathCommandArgs,
+            poke::PokeCommandArgs,
             query::{QuerySubcommandArgs, resolve_query_test_id_inputs},
             registry::RegistrySubcommandArgs,
             resolve::ResolveSubcommandArgs,
@@ -220,6 +143,35 @@ mod tests {
         let err =
             try_parse_contract(["fretboard", "run"]).expect_err("run should require a script");
         assert_eq!(err.kind(), ErrorKind::MissingRequiredArgument);
+    }
+
+    #[test]
+    fn agent_contract_captures_source_warmup_and_output_flags() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "agent",
+            "target/fret-diag/demo",
+            "--warmup-frames",
+            "7",
+            "--json",
+            "--out",
+            "target/agent.plan.json",
+        ])
+        .expect("agent should parse");
+
+        let DiagCommandContract::Agent(AgentCommandArgs {
+            source,
+            warmup,
+            output,
+        }) = cli.command
+        else {
+            panic!("expected agent command");
+        };
+
+        assert_eq!(source.as_deref(), Some("target/fret-diag/demo"));
+        assert_eq!(warmup.warmup_frames, 7);
+        assert!(output.json);
+        assert_eq!(output.out, Some(PathBuf::from("target/agent.plan.json")));
     }
 
     #[test]
@@ -845,6 +797,97 @@ mod tests {
 
         assert_eq!(write.path, Some(PathBuf::from("target/diag.index.json")));
         assert!(write.json);
+    }
+
+    #[test]
+    fn path_contract_captures_dir_and_trigger_override() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "path",
+            "--dir",
+            "target/fret-diag-path",
+            "--trigger-path",
+            "target/fret-diag-path/custom.trigger",
+        ])
+        .expect("path should parse");
+
+        let DiagCommandContract::Path(PathCommandArgs { dir, trigger_path }) = cli.command else {
+            panic!("expected path command");
+        };
+
+        assert_eq!(dir, Some(PathBuf::from("target/fret-diag-path")));
+        assert_eq!(
+            trigger_path,
+            Some(PathBuf::from("target/fret-diag-path/custom.trigger"))
+        );
+    }
+
+    #[test]
+    fn poke_contract_captures_dump_request_and_wait_flags() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "poke",
+            "--dir",
+            "target/fret-diag-poke",
+            "--trigger-path",
+            "target/fret-diag-poke/custom.trigger",
+            "--label",
+            "manual-dump",
+            "--max-snapshots",
+            "8",
+            "--request-id",
+            "42",
+            "--wait",
+            "--record-run",
+            "--run-id",
+            "99",
+            "--timeout-ms",
+            "9",
+            "--poll-ms",
+            "3",
+        ])
+        .expect("poke should parse");
+
+        let DiagCommandContract::Poke(PokeCommandArgs {
+            dir,
+            trigger_path,
+            label,
+            max_snapshots,
+            request_id,
+            wait,
+            record_run,
+            run_id,
+            wait_args,
+        }) = cli.command
+        else {
+            panic!("expected poke command");
+        };
+
+        assert_eq!(dir, Some(PathBuf::from("target/fret-diag-poke")));
+        assert_eq!(
+            trigger_path,
+            Some(PathBuf::from("target/fret-diag-poke/custom.trigger"))
+        );
+        assert_eq!(label.as_deref(), Some("manual-dump"));
+        assert_eq!(max_snapshots, Some(8));
+        assert_eq!(request_id, Some(42));
+        assert!(wait);
+        assert!(record_run);
+        assert_eq!(run_id, Some(99));
+        assert_eq!(wait_args.timeout_ms, 9);
+        assert_eq!(wait_args.poll_ms, 3);
+    }
+
+    #[test]
+    fn latest_contract_captures_dir_override() {
+        let cli = try_parse_contract(["fretboard", "latest", "--dir", "target/fret-diag-latest"])
+            .expect("latest should parse");
+
+        let DiagCommandContract::Latest(LatestCommandArgs { dir }) = cli.command else {
+            panic!("expected latest command");
+        };
+
+        assert_eq!(dir, Some(PathBuf::from("target/fret-diag-latest")));
     }
 
     #[test]
@@ -2287,6 +2330,8 @@ mod tests {
 
     #[test]
     fn contract_help_mentions_the_migrated_command_surfaces() {
+        let diag_help = render_command_help_path(&[]).expect("diag root help");
+        let agent_help = render_command_help("agent").expect("agent help");
         let ai_packet_help = render_command_help("ai-packet").expect("ai-packet help");
         let artifact_help = render_command_help("artifact").expect("artifact help");
         let artifact_lint_help =
@@ -2318,11 +2363,13 @@ mod tests {
         let list_help = render_command_help("list").expect("list help");
         let list_sessions_help =
             render_command_help_path(&["list", "sessions"]).expect("list sessions help");
+        let latest_help = render_command_help("latest").expect("latest help");
         let memory_summary_help =
             render_command_help("memory-summary").expect("memory-summary help");
         let meta_help = render_command_help("meta").expect("meta help");
         let matrix_help = render_command_help("matrix").expect("matrix help");
         let pack_help = render_command_help("pack").expect("pack help");
+        let path_help = render_command_help("path").expect("path help");
         let perf_help = render_command_help("perf").expect("perf help");
         let perf_baseline_help = render_command_help("perf-baseline-from-bundles")
             .expect("perf-baseline-from-bundles help");
@@ -2330,6 +2377,7 @@ mod tests {
         let pick_apply_help = render_command_help("pick-apply").expect("pick-apply help");
         let pick_arm_help = render_command_help("pick-arm").expect("pick-arm help");
         let pick_script_help = render_command_help("pick-script").expect("pick-script help");
+        let poke_help = render_command_help("poke").expect("poke help");
         let query_help = render_command_help("query").expect("query help");
         let query_snapshots_help =
             render_command_help_path(&["query", "snapshots"]).expect("query snapshots help");
@@ -2357,6 +2405,9 @@ mod tests {
         let trace_help = render_command_help("trace").expect("trace help");
         let triage_help = render_command_help("triage").expect("triage help");
         let windows_help = render_command_help("windows").expect("windows help");
+        assert!(agent_help.contains("--warmup-frames"));
+        assert!(agent_help.contains("--out"));
+        assert!(agent_help.contains("--json"));
         assert!(ai_packet_help.contains("--test-id"));
         assert!(ai_packet_help.contains("--packet-out"));
         assert!(artifact_help.contains("lint"));
@@ -2384,6 +2435,12 @@ mod tests {
         assert!(index_help.contains("--warmup-frames"));
         assert!(inspect_help.contains("toggle"));
         assert!(inspect_help.contains("--consume-clicks"));
+        assert!(diag_help.contains("Usage: fretboard diag"));
+        assert!(diag_help.contains("agent"));
+        assert!(diag_help.contains("path"));
+        assert!(diag_help.contains("poke"));
+        assert!(diag_help.contains("latest"));
+        assert!(latest_help.contains("--dir"));
         assert!(layout_sidecar_help.contains("--print"));
         assert!(layout_perf_summary_help.contains("--warmup-frames"));
         assert!(layout_perf_summary_help.contains("--top"));
@@ -2402,6 +2459,7 @@ mod tests {
         assert!(!matrix_help.contains("--check-dock-drag-min"));
         assert!(pack_help.contains("--pack-schema2-only"));
         assert!(!pack_help.contains("--schema2-only"));
+        assert!(path_help.contains("--trigger-path"));
         assert!(perf_help.contains("--prewarm-script"));
         assert!(perf_help.contains("--perf-threshold-agg"));
         assert!(perf_baseline_help.contains("--perf-baseline-out"));
@@ -2413,6 +2471,8 @@ mod tests {
         assert!(pick_arm_help.contains("Usage: fretboard diag pick-arm"));
         assert!(pick_script_help.contains("--pick-script-out"));
         assert!(pick_script_help.contains("--poll-ms"));
+        assert!(poke_help.contains("--request-id"));
+        assert!(poke_help.contains("--record-run"));
         assert!(query_help.contains("test-id"));
         assert!(query_help.contains("snapshots"));
         assert!(query_snapshots_help.contains("--step-index"));

@@ -969,16 +969,6 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
                     Some(crate::resolve_path(&ctx.workspace_root, PathBuf::from(v)));
                 i += 1;
             }
-            "--help" | "-h" => {
-                println!(
-                    "Usage: fretboard diag config doctor [--mode launch|manual] [--config-path <path>] [--show-env set|all] [--report-json] [--print-launch-policy]\n\n\
-Default mode is `launch`, which overlays the tooling-reserved env vars (FRET_DIAG*, ready/exit paths) as if you were using `--launch`.\n\
-Use `--mode manual` to report what the runtime would see from the current process env only.\n\
-\n\
-Tip: pass global `diag --env KEY=VALUE` flags to simulate one-off overrides for launched runs."
-                );
-                return Ok(());
-            }
             other if other.starts_with('-') => {
                 return Err(format!("unknown config doctor flag: {other}"));
             }
