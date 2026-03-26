@@ -1110,6 +1110,7 @@ pub struct AlertDialogContent {
     size: AlertDialogContentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
 }
 
 impl AlertDialogContent {
@@ -1120,6 +1121,7 @@ impl AlertDialogContent {
             size: AlertDialogContentSize::Default,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            test_id: None,
         }
     }
 
@@ -1152,8 +1154,30 @@ impl AlertDialogContent {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self {
+            children,
+            size,
+            chrome,
+            layout,
+            test_id,
+        } = self;
         let theme = Theme::global(&*cx.app).snapshot();
 
         let bg = theme.color_token("background");
@@ -1168,19 +1192,18 @@ impl AlertDialogContent {
             .bg(ColorRef::Color(bg))
             .border_color(ColorRef::Color(border))
             .p(Space::N6)
-            .merge(self.chrome);
+            .merge(chrome);
 
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(alert_dialog_content_default_max_width(self.size))
+            .max_w(alert_dialog_content_default_max_width(size))
             .min_w_0()
             .min_h_0()
-            .merge(self.layout);
+            .merge(layout);
 
         register_alert_dialog_content_max_width_hint(cx, &theme, &layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);
-        let children = self.children;
         let container = shadcn_layout::container_vstack(
             cx,
             ContainerProps {
@@ -1197,12 +1220,16 @@ impl AlertDialogContent {
         let (labelled_by_element, described_by_element) =
             crate::a11y_modal::modal_relations_for_current_scope(cx.app);
 
-        container.attach_semantics(SemanticsDecoration {
+        let mut content = container.attach_semantics(SemanticsDecoration {
             role: Some(SemanticsRole::AlertDialog),
             labelled_by_element,
             described_by_element,
             ..Default::default()
-        })
+        });
+        if let Some(test_id) = test_id {
+            content = content.test_id(test_id);
+        }
+        content
     }
 }
 
@@ -1257,13 +1284,13 @@ where
         ))
         .size(self.size)
         .refine_style(self.chrome)
-        .refine_layout(self.layout)
-        .into_element(cx);
-        if let Some(id) = self.test_id {
+        .refine_layout(self.layout);
+        let content = if let Some(id) = self.test_id {
             content.test_id(id)
         } else {
             content
-        }
+        };
+        content.into_element(cx)
     }
 }
 
@@ -1351,6 +1378,16 @@ impl AlertDialogHeader {
     pub fn media(mut self, media: AnyElement) -> Self {
         self.media = Some(media);
         self
+    }
+
+    #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
     }
 
     #[track_caller]
@@ -1564,6 +1601,16 @@ impl AlertDialogFooter {
             build: Some(build),
             _phantom: PhantomData,
         }
+    }
+
+    #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
     }
 
     #[track_caller]
@@ -2758,6 +2805,42 @@ mod tests {
     }
 
     #[test]
+    fn alert_dialog_content_new_accepts_composed_sections_and_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertDialogContent::new([
+                AlertDialogHeader::new([
+                    AlertDialogTitle::new("Title").into_element(cx),
+                    AlertDialogDescription::new("Description").into_element(cx),
+                ])
+                .into_element(cx),
+                AlertDialogFooter::new([crate::button::Button::new("Close").into_element(cx)])
+                    .into_element(cx),
+            ])
+            .test_id("content")
+            .into_element(cx)
+        });
+
+        assert!(matches!(element.kind, ElementKind::Container(_)));
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("content")
+        );
+        assert!(contains_plain_text(&element, "Title"));
+        assert!(contains_plain_text(&element, "Description"));
+        assert!(contains_plain_text(&element, "Close"));
+    }
+
+    #[test]
     fn alert_dialog_children_api_supports_from_scope_buttons() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2788,15 +2871,30 @@ mod tests {
                             )),
                             AlertDialogPart::portal(AlertDialogPortal::new()),
                             AlertDialogPart::overlay(AlertDialogOverlay::new()),
-                            AlertDialogPart::content(AlertDialogContent::build(|cx, out| {
-                                out.push(
-                                    AlertDialogFooter::new(vec![
-                                        AlertDialogCancel::from_scope("Cancel").into_element(cx),
-                                        AlertDialogAction::from_scope("Continue").into_element(cx),
-                                    ])
-                                    .into_element(cx),
-                                );
-                            })),
+                            AlertDialogPart::content_with(|cx| {
+                                AlertDialogContent::new([]).with_children(cx, |cx| {
+                                    vec![
+                                        AlertDialogHeader::new([]).with_children(cx, |cx| {
+                                            vec![
+                                                AlertDialogTitle::new("Delete project?")
+                                                    .into_element(cx),
+                                                AlertDialogDescription::new(
+                                                    "This action cannot be undone.",
+                                                )
+                                                .into_element(cx),
+                                            ]
+                                        }),
+                                        AlertDialogFooter::new([]).with_children(cx, |cx| {
+                                            vec![
+                                                AlertDialogCancel::from_scope("Cancel")
+                                                    .into_element(cx),
+                                                AlertDialogAction::from_scope("Continue")
+                                                    .into_element(cx),
+                                            ]
+                                        }),
+                                    ]
+                                })
+                            }),
                         ])
                         .into_element(cx),
                 ]

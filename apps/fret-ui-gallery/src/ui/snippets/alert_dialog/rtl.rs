@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -18,39 +17,34 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .variant(shadcn::ButtonVariant::Outline)
                         .test_id("ui-gallery-alert-dialog-rtl-trigger"),
                 )),
-                shadcn::AlertDialogPart::content(shadcn::AlertDialogContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
-                        shadcn::AlertDialogHeader::build(|cx, out| {
-                            out.push_ui(
-                                cx,
-                                shadcn::AlertDialogTitle::new("هل أنت متأكد تمامًا؟"),
-                            );
-                            out.push_ui(
-                                cx,
-                                shadcn::AlertDialogDescription::new(
-                                    "لا يمكن التراجع عن هذا الإجراء. سيؤدي هذا إلى حذف حسابك نهائيًا من خوادمنا.",
-                                ),
-                            );
-                        }),
-                    );
-                    out.push_ui(
-                        cx,
-                        shadcn::AlertDialogFooter::build(|cx, out| {
-                            out.push_ui(
-                                cx,
-                                shadcn::AlertDialogCancel::from_scope("إلغاء")
-                                    .test_id("ui-gallery-alert-dialog-rtl-cancel"),
-                            );
-                            out.push_ui(
-                                cx,
-                                shadcn::AlertDialogAction::from_scope("متابعة")
-                                    .test_id("ui-gallery-alert-dialog-rtl-action"),
-                            );
-                        }),
-                    );
-                })
-                .test_id("ui-gallery-alert-dialog-rtl-content")),
+                shadcn::AlertDialogPart::content_with(|cx| {
+                    shadcn::AlertDialogContent::new([])
+                        .test_id("ui-gallery-alert-dialog-rtl-content")
+                        .with_children(cx, |cx| {
+                            vec![
+                                shadcn::AlertDialogHeader::new([]).with_children(cx, |cx| {
+                                    vec![
+                                        shadcn::AlertDialogTitle::new("هل أنت متأكد تمامًا؟")
+                                            .into_element(cx),
+                                        shadcn::AlertDialogDescription::new(
+                                            "لا يمكن التراجع عن هذا الإجراء. سيؤدي هذا إلى حذف حسابك نهائيًا من خوادمنا.",
+                                        )
+                                        .into_element(cx),
+                                    ]
+                                }),
+                                shadcn::AlertDialogFooter::new([]).with_children(cx, |cx| {
+                                    vec![
+                                        shadcn::AlertDialogCancel::from_scope("إلغاء")
+                                            .test_id("ui-gallery-alert-dialog-rtl-cancel")
+                                            .into_element(cx),
+                                        shadcn::AlertDialogAction::from_scope("متابعة")
+                                            .test_id("ui-gallery-alert-dialog-rtl-action")
+                                            .into_element(cx),
+                                    ]
+                                }),
+                            ]
+                        })
+                }),
             ])
             .into_element(cx);
 
@@ -61,51 +55,45 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .variant(shadcn::ButtonVariant::Outline)
                         .test_id("ui-gallery-alert-dialog-rtl-small-trigger"),
                 )),
-                shadcn::AlertDialogPart::content(
-                    shadcn::AlertDialogContent::build(|cx, out| {
-                        let icon = shadcn::raw::icon::icon_with(
-                            cx,
-                            fret_icons::IconId::new_static("lucide.bluetooth"),
-                            Some(Px(32.0)),
-                            None,
-                        );
-                        let media = shadcn::AlertDialogMedia::new(icon).into_element(cx);
+                shadcn::AlertDialogPart::content_with(|cx| {
+                    let icon = shadcn::raw::icon::icon_with(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.bluetooth"),
+                        Some(Px(32.0)),
+                        None,
+                    );
+                    let media = shadcn::AlertDialogMedia::new(icon).into_element(cx);
 
-                        out.push_ui(
-                            cx,
-                            shadcn::AlertDialogHeader::build(|cx, out| {
-                                out.push_ui(
-                                    cx,
-                                    shadcn::AlertDialogTitle::new("السماح للملحق بالاتصال؟"),
-                                );
-                                out.push_ui(
-                                    cx,
-                                    shadcn::AlertDialogDescription::new(
-                                        "هل تريد السماح لملحق USB بالاتصال بهذا الجهاز؟",
-                                    ),
-                                );
-                            })
-                            .media(media),
-                        );
-                        out.push_ui(
-                            cx,
-                            shadcn::AlertDialogFooter::build(|cx, out| {
-                                out.push_ui(
-                                    cx,
-                                    shadcn::AlertDialogCancel::from_scope("عدم السماح")
-                                        .test_id("ui-gallery-alert-dialog-rtl-small-cancel"),
-                                );
-                                out.push_ui(
-                                    cx,
-                                    shadcn::AlertDialogAction::from_scope("السماح")
-                                        .test_id("ui-gallery-alert-dialog-rtl-small-action"),
-                                );
-                            }),
-                        );
-                    })
-                    .size(shadcn::AlertDialogContentSize::Sm)
-                    .test_id("ui-gallery-alert-dialog-rtl-small-content"),
-                ),
+                    shadcn::AlertDialogContent::new([])
+                        .size(shadcn::AlertDialogContentSize::Sm)
+                        .test_id("ui-gallery-alert-dialog-rtl-small-content")
+                        .with_children(cx, |cx| {
+                            vec![
+                                shadcn::AlertDialogHeader::new([])
+                                    .media(media)
+                                    .with_children(cx, |cx| {
+                                        vec![
+                                            shadcn::AlertDialogTitle::new("السماح للملحق بالاتصال؟")
+                                                .into_element(cx),
+                                            shadcn::AlertDialogDescription::new(
+                                                "هل تريد السماح لملحق USB بالاتصال بهذا الجهاز؟",
+                                            )
+                                            .into_element(cx),
+                                        ]
+                                    }),
+                                shadcn::AlertDialogFooter::new([]).with_children(cx, |cx| {
+                                    vec![
+                                        shadcn::AlertDialogCancel::from_scope("عدم السماح")
+                                            .test_id("ui-gallery-alert-dialog-rtl-small-cancel")
+                                            .into_element(cx),
+                                        shadcn::AlertDialogAction::from_scope("السماح")
+                                            .test_id("ui-gallery-alert-dialog-rtl-small-action")
+                                            .into_element(cx),
+                                    ]
+                                }),
+                            ]
+                        })
+                }),
             ])
             .into_element(cx);
 

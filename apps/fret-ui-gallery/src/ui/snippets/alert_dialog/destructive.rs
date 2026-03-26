@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("destructive.rs");
 
 // region: example
-use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_core::window::ColorScheme;
@@ -19,7 +18,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .variant(shadcn::ButtonVariant::Destructive)
                     .test_id("ui-gallery-alert-dialog-destructive-trigger"),
             )),
-            shadcn::AlertDialogPart::content(shadcn::AlertDialogContent::build(|cx, out| {
+            shadcn::AlertDialogPart::content_with(|cx| {
                 let theme = Theme::global(&*cx.app).snapshot();
                 let destructive_fg = theme
                     .color_by_key("destructive")
@@ -45,39 +44,38 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     )
                     .into_element(cx);
 
-                out.push_ui(
-                    cx,
-                    shadcn::AlertDialogHeader::build(|cx, out| {
-                        out.push_ui(cx, shadcn::AlertDialogTitle::new("Delete chat?"));
-                        out.push_ui(
-                            cx,
-                            shadcn::AlertDialogDescription::new(
-                                "This will permanently delete this chat conversation. View Settings to delete any memories saved during this chat.",
-                            ),
-                        );
-                    })
-                    .media(media),
-                );
-                out.push_ui(
-                    cx,
-                    shadcn::AlertDialogFooter::build(|cx, out| {
-                        out.push_ui(
-                            cx,
-                            shadcn::AlertDialogCancel::from_scope("Cancel")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .test_id("ui-gallery-alert-dialog-destructive-cancel"),
-                        );
-                        out.push_ui(
-                            cx,
-                            shadcn::AlertDialogAction::from_scope("Delete")
-                                .variant(shadcn::ButtonVariant::Destructive)
-                                .test_id("ui-gallery-alert-dialog-destructive-action"),
-                        );
-                    }),
-                );
-            })
-            .size(shadcn::AlertDialogContentSize::Sm)
-            .test_id("ui-gallery-alert-dialog-destructive-content")),
+                shadcn::AlertDialogContent::new([])
+                .size(shadcn::AlertDialogContentSize::Sm)
+                .test_id("ui-gallery-alert-dialog-destructive-content")
+                .with_children(cx, |cx| {
+                    vec![
+                        shadcn::AlertDialogHeader::new([])
+                            .media(media)
+                            .with_children(cx, |cx| {
+                                vec![
+                                    shadcn::AlertDialogTitle::new("Delete chat?")
+                                        .into_element(cx),
+                                    shadcn::AlertDialogDescription::new(
+                                        "This will permanently delete this chat conversation. View Settings to delete any memories saved during this chat.",
+                                    )
+                                    .into_element(cx),
+                                ]
+                            }),
+                        shadcn::AlertDialogFooter::new([]).with_children(cx, |cx| {
+                            vec![
+                                shadcn::AlertDialogCancel::from_scope("Cancel")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .test_id("ui-gallery-alert-dialog-destructive-cancel")
+                                    .into_element(cx),
+                                shadcn::AlertDialogAction::from_scope("Delete")
+                                    .variant(shadcn::ButtonVariant::Destructive)
+                                    .test_id("ui-gallery-alert-dialog-destructive-action")
+                                    .into_element(cx),
+                            ]
+                        }),
+                    ]
+                })
+            }),
         ])
         .into_element(cx)
 }
