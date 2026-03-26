@@ -1310,7 +1310,7 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
   while leaving the broader upstream form/state logic untouched.
 - another low-risk sweep now lands on the same card-family teaching rule:
   `motion_presets/{preset_selector,token_snapshot}.rs`, `skeleton/card.rs`,
-  `accordion/extras.rs`, `collapsible/settings_panel.rs`, and `card/meeting_notes.rs`
+  `accordion/showcase.rs`, `collapsible/settings_panel.rs`, and `card/meeting_notes.rs`
   now teach `card(...)` plus the slot helper family instead of eager `Card::*` constructors,
   with `meeting_notes.rs` also switching its header action to `card_action(...)`.
 - the last remaining low-risk non-material/non-carousel card shell in this sweep is now gone too:

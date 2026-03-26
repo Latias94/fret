@@ -1037,7 +1037,7 @@ Exit criteria:
 - the same card-family teaching convergence now also covers selected motion, skeleton,
   accordion/collapsible, and remaining in-family card examples:
   `motion_presets/{preset_selector,token_snapshot}.rs`, `skeleton/card.rs`,
-  `accordion/extras.rs`, `collapsible/settings_panel.rs`, and `card/meeting_notes.rs`
+  `accordion/showcase.rs`, `collapsible/settings_panel.rs`, and `card/meeting_notes.rs`
   now teach `card(...)` plus the slot helper family, while `meeting_notes.rs` also teaches
   `card_action(...)`; `selected_card_snippets_prefer_card_wrapper_family` now guards those
   call sites too.
