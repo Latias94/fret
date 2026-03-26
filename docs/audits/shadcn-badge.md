@@ -38,12 +38,17 @@ base examples, and the existing badge chrome/layout gates.
 - Pass: surrounding width negotiation and row placement remain caller-owned.
 - Pass: docs-aligned gallery rows center their badges at the snippet/example layer because upstream applies `justify-center` on the example call site rather than inside `Badge`.
 - Pass: badge height/chrome and the `font-medium` / `shrink-0` defaults remain covered by the existing web/layout and unit-test gates.
+- Pass: link-render hover behavior now stays recipe-owned and matches the upstream badge variants more closely:
+  - `default` / `secondary` / `destructive` dim the badge background.
+  - `outline` / `ghost` switch to `accent` + `accent-foreground`.
+  - `link` underlines on hover without introducing a filled background.
 
 ### Gallery / docs parity
 
 - Pass: the gallery mirrors the upstream base Badge docs path first: `Demo`, `Usage`, `Variants`, `With Icon`, `With Spinner`, `Link`, `Custom Colors`, `RTL`, and `API Reference`.
 - Pass: `Counts (Fret)` remains an explicit follow-up after the upstream path so compact numeric badge diagnostics stay stable.
 - Pass: this work is docs/public-surface parity, not a mechanism-layer fix.
+- Pass: a fully composable free-form `children` slot is still unnecessary for the upstream docs surface. The current `label + leading_children(...) + trailing_children(...) + BadgeRender::Link` lane covers the shipped shadcn examples while keeping ownership explicit.
 
 ## Validation
 
@@ -51,3 +56,7 @@ base examples, and the existing badge chrome/layout gates.
 - Existing chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_badge_demo_chrome_matches`)
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/badge.rs` (`web_vs_fret_layout_badge_demo_heights`)
 - Existing unit test: `ecosystem/fret-ui-shadcn/src/badge.rs` (`badge_defaults_to_font_medium_and_shrink_0`)
+- New unit tests: `ecosystem/fret-ui-shadcn/src/badge.rs`
+  - `outline_link_badge_hover_uses_accent_chrome_and_foreground`
+  - `link_badge_hover_underlines_label_when_rendered_as_link`
+- New diag evidence script: `tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-hover-screenshot-zinc-light.json`

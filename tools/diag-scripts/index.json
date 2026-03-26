@@ -2724,18 +2724,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-alert-dialog-detached-trigger-focus-restore",
-      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-detached-trigger-focus-restore.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
       "id": "ui-gallery-alert-dialog-destructive-inline-link-activate",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
       "required_capabilities": [
@@ -2751,6 +2739,18 @@
         "shadcn",
         "ui_gallery"
       ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-alert-dialog-detached-trigger-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-detached-trigger-focus-restore.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
