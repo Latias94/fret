@@ -16,7 +16,11 @@ pub(crate) struct RepeatCommandArgs {
     #[command(flatten)]
     pub compare: CompareArgs,
 
-    #[arg(long = "repeat", default_value_t = 1)]
+    #[arg(
+        long = "repeat",
+        default_value_t = 1,
+        value_parser = clap::value_parser!(u64).range(1..)
+    )]
     pub repeat: u64,
 
     #[arg(long = "no-compare")]

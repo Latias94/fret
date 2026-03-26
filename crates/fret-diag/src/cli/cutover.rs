@@ -404,6 +404,12 @@ fn parse_env_assignments(values: &[String]) -> Result<Vec<(String, String)>, Str
         .collect()
 }
 
+fn uses_devtools_transport(args: &contracts::shared::DevtoolsArgs) -> bool {
+    args.devtools_ws_url.is_some()
+        || args.devtools_token.is_some()
+        || args.devtools_session_id.is_some()
+}
+
 fn parse_memory_p90_thresholds(values: &[String]) -> Result<Vec<(String, u64)>, String> {
     values
         .iter()
@@ -2354,6 +2360,9 @@ fn parse_run_command(
     }
 
     let launch = args.launch.normalized_launch_argv();
+    if uses_devtools_transport(&args.devtools) && (launch.is_some() || args.reuse_launch) {
+        return Err("--launch/--reuse-launch is not supported with --devtools-ws-url".to_string());
+    }
     let ResolvedDiagCliPaths {
         resolved_run_context,
         ..
@@ -2440,7 +2449,7 @@ fn parse_repeat_command(
             launch_env,
             launch_high_priority: args.launch.launch_high_priority,
             launch_write_bundle_json: args.launch.launch_write_bundle_json,
-            perf_repeat: args.repeat.max(1),
+            perf_repeat: args.repeat,
             check_memory_p90_max,
             compare_enabled: !args.no_compare,
             compare_eps_px: args.compare.compare_eps_px,
@@ -2763,6 +2772,17 @@ fn parse_suite_command(
     }
 
     let launch = args.launch.normalized_launch_argv();
+    if args.suite.is_none() && args.script_dirs.is_empty() && args.globs.is_empty() {
+        return Err(
+            "missing suite/script input (pass a suite name, script path, `--script-dir`, or `--glob`)\n\
+hint: try `fretboard diag suite ui-gallery`, `fretboard diag suite --script-dir tools/diag-scripts/ui-gallery/data_table`, or `fretboard diag suite --glob 'tools/diag-scripts/ui-gallery-select-*.json'`\n\
+hint: list suites via `fretboard diag list suites`"
+                .to_string(),
+        );
+    }
+    if uses_devtools_transport(&args.devtools) && (launch.is_some() || args.reuse_launch) {
+        return Err("--launch/--reuse-launch is not supported with --devtools-ws-url".to_string());
+    }
     let ResolvedDiagCliPaths {
         resolved_run_context,
         ..
@@ -3391,6 +3411,31 @@ mod tests {
                 .out_dir
                 .ends_with("target/fret-diag-cutover-run")
         );
+    }
+
+    #[test]
+    fn migrated_run_rejects_devtools_transport_with_launch_or_reuse_launch() {
+        let workspace_root = workspace_root_for_tests();
+        let err = match maybe_parse_migrated_command_with_workspace(
+            &[
+                "run".to_string(),
+                "tools/diag-scripts/ui-gallery-intro-idle-screenshot.json".to_string(),
+                "--devtools-ws-url".to_string(),
+                "ws://127.0.0.1:7331/".to_string(),
+                "--devtools-token".to_string(),
+                "secret".to_string(),
+                "--launch".to_string(),
+                "--".to_string(),
+                "cargo".to_string(),
+                "run".to_string(),
+            ],
+            &workspace_root,
+        ) {
+            Some(Err(err)) => err,
+            Some(Ok(_)) => panic!("devtools + launch should be rejected"),
+            None => panic!("run should stay on migrated parser"),
+        };
+        assert!(err.contains("--launch/--reuse-launch is not supported with --devtools-ws-url"));
     }
 
     #[test]
@@ -5403,6 +5448,46 @@ mod tests {
     }
 
     #[test]
+    fn migrated_suite_rejects_missing_suite_and_script_inputs() {
+        let workspace_root = workspace_root_for_tests();
+        let err = match maybe_parse_migrated_command_with_workspace(
+            &[
+                "suite".to_string(),
+                "--timeout-ms".to_string(),
+                "1".to_string(),
+            ],
+            &workspace_root,
+        ) {
+            Some(Err(err)) => err,
+            Some(Ok(_)) => panic!("empty suite input should be rejected"),
+            None => panic!("suite should stay on migrated parser"),
+        };
+        assert!(err.contains("missing suite/script input"));
+    }
+
+    #[test]
+    fn migrated_suite_rejects_devtools_transport_with_launch_or_reuse_launch() {
+        let workspace_root = workspace_root_for_tests();
+        let err = match maybe_parse_migrated_command_with_workspace(
+            &[
+                "suite".to_string(),
+                "ui-gallery".to_string(),
+                "--devtools-ws-url".to_string(),
+                "ws://127.0.0.1:7331/".to_string(),
+                "--devtools-token".to_string(),
+                "secret".to_string(),
+                "--reuse-launch".to_string(),
+            ],
+            &workspace_root,
+        ) {
+            Some(Err(err)) => err,
+            Some(Ok(_)) => panic!("devtools + reuse-launch should be rejected"),
+            None => panic!("suite should stay on migrated parser"),
+        };
+        assert!(err.contains("--launch/--reuse-launch is not supported with --devtools-ws-url"));
+    }
+
+    #[test]
     fn migrated_repeat_subset_builds_a_real_repeat_context() {
         let workspace_root = workspace_root_for_tests();
         let args = vec![
@@ -5447,6 +5532,25 @@ mod tests {
                 .out_dir
                 .ends_with("target/fret-diag-cutover-repeat")
         );
+    }
+
+    #[test]
+    fn migrated_repeat_rejects_zero_repeat_count() {
+        let workspace_root = workspace_root_for_tests();
+        let err = match maybe_parse_migrated_command_with_workspace(
+            &[
+                "repeat".to_string(),
+                "tools/diag-scripts/ui-gallery-select-trigger-toggle-close.json".to_string(),
+                "--repeat".to_string(),
+                "0".to_string(),
+            ],
+            &workspace_root,
+        ) {
+            Some(Err(err)) => err,
+            Some(Ok(_)) => panic!("repeat=0 should be rejected"),
+            None => panic!("repeat should stay on migrated parser"),
+        };
+        assert!(err.contains("--repeat"));
     }
 
     #[test]

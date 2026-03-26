@@ -242,6 +242,49 @@ mod tests {
     }
 
     #[test]
+    fn repeat_contract_rejects_zero_repeat_count() {
+        let err = try_parse_contract(["fretboard", "repeat", "demo.json", "--repeat", "0"])
+            .expect_err("repeat=0 should be rejected");
+        assert_eq!(err.kind(), ErrorKind::ValueValidation);
+    }
+
+    #[test]
+    fn run_contract_rejects_incomplete_devtools_transport_args() {
+        let missing_token = try_parse_contract([
+            "fretboard",
+            "run",
+            "demo.json",
+            "--devtools-ws-url",
+            "ws://127.0.0.1:7331/",
+        ])
+        .expect_err("devtools ws url should require a token");
+        assert_eq!(missing_token.kind(), ErrorKind::MissingRequiredArgument);
+
+        let missing_ws = try_parse_contract([
+            "fretboard",
+            "run",
+            "demo.json",
+            "--devtools-token",
+            "secret",
+        ])
+        .expect_err("devtools token should require a ws url");
+        assert_eq!(missing_ws.kind(), ErrorKind::MissingRequiredArgument);
+    }
+
+    #[test]
+    fn suite_contract_rejects_session_id_without_devtools_ws_url() {
+        let err = try_parse_contract([
+            "fretboard",
+            "suite",
+            "ui-gallery",
+            "--devtools-session-id",
+            "session-1",
+        ])
+        .expect_err("devtools session id should require a ws url");
+        assert_eq!(err.kind(), ErrorKind::MissingRequiredArgument);
+    }
+
+    #[test]
     fn perf_contract_requires_at_least_one_target() {
         let err =
             try_parse_contract(["fretboard", "perf"]).expect_err("perf should require a target");

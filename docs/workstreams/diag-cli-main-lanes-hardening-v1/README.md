@@ -1,6 +1,6 @@
 # Diag CLI Main Lanes Hardening v1
 
-Status: Proposed follow-up lane
+Status: In progress
 Last updated: 2026-03-26
 
 Source lane:
@@ -16,6 +16,19 @@ landed:
 - `suite`
 - `repro`
 - `repeat`
+
+## Landed slice
+
+The first hardening slice for this lane is now merged into the parser-local contract + cutover
+path:
+
+- `repeat --repeat 0` is rejected by the parser instead of being silently coerced to `1`
+- `suite` rejects empty input before runtime dispatch instead of falling through to a later
+  indexing failure path
+- `run` and `suite` reject DevTools transport usage when `--launch` or `--reuse-launch` is also
+  requested
+- DevTools transport arguments now enforce their required peers structurally in the contract tree
+  (`--devtools-ws-url` + `--devtools-token`, plus `--devtools-session-id` requiring a WS URL)
 
 ## Carries
 
@@ -34,3 +47,24 @@ landed:
 - help/examples for the main lanes are fully generated and current
 - representative valid and invalid parser coverage exists for the main lanes
 - no remaining “partial migration” wording is needed for `run` / `suite` / `repro` / `repeat`
+
+## Repro, Gate, Evidence
+
+Gate commands:
+
+- `cargo nextest run -p fret-diag cli::contracts::tests:: cli::cutover::tests::`
+- `cargo build -p fretboard --message-format short`
+
+Evidence anchors:
+
+- `crates/fret-diag/src/cli/contracts/shared/devtools.rs`
+- `crates/fret-diag/src/cli/contracts/commands/repeat.rs`
+- `crates/fret-diag/src/cli/contracts/mod.rs`
+- `crates/fret-diag/src/cli/cutover.rs`
+
+## Remaining work
+
+- finish the same parser-local hardening pass for any `repro`-specific late validation
+- tighten generated help/examples for `run` / `suite` / `repro` / `repeat`
+- extend focused invalid-combination coverage where the current cutover still relies on runtime
+  rejection
