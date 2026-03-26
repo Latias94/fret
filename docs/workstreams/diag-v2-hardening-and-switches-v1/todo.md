@@ -157,7 +157,7 @@ Planned outcomes:
 - [x] Ensure promoted canonical scripts are schema v2 (keep `script_redirect` stubs as schema v1):
   - [x] `fretboard diag doctor scripts` reports and suggests upgrades for promoted schema v1 scripts.
   - [x] Upgrade the remaining promoted schema v1 scripts via `diag script upgrade --write`.
-- [x] Prefer `--suite-prelude` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
+- [x] Prefer `--prelude-script` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
 - [x] Document a migration runbook (dry-run plan → apply moves → validate suites) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
 - [x] Decide path-move compatibility strategy:
   - [ ] registry-first (no moves) to decouple suites from filenames,
