@@ -1,6 +1,8 @@
 use clap::{Args, CommandFactory, Parser, Subcommand};
 
+use crate::assets::contracts::AssetsCommandArgs;
 use crate::dev::contracts::{DevNativeCommandArgs, DevWebCommandArgs};
+use crate::hotpatch::contracts::HotpatchCommandArgs;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -17,7 +19,7 @@ pub(crate) struct FretboardCliContract {
 #[derive(Debug, Subcommand)]
 pub(crate) enum FretboardCommandContract {
     /// Manage generated asset manifests and Rust glue.
-    Assets(ForwardedSubcommandArgs),
+    Assets(AssetsCommandArgs),
     /// Configure workspace-local settings and generated config files.
     Config(ForwardedSubcommandArgs),
     /// Run workspace demos and shells.
@@ -25,7 +27,7 @@ pub(crate) enum FretboardCommandContract {
     /// Run diagnostics tooling.
     Diag(ForwardedSubcommandArgs),
     /// Manage developer hotpatch helpers.
-    Hotpatch(ForwardedSubcommandArgs),
+    Hotpatch(HotpatchCommandArgs),
     /// Create a new app from a starter template.
     Init(ForwardedSubcommandArgs),
     /// List discoverable demos and cookbook examples.
@@ -241,5 +243,40 @@ mod tests {
         assert!(help.contains("--hotpatch"));
         assert!(help.contains("--hotpatch-dx"));
         assert!(help.contains("--profile"));
+    }
+
+    #[test]
+    fn assets_help_lists_manifest_and_rust_targets() {
+        let help = render_command_help_path(&["assets"]).expect("assets help should render");
+        assert!(help.contains("manifest"));
+        assert!(help.contains("rust"));
+    }
+
+    #[test]
+    fn hotpatch_help_lists_watch_and_status_targets() {
+        let help = render_command_help_path(&["hotpatch"]).expect("hotpatch help should render");
+        assert!(help.contains("watch"));
+        assert!(help.contains("status"));
+    }
+
+    #[test]
+    fn assets_manifest_write_contract_captures_bundle_selector() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "assets",
+            "manifest",
+            "write",
+            "--dir",
+            "assets",
+            "--out",
+            "assets.manifest.json",
+            "--app-bundle",
+            "demo-app",
+        ])
+        .expect("assets manifest write should parse");
+
+        let FretboardCommandContract::Assets(_) = cli.command else {
+            panic!("expected assets command");
+        };
     }
 }
