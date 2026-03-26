@@ -7021,10 +7021,9 @@ fn selected_skeleton_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 }
 
 #[test]
-fn selected_popover_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+fn selected_popover_wrapper_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
         "src/ui/snippets/popover/basic.rs",
-        "src/ui/snippets/popover/demo.rs",
         "src/ui/snippets/popover/with_form.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
@@ -7037,6 +7036,21 @@ fn selected_popover_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             ],
         );
     }
+}
+
+#[test]
+fn selected_popover_demo_helpers_prefer_ui_child_over_host_bound_into_ui_element() {
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/snippets/popover/demo.rs",
+        &[
+            "fn centered<B>(body: B) -> impl UiChild + use<B> where B: IntoUiElement<fret_app::App>",
+            "fn row(label: &'static str, model: Model<String>) -> impl UiChild + use<>",
+        ],
+        &[
+            "fn centered<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B> where B: IntoUiElement<H>",
+            "fn row<H: UiHost>(label: &'static str, model: Model<String>) -> impl IntoUiElement<H> + use<H>",
+        ],
+    );
 }
 
 #[test]

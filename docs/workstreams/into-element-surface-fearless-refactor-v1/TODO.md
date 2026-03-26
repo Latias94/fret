@@ -1421,10 +1421,16 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
   with explicit `.into_element(cx)` only at the stack/row collection seam.
 - selected UI Gallery popover snippets now also keep layout-wrapper helpers off raw landed returns
   by default:
-  `src/ui/snippets/popover/{basic,demo,with_form}.rs`
-  now uses `centered<H, B>(body: B) -> impl IntoUiElement<H> + use<H, B>`
+  `src/ui/snippets/popover/{basic,with_form}.rs`
+  now use `centered<H, B>(body: B) -> impl IntoUiElement<H> + use<H, B>`
   where `B: IntoUiElement<H>`,
   so the wrapper no longer forces callers to pre-land `AnyElement`.
+- `src/ui/snippets/popover/demo.rs`
+  now takes the stricter app-facing helper lane instead:
+  `centered<B>(body: B) -> impl UiChild + use<B>` and
+  `row(...) -> impl UiChild + use<>`,
+  because both helpers only serve the default-app snippet surface and no longer need a host-bound
+  generic contract.
 - selected UI Gallery dropdown-menu snippets now also keep preview wrappers on the unified
   conversion contract:
   `src/ui/snippets/dropdown_menu/mod.rs`
@@ -1762,8 +1768,9 @@ Implementation note on 2026-03-12:
   `skeleton/*` snippet shape/row helpers stay on `IntoUiElement<H>` rather than reverting to raw
   `AnyElement`.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
-  `popover/*` wrapper helpers accept/return `IntoUiElement<H>` rather than forcing pre-landed
-  `AnyElement`.
+  `popover/basic.rs` and `popover/with_form.rs` wrapper helpers accept/return `IntoUiElement<H>`
+  rather than forcing pre-landed `AnyElement`, while `popover/demo.rs::{centered,row}` stay on the
+  stricter app-facing `impl UiChild` lane instead of reintroducing host-bound `IntoUiElement<H>`.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that
   `dropdown_menu/mod.rs` preview wrappers stay on `IntoUiElement<H>` rather than forcing
   pre-landed `AnyElement`.

@@ -6,16 +6,16 @@ use fret_core::Px;
 use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn centered<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B>
+fn centered<B>(body: B) -> impl UiChild + use<B>
 where
-    B: IntoUiElement<H>,
+    B: IntoUiElement<fret_app::App>,
 {
     ui::h_flex(move |cx| ui::children![cx; body])
         .layout(LayoutRefinement::default().w_full())
         .justify_center()
 }
 
-fn row<H: UiHost>(label: &'static str, model: Model<String>) -> impl IntoUiElement<H> + use<H> {
+fn row(label: &'static str, model: Model<String>) -> impl UiChild + use<> {
     let label_cell = ui::h_row(move |cx| ui::children![cx; ui::label(label)])
         .layout(LayoutRefinement::default().w_px(Px(96.0)).flex_shrink_0())
         .justify_end()
