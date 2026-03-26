@@ -28,4 +28,5 @@ mod sidecars;
 pub(crate) mod slice;
 mod slice_payload;
 mod slice_streaming;
+pub(crate) mod trace;
 pub(crate) mod windows;

@@ -39,7 +39,7 @@ struct SuiteRunProfile {
 
 impl SuiteRunProfile {
     fn from_suite_args(suite_args: &[String]) -> Self {
-        let single_suite_name = (suite_args.len() == 1).then_some(suite_args[0].as_str());
+        let single_suite_name = (suite_args.len() == 1).then(|| suite_args[0].as_str());
         let is_suite = |name: &str| single_suite_name == Some(name);
 
         Self {
@@ -3182,7 +3182,8 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
     let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
     if rest.is_empty() && suite_script_inputs.is_empty() {
         return Err(
-            "missing suite name or script paths (try: fretboard diag suite ui-gallery | fretboard diag suite docking-arbitration)\n\
+            "missing suite/script input (pass a suite name, script path, `--script-dir`, or `--glob`)\n\
+hint: try `fretboard diag suite ui-gallery`, `fretboard diag suite --script-dir tools/diag-scripts/ui-gallery/data_table`, or `fretboard diag suite --glob 'tools/diag-scripts/ui-gallery-select-*.json'`\n\
 hint: list suites via `fretboard diag list suites`"
                 .to_string(),
         );
@@ -3752,6 +3753,15 @@ mod tests {
 
         assert!(profile.strict_termination);
         assert_eq!(profile.resolve_warmup_frames(0), 0);
+    }
+
+    #[test]
+    fn suite_run_profile_handles_empty_suite_args() {
+        let profile = SuiteRunProfile::from_suite_args(&[]);
+
+        assert_eq!(profile, SuiteRunProfile::default());
+        assert_eq!(profile.resolve_warmup_frames(0), 0);
+        assert_eq!(profile.default_pixels_changed_test_id(), None);
     }
 
     #[test]

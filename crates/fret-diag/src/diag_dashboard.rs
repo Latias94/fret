@@ -4,15 +4,10 @@ use crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1;
 
 #[derive(Debug, Clone)]
 pub(crate) struct DashboardCmdContext {
-    pub rest: Vec<String>,
-    pub workspace_root: PathBuf,
+    pub source: Option<PathBuf>,
     pub resolved_out_dir: PathBuf,
+    pub top: usize,
     pub stats_json: bool,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct DashboardOptions {
-    top: usize,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -56,71 +51,25 @@ pub struct DashboardSummaryProjection {
 
 pub(crate) fn cmd_dashboard(ctx: DashboardCmdContext) -> Result<(), String> {
     let DashboardCmdContext {
-        rest,
-        workspace_root,
+        source,
         resolved_out_dir,
+        top,
         stats_json,
     } = ctx;
 
-    let (opts, positionals) = parse_dashboard_options(&rest)?;
-    let index_path =
-        resolve_dashboard_index_path(&workspace_root, &resolved_out_dir, &positionals)?;
+    let index_path = resolve_dashboard_index_path(&resolved_out_dir, source.as_deref())?;
     let payload = load_dashboard_index(&index_path)?;
 
-    let presentation =
-        build_dashboard_output_presentation(&index_path, &payload, opts.top, stats_json)?;
+    let presentation = build_dashboard_output_presentation(&index_path, &payload, top, stats_json)?;
     emit_dashboard_output_presentation(presentation);
     Ok(())
 }
 
-fn parse_dashboard_options(rest: &[String]) -> Result<(DashboardOptions, Vec<String>), String> {
-    let mut out = DashboardOptions { top: 5 };
-    let mut positionals = Vec::new();
-    let mut idx = 0usize;
-    while idx < rest.len() {
-        match rest[idx].as_str() {
-            "--top" => {
-                idx += 1;
-                let Some(raw) = rest.get(idx) else {
-                    return Err("missing value for --top".to_string());
-                };
-                out.top = raw
-                    .parse::<usize>()
-                    .map_err(|_| format!("invalid value for --top: {raw}"))?
-                    .max(1);
-            }
-            value if value.starts_with('-') => {
-                return Err(format!("unknown dashboard flag: {value}"));
-            }
-            other => positionals.push(other.to_string()),
-        }
-        idx += 1;
-    }
-    if positionals.len() > 1 {
-        return Err(format!(
-            "unexpected extra arguments for dashboard: {}",
-            positionals[1..].join(" ")
-        ));
-    }
-    Ok((out, positionals))
-}
-
 fn resolve_dashboard_index_path(
-    workspace_root: &Path,
     resolved_out_dir: &Path,
-    positionals: &[String],
+    source: Option<&Path>,
 ) -> Result<PathBuf, String> {
-    let base = match positionals.first() {
-        Some(raw) => {
-            let candidate = PathBuf::from(raw);
-            if candidate.is_absolute() {
-                candidate
-            } else {
-                workspace_root.join(candidate)
-            }
-        }
-        None => resolved_out_dir.to_path_buf(),
-    };
+    let base = source.unwrap_or(resolved_out_dir).to_path_buf();
 
     let index_path = if base.is_dir() {
         base.join(DIAG_REGRESSION_INDEX_FILENAME_V1)
@@ -372,15 +321,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_dashboard_options_accepts_top_and_one_positional() {
-        let (opts, positionals) = parse_dashboard_options(&[
-            "--top".to_string(),
-            "7".to_string(),
-            "target/out".to_string(),
-        ])
-        .expect("parse options");
-        assert_eq!(opts.top, 7);
-        assert_eq!(positionals, vec!["target/out".to_string()]);
+    fn resolve_dashboard_index_path_uses_explicit_source_file() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-dashboard-source-{}-{}",
+            std::process::id(),
+            crate::util::now_unix_ms()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let index_path = root.join("custom.index.json");
+        std::fs::write(&index_path, b"{}").unwrap();
+
+        let resolved = resolve_dashboard_index_path(Path::new("F:/repo/out"), Some(&index_path))
+            .expect("resolve source file");
+        assert_eq!(resolved, index_path);
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
@@ -395,7 +351,7 @@ mod tests {
         let index_path = root.join(DIAG_REGRESSION_INDEX_FILENAME_V1);
         std::fs::write(&index_path, b"{}").unwrap();
 
-        let resolved = resolve_dashboard_index_path(Path::new("F:/repo"), &root, &[]).unwrap();
+        let resolved = resolve_dashboard_index_path(&root, None).unwrap();
         assert_eq!(resolved, index_path);
 
         let _ = std::fs::remove_dir_all(&root);

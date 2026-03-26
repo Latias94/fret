@@ -1978,7 +1978,11 @@ fn execute_campaign_summary_finalize_outcome(
     ctx: &CampaignRunContext,
 ) -> CampaignSummaryFinalizeOutcome {
     let summarize_result = diag_summarize::cmd_summarize(diag_summarize::SummarizeCmdContext {
-        rest: plan.summarize_inputs.clone(),
+        inputs: plan
+            .summarize_inputs
+            .iter()
+            .map(|input| crate::resolve_path(&ctx.workspace_root, PathBuf::from(input)))
+            .collect(),
         workspace_root: ctx.workspace_root.clone(),
         resolved_out_dir: plan.out_dir.clone(),
         stats_json: false,

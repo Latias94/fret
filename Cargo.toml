@@ -29,6 +29,7 @@ documentation = "https://docs.rs/fret"
 
 [workspace.dependencies]
 anyhow = "1"
+clap = { version = "4.5", features = ["derive"] }
 bytemuck = { version = "1", features = ["derive"] }
 accesskit = "0.24.0"
 objc = "0.2"

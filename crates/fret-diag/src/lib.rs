@@ -347,6 +347,13 @@ fn run_bundle_doctor_for_bundle_path(
 }
 
 pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
+    if let Some(res) = crate::cli::maybe_render_migrated_help(&args) {
+        return res;
+    }
+    if let Some(res) = crate::cli::maybe_dispatch_migrated_command(&args) {
+        return res;
+    }
+
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
     let mut pack_out: Option<PathBuf> = None;
@@ -2913,62 +2920,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
     let workspace_root = crate::cli::workspace_root()?;
 
-    let resolved_base_out_dir = {
-        let raw = out_dir
-            .clone()
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_DIR")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| PathBuf::from("target").join("fret-diag"));
-        resolve_path(&workspace_root, raw)
-    };
-
     let session_enabled = session_auto || session_id.is_some();
     if session_enabled {
-        if launch.is_none() {
-            return Err(
-                "--session-auto/--session requires --launch (tool-launched only)".to_string(),
-            );
-        }
-        let mut overrides: Vec<&'static str> = Vec::new();
-        if trigger_path.is_some() {
-            overrides.push("--trigger-path");
-        }
-        if script_path.is_some() {
-            overrides.push("--script-path");
-        }
-        if script_trigger_path.is_some() {
-            overrides.push("--script-trigger-path");
-        }
-        if script_result_path.is_some() {
-            overrides.push("--script-result-path");
-        }
-        if script_result_trigger_path.is_some() {
-            overrides.push("--script-result-trigger-path");
-        }
-        if pick_trigger_path.is_some() {
-            overrides.push("--pick-trigger-path");
-        }
-        if pick_result_path.is_some() {
-            overrides.push("--pick-result-path");
-        }
-        if pick_result_trigger_path.is_some() {
-            overrides.push("--pick-result-trigger-path");
-        }
-        if inspect_path.is_some() {
-            overrides.push("--inspect-path");
-        }
-        if inspect_trigger_path.is_some() {
-            overrides.push("--inspect-trigger-path");
-        }
-        if !overrides.is_empty() {
-            return Err(format!(
-                "--session-auto/--session is not compatible with explicit path overrides ({})",
-                overrides.join(", ")
-            ));
-        }
         let supported = match sub.as_str() {
             "run" | "suite" | "repro" | "perf" | "repeat" | "matrix" => true,
             "script" => rest.first().is_some_and(|v| v == "shrink"),
@@ -2981,274 +2934,52 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         }
     }
 
-    let resolved_out_dir = if session_enabled {
-        let raw_id = session_id
-            .clone()
-            .unwrap_or_else(|| session::auto_session_id(now_unix_ms(), std::process::id()));
-        let sid = session::sanitize_session_id(&raw_id);
-        let out = session::session_out_dir(&resolved_base_out_dir, &sid);
-        session::write_session_json_best_effort(
-            &out,
-            &resolved_base_out_dir,
-            &sid,
-            &sub,
-            launch.as_deref(),
-        );
-        eprintln!(
-            "diag session: base_out_dir={} session_id={} out_dir={}",
-            resolved_base_out_dir.display(),
-            sid,
-            out.display()
-        );
-        out
-    } else {
-        resolved_base_out_dir.clone()
-    };
-
-    // Concurrency hygiene for tool-launched runs:
-    //
-    // The filesystem transport uses shared control-plane files under `out_dir` (`script.json`,
-    // `script.result.json`, `trigger.touch`, `latest.txt`, etc). If multiple concurrent runs share
-    // the same out dir (multiple terminals / multiple AI agents), they will race and produce
-    // misleading results.
-    //
-    // `--session-auto` is the preferred escape hatch: it isolates each tool-launched invocation
-    // under `<base_out_dir>/sessions/<session_id>/`.
-    if launch.is_some() && !session_enabled {
-        let sessions_root = resolved_out_dir.join(session::SESSIONS_DIRNAME);
-        if sessions_root.is_dir() {
-            eprintln!(
-                "warning: diag --launch is writing control-plane files directly under a base dir that contains `sessions/`.\n\
-  base_out_dir: {}\n\
-  out_dir: {}\n\
-  hint: prefer `--session-auto` (or `--session <id>`) to isolate concurrent runs under `{}`\n\
-  example:\n\
-    cargo run -p fretboard -- diag {} --dir {} --session-auto --launch -- <cmd...>",
-                resolved_base_out_dir.display(),
-                resolved_out_dir.display(),
-                sessions_root.display(),
-                sub,
-                resolved_base_out_dir.display(),
-            );
-        }
-    }
-
-    let resolved_trigger_path = {
-        let raw = if session_enabled {
-            trigger_path.unwrap_or_else(|| resolved_out_dir.join("trigger.touch"))
-        } else {
-            trigger_path
-                .or_else(|| {
-                    std::env::var_os("FRET_DIAG_TRIGGER_PATH")
-                        .filter(|v| !v.is_empty())
-                        .map(PathBuf::from)
-                })
-                .unwrap_or_else(|| resolved_out_dir.join("trigger.touch"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_ready_path = {
-        let raw = if session_enabled {
-            resolved_out_dir.join("ready.touch")
-        } else {
-            std::env::var_os("FRET_DIAG_READY_PATH")
-                .filter(|v| !v.is_empty())
-                .map(PathBuf::from)
-                .unwrap_or_else(|| resolved_out_dir.join("ready.touch"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_exit_path = {
-        let raw = if session_enabled {
-            resolved_out_dir.join("exit.touch")
-        } else {
-            std::env::var_os("FRET_DIAG_EXIT_PATH")
-                .filter(|v| !v.is_empty())
-                .map(PathBuf::from)
-                .unwrap_or_else(|| resolved_out_dir.join("exit.touch"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_script_path = {
-        let raw = if session_enabled {
-            script_path.unwrap_or_else(|| resolved_out_dir.join("script.json"))
-        } else {
-            script_path
-                .or_else(|| {
-                    std::env::var_os("FRET_DIAG_SCRIPT_PATH")
-                        .filter(|v| !v.is_empty())
-                        .map(PathBuf::from)
-                })
-                .unwrap_or_else(|| resolved_out_dir.join("script.json"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_script_trigger_path = {
-        let raw = if session_enabled {
-            script_trigger_path.unwrap_or_else(|| resolved_out_dir.join("script.touch"))
-        } else {
-            script_trigger_path
-                .or_else(|| {
-                    std::env::var_os("FRET_DIAG_SCRIPT_TRIGGER_PATH")
-                        .filter(|v| !v.is_empty())
-                        .map(PathBuf::from)
-                })
-                .unwrap_or_else(|| resolved_out_dir.join("script.touch"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_script_result_path = {
-        let raw = if session_enabled {
-            script_result_path.unwrap_or_else(|| resolved_out_dir.join("script.result.json"))
-        } else {
-            script_result_path
-                .or_else(|| {
-                    std::env::var_os("FRET_DIAG_SCRIPT_RESULT_PATH")
-                        .filter(|v| !v.is_empty())
-                        .map(PathBuf::from)
-                })
-                .unwrap_or_else(|| resolved_out_dir.join("script.result.json"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_script_result_trigger_path = {
-        let raw = if session_enabled {
-            script_result_trigger_path
-                .unwrap_or_else(|| resolved_out_dir.join("script.result.touch"))
-        } else {
-            script_result_trigger_path
-                .or_else(|| {
-                    std::env::var_os("FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH")
-                        .filter(|v| !v.is_empty())
-                        .map(PathBuf::from)
-                })
-                .unwrap_or_else(|| resolved_out_dir.join("script.result.touch"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_pick_trigger_path = {
-        let raw = if session_enabled {
-            pick_trigger_path.unwrap_or_else(|| resolved_out_dir.join("pick.touch"))
-        } else {
-            pick_trigger_path
-                .or_else(|| {
-                    std::env::var_os("FRET_DIAG_PICK_TRIGGER_PATH")
-                        .filter(|v| !v.is_empty())
-                        .map(PathBuf::from)
-                })
-                .unwrap_or_else(|| resolved_out_dir.join("pick.touch"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_pick_result_path = {
-        let raw = if session_enabled {
-            pick_result_path.unwrap_or_else(|| resolved_out_dir.join("pick.result.json"))
-        } else {
-            pick_result_path
-                .or_else(|| {
-                    std::env::var_os("FRET_DIAG_PICK_RESULT_PATH")
-                        .filter(|v| !v.is_empty())
-                        .map(PathBuf::from)
-                })
-                .unwrap_or_else(|| resolved_out_dir.join("pick.result.json"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_pick_result_trigger_path = {
-        let raw = if session_enabled {
-            pick_result_trigger_path.unwrap_or_else(|| resolved_out_dir.join("pick.result.touch"))
-        } else {
-            pick_result_trigger_path
-                .or_else(|| {
-                    std::env::var_os("FRET_DIAG_PICK_RESULT_TRIGGER_PATH")
-                        .filter(|v| !v.is_empty())
-                        .map(PathBuf::from)
-                })
-                .unwrap_or_else(|| resolved_out_dir.join("pick.result.touch"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_pick_script_out = {
-        let raw = pick_script_out.unwrap_or_else(|| resolved_out_dir.join("picked.script.json"));
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_inspect_path = {
-        let raw = if session_enabled {
-            inspect_path.unwrap_or_else(|| resolved_out_dir.join("inspect.json"))
-        } else {
-            inspect_path
-                .or_else(|| {
-                    std::env::var_os("FRET_DIAG_INSPECT_PATH")
-                        .filter(|v| !v.is_empty())
-                        .map(PathBuf::from)
-                })
-                .unwrap_or_else(|| resolved_out_dir.join("inspect.json"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
-
-    let resolved_inspect_trigger_path = {
-        let raw = if session_enabled {
-            inspect_trigger_path.unwrap_or_else(|| resolved_out_dir.join("inspect.touch"))
-        } else {
-            inspect_trigger_path
-                .or_else(|| {
-                    std::env::var_os("FRET_DIAG_INSPECT_TRIGGER_PATH")
-                        .filter(|v| !v.is_empty())
-                        .map(PathBuf::from)
-                })
-                .unwrap_or_else(|| resolved_out_dir.join("inspect.touch"))
-        };
-        resolve_path(&workspace_root, raw)
-    };
+    let crate::cli::ResolvedDiagCliPaths {
+        resolved_out_dir,
+        resolved_run_context,
+        resolved_pick_trigger_path,
+        resolved_pick_result_path,
+        resolved_pick_result_trigger_path,
+        resolved_pick_script_out,
+        resolved_inspect_path,
+        resolved_inspect_trigger_path,
+    } = crate::cli::resolve_diag_cli_paths(crate::cli::ResolveDiagCliPathsRequest {
+        workspace_root: &workspace_root,
+        sub: &sub,
+        launch: launch.as_deref(),
+        session_auto,
+        session_id: session_id.clone(),
+        overrides: crate::cli::DiagPathOverrides {
+            out_dir,
+            trigger_path,
+            script_path,
+            script_trigger_path,
+            script_result_path,
+            script_result_trigger_path,
+            pick_trigger_path,
+            pick_result_path,
+            pick_result_trigger_path,
+            pick_script_out,
+            inspect_path,
+            inspect_trigger_path,
+        },
+    })?;
 
     // Note: schema2 emission and raw bundle writing are controlled via the diagnostics config file
     // (`FRET_DIAG_CONFIG_PATH`) for tool-launched runs. Avoid adding more env-var switches here:
     // the goal is a single config surface with minimal env overrides.
-
-    let fs_transport_cfg = crate::transport::FsDiagTransportConfig {
-        out_dir: resolved_out_dir.clone(),
-        trigger_path: resolved_trigger_path.clone(),
-        script_path: resolved_script_path.clone(),
-        script_trigger_path: resolved_script_trigger_path.clone(),
-        script_result_path: resolved_script_result_path.clone(),
-        script_result_trigger_path: resolved_script_result_trigger_path.clone(),
-        pick_trigger_path: resolved_pick_trigger_path.clone(),
-        pick_result_path: resolved_pick_result_path.clone(),
-        pick_result_trigger_path: resolved_pick_result_trigger_path.clone(),
-        inspect_path: resolved_inspect_path.clone(),
-        inspect_trigger_path: resolved_inspect_trigger_path.clone(),
-        screenshots_request_path: resolved_out_dir.join("screenshots.request.json"),
-        screenshots_trigger_path: resolved_out_dir.join("screenshots.touch"),
-        screenshots_result_path: resolved_out_dir.join("screenshots.result.json"),
-        screenshots_result_trigger_path: resolved_out_dir.join("screenshots.result.touch"),
-    };
-
-    let resolved_paths = ResolvedScriptPaths {
-        out_dir: resolved_out_dir.clone(),
-        trigger_path: resolved_trigger_path.clone(),
-        ready_path: resolved_ready_path.clone(),
-        exit_path: resolved_exit_path.clone(),
-        script_path: resolved_script_path.clone(),
-        script_trigger_path: resolved_script_trigger_path.clone(),
-        script_result_path: resolved_script_result_path.clone(),
-        script_result_trigger_path: resolved_script_result_trigger_path.clone(),
-    };
-    let resolved_run_context = ResolvedRunContext {
-        paths: resolved_paths.clone(),
-        fs_transport_cfg: fs_transport_cfg.clone(),
-    };
+    let resolved_trigger_path = resolved_run_context.paths.trigger_path.clone();
+    let resolved_ready_path = resolved_run_context.paths.ready_path.clone();
+    let resolved_exit_path = resolved_run_context.paths.exit_path.clone();
+    let resolved_script_path = resolved_run_context.paths.script_path.clone();
+    let resolved_script_trigger_path = resolved_run_context.paths.script_trigger_path.clone();
+    let resolved_script_result_path = resolved_run_context.paths.script_result_path.clone();
+    let resolved_script_result_trigger_path = resolved_run_context
+        .paths
+        .script_result_trigger_path
+        .clone();
+    let resolved_paths = resolved_run_context.paths.clone();
+    let fs_transport_cfg = resolved_run_context.fs_transport_cfg.clone();
 
     if let Some(res) = diag_simple_dispatch::dispatch_simple(
         sub.as_str(),
@@ -3428,12 +3159,44 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             stats_json,
             stats_top_override,
         ),
-        "dashboard" => diag_dashboard::cmd_dashboard(diag_dashboard::DashboardCmdContext {
-            rest: rest.clone(),
-            workspace_root: workspace_root.clone(),
-            resolved_out_dir: resolved_out_dir.clone(),
-            stats_json,
-        }),
+        "dashboard" => {
+            let mut top = 5usize;
+            let mut source: Option<PathBuf> = None;
+            let mut idx = 0usize;
+            while idx < rest.len() {
+                match rest[idx].as_str() {
+                    "--top" => {
+                        idx += 1;
+                        let Some(raw) = rest.get(idx) else {
+                            return Err("missing value for --top".to_string());
+                        };
+                        top = raw
+                            .parse::<usize>()
+                            .map_err(|_| format!("invalid value for --top: {raw}"))?
+                            .max(1);
+                    }
+                    value if value.starts_with('-') => {
+                        return Err(format!("unknown dashboard flag: {value}"));
+                    }
+                    value => {
+                        if source.is_some() {
+                            return Err(format!(
+                                "unexpected extra arguments for dashboard: {}",
+                                rest[idx..].join(" ")
+                            ));
+                        }
+                        source = Some(resolve_path(&workspace_root, PathBuf::from(value)));
+                    }
+                }
+                idx += 1;
+            }
+            diag_dashboard::cmd_dashboard(diag_dashboard::DashboardCmdContext {
+                source,
+                resolved_out_dir: resolved_out_dir.clone(),
+                top,
+                stats_json,
+            })
+        }
         "campaign" => diag_campaign::cmd_campaign(diag_campaign::CampaignCmdContext {
             pack_after_run,
             rest: rest.clone(),
@@ -3465,7 +3228,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             checks: run_checks.clone(),
         }),
         "summarize" => diag_summarize::cmd_summarize(diag_summarize::SummarizeCmdContext {
-            rest: rest.clone(),
+            inputs: rest
+                .iter()
+                .map(|input| resolve_path(&workspace_root, PathBuf::from(input)))
+                .collect(),
             workspace_root: workspace_root.clone(),
             resolved_out_dir: resolved_out_dir.clone(),
             stats_json,

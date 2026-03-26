@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use super::util::{now_unix_ms, read_json_value, write_json_value};
 
+#[derive(Default)]
 pub(super) struct ResourceFootprintThresholds {
     pub(super) max_working_set_bytes: Option<u64>,
     pub(super) max_peak_working_set_bytes: Option<u64>,
@@ -75,6 +76,7 @@ pub(super) struct RenderTextAtlasBytesGateResult {
     pub(super) failures: usize,
 }
 
+#[derive(Default)]
 pub(super) struct RenderTextFontDbThresholds {
     pub(super) max_render_text_registered_font_blobs_total_bytes: Option<u64>,
     pub(super) max_render_text_registered_font_blobs_count: Option<u64>,
@@ -110,6 +112,7 @@ pub(super) struct RenderTextFontDbGateResult {
     pub(super) failures: usize,
 }
 
+#[derive(Default)]
 pub(super) struct RendererGpuBudgetThresholds {
     pub(super) max_renderer_gpu_images_bytes_estimate: Option<u64>,
     pub(super) max_renderer_gpu_render_targets_bytes_estimate: Option<u64>,
@@ -145,6 +148,7 @@ pub(super) struct LinearBytesVsImagesGateResult {
     pub(super) failures: usize,
 }
 
+#[derive(Default)]
 pub(super) struct CodeEditorMemoryThresholds {
     pub(super) max_code_editor_buffer_len_bytes: Option<u64>,
     pub(super) max_code_editor_undo_text_bytes_estimate_total: Option<u64>,

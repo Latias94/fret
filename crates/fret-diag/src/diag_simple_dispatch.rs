@@ -67,33 +67,7 @@ pub(crate) fn dispatch_simple(
             poll_ms,
         ),
         "latest" => commands::session::cmd_latest(rest, pack_after_run, resolved_out_dir),
-        "trace" => {
-            if pack_after_run {
-                return Some(Err("--pack is only supported with `diag run`".to_string()));
-            }
-            (|| -> Result<(), String> {
-                let Some(src) = rest.first().cloned() else {
-                    return Err(
-                        "missing bundle artifact path (try: fretboard diag trace <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
-                            .to_string(),
-                    );
-                };
-                if rest.len() != 1 {
-                    return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-                }
-
-                let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-                let resolved = commands::resolve::resolve_bundle_ref(&src)?;
-                let bundle_path = resolved.bundle_artifact;
-                let bundle_dir = resolved.bundle_dir;
-                let out = trace_out
-                    .map(|p| crate::resolve_path(workspace_root, p))
-                    .unwrap_or_else(|| bundle_dir.join("trace.chrome.json"));
-                crate::trace::write_chrome_trace_from_bundle_path(&bundle_path, &out)?;
-                println!("{}", out.display());
-                Ok(())
-            })()
-        }
+        "trace" => commands::trace::cmd_trace(rest, pack_after_run, workspace_root, trace_out),
         "pack" => commands::artifacts::cmd_pack(
             rest,
             workspace_root,

@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-03-20
+Catalog updated: 2026-03-26
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -102,6 +102,7 @@ those files, keep historical names when they are the evidence.
 - `docs/workstreams/diag-ai-agent-debugging-v1/` — first 2026-02-21, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/diag-architecture-fearless-refactor-v1/` — first 2026-03-02, latest 2026-03-06, 20 markdown docs
 - `docs/workstreams/diag-bundle-schema-v2/` — first 2026-02-21, latest 2026-02-24, 3 markdown docs
+- `docs/workstreams/diag-cli-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-26, 5 markdown docs
 - `docs/workstreams/diag-devtools-gui-v1/` — first 2026-02-07, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/` — first 2026-02-10, latest 2026-02-28, 9 markdown docs
 - `docs/workstreams/diag-fearless-refactor-v1/` — first 2026-02-21, latest 2026-03-06, 16 markdown docs

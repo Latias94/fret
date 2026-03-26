@@ -10,7 +10,7 @@ const DIAG_REGRESSION_INDEX_KIND_V1: &str = "diag_regression_index";
 
 #[derive(Debug, Clone)]
 pub(crate) struct SummarizeCmdContext {
-    pub rest: Vec<String>,
+    pub inputs: Vec<PathBuf>,
     pub workspace_root: PathBuf,
     pub resolved_out_dir: PathBuf,
     pub stats_json: bool,
@@ -29,13 +29,13 @@ enum SummarizeOutputPresentation {
 
 pub(crate) fn cmd_summarize(ctx: SummarizeCmdContext) -> Result<(), String> {
     let SummarizeCmdContext {
-        rest,
+        inputs,
         workspace_root,
         resolved_out_dir,
         stats_json,
     } = ctx;
 
-    let summary_paths = resolve_summary_inputs(&workspace_root, &resolved_out_dir, &rest)?;
+    let summary_paths = resolve_summary_inputs(&resolved_out_dir, &inputs)?;
     if summary_paths.is_empty() {
         return Err(format!(
             "no regression summaries found under {}",
@@ -125,22 +125,20 @@ fn emit_summarize_output_presentation(presentation: SummarizeOutputPresentation)
 }
 
 fn resolve_summary_inputs(
-    workspace_root: &Path,
     resolved_out_dir: &Path,
-    rest: &[String],
+    inputs: &[PathBuf],
 ) -> Result<Vec<PathBuf>, String> {
     let mut summary_paths: Vec<PathBuf> = Vec::new();
     let skip_output_summary = resolved_out_dir.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
 
-    if rest.is_empty() {
+    if inputs.is_empty() {
         collect_regression_summaries_recursively(
             resolved_out_dir,
             &skip_output_summary,
             &mut summary_paths,
         )?;
     } else {
-        for raw in rest {
-            let path = resolve_summary_input_path(workspace_root, raw);
+        for path in inputs {
             if path.is_file() {
                 if path.file_name().and_then(|v| v.to_str())
                     != Some(DIAG_REGRESSION_SUMMARY_FILENAME_V1)
@@ -151,8 +149,8 @@ fn resolve_summary_inputs(
                         path.display()
                     ));
                 }
-                if path != skip_output_summary {
-                    summary_paths.push(path);
+                if path != &skip_output_summary {
+                    summary_paths.push(path.clone());
                 }
                 continue;
             }
@@ -171,15 +169,6 @@ fn resolve_summary_inputs(
     summary_paths.sort();
     summary_paths.dedup();
     Ok(summary_paths)
-}
-
-fn resolve_summary_input_path(workspace_root: &Path, raw: &str) -> PathBuf {
-    let candidate = PathBuf::from(raw);
-    if candidate.is_absolute() {
-        candidate
-    } else {
-        workspace_root.join(candidate)
-    }
 }
 
 fn collect_regression_summaries_recursively(
@@ -693,7 +682,7 @@ mod tests {
         )
         .unwrap();
 
-        let found = resolve_summary_inputs(&root, &root, &[]).unwrap();
+        let found = resolve_summary_inputs(&root, &[]).unwrap();
 
         assert_eq!(found.len(), 1);
         assert_eq!(found[0], nested.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1));
