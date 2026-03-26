@@ -197,3 +197,73 @@ fn dispatch_command_bubbles_from_pending_source_element_when_focus_is_none() {
         "expected pending-source element bubbling to reach an ancestor handler"
     );
 }
+
+#[test]
+fn dispatch_command_prefers_pending_source_element_over_stale_focus() {
+    use crate::elements::NodeEntry;
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let cmd = CommandId::from("test.cmd");
+
+    let root = ui.create_node(HandleCommandWidget {
+        command: CommandId::from("test.root"),
+    });
+    let stale_focus = ui.create_node(HandleCommandWidget {
+        command: CommandId::from("test.stale_focus"),
+    });
+    let handler = ui.create_node(HandleCommandWidget {
+        command: cmd.clone(),
+    });
+    let source_element = crate::elements::GlobalElementId(42);
+    let leaf = ui.create_node_for_element(
+        source_element,
+        HandleCommandWidget {
+            command: CommandId::from("test.leaf"),
+        },
+    );
+    ui.add_child(root, stale_focus);
+    ui.add_child(root, handler);
+    ui.add_child(handler, leaf);
+    ui.set_root(root);
+    ui.set_focus(Some(stale_focus));
+
+    let frame_id = app.frame_id();
+    crate::elements::with_window_state(&mut app, window, |st| {
+        st.set_node_entry(
+            source_element,
+            NodeEntry {
+                node: leaf,
+                last_seen_frame: frame_id,
+                root: source_element,
+            },
+        );
+    });
+
+    app.with_global_mut(
+        fret_runtime::WindowPendingCommandDispatchSourceService::default,
+        |svc, app| {
+            svc.record(
+                window,
+                app.tick_id(),
+                cmd.clone(),
+                fret_runtime::CommandDispatchSourceV1 {
+                    kind: fret_runtime::CommandDispatchSourceKindV1::Pointer,
+                    element: Some(source_element.0),
+                    test_id: None,
+                },
+            );
+        },
+    );
+
+    let mut services = FakeUiServices;
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &cmd),
+        "expected pointer-triggered command dispatch to prefer the pending source element over stale focus"
+    );
+}

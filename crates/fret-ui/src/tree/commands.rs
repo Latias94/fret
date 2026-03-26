@@ -418,7 +418,7 @@ impl<H: UiHost> UiTree<H> {
             })
         });
 
-        let start = focus.or(source_node).unwrap_or(default_root);
+        let start = source_node.or(focus).unwrap_or(default_root);
         let start_in_default_root =
             start == default_root || self.is_descendant(default_root, start);
 

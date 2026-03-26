@@ -2575,7 +2575,7 @@ pub fn view_record_engine_frame<V: View>(
 mod tests {
     use super::{
         AppActivateExt, AppActivateSurface, AppUiRenderRootState, LocalActionCapture, LocalState,
-        LocalStateTxn, OnActivate, View, ViewWindowState, action_listener,
+        LocalStateTxn, OnActivate, UiCxActionsExt as _, View, ViewWindowState, action_listener,
         dispatch_action_listener, dispatch_payload_action_listener, render_root_with_app_ui,
         view_init_window, view_view,
     };
@@ -2586,9 +2586,12 @@ mod tests {
     };
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
     use fret_core::{
-        AppWindowId, FrameId, NodeId, Point, Px, Rect, Size, TextConstraints, TextMetrics,
+        AppWindowId, FrameId, Modifiers, MouseButton, NodeId, Point, PointerEvent, PointerType,
+        Px, Rect, Size, TextConstraints, TextMetrics,
     };
-    use fret_runtime::{ActionId, CommandId, Effect, ModelStore, TimerToken};
+    use fret_runtime::{
+        ActionId, CommandId, Effect, ModelStore, TimerToken, WindowPendingActionPayloadService,
+    };
     use fret_ui::action::{ActionCx, ActivateReason, UiActionHost, UiFocusActionHost};
     use fret_ui::declarative::render_root;
     use fret_ui::{UiTree, element::Length};
@@ -2675,6 +2678,16 @@ mod tests {
         fn action_id() -> ActionId {
             ActionId::from("test.locals_with.runtime.increment.v1")
         }
+    }
+
+    struct RuntimePayloadAppendAction;
+    impl fret_runtime::TypedAction for RuntimePayloadAppendAction {
+        fn action_id() -> ActionId {
+            ActionId::from("test.uicx.payload_models.append.v1")
+        }
+    }
+    impl crate::actions::TypedPayloadAction for RuntimePayloadAppendAction {
+        type Payload = u64;
     }
 
     #[derive(Default)]
@@ -3340,6 +3353,174 @@ mod tests {
             "notify should force the cached manual AppUi root to rerender on the next frame"
         );
         assert_eq!(st.last_seen_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn uicx_payload_models_runtime_dispatch_updates_shared_models_and_requests_redraw() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+
+        let mut services = FakeUiServices;
+        let selected_rows = app.models_mut().insert(Vec::<u64>::new());
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "uicx-payload-models-runtime",
+            |cx| {
+                cx.actions().payload_models::<RuntimePayloadAppendAction>({
+                    let selected_rows = selected_rows.clone();
+                    move |models, row_id| {
+                        models
+                            .update(&selected_rows, |rows| rows.push(row_id))
+                            .is_ok()
+                    }
+                });
+
+                vec![
+                    cx.container(fret_ui::element::ContainerProps::default(), |_cx| Vec::new())
+                        .into(),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let command = <RuntimePayloadAppendAction as fret_runtime::TypedAction>::action_id();
+        app.with_global_mut(WindowPendingActionPayloadService::default, |svc, app| {
+            svc.record(window, app.tick_id(), command.clone(), Box::new(41u64));
+        });
+
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &command),
+            "payload_models dispatch should be handled when a pending payload is present"
+        );
+        assert_eq!(
+            app.models()
+                .read(&selected_rows, |rows| rows.clone())
+                .ok()
+                .unwrap_or_default(),
+            vec![41u64]
+        );
+        assert!(
+            app.flush_effects()
+                .iter()
+                .any(|effect| matches!(effect, Effect::Redraw(redraw) if *redraw == window)),
+            "handled payload_models dispatch should request redraw"
+        );
+    }
+
+    #[cfg(feature = "shadcn")]
+    #[test]
+    fn checkbox_action_payload_round_trips_through_uicx_payload_models() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+
+        let mut services = FakeUiServices;
+        let checkbox_checked = app.models_mut().insert(false);
+        let selected_rows = app.models_mut().insert(Vec::<u64>::new());
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "uicx-payload-models-checkbox",
+            |cx| {
+                cx.actions().payload_models::<RuntimePayloadAppendAction>({
+                    let selected_rows = selected_rows.clone();
+                    move |models, row_id| {
+                        models
+                            .update(&selected_rows, |rows| rows.push(row_id))
+                            .is_ok()
+                    }
+                });
+
+                vec![
+                    fret_ui_shadcn::facade::Checkbox::new(checkbox_checked.clone())
+                        .test_id("payload-checkbox")
+                        .action(<RuntimePayloadAppendAction as fret_runtime::TypedAction>::action_id())
+                        .action_payload(41u64)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let checkbox = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("payload-checkbox"))
+            .expect("checkbox semantics node");
+        let position = Point::new(
+            Px(checkbox.bounds.origin.x.0 + checkbox.bounds.size.width.0 * 0.5),
+            Px(checkbox.bounds.origin.y.0 + checkbox.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let mut saw_command = false;
+        for effect in app.flush_effects() {
+            match effect {
+                Effect::Command {
+                    window: Some(target_window),
+                    command,
+                } if target_window == window => {
+                    saw_command = true;
+                    assert!(
+                        ui.dispatch_command(&mut app, &mut services, &command),
+                        "checkbox payload command should be handled by UiCx payload_models"
+                    );
+                }
+                other => app.push_effect(other),
+            }
+        }
+
+        assert!(saw_command, "checkbox click should emit an Effect::Command");
+        assert_eq!(
+            app.models()
+                .read(&selected_rows, |rows| rows.clone())
+                .ok()
+                .unwrap_or_default(),
+            vec![41u64]
+        );
     }
 
     #[test]
