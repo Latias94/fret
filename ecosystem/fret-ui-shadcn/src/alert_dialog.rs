@@ -6,7 +6,7 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::GlobalElementId;
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus, OnSelectableTextActivateSpan};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
     RenderTransformProps, SemanticFlexProps, SemanticsDecoration, SizeStyle,
@@ -1956,15 +1956,45 @@ impl AlertDialogTitle {
 }
 
 /// shadcn/ui `AlertDialogDescription` (v4).
-#[derive(Debug)]
 pub struct AlertDialogDescription {
     content: AlertDialogDescriptionContent,
 }
 
-#[derive(Debug)]
 enum AlertDialogDescriptionContent {
     Text(Arc<str>),
     Children(Vec<AnyElement>),
+    SelectableText {
+        props: fret_ui::element::SelectableTextProps,
+        on_activate_span: Option<OnSelectableTextActivateSpan>,
+    },
+}
+
+impl std::fmt::Debug for AlertDialogDescription {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AlertDialogDescription")
+            .field("content", &self.content)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for AlertDialogDescriptionContent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Text(text) => f.debug_tuple("Text").field(text).finish(),
+            Self::Children(children) => f
+                .debug_struct("Children")
+                .field("len", &children.len())
+                .finish(),
+            Self::SelectableText {
+                props,
+                on_activate_span,
+            } => f
+                .debug_struct("SelectableText")
+                .field("props", props)
+                .field("on_activate_span", &on_activate_span.is_some())
+                .finish(),
+        }
+    }
 }
 
 impl AlertDialogDescription {
@@ -1977,6 +2007,27 @@ impl AlertDialogDescription {
     pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             content: AlertDialogDescriptionContent::Children(children.into_iter().collect()),
+        }
+    }
+
+    pub fn new_selectable(props: fret_ui::element::SelectableTextProps) -> Self {
+        Self {
+            content: AlertDialogDescriptionContent::SelectableText {
+                props,
+                on_activate_span: None,
+            },
+        }
+    }
+
+    pub fn new_selectable_with(
+        props: fret_ui::element::SelectableTextProps,
+        on_activate_span: Option<OnSelectableTextActivateSpan>,
+    ) -> Self {
+        Self {
+            content: AlertDialogDescriptionContent::SelectableText {
+                props,
+                on_activate_span,
+            },
         }
     }
 
@@ -2001,6 +2052,19 @@ impl AlertDialogDescription {
                 &theme,
                 "component.alert_dialog.description",
             ),
+            AlertDialogDescriptionContent::SelectableText {
+                props,
+                on_activate_span,
+            } => {
+                let selectable = match on_activate_span {
+                    Some(handler) => cx.selectable_text_with_id_props(|cx, id| {
+                        cx.selectable_text_on_activate_span_for(id, handler);
+                        props
+                    }),
+                    None => cx.selectable_text_props(props),
+                };
+                scope_description_text(selectable, &theme, "component.alert_dialog.description")
+            }
         };
         crate::a11y_modal::register_modal_description(cx.app, description.id);
         description
@@ -2505,6 +2569,110 @@ mod tests {
     }
 
     #[test]
+    fn alert_dialog_description_selectable_surface_activates_interactive_span_handler() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(120.0)),
+        );
+        let mut services = ByteIndexTextService::default();
+        let activated = app.models_mut().insert(None::<Arc<str>>);
+
+        let prefix = "This will permanently delete this chat conversation. View ";
+        let settings = "Settings";
+        let suffix = " to delete any memories saved during this chat.";
+        let full_text: Arc<str> = Arc::from(format!("{prefix}{settings}{suffix}"));
+        let href: Arc<str> = Arc::from("https://example.com/settings");
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-alert-dialog-description-selectable-activate",
+            |cx| {
+                let rich = fret_core::AttributedText::new(
+                    full_text.clone(),
+                    Arc::<[fret_core::TextSpan]>::from([
+                        fret_core::TextSpan::new(prefix.len()),
+                        fret_core::TextSpan::new(settings.len()),
+                        fret_core::TextSpan::new(suffix.len()),
+                    ]),
+                );
+
+                let mut props = fret_ui::element::SelectableTextProps::new(rich);
+                props.interactive_spans =
+                    Arc::from([fret_ui::element::SelectableTextInteractiveSpan {
+                        range: prefix.len()..prefix.len() + settings.len(),
+                        tag: href.clone(),
+                    }]);
+
+                let activated = activated.clone();
+                vec![
+                    AlertDialogDescription::new_selectable_with(
+                        props,
+                        Some(Arc::new(move |host, action_cx, _reason, activation| {
+                            let _ = host
+                                .models_mut()
+                                .update(&activated, |value| *value = Some(activation.tag.clone()));
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                        })),
+                    )
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = fret_core::scene::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let description_node = ui.children(root)[0];
+        let description_bounds = ui
+            .debug_node_bounds(description_node)
+            .expect("expected description bounds");
+        let click_pos = Point::new(
+            Px(description_bounds.origin.x.0 + prefix.len() as f32 + 1.0),
+            Px(description_bounds.origin.y.0 + 5.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: click_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: click_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(app.models().get_cloned(&activated), Some(Some(href)));
+    }
+
+    #[test]
     fn alert_dialog_action_children_override_visual_label_but_keep_semantic_label() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2636,6 +2804,74 @@ mod tests {
     }
 
     impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    #[derive(Default)]
+    struct ByteIndexTextService {
+        last_len: usize,
+    }
+
+    impl TextService for ByteIndexTextService {
+        fn prepare(
+            &mut self,
+            input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            self.last_len = input.text().len();
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(self.last_len as f32), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn hit_test_point(&mut self, _blob: TextBlobId, point: Point) -> fret_core::HitTestResult {
+            let idx = point.x.0.floor().max(0.0) as usize;
+            fret_core::HitTestResult {
+                index: idx.min(self.last_len),
+                affinity: fret_core::CaretAffinity::Downstream,
+            }
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for ByteIndexTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for ByteIndexTextService {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for ByteIndexTextService {
         fn register_material(
             &mut self,
             _desc: fret_core::MaterialDescriptor,

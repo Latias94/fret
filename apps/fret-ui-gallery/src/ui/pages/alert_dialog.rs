@@ -25,7 +25,7 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`AlertDialogContent::build(...)` remains the typed companion when staged or conditional section assembly is clearer than inline deferred children.",
         "`AlertDialogAction::from_scope(...)` and `AlertDialogCancel::from_scope(...)` keep footer composition close to shadcn docs without threading the same open model through every button.",
         "`AlertDialogCancel::variant(...)` keeps non-default destructive cancel styling available for upstream example surfaces without requiring a lower-level escape hatch.",
-        "`AlertDialogTitle::new_children(...)` and `AlertDialogDescription::new_children(...)` already support composed or attributed subtree content when string-only labels are not enough.",
+        "`AlertDialogTitle::new_children(...)`, `AlertDialogDescription::new_children(...)`, and `AlertDialogDescription::new_selectable_with(...)` cover the current composed rich-text / interactive-inline-content seams when string-only labels are not enough.",
     ]);
 
     let extras = doc_layout::notes_block([
@@ -97,7 +97,7 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-alert-dialog-detached-trigger-docsec")
         .code_rust_from_file_region(snippets::detached_trigger::SOURCE, "example");
     let rich_content = DocSection::build(cx, "Rich Content", rich_content)
-        .description("Composable title/description content plus custom footer button content using `new_children(...)` and `children(...)`.")
+        .description("Composable title/description content plus custom footer button content using `new_children(...)`, `new_selectable_with(...)`, and `children(...)`.")
         .test_id_prefix("ui-gallery-alert-dialog-rich-content-docsec")
         .code_rust_from_file_region(snippets::rich_content::SOURCE, "example");
 

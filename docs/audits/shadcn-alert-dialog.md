@@ -73,6 +73,10 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   shadcn-specific composition concerns into the lower-level mechanism contract.
 - Pass: `AlertDialogContent::build(...)` remains the typed content-side companion when staged or
   conditional assembly is clearer than deferred `with_children(...)`.
+- Pass: `AlertDialogDescription::new_selectable(...)` /
+  `AlertDialogDescription::new_selectable_with(...)` now provide a first-class recipe seam for
+  inline interactive spans (for example the upstream destructive `Settings` link) without forcing
+  callers back through the generic `new_children([...])` escape hatch.
 - Note: Public-surface drift still exists compared with full React/JSX nesting. Fret now supports
   root-level part children, but it still collects recipe parts explicitly instead of accepting
   arbitrary nested JSX-like children.
@@ -157,11 +161,14 @@ First-party examples now pair the root `children([...])` path with deferred cont
 - `AlertDialogContent::new([]).with_children(cx, |cx| ...)`
 - `AlertDialogHeader::new([]).with_children(cx, |cx| ...)`
 - `AlertDialogFooter::new([]).with_children(cx, |cx| ...)`
+- `AlertDialogDescription::new_selectable_with(props, Some(handler))`
 
 Why this is the default teaching path:
 
 - it keeps `AlertDialogAction::from_scope(...)` / `AlertDialogCancel::from_scope(...)` inside the
   alert-dialog content scope where they are valid,
+- it gives inline links / interactive description spans an explicit recipe seam instead of teaching
+  them through generic child escape hatches,
 - it stays close to the upstream nested-children mental model without widening the mechanism
   contract,
 - it keeps automation-friendly hooks available through `AlertDialogContent::test_id(...)`.

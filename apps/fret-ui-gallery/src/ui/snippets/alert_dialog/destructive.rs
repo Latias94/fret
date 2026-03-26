@@ -8,11 +8,36 @@ use fret_core::window::ColorScheme;
 use fret_core::{
     AttributedText, DecorationLineStyle, Px, TextPaintStyle, TextSpan, UnderlineStyle,
 };
+use fret_runtime::Effect;
 use fret_ui::Theme;
+use fret_ui::element::{SelectableTextInteractiveSpan, SelectableTextProps};
 use fret_ui_kit::{ChromeRefinement, ColorRef};
 use fret_ui_shadcn::facade as shadcn;
 
-fn destructive_description_text(settings_color: fret_core::Color) -> AttributedText {
+fn is_diag_mode() -> bool {
+    std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+}
+
+fn is_safe_open_url(url: &str) -> bool {
+    let url = url.trim();
+    if url.is_empty() {
+        return false;
+    }
+
+    let lower = url.to_ascii_lowercase();
+    if lower.starts_with("javascript:")
+        || lower.starts_with("data:")
+        || lower.starts_with("file:")
+        || lower.starts_with("vbscript:")
+    {
+        return false;
+    }
+
+    lower.starts_with("http://") || lower.starts_with("https://") || lower.starts_with("mailto:")
+}
+
+fn destructive_description_props(settings_color: fret_core::Color) -> SelectableTextProps {
+    let settings_href: Arc<str> = Arc::from("https://example.com/settings");
     let text: Arc<str> = Arc::from(
         "This will permanently delete this chat conversation. View Settings to delete any memories saved during this chat.",
     );
@@ -32,10 +57,16 @@ fn destructive_description_text(settings_color: fret_core::Color) -> AttributedT
 
     let trailing = TextSpan::new(suffix.len());
 
-    AttributedText::new(
+    let rich = AttributedText::new(
         text,
         Arc::<[TextSpan]>::from([plain, settings_span, trailing]),
-    )
+    );
+    let mut props = SelectableTextProps::new(rich);
+    props.interactive_spans = Arc::from([SelectableTextInteractiveSpan {
+        range: prefix.len()..prefix.len() + settings.len(),
+        tag: settings_href,
+    }]);
+    props
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -66,6 +97,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     Some(Px(32.0)),
                     None,
                 );
+                let diag_mode = is_diag_mode();
                 let media = shadcn::AlertDialogMedia::new(icon)
                     .refine_style(
                         ChromeRefinement::default()
@@ -85,10 +117,24 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                     vec![
                                         shadcn::AlertDialogTitle::new("Delete chat?")
                                             .into_element(cx),
-                                        shadcn::AlertDialogDescription::new_children([cx
-                                            .styled_text(destructive_description_text(
+                                        shadcn::AlertDialogDescription::new_selectable_with(
+                                            destructive_description_props(
                                                 theme.color_token("primary"),
-                                            ))])
+                                            ),
+                                            Some(Arc::new(
+                                                move |host, _action_cx, _reason, activation| {
+                                                    if !diag_mode
+                                                        && is_safe_open_url(&activation.tag)
+                                                    {
+                                                        host.push_effect(Effect::OpenUrl {
+                                                            url: activation.tag.to_string(),
+                                                            target: None,
+                                                            rel: None,
+                                                        });
+                                                    }
+                                                },
+                                            )),
+                                        )
                                         .into_element(cx),
                                     ]
                                 }),
