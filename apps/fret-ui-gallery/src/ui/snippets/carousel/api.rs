@@ -54,6 +54,7 @@ fn slide_card(
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
+    let controls_shell_w = Px(max_w_xs.0 + 96.0);
 
     let api_snapshot = cx.local_model_keyed("api_snapshot", shadcn::CarouselApiSnapshot::default);
 
@@ -68,6 +69,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .api_snapshot_model(api_snapshot.clone())
         .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs))
         .test_id("ui-gallery-carousel-api")
+        .into_element(cx);
+    let api_carousel = ui::container(move |_cx| vec![api_carousel])
+        .w_full()
+        .max_w(controls_shell_w)
+        .h_px(Px(304.0))
+        .mx_auto()
+        .px(Space::N12)
         .into_element(cx);
 
     // The common "Slide X of Y" docs outcome only needs a snapshot model.
@@ -108,21 +116,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ui::container(move |_cx| vec![text]).py_2().into_element(cx)
     };
 
-    cx.flex(
-        FlexProps {
-            layout: decl_style::layout_style(
-                &Theme::global(&*cx.app).snapshot(),
-                LayoutRefinement::default()
-                    .w_full()
-                    .max_w(max_w_xs)
-                    .mx_auto(),
-            ),
-            direction: fret_core::Axis::Vertical,
-            justify: MainAlign::Start,
-            align: CrossAlign::Stretch,
-            ..Default::default()
-        },
-        move |_cx| vec![api_carousel, api_counter],
-    )
+    ui::v_flex(move |_cx| vec![api_carousel, api_counter])
+        .items_stretch()
+        .layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(controls_shell_w)
+                .mx_auto(),
+        )
+        .into_element(cx)
 }
 // endregion: example

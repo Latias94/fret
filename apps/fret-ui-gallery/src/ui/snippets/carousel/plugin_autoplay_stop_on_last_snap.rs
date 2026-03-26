@@ -53,6 +53,7 @@ fn slide_card(
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
+    let controls_shell_w = Px(max_w_xs.0 + 96.0);
 
     let autoplay_api = cx.local_model_keyed("autoplay_api", || None::<shadcn::CarouselAutoplayApi>);
     let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
@@ -106,6 +107,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs))
         .test_id("ui-gallery-carousel-plugin-stop-on-last-snap")
         .into_element(cx);
+    let carousel = ui::container(move |_cx| vec![carousel])
+        .w_full()
+        .max_w(controls_shell_w)
+        .h_px(Px(304.0))
+        .mx_auto()
+        .px(Space::N12)
+        .into_element(cx);
 
     let slide_counter = {
         let text = format!(
@@ -157,27 +165,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         None
     };
 
-    cx.flex(
-        FlexProps {
-            layout: decl_style::layout_style(
-                &Theme::global(&*cx.app).snapshot(),
-                LayoutRefinement::default()
-                    .w_full()
-                    .max_w(max_w_xs)
-                    .mx_auto(),
-            ),
-            direction: fret_core::Axis::Vertical,
-            justify: MainAlign::Start,
-            align: CrossAlign::Stretch,
-            ..Default::default()
-        },
-        move |_cx| {
-            let mut out = vec![carousel, slide_counter];
-            if let Some(marker) = stopped_marker {
-                out.push(marker);
-            }
-            out
-        },
+    ui::v_flex(move |_cx| {
+        let mut out = vec![carousel, slide_counter];
+        if let Some(marker) = stopped_marker {
+            out.push(marker);
+        }
+        out
+    })
+    .items_stretch()
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .max_w(controls_shell_w)
+            .mx_auto(),
     )
+    .into_element(cx)
 }
 // endregion: example

@@ -38,6 +38,8 @@ fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    const REINIT_VIEWPORT_BREAKPOINT: Px = Px(1200.0);
+
     let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
     let api_cursor = cx.local_model_keyed("api_cursor", shadcn::CarouselEventCursor::default);
     let select_seen = cx.local_model_keyed("select_seen", || false);
@@ -72,6 +74,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let carousel = shadcn::Carousel::new(items)
         .api_handle_model(api_handle.clone())
+        .viewport_track_start_neg_margin_breakpoint(REINIT_VIEWPORT_BREAKPOINT, Space::N3)
+        .viewport_item_padding_start_breakpoint(REINIT_VIEWPORT_BREAKPOINT, Space::N3)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
         .into_element(cx);
 

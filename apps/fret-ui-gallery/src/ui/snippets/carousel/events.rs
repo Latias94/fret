@@ -54,6 +54,8 @@ fn slide_card(
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
+    let controls_shell_w = Px(max_w_xs.0 + 96.0);
+    const REINIT_VIEWPORT_BREAKPOINT: Px = Px(1200.0);
     const EVENT_BASELINE_STABLE_FRAMES: usize = 2;
 
     let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
@@ -156,6 +158,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let carousel = shadcn::Carousel::default()
         .api_handle_model(api_handle.clone())
+        // Keep Gallery's resize gate deterministic: crossing this viewport breakpoint changes the
+        // slide spacing, which forces the carousel to recompute snaps and emit `reInit`.
+        .viewport_track_start_neg_margin_breakpoint(REINIT_VIEWPORT_BREAKPOINT, Space::N3)
+        .viewport_item_padding_start_breakpoint(REINIT_VIEWPORT_BREAKPOINT, Space::N3)
         .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs))
         .test_id("ui-gallery-carousel-events")
         .into_element_parts_content(
@@ -164,6 +170,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::CarouselPrevious::new().test_id("ui-gallery-carousel-events-prev"),
             shadcn::CarouselNext::new().test_id("ui-gallery-carousel-events-next"),
         );
+    let carousel = ui::container(move |_cx| vec![carousel])
+        .w_full()
+        .max_w(controls_shell_w)
+        .h_px(Px(304.0))
+        .mx_auto()
+        .px(Space::N12)
+        .into_element(cx);
 
     let status = {
         let text = format!(
@@ -222,30 +235,23 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         None
     };
 
-    cx.flex(
-        FlexProps {
-            layout: decl_style::layout_style(
-                &Theme::global(&*cx.app).snapshot(),
-                LayoutRefinement::default()
-                    .w_full()
-                    .max_w(max_w_xs)
-                    .mx_auto(),
-            ),
-            direction: fret_core::Axis::Vertical,
-            justify: MainAlign::Start,
-            align: CrossAlign::Stretch,
-            ..Default::default()
-        },
-        move |_cx| {
-            let mut out = vec![carousel, status];
-            if let Some(marker) = seen_marker {
-                out.push(marker);
-            }
-            if let Some(marker) = reinit_marker {
-                out.push(marker);
-            }
-            out
-        },
+    ui::v_flex(move |_cx| {
+        let mut out = vec![carousel, status];
+        if let Some(marker) = seen_marker {
+            out.push(marker);
+        }
+        if let Some(marker) = reinit_marker {
+            out.push(marker);
+        }
+        out
+    })
+    .items_stretch()
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .max_w(controls_shell_w)
+            .mx_auto(),
     )
+    .into_element(cx)
 }
 // endregion: example
