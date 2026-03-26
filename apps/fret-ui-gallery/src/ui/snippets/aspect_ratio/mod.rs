@@ -8,6 +8,7 @@
 
 mod images;
 
+pub mod composable_children;
 pub mod demo;
 pub mod portrait;
 pub mod rtl;
