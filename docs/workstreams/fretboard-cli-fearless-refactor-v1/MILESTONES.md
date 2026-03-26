@@ -1,6 +1,6 @@
 # Fretboard CLI Fearless Refactor v1 — Milestones
 
-Status: Active
+Status: Closeout-ready
 Last updated: 2026-03-26
 
 Tracking doc: `docs/workstreams/fretboard-cli-fearless-refactor-v1/README.md`
@@ -49,7 +49,8 @@ Current progress:
 
 - `assets`, `dev`, `hotpatch`, `config`, and `theme` are already migrated.
 - `diag` remains delegated to its canonical typed contract in `crates/fret-diag`.
-- `new` / `init` remain the last manual top-level family.
+- `new` is now migrated to a typed contract shape.
+- `init` has been deleted instead of preserved as a compatibility alias.
 
 Deliverables:
 

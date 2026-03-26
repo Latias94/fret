@@ -131,7 +131,7 @@ those files, keep historical names when they are the evidence.
 - `docs/workstreams/foundation-closure-p0/` — first 2026-01-28, latest 2026-02-11, 2 markdown docs
 - `docs/workstreams/font-system-fearless-refactor-v1/` — first 2026-03-13, latest 2026-03-13, 3 markdown docs
 - `docs/workstreams/framework-modularity-fearless-refactor-v1/` — first 2026-02-27, latest 2026-02-27, 3 markdown docs
-- `docs/workstreams/fretboard-cli-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-26, 3 markdown docs
+- `docs/workstreams/fretboard-cli-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-26, 4 markdown docs
 - `docs/workstreams/fret-interaction-kernel-v1/` — first 2026-02-10, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-12, 7 markdown docs
 - `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/` — first 2026-03-13, latest 2026-03-13, 3 markdown docs

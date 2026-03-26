@@ -62,8 +62,7 @@ fn is_display_only_error(kind: ErrorKind) -> bool {
 }
 
 pub(crate) fn help() -> Result<(), String> {
-    help::print_root_help();
-    Ok(())
+    help::print_root_help()
 }
 
 pub(crate) fn workspace_root() -> Result<PathBuf, String> {

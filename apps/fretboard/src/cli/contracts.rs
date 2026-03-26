@@ -4,6 +4,7 @@ use crate::assets::contracts::AssetsCommandArgs;
 use crate::config::contracts::ConfigCommandArgs;
 use crate::dev::contracts::{DevNativeCommandArgs, DevWebCommandArgs};
 use crate::hotpatch::contracts::HotpatchCommandArgs;
+use crate::scaffold::contracts::NewCommandArgs;
 use crate::theme::contracts::ThemeCommandArgs;
 
 #[derive(Debug, Parser)]
@@ -30,12 +31,10 @@ pub(crate) enum FretboardCommandContract {
     Diag(ForwardedSubcommandArgs),
     /// Manage developer hotpatch helpers.
     Hotpatch(HotpatchCommandArgs),
-    /// Create a new app from a starter template.
-    Init(ForwardedSubcommandArgs),
     /// List discoverable demos and cookbook examples.
     List(ListCommandArgs),
     /// Create a new app from a starter template.
-    New(ForwardedSubcommandArgs),
+    New(NewCommandArgs),
     /// Import and convert theme sources.
     Theme(ThemeCommandArgs),
 }
@@ -133,6 +132,8 @@ fn full_bin_name(path: &[&str]) -> String {
 #[cfg(test)]
 mod tests {
     use clap::error::ErrorKind;
+
+    use crate::scaffold::contracts::{NewTemplateContract, ScaffoldIconPackValue};
 
     use super::{
         DevTargetContract, FretboardCommandContract, ListTargetContract, render_command_help_path,
@@ -280,6 +281,64 @@ mod tests {
         let FretboardCommandContract::Assets(_) = cli.command else {
             panic!("expected assets command");
         };
+    }
+
+    #[test]
+    fn new_help_lists_scaffold_templates() {
+        let help = render_command_help_path(&["new"]).expect("new help should render");
+        assert!(help.contains("hello"));
+        assert!(help.contains("simple-todo"));
+        assert!(help.contains("todo"));
+        assert!(help.contains("empty"));
+    }
+
+    #[test]
+    fn new_contract_without_template_parses_as_wizard_entry() {
+        let cli = try_parse_contract(["fretboard", "new"]).expect("new should parse");
+
+        let FretboardCommandContract::New(args) = cli.command else {
+            panic!("expected new command");
+        };
+
+        assert_eq!(args.template, None);
+    }
+
+    #[test]
+    fn new_todo_contract_captures_scaffold_flags() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "new",
+            "todo",
+            "--name",
+            "my-todo",
+            "--ui-assets",
+            "--icons",
+            "radix",
+            "--command-palette",
+            "--no-check",
+        ])
+        .expect("new todo should parse");
+
+        let FretboardCommandContract::New(args) = cli.command else {
+            panic!("expected new command");
+        };
+
+        let Some(NewTemplateContract::Todo(args)) = args.template else {
+            panic!("expected todo template");
+        };
+
+        assert_eq!(args.output.name.as_deref(), Some("my-todo"));
+        assert!(args.ui_assets);
+        assert_eq!(args.icons.icons, Some(ScaffoldIconPackValue::Radix));
+        assert!(args.icons.command_palette);
+        assert!(args.output.no_check);
+    }
+
+    #[test]
+    fn deleted_init_alias_is_rejected() {
+        let err = try_parse_contract(["fretboard", "init", "todo"])
+            .expect_err("init should be rejected as a deleted alias");
+        assert_eq!(err.kind(), ErrorKind::InvalidSubcommand);
     }
 
     #[test]

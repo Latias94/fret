@@ -1,34 +1,3 @@
-const ROOT_USAGE: &str = r#"  fretboard help
-  fretboard assets manifest write --dir <dir> --out <path> (--app-bundle <name> | --package-bundle <name> | --bundle <id>) [--force]
-  fretboard assets rust write --dir <dir> --out <path> (--app-bundle <name> | --package-bundle <name> | --bundle <id>) [--surface <fret|framework>] [--crate-root <dir>] [--force]
-  fretboard new [template] [--path <path>] [--name <name>] [--ui-assets] [--icons <lucide|radix|none>] [--command-palette] [--no-check]
-  fretboard new             # interactive wizard
-  fretboard new hello       # rung 1: smallest runnable UI
-  fretboard new simple-todo # rung 2: recommended starter
-  fretboard new todo        # rung 3: selector/query follow-up
-  fretboard new empty       # minimal Cargo-like project
-  fretboard init <template> [...]    # alias for `new` (compat)
-  fretboard config menubar [--path <path>] [--force]
-  fretboard theme import-vscode <theme.json> [--out <path>] [--base <path>] [--all-tags] [--map <path>] [--set <key=value>...] [--report <path>] [--force]
-  fretboard hotpatch poke [--path <path>]        # dev-only (experimental)
-  fretboard hotpatch path [--path <path>]        # dev-only (experimental)
-  fretboard hotpatch status [--tail <n>]         # dev-only (experimental)
-  fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]  # dev-only (experimental)
-  fretboard diag --help
-  fretboard diag <subcommand> --help   # diagnostics help is generated from the executable contract
-  fretboard list native-demos [--all]
-  fretboard list web-demos
-  fretboard list cookbook-examples
-  fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] [--hotpatch] [--hotpatch-reload] [--hotpatch-trigger-path <path>] [--hotpatch-poll-ms <ms>] [-- <args...>]
-  fretboard dev native --demo <demo> [--profile <cargo_profile>] [--dev-state-reset] [--hotpatch|--watch] [-- <args...>]
-  fretboard dev native --example <name> [--profile <cargo_profile>] [-- <args...>]
-  fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] [--hotpatch] [--no-supervise] [-- <args...>]
-  fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] [--hotpatch] [--watch] [--watch-poll-ms <ms>] [--no-watch] [--dev-state-reset] [-- <args...>]
-  fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] --hotpatch-devserver <ws_endpoint> [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
-  fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] --hotpatch-dx [--hotpatch-dx-ws <ws_endpoint>] [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
-  fretboard dev web [--no-open] [--port <port>] [--demo <demo> | --choose] [--devtools-ws-url <ws://.../> --devtools-token <token>]
-  fretboard dev web --open [--no-open] [--port <port>] [--demo <demo> | --choose]"#;
-
 const ROOT_EXAMPLES: &str = r#"  fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-todo
   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle my-todo
     # `--surface fret` modules expose both `register(app)` and `mount(builder)`
@@ -69,19 +38,37 @@ const ROOT_EXAMPLES: &str = r#"  fretboard assets manifest write --dir assets --
   fretboard dev web --demo plot_demo
   fretboard dev web --demo custom_effect_v2_web_demo"#;
 
-pub(crate) fn print_root_help() {
-    println!(
-        "fretboard dev tooling for the Fret workspace\n\nUsage:\n{ROOT_USAGE}\n\nExamples:\n{ROOT_EXAMPLES}"
-    );
+fn render_root_help() -> Result<String, String> {
+    let mut help = super::contracts::render_command_help_path(&[])?;
+    if !help.ends_with('\n') {
+        help.push('\n');
+    }
+    help.push_str("\nExamples:\n");
+    help.push_str(ROOT_EXAMPLES);
+    help.push('\n');
+    Ok(help)
+}
+
+pub(crate) fn print_root_help() -> Result<(), String> {
+    print!("{}", render_root_help()?);
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{ROOT_EXAMPLES, ROOT_USAGE};
+    use super::render_root_help;
 
     #[test]
     fn root_help_keeps_diag_examples_visible() {
-        assert!(ROOT_USAGE.contains("fretboard diag --help"));
-        assert!(ROOT_EXAMPLES.contains("fretboard diag perf ui-gallery"));
+        let help = render_root_help().expect("root help should render");
+        assert!(help.contains("diag"));
+        assert!(help.contains("fretboard diag perf ui-gallery"));
+    }
+
+    #[test]
+    fn root_help_does_not_list_deleted_init_alias() {
+        let help = render_root_help().expect("root help should render");
+        assert!(!help.contains("fretboard init"));
+        assert!(help.contains("fretboard new todo --name my-todo"));
     }
 }

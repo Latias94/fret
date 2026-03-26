@@ -10,9 +10,8 @@ pub(crate) fn dispatch(contract: FretboardCliContract) -> Result<(), String> {
         FretboardCommandContract::Dev(args) => dispatch_dev(args),
         FretboardCommandContract::Diag(args) => crate::diag::diag_cmd(args.args),
         FretboardCommandContract::Hotpatch(args) => crate::hotpatch::run_hotpatch_contract(args),
-        FretboardCommandContract::Init(args) => crate::scaffold::init_cmd(args.args),
         FretboardCommandContract::List(args) => dispatch_list(args),
-        FretboardCommandContract::New(args) => crate::scaffold::new_cmd(args.args),
+        FretboardCommandContract::New(args) => crate::scaffold::run_new_contract(args),
         FretboardCommandContract::Theme(args) => crate::theme::run_theme_contract(args),
     }
 }
