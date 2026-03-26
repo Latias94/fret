@@ -2469,12 +2469,20 @@ fn parse_repro_command(
     args: contracts::commands::repro::ReproCommandArgs,
     workspace_root: &Path,
 ) -> Result<MigratedDiagCommand, String> {
+    let (scripts, suite_name) =
+        crate::diag_repro::resolve_repro_targets(&args.targets, workspace_root)?;
     let mut launch_env = parse_env_assignments(&args.launch.env)?;
+    for (key, value) in crate::diag_repro::merged_repro_script_env_defaults(&scripts)? {
+        push_env_if_missing(&mut launch_env, &key, &value);
+    }
     let checks = apply_contract_checks_to_run_checks(&args.checks);
 
     if checks.check_pixels_changed_test_id.is_some()
         || checks.check_pixels_unchanged_test_id.is_some()
         || args.pack.include_screenshots
+        || scripts
+            .iter()
+            .any(|path| crate::script_requests_screenshots(path))
     {
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
     }
@@ -2501,7 +2509,8 @@ fn parse_repro_command(
 
     Ok(MigratedDiagCommand::Repro(
         crate::diag_repro::ReproCmdContext {
-            rest: args.targets,
+            scripts,
+            suite_name,
             workspace_root: workspace_root.to_path_buf(),
             resolved_run_context,
             pack_out: args.pack.pack_out.clone(),
@@ -3344,7 +3353,10 @@ pub(crate) fn dispatch_diag_command(args: &[String]) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::{
+        path::{Path, PathBuf},
+        time::{SystemTime, UNIX_EPOCH},
+    };
 
     use super::*;
 
@@ -3355,6 +3367,31 @@ mod tests {
             .parent()
             .expect("workspace root should exist")
             .to_path_buf()
+    }
+
+    fn temp_test_dir(prefix: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after unix epoch")
+            .as_nanos();
+        let dir = workspace_root_for_tests()
+            .join("target")
+            .join("fret-diag-cutover-tests")
+            .join(format!("{prefix}-{unique}"));
+        std::fs::create_dir_all(&dir).expect("temp test dir should be created");
+        dir
+    }
+
+    fn write_test_script(path: &Path, env_defaults: &[(&str, &str)]) {
+        let env_defaults_json = env_defaults
+            .iter()
+            .map(|(key, value)| format!("\"{key}\": \"{value}\""))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let body = format!(
+            "{{\n  \"schema_version\": 2,\n  \"meta\": {{ \"env_defaults\": {{ {env_defaults_json} }} }},\n  \"steps\": []\n}}\n"
+        );
+        std::fs::write(path, body).expect("test script should be written");
     }
 
     #[test]
@@ -5558,7 +5595,6 @@ mod tests {
         let workspace_root = workspace_root_for_tests();
         let args = vec![
             "repro".to_string(),
-            "ui-gallery".to_string(),
             "tools/diag-scripts/ui-gallery-intro-idle-screenshot.json".to_string(),
             "--dir".to_string(),
             "target/fret-diag-cutover-repro".to_string(),
@@ -5579,12 +5615,10 @@ mod tests {
             panic!("expected repro context");
         };
 
+        assert_eq!(ctx.suite_name, None);
         assert_eq!(
-            ctx.rest,
-            vec![
-                "ui-gallery".to_string(),
-                "tools/diag-scripts/ui-gallery-intro-idle-screenshot.json".to_string(),
-            ]
+            ctx.scripts,
+            vec![workspace_root.join("tools/diag-scripts/ui-gallery-intro-idle-screenshot.json")]
         );
         assert!(ctx.pack_ai_only);
         assert!(ctx.ensure_ai_packet);
@@ -5605,6 +5639,67 @@ mod tests {
                 .out_dir
                 .ends_with("target/fret-diag-cutover-repro")
         );
+    }
+
+    #[test]
+    fn migrated_repro_rejects_unknown_suite_name() {
+        let workspace_root = workspace_root_for_tests();
+        let err = match maybe_parse_migrated_command_with_workspace(
+            &["repro".to_string(), "not-a-repro-suite".to_string()],
+            &workspace_root,
+        ) {
+            Some(Err(err)) => err,
+            Some(Ok(_)) => panic!("unknown repro suite should be rejected"),
+            None => panic!("repro should stay on migrated parser"),
+        };
+        assert!(err.contains("unknown suite or script path"));
+    }
+
+    #[test]
+    fn migrated_repro_rejects_missing_script_path() {
+        let workspace_root = workspace_root_for_tests();
+        let err = match maybe_parse_migrated_command_with_workspace(
+            &[
+                "repro".to_string(),
+                "tools/diag-scripts/does-not-exist.json".to_string(),
+            ],
+            &workspace_root,
+        ) {
+            Some(Err(err)) => err,
+            Some(Ok(_)) => panic!("missing repro script should be rejected"),
+            None => panic!("repro should stay on migrated parser"),
+        };
+        assert!(err.contains("script path does not exist"));
+    }
+
+    #[test]
+    fn migrated_repro_rejects_conflicting_script_env_defaults() {
+        let workspace_root = workspace_root_for_tests();
+        let temp_dir = temp_test_dir("repro-env-defaults");
+        let script_a = temp_dir.join("script-a.json");
+        let script_b = temp_dir.join("script-b.json");
+        write_test_script(&script_a, &[("FRET_TEST_MODE", "alpha")]);
+        write_test_script(&script_b, &[("FRET_TEST_MODE", "beta")]);
+        let script_a_arg = script_a
+            .strip_prefix(&workspace_root)
+            .expect("temp script should live under workspace root")
+            .display()
+            .to_string();
+        let script_b_arg = script_b
+            .strip_prefix(&workspace_root)
+            .expect("temp script should live under workspace root")
+            .display()
+            .to_string();
+
+        let err = match maybe_parse_migrated_command_with_workspace(
+            &["repro".to_string(), script_a_arg, script_b_arg],
+            &workspace_root,
+        ) {
+            Some(Err(err)) => err,
+            Some(Ok(_)) => panic!("conflicting repro env defaults should be rejected"),
+            None => panic!("repro should stay on migrated parser"),
+        };
+        assert!(err.contains("conflicting script meta.env_defaults in repro"));
     }
 
     #[test]

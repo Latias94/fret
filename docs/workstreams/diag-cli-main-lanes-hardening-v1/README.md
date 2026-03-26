@@ -29,6 +29,8 @@ path:
   requested
 - DevTools transport arguments now enforce their required peers structurally in the contract tree
   (`--devtools-ws-url` + `--devtools-token`, plus `--devtools-session-id` requiring a WS URL)
+- `repro` now resolves its targets during cutover, rejects unknown suite names / missing script
+  paths before execution, and rejects conflicting script `meta.env_defaults` before launch
 
 ## Carries
 
@@ -61,10 +63,11 @@ Evidence anchors:
 - `crates/fret-diag/src/cli/contracts/commands/repeat.rs`
 - `crates/fret-diag/src/cli/contracts/mod.rs`
 - `crates/fret-diag/src/cli/cutover.rs`
+- `crates/fret-diag/src/diag_repro.rs`
+- `crates/fret-diag/src/diag_repro/scripts.rs`
 
 ## Remaining work
 
-- finish the same parser-local hardening pass for any `repro`-specific late validation
 - tighten generated help/examples for `run` / `suite` / `repro` / `repeat`
 - extend focused invalid-combination coverage where the current cutover still relies on runtime
   rejection

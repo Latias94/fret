@@ -2316,7 +2316,6 @@ mod tests {
         let cli = try_parse_contract([
             "fretboard",
             "repro",
-            "ui-gallery",
             "tools/diag-scripts/ui-gallery-intro-idle-screenshot.json",
             "--ai-only",
             "--include-screenshots",
@@ -2336,10 +2335,7 @@ mod tests {
 
         assert_eq!(
             args.targets,
-            vec![
-                "ui-gallery".to_string(),
-                "tools/diag-scripts/ui-gallery-intro-idle-screenshot.json".to_string(),
-            ]
+            vec!["tools/diag-scripts/ui-gallery-intro-idle-screenshot.json".to_string()]
         );
         assert!(args.pack.ai_only);
         assert!(args.pack.include_screenshots);
