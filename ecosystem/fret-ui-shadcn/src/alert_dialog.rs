@@ -1461,6 +1461,10 @@ impl AlertDialogHeader {
             .items_stretch()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx);
+        let media = ui::v_flex(move |_cx| vec![media])
+            .items_center()
+            .layout(LayoutRefinement::default().mb(Space::N2))
+            .into_element(cx);
 
         cx.container(props, move |cx| {
             vec![
@@ -3179,6 +3183,7 @@ mod tests {
         title_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         description_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        media_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
     ) {
@@ -3213,6 +3218,7 @@ mod tests {
                 let title_id_out = title_id_out.clone();
                 let description_id_out = description_id_out.clone();
                 let content_id_out = content_id_out.clone();
+                let media_id_out = media_id_out.clone();
                 let cancel_id_out = cancel_id_out.clone();
                 let action_id_out = action_id_out.clone();
 
@@ -3232,6 +3238,7 @@ mod tests {
 
                             let media = AlertDialogMedia::new(ui::text("!").into_element(cx))
                                 .into_element(cx);
+                            media_id_out.set(Some(media.id));
 
                             children.push(
                                 AlertDialogHeader::new(vec![title, description])
@@ -3701,6 +3708,7 @@ mod tests {
         let title_id = Rc::new(Cell::new(None));
         let description_id = Rc::new(Cell::new(None));
         let content_id = Rc::new(Cell::new(None));
+        let media_id = Rc::new(Cell::new(None));
         let cancel_id = Rc::new(Cell::new(None));
         let action_id = Rc::new(Cell::new(None));
 
@@ -3723,6 +3731,7 @@ mod tests {
                 title_id.clone(),
                 description_id.clone(),
                 content_id.clone(),
+                media_id.clone(),
                 cancel_id.clone(),
                 action_id.clone(),
             );
@@ -3795,6 +3804,7 @@ mod tests {
         let title_id = Rc::new(Cell::new(None));
         let description_id = Rc::new(Cell::new(None));
         let content_id = Rc::new(Cell::new(None));
+        let media_id = Rc::new(Cell::new(None));
         let cancel_id = Rc::new(Cell::new(None));
         let action_id = Rc::new(Cell::new(None));
 
@@ -3817,6 +3827,7 @@ mod tests {
                 title_id.clone(),
                 description_id.clone(),
                 content_id.clone(),
+                media_id.clone(),
                 cancel_id.clone(),
                 action_id.clone(),
             );
@@ -3832,6 +3843,9 @@ mod tests {
         let title_bounds =
             bounds_for_element(&mut app, window, title_id.get().expect("title element id"))
                 .expect("title bounds");
+        let media_bounds =
+            bounds_for_element(&mut app, window, media_id.get().expect("media element id"))
+                .expect("media bounds");
         let description_bounds = bounds_for_element(
             &mut app,
             window,
@@ -3876,6 +3890,11 @@ mod tests {
                 "expected {label} to stay inside small media alert dialog content; content={content_bounds:?} node={bounds:?}"
             );
         }
+        assert!(
+            title_bounds.origin.y.0 - (media_bounds.origin.y.0 + media_bounds.size.height.0)
+                >= 12.0,
+            "expected small media title to keep visible space below the media block, got media={media_bounds:?} title={title_bounds:?}"
+        );
         assert!(
             (cancel_bounds.origin.y.0 - action_bounds.origin.y.0).abs() < 0.5,
             "expected small media footer buttons to share one row, got cancel={cancel_bounds:?} action={action_bounds:?}"
