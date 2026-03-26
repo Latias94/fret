@@ -5253,6 +5253,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-data-table-guide-header-screenshot-zinc-light",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-header-screenshot-zinc-light.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-data-table",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "data_table",
+        "header",
+        "light",
+        "screenshots",
+        "shadcn",
+        "ui_gallery",
+        "zinc"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/light.",
+        "Navigates to the Guide Demo table header and captures layout + screenshot evidence for header labels and sort icons."
+      ]
+    },
+    {
       "id": "ui-gallery-data-table-guide-row-actions-menu-stability",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-row-actions-menu-stability.json",
       "required_capabilities": [],
