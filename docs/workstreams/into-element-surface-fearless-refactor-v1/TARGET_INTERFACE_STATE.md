@@ -484,7 +484,7 @@ First-party UI Gallery examples already using this rule now include:
 - `src/ui/snippets/aspect_ratio/{portrait,square,rtl}.rs::{portrait_image(...), square_image(...), rtl_image(...), ratio_example(...)}`
 - `src/ui/snippets/combobox/{long_list,input_group,trigger_button,groups_with_separator,groups,disabled,custom_items,clear_button,invalid}.rs::{state_row(...), state_rows(...)}`
 - `src/ui/snippets/popover/{basic,demo,with_form}.rs::centered(...)`
-- `src/ui/snippets/resizable/{usage,vertical,handle}.rs::panel(...)`
+- `src/ui/snippets/resizable/{vertical,handle}.rs::panel(...)`
 - `src/ui/snippets/resizable/{vertical,handle}.rs::box_group(...)`
 - `src/ui/snippets/data_table/{basic_demo,default_demo,guide_demo}.rs::align_end(...)`
 - `src/ui/snippets/data_table/{basic_demo,rtl_demo}.rs::bottom_controls(...)`

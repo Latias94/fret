@@ -1573,7 +1573,7 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
 - selected UI Gallery resizable snippets now also keep panel/container wrapper helpers off raw
   landed returns by default:
   `src/ui/snippets/resizable/usage.rs`
-  now uses `panel(...) -> impl IntoUiElement<H> + use<H>`;
+  now uses `panel(...) -> impl UiChild + use<>`;
   `src/ui/snippets/resizable/{vertical,handle}.rs`
   now use `box_group<H, B>(..., body: B) -> impl IntoUiElement<H> + use<H, B>` where
   `B: IntoUiElement<H>`,

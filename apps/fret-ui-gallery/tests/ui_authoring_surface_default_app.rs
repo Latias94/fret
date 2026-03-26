@@ -8131,6 +8131,18 @@ fn resizable_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn selected_resizable_usage_helper_prefers_ui_child_over_host_bound_into_ui_element() {
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/snippets/resizable/usage.rs",
+        &["fn panel(_cx: &mut UiCx<'_>, label: &'static str) -> impl UiChild + use<>"],
+        &[
+            "fn panel<H: UiHost>(_cx: &mut ElementContext<'_, H>, label: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn panel<H: UiHost>(_cx: &mut ElementContext<'_, H>, label: &'static str,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
 fn accordion_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
