@@ -139,6 +139,16 @@ pub struct UiSemanticsNodeV1 {
     pub described_by: Vec<u64>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub controls: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub inline_spans: Vec<UiSemanticsInlineSpanV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSemanticsInlineSpanV1 {
+    pub range_utf8: (u32, u32),
+    pub role: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -215,6 +225,25 @@ pub struct UiSemanticsActionsV1 {
 impl UiSemanticsActionsV1 {
     fn is_default(v: &Self) -> bool {
         !v.focus && !v.invoke && !v.set_value && !v.scroll_by && !v.set_text_selection
+    }
+}
+
+impl UiSemanticsInlineSpanV1 {
+    fn from_span(
+        span: &fret_core::SemanticsInlineSpan,
+        redact_text: bool,
+        max_string_bytes: usize,
+    ) -> Self {
+        let mut tag = span.tag.as_deref().map(|s| maybe_redact_string(s, redact_text));
+        if let Some(s) = &mut tag {
+            truncate_string_bytes(s, max_string_bytes);
+        }
+
+        Self {
+            range_utf8: span.range_utf8,
+            role: semantics_role_label(span.role).to_string(),
+            tag,
+        }
     }
 }
 
@@ -327,6 +356,11 @@ impl UiSemanticsNodeV1 {
             labelled_by: node.labelled_by.iter().copied().map(key_to_u64).collect(),
             described_by: node.described_by.iter().copied().map(key_to_u64).collect(),
             controls: node.controls.iter().copied().map(key_to_u64).collect(),
+            inline_spans: node
+                .inline_spans
+                .iter()
+                .map(|span| UiSemanticsInlineSpanV1::from_span(span, redact_text, max_string_bytes))
+                .collect(),
         }
     }
 }
@@ -360,6 +394,7 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         };
 
         let v = serde_json::to_value(&node).expect("serialize");
@@ -368,6 +403,7 @@ mod tests {
         assert!(v.get("labelled_by").is_none());
         assert!(v.get("described_by").is_none());
         assert!(v.get("controls").is_none());
+        assert!(v.get("inline_spans").is_none());
         assert!(v.get("test_id").is_none());
     }
 
@@ -381,5 +417,47 @@ mod tests {
         let parsed: UiSemanticsNodeV1 = serde_json::from_value(v).expect("deserialize");
         assert!(UiSemanticsFlagsV1::is_default(&parsed.flags));
         assert!(UiSemanticsActionsV1::is_default(&parsed.actions));
+        assert!(parsed.inline_spans.is_empty());
+    }
+
+    #[test]
+    fn semantics_node_exports_inline_spans() {
+        let node = fret_core::SemanticsNode {
+            id: fret_core::NodeId::from(slotmap::KeyData::from_ffi(1)),
+            parent: None,
+            role: fret_core::SemanticsRole::Text,
+            bounds: fret_core::Rect::new(
+                fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                fret_core::Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+            ),
+            flags: fret_core::SemanticsFlags::default(),
+            test_id: Some("description".to_string()),
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: Some("Open Settings to continue.".to_string()),
+            extra: fret_core::SemanticsNodeExtra::default(),
+            text_selection: None,
+            text_composition: None,
+            actions: fret_core::SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: vec![fret_core::SemanticsInlineSpan {
+                range_utf8: (5, 13),
+                role: fret_core::SemanticsRole::Link,
+                tag: Some("settings://workspace".to_string()),
+            }],
+        };
+
+        let exported = UiSemanticsNodeV1::from_node(&node, false, 512);
+        assert_eq!(exported.inline_spans.len(), 1);
+        assert_eq!(exported.inline_spans[0].range_utf8, (5, 13));
+        assert_eq!(exported.inline_spans[0].role, "link");
+        assert_eq!(
+            exported.inline_spans[0].tag.as_deref(),
+            Some("settings://workspace")
+        );
     }
 }

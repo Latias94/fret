@@ -212,6 +212,7 @@ pub(super) struct V2ClickSelectableTextSpanStableState {
     pub(super) remaining_frames: u32,
     pub(super) stable_count: u32,
     pub(super) last_pos: Option<Point>,
+    pub(super) last_lookup_state: Option<&'static str>,
 }
 
 #[derive(Debug, Clone)]

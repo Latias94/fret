@@ -1498,11 +1498,35 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                     remaining_frames: timeout_frames,
                     stable_count: 0,
                     last_pos: None,
+                    last_lookup_state: None,
                 },
+            };
+            if state.last_lookup_state == Some("no_semantics_match") {
+                state.last_lookup_state = None;
+            }
+
+            let cached_test_id_bounds = match &target {
+                UiSelectorV1::TestId { id, .. } => svc
+                    .per_window
+                    .get(&window)
+                    .and_then(|ring| ring.test_id_bounds.get(id).copied()),
+                _ => None,
             };
 
             if state.remaining_frames == 0 {
                 if let Some(ui) = ui.as_deref_mut() {
+                    let timeout_note = match state.last_lookup_state {
+                        Some("no_semantics_match") => {
+                            "click_selectable_text_span_stable.timeout.no_semantics_match"
+                        }
+                        Some("no_runtime_state") => {
+                            "click_selectable_text_span_stable.timeout.no_runtime_state"
+                        }
+                        Some("empty_span_bounds") => {
+                            "click_selectable_text_span_stable.timeout.empty_span_bounds"
+                        }
+                        _ => "click_selectable_text_span_stable.timeout",
+                    };
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,
                         ui,
@@ -1511,9 +1535,12 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                         Some(snapshot),
                         &target,
                         step_index as u32,
-                        center_of_rect_clamped_to_rect(node.bounds, window_bounds),
+                        center_of_rect_clamped_to_rect(
+                            cached_test_id_bounds.unwrap_or(node.bounds),
+                            window_bounds,
+                        ),
                         Some(node),
-                        Some("click_selectable_text_span_stable.timeout"),
+                        Some(timeout_note),
                         svc.cfg.max_debug_string_bytes,
                     );
                 }
@@ -1521,7 +1548,18 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                     "script-step-{step_index:04}-click_selectable_span-timeout"
                 ));
                 *stop_script = true;
-                *failure_reason = Some("click_selectable_text_span_stable_timeout".to_string());
+                *failure_reason = Some(match state.last_lookup_state {
+                    Some("no_semantics_match") => {
+                        "click_selectable_text_span_stable_no_semantics_match_timeout".to_string()
+                    }
+                    Some("no_runtime_state") => {
+                        "click_selectable_text_span_stable_no_runtime_state_timeout".to_string()
+                    }
+                    Some("empty_span_bounds") => {
+                        "click_selectable_text_span_stable_empty_span_bounds_timeout".to_string()
+                    }
+                    _ => "click_selectable_text_span_stable_timeout".to_string(),
+                });
                 active.v2_step_state = None;
                 output.request_redraw = true;
             } else {
@@ -1529,6 +1567,7 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                     rt.selectable_text_interactive_span_bounds_for_node(window, node.id)
                 }) {
                     None => {
+                        state.last_lookup_state = Some("no_runtime_state");
                         state.remaining_frames = state.remaining_frames.saturating_sub(1);
                         active.v2_step_state =
                             Some(V2StepState::ClickSelectableTextSpanStable(state.clone()));
@@ -1538,6 +1577,7 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                     Some(spans) if spans.is_empty() => {
                         // Best-effort: span bounds are computed during `paint_all()`. If
                         // we don't see them yet, wait a few frames before failing.
+                        state.last_lookup_state = Some("empty_span_bounds");
                         state.remaining_frames = state.remaining_frames.saturating_sub(1);
                         active.v2_step_state =
                             Some(V2StepState::ClickSelectableTextSpanStable(state.clone()));
@@ -1547,7 +1587,10 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                     Some(spans) => spans
                         .iter()
                         .find(|span| span.tag.as_ref() == tag.as_str())
-                        .map(|span| span.bounds_local)
+                        .map(|span| {
+                            state.last_lookup_state = None;
+                            span.bounds_local
+                        })
                         .or_else(|| {
                             *force_dump_label = Some(format!(
                                 "script-step-{step_index:04}-click_selectable_span-tag-not-found"
@@ -1685,14 +1728,72 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                 }
             }
         } else {
-            *force_dump_label = Some(format!(
-                "script-step-{step_index:04}-click_selectable_span-no-semantics-match"
-            ));
-            *stop_script = true;
-            *failure_reason =
-                Some("click_selectable_text_span_stable_no_semantics_match".to_string());
-            active.v2_step_state = None;
-            output.request_redraw = true;
+            let mut state = match active.v2_step_state.take() {
+                Some(V2StepState::ClickSelectableTextSpanStable(mut state))
+                    if state.step_index == step_index =>
+                {
+                    state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                    state
+                }
+                _ => V2ClickSelectableTextSpanStableState {
+                    step_index,
+                    remaining_frames: timeout_frames,
+                    stable_count: 0,
+                    last_pos: None,
+                    last_lookup_state: None,
+                },
+            };
+
+            let cached_test_id_bounds = match &target {
+                UiSelectorV1::TestId { id, .. } => svc
+                    .per_window
+                    .get(&window)
+                    .and_then(|ring| ring.test_id_bounds.get(id).copied()),
+                _ => None,
+            };
+
+            if cached_test_id_bounds.is_some() && state.remaining_frames > 0 {
+                state.last_lookup_state = Some("no_semantics_match");
+                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                active.v2_step_state = Some(V2StepState::ClickSelectableTextSpanStable(state));
+                output.request_redraw = true;
+            } else if cached_test_id_bounds.is_some() && state.remaining_frames == 0 {
+                if let Some(ui) = ui.as_deref_mut() {
+                    record_hit_test_trace_for_selector(
+                        &mut active.hit_test_trace,
+                        ui,
+                        element_runtime,
+                        window,
+                        Some(snapshot),
+                        &target,
+                        step_index as u32,
+                        center_of_rect_clamped_to_rect(
+                            cached_test_id_bounds.expect("checked is_some"),
+                            window_bounds,
+                        ),
+                        None,
+                        Some("click_selectable_text_span_stable.timeout.no_semantics_match"),
+                        svc.cfg.max_debug_string_bytes,
+                    );
+                }
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-click_selectable_span-timeout"
+                ));
+                *stop_script = true;
+                *failure_reason =
+                    Some("click_selectable_text_span_stable_no_semantics_match_timeout".to_string());
+                active.v2_step_state = None;
+                output.request_redraw = true;
+            } else {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-click_selectable_span-no-semantics-match"
+                ));
+                *stop_script = true;
+                *failure_reason =
+                    Some("click_selectable_text_span_stable_no_semantics_match".to_string());
+                active.v2_step_state = None;
+                output.request_redraw = true;
+            }
         }
     } else {
         *force_dump_label = Some(format!(

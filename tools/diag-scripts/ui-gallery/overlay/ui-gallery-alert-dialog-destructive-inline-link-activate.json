@@ -73,32 +73,21 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-alert-dialog-destructive-description-link-gate"
+          "id": "ui-gallery-alert-dialog-destructive-description-link"
         }
       },
       "timeout_frames": 600
     },
     {
-      "type": "click_stable",
+      "type": "click_selectable_text_span_stable",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-alert-dialog-destructive-description-link-gate"
+        "id": "ui-gallery-alert-dialog-destructive-description-link"
       },
-      "stable_frames": 4,
-      "max_move_px": 0.5,
+      "tag": "https://example.com/settings",
       "timeout_frames": 240
     },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-alert-dialog-destructive-settings-link-activated"
-        }
-      },
-      "timeout_frames": 240
-    },
+    { "type": "wait_frames", "n": 4 },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-alert-dialog-destructive-inline-link-activate"

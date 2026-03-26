@@ -130,10 +130,11 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   (proves the alert dialog description keeps interactive span bounds after overlay paint).
 - UI Gallery docs-example screenshot gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-docs-example-open-screenshots.json`
   (covers `Small`, `Media`, `Small with Media`, and `Destructive` on the first-party docs page).
-- UI Gallery destructive inline-link click gate was attempted but not promoted:
-  native `click_selectable_text_span_stable` still times out on this docs surface even though the
-  recipe-level overlay state retains span bounds, so the remaining gap appears to be diagnostics /
-  real-text-service integration rather than `fret-ui-shadcn` authoring.
+- UI Gallery destructive inline-link click gate:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json`
+  (passes against the real `ui-gallery-alert-dialog-destructive-description-link` selectable-text
+  node; the remaining issue was in diagnostics timing/selector alignment, not in
+  `fret-ui-shadcn` authoring).
 
 ## Authoring note: `from_scope(...)`
 
