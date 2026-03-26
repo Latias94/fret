@@ -268,7 +268,6 @@ fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
         "src/ui/snippets/breadcrumb/link_component.rs",
         "src/ui/snippets/breadcrumb/responsive.rs",
         "src/ui/snippets/breadcrumb/rtl.rs",
-        "src/ui/snippets/breadcrumb/usage.rs",
     ];
 
     for relative_path in relative_paths {
@@ -301,6 +300,50 @@ fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
             path.display()
         );
     }
+}
+
+#[test]
+fn gallery_breadcrumb_usage_snippet_prefers_curated_parts_aliases() {
+    let relative_path = "src/ui/snippets/breadcrumb/usage.rs";
+    assert_curated_facade_only(&[relative_path]);
+
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    assert!(
+        source.contains("shadcn::BreadcrumbRoot::new()"),
+        "{} should teach the curated breadcrumb root alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::BreadcrumbList::new()"),
+        "{} should keep the breadcrumb list on the curated facade lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::BreadcrumbItemPart::new()"),
+        "{} should teach the curated breadcrumb item alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::BreadcrumbSeparatorPart::new()"),
+        "{} should teach the curated breadcrumb separator alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::BreadcrumbLink::new(\"Home\")"),
+        "{} should keep link composition on the curated facade lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::BreadcrumbPage::new(\"Breadcrumb\")"),
+        "{} should keep current-page composition on the curated facade lane",
+        path.display()
+    );
+    assert!(
+        !source.contains("shadcn::raw::breadcrumb::primitives"),
+        "{} should not require the raw breadcrumb primitive escape hatch for the copyable usage lane",
+        path.display()
+    );
 }
 
 #[test]

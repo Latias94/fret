@@ -16,7 +16,7 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
     let api_reference = doc_layout::notes_block([
         "`shadcn::Breadcrumb` remains the compact builder for standard trails: `Breadcrumb::new().items([...])`.",
-        "For upstream parity, `breadcrumb::primitives::{Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, BreadcrumbEllipsis}` keep the shadcn-shaped composition surface.",
+        "For upstream parity, the curated facade keeps the copyable docs lane on `shadcn::{BreadcrumbRoot, BreadcrumbList, BreadcrumbItemPart, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparatorPart, BreadcrumbEllipsis}`, while `breadcrumb::primitives::*` remains the explicit raw escape hatch for source-alignment-heavy examples.",
         "`BreadcrumbLink`, `BreadcrumbPage`, and `BreadcrumbSeparator` expose `.children(|cx| [...])` as the default typed alternative to upstream arbitrary React children, while `children_raw(...)` stays explicit for pre-landed content.",
         "`BreadcrumbSeparatorKind` remains the shortcut for the common chevron/slash/icon cases, while `href(...)`, `on_click(...)`, and `on_activate(...)` keep navigation typed instead of introducing generic `Slot` / `asChild` prop merging.",
     ]);
@@ -24,7 +24,7 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "API implementation: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`.",
         "Gallery sections now mirror the shadcn Breadcrumb docs order more directly: Demo, Usage, Basic, Custom Separator, Dropdown, Collapsed, Link Component, RTL, API Reference. `Responsive` remains a Fret-specific extra appended afterward.",
-        "Breadcrumb already exposes both upstream-shaped primitives and a compact builder; the docs-aligned example sections now prefer primitives for parity, while the compact builder remains a Fret ergonomic shortcut.",
+        "Breadcrumb already exposes a compact builder plus an upstream-shaped composition lane; `Usage` now teaches the curated facade aliases for that composition path, while raw primitives remain explicit in the more source-alignment-heavy examples.",
         "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
         "Use separators and collapse strategy (`BreadcrumbItem::ellipsis`) to keep paths readable in narrow sidebars.",
         "Dropdown, router-link, and custom-separator samples use typed pressables/links plus `.children(|cx| [...])` for composable inline content without widening the public surface into a generic Slot/`asChild` mechanism (ADR 0115), while `children_raw(...)` remains the explicit advanced seam.",
@@ -48,7 +48,7 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-breadcrumb-section-title-usage")
-        .description("Copyable upstream-shaped primitives usage for Breadcrumb.")
+        .description("Copyable curated Breadcrumb composition on the shadcn facade.")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let basic = DocSection::build(cx, "Basic", basic)
         .title_test_id("ui-gallery-breadcrumb-section-title-basic")
