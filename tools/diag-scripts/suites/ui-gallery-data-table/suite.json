@@ -5,9 +5,9 @@
     "tools/diag-scripts/ui-gallery-data-table-basic-row-actions-menu-toggle-stability.json",
     "tools/diag-scripts/ui-gallery-data-table-default-recipe-smoke.json",
     "tools/diag-scripts/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
+    "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-header-screenshot-zinc-light.json",
     "tools/diag-scripts/ui-gallery-data-table-guide-row-actions-menu-stability.json",
     "tools/diag-scripts/ui-gallery-data-table-listlike-pointer-selection.json",
-    "tools/diag-scripts/ui-gallery-data-table-smoke.json",
-    "tools/diag-scripts/ui-gallery-data-table-basic-row-actions-menu-toggle-stability.json"
+    "tools/diag-scripts/ui-gallery-data-table-smoke.json"
   ]
 }

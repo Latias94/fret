@@ -38,6 +38,7 @@
     "tools/diag-scripts/ui-gallery-combobox-custom-items-detail-filter-react.json",
     "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
     "tools/diag-scripts/ui-gallery-control-chrome-button-group-text-w-fit.json",
+    "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-header-screenshot-zinc-light.json",
     "tools/diag-scripts/ui-gallery-dialog-docs-order-smoke.json",
     "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
     "tools/diag-scripts/ui-gallery-empty-background-gradient-screenshot.json",
