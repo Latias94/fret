@@ -1,11 +1,12 @@
 # Diag CLI Fearless Refactor v1 — Parser Model
 
-Status: Draft (M1 baseline)
+Status: Archived baseline (superseded by `OWNERSHIP.md` for the final merged state)
 Last updated: 2026-03-26
 
 Related:
 
 - `docs/workstreams/diag-cli-fearless-refactor-v1/README.md`
+- `docs/workstreams/diag-cli-fearless-refactor-v1/OWNERSHIP.md`
 - `docs/workstreams/diag-cli-fearless-refactor-v1/MILESTONES.md`
 - `docs/workstreams/diag-cli-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/diag-cli-fearless-refactor-v1/COMMAND_INVENTORY.md`
@@ -15,6 +16,11 @@ Related:
 ## 0) Purpose
 
 This note records the first concrete parser model for the `clap` reset.
+
+Historical note:
+
+- the contract scaffold described below has since become the production `diag` contract
+- use `OWNERSHIP.md` for the final merged ownership split
 
 It answers the M1 questions that should be settled before we switch runtime execution over to the
 new parser:

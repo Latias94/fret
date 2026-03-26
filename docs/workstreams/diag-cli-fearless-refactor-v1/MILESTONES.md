@@ -1,6 +1,6 @@
 # Diag CLI Fearless Refactor v1 — Milestones
 
-Status: Draft
+Status: Closeout-ready
 Last updated: 2026-03-26
 
 Tracking doc: `docs/workstreams/diag-cli-fearless-refactor-v1/README.md`
@@ -65,6 +65,8 @@ Deliverables:
 Exit criteria:
 
 - The main diagnostics execution paths no longer depend on the legacy manual parser.
+- Residual main-lane validation/test hardening is tracked outside this lane in
+  `docs/workstreams/diag-cli-main-lanes-hardening-v1/README.md`.
 
 ## M3 — Utility lane migration and parser-v1 deletion
 
@@ -80,8 +82,8 @@ Target commands:
   `hotspots`, `bundle-v2`, `layout-sidecar`, `extensions`, `layout-perf-summary`, `memory-summary`,
   `ai-packet`, `query`, `slice`
 - authoring/live helpers: `inspect`, `pick`, `pick-arm`, `pick-script`, `pick-apply`, `script`
-- utility/control surfaces: `sessions clean`, `perf-baseline-from-bundles`, `matrix`, `registry`,
-  `config`
+- utility/control surfaces: `agent`, `path`, `poke`, `latest`, `sessions clean`,
+  `perf-baseline-from-bundles`, `matrix`, `registry`, `config`
 
 Current progress:
 
@@ -98,10 +100,14 @@ Current progress:
   `test-ids-index`, `frames-index`, `windows`, `dock-routing`, `dock-graph`, `screenshots`,
   `hotspots`, `bundle-v2`, `layout-sidecar`, `extensions`, `ai-packet`, `query`, and `slice` are
   also migrated through the new `clap` shell and cutover path.
-- `sessions clean`, `perf-baseline-from-bundles`, `matrix`, `registry`, and `config` are now also
-  migrated through the new `clap` shell and cutover path.
-- All currently shipped `diag` command families now dispatch through the new typed parser tree; the
-  only M3 work left is parser-v1 deletion and help/blob cleanup.
+- `agent`, `path`, `poke`, `latest`, `sessions clean`, `perf-baseline-from-bundles`, `matrix`,
+  `registry`, and `config` are now also migrated through the new `clap` shell and cutover path.
+- `crates/fret-diag/src/lib.rs` no longer carries parser-v1; `diag_cmd` now delegates directly to
+  the canonical typed dispatcher, and the old `diag_simple_dispatch` helper is deleted.
+- Migrated execution modules no longer ship their own duplicate usage/help branches; help ownership
+  is centralized in the `clap` contract layer.
+- `apps/fretboard/src/cli.rs` no longer duplicates the full `diag` usage surface in prose; callers
+  are pointed to the generated `fretboard diag --help` contract instead.
 
 Deliverables:
 
@@ -129,6 +135,9 @@ Deliverables:
 Exit criteria:
 
 - Repo-owned callers and repo-owned command examples no longer rely on deleted syntax, and future drift is caught by tests.
+- This lane no longer owns those hardening tasks directly; they are split into:
+  - `docs/workstreams/diag-cli-first-party-migration-v1/README.md`
+  - `docs/workstreams/diag-cli-help-and-gates-v1/README.md`
 
 ## M5 — Closeout
 
@@ -144,4 +153,5 @@ Deliverables:
 
 Exit criteria:
 
-- `fretboard diag` is on the new model only, and the repo no longer frames parser cleanup as unfinished pre-release debt.
+- `fretboard diag` is on the new model only.
+- This lane has explicit closeout, ownership, and follow-up handoff docs.

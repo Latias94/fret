@@ -1,13 +1,16 @@
 # Diag CLI Fearless Refactor v1 — TODO
 
-Status: Draft (active tracker)
+Status: Closeout-ready
 Last updated: 2026-03-26
 
 Related:
 
 - Main note: `docs/workstreams/diag-cli-fearless-refactor-v1/README.md`
+- Closeout: `docs/workstreams/diag-cli-fearless-refactor-v1/CLOSEOUT.md`
 - Milestones: `docs/workstreams/diag-cli-fearless-refactor-v1/MILESTONES.md`
+- Ownership: `docs/workstreams/diag-cli-fearless-refactor-v1/OWNERSHIP.md`
 - Parser model: `docs/workstreams/diag-cli-fearless-refactor-v1/PARSER_MODEL.md`
+- Follow-ups: `docs/workstreams/diag-cli-fearless-refactor-v1/FOLLOWUPS.md`
 - Current top-level CLI help shell: `apps/fretboard/src/cli.rs`
 - Current diagnostics parser blob: `crates/fret-diag/src/lib.rs`
 - Current diagnostics command modules: `crates/fret-diag/src/`
@@ -17,6 +20,7 @@ Tracking legend:
 - `[ ]` open
 - `[~]` in progress
 - `[x]` done
+- `[>]` moved to a narrower follow-up lane
 - `[!]` blocked
 
 ID format:
@@ -67,16 +71,16 @@ ID format:
 ## M2 — Parser reset for the main execution lanes
 
 - [x] DCR-core-020 Introduce `clap` scaffolding for `diag`.
-- [~] DCR-core-021 Implement the new typed parser for `diag run`.
-- [~] DCR-core-022 Implement the new typed parser for `diag suite`.
-- [~] DCR-core-023 Implement the new typed parser for `diag repro`.
-- [~] DCR-core-024 Implement the new typed parser for `diag repeat`.
+- [>] DCR-core-021 Remaining `diag run` hardening moved to `docs/workstreams/diag-cli-main-lanes-hardening-v1/README.md`.
+- [>] DCR-core-022 Remaining `diag suite` hardening moved to `docs/workstreams/diag-cli-main-lanes-hardening-v1/README.md`.
+- [>] DCR-core-023 Remaining `diag repro` hardening moved to `docs/workstreams/diag-cli-main-lanes-hardening-v1/README.md`.
+- [>] DCR-core-024 Remaining `diag repeat` hardening moved to `docs/workstreams/diag-cli-main-lanes-hardening-v1/README.md`.
 - [x] DCR-core-025 Implement the new typed parser for `diag perf`.
 - [x] DCR-core-026 Implement the new typed parser for `diag campaign`.
-- [ ] DCR-core-027 Move parser-local validation for the main execution lanes out of the global blob.
-- [~] DCR-core-028 Remove manual help prose for migrated lanes and replace it with generated help/examples.
-- [~] DCR-core-029 Add parser tests for representative valid invocations of the main execution lanes.
-- [~] DCR-core-030 Add parser tests for representative invalid combinations:
+- [>] DCR-core-027 Remaining parser-local validation extraction for the main execution lanes moved to `docs/workstreams/diag-cli-main-lanes-hardening-v1/README.md`.
+- [>] DCR-core-028 Remaining generated help/example hardening for the main execution lanes moved to `docs/workstreams/diag-cli-main-lanes-hardening-v1/README.md`.
+- [>] DCR-core-029 Remaining parser coverage for valid main-lane invocations moved to `docs/workstreams/diag-cli-main-lanes-hardening-v1/README.md`.
+- [>] DCR-core-030 Remaining parser coverage for invalid main-lane combinations moved to `docs/workstreams/diag-cli-main-lanes-hardening-v1/README.md`:
   - missing required values,
   - conflicting flags,
   - wrong subcommand-only flags,
@@ -91,30 +95,32 @@ ID format:
 - [x] DCR-util-042 Implement the new typed parser for inspect/pick/script helper commands.
   `script`, `inspect`, `pick`, `pick-arm`, `pick-script`, and `pick-apply` are now migrated.
 - [x] DCR-util-041 Implement the new typed parser for artifact/reporting commands.
-  `trace` / `resolve` / `compare` / `dashboard` / `stats` / `summarize` / `pack` / `triage` /
+  `trace` / `resolve` / `agent` / `path` / `poke` / `latest` / `compare` / `dashboard` / `stats` / `summarize` / `pack` / `triage` /
   `lint` / `artifact lint` / `meta` / `index` / `test-ids` / `test-ids-index` / `frames-index` /
   `windows` / `dock-routing` / `dock-graph` / `screenshots` / `hotspots` / `bundle-v2` /
   `layout-sidecar` / `layout-perf-summary` / `memory-summary` / `extensions` / `ai-packet` /
   `query` / `slice` / `registry` / `config` are now migrated through the `clap` cutover path.
-- [ ] DCR-util-043 Delete the old manual `diag` parse loop from `crates/fret-diag/src/lib.rs`.
-- [ ] DCR-util-044 Delete parser-only mutable state that existed solely to support parser-v1.
-- [ ] DCR-util-045 Remove duplicated post-parse arity/ownership checks that the new parser now declares structurally.
-- [ ] DCR-util-046 Remove stale hand-written usage text that can no longer drift from the executable surface.
+- [x] DCR-util-043 Delete the old manual `diag` parse loop from `crates/fret-diag/src/lib.rs`.
+- [x] DCR-util-044 Delete parser-only mutable state that existed solely to support parser-v1.
+- [x] DCR-util-045 Remove duplicated post-parse arity/ownership checks that the new parser now declares structurally.
+- [x] DCR-util-046 Remove stale hand-written usage text that can no longer drift from the executable surface.
+  Root `fretboard` help now points to generated `diag --help`, and migrated execution modules no
+  longer keep their own redundant `--help`/usage branches.
 
 ## M4 — Repo migration and hardening
 
-- [ ] DCR-repo-050 Rewrite repo-owned docs examples to the new syntax.
-- [ ] DCR-repo-051 Rewrite repo-owned helper scripts or gate docs to the new syntax.
-- [ ] DCR-repo-052 Rewrite parser-sensitive tests to the new syntax.
-- [ ] DCR-repo-053 Add snapshot coverage for `fretboard diag --help` or equivalent output guards.
-- [ ] DCR-repo-054 Add focused smoke tests for the highest-risk command families:
+- [>] DCR-repo-050 Remaining repo-owned docs migration moved to `docs/workstreams/diag-cli-first-party-migration-v1/README.md`.
+- [>] DCR-repo-051 Remaining helper script or gate-doc migration moved to `docs/workstreams/diag-cli-first-party-migration-v1/README.md`.
+- [>] DCR-repo-052 Remaining parser-sensitive test migration moved to `docs/workstreams/diag-cli-first-party-migration-v1/README.md`.
+- [>] DCR-repo-053 Help snapshot coverage moved to `docs/workstreams/diag-cli-help-and-gates-v1/README.md`.
+- [>] DCR-repo-054 Focused smoke coverage for the highest-risk command families moved to `docs/workstreams/diag-cli-help-and-gates-v1/README.md`:
   - `run`,
   - `suite`,
   - `repro`,
   - `perf`,
   - `campaign`.
-- [ ] DCR-repo-055 Grep the repo for deleted syntax and remove the final residues.
-- [~] DCR-repo-056 Update repo-owned command snippets in workstream docs, runbooks, and maintainer notes whenever those commands changed under the new parser contract.
+- [>] DCR-repo-055 Remaining repo grep cleanup for deleted syntax moved to `docs/workstreams/diag-cli-first-party-migration-v1/README.md`.
+- [>] DCR-repo-056 Remaining command-snippet migration moved to `docs/workstreams/diag-cli-first-party-migration-v1/README.md`.
   `script`, `trace`, `resolve latest`, `compare`, `dashboard`, `stats`, `summarize`,
   `layout-perf-summary`, `memory-summary`, `inspect`, `pick`, `pick-script`, `pick-apply`,
   `test-ids-index`, `frames-index`, `windows`, `dock-routing`, `dock-graph`, `screenshots`,
@@ -123,6 +129,6 @@ ID format:
 
 ## M5 — Closeout
 
-- [ ] DCR-close-060 Write a short closeout status note once parser-v1 is deleted.
-- [ ] DCR-close-061 Record the final ownership map for future maintainers.
-- [ ] DCR-close-062 Split any remaining follow-up work into narrow lanes instead of reintroducing compatibility debt.
+- [x] DCR-close-060 Write a short closeout status note once parser-v1 is deleted.
+- [x] DCR-close-061 Record the final ownership map for future maintainers.
+- [x] DCR-close-062 Split any remaining follow-up work into narrow lanes instead of reintroducing compatibility debt.

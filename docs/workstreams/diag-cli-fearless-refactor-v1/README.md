@@ -1,22 +1,25 @@
 # Diag CLI Fearless Refactor v1
 
-Status: Draft (active workstream)
+Status: Closeout-ready
 Last updated: 2026-03-26
 
 Tracking files:
 
 - `docs/workstreams/diag-cli-fearless-refactor-v1/README.md`
+- `docs/workstreams/diag-cli-fearless-refactor-v1/CLOSEOUT.md`
 - `docs/workstreams/diag-cli-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/diag-cli-fearless-refactor-v1/OWNERSHIP.md`
 - `docs/workstreams/diag-cli-fearless-refactor-v1/PARSER_MODEL.md`
+- `docs/workstreams/diag-cli-fearless-refactor-v1/FOLLOWUPS.md`
 - `docs/workstreams/diag-cli-fearless-refactor-v1/TODO.md`
 
 Related context:
 
 - Umbrella diagnostics workstream: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - Diagnostics architecture lane: `docs/workstreams/diag-architecture-fearless-refactor-v1/README.md`
-- Current top-level CLI help shell: `apps/fretboard/src/cli.rs`
-- Current diagnostics command parser + dispatcher blob: `crates/fret-diag/src/lib.rs`
-- Initial `clap` contract scaffold: `crates/fret-diag/src/cli/contracts/`
+- Top-level CLI shell: `apps/fretboard/src/cli.rs`
+- Final diagnostics entrypoint: `crates/fret-diag/src/lib.rs`
+- Canonical `clap` contract: `crates/fret-diag/src/cli/contracts/`
 - Current suite orchestration hotspot: `crates/fret-diag/src/diag_suite.rs`
 
 ## 0) Why this workstream exists
@@ -123,9 +126,9 @@ What is still intentionally open:
 
 Current design note:
 
-- `docs/workstreams/diag-cli-fearless-refactor-v1/PARSER_MODEL.md` now records the first
-  explicit ownership map, shared arg-family split, first-party migration rule, and the test-only
-  `clap` contract scaffold that will be promoted into production code during the cutover.
+- `docs/workstreams/diag-cli-fearless-refactor-v1/PARSER_MODEL.md` remains the historical design
+  baseline, while `OWNERSHIP.md` records the final merged ownership split after the production
+  cutover landed.
 - `diag run --help`, `diag suite --help`, `diag repeat --help`, `diag repro --help`, and
   `diag perf --help` now render from the new `clap` contract.
 - `diag campaign --help`, `diag campaign list --help`, and `diag campaign run --help` now render
@@ -136,9 +139,9 @@ Current design note:
   the new nested `clap` contract.
 - `diag script --help`, `diag script normalize --help`, `diag script upgrade --help`, and
   `diag script shrink --help` now render from the new nested `clap` contract.
-- A supported `run` / `suite` / `repeat` / `repro` subset now dispatches through the new `clap`
-  model in production, while unsupported flags still fall back temporarily until parser-v1 is
-  deleted.
+- `run`, `suite`, `repeat`, and `repro` now dispatch through the new `clap` model for the intended
+  shipped surface; residual validation/test hardening is split into a narrow follow-up lane rather
+  than keeping parser-v1 compatibility alive.
 - `diag perf` now dispatches through the new `clap` model with its real execution surface and no
   longer falls back to parser-v1 for stale per-command flags.
 - `diag campaign` now dispatches through the new `clap` model for `list` / `show` / `validate` /
@@ -165,7 +168,8 @@ Current design note:
 - `diag layout-perf-summary`, `diag memory-summary`, `diag inspect`, and the `diag pick*` helper
   family now also render help from the new `clap` contract and dispatch through the new cutover
   path while reusing the current execution modules behind typed contexts.
-- `diag sessions clean`, `diag perf-baseline-from-bundles`, `diag matrix`, `diag registry`, and
+- `diag agent`, `diag path`, `diag poke`, `diag latest`, `diag sessions clean`,
+  `diag perf-baseline-from-bundles`, `diag matrix`, `diag registry`, and
   `diag config doctor` now also render help from the new `clap` contract and dispatch through the
   new cutover path while reusing the current execution modules behind typed contexts.
 - `diag pack`, `diag triage`, `diag lint`, and `diag ai-packet` now dispatch through the new
@@ -190,11 +194,29 @@ Current design note:
   of falling back to parser-v1: `diag matrix --launch-write-bundle-json`,
   `diag perf-baseline-from-bundles --pack`, and invalid `diag sessions clean --top 0`.
 - Every currently shipped `diag` command family now renders help from and dispatches through the
-  new `clap` tree. The remaining work in this workstream is deleting parser-v1 and cleaning up
-  repo-owned callers/tests/docs that still assume the legacy parser blob exists.
+  new `clap` tree.
+- `crates/fret-diag/src/lib.rs` no longer contains the old mutable parser loop or legacy simple
+  dispatch fallback; `diag_cmd` now delegates directly to the typed `clap` contract dispatcher.
+- Execution modules that remain behind the cutover path no longer carry duplicated hand-written
+  `diag` usage/help branches for migrated commands; help ownership is centralized in the `clap`
+  contract surface.
+- `apps/fretboard/src/cli.rs` no longer mirrors the full `diag` usage surface in hand-maintained
+  prose; it now points callers at `fretboard diag --help`, which is generated from the executable
+  contract.
+
+Closeout note:
+
+- This lane is now closeout-ready.
+- Final ownership is recorded in `OWNERSHIP.md`.
+- Residual work is split into named follow-up lanes in `FOLLOWUPS.md`.
 
 Latest smoke evidence:
 
+- `target/debug/fretboard diag --help`
+- `target/debug/fretboard diag agent --help`
+- `target/debug/fretboard diag path --help`
+- `target/debug/fretboard diag poke --help`
+- `target/debug/fretboard diag latest --help`
 - `target/debug/fretboard diag campaign --help`
 - `target/debug/fretboard diag campaign list --help`
 - `target/debug/fretboard diag campaign run --help`
@@ -219,6 +241,9 @@ Latest smoke evidence:
 - `target/debug/fretboard diag sessions --help`
 - `target/debug/fretboard diag sessions clean --help`
 - `target/debug/fretboard diag sessions clean --keep 1 --json`
+- `target/debug/fretboard diag path --dir target/fret-diag-clap-smoke`
+- `target/debug/fretboard diag poke --dir target/fret-diag-clap-smoke`
+- `target/debug/fretboard diag latest --dir target/fret-diag-clap-smoke`
 - `target/debug/fretboard diag script --help`
 - `target/debug/fretboard diag script normalize --help`
 - `target/debug/fretboard diag script upgrade --help`
@@ -341,6 +366,8 @@ Smoke note:
 
 ## 5) Ownership direction
 
+Final merged ownership is recorded in `docs/workstreams/diag-cli-fearless-refactor-v1/OWNERSHIP.md`.
+
 Preferred ownership split:
 
 - `apps/fretboard` owns the top-level application shell,
@@ -409,3 +436,22 @@ The reset is successful when:
 - invalid command combinations fail immediately and intentionally,
 - repo-owned diagnostics docs stop drifting away from the executable surface,
 - there is no retained parser compatibility debt waiting to be cleaned up "later".
+
+## 9) Closeout State
+
+This workstream is no longer the place for broad parser cleanup.
+
+The parser reset itself is complete:
+
+- parser-v1 is deleted
+- `clap` is the only parser/help source of truth
+- migrated execution modules no longer own duplicated help branches
+
+Residual work is intentionally split out:
+
+- main execution lane hardening:
+  - `docs/workstreams/diag-cli-main-lanes-hardening-v1/README.md`
+- first-party caller migration:
+  - `docs/workstreams/diag-cli-first-party-migration-v1/README.md`
+- help snapshots and smoke gates:
+  - `docs/workstreams/diag-cli-help-and-gates-v1/README.md`
