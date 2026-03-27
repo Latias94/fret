@@ -16,7 +16,7 @@ See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
 Status: Active orchestration workstream
 
-Last updated: 2026-03-11
+Last updated: 2026-03-27
 
 ## Purpose
 
@@ -260,13 +260,13 @@ It coordinates them.
 
 Use:
 
-- `docs/workstreams/ui-editor-v1.md`
+- `docs/workstreams/ui-editor-v1/ui-editor-v1.md`
   for the canonical `fret-ui-editor` surface and starter-set direction
-- `docs/workstreams/ui-editor-egui-imgui-gap-v1.md`
+- `docs/workstreams/standalone/ui-editor-egui-imgui-gap-v1.md`
   for detailed editor capability gaps vs egui/ImGui
-- `docs/workstreams/imui-ecosystem-facade-v3.md`
-  for immediate-mode facade/runtime-adjacent work
-- `docs/workstreams/code-editor-ecosystem-v1.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+  for the current immediate-mode stack reset and ownership baseline
+- `docs/workstreams/code-editor-ecosystem-v1/code-editor-ecosystem-v1.md`
   for the code/text editor surface
 
 Use this workstream for:
@@ -301,10 +301,10 @@ This workstream has done its job when:
 
 ### Workstreams
 
-- `docs/workstreams/ui-editor-v1.md`
-- `docs/workstreams/ui-editor-egui-imgui-gap-v1.md`
-- `docs/workstreams/imui-ecosystem-facade-v3.md`
-- `docs/workstreams/code-editor-ecosystem-v1.md`
+- `docs/workstreams/ui-editor-v1/ui-editor-v1.md`
+- `docs/workstreams/standalone/ui-editor-egui-imgui-gap-v1.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/code-editor-ecosystem-v1/code-editor-ecosystem-v1.md`
 
 ### Primary notes in this directory
 

@@ -1,7 +1,25 @@
 # imui Ecosystem Facade v2 M3 Popup/Select and Floating Coexistence Polish
 
-Status: Accepted (M3 locked)
-Last updated: 2026-02-08
+## Historical note (pre-reset)
+
+This note records a pre-`imui-stack-fearless-refactor-v1` facade stage.
+Names mentioned below may reflect the old public surface (`select_model_ex`, older floating/window
+helpers, etc.) and should be read as historical evidence, not current API guidance.
+
+Current source of truth:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+Canonical name mapping for historical references in this note:
+
+- `select_model_ex` -> `select_model_with_options(...)`
+- older floating/window helper names -> `window(...)`, `window_open(...)`,
+  `floating_area_with_options(...)`, `floating_area_drag_surface(...)`
+
+Status: Historical archive note (pre-reset M3 record)
+Last updated: 2026-03-27
 
 This note captures the v2 M3 polish scope for popup/select choreography and floating coexistence.
 

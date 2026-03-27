@@ -80,7 +80,7 @@ and transform origin:
 - Pass: `side` + `align` placement and deterministic flip behavior.
   - Fret flips when the preferred side overflows on the **side axis** without clamping, then
     retries on the opposite side; if neither fits, it selects a best-fit side and clamps.
-  - Implementation: `anchored_panel_layout_ex(...)` / `anchored_panel_layout_sized_ex(...)` in
+  - Implementation: `anchored_panel_layout(...)` / `anchored_panel_layout_sized(...)` in
     `crates/fret-ui/src/overlay_placement/solver.rs`.
 - Pass: `sideOffset` and `alignOffset` are represented as `Offset`:
   - `Offset.main_axis` (added to `side_offset`)
@@ -90,7 +90,7 @@ and transform origin:
   - Implementation: `Offset` + `apply_cross_axis_offset(...)` in
     `crates/fret-ui/src/overlay_placement/solver.rs`.
 - Pass: RTL-aware logical alignment for vertical placements (`Top`/`Bottom`):
-  - Implementation: `anchored_origin_ex(...)` in `crates/fret-ui/src/overlay_placement/solver.rs`.
+  - Implementation: `anchored_origin_with_options(...)` in `crates/fret-ui/src/overlay_placement/solver.rs`.
 - Pass: Arrow positioning with padding, and aligned-placement panel shift when needed:
   - Fret computes `ArrowLayout { offset, alignment_offset }` and may shift the panel to preserve
     arrow pointing intent.

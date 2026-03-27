@@ -1,7 +1,31 @@
 # imui Ecosystem Facade v2 (Stabilization + Authoring Alignment)
 
-Status: Complete (M0-M5 locked; planning note, not an ADR)
-Last updated: 2026-02-06
+## Historical archive note
+
+This note records the pre-`imui-stack-fearless-refactor-v1` stabilization plan.
+It remains useful as design history, but it is no longer the canonical guide for the surviving
+`imui` stack shape.
+
+Current source of truth:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+Canonical name mapping for historical references across the v2 note set:
+
+- `select_model_ex` -> `select_model_with_options(...)`
+- `window_ex` -> `window(...)`
+- `window_open_ex` -> `window_open(...)`
+- `floating_area_show_ex` -> `floating_area_with_options(...)`
+- `floating_area_drag_surface_ex` -> `floating_area_drag_surface(...)`
+- `begin_popup_menu_ex` -> `begin_popup_menu_with_options(...)`
+- `begin_popup_modal_ex` -> `begin_popup_modal_with_options(...)`
+
+Do not extend the v2 note set with new API guidance.
+
+Status: Historical archive note (pre-reset planning record; not an ADR)
+Last updated: 2026-03-27
 
 This workstream starts after `imui` ecosystem facade v1 is functionally complete.
 

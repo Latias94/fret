@@ -129,7 +129,7 @@ Pointer-trigger authoring integration (v1 still dispatches through the command p
 - `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
 - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
 - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
-- `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiFacade::action_button_ex`, `ImUiFacade::menu_item_action_ex`, `UiWriterImUiFacadeExt::menu_item_action_ex`)
+- `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiFacade::action_button_with_options`, `ImUiFacade::menu_item_action_with_options`, `UiWriterImUiFacadeExt::menu_item_action_with_options`)
 - `ecosystem/fret-genui-core/src/executor.rs` (`GenUiActionExecutorV1::with_dispatch_command_actions`)
 - `ecosystem/fret-genui-core/src/render.rs` (default `test_id` stamping: `genui:{element_key}`)
 - `ecosystem/fret-genui-shadcn/src/resolver/basic.rs` (Button action-first mapping for unit `.v1` action ids)

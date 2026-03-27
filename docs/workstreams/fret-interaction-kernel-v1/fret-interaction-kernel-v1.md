@@ -1,7 +1,7 @@
 # Fret Interaction Kernel (v1)
 
 Status: Draft (v1 direction locked)
-Last updated: 2026-03-09
+Last updated: 2026-03-27
 
 This workstream introduces an ecosystem-level crate that consolidates interaction primitives shared
 across editor-grade surfaces:
@@ -118,7 +118,9 @@ Deliverable definition (M3 “done”):
 
 ## Evidence / related workstreams
 
-- ImGui parity tracking: `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
+- Current `imui` stack reset and ownership baseline:
+  `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- Historical ImGui parity audit archive: `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
 - Docking multi-window parity: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - XyFlow parity notes: `docs/workstreams/standalone/fret-node-xyflow-parity.md`
 

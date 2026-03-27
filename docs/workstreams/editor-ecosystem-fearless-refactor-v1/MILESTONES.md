@@ -39,7 +39,7 @@ Exit gates:
 - `README.md`, `DESIGN.md`, `MILESTONES.md`, and `TODO.md` point to one coherent plan.
 - `EDITOR_COMPONENT_SYSTEM.md` exists and is referenced as the design/style baseline.
 - `EDITOR_INTERACTION_CONTRACT.md` exists and is referenced as the interaction/identity baseline.
-- `ui-editor-v1.md` remains the detailed widget-surface note instead of being duplicated here.
+- `ui-editor-v1/ui-editor-v1.md` remains the detailed widget-surface note instead of being duplicated here.
 - Supporting notes (`OWNERSHIP_AUDIT.md`, `TOKEN_INVENTORY.md`, `IMGUI_LIKE_PRESET.md`,
   `PARITY_MATRIX.md`) are treated as references rather than competing trackers.
 

@@ -28,7 +28,7 @@ Interaction contract:
 - [x] `EER-DOC-103` Add an editor component-system note covering design language, density, state
       model, and preset strategy.
 - [ ] `EER-DOC-104` Decide whether `PARITY_MATRIX.md` should stay as a short orchestration snapshot
-      or be folded into `docs/workstreams/ui-editor-egui-imgui-gap-v1.md`.
+      or be folded into `docs/workstreams/standalone/ui-editor-egui-imgui-gap-v1.md`.
 - [x] `EER-DOC-105` Publish a short standalone conventions note for `id_source`, `test_id`,
       response semantics, and loop-built widget state.
 

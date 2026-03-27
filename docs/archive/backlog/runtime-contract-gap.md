@@ -26,7 +26,7 @@ Status legend:
 | Input routing + hit testing | **Done** | `crates/fret-ui/src/tree/mod.rs` | — |
 | Hover tracking + geometry queries | **Done** | `crates/fret-ui/src/elements/mod.rs` (`HoverRegion`, `bounds_for_element`), `crates/fret-ui/src/declarative.rs` (bounds recording) | — |
 | Focus + capture + focus-visible + traversal | **Done** | `crates/fret-ui/src/tree/mod.rs` (modal scoping + `focus.next`/`focus.previous`), `crates/fret-ui/src/focus_visible.rs` | Component-layer focus trap/restore remains policy (ADR 0067); runtime traversal is conservative until a scroll-into-view contract is formalized (ADR 0068). |
-| Multi-root layers substrate | **Done** | `crates/fret-ui/src/tree/mod.rs` (`push_overlay_root_ex`, `remove_layer`, `active_input_layers`) | — |
+| Multi-root layers substrate | **Done** | `crates/fret-ui/src/tree/layers/impls.rs` + `crates/fret-ui/src/tree/layers/types.rs` (`push_overlay_root_with_options`, `OverlayRootOptions`, `remove_layer`, `active_input_layers`) | — |
 | Placement solver | **Partial** | `crates/fret-ui/src/overlay_placement/mod.rs` | Arrow support is intentionally deferred to P1 (ADR 0066 Gate 3.2). |
 | Declarative authoring | **Done** | `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/elements/mod.rs`, `crates/fret-ui/src/declarative.rs` | — |
 | Layout vocabulary | **Done** | `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/declarative.rs` | Layout defaults should remain CSS/Tailwind-like; avoid adding per-component defaults in runtime. |

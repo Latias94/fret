@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Reference Notes
 
-Last updated: 2026-03-10
+Last updated: 2026-03-27
 
 This file is a quick pointer index to relevant upstream and in-tree references.
 
@@ -45,8 +45,8 @@ Priority rule for this workstream:
  - View runtime implementation (ecosystem golden path):
    - `ecosystem/fret/src/view.rs`
    - `ecosystem/fret/src/actions.rs`
-- imui authoring facade:
-  - `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md`
+- imui stack reset / authoring frontend ownership:
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
   - `ecosystem/fret-imui`
   - `ecosystem/fret-authoring`
 

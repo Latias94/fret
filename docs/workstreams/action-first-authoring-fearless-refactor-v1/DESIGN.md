@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Design
 
 Status: Landed (v1 implementation is in-tree; hardening follow-ups in progress; ADRs remain the source of truth)
-Last updated: 2026-03-10
+Last updated: 2026-03-27
 
 This workstream refactors Fret’s **user-facing authoring story** to close the ergonomics + correctness gap vs
 Zed/GPUI while preserving Fret’s non-negotiable layering rules:
@@ -136,7 +136,7 @@ These v1 decisions are locked to keep the implementation plan executable:
 - GPUI parity (experience + performance): `docs/workstreams/gpui-parity-refactor/gpui-parity-refactor.md`
 - Authoring paradigm consolidation: `docs/workstreams/authoring-paradigm-gpui-style-v1/authoring-paradigm-gpui-style-v1.md`
 - Fluent builder ergonomics: `docs/workstreams/authoring-ergonomics-fluent-builder/authoring-ergonomics-fluent-builder.md`
-- imui facade (implemented): `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md`
+- imui stack reset / authoring frontend ownership: `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
 - GenUI spec rendering (implemented): `docs/workstreams/genui-json-render-v1/genui-json-render-v1.md`
 
 ### Upstream references (non-normative)

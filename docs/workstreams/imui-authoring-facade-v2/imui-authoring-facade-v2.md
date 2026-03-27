@@ -1,5 +1,20 @@
 # Immediate-Mode Authoring Facade ("imui") v2 - Fearless Refactor Plan
 
+## Historical archive note
+
+This note records the pre-`imui-stack-fearless-refactor-v1` authoring consolidation.
+It remains useful as rationale and implementation history, but it is no longer the canonical API or
+ownership guide.
+
+Current source of truth:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+Do not extend this document with new API guidance; record new decisions in the active stack-reset
+workstream instead.
+
 Status: Implemented (in-tree; workstream note; not an ADR)
 Last updated: 2026-03-02
 
@@ -32,8 +47,8 @@ Decision snapshot (2026-02-03):
 Action-first integration note (2026-03-02):
 
 - The immediate-mode facade can dispatch stable `ActionId`s directly (no stringly `CommandId` glue
-  at call sites) via `fret_ui_kit::imui` helpers such as `action_button_ex(...)` /
-  `menu_item_action_ex(...)`.
+  at call sites) via `fret_ui_kit::imui` helpers such as `action_button_with_options(...)` /
+  `menu_item_action_with_options(...)`.
 - This is intended to keep the “keyboard shortcuts / command palette / menus / pointer clicks”
   dispatch semantics converged across authoring frontends (see ADR 0307 + the action-first
   workstream evidence gates).

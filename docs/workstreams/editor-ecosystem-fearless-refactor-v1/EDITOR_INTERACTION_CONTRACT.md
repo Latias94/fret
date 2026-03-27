@@ -6,12 +6,12 @@ Tracking doc:
 Related docs:
 
 - `docs/workstreams/editor-ecosystem-fearless-refactor-v1/EDITOR_COMPONENT_SYSTEM.md`
-- `docs/workstreams/ui-editor-v1.md`
-- `docs/workstreams/imui-ecosystem-facade-v3.md`
+- `docs/workstreams/ui-editor-v1/ui-editor-v1.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
 
 Status: Active design note (workstream contract, not an ADR)
 
-Last updated: 2026-03-15
+Last updated: 2026-03-27
 
 ## Purpose
 

@@ -1,7 +1,28 @@
 # imui Ecosystem Facade v2 - TODO Tracker
 
-Status: Complete (M0-M5 complete)
-Last updated: 2026-02-06
+## Historical note (pre-reset)
+
+This tracker records a pre-`imui-stack-fearless-refactor-v1` facade stage.
+Names mentioned below may reflect the old public surface (`select_model_ex`, older floating/window
+helpers, etc.) and should be read as historical evidence, not current API guidance.
+
+Current source of truth:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+Canonical name mapping for historical references in this tracker:
+
+- `select_model_ex` -> `select_model_with_options(...)`
+- `window_ex` -> `window(...)`
+- `window_open_ex` -> `window_open(...)`
+- `floating_area_show_ex` -> `floating_area_with_options(...)`
+
+Do not add follow-up work here; use the active stack-reset workstream instead.
+
+Status: Historical archive note
+Last updated: 2026-03-27
 
 This tracker covers:
 

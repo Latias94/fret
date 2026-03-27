@@ -1,5 +1,26 @@
 # imui Ecosystem Facade v3 - TODO Tracker
 
+## Historical note (pre-reset)
+
+This tracker records the pre-`imui-stack-fearless-refactor-v1` facade plan.
+Some evidence lines below intentionally reference historical names and pre-reset entry points
+(`begin_disabled`, `window_ex`, `window_open_ex`, `floating_area_show_ex`).
+They are retained as audit history, not as current API guidance.
+
+Current source of truth:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+Canonical name mapping for historical references in this tracker:
+
+- `begin_disabled` -> `disabled_scope(...)`
+- `window_ex` -> `window(...)`
+- `window_open_ex` -> `window_open(...)`
+- `floating_area_show_ex` -> `floating_area_with_options(...)`
+
+Do not treat the old names below as surviving APIs.
 
 ## Upstream references (non-normative)
 
@@ -9,8 +30,8 @@ Upstream sources:
 - Dear ImGui: https://github.com/ocornut/imgui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-Status: In progress (M0+ pending)
-Last updated: 2026-02-10
+Status: Historical archive note
+Last updated: 2026-03-27
 
 This tracker covers:
 
@@ -77,7 +98,8 @@ Exit criteria:
 - at least one diag script covers floating + popup coexistence under the new rules.
 
 - [~] IMUIECO3-float-010 Add `WindowFlags`/options surface for in-window floating windows.
-  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingWindowOptions`, `window_ex`, `window_open_ex`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingWindowOptions`, historical pre-reset
+    `window_ex`, `window_open_ex` entry points).
   - Evidence: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (`activate_on_click`, `inputs_enabled` behavior).
 - [x] IMUIECO3-float-011 Add deterministic bring-to-front + focus choreography for floatings.
   - Evidence: `crates/fret-ui/src/declarative/host_widget.rs` (capture-phase `PointerRegion` down hooks).
@@ -98,10 +120,11 @@ Exit criteria:
   - Reference: `repo-ref/imgui/imgui.cpp` (hovered-viewport detection expects `ImGuiViewportFlags_NoInputs` to be honored).
   - Note: current `inputs_enabled=false` is "non-interactive" but not click-through (by design).
   - Evidence (initial click-through): `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingWindowOptions.pointer_passthrough`,
-    `FloatingAreaOptions.hit_test_passthrough`, `floating_area_show_ex` wrapping with `HitTestGate`).
+    `FloatingAreaOptions.hit_test_passthrough`, historical pre-reset `floating_area_show_ex`
+    wrapping with `HitTestGate`).
   - Evidence (gate): `ecosystem/fret-imui/src/lib.rs` (`floating_window_pointer_passthrough_allows_underlay_hit_testing`).
   - Evidence (`NoInputs`): `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingWindowOptions.no_inputs`, `FloatingAreaOptions.no_inputs`,
-    `floating_area_show_ex` wrapping with `InteractivityGate`).
+    historical pre-reset `floating_area_show_ex` wrapping with `InteractivityGate`).
   - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`floating_window_no_inputs_allows_underlay_hit_testing`,
     `floating_window_no_inputs_is_skipped_by_focus_traversal`, `no_inputs_is_click_through_and_skips_focus_traversal`).
 - [x] IMUIECO3-float-016 Align activation semantics with ImGui `NoBringToFrontOnFocus` (focus vs z-order).
@@ -146,7 +169,8 @@ Exit criteria:
   - Reference: `repo-ref/imgui/imgui.h` (`BeginDisabled`) + `repo-ref/imgui/imgui.cpp` (`BeginDisabled`, `EndDisabled`).
   - Decision: disabled items are inert and report `hovered=false` / `pressed=false` / `focused=false` / `clicked=false` by default
     (ImGui-style). Use `ResponseExt::is_hovered(ImUiHoveredFlags::ALLOW_WHEN_DISABLED)` when you need hover queries for disabled items.
-  - Evidence (API): `ecosystem/fret-ui-kit/src/imui.rs` (`disabled_scope`, `begin_disabled`).
+  - Evidence (API): `ecosystem/fret-ui-kit/src/imui.rs` (`disabled_scope`, historical pre-reset
+    `begin_disabled` alias).
   - Evidence (policy): `ecosystem/fret-ui-kit/src/imui.rs` (`sanitize_response_for_enabled`, `component.imui.disabled_alpha`).
   - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`disabled_scope_blocks_underlay_and_suppresses_hover_and_click`).
 - [x] IMUIECO3-resp-022 Fill remaining `ImGuiHoveredFlags_` gaps (popup blocking + delays/stationary).

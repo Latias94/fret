@@ -26,6 +26,23 @@ git log --follow --format='%cs %h %s' -- docs/workstreams/standalone/<file>
 git log --since='2026-01-01' --name-only -- docs/workstreams/standalone
 ```
 
+## Immediate-Mode Note Cluster
+
+Current source of truth for the shipped `imui` stack:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+Standalone `imui` notes in this folder are companion or archive material:
+
+- `imui-imgui-parity-audit-v1.md` is a historical parity audit.
+- `imui-ecosystem-facade-perf-v1.md` is a historical companion perf note.
+- `imui-shadcn-adapter-v1.md` is a historical adapter companion note.
+- `imui-state-integration-v1.md` is a historical service/state compatibility note.
+
+Use them for rationale, parity, and migration history, not as the first stop for current API guidance.
+
 ## File Index
 
 - `ai-elements-upstream-alignment.md` — first 2026-02-11, latest 2026-03-07 (history: `docs/workstreams/ai-elements-upstream-alignment.md`)
@@ -44,10 +61,10 @@ git log --since='2026-01-01' --name-only -- docs/workstreams/standalone
 - `fret-node-internals-m0.md` — first 2026-02-03, latest 2026-03-01 (history: `docs/workstreams/fret-node-internals-m0.md`)
 - `fret-node-xyflow-parity.md` — first 2026-01-20, latest 2026-02-16 (history: `docs/workstreams/fret-node-xyflow-parity.md`)
 - `gpui-default-semantics-alignment.md` — first 2026-02-18, latest 2026-02-18 (history: `docs/workstreams/gpui-default-semantics-alignment.md`)
-- `imui-ecosystem-facade-perf-v1.md` — first 2026-02-06, latest 2026-02-06 (history: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`)
-- `imui-imgui-parity-audit-v1.md` — first 2026-02-08, latest 2026-02-16 (history: `docs/workstreams/imui-imgui-parity-audit-v1.md`)
-- `imui-shadcn-adapter-v1.md` — first 2026-02-06, latest 2026-02-06 (history: `docs/workstreams/imui-shadcn-adapter-v1.md`)
-- `imui-state-integration-v1.md` — first 2026-02-06, latest 2026-03-09 (history: `docs/workstreams/imui-state-integration-v1.md`)
+- `imui-ecosystem-facade-perf-v1.md` — first 2026-02-06, latest 2026-02-06 (historical imui companion note; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`) (history: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`)
+- `imui-imgui-parity-audit-v1.md` — first 2026-02-08, latest 2026-02-16 (historical parity audit; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`) (history: `docs/workstreams/imui-imgui-parity-audit-v1.md`)
+- `imui-shadcn-adapter-v1.md` — first 2026-02-06, latest 2026-02-06 (historical imui companion note; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`) (history: `docs/workstreams/imui-shadcn-adapter-v1.md`)
+- `imui-state-integration-v1.md` — first 2026-02-06, latest 2026-03-09 (historical imui companion note; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`) (history: `docs/workstreams/imui-state-integration-v1.md`)
 - `macos-docking-multiwindow-imgui-parity.md` — first 2026-01-27, latest 2026-02-16 (history: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`)
 - `os-menubar.md` — first 2026-01-20, latest 2026-02-16 (history: `docs/workstreams/os-menubar.md`)
 - `overlay-arbitration-polish-todo.md` — first 2026-01-24, latest 2026-02-11 (history: `docs/workstreams/overlay-arbitration-polish-todo.md`)
