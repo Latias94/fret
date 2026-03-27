@@ -7,6 +7,7 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let basic = snippets::basic::render(cx);
     let usage = snippets::usage::render(cx);
+    let compact_builder = snippets::compact_builder::render(cx);
     let range = snippets::range::render(cx);
     let dob = snippets::dob::render(cx);
     let input = snippets::input::render(cx);
@@ -27,7 +28,7 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .max_w(Px(980.0))
         .no_shell();
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Copyable minimal usage for the compact `DatePicker` builder surface.")
+        .description("Copyable shadcn-style composition using `Popover`, `PopoverTrigger`, `PopoverContent`, and `Calendar`.")
         .test_id_prefix("ui-gallery-date-picker-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example")
         .max_w(Px(980.0))
@@ -76,6 +77,11 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::presets::SOURCE, "example")
         .max_w(Px(980.0))
         .no_shell();
+    let compact_builder = DocSection::build(cx, "Compact Builder (Fret)", compact_builder)
+        .description("Fret shorthand for the same recipe when you want the default trigger + popover chrome bundled behind `DatePicker::new(...)`.")
+        .code_rust_from_file_region(snippets::compact_builder::SOURCE, "example")
+        .max_w(Px(980.0))
+        .no_shell();
     let label = DocSection::build(cx, "Label Association", label)
         .description("Use `FieldLabel::for_control`, `DatePicker::control_id`, and `DatePicker::test_id_prefix` to focus the trigger and keep derived automation anchors stable.")
         .test_id_prefix("ui-gallery-date-picker-label")
@@ -93,7 +99,7 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the shadcn Date Picker docs flow first: Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL. `With Presets` stays as the upstream registry follow-up, while `Label Association` and `With Dropdowns` remain focused Fret/gallery extensions.",
+            "Preview follows the shadcn Date Picker docs flow first: Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL. `With Presets` stays as the upstream registry follow-up; `Compact Builder (Fret)`, `Label Association`, and `With Dropdowns` remain focused Fret/gallery extensions.",
         ),
         vec![
             demo,
@@ -106,6 +112,7 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             natural_language,
             rtl,
             presets,
+            compact_builder,
             label,
             dropdowns,
             notes_stack,

@@ -3435,6 +3435,7 @@ fn date_picker_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
             "src/ui/snippets/date_picker/basic.rs",
+            "src/ui/snippets/date_picker/compact_builder.rs",
             "src/ui/snippets/date_picker/demo.rs",
             "src/ui/snippets/date_picker/dob.rs",
             "src/ui/snippets/date_picker/dropdowns.rs",
@@ -3476,6 +3477,7 @@ fn date_picker_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Natural Language Picker\", natural_language)",
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"With Presets\", presets)",
+            "DocSection::build(cx, \"Compact Builder (Fret)\", compact_builder)",
             "DocSection::build(cx, \"Label Association\", label)",
             "DocSection::build(cx, \"Extras: With Dropdowns\", dropdowns)",
             "DocSection::build(cx, \"Notes\", notes_stack)",
@@ -3492,7 +3494,37 @@ fn date_picker_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Label Association\", label)",
             "DocSection::new(\"With Presets\", presets)",
+            "DocSection::new(\"Compact Builder (Fret)\", compact_builder)",
             "preview_date_picker(cx, open, month, selected)",
+        ],
+    );
+}
+
+#[test]
+fn date_picker_usage_snippet_stays_on_the_composed_popover_calendar_lane() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/date_picker/usage.rs",
+        &[
+            "shadcn::Popover::new(",
+            "shadcn::PopoverTrigger::build(",
+            "shadcn::PopoverContent::build(cx, |cx| {",
+            "shadcn::Calendar::new(month.clone(), selected.clone())",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("shadcn::DatePicker::new("),
+        "src/ui/snippets/date_picker/usage.rs should keep the upstream-composed Popover + Calendar teaching surface instead of falling back to the compact DatePicker builder"
+    );
+}
+
+#[test]
+fn date_picker_compact_builder_snippet_keeps_the_fret_shorthand_explicit() {
+    assert_normalized_markers_present(
+        "src/ui/snippets/date_picker/compact_builder.rs",
+        &[
+            "shadcn::DatePicker::new(open, month, selected)",
+            ".test_id_prefix(\"ui-gallery-date-picker-compact-builder\")",
         ],
     );
 }
@@ -3511,6 +3543,17 @@ fn date_picker_input_snippet_keeps_upstream_ghost_icon_xs_trigger_surface() {
     assert!(
         !normalized.contains(".size(shadcn::InputGroupButtonSize::IconSm)"),
         "src/ui/snippets/date_picker/input.rs reintroduced the larger IconSm trailing trigger instead of the upstream icon-xs surface"
+    );
+}
+
+#[test]
+fn date_picker_time_snippet_explicitly_opts_into_close_on_select() {
+    assert_normalized_markers_present(
+        "src/ui/snippets/date_picker/time_picker.rs",
+        &[
+            "shadcn::DatePicker::new(date_open, date_month, date)",
+            ".close_on_select(true)",
+        ],
     );
 }
 

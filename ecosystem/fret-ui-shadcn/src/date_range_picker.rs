@@ -35,6 +35,7 @@ pub struct DateRangePicker {
     pub disable_outside_days: bool,
     pub disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
     pub disabled: bool,
+    close_on_select: bool,
     pub format_selected: Arc<dyn Fn(DateRangeSelection) -> Arc<str> + Send + Sync + 'static>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -53,6 +54,7 @@ impl std::fmt::Debug for DateRangePicker {
             .field("disable_outside_days", &self.disable_outside_days)
             .field("disabled_predicate", &self.disabled_predicate.is_some())
             .field("disabled", &self.disabled)
+            .field("close_on_select", &self.close_on_select)
             .finish()
     }
 }
@@ -75,6 +77,7 @@ impl DateRangePicker {
             disable_outside_days: false,
             disabled_predicate: None,
             disabled: false,
+            close_on_select: false,
             format_selected: Arc::new(format_selected_lll_dd_y_range),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -138,6 +141,14 @@ impl DateRangePicker {
         self
     }
 
+    /// Closes the popover once the range selection is complete.
+    ///
+    /// Default: `false`, matching the upstream shadcn range example.
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
+        self
+    }
+
     pub fn disabled_by(mut self, f: impl Fn(Date) -> bool + Send + Sync + 'static) -> Self {
         self.disabled_predicate = Some(Arc::new(f));
         self
@@ -163,7 +174,7 @@ impl DateRangePicker {
             let test_id_prefix = self.test_id_prefix.clone();
             let disabled_predicate = self.disabled_predicate.clone();
             let open_trigger = open.clone();
-            let open_content = open.clone();
+            let close_on_select_open = self.close_on_select.then(|| open.clone());
             let initial_focus_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
             let trigger_chrome = self.chrome.clone();
@@ -267,8 +278,10 @@ impl DateRangePicker {
                             .number_of_months(2)
                             // Keep the popover open after the first click so the user can pick an end date.
                             .min_days(1)
-                            .close_on_select(open_content.clone())
                             .initial_focus_out(initial_focus_out.clone());
+                        if let Some(open) = close_on_select_open.clone() {
+                            calendar = calendar.close_on_select(open);
+                        }
 
                         if let Some(pred) = disabled_predicate.clone() {
                             calendar = calendar.disabled_by(move |d| pred(d));

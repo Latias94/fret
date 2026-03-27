@@ -14,6 +14,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let time_value = cx.local_model_keyed("time_value", || String::from("10:30:00"));
 
     let date = shadcn::DatePicker::new(date_open, date_month, date)
+        .close_on_select(true)
         .placeholder("Select date")
         .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
         .into_element(cx)

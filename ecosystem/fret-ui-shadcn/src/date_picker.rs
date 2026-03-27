@@ -37,6 +37,7 @@ pub struct DatePicker {
     disabled: bool,
     show_outside_days: bool,
     disable_outside_days: bool,
+    close_on_select: bool,
     disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -55,6 +56,7 @@ impl std::fmt::Debug for DatePicker {
             .field("disabled", &self.disabled)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
+            .field("close_on_select", &self.close_on_select)
             .field("disabled_predicate", &self.disabled_predicate.is_some())
             .finish()
     }
@@ -78,6 +80,7 @@ impl DatePicker {
             disabled: false,
             show_outside_days: true,
             disable_outside_days: false,
+            close_on_select: false,
             disabled_predicate: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -184,6 +187,15 @@ impl DatePicker {
         self
     }
 
+    /// Closes the popover after selecting a day.
+    ///
+    /// Default: `false`, matching the upstream shadcn docs demos. Recipes such as DOB/time/input
+    /// that dismiss immediately should opt in explicitly.
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
+        self
+    }
+
     pub fn disabled_by(mut self, f: impl Fn(Date) -> bool + Send + Sync + 'static) -> Self {
         self.disabled_predicate = Some(Arc::new(f));
         self
@@ -209,7 +221,7 @@ impl DatePicker {
             let test_id_prefix = self.test_id_prefix.clone();
             let disabled_predicate = self.disabled_predicate.clone();
             let open_trigger = open.clone();
-            let open_content = open.clone();
+            let close_on_select_open = self.close_on_select.then(|| open.clone());
             let initial_focus_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
             let trigger_chrome = self.chrome.clone();
@@ -272,8 +284,10 @@ impl DatePicker {
                             .week_start(self.week_start)
                             .show_outside_days(self.show_outside_days)
                             .disable_outside_days(self.disable_outside_days)
-                            .close_on_select(open_content.clone())
                             .initial_focus_out(initial_focus_out.clone());
+                        if let Some(open) = close_on_select_open.clone() {
+                            calendar = calendar.close_on_select(open);
+                        }
 
                         if let Some(pred) = disabled_predicate.clone() {
                             calendar = calendar.disabled_by(move |d| pred(d));

@@ -35,7 +35,43 @@ pub(crate) fn default_month(today: Date) -> CalendarMonth {
     }
 }
 
+pub(crate) fn format_date_ppp_en(date: Date) -> String {
+    use time::Month;
+
+    fn ordinal_suffix(day: u8) -> &'static str {
+        let mod_100 = day % 100;
+        if (11..=13).contains(&mod_100) {
+            return "th";
+        }
+        match day % 10 {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th",
+        }
+    }
+
+    let month = match date.month() {
+        Month::January => "January",
+        Month::February => "February",
+        Month::March => "March",
+        Month::April => "April",
+        Month::May => "May",
+        Month::June => "June",
+        Month::July => "July",
+        Month::August => "August",
+        Month::September => "September",
+        Month::October => "October",
+        Month::November => "November",
+        Month::December => "December",
+    };
+
+    let day = date.day();
+    format!("{month} {day}{}, {}", ordinal_suffix(day), date.year())
+}
+
 pub mod basic;
+pub mod compact_builder;
 pub mod demo;
 pub mod dob;
 pub mod dropdowns;
