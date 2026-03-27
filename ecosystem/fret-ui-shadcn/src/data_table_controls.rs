@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use fret_core::Px;
 use fret_icons::IconId;
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, LayoutStyle, SpacerProps};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_headless::table::{ColumnDef, ColumnId, TableState};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -115,6 +116,20 @@ impl DataTableViewOptionItem {
     }
 }
 
+fn hidden_element<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    cx.spacer(SpacerProps {
+        layout: LayoutStyle::default(),
+        min: Px(0.0),
+    })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DataTableViewOptionsVisibility {
+    #[default]
+    AlwaysVisible,
+    HideBelowLg,
+}
+
 #[derive(Debug, Default)]
 struct DataTableViewOptionsRuntime {
     last_visibility: HashMap<ColumnId, bool>,
@@ -140,6 +155,8 @@ pub struct DataTableViewOptions {
     button_variant: ButtonVariant,
     button_size: ButtonSize,
     leading_icon: Option<IconId>,
+    menu_min_width: Option<Px>,
+    visibility: DataTableViewOptionsVisibility,
 }
 
 impl DataTableViewOptions {
@@ -158,6 +175,8 @@ impl DataTableViewOptions {
             button_variant: ButtonVariant::Outline,
             button_size: ButtonSize::Default,
             leading_icon: None,
+            menu_min_width: None,
+            visibility: DataTableViewOptionsVisibility::AlwaysVisible,
         }
     }
 
@@ -177,6 +196,12 @@ impl DataTableViewOptions {
             button_variant: ButtonVariant::Outline,
             button_size: ButtonSize::Sm,
             leading_icon: Some(IconId::new_static("lucide.settings-2")),
+            // Upstream shadcn/ui tasks `DataTableViewOptions` sets
+            // `DropdownMenuContent className="w-[150px]"`.
+            menu_min_width: Some(Px(150.0)),
+            // Upstream tasks `DataTableViewOptions` also sets
+            // `className="ml-auto hidden h-8 lg:flex"` on the trigger button.
+            visibility: DataTableViewOptionsVisibility::HideBelowLg,
         }
     }
 
@@ -247,6 +272,26 @@ impl DataTableViewOptions {
         self
     }
 
+    pub fn menu_min_width(mut self, min_width: Px) -> Self {
+        self.menu_min_width = Some(min_width);
+        self
+    }
+
+    pub fn visibility(mut self, visibility: DataTableViewOptionsVisibility) -> Self {
+        self.visibility = visibility;
+        self
+    }
+
+    pub fn always_visible(mut self) -> Self {
+        self.visibility = DataTableViewOptionsVisibility::AlwaysVisible;
+        self
+    }
+
+    pub fn hide_below_lg(mut self) -> Self {
+        self.visibility = DataTableViewOptionsVisibility::HideBelowLg;
+        self
+    }
+
     fn trigger_button(&self) -> Button {
         let mut button = Button::new(self.button_label.clone())
             .variant(self.button_variant)
@@ -260,6 +305,21 @@ impl DataTableViewOptions {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let show_trigger = match self.visibility {
+            DataTableViewOptionsVisibility::AlwaysVisible => true,
+            DataTableViewOptionsVisibility::HideBelowLg => {
+                fret_ui_kit::declarative::viewport_width_at_least(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    fret_ui_kit::declarative::viewport_tailwind::LG,
+                    fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+                )
+            }
+        };
+        if !show_trigger {
+            return hidden_element(cx);
+        }
+
         let button = self.trigger_button();
         let open = self.open;
         let items = self.items;
@@ -267,6 +327,7 @@ impl DataTableViewOptions {
         let bound_options = self.bound_options;
         let align = self.align;
         let menu_label = self.menu_label;
+        let menu_min_width = self.menu_min_width;
 
         let bound_entries = bound_state.map(|state| {
             let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
@@ -330,50 +391,53 @@ impl DataTableViewOptions {
             bindings
         });
 
-        DropdownMenu::from_open(open)
-            .align(align)
-            .build(cx, button, move |_cx| {
-                let mut entries = Vec::new();
+        let mut menu = DropdownMenu::from_open(open).align(align);
+        if let Some(min_width) = menu_min_width {
+            menu = menu.min_width(min_width);
+        }
 
-                match bound_entries.as_ref() {
-                    Some(bindings) => {
-                        if let Some(label) = menu_label.clone() {
-                            entries.push(DropdownMenuEntry::Label(
-                                DropdownMenuLabel::new(label).inset(true),
-                            ));
-                            if !bindings.is_empty() {
-                                entries.push(DropdownMenuEntry::Separator);
-                            }
+        menu.build(cx, button, move |_cx| {
+            let mut entries = Vec::new();
+
+            match bound_entries.as_ref() {
+                Some(bindings) => {
+                    if let Some(label) = menu_label.clone() {
+                        entries.push(DropdownMenuEntry::Label(
+                            DropdownMenuLabel::new(label).inset(true),
+                        ));
+                        if !bindings.is_empty() {
+                            entries.push(DropdownMenuEntry::Separator);
                         }
-
-                        entries.extend(bindings.iter().cloned().map(|binding| {
-                            DropdownMenuEntry::CheckboxItem(
-                                DropdownMenuCheckboxItem::new(binding.model, binding.label)
-                                    .disabled(binding.disabled),
-                            )
-                        }));
                     }
-                    None => {
-                        if let Some(label) = menu_label.clone() {
-                            entries.push(DropdownMenuEntry::Label(
-                                DropdownMenuLabel::new(label).inset(true),
-                            ));
-                            if !items.is_empty() {
-                                entries.push(DropdownMenuEntry::Separator);
-                            }
-                        }
 
-                        entries.extend(items.iter().cloned().map(|it| {
-                            DropdownMenuEntry::CheckboxItem(
-                                DropdownMenuCheckboxItem::new(it.checked, it.label)
-                                    .disabled(it.disabled),
-                            )
-                        }));
-                    }
+                    entries.extend(bindings.iter().cloned().map(|binding| {
+                        DropdownMenuEntry::CheckboxItem(
+                            DropdownMenuCheckboxItem::new(binding.model, binding.label)
+                                .disabled(binding.disabled),
+                        )
+                    }));
                 }
+                None => {
+                    if let Some(label) = menu_label.clone() {
+                        entries.push(DropdownMenuEntry::Label(
+                            DropdownMenuLabel::new(label).inset(true),
+                        ));
+                        if !items.is_empty() {
+                            entries.push(DropdownMenuEntry::Separator);
+                        }
+                    }
 
-                entries
-            })
+                    entries.extend(items.iter().cloned().map(|it| {
+                        DropdownMenuEntry::CheckboxItem(
+                            DropdownMenuCheckboxItem::new(it.checked, it.label)
+                                .disabled(it.disabled),
+                        )
+                    }));
+                }
+            }
+
+            entries
+        })
     }
 }
 

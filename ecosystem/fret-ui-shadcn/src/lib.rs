@@ -389,7 +389,7 @@ pub mod facade {
     pub use crate::data_table::DataTable;
     pub use crate::data_table_controls::{
         DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState,
-        DataTableViewOptionItem, DataTableViewOptions,
+        DataTableViewOptionItem, DataTableViewOptions, DataTableViewOptionsVisibility,
     };
     pub use crate::data_table_recipes::{
         DataTableFacetedFilterOption, DataTablePagination, DataTableToolbar,
