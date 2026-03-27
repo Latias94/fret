@@ -4,6 +4,8 @@ use fret::UiCx;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::breadcrumb as snippets;
 
+const BREADCRUMB_PAGE_INTRO: &str = "Preview mirrors the shadcn Breadcrumb docs path after skipping `Installation`: `Demo`, `Usage`, `Basic`, `Custom Separator`, `Dropdown`, `Collapsed`, `Link Component`, `RTL`, and `API Reference`. `Responsive` and `Notes` stay as focused Fret follow-ups.";
+
 pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
@@ -16,15 +18,16 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
     let api_reference = doc_layout::notes_block([
         "`shadcn::Breadcrumb` remains the compact builder for standard trails: `Breadcrumb::new().items([...])`.",
-        "For upstream parity, the curated facade keeps the copyable docs lane on `shadcn::{BreadcrumbRoot, BreadcrumbList, BreadcrumbItemPart, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparatorPart, BreadcrumbEllipsis}`, while `breadcrumb::primitives::*` remains the explicit raw escape hatch for source-alignment-heavy examples.",
-        "`BreadcrumbLink`, `BreadcrumbPage`, and `BreadcrumbSeparator` expose `.children(|cx| [...])` as the default typed alternative to upstream arbitrary React children, while `children_raw(...)` stays explicit for pre-landed content.",
-        "`BreadcrumbSeparatorKind` remains the shortcut for the common chevron/slash/icon cases, while `href(...)`, `on_click(...)`, and `on_activate(...)` keep navigation typed instead of introducing generic `Slot` / `asChild` prop merging.",
+        "`shadcn::{BreadcrumbRoot, BreadcrumbList, BreadcrumbItemPart, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparatorPart, BreadcrumbEllipsis}` is the preferred docs-path composition lane for copyable examples.",
+        "`BreadcrumbLink` keeps navigation typed with `href(...)`, `action(...)`, and `on_activate(...)`; `.children(|cx| [...])` is the default Fret alternative to upstream `render` / `asChild` when you need richer inline content.",
+        "`BreadcrumbPage` and `BreadcrumbSeparatorPart` also expose `.children(|cx| [...])`, while `children_raw(...)` remains the explicit advanced seam for already-landed content.",
+        "`breadcrumb::primitives::*` remains available as the explicit raw escape hatch for overlay-heavy or source-alignment-specific examples that need to show the low-level composition seam directly.",
     ]);
 
     let notes = doc_layout::notes_block([
         "API implementation: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`.",
-        "Gallery sections now mirror the shadcn Breadcrumb docs order more directly: Demo, Usage, Basic, Custom Separator, Dropdown, Collapsed, Link Component, RTL, API Reference. `Responsive` remains a Fret-specific extra appended afterward.",
-        "Breadcrumb already exposes a compact builder plus an upstream-shaped composition lane; `Usage` now teaches the curated facade aliases for that composition path, while raw primitives remain explicit in the more source-alignment-heavy examples.",
+        "Gallery now keeps the shadcn docs-path examples (`Usage`, `Basic`, `Custom Separator`, `Collapsed`) on the curated facade lane, and reopens raw breadcrumb primitives only for advanced seams such as dropdown trigger composition, richer router-shaped inline children, responsive drawer handoff, and RTL-specific overlay alignment.",
+        "Breadcrumb already exposes a compact builder plus an upstream-shaped composition lane; the main gap here was the teaching surface, not the mechanism layer or default recipe ownership.",
         "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
         "Use separators and collapse strategy (`BreadcrumbItem::ellipsis`) to keep paths readable in narrow sidebars.",
         "Dropdown, router-link, and custom-separator samples use typed pressables/links plus `.children(|cx| [...])` for composable inline content without widening the public surface into a generic Slot/`asChild` mechanism (ADR 0115), while `children_raw(...)` remains the explicit advanced seam.",
@@ -52,11 +55,13 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let basic = DocSection::build(cx, "Basic", basic)
         .title_test_id("ui-gallery-breadcrumb-section-title-basic")
-        .description("A basic breadcrumb with a home link and a components link.")
+        .description(
+            "A basic breadcrumb with a home link and a components link on the curated docs lane.",
+        )
         .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let custom_separator = DocSection::build(cx, "Custom Separator", custom_separator)
         .title_test_id("ui-gallery-breadcrumb-section-title-custom-separator")
-        .description("Use a custom separator component for parity with docs.")
+        .description("Use `.children(|cx| [...])` on `BreadcrumbSeparatorPart` for the docs-style custom separator.")
         .code_rust_from_file_region(snippets::custom_separator::SOURCE, "example");
     let dropdown = DocSection::build(cx, "Dropdown", dropdown)
         .title_test_id("ui-gallery-breadcrumb-section-title-dropdown")
@@ -69,7 +74,7 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let link_component = DocSection::build(cx, "Link Component", link_component)
         .title_test_id("ui-gallery-breadcrumb-section-title-link-component")
         .description(
-            "Use the typed link surface to model router-integrated breadcrumb items; `.children(|cx| [...])` is the default Fret alternative to upstream `render` / `asChild`.",
+            "Use the typed link surface to model router-integrated breadcrumb items; `.children(|cx| [...])` is the default Fret alternative to upstream `render` / `asChild` for richer inline content.",
         )
         .code_rust_from_file_region(snippets::link_component::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
@@ -79,10 +84,20 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some(
-            "Preview follows the shadcn Breadcrumb docs path first, then appends a Fret-specific responsive recipe for viewport-vs-drawer behavior.",
-        ),
-        vec![demo, usage, basic, custom_separator, dropdown, collapsed, link_component, rtl, api_reference, responsive, notes],
+        Some(BREADCRUMB_PAGE_INTRO),
+        vec![
+            demo,
+            usage,
+            basic,
+            custom_separator,
+            dropdown,
+            collapsed,
+            link_component,
+            rtl,
+            api_reference,
+            responsive,
+            notes,
+        ],
     )
     .test_id("ui-gallery-breadcrumb-component");
 

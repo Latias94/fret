@@ -34,6 +34,7 @@ these sources instead:
 - Pass: `Breadcrumb::new().items([...])` covers the common compact authoring path for standard breadcrumb trails.
 - Pass: `BreadcrumbItem::new(...).href(...)`, non-link `BreadcrumbItem::new(...)` current-page text, and `BreadcrumbItem::ellipsis()` cover the important shadcn recipe outcomes.
 - Pass: Upstream-shaped primitives remain available for cases that need more explicit composition.
+- Pass: Gallery docs-path examples (`Usage`, `Basic`, `Custom Separator`, `Collapsed`) now stay on the curated facade aliases, while advanced overlay/router/responsive examples reopen raw breadcrumb primitives only when they actually need the low-level seam.
 - Pass: `breadcrumb::primitives::BreadcrumbLink::children(...)` and `BreadcrumbPage::children(...)` now provide the narrow Rust-native equivalent of upstream arbitrary React children without introducing a generic `Slot` / `asChild` merge surface.
 - Pass: Gallery `Usage` now prefers the curated facade aliases for the upstream-shaped composition lane, while raw primitives remain the explicit escape hatch for source-alignment-heavy examples and the compact builder remains an ergonomic Fret shorthand.
 - Note: Gallery live previews keep `href("/")` examples deterministic by pairing them with a gallery command (`ui_gallery.app.open`) instead of falling through to `Effect::OpenUrl` during local/docs automation.

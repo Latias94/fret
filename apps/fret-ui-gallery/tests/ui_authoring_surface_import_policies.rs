@@ -329,6 +329,46 @@ fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
 }
 
 #[test]
+fn gallery_breadcrumb_docs_examples_prefer_curated_parts_aliases() {
+    let relative_paths = [
+        "src/ui/snippets/breadcrumb/basic.rs",
+        "src/ui/snippets/breadcrumb/collapsed.rs",
+        "src/ui/snippets/breadcrumb/custom_separator.rs",
+    ];
+    assert_curated_facade_only(&relative_paths);
+
+    for relative_path in relative_paths {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        assert!(
+            source.contains("shadcn::BreadcrumbRoot::new()"),
+            "{} should keep the docs-path root on the curated breadcrumb facade lane",
+            path.display()
+        );
+        assert!(
+            source.contains("shadcn::BreadcrumbList::new()"),
+            "{} should keep the docs-path list on the curated breadcrumb facade lane",
+            path.display()
+        );
+        assert!(
+            source.contains("shadcn::BreadcrumbItemPart::new()"),
+            "{} should keep the docs-path item composition on the curated breadcrumb facade lane",
+            path.display()
+        );
+        assert!(
+            source.contains("shadcn::BreadcrumbSeparatorPart::new()"),
+            "{} should keep the docs-path separator on the curated breadcrumb facade lane",
+            path.display()
+        );
+        assert!(
+            !source.contains("shadcn::raw::breadcrumb::primitives"),
+            "{} should not reopen the raw breadcrumb primitive escape hatch for docs-path examples",
+            path.display()
+        );
+    }
+}
+
+#[test]
 fn gallery_breadcrumb_usage_snippet_prefers_curated_parts_aliases() {
     let relative_path = "src/ui/snippets/breadcrumb/usage.rs";
     assert_curated_facade_only(&[relative_path]);
