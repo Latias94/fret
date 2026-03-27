@@ -6528,22 +6528,33 @@ fn selected_combobox_state_rows_prefer_into_ui_element_over_anyelement() {
 }
 
 #[test]
-fn selected_pagination_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+fn selected_pagination_page_number_helpers_prefer_ui_child_over_host_bound_into_ui_element() {
     for relative_path in [
         "src/ui/snippets/pagination/compact_builder.rs",
         "src/ui/snippets/pagination/custom_text.rs",
+        "src/ui/snippets/pagination/extras.rs",
         "src/ui/snippets/pagination/routing.rs",
         "src/ui/snippets/pagination/simple.rs",
         "src/ui/snippets/pagination/usage.rs",
     ] {
-        assert_selected_generic_helpers_prefer_into_ui_element(
+        assert_selected_page_helpers_prefer_ui_child(
             relative_path,
-            &["fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H>"],
+            &["fn page_number(label: &'static str) -> impl UiChild + use<>"],
             &[
+                "fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H>",
                 "fn page_number<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement",
             ],
         );
     }
+
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/snippets/pagination/demo.rs",
+        &["fn page_number(label: &'static str) -> impl UiChild + use<>"],
+        &[
+            "let page_number = |cx: &mut UiCx<'_>, label: &'static str| {",
+            "fret_ui_kit::ui::text(label).tabular_nums().into_element(cx)",
+        ],
+    );
 }
 
 #[test]

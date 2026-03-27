@@ -8,11 +8,11 @@ use fret_ui_shadcn::facade as shadcn;
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let page_number = |cx: &mut UiCx<'_>, label: &'static str| {
-        fret_ui_kit::ui::text(label).tabular_nums().into_element(cx)
-    };
+fn page_number(label: &'static str) -> impl UiChild + use<> {
+    fret_ui_kit::ui::text(label).tabular_nums()
+}
 
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::pagination(|cx| {
         ui::children![
             cx;
@@ -23,16 +23,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         shadcn::PaginationPrevious::new().action(CMD_APP_OPEN),
                     ),
                     shadcn::pagination_item(
-                        shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "1")])
+                        shadcn::pagination_link(|cx| ui::children![cx; page_number("1")])
                             .action(CMD_APP_OPEN),
                     ),
                     shadcn::pagination_item(
-                        shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "2")])
+                        shadcn::pagination_link(|cx| ui::children![cx; page_number("2")])
                             .action(CMD_APP_SAVE)
                             .active(true),
                     ),
                     shadcn::pagination_item(
-                        shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "3")])
+                        shadcn::pagination_link(|cx| ui::children![cx; page_number("3")])
                             .action(CMD_APP_SAVE),
                     ),
                     shadcn::pagination_item(shadcn::PaginationEllipsis::new()),

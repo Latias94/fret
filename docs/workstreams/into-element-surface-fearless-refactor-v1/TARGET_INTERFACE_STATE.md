@@ -503,6 +503,7 @@ Some helpers have already moved one step further up the default-app lane because
 copyable app-facing snippets rather than reusable generic wrappers:
 
 - `src/ui/snippets/popover/demo.rs::{centered(...), row(...)}`
+- `src/ui/snippets/pagination/{compact_builder,custom_text,demo,extras,routing,simple,usage}.rs::page_number(...)`
 - `src/ui/snippets/resizable/usage.rs::panel(...)`
 - `src/ui/snippets/carousel/plugin_autoplay_stop_on_focus.rs::slide(...)`
 - `src/ui/snippets/item/avatar.rs::{icon_button(...), item_team(...)}`

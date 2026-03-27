@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("routing.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_ui_kit::{IntoUiElement, ui};
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 
 const ROUTE_PAGE_PREVIOUS: &str = "app.router.pagination.previous";
 const ROUTE_PAGE_7: &str = "app.router.pagination.page_7";
@@ -11,7 +11,7 @@ const ROUTE_PAGE_8: &str = "app.router.pagination.page_8";
 const ROUTE_PAGE_9: &str = "app.router.pagination.page_9";
 const ROUTE_PAGE_NEXT: &str = "app.router.pagination.next";
 
-fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H> {
+fn page_number(label: &'static str) -> impl UiChild + use<> {
     ui::text(label).tabular_nums()
 }
 

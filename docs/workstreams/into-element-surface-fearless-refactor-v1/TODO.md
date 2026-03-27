@@ -1404,9 +1404,10 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
   with explicit `.into_element(cx)` only at sibling child-collection and render-boundary seams.
 - selected UI Gallery pagination snippets now also keep local page label helpers off raw landed
   returns by default:
-  `src/ui/snippets/pagination/{simple,usage}.rs`
-  now use `page_number(...) -> impl IntoUiElement<H> + use<H>`,
-  with explicit `.into_element(cx)` only at the `PaginationLink::new([..])` seam.
+  `src/ui/snippets/pagination/{compact_builder,custom_text,demo,extras,routing,simple,usage}.rs`
+  now use `page_number(...) -> impl UiChild + use<>`,
+  with explicit `.into_element(cx)` only at the remaining `PaginationLink::new([..])` seams where
+  the surrounding type-first API still lands children eagerly.
 - selected UI Gallery carousel snippets now also keep local slide helpers off raw landed returns
   by default:
   `src/ui/snippets/carousel/{basic,sizes,plugin_wheel_gestures,spacing_responsive,loop_carousel,options,loop_downgrade_cannot_loop,spacing,usage,sizes_thirds,parts,api,duration_embla,rtl,plugin_autoplay,plugin_autoplay_delays,plugin_autoplay_controlled,plugin_autoplay_stop_on_focus,plugin_autoplay_stop_on_last_snap,events}.rs`
@@ -1759,8 +1760,8 @@ Implementation note on 2026-03-12:
   `combobox/*` snippet `state_row(...)` and `state_rows(...)` helpers stay on
   `IntoUiElement<fret_app::App>` rather than reverting to raw `AnyElement`.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
-  `pagination/*` snippet page-number helpers stay on `IntoUiElement<H>` rather than reverting to
-  raw `AnyElement`.
+  `pagination/*` snippet page-number helpers stay on the stricter app-facing `impl UiChild` lane
+  rather than reintroducing host-bound `IntoUiElement<H>` or raw `AnyElement`.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
   `carousel/*` snippet slide helpers stay on `IntoUiElement<fret_app::App>` rather than
   reverting to raw `AnyElement`.
