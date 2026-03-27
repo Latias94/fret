@@ -122,12 +122,16 @@ fn is_missing_or_disabled_button(snap: &fret_core::SemanticsSnapshot, label: &st
     find_button_by_label(snap, label).is_none_or(|n| n.flags.disabled)
 }
 
+fn is_missing_or_hidden_button(snap: &fret_core::SemanticsSnapshot, label: &str) -> bool {
+    find_button_by_label(snap, label).is_none_or(|n| n.flags.hidden)
+}
+
 #[test]
 fn data_table_pagination_buttons_update_page_index_and_disabled_states() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(900.0), Px(520.0)),
+        CoreSize::new(Px(1200.0), Px(520.0)),
     );
 
     let mut app = App::new();
@@ -194,13 +198,22 @@ fn data_table_pagination_buttons_update_page_index_and_disabled_states() {
         snapshot_button_labels(&snap)
     );
     assert!(
+        !is_missing_or_hidden_button(&snap, "Go to first page"),
+        "first should be visible at/above lg breakpoint; button labels={:?}",
+        snapshot_button_labels(&snap)
+    );
+    assert!(
+        !is_missing_or_hidden_button(&snap, "Go to last page"),
+        "last should be visible at/above lg breakpoint; button labels={:?}",
+        snapshot_button_labels(&snap)
+    );
+    assert!(
         snap.nodes.iter().any(|n| {
-            n.role == SemanticsRole::Button
-                && n.label
-                    .as_deref()
-                    .is_some_and(|l| l.starts_with("Page ") && l.contains('/'))
+            n.label
+                .as_deref()
+                .is_some_and(|l| l.starts_with("Page ") && l.contains(" of "))
         }),
-        "expected a page label button; button labels={:?}",
+        "expected a page label text node; button labels={:?}",
         snapshot_button_labels(&snap)
     );
 
@@ -330,5 +343,77 @@ fn data_table_pagination_buttons_update_page_index_and_disabled_states() {
             .pagination
             .page_index,
         0
+    );
+}
+
+#[test]
+fn data_table_pagination_hides_edge_buttons_below_lg_breakpoint() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(900.0), Px(520.0)),
+    );
+
+    let mut app = App::new();
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
+        &mut app,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+
+    let data: Arc<[RowData]> = Arc::from(
+        (0..23usize)
+            .map(|id| RowData { id })
+            .collect::<Vec<_>>()
+            .into_boxed_slice(),
+    );
+    let columns: Arc<[ColumnDef<RowData>]> =
+        Arc::from(vec![ColumnDef::new("id")].into_boxed_slice());
+
+    let state: Model<TableState> = app.models_mut().insert(TableState::default());
+    let output: Model<shadcn::DataTableViewOutput> = app.models_mut().insert(Default::default());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    for _ in 0..3 {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            data.clone(),
+            1,
+            state.clone(),
+            columns.clone(),
+            output.clone(),
+        );
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    assert!(
+        is_missing_or_hidden_button(&snap, "Go to first page"),
+        "expected first-page button hidden below lg breakpoint; button labels={:?}",
+        snapshot_button_labels(&snap)
+    );
+    assert!(
+        is_missing_or_hidden_button(&snap, "Go to last page"),
+        "expected last-page button hidden below lg breakpoint; button labels={:?}",
+        snapshot_button_labels(&snap)
+    );
+    assert!(
+        !is_missing_or_hidden_button(&snap, "Go to previous page"),
+        "prev button should remain visible below lg breakpoint; button labels={:?}",
+        snapshot_button_labels(&snap)
+    );
+    assert!(
+        !is_missing_or_hidden_button(&snap, "Go to next page"),
+        "next button should remain visible below lg breakpoint; button labels={:?}",
+        snapshot_button_labels(&snap)
     );
 }

@@ -24,9 +24,13 @@ use crate::dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuEntry,
     DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
 };
+use crate::field::FieldLabel;
 use crate::input::Input;
 use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverTrigger};
 use crate::rtl;
+use crate::select::{
+    Select, SelectContent, SelectItem, SelectSide, SelectTrigger, SelectTriggerSize, SelectValue,
+};
 
 fn sanitize_test_id_segment(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
@@ -1634,33 +1638,38 @@ impl DataTablePagination {
         };
 
         let page_label: Arc<str> = if output_value.pagination.page_count == 0 {
-            Arc::from("Page 0 / 0")
+            Arc::from("Page 0 of 0")
         } else {
             Arc::from(format!(
-                "Page {} / {}",
+                "Page {} of {}",
                 output_value.pagination.page_index + 1,
                 output_value.pagination.page_count
             ))
         };
 
         let page_sizes = Arc::clone(&self.page_sizes);
-        let page_size_menu = DropdownMenu::from_open(page_size_open).build(
+        let page_size_control_id = "data-table-pagination-page-size";
+        let show_edge_buttons = fret_ui_kit::declarative::viewport_width_at_least(
             cx,
-            Button::new(Arc::from(format!("Rows per page: {current_size}")))
-                .variant(ButtonVariant::Outline)
-                .size(ButtonSize::Sm)
-                .label_tabular_nums(),
-            move |_cx| {
-                vec![DropdownMenuEntry::RadioGroup({
-                    let mut group = DropdownMenuRadioGroup::new(page_size_value);
-                    for size in page_sizes.iter().copied() {
-                        let value: Arc<str> = Arc::from(size.to_string());
-                        group = group.item(DropdownMenuRadioItemSpec::new(value.clone(), value));
-                    }
-                    group
-                })]
-            },
+            fret_ui::Invalidation::Layout,
+            fret_ui_kit::declarative::viewport_tailwind::LG,
+            fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
         );
+        let page_size_select = Select::new(page_size_value, page_size_open)
+            .control_id(page_size_control_id)
+            .a11y_label("Rows per page")
+            .trigger(
+                SelectTrigger::new()
+                    .size(SelectTriggerSize::Sm)
+                    .refine_layout(LayoutRefinement::default().w_px(Px(70.0))),
+            )
+            .value(SelectValue::new().placeholder(current_size_str))
+            .content(SelectContent::new().side(SelectSide::Top))
+            .items(page_sizes.iter().copied().map(|size| {
+                let value: Arc<str> = Arc::from(size.to_string());
+                SelectItem::new(value.clone(), value).label_tabular_nums()
+            }))
+            .into_element(cx);
 
         ui::h_row(move |cx| {
             let theme = Theme::global(&*cx.app);
@@ -1677,51 +1686,86 @@ impl DataTablePagination {
             let selected_text = text.into_element(cx);
             let spacer = cx.spacer(fret_ui::element::SpacerProps::default());
 
+            let page_size_group = ui::h_flex(move |cx| {
+                vec![
+                    FieldLabel::new("Rows per page")
+                        .for_control(page_size_control_id)
+                        .into_element(cx),
+                    page_size_select,
+                ]
+            })
+            .items_center()
+            .gap(Space::N2)
+            .into_element(cx);
+
             let first_btn = Button::new("Go to first page")
                 .variant(ButtonVariant::Outline)
-                .size(ButtonSize::Icon)
+                .size(ButtonSize::IconSm)
                 .disabled(!first_enabled)
                 .on_activate(first_on_activate.clone())
                 .children([icon::icon(cx, rtl::chevrons_inline_start(dir))])
                 .into_element(cx);
             let prev_btn = Button::new("Go to previous page")
                 .variant(ButtonVariant::Outline)
-                .size(ButtonSize::Icon)
+                .size(ButtonSize::IconSm)
                 .disabled(!prev_enabled)
                 .on_activate(prev_on_activate.clone())
                 .children([icon::icon(cx, rtl::chevron_inline_start(dir))])
                 .into_element(cx);
-            let page_btn = Button::new(page_label.clone())
-                .variant(ButtonVariant::Ghost)
-                .size(ButtonSize::Sm)
-                .label_tabular_nums()
-                .into_element(cx);
+            let page_summary = ui::h_flex(move |cx| {
+                vec![
+                    ui::text(page_label.clone())
+                        .text_sm()
+                        .font_medium()
+                        .tabular_nums()
+                        .nowrap()
+                        .into_element(cx),
+                ]
+            })
+            .layout(LayoutRefinement::default().w_px(Px(100.0)))
+            .items_center()
+            .justify_center()
+            .into_element(cx);
             let next_btn = Button::new("Go to next page")
                 .variant(ButtonVariant::Outline)
-                .size(ButtonSize::Icon)
+                .size(ButtonSize::IconSm)
                 .disabled(!next_enabled)
                 .on_activate(next_on_activate.clone())
                 .children([icon::icon(cx, rtl::chevron_inline_end(dir))])
                 .into_element(cx);
             let last_btn = Button::new("Go to last page")
                 .variant(ButtonVariant::Outline)
-                .size(ButtonSize::Icon)
+                .size(ButtonSize::IconSm)
                 .disabled(!last_enabled)
                 .on_activate(last_on_activate.clone())
                 .children([icon::icon(cx, rtl::chevrons_inline_end(dir))])
                 .into_element(cx);
 
-            let items = vec![
-                selected_text,
-                spacer,
-                first_btn,
-                prev_btn,
-                page_btn,
-                next_btn,
-                last_btn,
-                page_size_menu,
-            ];
-            rtl::reverse_in_rtl(dir, items)
+            let nav_buttons = ui::h_flex(move |_cx| {
+                let mut buttons = Vec::new();
+                if show_edge_buttons {
+                    buttons.push(first_btn);
+                }
+                buttons.push(prev_btn);
+                buttons.push(next_btn);
+                if show_edge_buttons {
+                    buttons.push(last_btn);
+                }
+                rtl::reverse_in_rtl(dir, buttons)
+            })
+            .items_center()
+            .gap(Space::N2)
+            .into_element(cx);
+
+            let controls = ui::h_flex(move |_cx| {
+                rtl::reverse_in_rtl(dir, vec![page_size_group, page_summary, nav_buttons])
+            })
+            .items_center()
+            .gap(Space::N6)
+            .into_element(cx);
+
+            let items = rtl::reverse_in_rtl(dir, vec![selected_text, spacer, controls]);
+            items
         })
         .layout(LayoutRefinement::default().w_full())
         .items_center()
