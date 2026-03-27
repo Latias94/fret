@@ -15,7 +15,7 @@ Current source of truth:
 Canonical name mapping for historical references in this note:
 
 - `select_model_ex` -> `select_model_with_options(...)`
-- older floating/window helper names -> `window(...)`, `window_open(...)`,
+- older floating/window helper names -> `window(...)`, `window_with_options(...)`,
   `floating_area_with_options(...)`
 
 Status: Historical archive note (pre-reset M4 record)

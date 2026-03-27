@@ -86,7 +86,7 @@ impl View for ImUiShadcnAdapterView {
                 let _ = count_state.update_in(ui.cx_mut().app.models_mut(), |v| *v += 1);
             }
 
-            let _ = ui.toggle_model("Enabled (toggle wrapper)", enabled_state.model());
+            let _ = ui.switch_model("Enabled (switch)", enabled_state.model());
 
             let _ = ui.slider_f32_model_with_options(
                 "Value",

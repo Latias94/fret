@@ -11,7 +11,7 @@ deleted by the fearless refactor rather than kept as compatibility aliases:
   `vertical_with_options(...)`, `grid_with_options(...)`, `scroll_with_options(...)`)
 - `floating_area_show_ex` -> `floating_area_with_options(...)`
 - `window_ex` -> `window(...)`
-- `window_open_ex` -> `window_open(...)`
+- `window_open_ex` -> `window_with_options(..., WindowOptions::default().with_open(...), ...)`
 - `select_model_ex` -> `select_model_with_options(...)`
 
 Do not use the historical names below as current API guidance.

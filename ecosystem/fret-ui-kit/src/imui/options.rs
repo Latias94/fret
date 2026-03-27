@@ -152,8 +152,6 @@ impl Default for SwitchOptions {
     }
 }
 
-pub type ToggleOptions = SwitchOptions;
-
 #[derive(Debug, Clone)]
 pub struct SliderOptions {
     pub enabled: bool,

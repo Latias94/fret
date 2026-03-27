@@ -8,7 +8,7 @@ use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{PressableA11y, PressableProps};
 
-use super::{ResponseExt, SwitchOptions, ToggleOptions, UiWriterImUiFacadeExt};
+use super::{ResponseExt, SwitchOptions, UiWriterImUiFacadeExt};
 
 pub(super) fn checkbox_model<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -186,15 +186,6 @@ pub(super) fn checkbox_model<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
 
     ui.add(element);
     response
-}
-
-pub(super) fn toggle_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
-    ui: &mut W,
-    label: Arc<str>,
-    model: &fret_runtime::Model<bool>,
-    options: ToggleOptions,
-) -> ResponseExt {
-    switch_model_with_options(ui, label, model, options)
 }
 
 pub(super) fn switch_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(

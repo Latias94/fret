@@ -66,7 +66,7 @@ use interaction_runtime::{
 pub use options::{
     ButtonOptions, GridOptions, HorizontalOptions, InputTextOptions, MenuItemOptions,
     PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectOptions, SliderOptions,
-    SwitchOptions, TextAreaOptions, ToggleOptions, VerticalOptions,
+    SwitchOptions, TextAreaOptions, VerticalOptions,
 };
 use popup_store::{drop_popup_scope_for_id, with_popup_store_for_id};
 pub use response::{
@@ -277,6 +277,46 @@ impl Default for FloatingWindowOptions {
             no_inputs: false,
             pointer_passthrough: false,
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct WindowOptions {
+    /// Optional `open` model controlling whether the window is rendered.
+    ///
+    /// When present, close actions update the model to `false`.
+    pub open: Option<fret_runtime::Model<bool>>,
+    /// Optional fixed initial size for the floating window.
+    ///
+    /// When absent, the window uses content-driven sizing and `resize` is ignored.
+    pub size: Option<Size>,
+    /// Optional resize policy for sized windows.
+    ///
+    /// This only takes effect when `size` is also set.
+    pub resize: Option<FloatingWindowResizeOptions>,
+    /// Behavior flags for the floating window surface.
+    pub behavior: FloatingWindowOptions,
+}
+
+impl WindowOptions {
+    pub fn with_open(mut self, open: &fret_runtime::Model<bool>) -> Self {
+        self.open = Some(open.clone());
+        self
+    }
+
+    pub fn with_size(mut self, size: Size) -> Self {
+        self.size = Some(size);
+        self
+    }
+
+    pub fn with_resize(mut self, resize: FloatingWindowResizeOptions) -> Self {
+        self.resize = Some(resize);
+        self
+    }
+
+    pub fn with_behavior(mut self, behavior: FloatingWindowOptions) -> Self {
+        self.behavior = behavior;
+        self
     }
 }
 
@@ -592,28 +632,6 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         resp
     }
 
-    pub fn menu_item_close(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        open: &fret_runtime::Model<bool>,
-    ) -> ResponseExt {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_close(self, label, open);
-        let enabled = self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        self.record_focusable(resp.id, enabled);
-        resp
-    }
-
-    pub fn menu_item_close_popup(
-        &mut self,
-        popup_id: &str,
-        label: impl Into<Arc<str>>,
-    ) -> ResponseExt {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_close_popup(self, popup_id, label);
-        let enabled = self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        self.record_focusable(resp.id, enabled);
-        resp
-    }
-
     pub fn input_text_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
         self.input_text_model_with_options(model, InputTextOptions::default())
     }
@@ -644,29 +662,6 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let focusable = enabled && options.focusable;
         let resp =
             <Self as UiWriterImUiFacadeExt<H>>::textarea_model_with_options(self, model, options);
-        self.record_focusable(resp.id, focusable);
-        resp
-    }
-
-    pub fn toggle_model(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<bool>,
-    ) -> ResponseExt {
-        self.toggle_model_with_options(label, model, ToggleOptions::default())
-    }
-
-    pub fn toggle_model_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<bool>,
-        options: ToggleOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let focusable = enabled && options.focusable;
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::toggle_model_with_options(
-            self, label, model, options,
-        );
         self.record_focusable(resp.id, focusable);
         resp
     }
@@ -1067,25 +1062,6 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         self.menu_item_with_options(label, MenuItemOptions::default())
     }
 
-    fn menu_item_close(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        open: &fret_runtime::Model<bool>,
-    ) -> ResponseExt {
-        self.menu_item_with_options(
-            label,
-            MenuItemOptions {
-                close_popup: Some(open.clone()),
-                ..Default::default()
-            },
-        )
-    }
-
-    fn menu_item_close_popup(&mut self, popup_id: &str, label: impl Into<Arc<str>>) -> ResponseExt {
-        let open = self.popup_open_model(popup_id);
-        self.menu_item_close(label, &open)
-    }
-
     fn menu_item_with_options(
         &mut self,
         label: impl Into<Arc<str>>,
@@ -1185,23 +1161,6 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         boolean_controls::checkbox_model(self, label.into(), model)
     }
 
-    fn toggle_model(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<bool>,
-    ) -> ResponseExt {
-        self.toggle_model_with_options(label, model, ToggleOptions::default())
-    }
-
-    fn toggle_model_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<bool>,
-        options: ToggleOptions,
-    ) -> ResponseExt {
-        boolean_controls::toggle_model_with_options(self, label.into(), model, options)
-    }
-
     fn switch_model(
         &mut self,
         label: impl Into<Arc<str>>,
@@ -1299,151 +1258,20 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         floating_window::floating_window_show(self, id, title, initial_position, f)
     }
 
-    /// Render a floating window controlled by an `open` model (ImGui-style `bool* p_open`).
-    ///
-    /// When the close button is activated, the model is set to `false`.
-    fn window_open(
-        &mut self,
-        id: &str,
-        title: impl Into<Arc<str>>,
-        open: &fret_runtime::Model<bool>,
-        initial_position: Point,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> FloatingWindowResponse {
-        floating_window::floating_window_open_show(self, id, title, open, initial_position, f)
-    }
-
-    /// Render a resizable in-window floating window with a fixed initial size.
-    ///
-    /// This installs minimal resize handles (right edge, bottom edge, bottom-right corner).
-    fn window_resizable(
-        &mut self,
-        id: &str,
-        title: impl Into<Arc<str>>,
-        initial_position: Point,
-        initial_size: Size,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> FloatingWindowResponse {
-        floating_window::floating_window_resizable_show(
-            self,
-            id,
-            title,
-            initial_position,
-            initial_size,
-            f,
-        )
-    }
-
-    /// Render a resizable floating window controlled by an `open` model.
-    fn window_open_resizable(
-        &mut self,
-        id: &str,
-        title: impl Into<Arc<str>>,
-        open: &fret_runtime::Model<bool>,
-        initial_position: Point,
-        initial_size: Size,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> FloatingWindowResponse {
-        floating_window::floating_window_open_resizable_show(
-            self,
-            id,
-            title,
-            open,
-            initial_position,
-            initial_size,
-            f,
-        )
-    }
-
-    /// Render a floating window with explicit behavior flags.
+    /// Render a floating window with explicit state and behavior options.
     fn window_with_options(
         &mut self,
         id: &str,
         title: impl Into<Arc<str>>,
         initial_position: Point,
-        options: FloatingWindowOptions,
+        options: WindowOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> FloatingWindowResponse {
-        floating_window::floating_window_impl_show_with_options(
+        floating_window::floating_window_show_with_options(
             self,
             id,
-            title.into(),
-            None,
+            title,
             initial_position,
-            None,
-            None,
-            options,
-            f,
-        )
-    }
-
-    /// Render an `open`-model floating window with explicit behavior flags.
-    fn window_open_with_options(
-        &mut self,
-        id: &str,
-        title: impl Into<Arc<str>>,
-        open: &fret_runtime::Model<bool>,
-        initial_position: Point,
-        options: FloatingWindowOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> FloatingWindowResponse {
-        floating_window::floating_window_impl_show_with_options(
-            self,
-            id,
-            title.into(),
-            Some(open),
-            initial_position,
-            None,
-            None,
-            options,
-            f,
-        )
-    }
-
-    /// Render a resizable floating window with explicit behavior flags.
-    fn window_resizable_with_options(
-        &mut self,
-        id: &str,
-        title: impl Into<Arc<str>>,
-        initial_position: Point,
-        initial_size: Size,
-        resize: FloatingWindowResizeOptions,
-        options: FloatingWindowOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> FloatingWindowResponse {
-        floating_window::floating_window_impl_show_with_options(
-            self,
-            id,
-            title.into(),
-            None,
-            initial_position,
-            Some(initial_size),
-            Some(resize),
-            options,
-            f,
-        )
-    }
-
-    /// Render an `open`-model resizable floating window with explicit behavior flags.
-    fn window_open_resizable_with_options(
-        &mut self,
-        id: &str,
-        title: impl Into<Arc<str>>,
-        open: &fret_runtime::Model<bool>,
-        initial_position: Point,
-        initial_size: Size,
-        resize: FloatingWindowResizeOptions,
-        options: FloatingWindowOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> FloatingWindowResponse {
-        floating_window::floating_window_impl_show_with_options(
-            self,
-            id,
-            title.into(),
-            Some(open),
-            initial_position,
-            Some(initial_size),
-            Some(resize),
             options,
             f,
         )

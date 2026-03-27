@@ -1913,7 +1913,7 @@ mod authoring_surface_policy_tests {
                 "let value = value_state.paint_value(cx);",
                 "let mode = mode_state.paint_value(cx);",
                 "let draft = draft_state.paint_value(cx);",
-                "let _ = ui.toggle_model(\"Enabled (toggle wrapper)\", enabled_state.model());",
+                "let _ = ui.switch_model(\"Enabled (switch)\", enabled_state.model());",
             ],
             &[
                 "count: app.models_mut().insert(0)",

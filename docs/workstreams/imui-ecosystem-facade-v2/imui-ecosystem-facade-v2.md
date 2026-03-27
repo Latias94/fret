@@ -16,7 +16,7 @@ Canonical name mapping for historical references across the v2 note set:
 
 - `select_model_ex` -> `select_model_with_options(...)`
 - `window_ex` -> `window(...)`
-- `window_open_ex` -> `window_open(...)`
+- `window_open_ex` -> `window_with_options(..., WindowOptions::default().with_open(...), ...)`
 - `floating_area_show_ex` -> `floating_area_with_options(...)`
 - `floating_area_drag_surface_ex` -> `floating_area_drag_surface(...)`
 - `begin_popup_menu_ex` -> `begin_popup_menu_with_options(...)`

@@ -472,8 +472,7 @@ The following M5 claims are now backed by direct evidence:
 
 The public alias debt that motivated this closeout is now closed:
 
-- `window(...)` / `window_open(...)` / `window_resizable(...)` / `window_open_resizable(...)`
-  are the surviving public floating-window families,
+- `window(...)` and `window_with_options(...)` are the surviving public floating-window families,
 - `floating_area_with_options(...)` is the surviving explicit-options floating-area entry point,
 - `floating_area_drag_surface(...)` is the surviving drag-surface helper,
 - `select_model_with_options(...)` is the surviving explicit-options select helper,
@@ -483,8 +482,8 @@ The public alias debt that motivated this closeout is now closed:
   `menu_item_with_options(...)`, `menu_item_checkbox_with_options(...)`,
   `menu_item_radio_with_options(...)`, `menu_item_action_with_options(...)`,
 - model-backed form helpers now use `input_text_model_with_options(...)`,
-  `textarea_model_with_options(...)`, `toggle_model_with_options(...)`,
-  `switch_model_with_options(...)`, and `slider_f32_model_with_options(...)`,
+  `textarea_model_with_options(...)`, `switch_model_with_options(...)`,
+  and `slider_f32_model_with_options(...)`,
 - and popup helpers now use `begin_popup_menu_with_options(...)`,
   `begin_popup_modal_with_options(...)`, and `begin_popup_context_menu_with_options(...)`.
 - overlay-root installation now uses `push_overlay_root_with_options(...)` when non-default

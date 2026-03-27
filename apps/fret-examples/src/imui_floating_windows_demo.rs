@@ -73,12 +73,14 @@ impl View for ImUiFloatingWindowsView {
                 let initial_position = Point::new(Px(24.0), Px(96.0));
                 let initial_size = Size::new(Px(220.0), Px(160.0));
 
-                let resp = ui.window_open_resizable(
+                let resp = ui.window_with_options(
                     id,
                     "Window A",
-                    open_a_state.model(),
                     initial_position,
-                    initial_size,
+                    fret_ui_kit::imui::WindowOptions::default()
+                        .with_open(open_a_state.model())
+                        .with_size(initial_size)
+                        .with_resize(fret_ui_kit::imui::FloatingWindowResizeOptions::default()),
                     |ui| {
                         ui.vertical(|ui| {
                             ui.mount(|cx| {
@@ -197,11 +199,13 @@ impl View for ImUiFloatingWindowsView {
                     },
                 );
 
-                let _ = ui.window_resizable(
+                let _ = ui.window_with_options(
                     "b",
                     "Window B",
                     Point::new(Px(176.0), Px(116.0)),
-                    Size::new(Px(180.0), Px(120.0)),
+                    fret_ui_kit::imui::WindowOptions::default()
+                        .with_size(Size::new(Px(180.0), Px(120.0)))
+                        .with_resize(fret_ui_kit::imui::FloatingWindowResizeOptions::default()),
                     |ui| {
                         ui.vertical(|ui| {
                             ui.text("This window starts on top of A's overlap target.");

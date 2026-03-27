@@ -17,7 +17,7 @@ Canonical name mapping for historical references in this tracker:
 
 - `begin_disabled` -> `disabled_scope(...)`
 - `window_ex` -> `window(...)`
-- `window_open_ex` -> `window_open(...)`
+- `window_open_ex` -> `window_with_options(..., WindowOptions::default().with_open(...), ...)`
 - `floating_area_show_ex` -> `floating_area_with_options(...)`
 
 Do not treat the old names below as surviving APIs.

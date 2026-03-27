@@ -2,12 +2,12 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Point, Size};
+use fret_core::Point;
 use fret_ui::{GlobalElementId, UiHost};
 
 use super::{
-    FloatingAreaOptions, FloatingAreaResponse, FloatingWindowOptions, FloatingWindowResizeOptions,
-    FloatingWindowResponse, ImUiFacade, UiWriterImUiFacadeExt, floating_window_on_area,
+    FloatingAreaOptions, FloatingAreaResponse, FloatingWindowResponse, ImUiFacade,
+    UiWriterImUiFacadeExt, WindowOptions, floating_window_on_area,
 };
 
 pub(super) fn floating_window_show<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -17,192 +17,24 @@ pub(super) fn floating_window_show<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Siz
     initial_position: Point,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> FloatingWindowResponse {
-    floating_window_impl_show(ui, id, title.into(), None, initial_position, None, None, f)
+    floating_window_show_with_options(ui, id, title, initial_position, WindowOptions::default(), f)
 }
 
-pub(super) fn floating_window_open_show<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
-    ui: &mut W,
-    id: &str,
-    title: impl Into<Arc<str>>,
-    open: &fret_runtime::Model<bool>,
-    initial_position: Point,
-    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-) -> FloatingWindowResponse {
-    floating_window_impl_show(
-        ui,
-        id,
-        title.into(),
-        Some(open),
-        initial_position,
-        None,
-        None,
-        f,
-    )
-}
-
-pub(super) fn floating_window_resizable_show<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+pub(super) fn floating_window_show_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     id: &str,
     title: impl Into<Arc<str>>,
     initial_position: Point,
-    initial_size: Size,
+    options: WindowOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> FloatingWindowResponse {
-    floating_window_resizable_with_options_show(
-        ui,
-        id,
-        title,
-        initial_position,
-        initial_size,
-        FloatingWindowResizeOptions::default(),
-        FloatingWindowOptions::default(),
-        f,
-    )
-}
+    let title = title.into();
+    let open = options.open.clone();
+    let initial_size = options.size;
+    let resize = options.resize;
+    let behavior = options.behavior;
 
-pub(super) fn floating_window_resizable_with_options_show<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    id: &str,
-    title: impl Into<Arc<str>>,
-    initial_position: Point,
-    initial_size: Size,
-    resize: FloatingWindowResizeOptions,
-    options: FloatingWindowOptions,
-    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-) -> FloatingWindowResponse {
-    floating_window_impl_show_with_options(
-        ui,
-        id,
-        title.into(),
-        None,
-        initial_position,
-        Some(initial_size),
-        Some(resize),
-        options,
-        f,
-    )
-}
-
-pub(super) fn floating_window_open_resizable_show<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    id: &str,
-    title: impl Into<Arc<str>>,
-    open: &fret_runtime::Model<bool>,
-    initial_position: Point,
-    initial_size: Size,
-    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-) -> FloatingWindowResponse {
-    floating_window_open_resizable_with_options_show(
-        ui,
-        id,
-        title,
-        open,
-        initial_position,
-        initial_size,
-        FloatingWindowResizeOptions::default(),
-        FloatingWindowOptions::default(),
-        f,
-    )
-}
-
-pub(super) fn floating_window_open_resizable_with_options_show<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    id: &str,
-    title: impl Into<Arc<str>>,
-    open: &fret_runtime::Model<bool>,
-    initial_position: Point,
-    initial_size: Size,
-    resize: FloatingWindowResizeOptions,
-    options: FloatingWindowOptions,
-    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-) -> FloatingWindowResponse {
-    floating_window_impl_show_with_options(
-        ui,
-        id,
-        title.into(),
-        Some(open),
-        initial_position,
-        Some(initial_size),
-        Some(resize),
-        options,
-        f,
-    )
-}
-
-pub(super) fn floating_window_impl_show<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
-    ui: &mut W,
-    id: &str,
-    title: Arc<str>,
-    open: Option<&fret_runtime::Model<bool>>,
-    initial_position: Point,
-    initial_size: Option<Size>,
-    resize: Option<FloatingWindowResizeOptions>,
-    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-) -> FloatingWindowResponse {
-    floating_window_impl_on_area_show_with_options(
-        ui,
-        id,
-        title,
-        open,
-        initial_position,
-        initial_size,
-        resize,
-        FloatingWindowOptions::default(),
-        f,
-    )
-}
-
-pub(super) fn floating_window_impl_show_with_options<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    id: &str,
-    title: Arc<str>,
-    open: Option<&fret_runtime::Model<bool>>,
-    initial_position: Point,
-    initial_size: Option<Size>,
-    resize: Option<FloatingWindowResizeOptions>,
-    options: FloatingWindowOptions,
-    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-) -> FloatingWindowResponse {
-    floating_window_impl_on_area_show_with_options(
-        ui,
-        id,
-        title,
-        open,
-        initial_position,
-        initial_size,
-        resize,
-        options,
-        f,
-    )
-}
-
-pub(super) fn floating_window_impl_on_area_show_with_options<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    id: &str,
-    title: Arc<str>,
-    open: Option<&fret_runtime::Model<bool>>,
-    initial_position: Point,
-    initial_size: Option<Size>,
-    resize: Option<FloatingWindowResizeOptions>,
-    options: FloatingWindowOptions,
-    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-) -> FloatingWindowResponse {
-    if let Some(open) = open {
+    if let Some(open) = open.as_ref() {
         let is_open = ui
             .with_cx_mut(|cx| cx.read_model(open, fret_ui::Invalidation::Paint, |_app, v| *v))
             .unwrap_or(false);
@@ -222,8 +54,6 @@ pub(super) fn floating_window_impl_on_area_show_with_options<
         }
     }
 
-    let open_model = open.cloned();
-
     let chrome = Rc::new(Cell::new(super::FloatingWindowChromeResponse::default()));
     let chrome_out = chrome.clone();
 
@@ -233,8 +63,8 @@ pub(super) fn floating_window_impl_on_area_show_with_options<
         FloatingAreaOptions {
             test_id_prefix: "imui.float_window.window:",
             test_id: None,
-            hit_test_passthrough: options.pointer_passthrough,
-            no_inputs: options.no_inputs,
+            hit_test_passthrough: behavior.pointer_passthrough,
+            no_inputs: behavior.no_inputs,
         },
         move |ui, area| {
             let chrome = floating_window_on_area::render_floating_window_in_area(
@@ -242,11 +72,11 @@ pub(super) fn floating_window_impl_on_area_show_with_options<
                 area,
                 id,
                 title,
-                open_model.clone(),
+                open.clone(),
                 initial_position,
                 initial_size,
                 resize,
-                options,
+                behavior,
                 f,
             );
             chrome_out.set(chrome);

@@ -26,8 +26,8 @@ use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 use fret_ui_kit::imui::{
     FloatingAreaOptions, FloatingWindowOptions, FloatingWindowResizeOptions, GridOptions,
     HorizontalOptions, ImUiHoveredFlags, InputTextOptions, MenuItemOptions, PopupMenuOptions,
-    PopupModalOptions, ScrollOptions, SelectOptions, SliderOptions, SwitchOptions, ToggleOptions,
-    VerticalOptions,
+    PopupModalOptions, ScrollOptions, SelectOptions, SliderOptions, SwitchOptions, VerticalOptions,
+    WindowOptions,
 };
 use fret_ui_kit::{OverlayPresence, OverlayRequest};
 
@@ -941,6 +941,36 @@ enum FloatingLayerOverlayVariant {
     Popover,
 }
 
+fn window_behavior_options(behavior: FloatingWindowOptions) -> WindowOptions {
+    WindowOptions::default().with_behavior(behavior)
+}
+
+fn resizable_window_options(size: Size) -> WindowOptions {
+    WindowOptions::default()
+        .with_size(size)
+        .with_resize(FloatingWindowResizeOptions::default())
+}
+
+fn resizable_window_options_with_behavior(
+    size: Size,
+    behavior: FloatingWindowOptions,
+) -> WindowOptions {
+    resizable_window_options(size).with_behavior(behavior)
+}
+
+fn open_window_options(open: &fret_runtime::Model<bool>) -> WindowOptions {
+    WindowOptions::default().with_open(open)
+}
+
+fn open_window_options_with_behavior(
+    open: &fret_runtime::Model<bool>,
+    behavior: FloatingWindowOptions,
+) -> WindowOptions {
+    WindowOptions::default()
+        .with_open(open)
+        .with_behavior(behavior)
+}
+
 fn render_floating_layer_with_overlay(
     cx: &mut ElementContext<'_, TestHost>,
     open: fret_runtime::Model<bool>,
@@ -958,7 +988,7 @@ fn render_floating_layer_with_overlay(
                 "a",
                 "A",
                 Point::new(Px(10.0), Px(10.0)),
-                FloatingWindowOptions::default(),
+                window_behavior_options(FloatingWindowOptions::default()),
                 move |ui| {
                     let is_open = ui
                         .cx_mut()
@@ -1060,7 +1090,7 @@ fn render_floating_layer_with_overlay(
                 "b",
                 "B",
                 Point::new(Px(90.0), Px(10.0)),
-                FloatingWindowOptions::default(),
+                window_behavior_options(FloatingWindowOptions::default()),
                 |ui| {
                     let body = ui.cx_mut().container(
                         {

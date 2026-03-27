@@ -434,10 +434,13 @@ fn window_wrapper_reports_position_and_size() {
         "imui-window-wrapper-reports-position-and-size",
         |cx| {
             crate::imui(cx, |ui| {
-                let resp =
-                    ui.window_resizable("demo", "Demo", initial_position, initial_size, |ui| {
-                        ui.text("Hello")
-                    });
+                let resp = ui.window_with_options(
+                    "demo",
+                    "Demo",
+                    initial_position,
+                    resizable_window_options(initial_size),
+                    |ui| ui.text("Hello"),
+                );
                 reported_pos_out.set(resp.position());
                 reported_size_out.set(resp.size());
             })
@@ -474,11 +477,11 @@ fn floating_window_close_button_sets_open_false() {
         "imui-floating-window-close",
         |cx| {
             crate::imui(cx, |ui| {
-                ui.window_open(
+                ui.window_with_options(
                     "demo",
                     "Demo",
-                    &open,
                     Point::new(Px(10.0), Px(10.0)),
+                    open_window_options(&open),
                     |ui| {
                         ui.text("Hello");
                     },
@@ -525,11 +528,11 @@ fn floating_window_escape_sets_open_false_after_focusing_title_bar() {
         "imui-floating-window-escape",
         |cx| {
             crate::imui(cx, |ui| {
-                ui.window_open(
+                ui.window_with_options(
                     "demo",
                     "Demo",
-                    &open,
                     Point::new(Px(10.0), Px(10.0)),
+                    open_window_options(&open),
                     |ui| {
                         ui.text("Hello");
                     },
@@ -868,10 +871,10 @@ fn floating_window_inputs_enabled_false_blocks_child_pressables() {
                         "demo",
                         "Demo",
                         Point::new(Px(10.0), Px(10.0)),
-                        fret_ui_kit::imui::FloatingWindowOptions {
+                        window_behavior_options(fret_ui_kit::imui::FloatingWindowOptions {
                             inputs_enabled: false,
                             ..Default::default()
-                        },
+                        }),
                         |ui| {
                             let model = clicked_model.clone();
                             let element = ui.cx_mut().pressable(
@@ -935,10 +938,10 @@ fn floating_window_inputs_enabled_false_blocks_child_pressables() {
                         "demo",
                         "Demo",
                         Point::new(Px(10.0), Px(10.0)),
-                        fret_ui_kit::imui::FloatingWindowOptions {
+                        window_behavior_options(fret_ui_kit::imui::FloatingWindowOptions {
                             inputs_enabled: false,
                             ..Default::default()
-                        },
+                        }),
                         |_ui| {},
                     );
                 });
@@ -990,10 +993,10 @@ fn floating_window_no_inputs_is_skipped_by_focus_traversal() {
                         "overlay",
                         "Overlay",
                         Point::new(Px(120.0), Px(80.0)),
-                        FloatingWindowOptions {
+                        window_behavior_options(FloatingWindowOptions {
                             no_inputs: true,
                             ..Default::default()
-                        },
+                        }),
                         |ui| {
                             ui.menu_item_with_options(
                                 "Overlay",
@@ -1093,10 +1096,10 @@ fn floating_window_activate_on_click_can_be_disabled_for_content() {
                         "a",
                         "A",
                         Point::new(Px(10.0), Px(10.0)),
-                        FloatingWindowOptions {
+                        window_behavior_options(FloatingWindowOptions {
                             activate_on_click: false,
                             ..Default::default()
-                        },
+                        }),
                         |ui| {
                             let pressable = ui.cx_mut().pressable(
                                 {
@@ -1137,7 +1140,7 @@ fn floating_window_activate_on_click_can_be_disabled_for_content() {
                         "b",
                         "B",
                         Point::new(Px(60.0), Px(10.0)),
-                        FloatingWindowOptions::default(),
+                        window_behavior_options(FloatingWindowOptions::default()),
                         |ui| {
                             let element = ui.cx_mut().container(
                                 {
@@ -1228,17 +1231,17 @@ fn floating_window_activate_on_click_can_be_disabled_for_content() {
                         "a",
                         "A",
                         Point::new(Px(10.0), Px(10.0)),
-                        FloatingWindowOptions {
+                        window_behavior_options(FloatingWindowOptions {
                             activate_on_click: false,
                             ..Default::default()
-                        },
+                        }),
                         |_ui| {},
                     );
                     let _ = ui.window_with_options(
                         "b",
                         "B",
                         Point::new(Px(60.0), Px(10.0)),
-                        FloatingWindowOptions::default(),
+                        window_behavior_options(FloatingWindowOptions::default()),
                         |_ui| {},
                     );
                 });
@@ -1310,17 +1313,17 @@ fn floating_window_activate_on_click_can_be_disabled_for_content() {
                         "a",
                         "A",
                         Point::new(Px(10.0), Px(10.0)),
-                        FloatingWindowOptions {
+                        window_behavior_options(FloatingWindowOptions {
                             activate_on_click: false,
                             ..Default::default()
-                        },
+                        }),
                         |_ui| {},
                     );
                     let _ = ui.window_with_options(
                         "b",
                         "B",
                         Point::new(Px(60.0), Px(10.0)),
-                        FloatingWindowOptions::default(),
+                        window_behavior_options(FloatingWindowOptions::default()),
                         |_ui| {},
                     );
                 });
@@ -1385,26 +1388,25 @@ fn floating_window_focus_on_click_can_be_independent_from_z_order_activation() {
         |cx| {
             crate::imui(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "a",
                         "A",
                         Point::new(Px(10.0), Px(10.0)),
-                        fixed,
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions {
-                            activate_on_click: false,
-                            focus_on_click: true,
-                            ..Default::default()
-                        },
+                        resizable_window_options_with_behavior(
+                            fixed,
+                            FloatingWindowOptions {
+                                activate_on_click: false,
+                                focus_on_click: true,
+                                ..Default::default()
+                            },
+                        ),
                         |_ui| {},
                     );
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "b",
                         "B",
                         Point::new(Px(60.0), Px(10.0)),
-                        fixed,
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions::default(),
+                        resizable_window_options(fixed),
                         |_ui| {},
                     );
                 });
@@ -1502,26 +1504,25 @@ fn floating_window_focus_on_click_can_be_independent_from_z_order_activation() {
         |cx| {
             crate::imui(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "a",
                         "A",
                         Point::new(Px(10.0), Px(10.0)),
-                        fixed,
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions {
-                            activate_on_click: false,
-                            focus_on_click: true,
-                            ..Default::default()
-                        },
+                        resizable_window_options_with_behavior(
+                            fixed,
+                            FloatingWindowOptions {
+                                activate_on_click: false,
+                                focus_on_click: true,
+                                ..Default::default()
+                            },
+                        ),
                         |_ui| {},
                     );
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "b",
                         "B",
                         Point::new(Px(60.0), Px(10.0)),
-                        fixed,
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions::default(),
+                        resizable_window_options(fixed),
                         |_ui| {},
                     );
                 });
@@ -1594,25 +1595,24 @@ fn floating_window_activate_on_click_can_be_disabled_for_resize_handles() {
         |cx| {
             crate::imui(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "a",
                         "A",
                         Point::new(Px(10.0), Px(10.0)),
-                        Size::new(Px(180.0), Px(120.0)),
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions {
-                            activate_on_click: false,
-                            ..Default::default()
-                        },
+                        resizable_window_options_with_behavior(
+                            Size::new(Px(180.0), Px(120.0)),
+                            FloatingWindowOptions {
+                                activate_on_click: false,
+                                ..Default::default()
+                            },
+                        ),
                         |_ui| {},
                     );
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "b",
                         "B",
                         Point::new(Px(260.0), Px(10.0)),
-                        Size::new(Px(180.0), Px(120.0)),
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions::default(),
+                        resizable_window_options(Size::new(Px(180.0), Px(120.0))),
                         |_ui| {},
                     );
                 });
@@ -1670,25 +1670,24 @@ fn floating_window_activate_on_click_can_be_disabled_for_resize_handles() {
         |cx| {
             crate::imui(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "a",
                         "A",
                         Point::new(Px(10.0), Px(10.0)),
-                        Size::new(Px(180.0), Px(120.0)),
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions {
-                            activate_on_click: false,
-                            ..Default::default()
-                        },
+                        resizable_window_options_with_behavior(
+                            Size::new(Px(180.0), Px(120.0)),
+                            FloatingWindowOptions {
+                                activate_on_click: false,
+                                ..Default::default()
+                            },
+                        ),
                         |_ui| {},
                     );
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "b",
                         "B",
                         Point::new(Px(260.0), Px(10.0)),
-                        Size::new(Px(180.0), Px(120.0)),
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions::default(),
+                        resizable_window_options(Size::new(Px(180.0), Px(120.0))),
                         |_ui| {},
                     );
                 });
@@ -1753,25 +1752,24 @@ fn floating_window_pointer_passthrough_allows_underlay_hit_testing() {
             crate::imui(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     let fixed = Size::new(Px(200.0), Px(120.0));
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "a",
                         "A",
                         Point::new(Px(10.0), Px(10.0)),
-                        fixed,
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions::default(),
+                        resizable_window_options(fixed),
                         |_ui| {},
                     );
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "b",
                         "B",
                         Point::new(Px(60.0), Px(10.0)),
-                        fixed,
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions {
-                            pointer_passthrough: true,
-                            ..Default::default()
-                        },
+                        resizable_window_options_with_behavior(
+                            fixed,
+                            FloatingWindowOptions {
+                                pointer_passthrough: true,
+                                ..Default::default()
+                            },
+                        ),
                         |_ui| {},
                     );
                 });
@@ -1864,25 +1862,24 @@ fn floating_window_no_inputs_allows_underlay_hit_testing() {
             crate::imui(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     let fixed = Size::new(Px(200.0), Px(120.0));
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "a",
                         "A",
                         Point::new(Px(10.0), Px(10.0)),
-                        fixed,
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions::default(),
+                        resizable_window_options(fixed),
                         |_ui| {},
                     );
-                    let _ = ui.window_resizable_with_options(
+                    let _ = ui.window_with_options(
                         "b",
                         "B",
                         Point::new(Px(60.0), Px(10.0)),
-                        fixed,
-                        FloatingWindowResizeOptions::default(),
-                        FloatingWindowOptions {
-                            no_inputs: true,
-                            ..Default::default()
-                        },
+                        resizable_window_options_with_behavior(
+                            fixed,
+                            FloatingWindowOptions {
+                                no_inputs: true,
+                                ..Default::default()
+                            },
+                        ),
                         |_ui| {},
                     );
                 });
@@ -2732,15 +2729,17 @@ fn floating_window_closable_false_hides_close_button_and_escape_does_not_close()
         "imui-floating-window-closable-false",
         |cx| {
             crate::imui(cx, |ui| {
-                let _ = ui.window_open_with_options(
+                let _ = ui.window_with_options(
                     "demo",
                     "Demo",
-                    &open,
                     Point::new(Px(10.0), Px(10.0)),
-                    FloatingWindowOptions {
-                        closable: false,
-                        ..Default::default()
-                    },
+                    open_window_options_with_behavior(
+                        &open,
+                        FloatingWindowOptions {
+                            closable: false,
+                            ..Default::default()
+                        },
+                    ),
                     |ui| ui.text("Hello"),
                 );
             })
@@ -2786,15 +2785,17 @@ fn floating_window_closable_false_hides_close_button_and_escape_does_not_close()
         "imui-floating-window-closable-false",
         |cx| {
             crate::imui(cx, |ui| {
-                let _ = ui.window_open_with_options(
+                let _ = ui.window_with_options(
                     "demo",
                     "Demo",
-                    &open,
                     Point::new(Px(10.0), Px(10.0)),
-                    FloatingWindowOptions {
-                        closable: false,
-                        ..Default::default()
-                    },
+                    open_window_options_with_behavior(
+                        &open,
+                        FloatingWindowOptions {
+                            closable: false,
+                            ..Default::default()
+                        },
+                    ),
                     |ui| ui.text("Hello"),
                 );
             })
@@ -2838,10 +2839,10 @@ fn floating_window_movable_false_does_not_move_when_dragging_title_bar() {
                     "demo",
                     "Demo",
                     Point::new(Px(10.0), Px(10.0)),
-                    FloatingWindowOptions {
+                    window_behavior_options(FloatingWindowOptions {
                         movable: false,
                         ..Default::default()
-                    },
+                    }),
                     |ui| ui.text("Hello"),
                 );
                 position_out.set(resp.position());
@@ -2887,10 +2888,10 @@ fn floating_window_movable_false_does_not_move_when_dragging_title_bar() {
                     "demo",
                     "Demo",
                     Point::new(Px(10.0), Px(10.0)),
-                    FloatingWindowOptions {
+                    window_behavior_options(FloatingWindowOptions {
                         movable: false,
                         ..Default::default()
-                    },
+                    }),
                     |ui| ui.text("Hello"),
                 );
                 position_out.set(resp.position());
@@ -2929,16 +2930,17 @@ fn floating_window_resizable_false_hides_resize_handles() {
         "imui-floating-window-resizable-false",
         |cx| {
             crate::imui(cx, |ui| {
-                let _ = ui.window_resizable_with_options(
+                let _ = ui.window_with_options(
                     "demo",
                     "Demo",
                     Point::new(Px(60.0), Px(36.0)),
-                    Size::new(Px(180.0), Px(120.0)),
-                    FloatingWindowResizeOptions::default(),
-                    FloatingWindowOptions {
-                        resizable: false,
-                        ..Default::default()
-                    },
+                    resizable_window_options_with_behavior(
+                        Size::new(Px(180.0), Px(120.0)),
+                        FloatingWindowOptions {
+                            resizable: false,
+                            ..Default::default()
+                        },
+                    ),
                     |ui| ui.text("Hello"),
                 );
             })
@@ -2984,16 +2986,17 @@ fn floating_window_collapsible_false_does_not_toggle_on_title_double_click() {
         "imui-floating-window-collapsible-false",
         |cx| {
             crate::imui(cx, |ui| {
-                let resp = ui.window_resizable_with_options(
+                let resp = ui.window_with_options(
                     "demo",
                     "Demo",
                     Point::new(Px(60.0), Px(36.0)),
-                    Size::new(Px(180.0), Px(120.0)),
-                    FloatingWindowResizeOptions::default(),
-                    FloatingWindowOptions {
-                        collapsible: false,
-                        ..Default::default()
-                    },
+                    resizable_window_options_with_behavior(
+                        Size::new(Px(180.0), Px(120.0)),
+                        FloatingWindowOptions {
+                            collapsible: false,
+                            ..Default::default()
+                        },
+                    ),
                     |ui| ui.text("Hello"),
                 );
                 collapsed_out.set(resp.collapsed());
@@ -3022,16 +3025,17 @@ fn floating_window_collapsible_false_does_not_toggle_on_title_double_click() {
         "imui-floating-window-collapsible-false",
         |cx| {
             crate::imui(cx, |ui| {
-                let resp = ui.window_resizable_with_options(
+                let resp = ui.window_with_options(
                     "demo",
                     "Demo",
                     Point::new(Px(60.0), Px(36.0)),
-                    Size::new(Px(180.0), Px(120.0)),
-                    FloatingWindowResizeOptions::default(),
-                    FloatingWindowOptions {
-                        collapsible: false,
-                        ..Default::default()
-                    },
+                    resizable_window_options_with_behavior(
+                        Size::new(Px(180.0), Px(120.0)),
+                        FloatingWindowOptions {
+                            collapsible: false,
+                            ..Default::default()
+                        },
+                    ),
                     |ui| ui.text("Hello"),
                 );
                 collapsed_out.set(resp.collapsed());
@@ -3069,11 +3073,11 @@ fn floating_window_resizes_when_dragging_corner_handle() {
         "imui-floating-window-resize",
         |cx| {
             crate::imui(cx, |ui| {
-                ui.window_resizable(
+                ui.window_with_options(
                     "demo",
                     "Demo",
                     Point::new(Px(10.0), Px(10.0)),
-                    Size::new(Px(140.0), Px(80.0)),
+                    resizable_window_options(Size::new(Px(140.0), Px(80.0))),
                     |ui| {
                         ui.text("Hello");
                     },
@@ -3121,11 +3125,11 @@ fn floating_window_resizes_when_dragging_corner_handle() {
         "imui-floating-window-resize",
         |cx| {
             crate::imui(cx, |ui| {
-                ui.window_resizable(
+                ui.window_with_options(
                     "demo",
                     "Demo",
                     Point::new(Px(10.0), Px(10.0)),
-                    Size::new(Px(140.0), Px(80.0)),
+                    resizable_window_options(Size::new(Px(140.0), Px(80.0))),
                     |ui| {
                         ui.text("Hello");
                     },
@@ -3179,11 +3183,11 @@ fn floating_window_resizes_from_left_updates_origin_and_width() {
         "imui-floating-window-resize-left",
         |cx| {
             crate::imui(cx, |ui| {
-                ui.window_resizable(
+                ui.window_with_options(
                     "demo",
                     "Demo",
                     Point::new(Px(80.0), Px(40.0)),
-                    Size::new(Px(140.0), Px(80.0)),
+                    resizable_window_options(Size::new(Px(140.0), Px(80.0))),
                     |ui| ui.text("Hello"),
                 );
             })
@@ -3230,11 +3234,11 @@ fn floating_window_resizes_from_left_updates_origin_and_width() {
         "imui-floating-window-resize-left",
         |cx| {
             crate::imui(cx, |ui| {
-                ui.window_resizable(
+                ui.window_with_options(
                     "demo",
                     "Demo",
                     Point::new(Px(80.0), Px(40.0)),
-                    Size::new(Px(140.0), Px(80.0)),
+                    resizable_window_options(Size::new(Px(140.0), Px(80.0))),
                     |ui| ui.text("Hello"),
                 );
             })
@@ -3293,11 +3297,11 @@ fn floating_window_title_bar_double_click_toggles_collapsed() {
         "imui-floating-window-collapse",
         |cx| {
             crate::imui(cx, |ui| {
-                let resp = ui.window_resizable(
+                let resp = ui.window_with_options(
                     "demo",
                     "Demo",
                     Point::new(Px(60.0), Px(36.0)),
-                    Size::new(Px(180.0), Px(120.0)),
+                    resizable_window_options(Size::new(Px(180.0), Px(120.0))),
                     |ui| ui.text("Hello"),
                 );
                 collapsed_out.set(resp.collapsed());
@@ -3350,11 +3354,11 @@ fn floating_window_title_bar_double_click_toggles_collapsed() {
         "imui-floating-window-collapse",
         |cx| {
             crate::imui(cx, |ui| {
-                let resp = ui.window_resizable(
+                let resp = ui.window_with_options(
                     "demo",
                     "Demo",
                     Point::new(Px(60.0), Px(36.0)),
-                    Size::new(Px(180.0), Px(120.0)),
+                    resizable_window_options(Size::new(Px(180.0), Px(120.0))),
                     |ui| ui.text("Hello"),
                 );
                 collapsed_out.set(resp.collapsed());
@@ -3425,11 +3429,11 @@ fn floating_window_title_bar_double_click_toggles_collapsed() {
         "imui-floating-window-collapse",
         |cx| {
             crate::imui(cx, |ui| {
-                let resp = ui.window_resizable(
+                let resp = ui.window_with_options(
                     "demo",
                     "Demo",
                     Point::new(Px(60.0), Px(36.0)),
-                    Size::new(Px(180.0), Px(120.0)),
+                    resizable_window_options(Size::new(Px(180.0), Px(120.0))),
                     |ui| ui.text("Hello"),
                 );
                 collapsed_out.set(resp.collapsed());

@@ -16,7 +16,7 @@ Current source of truth:
 Canonical name mapping for historical references in this tracker:
 
 - `window_ex` -> `window(...)`
-- `window_open_ex` -> `window_open(...)`
+- `window_open_ex` -> `window_with_options(..., WindowOptions::default().with_open(...), ...)`
 - `floating_area_show_ex` -> `floating_area_with_options(...)`
 - `floating_area_drag_surface_ex` -> `floating_area_drag_surface(...)`
 - `begin_popup_menu_ex` -> `begin_popup_menu_with_options(...)`

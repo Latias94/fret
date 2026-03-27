@@ -16,7 +16,7 @@ Canonical name mapping for historical references in this tracker:
 
 - `select_model_ex` -> `select_model_with_options(...)`
 - `window_ex` -> `window(...)`
-- `window_open_ex` -> `window_open(...)`
+- `window_open_ex` -> `window_with_options(..., WindowOptions::default().with_open(...), ...)`
 - `floating_area_show_ex` -> `floating_area_with_options(...)`
 
 Do not add follow-up work here; use the active stack-reset workstream instead.
