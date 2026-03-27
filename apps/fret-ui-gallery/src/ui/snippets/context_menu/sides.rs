@@ -98,7 +98,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         LayoutRefinement::default()
             .w_full()
             .min_w_0()
-            .max_w(Px(560.0)),
+            .max_w(Px(640.0)),
     );
 
     cx.grid(
@@ -113,20 +113,29 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             vec![
                 side_menu(
                     cx,
+                    "Right click (inline start)",
+                    "Long press (inline start)",
+                    shadcn::DropdownMenuSide::InlineStart,
+                    "ui-gallery-context-menu-sides-inline-start-trigger",
+                    "ui-gallery-context-menu-sides-inline-start-content",
+                )
+                .into_element(cx),
+                side_menu(
+                    cx,
+                    "Right click (left)",
+                    "Long press (left)",
+                    shadcn::DropdownMenuSide::Left,
+                    "ui-gallery-context-menu-sides-left-trigger",
+                    "ui-gallery-context-menu-sides-left-content",
+                )
+                .into_element(cx),
+                side_menu(
+                    cx,
                     "Right click (top)",
                     "Long press (top)",
                     shadcn::DropdownMenuSide::Top,
                     "ui-gallery-context-menu-sides-top-trigger",
                     "ui-gallery-context-menu-sides-top-content",
-                )
-                .into_element(cx),
-                side_menu(
-                    cx,
-                    "Right click (right)",
-                    "Long press (right)",
-                    shadcn::DropdownMenuSide::Right,
-                    "ui-gallery-context-menu-sides-right-trigger",
-                    "ui-gallery-context-menu-sides-right-content",
                 )
                 .into_element(cx),
                 side_menu(
@@ -140,11 +149,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .into_element(cx),
                 side_menu(
                     cx,
-                    "Right click (left)",
-                    "Long press (left)",
-                    shadcn::DropdownMenuSide::Left,
-                    "ui-gallery-context-menu-sides-left-trigger",
-                    "ui-gallery-context-menu-sides-left-content",
+                    "Right click (right)",
+                    "Long press (right)",
+                    shadcn::DropdownMenuSide::Right,
+                    "ui-gallery-context-menu-sides-right-trigger",
+                    "ui-gallery-context-menu-sides-right-content",
+                )
+                .into_element(cx),
+                side_menu(
+                    cx,
+                    "Right click (inline end)",
+                    "Long press (inline end)",
+                    shadcn::DropdownMenuSide::InlineEnd,
+                    "ui-gallery-context-menu-sides-inline-end-trigger",
+                    "ui-gallery-context-menu-sides-inline-end-content",
                 )
                 .into_element(cx),
             ]

@@ -968,15 +968,27 @@ fn context_menu_submenu_shortcuts_destructive_and_demo_examples_stay_docs_aligne
 
     let sides = read("src/ui/snippets/context_menu/sides.rs");
     assert!(
-        sides.contains("\"Right click (top)\"")
-            && sides.contains("\"Right click (right)\"")
-            && sides.contains("\"Right click (bottom)\"")
+        sides.contains("\"Right click (inline start)\"")
             && sides.contains("\"Right click (left)\"")
+            && sides.contains("\"Right click (top)\"")
+            && sides.contains("\"Right click (bottom)\"")
+            && sides.contains("\"Right click (right)\"")
+            && sides.contains("\"Right click (inline end)\"")
+            && sides.contains("DropdownMenuSide::InlineStart")
+            && sides.contains("DropdownMenuSide::Left")
             && sides.contains("DropdownMenuSide::Top")
-            && sides.contains("DropdownMenuSide::Right")
             && sides.contains("DropdownMenuSide::Bottom")
-            && sides.contains("DropdownMenuSide::Left"),
-        "src/ui/snippets/context_menu/sides.rs should keep the upstream sides example labels and explicit side assignments for top/right/bottom/left"
+            && sides.contains("DropdownMenuSide::Right")
+            && sides.contains("DropdownMenuSide::InlineEnd"),
+        "src/ui/snippets/context_menu/sides.rs should keep the upstream Base UI sides example shape, including logical inline-start/inline-end placements"
+    );
+
+    let page = read("src/ui/pages/context_menu.rs");
+    assert!(
+        page.contains(
+            "The Sides preview now mirrors the upstream Base UI docs set more closely by covering `inline-start`, `left`, `top`, `bottom`, `right`, and `inline-end` in one section-level placement sweep."
+        ),
+        "src/ui/pages/context_menu.rs should record that the Sides preview now covers the full Base UI logical/physical placement set"
     );
 }
 

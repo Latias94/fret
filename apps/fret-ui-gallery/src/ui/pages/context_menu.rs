@@ -33,6 +33,7 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "This pass mainly fixes teaching-surface drift: docs-aligned snippets now prefer the same typed `compose()` root lane instead of mixing older `build(...)` roots into the default examples.",
         "Those lower-level adapter seams are still advanced API, not the default copyable teaching lane.",
         "Docs-backed trigger copy now adapts to the committed primary pointer capability, so touch-first windows read `Long press here` / `Long press (...)` without needing any new context-menu mechanism work.",
+        "The Sides preview now mirrors the upstream Base UI docs set more closely by covering `inline-start`, `left`, `top`, `bottom`, `right`, and `inline-end` in one section-level placement sweep.",
         "The RTL example now exercises logical-side placement directly: `ContextMenuContent::side(shadcn::DropdownMenuSide::InlineEnd)` matches the upstream Base UI docs while submenu chevrons still follow direction-provider parity.",
         "The RTL preview now stays closer to the upstream Base UI example shape too: dual submenus, checkbox toggles, and a radio group all render under `LayoutDirection::Rtl` while keeping the explicit `inline-end` teaching point.",
         "The explicit entry tree remains intentional, so the page records why we are not widening this family into a generic heterogeneous children API.",
@@ -87,7 +88,7 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-context-menu-destructive")
         .code_rust_from_file_region(snippets::destructive::SOURCE, "example");
     let sides = DocSection::build(cx, "Sides", sides)
-        .description("Control content placement with `side` props.")
+        .description("Control content placement with physical and logical `side` props.")
         .test_id_prefix("ui-gallery-context-menu-sides")
         .code_rust_from_file_region(snippets::sides::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
