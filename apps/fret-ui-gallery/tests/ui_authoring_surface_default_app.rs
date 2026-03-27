@@ -3917,6 +3917,7 @@ fn hover_card_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
             "src/ui/snippets/hover_card/basic.rs",
+            "src/ui/snippets/hover_card/children.rs",
             "src/ui/snippets/hover_card/demo.rs",
             "src/ui/snippets/hover_card/positioning.rs",
             "src/ui/snippets/hover_card/rtl.rs",
@@ -3949,6 +3950,7 @@ fn hover_card_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Basic\", basic)",
             "DocSection::build(cx, \"Sides\", sides)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Children (Fret)\", children)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
@@ -3958,7 +3960,26 @@ fn hover_card_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Basic\", basic)",
             "DocSection::new(\"Sides\", sides)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Children (Fret)\", children)",
         ],
+    );
+}
+
+#[test]
+fn hover_card_children_snippet_prefers_explicit_content_children_followup() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/hover_card/children.rs",
+        &[
+            "shadcn::HoverCardContent::new([title, summary, meta])",
+            "shadcn::HoverCard::new(",
+            ".open_delay_frames(8)",
+            ".close_delay_frames(8)",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("HoverCardContent::build(cx,"),
+        "src/ui/snippets/hover_card/children.rs should keep the focused eager content-children follow-up visible instead of collapsing back to the builder lane",
     );
 }
 
@@ -6065,12 +6086,14 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
             "let api_reference = doc_layout::notes_block([",
             "let notes = doc_layout::notes_block([",
             "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let children = DocSection::build(cx, \"Children (Fret)\", children)",
             "let notes = DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
             "let api_reference = doc_layout::notes(",
             "let notes = doc_layout::notes(",
             "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Children (Fret)\", children)",
             "DocSection::new(\"Notes\", notes)",
         ],
     );

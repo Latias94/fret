@@ -7,6 +7,7 @@
 //! Keep `ui-gallery-hover-card-*` `test_id`s stable: diag scripts depend on them.
 
 pub mod basic;
+pub mod children;
 pub mod demo;
 pub mod positioning;
 pub mod rtl;

@@ -12,20 +12,23 @@ pub(super) fn preview_hover_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let basic = snippets::basic::render(cx);
     let sides = snippets::sides::render(cx);
     let rtl = snippets::rtl::render(cx);
+    let children = snippets::children::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`HoverCard::open_delay(...)` and `HoverCard::close_delay(...)` keep timing ownership on the root, matching the Radix/shadcn docs surface. Base UI's trigger-owned delay props remain a reference, not the public Fret API.",
+        "`HoverCard::open_delay(...)` and `HoverCard::close_delay(...)` keep timing ownership on the root, matching the Radix/shadcn docs surface. Base UI's trigger-owned `delay` / `closeDelay` props remain a mechanism reference, not the public Fret API.",
         "`HoverCard::side(...)` / `align(...)` set placement defaults, and `HoverCardContent` also exposes `side(...)`, `align(...)`, `side_offset(...)`, and `align_offset(...)` for explicit geometry tuning.",
-        "`HoverCard::new(cx, trigger, content)` remains the recipe-level entry point; `HoverCardTrigger::build(...)` and `HoverCardContent::build(cx, ...)` cover the typed compound-parts lane without adding a separate root compose API.",
+        "`HoverCard::new(cx, trigger, content)` remains the recipe-level entry point; `HoverCardTrigger::build(...)`, `HoverCardContent::new([...])`, and `HoverCardContent::build(cx, ...)` cover the composable slot lanes without adding a separate heterogeneous root `children([...])` API.",
     ]);
 
     let notes = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/hover_card.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/hover-card.mdx` and Radix Hover Card docs.",
-        "Preview keeps the docs-aligned `@nextjs` demo first, then follows the Radix Hover Card topics (`Usage`, `Trigger Delays`, `Positioning`, `Sides`, `RTL`). The extra `Basic` section is a minimal Fret supplement.",
-        "Hover card already exposes shadcn-style part names (`HoverCardTrigger`, `HoverCardContent`) plus typed builders for the copyable parts lane.",
-        "Delay examples intentionally follow the Radix/shadcn root-owned timing model; Base UI's trigger-owned delay props are only a mechanism reference for cross-checking behavior.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/hover_card.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/hover-card.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/hover-card.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/hover-card.tsx`, `repo-ref/primitives/packages/react/hover-card/src/hover-card.tsx`, and `repo-ref/base-ui/packages/react/src/preview-card/root/PreviewCardRoot.tsx`.",
+        "Preview now mirrors the shadcn Hover Card docs path directly: `Demo`, `Usage`, `Trigger Delays`, `Positioning`, `Basic`, `Sides`, `RTL`, and `API Reference`. `Children (Fret)` and `Notes` stay as the explicit follow-ups.",
+        "Hover card already exposes shadcn-style part names (`HoverCardTrigger`, `HoverCardContent`) plus typed builders for the copyable parts lane; the content slot already has a composable children surface, so a generic root `children([...])` API would mostly duplicate `HoverCard::new(...)`.",
+        "Delay examples intentionally follow the Radix/shadcn root-owned timing model; Base UI's trigger-owned delay props are only a mechanism cross-check for behavior and do not define the Fret recipe surface.",
         "Hover card interactions depend on hover-intent delays, so examples include both instant and delayed scenarios.",
-        "Sides and positioning are separated to make placement parity checks deterministic.",
+        "`Basic` and `Sides` stay on the docs path because upstream documents them as examples, not as Fret-only supplements.",
+        "`Children (Fret)` is the focused follow-up for caller-owned content-slot composition via `HoverCardContent::new([...])`; it does not imply a new root `children([...])` API.",
+        "Sides and positioning are separated to keep placement parity checks deterministic.",
         "RTL sample is included because side resolution can differ in right-to-left layouts.",
     ]);
 
@@ -57,7 +60,7 @@ pub(super) fn preview_hover_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Placement is controlled by `side` and `align` on `HoverCardContent`.")
         .code_rust_from_file_region(snippets::positioning::SOURCE, "example");
     let basic = DocSection::build(cx, "Basic", basic)
-        .description("Minimal supplemental recipe beneath the full docs-aligned demo.")
+        .description("Minimal hover card example from the upstream docs examples set.")
         .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let sides = DocSection::build(cx, "Sides", sides)
         .description("Visual sweep of side placements.")
@@ -65,11 +68,17 @@ pub(super) fn preview_hover_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = DocSection::build(cx, "RTL", rtl)
         .description("Hover card should respect right-to-left direction context.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let children = DocSection::build(cx, "Children (Fret)", children)
+        .description(
+            "Use `HoverCardContent::new([...])` when the panel body is already built or caller-owned.",
+        )
+        .test_id_prefix("ui-gallery-hover-card-children")
+        .code_rust_from_file_region(snippets::children::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview leads with the docs-aligned `@nextjs` demo, then follows the Radix Hover Card topics; `Basic` remains a small Fret supplement.",
+            "Preview leads with the docs-aligned `@nextjs` demo, then follows the shadcn Hover Card docs path through `API Reference`; `Children (Fret)` and `Notes` stay as the explicit Fret/source-alignment follow-ups.",
         ),
         vec![
             demo,
@@ -80,6 +89,7 @@ pub(super) fn preview_hover_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             sides,
             rtl,
             api_reference,
+            children,
             notes,
         ],
     );

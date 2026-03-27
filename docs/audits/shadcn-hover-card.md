@@ -8,13 +8,18 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret's shadcn-aligned `HoverCard` against the upstream shadcn/ui v4 docs and
-the `new-york-v4` registry implementation in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `HoverCard` against the upstream shadcn/ui v4 docs
+surfaces, the `new-york-v4` registry implementation in `repo-ref/ui`, and the Radix/Base UI
+headless references used to validate semantics and mechanism choices.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/hover-card.mdx`
+- Docs page (base): `repo-ref/ui/apps/v4/content/docs/components/base/hover-card.mdx`
+- Docs page (radix): `repo-ref/ui/apps/v4/content/docs/components/radix/hover-card.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/hover-card.tsx`
+- Radix primitive: `repo-ref/primitives/packages/react/hover-card/src/hover-card.tsx`
+- Base UI preview card root: `repo-ref/base-ui/packages/react/src/preview-card/root/PreviewCardRoot.tsx`
+- Base UI preview card trigger: `repo-ref/base-ui/packages/react/src/preview-card/trigger/PreviewCardTrigger.tsx`
 
 ## Fret implementation
 
@@ -35,11 +40,16 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   `HoverCard::anchor_element(...)` (anchor can be separate from the trigger).
 - Pass: `HoverCard::new(cx, trigger, content)` already acts as the recipe-level composition entry point,
   with `HoverCardTrigger` / `HoverCardContent` preserving shadcn-style part naming at call sites.
+- Pass: `HoverCardContent::new([...])` and `HoverCardContent::build(cx, ...)` already cover the
+  composable children lane for the content slot.
 - Note: Fret intentionally does not add a separate generic `compose()` builder for `HoverCard`
   today. Unlike modal overlays that need explicit portal/overlay/content slot assembly, hover card
   authoring is already expressed by the root's two required slots plus root-owned hover/anchor
   policy (`open_delay`, `close_delay`, `anchor_element`). An extra builder would mostly duplicate
   the current contract without improving semantics.
+- Note: For the same reason, a heterogeneous root `children([...])` API is not currently warranted.
+  The root only owns trigger/content pairing plus hover/anchor policy, while the content slot
+  already has an explicit composable children surface.
 
 ### Open/close behavior
 
@@ -50,6 +60,10 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   (Base UI / Radix `open` + `defaultOpen`).
 - Pass: Open lifecycle callbacks are available via `HoverCard::on_open_change` and
   `HoverCard::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
+- Note: Fret keeps delay ownership on the root (`HoverCard::open_delay(...)` /
+  `HoverCard::close_delay(...)`) to match the Radix/shadcn docs surface. Base UI's trigger-owned
+  `delay` / `closeDelay` props remain a useful mechanism cross-check, but they do not define the
+  Fret public recipe API.
 
 ### Placement & sizing
 
@@ -66,6 +80,17 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 - Pass: Upstream includes open/close animations (fade + zoom + side-based slide) keyed off
   `data-state` and `data-side`. Fret matches the same motion taxonomy on both enter and exit, using a
   geometry-driven transform origin aligned to the anchor/arrow.
+
+### Docs / teaching surface parity
+
+- Pass: The UI Gallery page order now mirrors the upstream docs flow:
+  `Demo`, `Usage`, `Trigger Delays`, `Positioning`, `Basic`, `Sides`, `RTL`, `API Reference`.
+- Pass: `Basic` is treated as an upstream docs example, not a Fret-only follow-up.
+- Pass: `Children (Fret)` now exists as an explicit post-docs follow-up that demonstrates
+  `HoverCardContent::new([...])` for caller-owned panel composition without widening the root
+  recipe surface.
+- Pass: Source attribution now names both shadcn docs surfaces (base + radix), plus Radix/Base UI
+  references, so the distinction between public recipe API and mechanism cross-checks is explicit.
 
 ## Validation
 
