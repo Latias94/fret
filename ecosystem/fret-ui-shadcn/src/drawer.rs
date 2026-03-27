@@ -443,6 +443,16 @@ impl DrawerContent {
     }
 
     #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
         let side = drawer_side_in_scope(cx);
@@ -742,6 +752,16 @@ impl DrawerHeader {
     }
 
     #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let side = drawer_side_in_scope(cx);
         let md_breakpoint = cx
@@ -895,6 +915,16 @@ impl DrawerFooter {
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
+    }
+
+    #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
     }
 
     #[track_caller]
@@ -2536,6 +2566,35 @@ mod tests {
             element.kind,
             fret_ui::element::ElementKind::Container(_)
         ));
+        assert!(find_text(&element, "Title").is_some());
+        assert!(find_text(&element, "Close").is_some());
+    }
+
+    #[test]
+    fn drawer_content_with_children_accepts_composable_sections_surface() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                DrawerContent::new([]).with_children(cx, |cx| {
+                    vec![
+                        DrawerHeader::new([]).with_children(cx, |cx| {
+                            vec![DrawerTitle::new("Title").into_element(cx)]
+                        }),
+                        DrawerFooter::new([]).with_children(cx, |cx| {
+                            vec![crate::button::Button::new("Close").into_element(cx)]
+                        }),
+                    ]
+                })
+            });
+
+        assert!(matches!(
+            element.kind,
+            fret_ui::element::ElementKind::Container(_)
+        ));
+        assert!(find_text(&element, "Title").is_some());
+        assert!(find_text(&element, "Close").is_some());
     }
 
     fn bounds() -> Rect {

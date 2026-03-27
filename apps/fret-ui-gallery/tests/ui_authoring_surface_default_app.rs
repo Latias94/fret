@@ -100,6 +100,31 @@ fn assert_normalized_markers_present(relative_path: &str, required_markers: &[&s
     normalized
 }
 
+fn assert_normalized_chain_reaches(
+    relative_path: &str,
+    normalized: &str,
+    chain_start: &str,
+    required_suffix: &str,
+) {
+    let path = manifest_path(relative_path);
+    let chain_start = chain_start.split_whitespace().collect::<String>();
+    let required_suffix = required_suffix.split_whitespace().collect::<String>();
+    let start_index = normalized.find(&chain_start).unwrap_or_else(|| {
+        panic!(
+            "{} is missing chain start `{}`",
+            path.display(),
+            chain_start
+        )
+    });
+    assert!(
+        normalized[start_index..].contains(&required_suffix),
+        "{} should continue the `{}` chain onto `{}`",
+        path.display(),
+        chain_start,
+        required_suffix
+    );
+}
+
 fn assert_material3_snippet_prefers_copyable_root(
     relative_path: &str,
     required_markers: &[&str],
@@ -2554,8 +2579,8 @@ fn drawer_page_marks_usage_as_default_and_snap_points_as_follow_up() {
     );
     assert!(
         drawer_page
-            .contains("Default copyable `children([...])` path for common Drawer call sites."),
-        "src/ui/pages/drawer.rs should label Usage as the default copyable children() path"
+            .contains("Default copyable `children([...])` root lane with composable `with_children(...)` content sections."),
+        "src/ui/pages/drawer.rs should label Usage as the default copyable children() + with_children() path"
     );
     assert!(
         drawer_page.contains(
@@ -2625,6 +2650,104 @@ fn curated_drawer_snippets_prefer_drawer_close_scope_for_footer_close_actions() 
             &["shadcn::DrawerClose::from_scope().build("],
         );
     }
+}
+
+#[test]
+fn curated_drawer_snippets_prefer_composable_content_with_children_lane() {
+    for relative_path in [
+        "src/ui/snippets/drawer/demo.rs",
+        "src/ui/snippets/drawer/usage.rs",
+        "src/ui/snippets/drawer/scrollable_content.rs",
+        "src/ui/snippets/drawer/sides.rs",
+        "src/ui/snippets/drawer/responsive_dialog.rs",
+        "src/ui/snippets/drawer/rtl.rs",
+        "src/ui/snippets/drawer/snap_points.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &[
+                "shadcn::DrawerContent::new([])",
+                "shadcn::DrawerHeader::new([])",
+                "shadcn::DrawerFooter::new([])",
+            ],
+        );
+
+        assert_normalized_chain_reaches(
+            relative_path,
+            &normalized,
+            "shadcn::DrawerContent::new([])",
+            ".with_children(",
+        );
+        assert_normalized_chain_reaches(
+            relative_path,
+            &normalized,
+            "shadcn::DrawerHeader::new([])",
+            ".with_children(",
+        );
+        assert_normalized_chain_reaches(
+            relative_path,
+            &normalized,
+            "shadcn::DrawerFooter::new([])",
+            ".with_children(",
+        );
+
+        assert!(
+            !normalized.contains("shadcn::DrawerContent::build("),
+            "{} should keep drawer content on the composable with_children lane",
+            manifest_path(relative_path).display()
+        );
+        assert!(
+            !normalized.contains("shadcn::DrawerHeader::build("),
+            "{} should keep drawer headers on the composable with_children lane",
+            manifest_path(relative_path).display()
+        );
+        assert!(
+            !normalized.contains("shadcn::DrawerFooter::build("),
+            "{} should keep drawer footers on the composable with_children lane",
+            manifest_path(relative_path).display()
+        );
+    }
+}
+
+#[test]
+fn drawer_responsive_dialog_keeps_desktop_dialog_on_composable_content_lane() {
+    let relative_path = "src/ui/snippets/drawer/responsive_dialog.rs";
+    let normalized = assert_normalized_markers_present(
+        relative_path,
+        &[
+            "shadcn::DialogContent::new([])",
+            "shadcn::DialogHeader::new([])",
+        ],
+    );
+
+    assert_normalized_chain_reaches(
+        relative_path,
+        &normalized,
+        "shadcn::DialogContent::new([])",
+        ".refine_layout(LayoutRefinement::default().max_w(Px(425.0))).with_children(",
+    );
+    assert_normalized_chain_reaches(
+        relative_path,
+        &normalized,
+        "shadcn::DialogHeader::new([])",
+        ".with_children(",
+    );
+
+    assert!(
+        !normalized.contains("usefret::children::UiElementSinkExt;"),
+        "{} should not need sink-mutation imports once the desktop dialog stays on the composable with_children lane",
+        manifest_path(relative_path).display()
+    );
+    assert!(
+        !normalized.contains("shadcn::DialogContent::build("),
+        "{} should keep the desktop dialog content on the composable with_children lane",
+        manifest_path(relative_path).display()
+    );
+    assert!(
+        !normalized.contains("shadcn::DialogHeader::build("),
+        "{} should keep the desktop dialog header on the composable with_children lane",
+        manifest_path(relative_path).display()
+    );
 }
 
 #[test]
