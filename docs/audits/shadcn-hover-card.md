@@ -89,6 +89,10 @@ headless references used to validate semantics and mechanism choices.
 - Pass: `Children (Fret)` now exists as an explicit post-docs follow-up that demonstrates
   `HoverCardContent::new([...])` for caller-owned panel composition without widening the root
   recipe surface.
+- Pass: The `Children (Fret)` section now keeps section-scaffold selectors and preview selectors
+  disjoint (`ui-gallery-hover-card-children-*` for the section, `ui-gallery-hover-card-children-demo-*`
+  for the preview), so diag automation can target the teaching surface without duplicate `test_id`
+  collisions.
 - Pass: Source attribution now names both shadcn docs surfaces (base + radix), plus Radix/Base UI
   references, so the distinction between public recipe API and mechanism cross-checks is explicit.
 
@@ -99,6 +103,11 @@ headless references used to validate semantics and mechanism choices.
 - Contract test: `hover_card_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `hover_card_open_change_events_complete_without_animation`
 - Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
+- UI Gallery docs smoke gate:
+  `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- UI Gallery interaction gates:
+  `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-click-leave-closes.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+  `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-trigger-delays.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
   hover card panel tracks the trigger after wheel-driven scroll updates (validated in
   `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via

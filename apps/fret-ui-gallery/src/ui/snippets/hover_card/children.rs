@@ -13,13 +13,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .text_sm()
         .font_semibold()
         .into_element(cx)
-        .test_id("ui-gallery-hover-card-children-title");
+        .test_id("ui-gallery-hover-card-children-demo-title");
     let summary =
         ui::text_block("Already-built panel nodes can be passed directly into HoverCardContent::new([...]) when the content body is caller-owned.")
             .text_sm()
             .wrap(TextWrap::WordBreak)
             .into_element(cx)
-            .test_id("ui-gallery-hover-card-children-summary");
+            .test_id("ui-gallery-hover-card-children-demo-summary");
     let meta = ui::h_flex(|cx| {
         vec![
             shadcn::Badge::new("Caller-owned")
@@ -34,22 +34,22 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .gap(Space::N2)
     .items_center()
     .into_element(cx)
-    .test_id("ui-gallery-hover-card-children-meta");
+    .test_id("ui-gallery-hover-card-children-demo-meta");
 
     let content = shadcn::HoverCardContent::new([title, summary, meta])
-        .test_id("ui-gallery-hover-card-children-content")
+        .test_id("ui-gallery-hover-card-children-demo-content")
         .refine_layout(LayoutRefinement::default().max_w(Px(288.0)));
 
     shadcn::HoverCard::new(
         cx,
         shadcn::Button::new("Composable content")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-hover-card-children-trigger"),
+            .test_id("ui-gallery-hover-card-children-demo-trigger"),
         content,
     )
     .open_delay_frames(8)
     .close_delay_frames(8)
     .into_element(cx)
-    .test_id("ui-gallery-hover-card-children")
+    .test_id("ui-gallery-hover-card-children-demo")
 }
 // endregion: example

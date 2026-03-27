@@ -38,6 +38,19 @@
       },
       "timeout_frames": 240
     },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-hover-card-delay-delayed-trigger"
+      },
+      "delta_y": -240.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 1200
+    },
 
     {
       "type": "move_pointer",
