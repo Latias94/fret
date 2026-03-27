@@ -18,6 +18,11 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let sides = snippets::sides::render(cx);
     let rtl = snippets::rtl::render(cx);
 
+    let examples = doc_layout::notes_block([
+        "Gallery collapses the upstream top-of-page `ComponentPreview` into `Demo` and skips `Installation`, because the UI Gallery teaches live Rust surfaces rather than package-install steps.",
+        "The upstream `Examples` group stays explicit here so `Basic`, `Submenu`, `Shortcuts`, `Groups`, `Icons`, `Checkboxes`, `Radio`, `Destructive`, and `Sides` remain easy to compare one-to-one with the docs page.",
+        "`RTL` remains a separate top-level docs section after `Examples`, matching the upstream page structure instead of being folded into the example group.",
+    ]);
     let api_reference = doc_layout::notes_block([
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/context-menu.mdx`.",
         "`ContextMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)` is the default copyable root path; `build(...)`, `build_parts(...)`, and `into_element_parts(...)` stay as narrower adapter seams for already-landed or closure-owned roots.",
@@ -28,11 +33,12 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "No extra generic heterogeneous children API is currently warranted: the explicit `ContextMenuEntry` tree is the Fret-equivalent structured surface for upstream nested menu children, and a generic children lane would add hidden scope/collection contracts without unlocking new behavior.",
     ]);
     let notes = doc_layout::notes_block([
-        "Preview now mirrors the upstream shadcn Context Menu docs path first: `Demo`, `Usage`, the example set through `RTL`, then `API Reference`.",
+        "Preview now mirrors the upstream shadcn/Base UI Context Menu docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Examples`, `RTL`, and `API Reference`.",
         "Mechanism parity already looks healthy here: existing web-vs-fret placement/chrome gates plus context-menu diag scripts cover right-click open, keyboard open, dismissal, focus routing, safe-corridor submenu behavior, and panel geometry.",
         "This pass mainly fixes teaching-surface drift: docs-aligned snippets now prefer the same typed `compose()` root lane instead of mixing older `build(...)` roots into the default examples.",
         "Those lower-level adapter seams are still advanced API, not the default copyable teaching lane.",
         "Docs-backed trigger copy now adapts to the committed primary pointer capability, so touch-first windows read `Long press here` / `Long press (...)` without needing any new context-menu mechanism work.",
+        "The explicit `Examples` section now keeps the upstream grouping visible before the page returns to the top-level `RTL` and `API Reference` sections.",
         "The Sides preview now mirrors the upstream Base UI docs set more closely by covering `inline-start`, `left`, `top`, `bottom`, `right`, and `inline-end` in one section-level placement sweep.",
         "The RTL example now exercises logical-side placement directly: `ContextMenuContent::side(shadcn::DropdownMenuSide::InlineEnd)` matches the upstream Base UI docs while submenu chevrons still follow direction-provider parity.",
         "The RTL preview now stays closer to the upstream Base UI example shape too: dual submenus, checkbox toggles, and a radio group all render under `LayoutDirection::Rtl` while keeping the explicit `inline-end` teaching point.",
@@ -40,6 +46,10 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Examples are snippet-backed: preview and code stay in sync.",
         "Keep `ui-gallery-context-menu-*` test IDs stable; multiple diag scripts depend on them.",
     ]);
+    let examples = DocSection::build(cx, "Examples", examples)
+        .no_shell()
+        .test_id_prefix("ui-gallery-context-menu-examples")
+        .description("How the upstream `Examples` group maps onto the preview sections below.");
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .test_id_prefix("ui-gallery-context-menu-api-reference")
@@ -52,7 +62,7 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
-        .description("Copyable source-aligned default root composition for Context Menu.")
+        .description("Copyable minimal usage aligned with the upstream four-item `Profile / Billing / Team / Subscription` block.")
         .test_id_prefix("ui-gallery-context-menu-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let basic = DocSection::build(cx, "Basic", basic)
@@ -99,11 +109,12 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Context Menu examples aligned with the upstream shadcn docs path first, followed by Fret-specific API guidance and notes.",
+            "Preview mirrors the upstream shadcn/Base UI Context Menu docs path after collapsing `ComponentPreview` into `Demo` and skipping `Installation`, then keeps Fret-specific API guidance and notes explicit.",
         ),
         vec![
             demo,
             usage,
+            examples,
             basic,
             submenu,
             shortcuts,

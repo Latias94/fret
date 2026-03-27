@@ -665,6 +665,7 @@ fn context_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Examples\", examples)",
             "DocSection::build(cx, \"Basic\", basic)",
             "DocSection::build(cx, \"Submenu\", submenu)",
             "DocSection::build(cx, \"Shortcuts\", shortcuts)",
@@ -680,6 +681,7 @@ fn context_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Examples\", examples)",
             "DocSection::new(\"Basic\", basic)",
             "DocSection::new(\"Submenu\", submenu)",
             "DocSection::new(\"Shortcuts\", shortcuts)",
@@ -692,6 +694,23 @@ fn context_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"API Reference\", api_reference)",
         ],
+    );
+}
+
+#[test]
+fn context_menu_page_keeps_the_upstream_examples_group_explicit() {
+    let page = read("src/ui/pages/context_menu.rs");
+    assert!(
+        page.contains(
+            "Preview now mirrors the upstream shadcn/Base UI Context Menu docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Examples`, `RTL`, and `API Reference`."
+        ),
+        "src/ui/pages/context_menu.rs should record that the docs path now keeps an explicit `Examples` group after collapsing `ComponentPreview` into `Demo` and skipping `Installation`"
+    );
+    assert!(
+        page.contains(
+            "The explicit `Examples` section now keeps the upstream grouping visible before the page returns to the top-level `RTL` and `API Reference` sections."
+        ),
+        "src/ui/pages/context_menu.rs should record that the upstream examples group stays explicit before the top-level RTL/API follow-ups"
     );
 }
 
