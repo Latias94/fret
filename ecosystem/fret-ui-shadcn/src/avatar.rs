@@ -105,6 +105,14 @@ pub struct Avatar {
 }
 
 impl Avatar {
+    /// Start an avatar composition with no pre-seeded children.
+    ///
+    /// This is the most natural entrypoint when callers want the builder lane:
+    /// `Avatar::empty().children([..])`.
+    pub fn empty() -> Self {
+        Self::new(std::iter::empty::<AnyElement>())
+    }
+
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
         Self {
@@ -333,6 +341,11 @@ pub struct AvatarGroup {
 }
 
 impl AvatarGroup {
+    /// Start an avatar-group composition with no pre-seeded children.
+    pub fn empty() -> Self {
+        Self::new(std::iter::empty::<AnyElement>())
+    }
+
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             children: children.into_iter().collect(),
@@ -340,6 +353,11 @@ impl AvatarGroup {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     pub fn size(mut self, size: AvatarSize) -> Self {
@@ -418,6 +436,11 @@ pub struct AvatarGroupCount {
 }
 
 impl AvatarGroupCount {
+    /// Start an avatar-group-count composition with no pre-seeded children.
+    pub fn empty() -> Self {
+        Self::new(std::iter::empty::<AnyElement>())
+    }
+
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             children: children.into_iter().collect(),
@@ -425,6 +448,11 @@ impl AvatarGroupCount {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     /// Explicitly set the avatar size for this count bubble.
@@ -1105,6 +1133,78 @@ mod tests {
             panic!("expected Avatar root to be a Container, got {:?}", el.kind);
         };
         assert_eq!(props.layout.overflow, Overflow::Clip);
+    }
+
+    #[test]
+    fn avatar_empty_supports_children_builder_lane() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Avatar::empty()
+                .children([AvatarFallback::new("JD").into_element(cx)])
+                .into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &el.kind else {
+            panic!(
+                "expected Avatar::empty().children(...) root to be a Container, got {:?}",
+                el.kind
+            );
+        };
+        assert_eq!(props.layout.overflow, Overflow::Clip);
+    }
+
+    #[test]
+    fn avatar_group_empty_supports_children_builder_lane() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AvatarGroup::empty()
+                .children([
+                    Avatar::new([AvatarFallback::new("JD").into_element(cx)]).into_element(cx)
+                ])
+                .into_element(cx)
+        });
+
+        let ElementKind::Container(_) = &el.kind else {
+            panic!(
+                "expected AvatarGroup::empty().children(...) root to be a Container, got {:?}",
+                el.kind
+            );
+        };
+    }
+
+    #[test]
+    fn avatar_group_count_empty_supports_children_builder_lane() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AvatarGroupCount::empty()
+                .children([ui::text("+8").font_medium().nowrap().into_element(cx)])
+                .into_element(cx)
+        });
+
+        let ElementKind::Container(_) = &el.kind else {
+            panic!(
+                "expected AvatarGroupCount::empty().children(...) root to be a Container, got {:?}",
+                el.kind
+            );
+        };
     }
 
     #[test]

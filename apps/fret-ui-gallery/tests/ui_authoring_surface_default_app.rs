@@ -1545,6 +1545,7 @@ fn button_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Cursor\", cursor)",
             "DocSection::build(cx, \"Size\", size)",
             "DocSection::build(cx, \"Default\", default)",
             "DocSection::build(cx, \"Outline\", outline)",
@@ -1557,13 +1558,16 @@ fn button_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Rounded\", rounded)",
             "DocSection::build(cx, \"Spinner\", spinner)",
             "DocSection::build(cx, \"Button Group\", button_group)",
-            "DocSection::build(cx, \"Link (Semantic)\", link_render)",
+            "DocSection::build(cx, \"As Link / As Child (Semantic)\", link_render)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Children (Fret)\", children)",
             "DocSection::build(cx, \"Variants Overview (Fret)\", variants)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Cursor\", cursor)",
             "DocSection::new(\"Size\", size)",
             "DocSection::new(\"Default\", default)",
             "DocSection::new(\"Outline\", outline)",
@@ -1576,9 +1580,23 @@ fn button_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Rounded\", rounded)",
             "DocSection::new(\"Spinner\", spinner)",
             "DocSection::new(\"Button Group\", button_group)",
-            "DocSection::new(\"Link (Semantic)\", link_render)",
+            "DocSection::new(\"As Link / As Child (Semantic)\", link_render)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Children (Fret)\", children)",
             "DocSection::new(\"Variants Overview (Fret)\", variants)",
+        ],
+    );
+}
+
+#[test]
+fn button_page_records_semantic_link_axis_and_children_api_conclusion() {
+    assert_normalized_markers_present(
+        "src/ui/pages/button.rs",
+        &[
+            "`ButtonRender::Link` is the shared Fret mapping for the Base UI docs' `As Link` section and the Radix docs' `As Child` link example, so semantic link rendering stays button-owned instead of widening the public surface with a generic root `asChild` / `compose()` API.",
+            "No extra generic root `asChild` / composable children API is currently warranted: `leading_child(...)` / `trailing_child(...)` already cover the documented inline icon/spinner lane, `child(...)` / `children(...)` keep the full-row override explicit, and `ButtonRender::Link` covers the semantics-sensitive link escape hatch.",
+            "Visual chrome stays aligned to the current `new-york-v4` button recipe, while the docs section order follows the published Base / Radix Button pages.",
         ],
     );
 }
@@ -1656,6 +1674,29 @@ fn button_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"ButtonGroupText\", text)",
             "DocSection::new(\"Flex-1 items (Fret)\", flex_1)",
+        ],
+    );
+}
+
+#[test]
+fn button_group_text_follow_up_teaches_label_mapping_without_slot_api() {
+    assert_normalized_markers_present(
+        "src/ui/snippets/button_group/text.rs",
+        &[
+            "let control_id = \"button-group-url\";",
+            "shadcn::ButtonGroupText::new_children([",
+            "shadcn::Label::new(\"https://\")",
+            ".for_control(control_id)",
+            ".into_element(cx)])",
+            "shadcn::Input::new(url_value).control_id(control_id)",
+        ],
+    );
+
+    assert_normalized_markers_present(
+        "src/ui/pages/button_group.rs",
+        &[
+            "`ButtonGroupText` uses `new(...)` for plain text and `new_children(...)` for custom inline content. `Label::for_control(...)` inside `ButtonGroupText::new_children(...)` is the Rust-native mapping for the upstream `asChild` label example, without widening the recipe to generic slot merging (ADR 0115).",
+            "`ButtonGroupText` and `Flex-1 items` remain after the upstream path as focused Fret follow-ups: one shows the explicit `new_children(...)` + `Label::for_control(...)` mapping for the upstream `asChild` label lane, the other demonstrates caller-owned flex negotiation.",
         ],
     );
 }
@@ -3403,8 +3444,8 @@ fn date_picker_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Time Picker\", time_picker)",
             "DocSection::build(cx, \"Natural Language Picker\", natural_language)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"With Presets\", presets)",
             "DocSection::build(cx, \"Label Association\", label)",
-            "DocSection::build(cx, \"Extras: With Presets\", presets)",
             "DocSection::build(cx, \"Extras: With Dropdowns\", dropdowns)",
             "DocSection::build(cx, \"Notes\", notes_stack)",
         ],
@@ -3419,9 +3460,26 @@ fn date_picker_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Natural Language Picker\", natural_language)",
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Label Association\", label)",
-            "DocSection::new(\"Extras: With Presets\", presets)",
+            "DocSection::new(\"With Presets\", presets)",
             "preview_date_picker(cx, open, month, selected)",
         ],
+    );
+}
+
+#[test]
+fn date_picker_input_snippet_keeps_upstream_ghost_icon_xs_trigger_surface() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/date_picker/input.rs",
+        &[
+            ".variant(shadcn::ButtonVariant::Ghost)",
+            ".size(shadcn::InputGroupButtonSize::IconXs)",
+            ".overflow_hidden()",
+        ],
+    );
+
+    assert!(
+        !normalized.contains(".size(shadcn::InputGroupButtonSize::IconSm)"),
+        "src/ui/snippets/date_picker/input.rs reintroduced the larger IconSm trailing trigger instead of the upstream icon-xs surface"
     );
 }
 
@@ -3485,6 +3543,24 @@ fn avatar_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Dropdown\", dropdown)",
             "DocSection::new(\"RTL\", rtl)",
             "preview_avatar(cx, avatar_image)",
+        ],
+    );
+}
+
+#[test]
+fn avatar_page_api_reference_lists_family_parts_and_builder_lanes() {
+    assert_normalized_markers_present(
+        "src/ui/pages/avatar.rs",
+        &[
+            "fn avatar_api_reference(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "avatar_api_table(cx, \"Avatar\",",
+            "avatar_api_table(cx, \"AvatarImage\",",
+            "avatar_api_table(cx, \"AvatarFallback\",",
+            "avatar_api_table(cx, \"AvatarBadge\",",
+            "avatar_api_table(cx, \"AvatarGroup\",",
+            "avatar_api_table(cx, \"AvatarGroupCount\",",
+            "`AvatarGroup::empty().children([..])`",
+            "`AvatarGroupCount::empty().children([..])`",
         ],
     );
 }
@@ -4325,17 +4401,18 @@ fn carousel_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Examples\", examples)",
             "DocSection::build(cx, \"Parts\", parts)",
             "DocSection::build(cx, \"Basic\", basic)",
-            "DocSection::build(cx, \"Sizes (1/3)\", sizes_thirds)",
-            "DocSection::build(cx, \"Sizes\", sizes)",
+            "DocSection::build(cx, \"Sizes\", sizes_thirds)",
+            "DocSection::build(cx, \"Sizes (Responsive)\", sizes)",
             "DocSection::build(cx, \"Spacing\", spacing)",
             "DocSection::build(cx, \"Spacing (Responsive)\", spacing_responsive)",
-            "DocSection::build(cx, \"Orientation (Vertical)\", orientation_vertical)",
+            "DocSection::build(cx, \"Orientation\", orientation_vertical)",
             "DocSection::build(cx, \"Options\", options)",
             "DocSection::build(cx, \"API\", api)",
             "DocSection::build(cx, \"Events\", events)",
-            "DocSection::build(cx, \"Plugin (Autoplay)\", plugin)",
+            "DocSection::build(cx, \"Plugins\", plugin)",
             "DocSection::build(cx, \"Plugin (Autoplay, Controlled)\", plugin_controlled)",
             "DocSection::build(cx, \"Plugin (Autoplay, stopOnInteraction via focus)\", plugin_stop_on_focus)",
             "DocSection::build(cx, \"Plugin (Autoplay, stopOnLastSnap)\", plugin_stop_on_last_snap)",
@@ -4351,17 +4428,18 @@ fn carousel_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Examples\", examples)",
             "DocSection::new(\"Parts\", parts)",
             "DocSection::new(\"Basic\", basic)",
-            "DocSection::new(\"Sizes (1/3)\", sizes_thirds)",
-            "DocSection::new(\"Sizes\", sizes)",
+            "DocSection::new(\"Sizes\", sizes_thirds)",
+            "DocSection::new(\"Sizes (Responsive)\", sizes)",
             "DocSection::new(\"Spacing\", spacing)",
             "DocSection::new(\"Spacing (Responsive)\", spacing_responsive)",
-            "DocSection::new(\"Orientation (Vertical)\", orientation_vertical)",
+            "DocSection::new(\"Orientation\", orientation_vertical)",
             "DocSection::new(\"Options\", options)",
             "DocSection::new(\"API\", api)",
             "DocSection::new(\"Events\", events)",
-            "DocSection::new(\"Plugin (Autoplay)\", plugin)",
+            "DocSection::new(\"Plugins\", plugin)",
             "DocSection::new(\"Plugin (Autoplay, Controlled)\", plugin_controlled)",
             "DocSection::new(\"Plugin (Autoplay, stopOnInteraction via focus)\", plugin_stop_on_focus)",
             "DocSection::new(\"Plugin (Autoplay, stopOnLastSnap)\", plugin_stop_on_last_snap)",
@@ -6855,19 +6933,19 @@ fn carousel_page_keeps_basic_preview_out_of_the_upstream_docs_path() {
     );
     assert!(
         carousel_page.contains(
-            "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Sizes/Spacing/Orientation), Options, API, Events, Plugin, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Basic`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`."
+            "Preview mirrors the shadcn Carousel docs structure after collapsing the top preview into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Examples`, `Options`, `API`, `Events`, `Plugins`, and `RTL`. Under `Examples`, Gallery keeps the upstream sub-cases explicit: `Sizes`, `Sizes (Responsive)`, `Spacing`, `Spacing (Responsive)`, and `Orientation`. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Basic`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`."
         ),
         "src/ui/pages/carousel.rs should describe `Basic` as a follow-up baseline preview rather than part of the upstream docs path"
     );
     assert!(
         normalized.contains(
-            "vec![demo,about,usage,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,fret_follow_ups,basic,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,compact_builder,parts,loop_carousel,loop_downgrade_cannot_loop,focus,duration,expandable,api_reference,]"
+            "vec![demo,about,usage,examples,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,fret_follow_ups,basic,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,compact_builder,parts,loop_carousel,loop_downgrade_cannot_loop,focus,duration,expandable,api_reference,]"
         ),
         "src/ui/pages/carousel.rs should place `Basic` after `Fret Follow-ups` instead of inside the upstream docs path"
     );
     assert!(
         !normalized.contains(
-            "vec![demo,about,usage,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,"
+            "vec![demo,about,usage,examples,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,"
         ),
         "src/ui/pages/carousel.rs should not keep `Basic` before the docs-path size examples"
     );
@@ -6886,19 +6964,19 @@ fn carousel_page_keeps_extra_plugin_variants_out_of_the_upstream_docs_path() {
     );
     assert!(
         carousel_page.contains(
-            "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Sizes/Spacing/Orientation), Options, API, Events, Plugin, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Basic`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`."
+            "Preview mirrors the shadcn Carousel docs structure after collapsing the top preview into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Examples`, `Options`, `API`, `Events`, `Plugins`, and `RTL`. Under `Examples`, Gallery keeps the upstream sub-cases explicit: `Sizes`, `Sizes (Responsive)`, `Spacing`, `Spacing (Responsive)`, and `Orientation`. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Basic`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`."
         ),
         "src/ui/pages/carousel.rs should describe the narrowed docs path before the follow-up plugin variants"
     );
     assert!(
         normalized.contains(
-            "vec![demo,about,usage,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,fret_follow_ups,basic,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,compact_builder,parts,loop_carousel,loop_downgrade_cannot_loop,focus,duration,expandable,api_reference,]"
+            "vec![demo,about,usage,examples,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,fret_follow_ups,basic,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,compact_builder,parts,loop_carousel,loop_downgrade_cannot_loop,focus,duration,expandable,api_reference,]"
         ),
         "src/ui/pages/carousel.rs should place the extra plugin variants after `Fret Follow-ups` instead of inside the upstream docs path"
     );
     assert!(
         !normalized.contains(
-            "vec![demo,about,usage,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,rtl,"
+            "vec![demo,about,usage,examples,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,rtl,"
         ),
         "src/ui/pages/carousel.rs should not place the extra plugin variants before `RTL`"
     );

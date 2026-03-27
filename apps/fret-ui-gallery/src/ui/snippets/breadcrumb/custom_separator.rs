@@ -14,10 +14,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             vec![shadcn::BreadcrumbList::new().into_element(cx, |cx| {
                 vec![
                     shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
-                        vec![shadcn::BreadcrumbLink::new("Home")
-                            .href("/")
-                            .action(CMD_APP_OPEN)
-                            .into_element(cx)]
+                        vec![
+                            shadcn::BreadcrumbLink::new("Home")
+                                .href("/")
+                                .action(CMD_APP_OPEN)
+                                .into_element(cx),
+                        ]
                     }),
                     shadcn::BreadcrumbSeparatorPart::new()
                         .children(|cx| {
@@ -30,10 +32,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         })
                         .into_element(cx),
                     shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
-                        vec![shadcn::BreadcrumbLink::new("Components")
-                            .href("/components")
-                            .action(CMD_APP_OPEN)
-                            .into_element(cx)]
+                        vec![
+                            shadcn::BreadcrumbLink::new("Components")
+                                .href("/components")
+                                .action(CMD_APP_OPEN)
+                                .into_element(cx),
+                        ]
                     }),
                     shadcn::BreadcrumbSeparatorPart::new()
                         .children(|cx| {

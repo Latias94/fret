@@ -120,7 +120,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             move |cx| {
                 let trigger = shadcn::InputGroupButton::new("")
                     .a11y_label("Select date")
-                    .size(shadcn::InputGroupButtonSize::IconSm)
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::InputGroupButtonSize::IconXs)
                     .icon(fret_icons::IconId::new_static("lucide.calendar"))
                     .into_element(cx)
                     .test_id("ui-gallery-date-picker-input-trigger");
@@ -131,7 +132,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::PopoverContent::build(cx, |cx| [calendar(cx)])
                     .refine_style(ChromeRefinement::default().p(Space::N0))
                     .refine_layout(
-                        LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto),
+                        LayoutRefinement::default()
+                            .w(fret_ui_kit::LengthRefinement::Auto)
+                            .overflow_hidden(),
                     )
                     .into_element(cx)
                     .test_id("ui-gallery-date-picker-input-content")

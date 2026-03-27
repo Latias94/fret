@@ -41,6 +41,7 @@ This audit compares Fret's shadcn-aligned `Calendar` against the upstream shadcn
 - Pass: Recipe-owned defaults match the upstream component source: the calendar owns its inner chrome (`bg-background`, padding, day-cell chrome, caption/nav layout) and keeps the card/popover background transparent when hosted inside those slots.
 - Pass: Example-level styling from the upstream docs stays caller-owned in Fret too: `rounded-lg border`, `p-0`, custom `--cell-size`, and field/popover width negotiation are applied in the gallery snippets rather than baked into `Calendar` defaults.
 - Pass: The calendar root remains intrinsic-width (`w-fit` outcome) by default; the earlier gallery demo stretch came from page-level layout authored at the call site, not from a recipe bug.
+- Pass: Single-month popup surfaces no longer reserve trailing whitespace: the transparent query-region wrapper now stays intrinsic unless the calendar actually needs multi-month container-width queries, so `PopoverContent(w-auto)` hugs the calendar root instead of a fill-width shim.
 - Pass: Multi-month responsive layout remains a mixed-ownership surface: the recipe owns month-row switching semantics, while host containers/popovers still own the outer width constraints.
 
 ### Gallery / docs parity
@@ -59,6 +60,7 @@ This audit compares Fret's shadcn-aligned `Calendar` against the upstream shadcn
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web --status-level fail`
 - `cargo nextest run -p fret-ui-gallery --lib gallery_calendar_core_examples_keep_upstream_aligned_targets_present --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --lib calendar_root_width_is_intrinsic_unless_caller_overrides_it --status-level fail`
+- `cargo nextest run -p fret-ui-shadcn --lib -E 'test(calendar_query_region_stays_intrinsic_for_single_month_and_fill_for_multi_month) | test(calendar_range_query_region_stays_intrinsic_for_single_month_and_fill_for_multi_month)' --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --lib -E 'test(calendar_day_button_supporting_text_renders_only_for_in_month_days) | test(calendar_range_day_button_supporting_text_renders_only_for_in_month_days)' --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --lib calendar_range_dropdown_caption_layout_renders_month_and_year_triggers --status-level fail`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-screenshot.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`

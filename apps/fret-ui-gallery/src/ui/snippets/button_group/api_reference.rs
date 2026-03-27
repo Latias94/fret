@@ -52,10 +52,15 @@ pub fn button_group_with_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> impl IntoUiElement<H> + use<H> {
     let site_name = cx.local_model(String::new);
+    let control_id = "site-name";
 
     shadcn::ButtonGroup::new([
-        shadcn::ButtonGroupText::new_children([ui::text("https://").into_element(cx)]).into(),
+        shadcn::ButtonGroupText::new_children([shadcn::Label::new("https://")
+            .for_control(control_id)
+            .into_element(cx)])
+        .into(),
         shadcn::Input::new(site_name)
+            .control_id(control_id)
             .a11y_label("Site name")
             .placeholder("my-app")
             .into(),

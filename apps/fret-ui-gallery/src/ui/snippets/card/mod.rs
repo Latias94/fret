@@ -39,6 +39,7 @@ fn demo_cover_rgba8(width: u32, height: u32) -> Vec<u8> {
 pub mod card_content;
 pub mod compositions;
 pub mod demo;
+pub mod description_children;
 pub mod image;
 pub mod meeting_notes;
 pub mod rtl;

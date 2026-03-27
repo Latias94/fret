@@ -6,47 +6,14 @@
 //!
 //! Keep `ui-gallery-avatar-*` `test_id`s stable: diag scripts depend on them.
 
-use fret_core::{ImageColorSpace, ImageId};
+use crate::driver::demo_assets::ui_gallery_shared_media_preview_request;
+use fret_core::ImageId;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
-use std::sync::OnceLock;
+use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 
 pub(crate) fn demo_image<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
-    cx.use_image_source_state(demo_avatar_source()).image
-}
-
-fn demo_avatar_source() -> &'static ImageSource {
-    static SOURCE: OnceLock<ImageSource> = OnceLock::new();
-    SOURCE.get_or_init(|| {
-        ImageSource::rgba8(160, 160, demo_avatar_rgba8(160, 160), ImageColorSpace::Srgb)
-    })
-}
-
-fn demo_avatar_rgba8(width: u32, height: u32) -> Vec<u8> {
-    let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
-    let width_f = (width.saturating_sub(1)).max(1) as f32;
-    let height_f = (height.saturating_sub(1)).max(1) as f32;
-
-    for y in 0..height {
-        for x in 0..width {
-            let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
-            let fx = x as f32 / width_f;
-            let fy = y as f32 / height_f;
-            let dx = fx - 0.5;
-            let dy = fy - 0.5;
-            let radial = (1.0 - (dx * dx + dy * dy).sqrt() * 1.6).clamp(0.0, 1.0);
-            let highlight =
-                ((1.0 - (fx - 0.26).abs() * 3.2 - (fy - 0.22).abs() * 4.0).clamp(0.0, 1.0)) * 56.0;
-
-            out[idx] = (42.0 + 84.0 * radial + 28.0 * fy + highlight).min(255.0) as u8;
-            out[idx + 1] = (74.0 + 90.0 * radial + 44.0 * fx + highlight * 0.45).min(255.0) as u8;
-            out[idx + 2] =
-                (122.0 + 102.0 * radial + 36.0 * (1.0 - fy) + highlight * 0.25).min(255.0) as u8;
-            out[idx + 3] = 255;
-        }
-    }
-
-    out
+    cx.use_image_source_state_from_asset_request(&ui_gallery_shared_media_preview_request())
+        .image
 }
 
 pub mod badge_icon;

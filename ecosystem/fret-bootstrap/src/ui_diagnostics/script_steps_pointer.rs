@@ -1780,8 +1780,9 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                     "script-step-{step_index:04}-click_selectable_span-timeout"
                 ));
                 *stop_script = true;
-                *failure_reason =
-                    Some("click_selectable_text_span_stable_no_semantics_match_timeout".to_string());
+                *failure_reason = Some(
+                    "click_selectable_text_span_stable_no_semantics_match_timeout".to_string(),
+                );
                 active.v2_step_state = None;
                 output.request_redraw = true;
             } else {

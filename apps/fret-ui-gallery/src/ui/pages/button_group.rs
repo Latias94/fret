@@ -30,12 +30,12 @@ pub(super) fn preview_button_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`ButtonGroup` exposes typed composition points for buttons, inputs, input groups, selects, dropdowns, popovers, and nested button groups, plus `orientation(...)`, `a11y_label(...)`, and `labelled_by_element(...)`.",
         "`ButtonGroupSeparator` keeps divider ownership explicit through `orientation(...)` and layout refinements; default divider thickness remains recipe-owned.",
-        "`ButtonGroupText` uses `new(...)` for plain text and `new_children(...)` for custom inline content. This is Fret's explicit alternative to generic `asChild` prop merging (ADR 0115).",
+        "`ButtonGroupText` uses `new(...)` for plain text and `new_children(...)` for custom inline content. `Label::for_control(...)` inside `ButtonGroupText::new_children(...)` is the Rust-native mapping for the upstream `asChild` label example, without widening the recipe to generic slot merging (ADR 0115).",
     ]);
 
     let notes = doc_layout::notes_block([
         "Gallery sections now mirror shadcn Button Group docs first: Demo, Usage, Accessibility, ButtonGroup vs ToggleGroup, examples, RTL, API Reference.",
-        "`ButtonGroupText` and `Flex-1 items` remain after the upstream path as focused Fret follow-ups: one documents the explicit `new_children(...)` surface, the other demonstrates caller-owned flex negotiation.",
+        "`ButtonGroupText` and `Flex-1 items` remain after the upstream path as focused Fret follow-ups: one shows the explicit `new_children(...)` + `Label::for_control(...)` mapping for the upstream `asChild` label lane, the other demonstrates caller-owned flex negotiation.",
         "Default-style ownership stays aligned with upstream: merged borders, outer radii, separator thickness, and nested-group gap are recipe-owned; width/flex growth remains caller-owned.",
         "Accessibility matches the upstream intent: the root stamps `role=group`, `a11y_label(...)` covers the `aria-label` path, and `labelled_by_element(...)` covers the `aria-labelledby` path without introducing a DOM-only API.",
     ]);

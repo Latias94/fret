@@ -2,24 +2,20 @@ pub const SOURCE: &str = include_str!("text.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_core::{FontWeight, Px};
+use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let url_value = cx.local_model(String::new);
-
-    let icon_id = |id: &'static str| fret_icons::IconId::new_static(id);
+    let control_id = "button-group-url";
 
     shadcn::ButtonGroup::new([
-        shadcn::ButtonGroupText::new_children([
-            icon::icon(cx, icon_id("lucide.globe")),
-            ui::text("https://")
-                .text_sm()
-                .font_weight(FontWeight::MEDIUM)
-                .into_element(cx),
-        ])
+        shadcn::ButtonGroupText::new_children([shadcn::Label::new("https://")
+            .for_control(control_id)
+            .into_element(cx)])
         .into(),
         shadcn::Input::new(url_value)
+            .control_id(control_id)
             .a11y_label("URL")
             .placeholder("my-app")
             .refine_layout(LayoutRefinement::default().w_px(Px(220.0)).min_w_0())

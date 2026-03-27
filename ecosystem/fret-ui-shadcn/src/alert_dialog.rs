@@ -5,12 +5,12 @@ use fret_core::{
     Color, Corners, Edges, FontWeight, Point, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap,
 };
 use fret_runtime::Model;
+use fret_ui::GlobalElementId;
 use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus, OnSelectableTextActivateSpan};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
     RenderTransformProps, SemanticFlexProps, SemanticsDecoration, SizeStyle,
 };
-use fret_ui::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -18,8 +18,8 @@ use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
-    ui, ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
-    OverlayPresence, Radius, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
+    OverlayPresence, Radius, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -1446,11 +1446,13 @@ impl AlertDialogHeader {
                 .into_element(cx);
 
             return cx.container(props, move |cx| {
-                vec![ui::h_flex(move |_cx| vec![media, text])
-                    .gap(Space::N6)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .into_element(cx)]
+                vec![
+                    ui::h_flex(move |_cx| vec![media, text])
+                        .gap(Space::N6)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                ]
             });
         }
 
@@ -1465,11 +1467,13 @@ impl AlertDialogHeader {
             .into_element(cx);
 
         cx.container(props, move |cx| {
-            vec![ui::v_flex(move |_cx| vec![media, text])
-                .gap(Space::N1p5)
-                .items_center()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .into_element(cx)]
+            vec![
+                ui::v_flex(move |_cx| vec![media, text])
+                    .gap(Space::N1p5)
+                    .items_center()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+            ]
         })
     }
 }
@@ -1651,11 +1655,13 @@ impl AlertDialogFooter {
                 .collect();
 
             cx.container(props, move |cx| {
-                vec![ui::h_flex(move |_cx| children)
-                    .gap(Space::N2)
-                    .items_stretch()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .into_element(cx)]
+                vec![
+                    ui::h_flex(move |_cx| children)
+                        .gap(Space::N2)
+                        .items_stretch()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                ]
             })
         } else if sm_breakpoint {
             shadcn_layout::container_hstack(
@@ -2313,18 +2319,18 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
+    use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
     use fret_ui::elements::bounds_for_element;
-    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     fn find_first_styled_text(el: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
@@ -2608,17 +2614,19 @@ mod tests {
                     }]);
 
                 let activated = activated.clone();
-                vec![AlertDialogDescription::new_selectable_with(
-                    props,
-                    Some(Arc::new(move |host, action_cx, _reason, activation| {
-                        let _ = host
-                            .models_mut()
-                            .update(&activated, |value| *value = Some(activation.tag.clone()));
-                        host.notify(action_cx);
-                        host.request_redraw(action_cx.window);
-                    })),
-                )
-                .into_element(cx)]
+                vec![
+                    AlertDialogDescription::new_selectable_with(
+                        props,
+                        Some(Arc::new(move |host, action_cx, _reason, activation| {
+                            let _ = host
+                                .models_mut()
+                                .update(&activated, |value| *value = Some(activation.tag.clone()));
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                        })),
+                    )
+                    .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -3196,8 +3204,9 @@ mod tests {
         let description_id = description_id_out
             .get()
             .expect("selectable description element id");
-        let description_node = fret_ui::elements::node_for_element(&mut app, window, description_id)
-            .expect("selectable description node");
+        let description_node =
+            fret_ui::elements::node_for_element(&mut app, window, description_id)
+                .expect("selectable description node");
         let semantics_node = snap
             .nodes
             .iter()
@@ -3239,21 +3248,23 @@ mod tests {
                 let trigger =
                     AlertDialogTrigger::new(crate::button::Button::new("Open").into_element(cx));
 
-                vec![AlertDialog::new(open.clone())
-                    .compose()
-                    .trigger(trigger)
-                    .portal(AlertDialogPortal::new())
-                    .overlay(AlertDialogOverlay::new())
-                    .content_with(|cx| {
-                        let footer = AlertDialogFooter::new(vec![
-                            AlertDialogCancel::from_scope("Cancel").into_element(cx),
-                            AlertDialogAction::from_scope("Continue").into_element(cx),
-                        ])
-                        .into_element(cx);
+                vec![
+                    AlertDialog::new(open.clone())
+                        .compose()
+                        .trigger(trigger)
+                        .portal(AlertDialogPortal::new())
+                        .overlay(AlertDialogOverlay::new())
+                        .content_with(|cx| {
+                            let footer = AlertDialogFooter::new(vec![
+                                AlertDialogCancel::from_scope("Cancel").into_element(cx),
+                                AlertDialogAction::from_scope("Continue").into_element(cx),
+                            ])
+                            .into_element(cx);
 
-                        AlertDialogContent::new(vec![footer]).into_element(cx)
-                    })
-                    .into_element(cx)]
+                            AlertDialogContent::new(vec![footer]).into_element(cx)
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -3355,39 +3366,41 @@ mod tests {
             bounds,
             "shadcn-alert-dialog-children-api-from-scope",
             |cx| {
-                vec![AlertDialog::new(open.clone())
-                    .children([
-                        AlertDialogPart::trigger(AlertDialogTrigger::build(
-                            crate::button::Button::new("Open"),
-                        )),
-                        AlertDialogPart::portal(AlertDialogPortal::new()),
-                        AlertDialogPart::overlay(AlertDialogOverlay::new()),
-                        AlertDialogPart::content_with(|cx| {
-                            AlertDialogContent::new([]).with_children(cx, |cx| {
-                                vec![
-                                    AlertDialogHeader::new([]).with_children(cx, |cx| {
-                                        vec![
-                                            AlertDialogTitle::new("Delete project?")
+                vec![
+                    AlertDialog::new(open.clone())
+                        .children([
+                            AlertDialogPart::trigger(AlertDialogTrigger::build(
+                                crate::button::Button::new("Open"),
+                            )),
+                            AlertDialogPart::portal(AlertDialogPortal::new()),
+                            AlertDialogPart::overlay(AlertDialogOverlay::new()),
+                            AlertDialogPart::content_with(|cx| {
+                                AlertDialogContent::new([]).with_children(cx, |cx| {
+                                    vec![
+                                        AlertDialogHeader::new([]).with_children(cx, |cx| {
+                                            vec![
+                                                AlertDialogTitle::new("Delete project?")
+                                                    .into_element(cx),
+                                                AlertDialogDescription::new(
+                                                    "This action cannot be undone.",
+                                                )
                                                 .into_element(cx),
-                                            AlertDialogDescription::new(
-                                                "This action cannot be undone.",
-                                            )
-                                            .into_element(cx),
-                                        ]
-                                    }),
-                                    AlertDialogFooter::new([]).with_children(cx, |cx| {
-                                        vec![
-                                            AlertDialogCancel::from_scope("Cancel")
-                                                .into_element(cx),
-                                            AlertDialogAction::from_scope("Continue")
-                                                .into_element(cx),
-                                        ]
-                                    }),
-                                ]
-                            })
-                        }),
-                    ])
-                    .into_element(cx)]
+                                            ]
+                                        }),
+                                        AlertDialogFooter::new([]).with_children(cx, |cx| {
+                                            vec![
+                                                AlertDialogCancel::from_scope("Cancel")
+                                                    .into_element(cx),
+                                                AlertDialogAction::from_scope("Continue")
+                                                    .into_element(cx),
+                                            ]
+                                        }),
+                                    ]
+                                })
+                            }),
+                        ])
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);

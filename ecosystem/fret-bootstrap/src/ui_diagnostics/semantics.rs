@@ -234,7 +234,10 @@ impl UiSemanticsInlineSpanV1 {
         redact_text: bool,
         max_string_bytes: usize,
     ) -> Self {
-        let mut tag = span.tag.as_deref().map(|s| maybe_redact_string(s, redact_text));
+        let mut tag = span
+            .tag
+            .as_deref()
+            .map(|s| maybe_redact_string(s, redact_text));
         if let Some(s) = &mut tag {
             truncate_string_bytes(s, max_string_bytes);
         }

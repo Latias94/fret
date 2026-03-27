@@ -7,15 +7,15 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let basic = snippets::basic::render(cx);
     let usage = snippets::usage::render(cx);
-    let label = snippets::label::render(cx);
     let range = snippets::range::render(cx);
     let dob = snippets::dob::render(cx);
-    let dropdowns = snippets::dropdowns::render(cx);
-    let presets = snippets::presets::render(cx);
-    let natural_language = snippets::natural_language::render(cx);
     let input = snippets::input::render(cx);
     let time_picker = snippets::time_picker::render(cx);
+    let natural_language = snippets::natural_language::render(cx);
     let rtl = snippets::rtl::render(cx);
+    let presets = snippets::presets::render(cx);
+    let label = snippets::label::render(cx);
+    let dropdowns = snippets::dropdowns::render(cx);
     let notes_stack = snippets::notes::render(cx);
     let notes_stack = DocSection::build(cx, "Notes", notes_stack)
         .description("Guidelines and parity notes for date picker recipes.")
@@ -69,15 +69,17 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example")
         .max_w(Px(980.0))
         .no_shell();
+    let presets = DocSection::build(cx, "With Presets", presets)
+        .description(
+            "Upstream shadcn registry example `date-picker-with-presets` (Select + Calendar in a popover).",
+        )
+        .code_rust_from_file_region(snippets::presets::SOURCE, "example")
+        .max_w(Px(980.0))
+        .no_shell();
     let label = DocSection::build(cx, "Label Association", label)
         .description("Use `FieldLabel::for_control`, `DatePicker::control_id`, and `DatePicker::test_id_prefix` to focus the trigger and keep derived automation anchors stable.")
         .test_id_prefix("ui-gallery-date-picker-label")
         .code_rust_from_file_region(snippets::label::SOURCE, "example")
-        .max_w(Px(980.0))
-        .no_shell();
-    let presets = DocSection::build(cx, "Extras: With Presets", presets)
-        .description("shadcn `date-picker-with-presets` (Select + Calendar in a popover).")
-        .code_rust_from_file_region(snippets::presets::SOURCE, "example")
         .max_w(Px(980.0))
         .no_shell();
     let dropdowns = DocSection::build(cx, "Extras: With Dropdowns", dropdowns)
@@ -91,7 +93,7 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Date Picker docs flow: Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL. Presets and dropdowns remain gallery extensions.",
+            "Preview follows the shadcn Date Picker docs flow first: Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL. `With Presets` stays as the upstream registry follow-up, while `Label Association` and `With Dropdowns` remain focused Fret/gallery extensions.",
         ),
         vec![
             demo,
@@ -103,8 +105,8 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             time_picker,
             natural_language,
             rtl,
-            label,
             presets,
+            label,
             dropdowns,
             notes_stack,
         ],

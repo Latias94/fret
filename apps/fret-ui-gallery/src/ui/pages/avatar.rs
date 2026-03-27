@@ -1,8 +1,149 @@
 use super::super::*;
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::avatar as snippets;
+
+fn avatar_api_table<I>(cx: &mut UiCx<'_>, title: &'static str, rows: I) -> impl UiChild + use<I>
+where
+    I: IntoIterator<Item = [&'static str; 3]>,
+{
+    let title = ui::text(title).font_semibold().into_element(cx);
+    let table =
+        doc_layout::text_table(cx, ["Surface", "Type", "Default"], rows, true).into_element(cx);
+
+    ui::v_flex(move |_cx| vec![title, table])
+        .gap(Space::N3)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+}
+
+fn avatar_api_reference(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let avatar = avatar_api_table(
+        cx,
+        "Avatar",
+        [
+            ["`size(...)`", "`AvatarSize`", "`Default`"],
+            [
+                "`children([...])`",
+                "`IntoIterator<Item = AnyElement>`",
+                "`[]`",
+            ],
+            ["`refine_style(...)`", "`ChromeRefinement`", "`default`"],
+            ["`refine_layout(...)`", "`LayoutRefinement`", "`default`"],
+        ],
+    )
+    .into_element(cx);
+    let image = avatar_api_table(
+        cx,
+        "AvatarImage",
+        [
+            ["`new(image)`", "`ImageId`", "required"],
+            ["`maybe(image)`", "`Option<ImageId>`", "`None`"],
+            ["`model(image)`", "`Model<Option<ImageId>>`", "-"],
+            ["`opacity(...)`", "`f32`", "`1.0`"],
+        ],
+    )
+    .into_element(cx);
+    let fallback = avatar_api_table(
+        cx,
+        "AvatarFallback",
+        [
+            ["`new(text)`", "`impl Into<Arc<str>>`", "required"],
+            [
+                "`when_image_missing(...)`",
+                "`Option<ImageId>`",
+                "render always",
+            ],
+            [
+                "`when_image_missing_model(...)`",
+                "`Model<Option<ImageId>>`",
+                "-",
+            ],
+            ["`delay_ms(...)`", "`u64`", "immediate"],
+            ["`delay_frames(...)`", "`u64`", "immediate"],
+        ],
+    )
+    .into_element(cx);
+    let badge = avatar_api_table(
+        cx,
+        "AvatarBadge",
+        [
+            [
+                "`children([...])`",
+                "`IntoIterator<Item = AnyElement>`",
+                "empty status dot",
+            ],
+            ["`size(...)`", "`AvatarSize`", "inherit avatar size"],
+            [
+                "`refine_style(...)`",
+                "`ChromeRefinement`",
+                "recipe defaults",
+            ],
+            ["`refine_layout(...)`", "`LayoutRefinement`", "`default`"],
+        ],
+    )
+    .into_element(cx);
+    let group = avatar_api_table(
+        cx,
+        "AvatarGroup",
+        [
+            [
+                "`new(children)`",
+                "`IntoIterator<Item = AnyElement>`",
+                "required",
+            ],
+            [
+                "`children([...])`",
+                "`IntoIterator<Item = AnyElement>`",
+                "`[]` via `empty()`",
+            ],
+            ["`size(...)`", "`AvatarSize`", "optional shared size scope"],
+            ["`refine_style(...)`", "`ChromeRefinement`", "`default`"],
+            ["`refine_layout(...)`", "`LayoutRefinement`", "`default`"],
+        ],
+    )
+    .into_element(cx);
+    let group_count = avatar_api_table(
+        cx,
+        "AvatarGroupCount",
+        [
+            [
+                "`new(children)`",
+                "`IntoIterator<Item = AnyElement>`",
+                "required",
+            ],
+            [
+                "`children([...])`",
+                "`IntoIterator<Item = AnyElement>`",
+                "`+3` when empty",
+            ],
+            ["`size(...)`", "`AvatarSize`", "inherit group/avatar size"],
+            [
+                "`refine_style(...)`",
+                "`ChromeRefinement`",
+                "recipe defaults",
+            ],
+            ["`refine_layout(...)`", "`LayoutRefinement`", "`default`"],
+        ],
+    )
+    .into_element(cx);
+    let notes = doc_layout::notes_block([
+        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/avatar.mdx`.",
+        "`className`-style upstream customization maps to `refine_style(...)` / `refine_layout(...)` in Fret; page/container width negotiation remains caller-owned.",
+        "`Avatar::new([..])` and `Avatar::children([..])` are already sufficient for composable avatar content; no extra generic children or slot-merge API is needed here.",
+        "`Avatar::empty().children([..])`, `AvatarGroup::empty().children([..])`, and `AvatarGroupCount::empty().children([..])` now cover the docs-shaped composable children lane without widening the family beyond its typed parts.",
+        "`AvatarBadge` stays the icon/content child lane, and `avatar_sized(...)` remains the preferred helper when size-dependent parts should inherit scope before landing.",
+    ])
+    .into_element(cx);
+
+    ui::v_flex(move |_cx| vec![avatar, image, fallback, badge, group, group_count, notes])
+        .gap(Space::N6)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+}
 
 pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
@@ -18,22 +159,20 @@ pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
     let fallback = snippets::fallback_only::render(cx);
 
-    let api_reference = doc_layout::notes_block([
-        "`Avatar`, `AvatarImage`, and `AvatarFallback` cover the base shadcn/Base UI surface, while `AvatarBadge`, `AvatarGroup`, and `AvatarGroupCount` stay as explicit typed recipe parts.",
-        "`Avatar::new([..])` remains the base composable builder, while `avatar_sized(...)` is the preferred helper when size-dependent children should inherit the active avatar size before landing.",
-        "Dropdown composition remains recipe-owned: the authored pressable child button is the trigger, and the nested avatar stays presentational content inside it.",
-    ]);
+    let api_reference = avatar_api_reference(cx);
 
     let notes = doc_layout::notes_block([
         "Core parity is already in a good place: default size, circular clipping, fallback timing, overlap geometry, and dropdown trigger attribution all match the audited upstream outcomes.",
         "Gallery sections now mirror shadcn Avatar docs first: Demo, Usage, Basic, Badge, Badge with Icon, Avatar Group, Avatar Group Count, Avatar Group with Icon, Sizes, Dropdown, RTL, API Reference.",
-        "Gallery snippets now resolve their demo image through the shared gallery demo asset bundle instead of relaying page-owned image models or synthesizing local RGBA buffers.",
+        "The current follow-up work is docs/API surface alignment rather than a mechanism-layer fix: the page now mirrors the upstream part breakdown more directly, and group/count snippets also teach the docs-shaped builder lane.",
+        "Gallery snippets now resolve their demo image through the shared gallery demo asset bundle, keeping avatar demos aligned with the rest of the first-party media surface.",
         "`Fallback only` remains a Fret-specific follow-up section for compact regression coverage across sizes.",
     ]);
 
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
-        .description("Public surface summary and composition ownership notes.")
+        .description("Upstream-shaped part breakdown plus Fret surface/default mapping.")
+        .max_w(Px(980.0))
         .test_id_prefix("ui-gallery-avatar-api-reference");
     let notes = DocSection::build(cx, "Notes", notes)
         .no_shell()
@@ -93,7 +232,7 @@ pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview now mirrors the shadcn Avatar docs order first, then appends a small Fret-specific fallback-only check.",
+            "Preview now mirrors the shadcn Avatar docs order first, and API Reference now tracks the upstream part breakdown more directly before appending a small Fret-specific fallback-only check.",
         ),
         vec![
             demo,

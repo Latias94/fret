@@ -29,6 +29,8 @@ example implementations in `repo-ref/ui`.
 - Pass: `Card::new([...])` plus `CardHeader` / `CardContent` / `CardFooter` / `CardTitle` / `CardDescription` / `CardAction` covers the common shadcn authoring path.
 - Pass: Free helpers (`card`, `card_header`, `card_title`, `card_description`, `card_action`, `card_content`, `card_footer`) now cover the copyable “children-style” path without forcing every example to allocate slot structs manually.
 - Pass: `CardTitle::new_children(...)` plus `card_title_children(...)` now cover the missing title-side composable children lane for rich/selectable text and caller-owned composition roots.
+- Pass: `CardDescription::new_children(...)` plus `card_description_children(...)` cover the matching rich/selectable description lane, so both text slots preserve recipe-owned typography while still accepting caller-owned child trees.
+- Pass: No new generic `children(...)` API is warranted at the root/section layer. `Card::new([...])`, slot `::new([...])`, and the helper-family builders already provide the JSX-style composable children surface without widening the public API further.
 - Pass: Builder-first helpers such as `CardBuild`, `CardHeader::build(...)`, and `CardFooter::build(...)` still cover advanced composition when a slot needs extra policy (for example footer direction/gap).
 - Pass: `CardSize::Sm` and per-slot layout/style refinements provide the expected recipe-level sizing hooks.
 - Note: Recommended authoring pattern is: free helpers for the common path, slot builders for advanced per-slot policy, root-level `refine_layout(...)` for call-site-owned width constraints, and title/description children helpers only when the compact text lane is genuinely too narrow.
@@ -41,11 +43,12 @@ example implementations in `repo-ref/ui`.
 - Pass: `CardHeader` keeps title/description/action alignment compatible with the upstream two-row grid outcome.
 - Pass: `CardContent` and `CardFooter` preserve the expected horizontal padding and allow richer compositions without collapsing intrinsic child sizes.
 - Pass: `CardFooter` row/column roots now request `w_full().min_w_0()` so footer-only or narrow-card text wraps against the card's inner width instead of collapsing into one word per line.
+- Verdict: the remaining layout translation is recipe-level, not mechanism-level. `CardContent` uses `items_start()` because Fret's helper stacks are real flex containers, while upstream `CardContent` is a plain `div`; `CardFooter` requests `w_full().min_w_0()` to keep DOM-like wrap behavior inside Fret's GPU-first layout model.
 
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Size`, `Image`, `RTL`, and `API Reference`.
-- Pass: `Rich Title (Fret)` now follows `API Reference` as the copyable app-facing teaching lane for `card_title_children(...)`, so rich title content does not require teaching `CardTitle::build(...)` directly.
+- Pass: `Rich Title (Fret)` and `Rich Description (Fret)` now follow `API Reference` as the copyable app-facing teaching lanes for `card_title_children(...)` and `card_description_children(...)`, so rich text content does not require teaching slot builders directly.
 - Pass: `Compositions`, `CardContent`, and `Meeting Notes` remain explicit Fret follow-ups after the upstream path, because they lock regression coverage for slot permutations and intrinsic-size behavior.
 - Pass: `API Reference` now spells out the Fret public surface explicitly, including caller-owned width, `CardFooter` direction/gap ownership, and the `CardTitle` children lane.
 - Pass: the `footer only` drift was a recipe-owned `CardFooter` width-budget issue, not a page-level `w-full` / `min-w-0` problem in the gallery composition.

@@ -52,11 +52,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .into_element(cx)
             })
             .collect::<Vec<_>>();
-        let count =
-            shadcn::AvatarGroupCount::new([ui::text("+3").font_medium().nowrap().into_element(cx)])
-                .into_element(cx);
+        let count = shadcn::AvatarGroupCount::empty()
+            .children([ui::text("+3").font_medium().nowrap().into_element(cx)])
+            .into_element(cx);
 
-        shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
+        shadcn::AvatarGroup::empty()
+            .children(avatars.into_iter().chain([count]).collect::<Vec<_>>())
             .size(shadcn::AvatarSize::Default)
             .into_element(cx)
             .test_id("ui-gallery-avatar-demo-group")

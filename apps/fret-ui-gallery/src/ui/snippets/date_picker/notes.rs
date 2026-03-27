@@ -8,7 +8,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| {
             vec![
                 shadcn::raw::typography::muted(
-                    "This page mirrors shadcn Date Picker docs (new-york-v4) and keeps the diag suite stable.",
+                    "This page mirrors the shadcn Date Picker docs path first, then appends the upstream `date-picker-with-presets` follow-up and the gallery-only dropdown coverage.",
                 ).into_element(cx),
                 shadcn::raw::typography::muted(
                     "Calendar dropdown caption improves large-jump navigation compared with arrow-only controls.",

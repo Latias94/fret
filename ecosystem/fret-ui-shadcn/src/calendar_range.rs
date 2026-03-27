@@ -398,11 +398,18 @@ impl CalendarRange {
         let chrome_override = self.chrome;
         let layout_override = self.layout;
 
+        let query_region_layout = if number_of_months > 1
+            && !matches!(
+                surface_slot_in_scope(cx),
+                Some(ShadcnSurfaceSlot::PopoverContent)
+            ) {
+            LayoutRefinement::default().w_full().min_w_0()
+        } else {
+            LayoutRefinement::default()
+        };
+
         let region_props = LayoutQueryRegionProps {
-            layout: decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default().w_full().min_w_0(),
-            ),
+            layout: decl_style::layout_style(&theme, query_region_layout),
             name: None,
         };
 
@@ -1620,8 +1627,19 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::{AnyElement, ElementKind};
+    use fret_ui::element::{AnyElement, ElementKind, LayoutQueryRegionProps, Length};
     use time::Month;
+
+    fn find_layout_query_region(root: &AnyElement) -> &LayoutQueryRegionProps {
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            if let ElementKind::LayoutQueryRegion(props) = &node.kind {
+                return props;
+            }
+            stack.extend(node.children.iter());
+        }
+        panic!("expected CalendarRange to include a layout query region wrapper");
+    }
 
     fn count_svg_icons(node: &AnyElement) -> usize {
         let mut out = usize::from(matches!(node.kind, ElementKind::SvgIcon(_)));
@@ -1768,6 +1786,40 @@ mod tests {
                 find_element_by_test_id(&el, "calendar.range.caption.caption-year-trigger")
                     .is_some(),
                 "expected range dropdown caption year trigger to render"
+            );
+        });
+    }
+
+    #[test]
+    fn calendar_range_query_region_stays_intrinsic_for_single_month_and_fill_for_multi_month() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let month = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::December));
+            let selected = cx.app.models_mut().insert(DateRangeSelection::default());
+
+            let single = CalendarRange::new(month.clone(), selected.clone()).into_element(cx);
+            let multi = CalendarRange::new(month, selected)
+                .number_of_months(2)
+                .into_element(cx);
+
+            assert_eq!(
+                find_layout_query_region(&single).layout.size.width,
+                Length::Auto,
+                "expected single-month CalendarRange query region to stay intrinsic so popup surfaces do not reserve trailing whitespace"
+            );
+            assert_eq!(
+                find_layout_query_region(&multi).layout.size.width,
+                Length::Fill,
+                "expected multi-month CalendarRange query region to keep fill-width behavior for non-popover container queries"
             );
         });
     }
