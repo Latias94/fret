@@ -3082,6 +3082,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-calendar-custom-cell-size-responsive",
+      "path": "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "calendar",
+        "cell-size",
+        "responsive",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-calendar-demo-code-tab-scroll-range",
       "path": "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-demo-code-tab-scroll-range.json",
       "required_capabilities": [

@@ -1773,6 +1773,40 @@ mod tests {
     }
 
     #[test]
+    fn calendar_range_cell_size_overrides_day_pressable_bounds() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(280.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let month = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::December));
+            let selected = cx.app.models_mut().insert(DateRangeSelection::default());
+
+            let el = CalendarRange::new(month, selected)
+                .test_id_prefix("calendar.range.size")
+                .cell_size(Px(40.0))
+                .into_element(cx);
+
+            let Some(day) = find_element_by_test_id(&el, "calendar.range.size:2026-12-12") else {
+                panic!("expected in-month day pressable to render");
+            };
+
+            let ElementKind::Pressable(props) = &day.kind else {
+                panic!("expected calendar day test_id to land on a pressable");
+            };
+
+            assert_eq!(props.layout.size.width, Length::Px(Px(40.0)));
+            assert_eq!(props.layout.size.height, Length::Px(Px(40.0)));
+        });
+    }
+
+    #[test]
     fn calendar_range_nav_buttons_render_svg_icons() {
         let window = AppWindowId::default();
         let mut app = App::new();

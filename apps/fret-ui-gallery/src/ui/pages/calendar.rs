@@ -51,7 +51,7 @@ pub(super) fn preview_calendar(
         "`CalendarDayButton::supporting_text_by(...)` is the landed day-cell composition seam for the upstream `components.DayButton` custom-days example, and the same seam now flows through both `Calendar` and `CalendarRange`.",
         "This stays intentionally narrower than a generic root-level `children` API: custom content belongs to the day-button slot, while the calendar frame remains recipe-owned.",
         "`CalendarRange` and `CalendarMultiple` remain explicit typed variants instead of reintroducing a single `mode` enum builder at the root surface.",
-        "Caller-owned styling remains `rounded-lg border`, `p-0`, outer width, and `cell_size(...)`; the recipe still owns inner calendar chrome, caption/nav layout, and slot-aware backgrounds.",
+        "Caller-owned styling remains `rounded-lg border`, `p-0`, outer width, and `cell_size(...)`; responsive `md:[--cell-size:*]` style parity is expressed at the call site with viewport queries rather than baked into the recipe defaults.",
     ]);
 
     let notes = doc_layout::notes_block([
@@ -59,6 +59,7 @@ pub(super) fn preview_calendar(
         "For the closest source-aligned equivalent to upstream `selected/onSelect`, pass your selected model into `Calendar::new_controllable(cx, Some(selected), default_selected)` and let the calendar own only the visible month state.",
         "Gallery sections now mirror the upstream docs path first: Demo, Usage, About, Date Picker, Persian / Hijri / Jalali Calendar, Selected Date (With TimeZone), core examples, RTL, API Reference. Fret-only extensions stay after that path.",
         "Default-style ownership follows shadcn upstream: recipe defaults own the inner calendar chrome (`bg-background`, padding, day-cell styling), while example-level `rounded-lg border`, `p-0`, and custom `--cell-size` tweaks stay caller-owned.",
+        "The `Custom Cell Size` snippet now mirrors the upstream `Card` + `CardContent` shell and uses viewport queries at the call site to translate Tailwind-style `md:[--cell-size:*]` behavior into typed Fret code.",
         "Fret uses `time::Date` for selections, so timezone offset issues from JS `Date` do not apply.",
         "Set `FRET_UI_GALLERY_FIXED_TODAY=YYYY-MM-DD` to make presets deterministic in screenshots/tests.",
         "Diagnostics use inner `ui-gallery.calendar.*` test_id prefixes from snippets, while page sections keep `ui-gallery-calendar-*` doc IDs.",

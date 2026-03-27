@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("custom_cell_size.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::Px;
+use fret_ui::Invalidation;
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -54,12 +55,25 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         })
     });
 
-    shadcn::CalendarRange::new(month, selected)
+    let is_md = fret_ui_kit::declarative::viewport_queries::viewport_width_at_least(
+        cx,
+        Invalidation::Layout,
+        fret_ui_kit::declarative::viewport_queries::tailwind::MD,
+        fret_ui_kit::declarative::viewport_queries::ViewportQueryHysteresis::default(),
+    );
+    let cell_size = if is_md { Px(48.0) } else { Px(40.0) };
+
+    let calendar = shadcn::CalendarRange::new(month, selected)
         .test_id_prefix("ui-gallery.calendar.custom-cell")
         .day_button(day_button)
-        .cell_size(Px(44.0))
+        .cell_size(cell_size)
         .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
-        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
-        .into_element(cx)
+        .into_element(cx);
+
+    shadcn::Card::new([shadcn::CardContent::new([calendar])
+        .refine_style(ChromeRefinement::default().p(Space::N0))
+        .into_element(cx)])
+    .refine_style(ChromeRefinement::default().p(Space::N0))
+    .into_element(cx)
 }
 // endregion: example
