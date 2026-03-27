@@ -1308,7 +1308,7 @@ fn selected_combobox_input_group_snippet_prefers_typed_input_addons() {
     let page = read("src/ui/pages/combobox.rs");
     assert!(
         page.contains(
-            "`Extras: Input Group` demonstrates typed `ComboboxInput::children([InputGroupAddon...])` composition for inline addons; keep that surface narrow instead of widening to generic arbitrary children."
+            "`Input Group` demonstrates typed `ComboboxInput::children([InputGroupAddon...])` composition for inline addons; keep that surface narrow instead of widening to generic arbitrary children."
         ),
         "src/ui/pages/combobox.rs should document the typed ComboboxInput addon surface instead of teaching a generic children escape hatch"
     );
@@ -3891,41 +3891,51 @@ fn combobox_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/combobox.rs",
         &[
-            "DocSection::build(cx, \"Conformance Demo\", conformance_demo)",
             "DocSection::build(cx, \"Basic\", basic)",
             "DocSection::build(cx, \"Usage\", usage)",
-            "DocSection::build(cx, \"Label Association\", label)",
-            "DocSection::build(cx, \"Auto Highlight\", auto_highlight)",
+            "DocSection::build(cx, \"Custom Items\", custom_items)",
+            "DocSection::build(cx, \"Multiple Selection\", multiple)",
             "DocSection::build(cx, \"Clear Button\", clear)",
             "DocSection::build(cx, \"Groups\", groups)",
+            "DocSection::build(cx, \"Invalid\", invalid)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Auto Highlight\", auto_highlight)",
+            "DocSection::build(cx, \"Popup\", popup)",
+            "DocSection::build(cx, \"Input Group\", input_group)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Conformance Demo\", conformance_demo)",
             "DocSection::build(cx, \"Groups + Separator\", groups_with_separator)",
-            "DocSection::build(cx, \"Trigger Button\", trigger_button)",
-            "DocSection::build(cx, \"Multiple Selection\", multiple)",
-            "DocSection::build(cx, \"Extras: Custom Items\", custom_items)",
-            "DocSection::build(cx, \"Extras: Long List\", long_list)",
-            "DocSection::build(cx, \"Extras: Invalid\", invalid)",
-            "DocSection::build(cx, \"Extras: Disabled\", disabled)",
-            "DocSection::build(cx, \"Extras: Input Group\", input_group)",
-            "DocSection::build(cx, \"Extras: RTL\", rtl)",
+            "DocSection::build(cx, \"Label Association\", label)",
+            "DocSection::build(cx, \"Long List\", long_list)",
         ],
         &[
-            "DocSection::new(\"Conformance Demo\", conformance_demo)",
             "DocSection::new(\"Basic\", basic)",
             "DocSection::new(\"Usage\", usage)",
-            "DocSection::new(\"Label Association\", label)",
-            "DocSection::new(\"Auto Highlight\", auto_highlight)",
+            "DocSection::new(\"Custom Items\", custom_items)",
+            "DocSection::new(\"Multiple Selection\", multiple)",
             "DocSection::new(\"Clear Button\", clear)",
             "DocSection::new(\"Groups\", groups)",
+            "DocSection::new(\"Invalid\", invalid)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Auto Highlight\", auto_highlight)",
+            "DocSection::new(\"Popup\", popup)",
+            "DocSection::new(\"Input Group\", input_group)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Conformance Demo\", conformance_demo)",
             "DocSection::new(\"Groups + Separator\", groups_with_separator)",
-            "DocSection::new(\"Trigger Button\", trigger_button)",
-            "DocSection::new(\"Multiple Selection\", multiple)",
-            "DocSection::new(\"Extras: Custom Items\", custom_items)",
-            "DocSection::new(\"Extras: Long List\", long_list)",
-            "DocSection::new(\"Extras: Invalid\", invalid)",
-            "DocSection::new(\"Extras: Disabled\", disabled)",
-            "DocSection::new(\"Extras: Input Group\", input_group)",
-            "DocSection::new(\"Extras: RTL\", rtl)",
+            "DocSection::new(\"Label Association\", label)",
+            "DocSection::new(\"Long List\", long_list)",
         ],
+    );
+
+    let page = read("src/ui/pages/combobox.rs");
+    assert!(
+        page.contains(
+            "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups."
+        ),
+        "src/ui/pages/combobox.rs should keep the docs-path-first combobox page structure explicit"
     );
 }
 
@@ -6219,11 +6229,15 @@ fn selected_badge_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/combobox.rs",
         &[
+            "let api_reference = doc_layout::notes_block([",
             "let notes = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
             "let notes = DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
+            "let api_reference = doc_layout::notes(",
             "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
             "DocSection::new(\"Notes\", notes)",
         ],
     );
@@ -6562,13 +6576,7 @@ fn selected_combobox_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
         "src/ui/snippets/combobox/long_list.rs",
         "src/ui/snippets/combobox/input_group.rs",
-        "src/ui/snippets/combobox/trigger_button.rs",
         "src/ui/snippets/combobox/groups_with_separator.rs",
-        "src/ui/snippets/combobox/groups.rs",
-        "src/ui/snippets/combobox/disabled.rs",
-        "src/ui/snippets/combobox/custom_items.rs",
-        "src/ui/snippets/combobox/clear_button.rs",
-        "src/ui/snippets/combobox/invalid.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -6585,13 +6593,7 @@ fn selected_combobox_state_rows_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
         "src/ui/snippets/combobox/long_list.rs",
         "src/ui/snippets/combobox/input_group.rs",
-        "src/ui/snippets/combobox/trigger_button.rs",
         "src/ui/snippets/combobox/groups_with_separator.rs",
-        "src/ui/snippets/combobox/groups.rs",
-        "src/ui/snippets/combobox/disabled.rs",
-        "src/ui/snippets/combobox/custom_items.rs",
-        "src/ui/snippets/combobox/clear_button.rs",
-        "src/ui/snippets/combobox/invalid.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,

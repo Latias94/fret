@@ -81,14 +81,30 @@ Base UI combobox lifecycle semantics.
   to pre-format richer labels.
 - Pass: `ComboboxItem::keywords(...)` is forwarded to cmdk-style filtering via `CommandItem::keywords(...)`.
 
+### Gallery docs surface
+
+- Pass: UI Gallery now mirrors the shadcn/Base UI docs path first with
+  `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`,
+  `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`.
+- Pass: Fret-specific `Conformance Demo`, `Groups + Separator`, `Label Association`, and
+  `Long List` sections are now explicit follow-ups instead of being mixed into the primary docs
+  path.
+- Pass: The docs-path snippets no longer carry gallery-local `Selected:` / `Query:` debug rows
+  when those rows are not part of the upstream teaching surface; state rows remain only on the
+  diagnostics-oriented follow-ups that still need them.
+- Note: `Popup` and `Input Group` still map upstream composable-children outcomes onto Fret's
+  typed recipe surface (`trigger(...)`, `ComboboxContent::new([..])`,
+  `ComboboxInput::children([InputGroupAddon...])`) rather than a generic root `children(...)`
+  API.
+
 ## Known gaps
 
 - Gap: Base UI callbacks include cancellable event details; Fret currently exposes reason metadata
   but does not provide cancelable `eventDetails` contracts.
-- Gap: UI Gallery docs surface still uses a Fret-typed parts mapping instead of JSX-style arbitrary
-  nested children. That is currently intentional; only widen it if a concrete upstream authoring
-  outcome cannot be represented with `ComboboxContent::new([...])`, `ComboboxList::{items,groups}`,
-  or `ComboboxItem::content(...)`.
+- Note: Fret still keeps a typed recipe surface instead of JSX-style arbitrary nested children.
+  That remains intentional; only widen it if a concrete upstream authoring outcome cannot be
+  represented with `ComboboxContent::new([...])`, `ComboboxList::{items,groups}`,
+  `ComboboxInput::children([InputGroupAddon...])`, or `ComboboxItem::content(...)`.
 
 ## Conclusion
 
@@ -101,6 +117,11 @@ Base UI combobox lifecycle semantics.
   closure-based parts surface remains available for upstream-shaped patch stories.
 - Result: That same compact-root posture now also covers the chips variant, so first-party
   `Combobox` examples no longer split into two default authoring stories.
+- Result: The Gallery page now keeps the upstream docs path legible first and moves diagnostics /
+  Fret-only follow-ups after `API Reference`, so page-level drift is no longer conflated with
+  runtime parity.
+- Result: Removing non-essential debug rows from the docs-path snippets keeps page parity anchored
+  to shadcn/Base UI while preserving diagnostics value on the explicit Fret follow-up surfaces.
 - Result: Keep the current typed children/parts posture unless a concrete upstream example proves
   it insufficient; do not widen to arbitrary children by default.
 - Authoring-lane classification: keep `Combobox` on the direct recipe root/bridge lane.
@@ -121,6 +142,9 @@ Base UI combobox lifecycle semantics.
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_reason_maps_dismiss_reasons`
 - `cargo test -p fret-ui-shadcn --lib combobox_builder_steps_apply_the_same_patch_surface -- --exact --nocapture`
 - `cargo test -p fret-ui-shadcn --lib combobox_chips_builder_steps_apply_the_same_patch_surface -- --exact --nocapture`
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app combobox_page_uses_typed_doc_sections_for_app_facing_snippets selected_combobox_input_group_snippet_prefers_typed_input_addons selected_combobox_snippet_helpers_prefer_into_ui_element_over_anyelement selected_combobox_state_rows_prefer_into_ui_element_over_anyelement`
+- `cargo nextest run -p fret-ui-gallery combobox_visible_section_contents_do_not_overlap_while_scrolling`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json --dir target/fret-diag-combobox-popup-20260327-2 --launch -- cargo run -p fret-ui-gallery`
 - `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-label-click-focus.json --dir target/fret-diag-combobox-label-focus-20260320-1 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-combobox cargo run -p fret-ui-gallery`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-combobox-custom-items-detail-filter-react.json --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-custom-items-detail-filter-react.json --dir target/fret-diag-combobox-custom-items-20260327-1 --launch -- cargo run -p fret-ui-gallery`
 - `cargo check -p fret-ui-gallery --message-format short`
