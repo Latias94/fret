@@ -1,0 +1,181 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-dialog-wrap-smoke",
+    "tags": ["ui-gallery", "shadcn", "dialog", "wrap", "layout"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Navigates to the Dialog component page in a narrow window.",
+      "Opens the Scrollable Content and Sticky Footer examples.",
+      "Verifies the first long body row stays within the window bounds and captures evidence."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 760.0 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "dialog" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-dialog" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-dialog" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-dialog" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-dialog-scrollable-trigger" },
+      "delta_y": -140.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-dialog-scrollable-trigger" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-scrollable-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_under",
+        "scope": { "kind": "test_id", "id": "ui-gallery-dialog-scrollable-content" },
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-scrollable-row-01" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-scrollable-row-01" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-dialog-wrap-smoke.scrollable"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-dialog-wrap-smoke.scrollable"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-dialog-wrap-smoke.scrollable"
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-scrollable-content" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-dialog-sticky-footer-trigger" },
+      "delta_y": -140.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-dialog-sticky-footer-trigger" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-sticky-footer-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_under",
+        "scope": { "kind": "test_id", "id": "ui-gallery-dialog-sticky-footer-content" },
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-sticky-footer-row-01" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-sticky-footer-row-01" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-dialog-wrap-smoke.sticky-footer"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-dialog-wrap-smoke.sticky-footer"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-dialog-wrap-smoke.sticky-footer"
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-sticky-footer-content" }
+      },
+      "timeout_frames": 240
+    }
+  ]
+}

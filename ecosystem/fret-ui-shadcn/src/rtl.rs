@@ -94,6 +94,40 @@ pub(crate) fn inline_start_end_pair<T>(
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct HorizontalVisualItemPosition {
+    pub is_visual_first: bool,
+    pub is_visual_last: bool,
+    pub order: Option<i32>,
+}
+
+/// Computes visual first/last and flex-order for horizontal rows in Fret.
+///
+/// Fret's horizontal flex axis stays physical left-to-right even under RTL, so recipe code that
+/// wants DOM-like RTL visual outcomes must explicitly assign `flex.order` and then derive
+/// first/last from the visual order instead of the source index.
+#[inline]
+pub(crate) fn horizontal_visual_item_position(
+    dir: LayoutDirection,
+    idx: usize,
+    len: usize,
+) -> HorizontalVisualItemPosition {
+    debug_assert!(len > 0, "horizontal_visual_item_position requires len > 0");
+
+    match dir {
+        LayoutDirection::Ltr => HorizontalVisualItemPosition {
+            is_visual_first: idx == 0,
+            is_visual_last: idx + 1 == len,
+            order: None,
+        },
+        LayoutDirection::Rtl => HorizontalVisualItemPosition {
+            is_visual_first: idx + 1 == len,
+            is_visual_last: idx == 0,
+            order: Some((len - 1 - idx) as i32),
+        },
+    }
+}
+
 #[inline]
 pub(crate) fn vec_main_with_inline_end<T>(
     dir: LayoutDirection,
@@ -367,6 +401,42 @@ mod tests {
         assert_eq!(
             concat_main_with_inline_start_vec(LayoutDirection::Rtl, 1, vec![2, 3]),
             vec![1, 3, 2]
+        );
+    }
+
+    #[test]
+    fn horizontal_visual_item_position_tracks_visual_edges_and_order() {
+        assert_eq!(
+            horizontal_visual_item_position(LayoutDirection::Ltr, 0, 3),
+            HorizontalVisualItemPosition {
+                is_visual_first: true,
+                is_visual_last: false,
+                order: None,
+            }
+        );
+        assert_eq!(
+            horizontal_visual_item_position(LayoutDirection::Ltr, 2, 3),
+            HorizontalVisualItemPosition {
+                is_visual_first: false,
+                is_visual_last: true,
+                order: None,
+            }
+        );
+        assert_eq!(
+            horizontal_visual_item_position(LayoutDirection::Rtl, 0, 3),
+            HorizontalVisualItemPosition {
+                is_visual_first: false,
+                is_visual_last: true,
+                order: Some(2),
+            }
+        );
+        assert_eq!(
+            horizontal_visual_item_position(LayoutDirection::Rtl, 2, 3),
+            HorizontalVisualItemPosition {
+                is_visual_first: true,
+                is_visual_last: false,
+                order: Some(0),
+            }
         );
     }
 }

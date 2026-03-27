@@ -26,7 +26,8 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`Input::new(model)` is the Fret equivalent of the upstream `<Input />`; `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `aria_required(...)`, and `password()` cover the current documented core surface.",
         "`Input` root width/height defaults remain recipe-owned (`w-full min-w-0` plus the control height) because the upstream recipe defines those constraints on the component itself.",
-        "`control_id(...)` plus `FieldLabel::for_control(...)` is the Fret path for label association; it stays a focused follow-up example instead of widening the base Input API.",
+        "Field-backed examples on this page default to `FieldLabel::for_control(...)` + `Input::control_id(...)` to mirror upstream `htmlFor` / `id`; keep `a11y_label(...)` for unlabeled controls such as `Demo`, `Usage`, and `Inline`.",
+        "The dedicated `Label Association` section remains the focused regression-friendly follow-up that proves label clicks, `labelled-by`, and `described-by` survive on the gallery page.",
         "`Input` stays a leaf control; labels/descriptions/errors belong in `Field`, and inline adornments belong in `InputGroup` / `ButtonGroup`, so no generic `children(...)` / `asChild` surface is needed here.",
         "The self-drawn input surface does not yet expose generic browser `type=` hints (`email/search/url/tel/file`) as a public API; `password()` is the direct parity path today, and the file example remains an explicit composition translation.",
         "Native file inputs are authored as `Input` + `Browse` button composition; Fret does not mirror DOM `type=\"file\"` directly, and diagnostics runs mock the picker to keep scripted gates deterministic.",
@@ -36,6 +37,7 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "This page follows the upstream Input docs path first: Demo, Usage, Basic, Field, Field Group, Disabled, Invalid, File, Inline, Grid, Required, Badge, Input Group, Button Group, Form, RTL.",
         "Use plain `Input` when you only need an editable value; compose with `Field` parts or `InputGroup` once labels, descriptions, validation copy, or inline addons become part of the authoring surface.",
+        "When a visible label exists, prefer `FieldLabel::for_control(...)` + `Input::control_id(...)` over duplicating the accessible name with `a11y_label(...)`.",
         "Copyable gallery snippets standardize on `use fret_ui_shadcn::{facade as shadcn, prelude::*};` for the curated shadcn lane.",
         "Most regressions here come from IME routing, label/control wiring, width negotiation, or docs-page drift, so keep `ui-gallery-input-*` ids stable when extending the page or adding diag scripts.",
     ]);
@@ -121,7 +123,7 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Input docs path first: Demo, Usage, Basic, Field, Field Group, Disabled, Invalid, File, Inline, Grid, Required, Badge, Input Group, Button Group, Form, RTL. `Label Association` and `API Reference` stay as explicit Fret follow-ups.",
+            "Preview mirrors the shadcn Input docs path first: Demo, Usage, Basic, Field, Field Group, Disabled, Invalid, File, Inline, Grid, Required, Badge, Input Group, Button Group, Form, RTL. Field-backed examples now use explicit label/control association on that docs path; `Label Association` and `API Reference` stay as focused Fret follow-ups.",
         ),
         vec![
             demo,

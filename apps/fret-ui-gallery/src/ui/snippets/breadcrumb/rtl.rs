@@ -4,9 +4,23 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Theme;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use shadcn::raw::breadcrumb::primitives as bc;
 use std::sync::Arc;
+
+fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
+    bc::BreadcrumbSeparator::new()
+        .children(|cx| {
+            [shadcn::raw::icon::icon_with(
+                cx,
+                fret_icons::IconId::new_static("lucide.dot"),
+                Some(Px(14.0)),
+                None,
+            )]
+        })
+        .into_element(cx)
+}
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model(|| false);
@@ -16,7 +30,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let list = bc::BreadcrumbList::new().into_element(cx, |cx| {
                 let home = bc::BreadcrumbItem::new().into_element(cx, |cx| {
                     vec![
-                        bc::BreadcrumbLink::new("Home")
+                        bc::BreadcrumbLink::new("الرئيسية")
                             .on_activate(Arc::new(|_host, _acx, _reason| {}))
                             .into_element(cx),
                     ]
@@ -32,14 +46,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 let fg = theme.color_token("foreground");
                                 let muted = theme.color_token("muted-foreground");
                                 let mut props = fret_ui::element::PressableProps::default();
-                                props.a11y.label = Some(Arc::<str>::from("Components"));
+                                props.a11y.label = Some(Arc::<str>::from("المكونات"));
                                 props.a11y.test_id = Some(Arc::<str>::from(
                                     "ui-gallery-breadcrumb-rtl-dropdown-trigger",
                                 ));
 
                                 cx.pressable(props, move |cx, st| {
                                     let color = if st.hovered { fg } else { muted };
-                                    let label = fret_ui_kit::ui::text("Components")
+                                    let label = fret_ui_kit::ui::text("المكونات")
                                         .text_color(fret_ui_kit::ColorRef::Color(color))
                                         .nowrap()
                                         .into_element(cx);
@@ -51,7 +65,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                     );
 
                                     vec![
-                                        ui::h_row(move |_cx| vec![label, chevron])
+                                        ui::h_row(move |_cx| vec![chevron, label])
                                             .gap(Space::N1)
                                             .items_center()
                                             .into_element(cx),
@@ -60,19 +74,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             },
                             |_cx| {
                                 vec![
-                                    shadcn::DropdownMenuEntry::Item(
-                                        shadcn::DropdownMenuItem::new("Documentation")
+                                    shadcn::DropdownMenuGroup::new([
+                                        shadcn::DropdownMenuItem::new("التوثيق")
                                             .on_activate(Arc::new(|_host, _acx, _reason| {}))
-                                            .test_id("ui-gallery-breadcrumb-rtl-dropdown-docs"),
-                                    ),
-                                    shadcn::DropdownMenuEntry::Item(
-                                        shadcn::DropdownMenuItem::new("Themes")
-                                            .on_activate(Arc::new(|_host, _acx, _reason| {})),
-                                    ),
-                                    shadcn::DropdownMenuEntry::Item(
-                                        shadcn::DropdownMenuItem::new("GitHub")
-                                            .on_activate(Arc::new(|_host, _acx, _reason| {})),
-                                    ),
+                                            .test_id("ui-gallery-breadcrumb-rtl-dropdown-docs")
+                                            .into(),
+                                        shadcn::DropdownMenuItem::new("السمات")
+                                            .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                                            .into(),
+                                        shadcn::DropdownMenuItem::new("جيت هاب")
+                                            .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                                            .into(),
+                                    ])
+                                    .into(),
                                 ]
                             },
                         );
@@ -80,14 +94,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 });
 
                 let page = bc::BreadcrumbItem::new().into_element(cx, |cx| {
-                    vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                    vec![bc::BreadcrumbPage::new("مسار التنقل").into_element(cx)]
                 });
 
                 vec![
                     home,
-                    bc::BreadcrumbSeparator::new().into_element(cx),
+                    dot_separator(cx).into_element(cx),
                     components_dropdown,
-                    bc::BreadcrumbSeparator::new().into_element(cx),
+                    dot_separator(cx).into_element(cx),
                     page,
                 ]
             });

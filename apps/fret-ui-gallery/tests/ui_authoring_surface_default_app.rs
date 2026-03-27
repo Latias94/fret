@@ -1208,6 +1208,18 @@ fn menubar_page_distinguishes_compact_and_copyable_parts_lanes() {
             .contains("Focused Trigger/Content adapter example on the same copyable parts lane."),
         "src/ui/pages/menubar.rs should keep the Parts section on the copyable parts lane rather than marking it as advanced"
     );
+    assert!(
+        menubar_page.contains(
+            "`MenubarSubContent` keeps the upstream Base UI submenu default on logical `inline-end`, so RTL only needs a direction provider; submenu chevrons flip with the same logical edge."
+        ),
+        "src/ui/pages/menubar.rs should document the logical inline-end submenu default for RTL teaching"
+    );
+    assert!(
+        menubar_page.contains(
+            "RTL layout mirrors the fuller docs demo shape while keeping nested submenus on logical `inline-end` and flipping submenu chevrons automatically."
+        ),
+        "src/ui/pages/menubar.rs should make the RTL logical-side teaching explicit"
+    );
 }
 
 #[test]
@@ -1385,6 +1397,18 @@ fn navigation_menu_and_pagination_pages_keep_their_dual_lane_story() {
         ),
         "src/ui/pages/navigation_menu.rs should keep the upstream-shaped lane explicit"
     );
+    assert!(
+        navigation_menu_page.contains(
+            "`NavigationMenu` keeps viewport placement on logical `align=start` by default; under `DirectionProvider(Rtl)`"
+        ),
+        "src/ui/pages/navigation_menu.rs should document the logical default alignment used by the RTL preview"
+    );
+    assert!(
+        navigation_menu_page.contains(
+            "Navigation Menu should preserve logical start placement and viewport alignment under RTL without requiring an extra physical align prop."
+        ),
+        "src/ui/pages/navigation_menu.rs should make the RTL logical-alignment teaching explicit"
+    );
 
     let pagination_page = read("src/ui/pages/pagination.rs");
     assert!(
@@ -1439,6 +1463,63 @@ fn dropdown_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Parts\", parts)",
         ],
+    );
+}
+
+#[test]
+fn dropdown_menu_usage_snippet_keeps_upstream_group_separator_shape() {
+    let relative_path = "src/ui/snippets/dropdown_menu/usage.rs";
+    let normalized = assert_normalized_markers_present(
+        relative_path,
+        &[
+            "shadcn::DropdownMenuLabel::new(\"My Account\")",
+            "shadcn::DropdownMenuSeparator::new().into(),",
+            "shadcn::DropdownMenuItem::new(\"Subscription\")",
+        ],
+    );
+
+    let upstream_shape = "
+        shadcn::DropdownMenuGroup::new([
+            shadcn::DropdownMenuLabel::new(\"My Account\").into(),
+            shadcn::DropdownMenuItem::new(\"Profile\").into(),
+            shadcn::DropdownMenuItem::new(\"Billing\").into(),
+        ])
+        .into(),
+        shadcn::DropdownMenuSeparator::new().into(),
+        shadcn::DropdownMenuGroup::new([
+            shadcn::DropdownMenuItem::new(\"Team\").into(),
+            shadcn::DropdownMenuItem::new(\"Subscription\").into(),
+        ])
+        .into(),
+    "
+    .split_whitespace()
+    .collect::<String>();
+    assert!(
+        normalized.contains(&upstream_shape),
+        "{} should keep the upstream Usage docs shape with the separator between the two groups",
+        manifest_path(relative_path).display()
+    );
+
+    let old_drift_shape = "
+        shadcn::DropdownMenuGroup::new([
+            shadcn::DropdownMenuLabel::new(\"My Account\").into(),
+            shadcn::DropdownMenuItem::new(\"Profile\").into(),
+            shadcn::DropdownMenuItem::new(\"Billing\").into(),
+            shadcn::DropdownMenuSeparator::new().into(),
+        ])
+        .into(),
+        shadcn::DropdownMenuGroup::new([
+            shadcn::DropdownMenuItem::new(\"Team\").into(),
+            shadcn::DropdownMenuItem::new(\"Subscription\").into(),
+        ])
+        .into(),
+    "
+    .split_whitespace()
+    .collect::<String>();
+    assert!(
+        !normalized.contains(&old_drift_shape),
+        "{} should not tuck the separator inside the first group",
+        manifest_path(relative_path).display()
     );
 }
 
@@ -1654,6 +1735,62 @@ fn button_page_records_semantic_link_axis_and_children_api_conclusion() {
             "No extra generic root `asChild` / composable children API is currently warranted: `leading_child(...)` / `trailing_child(...)` already cover the documented inline icon/spinner lane, `child(...)` / `children(...)` keep the full-row override explicit, and `ButtonRender::Link` covers the semantics-sensitive link escape hatch.",
             "Visual chrome stays aligned to the current `new-york-v4` button recipe, while the docs section order follows the published Base / Radix Button pages.",
         ],
+    );
+}
+
+#[test]
+fn button_page_teaches_rtl_logical_slots_and_caller_owned_glyph_direction() {
+    let button_page = read("src/ui/pages/button.rs");
+
+    assert!(
+        button_page.contains(
+            "Translated upstream RTL row showing logical inline-start/inline-end slot flipping; icon glyph mirroring stays caller-owned."
+        ),
+        "src/ui/pages/button.rs should describe the RTL section as logical-slot parity rather than generic RTL support"
+    );
+    assert!(
+        button_page.contains(
+            "The `RTL` preview keeps the translated upstream row shape and makes the logical slot contract explicit: `trailing_icon(...)` still means inline-end and `leading_child(...)` still means inline-start, so the visual order flips automatically under `DirectionProvider(Rtl)`."
+        ),
+        "src/ui/pages/button.rs should explain that button inline slots flip visually under RTL"
+    );
+    assert!(
+        button_page.contains(
+            "Icon glyph direction remains caller-owned rather than recipe-owned. The RTL submit example uses `lucide.arrow-left` to match the upstream web example's `ArrowRightIcon` plus `rtl:rotate-180` outcome without introducing a button-specific auto-mirror rule."
+        ),
+        "src/ui/pages/button.rs should document that glyph mirroring is caller-owned for RTL buttons"
+    );
+}
+
+#[test]
+fn button_rtl_snippet_keeps_translated_upstream_shape_and_logical_slot_helpers() {
+    let rtl = read("src/ui/snippets/button/rtl.rs");
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/button/rtl.rs",
+        &[
+            "with_direction_provider(cx, LayoutDirection::Rtl, |cx| {",
+            ".trailing_icon(IconId::new_static(\"lucide.arrow-left\"))",
+            ".leading_child(shadcn::Spinner::new().into_element(cx))",
+            "\"زر\"",
+            "\"حذف\"",
+            "\"إرسال\"",
+            "\"جاري التحميل\"",
+        ],
+    );
+
+    assert!(
+        rtl.contains(".a11y_label(\"إضافة\")"),
+        "src/ui/snippets/button/rtl.rs should keep the docs-aligned icon-only add button in the RTL row"
+    );
+    assert!(
+        !normalized.contains(".leading_icon(IconId::new_static(\"lucide.arrow-left\"))"),
+        "{} should keep the submit affordance on the logical inline-end slot, not the inline-start slot",
+        manifest_path("src/ui/snippets/button/rtl.rs").display()
+    );
+    assert!(
+        !normalized.contains(".trailing_child(shadcn::Spinner::new().into_element(cx))"),
+        "{} should keep the loading spinner on the logical inline-start slot, matching the upstream RTL row",
+        manifest_path("src/ui/snippets/button/rtl.rs").display()
     );
 }
 
@@ -1972,6 +2109,71 @@ fn input_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Label Association\", label)",
         ],
+    );
+}
+
+#[test]
+fn input_docs_path_snippets_prefer_explicit_label_binding_when_visible_labels_exist() {
+    let field = assert_normalized_markers_present(
+        "src/ui/snippets/input/field.rs",
+        &[
+            "let username_id = \"ui-gallery-input-field-username\";",
+            "shadcn::FieldLabel::new(\"Username\").for_control(username_id)",
+            "shadcn::Input::new(value).control_id(username_id)",
+            "shadcn::FieldDescription::new(\"Choose a unique username for your account.\").for_control(username_id)",
+        ],
+    );
+    assert!(
+        !field.contains(".a11y_label("),
+        "src/ui/snippets/input/field.rs should teach visible-label binding via for_control/control_id rather than an a11y_label fallback"
+    );
+
+    let file = assert_normalized_markers_present(
+        "src/ui/snippets/input/file.rs",
+        &[
+            "let picture_id = \"ui-gallery-input-file-picture\";",
+            "shadcn::FieldLabel::new(\"Picture\").for_control(picture_id)",
+            "shadcn::Input::new(file_value).control_id(picture_id)",
+            "shadcn::FieldDescription::new(\"Select a picture to upload.\").for_control(picture_id)",
+        ],
+    );
+    assert!(
+        !file.contains(".a11y_label("),
+        "src/ui/snippets/input/file.rs should keep the file example on the visible-label binding lane"
+    );
+
+    let input_group = assert_normalized_markers_present(
+        "src/ui/snippets/input/input_group.rs",
+        &[
+            "let website_url_id = \"ui-gallery-input-input-group-website-url\";",
+            "shadcn::FieldLabel::new(\"Website URL\").for_control(website_url_id)",
+            "shadcn::InputGroup::new(value).control_id(website_url_id)",
+        ],
+    );
+    assert!(
+        !input_group.contains(".a11y_label("),
+        "src/ui/snippets/input/input_group.rs should keep label wiring explicit instead of falling back to a11y_label"
+    );
+
+    let label = assert_normalized_markers_present(
+        "src/ui/snippets/input/label.rs",
+        &[
+            "let control_id = \"ui-gallery-input-label\";",
+            ".for_control(control_id)",
+            ".control_id(control_id)",
+        ],
+    );
+    assert!(
+        !label.contains(".a11y_label("),
+        "src/ui/snippets/input/label.rs should demonstrate label association without shadowing it with a11y_label"
+    );
+
+    let input_page = read("src/ui/pages/input.rs");
+    assert!(
+        input_page.contains(
+            "Field-backed examples on this page default to `FieldLabel::for_control(...)` + `Input::control_id(...)` to mirror upstream `htmlFor` / `id`; keep `a11y_label(...)` for unlabeled controls such as `Demo`, `Usage`, and `Inline`."
+        ),
+        "src/ui/pages/input.rs should teach visible-label binding as the default docs-path input story"
     );
 }
 
@@ -2320,6 +2522,62 @@ fn select_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Invalid\", invalid)",
             "DocSection::new(\"RTL\", rtl)",
         ],
+    );
+}
+
+#[test]
+fn select_page_teaches_rtl_as_logical_layout_not_extra_physical_alignment() {
+    let select_page = read("src/ui/pages/select.rs");
+
+    assert!(
+        select_page.contains(
+            "Translated upstream RTL example with logical trigger/content layout and no extra physical alignment override."
+        ),
+        "src/ui/pages/select.rs should describe RTL as a logical-layout teaching surface"
+    );
+    assert!(
+        select_page.contains(
+            "`RTL` now keeps the translated upstream example shape more closely: a narrower `w-32`-equivalent trigger plus the full five-fruit / three-vegetable grouping instead of a reduced smoke-test list."
+        ),
+        "src/ui/pages/select.rs should record that the RTL snippet keeps the fuller upstream translated example shape"
+    );
+    assert!(
+        select_page.contains(
+            "`DirectionProvider(Rtl)` is sufficient for the RTL example: trigger text/chevron ordering and popup content layout already follow logical inline-start/end, so the gallery should not teach an extra physical alignment override here."
+        ),
+        "src/ui/pages/select.rs should explain why RTL Select does not need extra physical alignment props"
+    );
+}
+
+#[test]
+fn select_rtl_snippet_keeps_fuller_upstream_translated_grouping() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/select/rtl.rs",
+        &[
+            ".placeholder(\"اختر فاكهة\")",
+            "\"grapes\", \"عنب\"",
+            "\"pineapple\", \"أناناس\"",
+            "LayoutRefinement::default().w_px(Px(128.0))",
+        ],
+    );
+    let rtl = read("src/ui/snippets/select/rtl.rs");
+
+    for marker in [
+        "\"الفواكه\"",
+        "\"الخضروات\"",
+        "\"carrot\", \"جزر\"",
+        "\"spinach\", \"سبانخ\"",
+    ] {
+        assert!(
+            rtl.contains(marker),
+            "src/ui/snippets/select/rtl.rs is missing marker `{marker}`"
+        );
+    }
+
+    assert!(
+        !normalized.contains("w_px(Px(180.0))"),
+        "{} should keep the upstream narrower RTL trigger width instead of the old wider demo width",
+        manifest_path("src/ui/snippets/select/rtl.rs").display()
     );
 }
 
@@ -2984,6 +3242,51 @@ fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn form_page_and_notes_teach_rtl_as_a_fret_follow_up() {
+    let form_page = read("src/ui/pages/form.rs");
+    assert!(
+        form_page.contains(
+            "Focused Fret RTL follow-up: logical end-aligned field text plus explicit horizontal row composition."
+        ),
+        "src/ui/pages/form.rs should describe RTL as a focused Fret follow-up rather than a generic RTL claim"
+    );
+
+    let notes = read("src/ui/snippets/form/notes.rs");
+    assert!(
+        notes.contains(
+            "There is no standalone upstream `Form` RTL component page/example in `repo-ref/ui`; Gallery keeps `RTL` as a focused Fret follow-up that validates logical text alignment and explicit horizontal field composition under `DirectionProvider(Rtl)`."
+        ),
+        "src/ui/snippets/form/notes.rs should explain why the RTL section is a Fret follow-up instead of a copied upstream docs row"
+    );
+}
+
+#[test]
+fn form_rtl_snippet_keeps_explicit_horizontal_field_composition_under_rtl() {
+    let rtl = read("src/ui/snippets/form/rtl.rs");
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/form/rtl.rs",
+        &[
+            "with_direction_provider(cx, LayoutDirection::Rtl, |cx| {",
+            "\"الملف الشخصي\"",
+            "\"البريد الإلكتروني\"",
+            "\"تفعيل الإشعارات\"",
+            "FieldContent::new([",
+            ".orientation(shadcn::FieldOrientation::Horizontal)",
+        ],
+    );
+
+    assert!(
+        rtl.contains("تحقق من محاذاة الحقول والنصوص تحت RTL."),
+        "src/ui/snippets/form/rtl.rs should keep the focused RTL alignment copy"
+    );
+    assert!(
+        !normalized.contains("DirectionProvider::new(shadcn::LayoutDirection::Rtl)"),
+        "{} should keep the gallery-standard direction helper lane for the current form snippet",
+        manifest_path("src/ui/snippets/form/rtl.rs").display()
+    );
+}
+
+#[test]
 fn empty_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -3088,6 +3391,70 @@ fn breadcrumb_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Responsive\", responsive)",
         ],
+    );
+}
+
+#[test]
+fn breadcrumb_page_teaches_rtl_dot_separator_example_and_logical_default_separator() {
+    let breadcrumb_page = read("src/ui/pages/breadcrumb.rs");
+
+    assert!(
+        breadcrumb_page.contains(
+            "Translated upstream RTL breadcrumb with dot separators, logical inline-end trigger icon placement, and end-aligned dropdown content."
+        ),
+        "src/ui/pages/breadcrumb.rs should describe the RTL section with the fuller translated upstream shape"
+    );
+    assert!(
+        breadcrumb_page.contains(
+            "The `RTL` preview now stays closer to the upstream translated example too: Arabic labels, dot separators, and an end-aligned dropdown attached to the middle breadcrumb item."
+        ),
+        "src/ui/pages/breadcrumb.rs should record the richer translated RTL preview shape"
+    );
+    assert!(
+        breadcrumb_page.contains(
+            "Default `BreadcrumbSeparator` chevrons already mirror toward logical `inline-end` in `fret-ui-shadcn`; the docs-aligned RTL preview overrides separators with dots because upstream does, not because the default chevron separator needs a manual RTL fix."
+        ),
+        "src/ui/pages/breadcrumb.rs should explain that the default chevron separator already mirrors logically in RTL"
+    );
+}
+
+#[test]
+fn breadcrumb_rtl_snippet_keeps_translated_upstream_shape() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/breadcrumb/rtl.rs",
+        &[
+            "fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
+            "DropdownMenuAlign::End",
+            "IconId::new_static(\"lucide.dot\")",
+            "\"الرئيسية\"",
+            "\"المكونات\"",
+            "\"مسار التنقل\"",
+            "ui::h_row(move |_cx| vec![chevron, label])",
+        ],
+    );
+    let breadcrumb_rtl = read("src/ui/snippets/breadcrumb/rtl.rs");
+
+    for marker in ["\"التوثيق\"", "\"السمات\"", "\"جيت هاب\""] {
+        assert!(
+            breadcrumb_rtl.contains(marker),
+            "src/ui/snippets/breadcrumb/rtl.rs is missing marker `{marker}`"
+        );
+    }
+
+    assert!(
+        !normalized.contains("\"Home\""),
+        "{} should not keep the old English home label in the translated RTL example",
+        manifest_path("src/ui/snippets/breadcrumb/rtl.rs").display()
+    );
+    assert!(
+        !normalized.contains("\"Components\""),
+        "{} should not keep the old English components label in the translated RTL example",
+        manifest_path("src/ui/snippets/breadcrumb/rtl.rs").display()
+    );
+    assert!(
+        !normalized.contains("bc::BreadcrumbSeparator::new().into_element(cx)"),
+        "{} should keep the docs-aligned dot separators instead of the default chevron separators",
+        manifest_path("src/ui/snippets/breadcrumb/rtl.rs").display()
     );
 }
 
@@ -4906,6 +5273,72 @@ fn tabs_page_explains_width_split_and_existing_parts_lane() {
 }
 
 #[test]
+fn tabs_page_teaches_rtl_activation_direction_and_fuller_example_shape() {
+    let tabs_page = read("src/ui/pages/tabs.rs");
+
+    assert!(
+        tabs_page.contains(
+            "RTL parity for logical previous/next movement, flipped `activation_direction` metadata, and the fuller upstream card example."
+        ),
+        "src/ui/pages/tabs.rs should describe the RTL section as more than a keynav-only gate"
+    );
+    assert!(
+        tabs_page.contains(
+            "the physical Right Arrow in RTL maps to the logical previous tab instead of the logical next tab."
+        ),
+        "src/ui/pages/tabs.rs should explain the RTL physical-vs-logical activation direction teaching"
+    );
+    assert!(
+        tabs_page.contains(
+            "The `RTL` section now uses a fuller upstream-style four-tab card example instead of a gallery-only two-tab keynav gate"
+        ),
+        "src/ui/pages/tabs.rs should record that the RTL snippet stays close to the upstream card shape"
+    );
+}
+
+#[test]
+fn tabs_rtl_snippet_keeps_a_fuller_upstream_card_shape() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/tabs/rtl.rs",
+        &[
+            "fn metric_card(",
+            "\"overview\",",
+            "\"analytics\",",
+            "\"reports\",",
+            "\"settings\",",
+            "LayoutRefinement::default().w_full().max_w(Px(384.0)).min_w_0()",
+        ],
+    );
+    let tabs_rtl = read("src/ui/snippets/tabs/rtl.rs");
+
+    for marker in [
+        "\"Overview\"",
+        "\"Analytics\"",
+        "\"Reports\"",
+        "\"Settings\"",
+        "shadcn::card_title(title)",
+        "shadcn::card_description(description)",
+        "shadcn::raw::typography::muted(content)",
+    ] {
+        assert!(
+            tabs_rtl.contains(marker),
+            "src/ui/snippets/tabs/rtl.rs is missing marker `{marker}`"
+        );
+    }
+
+    assert!(
+        !normalized.contains("\"Preview\""),
+        "{} should no longer teach the old two-tab preview/code RTL gate",
+        manifest_path("src/ui/snippets/tabs/rtl.rs").display()
+    );
+    assert!(
+        !normalized.contains("\"Code\""),
+        "{} should keep the richer upstream-style RTL tabs surface instead of the old preview/code pair",
+        manifest_path("src/ui/snippets/tabs/rtl.rs").display()
+    );
+}
+
+#[test]
 fn card_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -5831,12 +6264,14 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
             "let api_reference = doc_layout::notes_block([",
             "let notes = doc_layout::notes_block([",
             "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let children = DocSection::build(cx, \"Children (Fret)\", children)",
             "let notes = DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
             "let api_reference = doc_layout::notes(",
             "let notes = doc_layout::notes(",
             "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Children (Fret)\", children)",
             "DocSection::new(\"Notes\", notes)",
         ],
     );
@@ -6086,14 +6521,12 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
             "let api_reference = doc_layout::notes_block([",
             "let notes = doc_layout::notes_block([",
             "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
-            "let children = DocSection::build(cx, \"Children (Fret)\", children)",
             "let notes = DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
             "let api_reference = doc_layout::notes(",
             "let notes = doc_layout::notes(",
             "DocSection::new(\"API Reference\", api_reference)",
-            "DocSection::new(\"Children (Fret)\", children)",
             "DocSection::new(\"Notes\", notes)",
         ],
     );
@@ -7799,7 +8232,6 @@ fn selected_empty_snippets_prefer_empty_wrapper_family() {
         "src/ui/snippets/empty/input_group.rs",
         "src/ui/snippets/empty/outline.rs",
         "src/ui/snippets/empty/rtl.rs",
-        "src/ui/snippets/empty/usage.rs",
         "src/ui/snippets/spinner/empty.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
@@ -7828,7 +8260,6 @@ fn selected_empty_snippets_prefer_empty_wrapper_family() {
         "src/ui/snippets/empty/demo.rs",
         "src/ui/snippets/empty/outline.rs",
         "src/ui/snippets/empty/rtl.rs",
-        "src/ui/snippets/empty/usage.rs",
         "src/ui/snippets/spinner/empty.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
@@ -7837,6 +8268,29 @@ fn selected_empty_snippets_prefer_empty_wrapper_family() {
             &["fret_ui_shadcn::empty::EmptyMedia::new("],
         );
     }
+}
+
+#[test]
+fn empty_usage_snippet_prefers_direct_compound_children_lane() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/empty/usage.rs",
+        &[
+            "shadcn::Empty::new([",
+            "shadcn::EmptyHeader::new([",
+            "shadcn::EmptyMedia::new([icon])",
+            "shadcn::EmptyTitle::new(\"No data\")",
+            "shadcn::EmptyDescription::new(\"No data found.\")",
+            "shadcn::EmptyContent::new([",
+        ],
+        &[
+            "shadcn::empty(|cx|",
+            "shadcn::empty_header(|cx|",
+            "shadcn::empty_media(|cx|",
+            "shadcn::empty_title(",
+            "shadcn::empty_description(",
+            "shadcn::empty_content(|cx|",
+        ],
+    );
 }
 
 #[test]
@@ -7977,6 +8431,13 @@ fn selected_breadcrumb_snippet_helpers_prefer_into_ui_element_over_anyelement() 
             "fn slash_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
         ],
         &["fn slash_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/breadcrumb/rtl.rs",
+        &[
+            "fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &["fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
     );
 }
 
@@ -8258,6 +8719,62 @@ fn checkbox_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn checkbox_page_teaches_rtl_as_fuller_translated_preview() {
+    let checkbox_page = read("src/ui/pages/checkbox.rs");
+
+    assert!(
+        checkbox_page.contains(
+            "The `RTL` preview now keeps the translated upstream four-row example shape. `DirectionProvider(Rtl)` plus `Field`, `FieldContent`, `Label::for_control(...)`, and `FieldLabel::wrap(...)` are already sufficient, so no checkbox-specific physical alignment prop or wider children API is needed."
+        ),
+        "src/ui/pages/checkbox.rs should record that RTL parity stays on the existing logical field composition surface"
+    );
+    assert!(
+        checkbox_page.contains(
+            "Translated upstream four-row RTL preview under `DirectionProvider(Rtl)` using the same logical field primitives."
+        ),
+        "src/ui/pages/checkbox.rs should describe the RTL section as the fuller translated upstream preview"
+    );
+    assert!(
+        checkbox_page.contains(
+            "Preview mirrors the shadcn Checkbox docs path first, including the translated upstream four-row RTL preview, surfaces the source-aligned snapshot/action story in `API Reference`, then keeps `Label Association` and `With Title` as focused Fret follow-ups."
+        ),
+        "src/ui/pages/checkbox.rs should keep the translated upstream RTL preview visible in the page-level teaching summary"
+    );
+}
+
+#[test]
+fn checkbox_rtl_snippet_keeps_fuller_upstream_translated_shape() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/checkbox/rtl.rs",
+        &[
+            "with_direction_provider(cx, LayoutDirection::Rtl, |cx| {",
+            "shadcn::field_group(|cx| {",
+            "ui-gallery-checkbox-rtl-basic",
+            "ui-gallery-checkbox-rtl-description",
+            "ui-gallery-checkbox-rtl-disabled",
+            "ui-gallery-checkbox-rtl-with-title",
+            "\"قبول الشروط والأحكام\"",
+            "\"بالنقر على هذا المربع، فإنك توافق على الشروط.\"",
+            "\"تفعيل الإشعارات\"",
+            "\"يمكنك تفعيل أو إلغاء تفعيل الإشعارات في أي وقت.\"",
+            "shadcn::Label::new(\"قبول الشروط والأحكام\")",
+            "FieldLabel::new(\"تفعيل الإشعارات\")",
+            "FieldTitle::new(\"تفعيل الإشعارات\")",
+            ".disabled(true)",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("Enablenotifications(RTL)"),
+        "src/ui/snippets/checkbox/rtl.rs should keep the translated upstream preview instead of the previous single-row English shortcut"
+    );
+    assert!(
+        !normalized.contains("ui-gallery-checkbox-rtl-field"),
+        "src/ui/snippets/checkbox/rtl.rs should no longer collapse RTL into one field-level demo id"
+    );
+}
+
+#[test]
 fn toggle_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -8358,6 +8875,55 @@ fn toggle_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn switch_page_teaches_rtl_as_logical_layout_not_extra_physical_alignment() {
+    let switch_page = read("src/ui/pages/switch.rs");
+
+    assert!(
+        switch_page.contains(
+            "The `RTL` preview keeps the translated upstream one-row example shape. `DirectionProvider(Rtl)` is sufficient here: `FieldContent` stays on the logical text side and `Switch` stays on the opposite edge without teaching an extra physical alignment prop."
+        ),
+        "src/ui/pages/switch.rs should record that RTL parity stays on the existing logical field composition surface"
+    );
+    assert!(
+        switch_page.contains(
+            "Translated upstream RTL row with logical field text on inline-start and the switch on the opposite edge."
+        ),
+        "src/ui/pages/switch.rs should describe the RTL section as the translated upstream row"
+    );
+    assert!(
+        switch_page.contains(
+            "Preview mirrors the shadcn Switch docs path first: Demo, Usage, Description, Choice Card, Disabled, Invalid, Size, RTL, including the translated upstream RTL row, with source-aligned label/control binding on the docs-path rows before `Label Association`, `Style Override`, and `API Reference` continue as explicit Fret follow-ups."
+        ),
+        "src/ui/pages/switch.rs should keep the translated upstream RTL row visible in the page-level teaching summary"
+    );
+}
+
+#[test]
+fn switch_rtl_snippet_keeps_translated_upstream_row_shape() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/switch/rtl.rs",
+        &[
+            "with_direction_provider(cx, LayoutDirection::Rtl, |cx| {",
+            "\"المشاركة عبر الأجهزة\"",
+            "\"يتم مشاركة التركيز عبر الأجهزة، ويتم إيقاف تشغيله عند مغادرة التطبيق.\"",
+            "FieldContent::new([",
+            "shadcn::Switch::new(rtl)",
+        ],
+    );
+
+    assert_normalized_chain_reaches(
+        "src/ui/snippets/switch/rtl.rs",
+        &normalized,
+        "FieldContent::new([",
+        "shadcn::Switch::new(rtl)",
+    );
+    assert!(
+        !normalized.contains("Shareacrossdevices"),
+        "src/ui/snippets/switch/rtl.rs should keep the translated upstream RTL text instead of the previous English placeholder copy"
+    );
+}
+
+#[test]
 fn radio_group_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -8410,6 +8976,56 @@ fn radio_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Label Association (Fret)\", label)",
         ],
+    );
+}
+
+#[test]
+fn radio_group_page_teaches_rtl_on_the_default_helper_lane() {
+    let radio_group_page = read("src/ui/pages/radio_group.rs");
+
+    assert!(
+        radio_group_page.contains(
+            "`RadioGroupItem::child(...)` / `children(...)` and `variant(RadioGroupItemVariant::ChoiceCard)` cover the richer description, RTL field-content, and choice-card compositions without introducing a generic root `compose()` / children API."
+        ),
+        "src/ui/pages/radio_group.rs should record that richer RTL rows stay on the existing item child surface"
+    );
+    assert!(
+        radio_group_page.contains(
+            "The `RTL` preview keeps the translated upstream three-row example shape. `DirectionProvider(Rtl)` plus `RadioGroupItem::child(...)` are sufficient to keep each item's text on the logical side and the indicator on the opposite edge, so no extra physical alignment prop is needed."
+        ),
+        "src/ui/pages/radio_group.rs should describe RTL as logical layout parity rather than a missing physical prop"
+    );
+    assert!(
+        radio_group_page.contains(
+            "Preview mirrors the shadcn Radio Group docs path first: Demo, Usage, Description, Choice Card, Fieldset, Disabled, Invalid, RTL, and API Reference, including the translated upstream RTL preview on the default helper lane. `Label Association` stays as a focused Fret follow-up."
+        ),
+        "src/ui/pages/radio_group.rs should keep the translated upstream RTL preview visible in the page-level teaching summary"
+    );
+}
+
+#[test]
+fn radio_group_rtl_snippet_keeps_translated_upstream_rows_on_the_helper_lane() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/radio_group/rtl.rs",
+        &[
+            "with_direction_provider(cx, LayoutDirection::Rtl, |cx| {",
+            "shadcn::RadioGroup::uncontrolled(Some(\"comfortable\"))",
+            "shadcn::RadioGroupItem::new(\"default\", \"افتراضي\").child(",
+            "shadcn::RadioGroupItem::new(\"comfortable\", \"مريح\").child(",
+            "shadcn::RadioGroupItem::new(\"compact\", \"مضغوط\").child(",
+            "\"تباعد قياسي لمعظم حالات الاستخدام.\"",
+            "\"مساحة أكبر بين العناصر.\"",
+            "\"تباعد أدنى للتخطيطات الكثيفة.\"",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("\"Default\""),
+        "src/ui/snippets/radio_group/rtl.rs should keep the translated upstream copy instead of English labels"
+    );
+    assert!(
+        !normalized.contains("Field::new(["),
+        "src/ui/snippets/radio_group/rtl.rs should keep the default radio-group item helper lane instead of dropping to raw field row assembly"
     );
 }
 
@@ -9929,6 +10545,60 @@ fn prompt_input_docs_page_tracks_official_examples_sections() {
             ".code_rust_from_file_region(snippets::prompt_input_cursor_demo::SOURCE, \"example\")",
         ],
         &[],
+    );
+}
+
+#[test]
+fn direction_docs_page_tracks_upstream_sections_and_fret_followup() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/pages/direction.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"useDirection\", use_direction)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Composable Children (Fret)\", composed_children)",
+            "Preview mirrors the shadcn/Base UI Direction docs path after skipping `Installation`: `Demo`, `Usage`, `useDirection`, and `API Reference`. `Composable Children (Fret)` stays as the explicit provider-owned siblings follow-up.",
+            "Use `into_element(...)` for the default single-subtree lane that mirrors the upstream docs. Keep `with(...)` for the explicit provider-owned siblings lane when you want to avoid an extra wrapper element.",
+            "For app-wide direction, `fret-bootstrap` can install a root `LayoutDirection` global once; `DirectionProvider` remains the local subtree override, analogous to the web docs separating host `dir` from the provider surface.",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("DocSection::build(cx,\"use_direction\",use_direction)"),
+        "src/ui/pages/direction.rs should title the hook section `useDirection` to match the upstream docs surface"
+    );
+}
+
+#[test]
+fn direction_docs_snippets_keep_into_element_as_default_lane_and_with_as_followup() {
+    for relative_path in [
+        "src/ui/snippets/direction/demo.rs",
+        "src/ui/snippets/direction/usage.rs",
+        "src/ui/snippets/direction/use_direction.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &["DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx,"],
+        );
+        let path = manifest_path(relative_path);
+        assert!(
+            !normalized.contains("DirectionProvider::new(shadcn::LayoutDirection::Rtl).with(cx,"),
+            "{} should keep `.into_element(...)` as the default single-subtree docs lane",
+            path.display()
+        );
+    }
+
+    let composed_children = assert_normalized_markers_present(
+        "src/ui/snippets/direction/composed_children.rs",
+        &[
+            "DirectionProvider::new(shadcn::LayoutDirection::Rtl).dir(shadcn::LayoutDirection::Rtl).with(cx,",
+        ],
+    );
+    assert!(
+        !composed_children
+            .contains("DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx,"),
+        "src/ui/snippets/direction/composed_children.rs should keep `.with(...)` as the provider-owned siblings follow-up lane"
     );
 }
 

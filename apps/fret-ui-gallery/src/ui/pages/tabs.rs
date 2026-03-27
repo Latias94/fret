@@ -27,9 +27,10 @@ pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Demo shell (`w-full max-w-sm`) and usage width (`w-[400px]`) stay caller-owned, while list/trigger/content chrome and `TabsContent` fill-width defaults stay recipe-owned.",
     ]);
     let notes = doc_layout::notes_block([
-        "No `fret-ui` runtime change was needed for Tabs semantics/layout; the only mechanism-adjacent parity fix stayed in `fret-ui-shadcn` and makes Base UI-style `activation_direction` metadata respect RTL physical movement.",
+        "No `fret-ui` runtime change was needed for Tabs semantics/layout; the only mechanism-adjacent parity fix stayed in `fret-ui-shadcn` and makes Base UI-style `activation_direction` metadata follow physical movement, so the physical Right Arrow in RTL maps to the logical previous tab instead of the logical next tab.",
         "The docs surface keeps the upstream width split explicit: `Demo` mirrors the `w-full max-w-sm` shell, while `Usage` keeps the `w-[400px]` call-site width from the docs block.",
         "Password fields use `Input::password()` to mirror `type=\"password\"` in shadcn/ui examples.",
+        "The `RTL` section now uses a fuller upstream-style four-tab card example instead of a gallery-only two-tab keynav gate, making the mirrored content shell easier to compare against the shadcn docs surface.",
         "List-only, vertical-line, and flex-1 examples stay after the docs path because they are regression/follow-up surfaces rather than upstream section headings.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -64,7 +65,9 @@ pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-tabs-icons")
         .code_rust_from_file_region(snippets::icons::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("RTL key navigation and indicator placement parity.")
+        .description(
+            "RTL parity for logical previous/next movement, flipped `activation_direction` metadata, and the fuller upstream card example.",
+        )
         .test_id_prefix("ui-gallery-tabs-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let parts = DocSection::build(cx, "Composable Parts (Fret)", parts)

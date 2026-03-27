@@ -13,19 +13,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         shadcn::Field::new([
             shadcn::FieldContent::new([
-                shadcn::FieldLabel::new("Share across devices")
+                shadcn::FieldLabel::new("المشاركة عبر الأجهزة")
                     .for_control(control_id.clone())
                     .test_id("ui-gallery-switch-rtl-label")
                     .into_element(cx),
                 shadcn::FieldDescription::new(
-                    "Focus is shared across devices, and turns off when you leave the app.",
+                    "يتم مشاركة التركيز عبر الأجهزة، ويتم إيقاف تشغيله عند مغادرة التطبيق.",
                 )
                 .into_element(cx),
             ])
             .into_element(cx),
             shadcn::Switch::new(rtl)
                 .control_id(control_id)
-                .a11y_label("Share across devices")
+                .a11y_label("المشاركة عبر الأجهزة")
                 .test_id("ui-gallery-switch-rtl-toggle")
                 .into_element(cx),
         ])

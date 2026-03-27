@@ -25,6 +25,7 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx`.",
         "`DropdownMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)` is now the default copyable root path, while `build_parts(...)` / `into_element_parts(...)` remain lower-level adapters for closure-driven or already-landed seams.",
         "`DropdownMenuTrigger`, `DropdownMenuPortal`, `DropdownMenuContent`, and `DropdownMenuSub*` keep the shadcn/Base UI part names available without pushing menu policy down into `fret-ui`.",
+        "`DropdownMenuSubContent` keeps the upstream Base UI default submenu side (`inline-end`), so a direction provider is enough to mirror submenu opening direction while submenu chevrons also flip toward logical inline-end.",
         "`DropdownMenu::from_open(open)` stays as the explicit advanced seam when the caller already owns the open model; `new_controllable(cx, open, default_open)` still covers the broader controlled/uncontrolled contract.",
         "`DropdownMenuItem::shortcut(...)`, `DropdownMenuCheckboxItem::shortcut(...)`, and radio-item shortcut helpers are now the preferred copyable API for keyboard hints; `DropdownMenuShortcut` remains the explicit trailing escape hatch.",
         "`DropdownMenuCheckboxItem::from_checked(...)` / `.on_checked_change(...)` and `DropdownMenuRadioGroup::from_value(...)` / `.on_value_change(...)` now cover the upstream snapshot + callback path without forcing per-item `Model<_>` state.",
@@ -37,7 +38,7 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Mechanism parity is largely covered already: existing web-vs-fret chrome/placement gates and dropdown diag scripts cover placement, dismissal, focus restore, submenu routing, and safe-corridor behavior.",
         "The lead `Demo` preview now keeps the official `dropdown-menu-demo.tsx` row order more closely, including the `Keyboard shortcuts` action and the ungrouped `GitHub` / `Support` / `API` rows after the second separator.",
         "The checkable examples now demonstrate snapshot + callback authoring, so simple menus do not need one `Model<bool>` per checkbox row.",
-        "The remaining docs examples now stay closer to the upstream base docs too: `Checkboxes` keeps the `w-40` panel, `Checkboxes Icons` uses the notification-preferences example, `Radio Group` keeps `w-32`, `Avatar` reuses the shared demo image/fallback pipeline, and `RTL` keeps the richer submenu + checkbox + radio + destructive logout shape.",
+        "The remaining docs examples now stay closer to the upstream base docs too: `Checkboxes` keeps the `w-40` panel, `Checkboxes Icons` uses the notification-preferences example, `Radio Group` keeps `w-32`, `Avatar` reuses the shared demo image/fallback pipeline, and `RTL` keeps the richer submenu + checkbox + radio + destructive logout shape while documenting that nested submenus still default to logical `inline-end`.",
         "The `Parts` section is intentionally outside the upstream docs path: treat it as the advanced adapter surface for already-landed or closure-driven seams, while `Usage` now shows the default typed `compose()` root.",
         "The explicit entry tree remains intentional, so the page records why we are not widening this family into a generic heterogeneous children API.",
         "Examples are snippet-backed, so preview and code stay in sync.",
@@ -110,7 +111,7 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-dropdown-menu-complex")
         .code_rust_from_file_region(snippets::complex::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("RTL layout mirrors the richer base docs shape with nested submenus, toggles, radio options, and destructive logout.")
+        .description("RTL layout mirrors the richer base docs shape while keeping nested submenus on logical `inline-end` and flipping submenu chevrons automatically.")
         .test_id_prefix("ui-gallery-dropdown-menu-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let parts = DocSection::build(cx, "Parts", parts)

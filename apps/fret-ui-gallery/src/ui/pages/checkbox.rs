@@ -25,6 +25,7 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Visual defaults such as control size, border, focus ring, and indicator chrome stay recipe-owned, while row width and form layout remain caller-owned.",
         "The top-level `Demo` now mirrors the upstream four-row composite preview (`Label`, description, disabled, and wrapped title/content) instead of collapsing that teaching surface into a single shortcut row.",
         "The docs-aligned `Description`, `Group`, and `Table` sections now keep the upstream row order, fieldset framing, and mixed select-all teaching surface visible on the page instead of hiding them behind unrelated composition shortcuts.",
+        "The `RTL` preview now keeps the translated upstream four-row example shape. `DirectionProvider(Rtl)` plus `Field`, `FieldContent`, `Label::for_control(...)`, and `FieldLabel::wrap(...)` are already sufficient, so no checkbox-specific physical alignment prop or wider children API is needed.",
         "`Label Association` and `With Title` stay after the upstream docs path because they document Fret-specific control-registry and wrapped-field composition patterns.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
     ]);
@@ -67,7 +68,7 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Table selection pattern with a derived mixed-state select-all checkbox on the action-first path.")
         .code_rust_from_file_region(snippets::table::SOURCE, "example");
     let rtl_section = DocSection::build(cx, "RTL", rtl_section)
-        .description("Checkbox and label alignment under an RTL direction provider.")
+        .description("Translated upstream four-row RTL preview under `DirectionProvider(Rtl)` using the same logical field primitives.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let label = DocSection::build(cx, "Label Association (Fret)", label)
         .description("Use `FieldLabel::for_control` plus `Checkbox::control_id` so label clicks toggle the checkbox.")
@@ -80,7 +81,7 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Checkbox docs path first, surfaces the source-aligned snapshot/action story in `API Reference`, then keeps `Label Association` and `With Title` as focused Fret follow-ups.",
+            "Preview mirrors the shadcn Checkbox docs path first, including the translated upstream four-row RTL preview, surfaces the source-aligned snapshot/action story in `API Reference`, then keeps `Label Association` and `With Title` as focused Fret follow-ups.",
         ),
         vec![
             demo,

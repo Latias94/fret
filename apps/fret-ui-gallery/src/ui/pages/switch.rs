@@ -21,6 +21,7 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Track/thumb chrome and the intrinsic switch sizes remain recipe-owned because the upstream component source defines those defaults on the switch itself.",
         "Caller-owned layout stays explicit for `max-w-*`, stacked field groups, and surrounding page/grid negotiation; the recipe should not absorb those constraints.",
         "`Label::for_control(...)` covers the inline `Demo` / `Size` rows, and `FieldLabel::for_control(...)` plus `FieldLabel::wrap(...)` cover the description and choice-card compositions without widening `Switch` into a generic children API.",
+        "The `RTL` preview keeps the translated upstream one-row example shape. `DirectionProvider(Rtl)` is sufficient here: `FieldContent` stays on the logical text side and `Switch` stays on the opposite edge without teaching an extra physical alignment prop.",
         "`SwitchStyle` remains a focused Fret follow-up for token-safe track/thumb overrides; it is not part of the upstream docs path, but it is the right escape hatch when product recipes need custom checked colors.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -57,7 +58,7 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-switch-size")
         .code_rust_from_file_region(snippets::sizes::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Switch composition under an RTL direction provider.")
+        .description("Translated upstream RTL row with logical field text on inline-start and the switch on the opposite edge.")
         .test_id_prefix("ui-gallery-switch-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let label = DocSection::build(cx, "Label Association", label)
@@ -74,7 +75,7 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Switch docs path first: Demo, Usage, Description, Choice Card, Disabled, Invalid, Size, RTL, with source-aligned label/control binding on the docs-path rows before `Label Association`, `Style Override`, and `API Reference` continue as explicit Fret follow-ups.",
+            "Preview mirrors the shadcn Switch docs path first: Demo, Usage, Description, Choice Card, Disabled, Invalid, Size, RTL, including the translated upstream RTL row, with source-aligned label/control binding on the docs-path rows before `Label Association`, `Style Override`, and `API Reference` continue as explicit Fret follow-ups.",
         ),
         vec![
             demo,

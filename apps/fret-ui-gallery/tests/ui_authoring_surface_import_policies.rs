@@ -527,13 +527,13 @@ fn gallery_dialog_usage_snippet_prefers_curated_part_lane() {
         path.display()
     );
     assert!(
-        source.contains("shadcn::DialogPart::content("),
-        "{} should teach the curated dialog content part lane",
+        source.contains("shadcn::DialogPart::content_with("),
+        "{} should teach the deferred curated dialog content part lane",
         path.display()
     );
     assert!(
-        source.contains("shadcn::DialogContent::build("),
-        "{} should keep content composition on the copyable dialog lane",
+        source.contains("shadcn::DialogContent::new([]).with_children("),
+        "{} should keep content composition on the copyable dialog with_children lane",
         path.display()
     );
     assert!(

@@ -14,7 +14,8 @@ in-repo web goldens that currently gate visual geometry.
 ## Upstream references (source of truth)
 
 - Docs page order: `repo-ref/ui/apps/v4/content/docs/components/base/empty.mdx`
-- Component implementations reviewed: `repo-ref/ui/apps/v4/examples/base/ui/empty.tsx`, `repo-ref/ui/apps/v4/examples/radix/ui/empty.tsx`
+- Default visual recipe source reviewed: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/empty.tsx`
+- Docs-surface component implementations reviewed: `repo-ref/ui/apps/v4/registry/bases/base/ui/empty.tsx`, `repo-ref/ui/apps/v4/registry/bases/radix/ui/empty.tsx`, `repo-ref/ui/apps/v4/styles/base-nova/ui/empty.tsx`
 - Example compositions: `repo-ref/ui/apps/v4/examples/base/empty-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/empty-outline.tsx`, `repo-ref/ui/apps/v4/examples/base/empty-background.tsx`, `repo-ref/ui/apps/v4/examples/base/empty-avatar.tsx`, `repo-ref/ui/apps/v4/examples/base/empty-avatar-group.tsx`, `repo-ref/ui/apps/v4/examples/base/empty-input-group.tsx`, `repo-ref/ui/apps/v4/examples/base/empty-rtl.tsx`
 - Visual geometry gates: `goldens/shadcn-web/v4/new-york-v4/empty-demo.json`, `goldens/shadcn-web/v4/new-york-v4/empty-background.json`, `goldens/shadcn-web/v4/new-york-v4/empty-outline.json`
 
@@ -41,9 +42,10 @@ in-repo web goldens that currently gate visual geometry.
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream Empty docs path first: `Demo`, `Usage`, the example set through `RTL`, and `API Reference`.
+- Pass: the `Usage` snippet now leads with direct `Empty::new([...])` compound-children composition, which matches the upstream JSX slot model more closely than the lazy wrapper helpers.
 - Pass: the gallery `Demo` and `RTL` snippets now follow the upstream `new-york-v4` teaching shape more closely: folder-code icon media, a centered two-button action row, and a semantic link CTA.
 - Pass: the old gallery `Notes` section is replaced by an explicit `API Reference` section that records ownership and source-of-truth decisions.
-- Pass: no mechanism-layer gap was identified in this pass; the work here is docs parity plus documenting the current recipe/golden ownership choice.
+- Pass: no mechanism-layer gap was identified in this pass; the remaining nuance is source-of-truth split between base docs page structure and `new-york-v4` geometry gates, so the work here is teaching-surface parity plus documenting the current recipe/golden ownership choice.
 
 ## Validation
 

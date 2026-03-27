@@ -106,6 +106,9 @@ Still missing (relative to upstream shadcn/ui v4):
 
 - Pass: Submenus are supported via `DropdownMenuItem::submenu(Vec<DropdownMenuEntry>)` and open on
   hover/activate (pointer click), and can be opened/closed with ArrowRight/ArrowLeft.
+- Pass: submenu placement continues to follow logical inline-end under RTL, and submenu chevrons
+  now explicitly track the same logical direction instead of staying hard-coded to a physical
+  right-pointing affordance.
 - Pass: Pointer grace intent is implemented using a Radix-style polygon corridor (tracked via
   `fret-ui-kit::primitives::menu::pointer_grace_intent`), plus a short close delay on unsafe leave.
 - Note: Submenu rendering no longer depends on pointer movement; keyboard-opened submenus render even
@@ -179,6 +182,7 @@ Notes on API mapping:
 - Keyboard test: `dropdown_menu_submenu_opens_on_arrow_right_without_pointer_move`
 - Keyboard test: `dropdown_menu_nested_submenu_opens_on_arrow_right_and_keeps_test_ids`
 - Direction test: `dropdown_menu_align_start_respects_direction_provider`
+- Direction test: `dropdown_menu_submenu_chevron_tracks_inline_end_direction`
 - Web placement gate (root): `web_vs_fret_dropdown_menu_demo_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
 - Web menu row height gate (root): `web_vs_fret_dropdown_menu_demo_menu_item_height_matches`
@@ -249,6 +253,9 @@ Notes on API mapping:
   (asserts the interactive row chrome still fills the authored item bounds on demo/basic examples).
 - Diag screenshot evidence: `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-demo-open-screenshot-zinc-dark.json`
   (captures the docs-aligned demo open state in the zinc dark preset).
+- Diag screenshot evidence: `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-rtl-submenu-inline-end-screenshot.json`
+  (captures the RTL submenu stack after hovering the nested submenu chain so logical inline-end
+  placement stays reviewable outside the unit tests).
 - Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
   menu panel tracks the trigger after wheel-driven scroll updates (validated in
   `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via

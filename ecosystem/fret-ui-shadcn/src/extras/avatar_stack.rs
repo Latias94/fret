@@ -113,6 +113,7 @@ impl AvatarStack {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).snapshot();
+            let dir = crate::direction::use_direction(cx, None);
 
             let size = self.size;
             let overlap = self.overlap;
@@ -145,11 +146,16 @@ impl AvatarStack {
                 }
             }
 
-            let mut out = Vec::with_capacity(items.len());
+            let len = items.len();
+            let mut out = Vec::with_capacity(len);
             for (idx, item) in items.into_iter().enumerate() {
                 let mut layout = item_layout_base.clone();
-                if idx > 0 {
+                let visual = crate::rtl::horizontal_visual_item_position(dir, idx, len);
+                if !visual.is_visual_first {
                     layout = layout.ml_neg(overlap);
+                }
+                if let Some(order) = visual.order {
+                    layout = layout.order(order);
                 }
 
                 let child = match item {
@@ -193,5 +199,104 @@ impl AvatarStack {
                     ),
             )
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{ElementKind, MarginEdge};
+
+    fn bounds_320x120() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        )
+    }
+
+    fn render_stack(
+        app: &mut App,
+        window: AppWindowId,
+        dir: crate::direction::LayoutDirection,
+    ) -> AnyElement {
+        fret_ui::elements::with_element_cx(app, window, bounds_320x120(), "test", |cx| {
+            crate::direction::with_direction_provider(cx, dir, |cx| {
+                let a = ShadcnAvatar::new([ShadcnAvatarFallback::new("A").into_element(cx)]);
+                let b = ShadcnAvatar::new([ShadcnAvatarFallback::new("B").into_element(cx)]);
+                let c = ShadcnAvatar::new([ShadcnAvatarFallback::new("C").into_element(cx)]);
+                AvatarStack::new([a, b, c])
+                    .overlap(Space::N2)
+                    .into_element(cx)
+            })
+        })
+    }
+
+    #[test]
+    fn avatar_stack_preserves_source_order_in_ltr() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let root = render_stack(&mut app, window, crate::direction::LayoutDirection::Ltr);
+        let ElementKind::Flex(_) = &root.kind else {
+            panic!("expected AvatarStack root to be a Flex element");
+        };
+        assert_eq!(root.children.len(), 3);
+
+        let first = &root.children[0];
+        let second = &root.children[1];
+        let third = &root.children[2];
+
+        let ElementKind::Container(first_props) = &first.kind else {
+            panic!("expected first AvatarStack item wrapper to be a Container");
+        };
+        let ElementKind::Container(second_props) = &second.kind else {
+            panic!("expected second AvatarStack item wrapper to be a Container");
+        };
+        let ElementKind::Container(third_props) = &third.kind else {
+            panic!("expected third AvatarStack item wrapper to be a Container");
+        };
+
+        assert_eq!(first_props.layout.flex.order, 0);
+        assert_eq!(second_props.layout.flex.order, 0);
+        assert_eq!(third_props.layout.flex.order, 0);
+        assert_eq!(first_props.layout.margin.left, MarginEdge::Px(Px(0.0)));
+        assert_eq!(second_props.layout.margin.left, MarginEdge::Px(Px(-8.0)));
+        assert_eq!(third_props.layout.margin.left, MarginEdge::Px(Px(-8.0)));
+    }
+
+    #[test]
+    fn avatar_stack_uses_logical_visual_order_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let root = render_stack(&mut app, window, crate::direction::LayoutDirection::Rtl);
+        let ElementKind::Flex(_) = &root.kind else {
+            panic!("expected AvatarStack root to be a Flex element");
+        };
+        assert_eq!(root.children.len(), 3);
+
+        let first = &root.children[0];
+        let second = &root.children[1];
+        let third = &root.children[2];
+
+        let ElementKind::Container(first_props) = &first.kind else {
+            panic!("expected first AvatarStack item wrapper to be a Container");
+        };
+        let ElementKind::Container(second_props) = &second.kind else {
+            panic!("expected second AvatarStack item wrapper to be a Container");
+        };
+        let ElementKind::Container(third_props) = &third.kind else {
+            panic!("expected third AvatarStack item wrapper to be a Container");
+        };
+
+        assert_eq!(first_props.layout.flex.order, 2);
+        assert_eq!(second_props.layout.flex.order, 1);
+        assert_eq!(third_props.layout.flex.order, 0);
+        assert_eq!(first_props.layout.margin.left, MarginEdge::Px(Px(-8.0)));
+        assert_eq!(second_props.layout.margin.left, MarginEdge::Px(Px(-8.0)));
+        assert_eq!(third_props.layout.margin.left, MarginEdge::Px(Px(0.0)));
     }
 }

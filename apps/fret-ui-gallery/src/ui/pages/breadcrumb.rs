@@ -28,6 +28,8 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "API implementation: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`.",
         "Gallery now keeps the shadcn docs-path examples (`Usage`, `Basic`, `Custom Separator`, `Collapsed`) on the curated facade lane, and reopens raw breadcrumb primitives only for advanced seams such as dropdown trigger composition, richer router-shaped inline children, responsive drawer handoff, and RTL-specific overlay alignment.",
         "Breadcrumb already exposes a compact builder plus an upstream-shaped composition lane; the main gap here was the teaching surface, not the mechanism layer or default recipe ownership.",
+        "The `RTL` preview now stays closer to the upstream translated example too: Arabic labels, dot separators, and an end-aligned dropdown attached to the middle breadcrumb item.",
+        "Default `BreadcrumbSeparator` chevrons already mirror toward logical `inline-end` in `fret-ui-shadcn`; the docs-aligned RTL preview overrides separators with dots because upstream does, not because the default chevron separator needs a manual RTL fix.",
         "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
         "Use separators and collapse strategy (`BreadcrumbItem::ellipsis`) to keep paths readable in narrow sidebars.",
         "Dropdown, router-link, and custom-separator samples use typed pressables/links plus `.children(|cx| [...])` for composable inline content without widening the public surface into a generic Slot/`asChild` mechanism (ADR 0115), while `children_raw(...)` remains the explicit advanced seam.",
@@ -79,7 +81,9 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::link_component::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
         .title_test_id("ui-gallery-breadcrumb-section-title-rtl")
-        .description("Breadcrumb layout should follow right-to-left direction context.")
+        .description(
+            "Translated upstream RTL breadcrumb with dot separators, logical inline-end trigger icon placement, and end-aligned dropdown content.",
+        )
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(

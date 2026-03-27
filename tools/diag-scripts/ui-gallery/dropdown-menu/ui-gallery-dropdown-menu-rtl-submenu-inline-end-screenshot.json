@@ -1,0 +1,111 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-dropdown-menu-rtl-submenu-inline-end-screenshot",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "dropdown_menu",
+      "rtl",
+      "submenu",
+      "screenshots"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "dropdown_menu"
+    },
+    "target_hints": [
+      "Starts UI Gallery on the Dropdown Menu page.",
+      "Opens the RTL example, hovers the nested submenu chain, and captures a screenshot proving the submenu stack remains on logical inline-end."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 760.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-dropdown-menu" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-rtl-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-rtl-trigger" },
+      "delta_y": -160.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-rtl-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-rtl-item-invite-users" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-rtl-item-invite-users" }
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-rtl-item-email" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-rtl-item-invite-users" },
+        "b": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-rtl-item-email" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-rtl-item-more" }
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-rtl-item-calendar" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-dropdown-menu-rtl-submenu-inline-end"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-dropdown-menu-rtl-submenu-inline-end"
+    }
+  ]
+}

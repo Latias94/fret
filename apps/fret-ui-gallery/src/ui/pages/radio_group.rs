@@ -17,8 +17,9 @@ pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "`radio_group_uncontrolled(default, items)` and `radio_group(model, items)` are the default first-party helper paths for uncontrolled and controlled radio-group authoring.",
-        "`RadioGroupItem::children(...)` and `variant(RadioGroupItemVariant::ChoiceCard)` cover the richer description and choice-card compositions without introducing a generic `compose()` API.",
+        "`RadioGroupItem::child(...)` / `children(...)` and `variant(RadioGroupItemVariant::ChoiceCard)` cover the richer description, RTL field-content, and choice-card compositions without introducing a generic root `compose()` / children API.",
         "Selection semantics, roving navigation, icon chrome, border, and focus ring remain recipe-owned; surrounding fieldset and row layout remain caller-owned composition.",
+        "The `RTL` preview keeps the translated upstream three-row example shape. `DirectionProvider(Rtl)` plus `RadioGroupItem::child(...)` are sufficient to keep each item's text on the logical side and the indicator on the opposite edge, so no extra physical alignment prop is needed.",
         "`Label Association` stays after the upstream docs path because it documents the Fret-specific `control_id(...)` bridge rather than an upstream section heading.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
     ]);
@@ -56,7 +57,7 @@ pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-radio-group-invalid")
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Radio group layout and content order under RTL.")
+        .description("Translated upstream three-row RTL preview on the default `RadioGroupItem::child(...)` lane.")
         .test_id_prefix("ui-gallery-radio-group-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let label = DocSection::build(cx, "Label Association (Fret)", label)
@@ -67,7 +68,7 @@ pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Radio Group docs path first: Demo, Usage, Description, Choice Card, Fieldset, Disabled, Invalid, RTL, and API Reference. `Label Association` stays as a focused Fret follow-up.",
+            "Preview mirrors the shadcn Radio Group docs path first: Demo, Usage, Description, Choice Card, Fieldset, Disabled, Invalid, RTL, and API Reference, including the translated upstream RTL preview on the default helper lane. `Label Association` stays as a focused Fret follow-up.",
         ),
         vec![
             demo,

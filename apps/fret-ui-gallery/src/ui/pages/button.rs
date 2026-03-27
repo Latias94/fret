@@ -47,6 +47,8 @@ pub(super) fn preview_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Gallery sections now mirror shadcn Button docs first: Demo, Usage, Cursor, Size, Default, Outline, Secondary, Ghost, Destructive, Link, Icon, With Icon, Rounded, Spinner, Button Group, As Link / As Child (Semantic), RTL, API Reference.",
         "`Children (Fret)` stays after the upstream path to document the landed-element equivalent of JSX child composition without widening `Button` into a generic root `asChild` surface.",
         "`Variants Overview (Fret)` stays after the upstream path so existing variant chrome diagnostics remain easy to compare without displacing the docs order.",
+        "The `RTL` preview keeps the translated upstream row shape and makes the logical slot contract explicit: `trailing_icon(...)` still means inline-end and `leading_child(...)` still means inline-start, so the visual order flips automatically under `DirectionProvider(Rtl)`.",
+        "Icon glyph direction remains caller-owned rather than recipe-owned. The RTL submit example uses `lucide.arrow-left` to match the upstream web example's `ArrowRightIcon` plus `rtl:rotate-180` outcome without introducing a button-specific auto-mirror rule.",
         "The main parity fix here is recipe/public-surface work: logical inline child slots now cover spinner/icon compositions, the semantic-link lane now bridges both the Base `As Link` and Radix `As Child` docs surfaces, and the page now stamps stable button-scoped section ids so docs smoke gates can target the real page structure.",
     ]);
 
@@ -121,7 +123,9 @@ pub(super) fn preview_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::link_render::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
         .test_id_prefix("ui-gallery-button-rtl")
-        .description("Button layout under an RTL direction provider.")
+        .description(
+            "Translated upstream RTL row showing logical inline-start/inline-end slot flipping; icon glyph mirroring stays caller-owned.",
+        )
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let children = DocSection::build(cx, "Children (Fret)", children)
         .test_id_prefix("ui-gallery-button-children")

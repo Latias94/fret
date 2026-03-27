@@ -19,6 +19,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         shadcn::AlertDescription::new(
                             "This alert validates right-to-left layout and text alignment.",
                         ),
+                        shadcn::AlertAction::build(|cx, out| {
+                            out.push(
+                                shadcn::Button::new("تراجع")
+                                    .size(shadcn::ButtonSize::Xs)
+                                    .ui()
+                                    .shadow_none()
+                                    .into_element(cx),
+                            );
+                        }),
                     ]
                 })
                 .variant(shadcn::AlertVariant::Default)

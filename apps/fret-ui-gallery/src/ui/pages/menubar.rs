@@ -18,6 +18,7 @@ pub(super) fn preview_menubar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/menubar.mdx`; example references: `repo-ref/ui/apps/v4/examples/base/menubar-*.tsx`; chrome reference: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx`.",
         "`MenubarTrigger::new(...).into_menu().entries_parts(MenubarContent::new(), [...])` is the default copyable docs-aligned lane, while `Menubar::new([MenubarMenu::new(...).entries([...])])` remains the compact Fret-first shorthand for app code.",
         "`MenubarGroup::new([...])`, `MenubarSub::new(...)`, `MenubarSubContent::new([...])`, `MenubarSeparator`, and `MenubarShortcut::new(...)` keep the upstream part vocabulary visible while still landing into an explicit typed `MenubarEntry` tree.",
+        "`MenubarSubContent` keeps the upstream Base UI submenu default on logical `inline-end`, so RTL only needs a direction provider; submenu chevrons flip with the same logical edge.",
         "`MenubarCheckboxItem::from_checked(...).on_checked_change(...)` and `MenubarRadioGroup::from_value(...).on_value_change(...)` cover the docs examples without widening this family into per-row model plumbing.",
         "`MenubarContent::{min_width, submenu_min_width}` own explicit panel sizing overrides; root width remains caller-owned page/layout negotiation.",
         "A generic heterogeneous children API is still not warranted here: the typed `MenubarEntry` tree already preserves submenu structure, collection semantics, and diagnostics-friendly test ids without adding hidden scope contracts.",
@@ -28,6 +29,7 @@ pub(super) fn preview_menubar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "The docs-path snippets now stay on the part-shaped lane so the copyable code tabs teach the same `MenubarTrigger` / `MenubarContent` / `MenubarSub*` vocabulary that upstream docs do.",
         "`MenubarTrigger::new(...).into_menu().entries_parts(...)` remains the upstream-shaped copyable lane; the `Parts` section is a focused adapter example on that same lane rather than an advanced escape hatch.",
         "The compact Fret-first root shorthand still exists, but it is documented in `API Reference` instead of displacing the docs-aligned authoring lane.",
+        "The RTL example keeps the fuller docs demo shape while relying on the same logical `inline-end` submenu default as upstream; no extra physical-side API is needed for submenu opening direction.",
         "`Parts` stays as the focused advanced adapter example after the docs path; it is not the primary teaching surface anymore.",
         "Keep `ui-gallery-menubar-*` and `ui-gallery-page-menubar` test IDs stable; existing diag scripts depend on them.",
     ]);
@@ -69,7 +71,7 @@ pub(super) fn preview_menubar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::with_icons::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
         .description(
-            "RTL layout mirrors the fuller docs demo shape instead of a reduced one-menu sample.",
+            "RTL layout mirrors the fuller docs demo shape while keeping nested submenus on logical `inline-end` and flipping submenu chevrons automatically.",
         )
         .test_id_prefix("ui-gallery-menubar-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");

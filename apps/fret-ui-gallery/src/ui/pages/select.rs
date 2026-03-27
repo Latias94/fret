@@ -43,6 +43,8 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) are now the default copyable root story; `into_element_parts(...)` remains the focused upstream-shaped adapter on the same lane rather than a separate `compose()` story.",
         "`Composable Parts (Fret)` now makes that nested lane explicit with a full copyable example, so app authors do not need a broader generic children API just to match upstream docs ergonomics.",
         "`Rich Items (Fret)` documents the current typed answer to richer `SelectItemText` content: use styled text runs for value + secondary label style instead of widening items to arbitrary child trees.",
+        "`RTL` now keeps the translated upstream example shape more closely: a narrower `w-32`-equivalent trigger plus the full five-fruit / three-vegetable grouping instead of a reduced smoke-test list.",
+        "`DirectionProvider(Rtl)` is sufficient for the RTL example: trigger text/chevron ordering and popup content layout already follow logical inline-start/end, so the gallery should not teach an extra physical alignment override here.",
         "Base UI's `multiple` and object-value examples are not blocked on Select overlay mechanics; they would require a separate public-surface expansion beyond the current `Model<Option<Arc<str>>>` contract, so prefer `Combobox` for multi-select today.",
         "Standalone label wiring still uses `FieldLabel::for_control(...)` + `Select::control_id(...)`; inside `Field::build(...)`, Select can inherit the field-local label/description association automatically.",
         "`Composable Parts (Fret)`, `Rich Items (Fret)`, `Label Association`, `Field Builder Association`, and `Diag Surface` stay after `API Reference` as explicit Fret follow-ups so the docs path stays clean without sacrificing existing scripted coverage.",
@@ -110,7 +112,9 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-select-invalid")
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("All shadcn components should work under an RTL direction provider.")
+        .description(
+            "Translated upstream RTL example with logical trigger/content layout and no extra physical alignment override.",
+        )
         .test_id_prefix("ui-gallery-select-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 

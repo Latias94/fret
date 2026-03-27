@@ -16,7 +16,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
-use fret_ui_kit::{ui, ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space, ui};
 
 use crate::layout as shadcn_layout;
 

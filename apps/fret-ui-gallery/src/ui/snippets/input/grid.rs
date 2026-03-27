@@ -9,22 +9,28 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let first = cx.local_model_keyed("first", String::new);
     let last = cx.local_model_keyed("last", String::new);
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(420.0));
+    let first_id = "ui-gallery-input-grid-first-name";
+    let last_id = "ui-gallery-input-grid-last-name";
 
     ui::h_row(|cx| {
         vec![
             shadcn::Field::new([
-                shadcn::FieldLabel::new("First Name").into_element(cx),
+                shadcn::FieldLabel::new("First Name")
+                    .for_control(first_id)
+                    .into_element(cx),
                 shadcn::Input::new(first)
-                    .a11y_label("First name")
+                    .control_id(first_id)
                     .placeholder("Jordan")
                     .into_element(cx),
             ])
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx),
             shadcn::Field::new([
-                shadcn::FieldLabel::new("Last Name").into_element(cx),
+                shadcn::FieldLabel::new("Last Name")
+                    .for_control(last_id)
+                    .into_element(cx),
                 shadcn::Input::new(last)
-                    .a11y_label("Last name")
+                    .control_id(last_id)
                     .placeholder("Lee")
                     .into_element(cx),
             ])

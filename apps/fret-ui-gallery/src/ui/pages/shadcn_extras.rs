@@ -31,6 +31,7 @@ pub(super) fn preview_shadcn_extras(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rating = DocSection::build(cx, "Rating", rating)
         .code_rust_from_file_region(snippets::rating::SOURCE, "example");
     let avatar_stack = DocSection::build(cx, "Avatar stack", avatar_stack)
+        .description("Raw extras avatar stack in LTR and RTL so overlap direction stays auditable.")
         .code_rust_from_file_region(snippets::avatar_stack::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(

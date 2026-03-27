@@ -5,8 +5,8 @@ use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    ui::v_stack(|cx| {
-        shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).with(cx, |cx| {
+    shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, |cx| {
+        ui::v_stack(|cx| {
             vec![
                 shadcn::Badge::new("RTL subtree")
                     .variant(shadcn::BadgeVariant::Outline)
@@ -40,16 +40,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .into_element(cx),
             ]
         })
+        .gap(Space::N3)
+        .items_start()
+        .layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(480.0))
+                .min_w_0(),
+        )
+        .into_element(cx)
+        .test_id("ui-gallery-direction-usage")
     })
-    .gap(Space::N3)
-    .items_start()
-    .layout(
-        LayoutRefinement::default()
-            .w_full()
-            .max_w(Px(480.0))
-            .min_w_0(),
-    )
-    .into_element(cx)
-    .test_id("ui-gallery-direction-usage")
 }
 // endregion: example

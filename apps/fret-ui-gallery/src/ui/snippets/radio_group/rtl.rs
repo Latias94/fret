@@ -13,7 +13,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::RadioGroupItem::new("default", "افتراضي").child(
                     shadcn::FieldContent::new([
                         shadcn::FieldLabel::new("افتراضي").into_element(cx),
-                        shadcn::FieldDescription::new("المسافات القياسية لمعظم حالات الاستخدام.")
+                        shadcn::FieldDescription::new("تباعد قياسي لمعظم حالات الاستخدام.")
                             .into_element(cx),
                     ])
                     .into_element(cx),

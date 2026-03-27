@@ -221,7 +221,9 @@ pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-avatar-dropdown")
         .code_rust_from_file_region(snippets::dropdown::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Avatar should behave under an RTL direction provider.")
+        .description(
+            "Docs-aligned RTL preview: basic avatar, badge, and group count; `AvatarBadge` stays physical bottom-right under RTL.",
+        )
         .test_id_prefix("ui-gallery-avatar-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let fallback = DocSection::build(cx, "Fallback only (Fret)", fallback)

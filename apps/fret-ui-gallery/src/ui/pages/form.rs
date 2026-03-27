@@ -42,7 +42,9 @@ pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("FieldSet recipe with grouped fields and action row.")
         .code_rust_from_file_region(snippets::fieldset::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Form composition under an RTL direction provider.")
+        .description(
+            "Focused Fret RTL follow-up: logical end-aligned field text plus explicit horizontal row composition.",
+        )
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(

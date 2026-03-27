@@ -52,6 +52,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         shadcn::DropdownMenuSubContent::new([shadcn::DropdownMenuGroup::new([
                             shadcn::DropdownMenuItem::new("الملف الشخصي")
                                 .leading_icon(IconId::new_static("lucide.user"))
+                                .test_id("ui-gallery-dropdown-menu-rtl-item-profile")
                                 .into(),
                             shadcn::DropdownMenuItem::new("الفوترة")
                                 .leading_icon(IconId::new_static("lucide.credit-card"))
@@ -73,14 +74,18 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 item.test_id("ui-gallery-dropdown-menu-rtl-item-invite-users")
                             }),
                             shadcn::DropdownMenuSubContent::new([
-                                shadcn::DropdownMenuItem::new("البريد الإلكتروني").into(),
+                                shadcn::DropdownMenuItem::new("البريد الإلكتروني")
+                                    .test_id("ui-gallery-dropdown-menu-rtl-item-email")
+                                    .into(),
                                 shadcn::DropdownMenuItem::new("رسالة").into(),
                                 shadcn::DropdownMenuSub::new(
                                     shadcn::DropdownMenuSubTrigger::new("المزيد").refine(|item| {
                                         item.test_id("ui-gallery-dropdown-menu-rtl-item-more")
                                     }),
                                     shadcn::DropdownMenuSubContent::new([
-                                        shadcn::DropdownMenuItem::new("تقويم").into(),
+                                        shadcn::DropdownMenuItem::new("تقويم")
+                                            .test_id("ui-gallery-dropdown-menu-rtl-item-calendar")
+                                            .into(),
                                         shadcn::DropdownMenuItem::new("دردشة").into(),
                                         shadcn::DropdownMenuSeparator::new().into(),
                                         shadcn::DropdownMenuItem::new("خطاف ويب").into(),

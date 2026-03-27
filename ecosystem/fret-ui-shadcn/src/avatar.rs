@@ -378,28 +378,32 @@ impl AvatarGroup {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let run = |cx: &mut ElementContext<'_, H>| {
+            let dir = crate::direction::use_direction(cx, None);
             let props = {
                 let theme = Theme::global(&*cx.app);
                 decl_style::container_props(theme, self.chrome, self.layout)
             };
 
-            let mut out = Vec::new();
+            let len = self.children.len();
+            let mut out = Vec::with_capacity(len);
             for (idx, child) in self.children.into_iter().enumerate() {
-                if idx == 0 {
-                    out.push(child);
-                } else {
-                    out.push(cx.container(
-                        {
-                            let theme = Theme::global(&*cx.app);
-                            decl_style::container_props(
-                                theme,
-                                ChromeRefinement::default(),
-                                LayoutRefinement::default().ml_neg(Space::N2),
-                            )
-                        },
-                        move |_cx| vec![child],
-                    ));
+                let visual = crate::rtl::horizontal_visual_item_position(dir, idx, len);
+
+                let mut layout = LayoutRefinement::default();
+                if !visual.is_visual_first {
+                    layout = layout.ml_neg(Space::N2);
                 }
+                if let Some(order) = visual.order {
+                    layout = layout.order(order);
+                }
+
+                out.push(cx.container(
+                    {
+                        let theme = Theme::global(&*cx.app);
+                        decl_style::container_props(theme, ChromeRefinement::default(), layout)
+                    },
+                    move |_cx| vec![child],
+                ));
             }
 
             cx.container(props, move |cx| {
@@ -861,7 +865,7 @@ mod tests {
         TextConstraints, TextMetrics, TextService, WindowFrameClockService,
     };
     use fret_runtime::{Effect, FrameId};
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{ElementKind, InsetEdge, MarginEdge, PositionStyle};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -947,6 +951,13 @@ mod tests {
             n.role == SemanticsRole::Text
                 && (n.label.as_deref() == Some(text) || n.value.as_deref() == Some(text))
         })
+    }
+
+    fn find_avatar_badge(node: &AnyElement) -> Option<&AnyElement> {
+        if is_avatar_badge_marker(node) {
+            return Some(node);
+        }
+        node.children.iter().find_map(find_avatar_badge)
     }
 
     #[test]
@@ -1245,6 +1256,91 @@ mod tests {
             Overflow::Clip,
             "expected avatar core to clip overflow"
         );
+    }
+
+    #[test]
+    fn avatar_badge_keeps_physical_bottom_right_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            crate::direction::with_direction_provider(
+                cx,
+                crate::direction::LayoutDirection::Rtl,
+                |cx| {
+                    let badge = AvatarBadge::new().into_element(cx);
+                    Avatar::new([AvatarFallback::new("JD").into_element(cx), badge])
+                        .into_element(cx)
+                },
+            )
+        });
+
+        let badge = find_avatar_badge(&el).expect("expected AvatarBadge marker in Avatar tree");
+        let ElementKind::Container(props) = &badge.kind else {
+            panic!("expected AvatarBadge marker to resolve to a Container");
+        };
+
+        assert_eq!(props.layout.position, PositionStyle::Absolute);
+        assert_eq!(props.layout.inset.right, InsetEdge::Px(Px(0.0)));
+        assert_eq!(props.layout.inset.bottom, InsetEdge::Px(Px(0.0)));
+        assert_eq!(props.layout.inset.left, InsetEdge::Auto);
+        assert_eq!(props.layout.inset.top, InsetEdge::Auto);
+    }
+
+    #[test]
+    fn avatar_group_uses_logical_visual_order_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(260.0), Px(120.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            crate::direction::with_direction_provider(
+                cx,
+                crate::direction::LayoutDirection::Rtl,
+                |cx| {
+                    AvatarGroup::new([
+                        Avatar::new([AvatarFallback::new("A").into_element(cx)]).into_element(cx),
+                        Avatar::new([AvatarFallback::new("B").into_element(cx)]).into_element(cx),
+                        AvatarGroupCount::empty()
+                            .children([ui::text("+3").into_element(cx)])
+                            .into_element(cx),
+                    ])
+                    .into_element(cx)
+                },
+            )
+        });
+
+        let flex = el
+            .children
+            .first()
+            .expect("expected AvatarGroup flex child");
+        let wrappers = &flex.children;
+        assert_eq!(wrappers.len(), 3);
+
+        let ElementKind::Container(first_props) = &wrappers[0].kind else {
+            panic!("expected first AvatarGroup item wrapper to be a Container");
+        };
+        let ElementKind::Container(second_props) = &wrappers[1].kind else {
+            panic!("expected second AvatarGroup item wrapper to be a Container");
+        };
+        let ElementKind::Container(third_props) = &wrappers[2].kind else {
+            panic!("expected third AvatarGroup item wrapper to be a Container");
+        };
+
+        assert_eq!(first_props.layout.flex.order, 2);
+        assert_eq!(second_props.layout.flex.order, 1);
+        assert_eq!(third_props.layout.flex.order, 0);
+
+        assert_eq!(first_props.layout.margin.left, MarginEdge::Px(Px(-8.0)));
+        assert_eq!(second_props.layout.margin.left, MarginEdge::Px(Px(-8.0)));
+        assert_eq!(third_props.layout.margin.left, MarginEdge::Px(Px(0.0)));
     }
 
     #[test]

@@ -12,8 +12,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .max_w(MetricRef::Px(Px(384.0)))
         .min_w_0();
 
-    ui::v_flex(move |cx| {
-        shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).with(cx, |cx| {
+    shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, move |cx| {
+        ui::v_flex(|cx| {
             vec![
                 shadcn::card(|cx| {
                     ui::children![
@@ -105,10 +105,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .test_id("ui-gallery-direction-demo-card"),
             ]
         })
+        .justify_center()
+        .layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
+        .test_id("ui-gallery-direction-demo")
     })
-    .justify_center()
-    .layout(LayoutRefinement::default().w_full())
-    .into_element(cx)
-    .test_id("ui-gallery-direction-demo")
 }
 // endregion: example

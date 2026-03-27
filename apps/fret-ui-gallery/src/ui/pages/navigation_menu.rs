@@ -15,6 +15,7 @@ pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "The main preview now follows the official new-york-v4 Navigation Menu demo structure (Home, Components, Docs, List, Simple, With Icon), while the container-query toggle remains a Fret-specific follow-up.",
         "`navigation_menu(cx, model, |cx| ..)` is now the default first-party root helper, while `NavigationMenu::new(model)` remains available when callers want the explicit root builder seam.",
         "`NavigationMenuRoot/List/Item/Trigger/Content/Link/Viewport/Indicator` remain the upstream-shaped lane on the same family rather than an advanced escape hatch.",
+        "`NavigationMenu` keeps viewport placement on logical `align=start` by default; under `DirectionProvider(Rtl)` that yields the same visual outcome as the upstream RTL example's explicit `align={dir === \"rtl\" ? \"end\" : \"start\"}` wiring.",
         "`NavigationMenuLink::{new, child}` now accept the same narrow single-selection bridge as the compact root lane.",
         "Top-level docs-style links stay on a contentless `NavigationMenuItem` with `href` / `target` / `rel`, and `trigger` / `trigger_child` / `trigger_children` already cover the custom trigger-child composition seam without adding a DOM-style children API.",
         "`navigation_menu_trigger_style()` intentionally stays a typed layout helper; hover/open chrome remains recipe-owned, while `w-full` / `min-w-0` / width negotiation remain caller-owned.",
@@ -37,7 +38,9 @@ pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         )
         .code_rust_from_file_region(snippets::link_component::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Navigation Menu should preserve placement and viewport alignment under RTL.")
+        .description(
+            "Navigation Menu should preserve logical start placement and viewport alignment under RTL without requiring an extra physical align prop.",
+        )
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let demo_with_toggle = DocSection::build(cx, "Container Query Toggle", demo_with_toggle)
         .description("Compare viewport-driven and container-driven md breakpoint behavior.")

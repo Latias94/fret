@@ -21,9 +21,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::DropdownMenuLabel::new("My Account").into(),
                     shadcn::DropdownMenuItem::new("Profile").into(),
                     shadcn::DropdownMenuItem::new("Billing").into(),
-                    shadcn::DropdownMenuSeparator::new().into(),
                 ])
                 .into(),
+                shadcn::DropdownMenuSeparator::new().into(),
                 shadcn::DropdownMenuGroup::new([
                     shadcn::DropdownMenuItem::new("Team").into(),
                     shadcn::DropdownMenuItem::new("Subscription").into(),

@@ -9,10 +9,13 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model(String::new);
     let max_w_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
+    let required_id = "ui-gallery-input-required-field";
 
     let label = ui::h_row(|cx| {
         vec![
-            shadcn::FieldLabel::new("Required Field").into_element(cx),
+            shadcn::FieldLabel::new("Required Field")
+                .for_control(required_id)
+                .into_element(cx),
             shadcn::raw::typography::muted("*")
                 .into_element(cx)
                 .attach_semantics(SemanticsDecoration::default().label("required-star")),
@@ -25,11 +28,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::Field::new([
         label,
         shadcn::Input::new(value)
-            .a11y_label("Required field")
+            .control_id(required_id)
             .aria_required(true)
             .placeholder("This field is required")
             .into_element(cx),
-        shadcn::FieldDescription::new("This field must be filled out.").into_element(cx),
+        shadcn::FieldDescription::new("This field must be filled out.")
+            .for_control(required_id)
+            .into_element(cx),
     ])
     .refine_layout(max_w_xs)
     .into_element(cx)
