@@ -91,6 +91,16 @@ Meta fields (v1):
 Taffy dump payload:
 
 - `taffy` is currently the internal Taffy debug subtree dump (node list + rects + style debug).
+- `taffy.roots` may additionally expose each visible layer root as a separate dump entry, including
+  layer metadata (`blocks_underlay_input`, `blocks_underlay_focus`, `hit_testable`) and per-root
+  bounds. This allows overlay/modal subtrees to remain inspectable even when the primary `taffy`
+  dump is rooted at the base layer or narrowed by a filter.
+- Nodes may include an optional `debug` object with stable diagnostics annotations when available
+  (for example `test_id`, effective semantics label/role, element id, instance kind).
+- Human-readable node `label` strings may also inline those diagnostics anchors for grep-friendly
+  triage and `root_label_filter` matching.
+- `root_label_filter` matching may search across all visible layer roots before choosing the
+  primary dump root.
 - Tooling should treat this payload as debug-oriented and avoid depending on exact field names.
 
 Guidance:

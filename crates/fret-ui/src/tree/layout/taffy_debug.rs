@@ -1,7 +1,224 @@
 use super::*;
-use crate::layout_engine::TaffyLayoutEngine;
+use crate::layout_engine::{DebugDumpNodeInfo, TaffyLayoutEngine};
+
+#[derive(Debug, Clone, Copy)]
+struct LayoutSidecarRootRecord {
+    capture_index: usize,
+    kind: &'static str,
+    root: NodeId,
+    root_bounds: Rect,
+    blocks_underlay_input: bool,
+    blocks_underlay_focus: bool,
+    hit_testable: bool,
+}
+
+fn layout_debug_node_info<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    node: NodeId,
+) -> DebugDumpNodeInfo {
+    let Some(record) = crate::declarative::frame::element_record_for_node(app, window, node) else {
+        return DebugDumpNodeInfo::default();
+    };
+
+    let mut label = format!("{:?}", record.instance);
+    let mut debug = serde_json::Map::new();
+    debug.insert(
+        "element_id".to_string(),
+        serde_json::json!(record.element.0),
+    );
+    debug.insert(
+        "instance_kind".to_string(),
+        serde_json::json!(record.instance.kind_name()),
+    );
+
+    let mut effective_test_id: Option<String> = None;
+    let mut effective_role: Option<String> = None;
+    let mut effective_label: Option<String> = None;
+
+    match &record.instance {
+        crate::declarative::frame::ElementInstance::Semantics(props) => {
+            effective_role = Some(format!("{:?}", props.role));
+            effective_test_id = props.test_id.as_ref().map(ToString::to_string);
+            effective_label = props.label.as_ref().map(ToString::to_string);
+        }
+        crate::declarative::frame::ElementInstance::SemanticFlex(props) => {
+            effective_role = Some(format!("{:?}", props.role));
+        }
+        _ => {}
+    }
+
+    if let Some(decoration) = record.semantics_decoration.as_ref() {
+        let mut decoration_debug = serde_json::Map::new();
+        if let Some(test_id) = decoration.test_id.as_ref() {
+            decoration_debug.insert("test_id".to_string(), serde_json::json!(test_id.as_ref()));
+            effective_test_id = Some(test_id.to_string());
+        }
+        if let Some(role) = decoration.role {
+            let role = format!("{role:?}");
+            decoration_debug.insert("role".to_string(), serde_json::json!(role));
+            effective_role = Some(role);
+        }
+        if let Some(label_text) = decoration.label.as_ref() {
+            decoration_debug.insert("label".to_string(), serde_json::json!(label_text.as_ref()));
+            effective_label = Some(label_text.to_string());
+        }
+        if !decoration_debug.is_empty() {
+            debug.insert(
+                "semantics_decoration".to_string(),
+                serde_json::Value::Object(decoration_debug),
+            );
+        }
+    }
+
+    if let Some(test_id) = effective_test_id.as_ref() {
+        debug.insert("test_id".to_string(), serde_json::json!(test_id));
+        label.push_str(&format!(" [test_id={test_id}]"));
+    }
+    if let Some(role) = effective_role.as_ref() {
+        debug.insert("semantics_role".to_string(), serde_json::json!(role));
+        label.push_str(&format!(" [semantics_role={role}]"));
+    }
+    if let Some(label_text) = effective_label.as_ref() {
+        debug.insert("semantics_label".to_string(), serde_json::json!(label_text));
+        label.push_str(&format!(" [semantics_label={label_text}]"));
+    }
+    if let Some(key_context) = record.key_context.as_ref() {
+        debug.insert(
+            "key_context".to_string(),
+            serde_json::json!(key_context.as_ref()),
+        );
+    }
+
+    DebugDumpNodeInfo {
+        label: Some(label),
+        debug: Some(serde_json::Value::Object(debug)),
+    }
+}
+
+fn layout_debug_search_label<H: UiHost>(app: &mut H, window: AppWindowId, node: NodeId) -> String {
+    layout_debug_node_info(app, window, node)
+        .label
+        .unwrap_or_default()
+}
+
+fn find_layout_debug_match_in_subtree<H: UiHost>(
+    tree: &UiTree<H>,
+    app: &mut H,
+    window: AppWindowId,
+    root: NodeId,
+    filter: &str,
+) -> Option<NodeId> {
+    let root_label = layout_debug_search_label(app, window, root);
+    if root_label.contains(filter) {
+        return Some(root);
+    }
+
+    let mut stack: Vec<NodeId> = vec![root];
+    let mut visited: std::collections::HashSet<NodeId> = std::collections::HashSet::new();
+    while let Some(node) = stack.pop() {
+        if !visited.insert(node) {
+            continue;
+        }
+
+        let label = layout_debug_search_label(app, window, node);
+        if label.contains(filter) {
+            return Some(node);
+        }
+
+        if let Some(node) = tree.nodes.get(node) {
+            stack.extend(node.children.iter().copied());
+        }
+    }
+
+    None
+}
 
 impl<H: UiHost> UiTree<H> {
+    fn layout_sidecar_roots(
+        &self,
+        fallback_root: NodeId,
+        fallback_bounds: Rect,
+    ) -> Vec<LayoutSidecarRootRecord> {
+        let layer_roots: Vec<NodeId> = self
+            .visible_layers_in_paint_order()
+            .filter_map(|layer_id| self.layers.get(layer_id).map(|layer| layer.root))
+            .collect();
+
+        let mut seen: std::collections::HashSet<NodeId> = std::collections::HashSet::new();
+        let mut roots: Vec<LayoutSidecarRootRecord> = self
+            .visible_layers_in_paint_order()
+            .enumerate()
+            .filter_map(|(capture_index, layer_id)| {
+                let layer = self.layers.get(layer_id)?;
+                if !seen.insert(layer.root) {
+                    return None;
+                }
+                let root_bounds = self
+                    .nodes
+                    .get(layer.root)
+                    .map(|node| node.bounds)
+                    .unwrap_or(fallback_bounds);
+                Some(LayoutSidecarRootRecord {
+                    capture_index,
+                    kind: "layer",
+                    root: layer.root,
+                    root_bounds,
+                    blocks_underlay_input: layer.blocks_underlay_input,
+                    blocks_underlay_focus: layer.blocks_underlay_focus,
+                    hit_testable: layer.hit_testable,
+                })
+            })
+            .collect();
+
+        let viewport_bounds: std::collections::HashMap<NodeId, Rect> =
+            self.viewport_roots().iter().copied().collect();
+        for root in self.layout_engine.debug_independent_root_nodes() {
+            if !seen.insert(root) {
+                continue;
+            }
+            if !layer_roots.is_empty()
+                && !self.is_reachable_from_any_root_via_children(root, &layer_roots)
+            {
+                continue;
+            }
+
+            let root_bounds = viewport_bounds
+                .get(&root)
+                .copied()
+                .or_else(|| self.nodes.get(root).map(|node| node.bounds))
+                .unwrap_or(fallback_bounds);
+            let kind = if viewport_bounds.contains_key(&root) {
+                "viewport"
+            } else {
+                "independent"
+            };
+            roots.push(LayoutSidecarRootRecord {
+                capture_index: roots.len(),
+                kind,
+                root,
+                root_bounds,
+                blocks_underlay_input: false,
+                blocks_underlay_focus: false,
+                hit_testable: true,
+            });
+        }
+
+        if roots.is_empty() {
+            roots.push(LayoutSidecarRootRecord {
+                capture_index: 0,
+                kind: "fallback",
+                root: fallback_root,
+                root_bounds: fallback_bounds,
+                blocks_underlay_input: false,
+                blocks_underlay_focus: false,
+                hit_testable: true,
+            });
+        }
+
+        roots
+    }
+
     pub(super) fn maybe_dump_taffy_subtree(
         &self,
         app: &mut H,
@@ -40,9 +257,7 @@ impl<H: UiHost> UiTree<H> {
         // When debugging complex demos or golden-gated layouts, it is often easier to filter by a
         // stable element label (e.g. a `SemanticsProps.label`) than by ephemeral `NodeId`s.
         let dump_root = if let Some(filter) = taffy_dump.root_label_filter.as_ref() {
-            let root_label = crate::declarative::frame::element_record_for_node(app, window, root)
-                .map(|r| format!("{:?}", r.instance))
-                .unwrap_or_default();
+            let root_label = layout_debug_search_label(app, window, root);
             if root_label.contains(filter) {
                 root
             } else {
@@ -55,10 +270,7 @@ impl<H: UiHost> UiTree<H> {
                         continue;
                     }
 
-                    let label =
-                        crate::declarative::frame::element_record_for_node(app, window, node)
-                            .map(|r| format!("{:?}", r.instance))
-                            .unwrap_or_default();
+                    let label = layout_debug_search_label(app, window, node);
                     if label.contains(filter) {
                         found = Some(node);
                         break;
@@ -88,9 +300,8 @@ impl<H: UiHost> UiTree<H> {
             .collect();
         let filename = format!("taffy_{frame}_{root_slug}.json");
 
-        let dump = engine.debug_dump_subtree_json(dump_root, |node| {
-            crate::declarative::frame::element_record_for_node(app, window, node)
-                .map(|r| format!("{:?}", r.instance))
+        let dump = engine.debug_dump_subtree_json_with_info(dump_root, |node| {
+            layout_debug_node_info(app, window, node)
         });
 
         let wrapped = serde_json::json!({
@@ -163,9 +374,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let dump_root = if let Some(filter) = root_label_filter {
-            let root_label = crate::declarative::frame::element_record_for_node(app, window, root)
-                .map(|r| format!("{:?}", r.instance))
-                .unwrap_or_default();
+            let root_label = layout_debug_search_label(app, window, root);
             if root_label.contains(filter) {
                 root
             } else {
@@ -178,10 +387,7 @@ impl<H: UiHost> UiTree<H> {
                         continue;
                     }
 
-                    let label =
-                        crate::declarative::frame::element_record_for_node(app, window, node)
-                            .map(|r| format!("{:?}", r.instance))
-                            .unwrap_or_default();
+                    let label = layout_debug_search_label(app, window, node);
                     if label.contains(filter) {
                         found = Some(node);
                         break;
@@ -209,9 +415,8 @@ impl<H: UiHost> UiTree<H> {
 
         let dump = self
             .layout_engine
-            .debug_dump_subtree_json(dump_root, |node| {
-                crate::declarative::frame::element_record_for_node(app, window, node)
-                    .map(|r| format!("{:?}", r.instance))
+            .debug_dump_subtree_json_with_info(dump_root, |node| {
+                layout_debug_node_info(app, window, node)
             });
 
         let wrapped = serde_json::json!({
@@ -256,48 +461,50 @@ impl<H: UiHost> UiTree<H> {
         out_dir: impl AsRef<std::path::Path>,
         captured_at_unix_ms: u64,
     ) -> std::io::Result<std::path::PathBuf> {
+        let sidecar_roots = self.layout_sidecar_roots(root, root_bounds);
         let dump_root = if let Some(filter) = root_label_filter {
-            let root_label = crate::declarative::frame::element_record_for_node(app, window, root)
-                .map(|r| format!("{:?}", r.instance))
-                .unwrap_or_default();
-            if root_label.contains(filter) {
-                root
-            } else {
-                let mut stack: Vec<NodeId> = vec![root];
-                let mut visited: std::collections::HashSet<NodeId> =
-                    std::collections::HashSet::new();
-                let mut found: Option<NodeId> = None;
-                while let Some(node) = stack.pop() {
-                    if !visited.insert(node) {
-                        continue;
-                    }
-
-                    let label =
-                        crate::declarative::frame::element_record_for_node(app, window, node)
-                            .map(|r| format!("{:?}", r.instance))
-                            .unwrap_or_default();
-                    if label.contains(filter) {
-                        found = Some(node);
-                        break;
-                    }
-
-                    if let Some(node) = self.nodes.get(node) {
-                        stack.extend(node.children.iter().copied());
-                    }
-                }
-
-                found.unwrap_or(root)
-            }
+            sidecar_roots
+                .iter()
+                .rev()
+                .find_map(|root_record| {
+                    find_layout_debug_match_in_subtree(self, app, window, root_record.root, filter)
+                })
+                .unwrap_or(root)
         } else {
             root
         };
 
-        let dump = self
+        let mut dump = self
             .layout_engine
-            .debug_dump_subtree_json(dump_root, |node| {
-                crate::declarative::frame::element_record_for_node(app, window, node)
-                    .map(|r| format!("{:?}", r.instance))
+            .debug_dump_subtree_json_with_info(dump_root, |node| {
+                layout_debug_node_info(app, window, node)
             });
+        let root_dumps = sidecar_roots
+            .iter()
+            .map(|root_record| {
+                serde_json::json!({
+                    "capture_index": root_record.capture_index,
+                    "kind": root_record.kind,
+                    "root": format!("{:?}", root_record.root),
+                    "root_bounds": {
+                        "x": root_record.root_bounds.origin.x.0,
+                        "y": root_record.root_bounds.origin.y.0,
+                        "w": root_record.root_bounds.size.width.0,
+                        "h": root_record.root_bounds.size.height.0,
+                    },
+                    "blocks_underlay_input": root_record.blocks_underlay_input,
+                    "blocks_underlay_focus": root_record.blocks_underlay_focus,
+                    "hit_testable": root_record.hit_testable,
+                    "dump": self.layout_engine.debug_dump_subtree_json_with_info(
+                        root_record.root,
+                        |node| layout_debug_node_info(app, window, node),
+                    ),
+                })
+            })
+            .collect::<Vec<_>>();
+        if let Some(dump_obj) = dump.as_object_mut() {
+            dump_obj.insert("roots".to_string(), serde_json::Value::Array(root_dumps));
+        }
 
         let wrapped = serde_json::json!({
             "schema_version": "v1",
@@ -319,6 +526,8 @@ impl<H: UiHost> UiTree<H> {
                 },
                 "scale_factor": scale_factor,
                 "root_label_filter": root_label_filter,
+                "captured_root_count": sidecar_roots.len(),
+                "visible_layer_root_count": self.visible_layers_in_paint_order().count(),
             },
             "taffy": dump,
         });

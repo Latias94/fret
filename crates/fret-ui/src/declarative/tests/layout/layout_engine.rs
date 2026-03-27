@@ -1,6 +1,354 @@
 use super::*;
 
 #[test]
+fn layout_sidecar_exposes_attached_test_id_in_node_debug_and_filtering() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "layout-sidecar-test-id-bridge",
+        |cx| {
+            vec![cx.container(Default::default(), |cx| {
+                vec![cx.text("hello overlay").test_id("layout-sidecar-node")]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock should be after unix epoch")
+        .as_nanos();
+    let out_dir = std::env::temp_dir().join(format!(
+        "fret-ui-layout-sidecar-test-{}-{nonce}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&out_dir);
+
+    let path = ui
+        .debug_write_layout_sidecar_taffy_v1_json(
+            &mut app,
+            window,
+            root,
+            bounds,
+            1.0,
+            Some("layout-sidecar-node"),
+            &out_dir,
+            1234,
+        )
+        .expect("layout sidecar should be written");
+
+    let sidecar: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).expect("sidecar should be readable"))
+            .expect("sidecar json should parse");
+
+    let root_node = sidecar["taffy"]["meta"]["root"]
+        .as_str()
+        .expect("taffy root should be a string");
+    let nodes = sidecar["taffy"]["nodes"]
+        .as_array()
+        .expect("taffy nodes should be an array");
+    let matched = nodes
+        .iter()
+        .find(|node| node["debug"]["test_id"].as_str() == Some("layout-sidecar-node"))
+        .expect("expected layout sidecar node with attached test_id");
+
+    assert_eq!(
+        matched["node"].as_str(),
+        Some(root_node),
+        "root_label_filter should be able to target an attached test_id"
+    );
+    assert_eq!(
+        matched["debug"]["instance_kind"].as_str(),
+        Some("Text"),
+        "structured debug metadata should expose the instance kind"
+    );
+    assert!(
+        matched["label"]
+            .as_str()
+            .is_some_and(|label| label.contains("layout-sidecar-node")),
+        "human-readable labels should embed the attached test_id for grep-friendly triage"
+    );
+
+    let _ = std::fs::remove_dir_all(&out_dir);
+}
+
+#[test]
+fn layout_sidecar_includes_visible_overlay_roots_and_filtering_can_target_overlay_nodes() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let base_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "layout-sidecar-underlay-root",
+        |cx| {
+            vec![cx.container(Default::default(), |cx| {
+                vec![cx.text("underlay").test_id("layout-sidecar-underlay-node")]
+            })]
+        },
+    );
+    ui.set_root(base_root);
+
+    let overlay_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "layout-sidecar-overlay-root",
+        |cx| {
+            vec![cx.container(Default::default(), |cx| {
+                vec![cx.text("overlay").test_id("layout-sidecar-overlay-node")]
+            })]
+        },
+    );
+    let _overlay_layer = ui.push_overlay_root_ex(overlay_root, true, true);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock should be after unix epoch")
+        .as_nanos();
+    let out_dir = std::env::temp_dir().join(format!(
+        "fret-ui-layout-sidecar-overlay-test-{}-{nonce}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&out_dir);
+
+    let path = ui
+        .debug_write_layout_sidecar_taffy_v1_json(
+            &mut app,
+            window,
+            base_root,
+            bounds,
+            1.0,
+            Some("layout-sidecar-overlay-node"),
+            &out_dir,
+            5678,
+        )
+        .expect("layout sidecar should be written");
+
+    let sidecar: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).expect("sidecar should be readable"))
+            .expect("sidecar json should parse");
+
+    assert_eq!(
+        sidecar["meta"]["captured_root_count"].as_u64(),
+        Some(2),
+        "sidecar metadata should report all visible layer roots"
+    );
+
+    let overlay_dump_root = sidecar["taffy"]["meta"]["root"]
+        .as_str()
+        .expect("taffy root should be a string");
+    let overlay_nodes = sidecar["taffy"]["nodes"]
+        .as_array()
+        .expect("taffy nodes should be an array");
+    let overlay_match = overlay_nodes
+        .iter()
+        .find(|node| node["debug"]["test_id"].as_str() == Some("layout-sidecar-overlay-node"))
+        .expect("expected filtered sidecar dump to expose the overlay node");
+
+    assert_eq!(
+        overlay_match["node"].as_str(),
+        Some(overlay_dump_root),
+        "root_label_filter should search across overlay roots and narrow the dump to the matched overlay node"
+    );
+
+    let root_dumps = sidecar["taffy"]["roots"]
+        .as_array()
+        .expect("taffy roots should be present");
+    assert_eq!(
+        root_dumps.len(),
+        2,
+        "sidecar should include all visible layer root dumps"
+    );
+
+    let base_root_label = format!("{base_root:?}");
+    let overlay_root_label = format!("{overlay_root:?}");
+
+    let base_dump = root_dumps
+        .iter()
+        .find(|entry| entry["root"].as_str() == Some(base_root_label.as_str()))
+        .expect("expected a dump for the base layer root");
+    assert!(
+        base_dump["dump"]["nodes"]
+            .as_array()
+            .is_some_and(|nodes| nodes.iter().any(|node| {
+                node["debug"]["test_id"].as_str() == Some("layout-sidecar-underlay-node")
+            })),
+        "base root dump should still expose underlay test ids"
+    );
+
+    let overlay_dump = root_dumps
+        .iter()
+        .find(|entry| entry["root"].as_str() == Some(overlay_root_label.as_str()))
+        .expect("expected a dump for the overlay layer root");
+    assert_eq!(
+        overlay_dump["blocks_underlay_input"].as_bool(),
+        Some(true),
+        "overlay root metadata should retain layer barrier information"
+    );
+    assert!(
+        overlay_dump["dump"]["nodes"]
+            .as_array()
+            .is_some_and(|nodes| nodes.iter().any(|node| {
+                node["debug"]["test_id"].as_str() == Some("layout-sidecar-overlay-node")
+            })),
+        "overlay root dump should expose overlay test ids even without selecting it as the base root"
+    );
+
+    let _ = std::fs::remove_dir_all(&out_dir);
+}
+
+#[test]
+fn layout_sidecar_captures_independent_layout_roots_for_scroll_content_test_ids() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "layout-sidecar-independent-root",
+        |cx| {
+            let mut scroll = crate::element::ScrollProps::default();
+            scroll.layout.size.width = crate::element::Length::Fill;
+            scroll.layout.size.height = crate::element::Length::Fill;
+            scroll.probe_unbounded = true;
+
+            let mut rows = crate::element::FlexProps::default();
+            rows.layout.size.width = crate::element::Length::Fill;
+            rows.direction = fret_core::Axis::Vertical;
+
+            vec![cx.scroll(scroll, |cx| {
+                vec![cx.flex(rows, |cx| {
+                    vec![
+                        cx.text("independent row")
+                            .test_id("layout-sidecar-independent-row"),
+                        cx.text("second row"),
+                    ]
+                })]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock should be after unix epoch")
+        .as_nanos();
+    let out_dir = std::env::temp_dir().join(format!(
+        "fret-ui-layout-sidecar-independent-test-{}-{nonce}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&out_dir);
+
+    let path = ui
+        .debug_write_layout_sidecar_taffy_v1_json(
+            &mut app,
+            window,
+            root,
+            bounds,
+            1.0,
+            Some("layout-sidecar-independent-row"),
+            &out_dir,
+            91011,
+        )
+        .expect("layout sidecar should be written");
+
+    let sidecar: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).expect("sidecar should be readable"))
+            .expect("sidecar json should parse");
+
+    let matched_root = sidecar["taffy"]["meta"]["root"]
+        .as_str()
+        .expect("taffy root should be a string");
+    let matched_nodes = sidecar["taffy"]["nodes"]
+        .as_array()
+        .expect("taffy nodes should be an array");
+    let matched = matched_nodes
+        .iter()
+        .find(|node| node["debug"]["test_id"].as_str() == Some("layout-sidecar-independent-row"))
+        .expect("expected filtered sidecar dump to expose the scroll content test id");
+    assert_eq!(
+        matched["node"].as_str(),
+        Some(matched_root),
+        "root_label_filter should be able to narrow the dump to a node inside an independent layout root"
+    );
+
+    let captured_root_count = sidecar["meta"]["captured_root_count"]
+        .as_u64()
+        .expect("captured_root_count should be present");
+    let visible_layer_root_count = sidecar["meta"]["visible_layer_root_count"]
+        .as_u64()
+        .expect("visible_layer_root_count should be present");
+    assert!(
+        captured_root_count > visible_layer_root_count,
+        "expected sidecar to capture extra independent layout roots beyond the visible layer roots"
+    );
+
+    let independent_root = sidecar["taffy"]["roots"]
+        .as_array()
+        .expect("taffy roots should be present")
+        .iter()
+        .find(|entry| {
+            entry["kind"].as_str() == Some("independent")
+                && entry["dump"]["nodes"].as_array().is_some_and(|nodes| {
+                    nodes.iter().any(|node| {
+                        node["debug"]["test_id"].as_str() == Some("layout-sidecar-independent-row")
+                    })
+                })
+        })
+        .expect("expected an independent layout root dump for the scroll content row");
+    assert_eq!(
+        independent_root["blocks_underlay_input"].as_bool(),
+        Some(false),
+        "independent layout roots should not masquerade as modal barriers"
+    );
+
+    let _ = std::fs::remove_dir_all(&out_dir);
+}
+
+#[test]
 fn layout_engine_solve_stats_are_per_call_and_bounded_for_two_viewport_roots() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
