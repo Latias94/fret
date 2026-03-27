@@ -100,6 +100,9 @@ Representative seams:
 Rule:
 
 - keep these seams explicit when they truly represent owned control state,
+- treat `Button::toggle_model(...)` / `InputGroupButton::toggle_model(...)` as component-owned
+  activation-policy hooks for trigger affordances, not as a naming precedent for the `imui`
+  boolean field surface,
 - prefer shrinking first-contact helpers before adding more raw part-level constructors.
 
 ### 3. Output/controller handoff seams

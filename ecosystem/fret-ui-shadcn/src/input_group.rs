@@ -1892,6 +1892,10 @@ impl InputGroupButton {
         self
     }
 
+    /// Toggle an externally owned boolean model when the input-group button activates.
+    ///
+    /// This stays on the component/policy layer for trigger-style affordances and should not be
+    /// read as precedent for reintroducing `toggle_model(...)` on the `imui` form-control lane.
     pub fn toggle_model(mut self, model: Model<bool>) -> Self {
         self.toggle_model = Some(model);
         self

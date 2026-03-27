@@ -117,6 +117,10 @@ Cross-cutting interaction policies (toggle models, close overlays, selection wri
   local listeners instead of importing `AppActivateExt`. As of 2026-03-16, the first-party
   default widget bridge table is intentionally empty.
 - `fret-ui-kit` and `fret-ui-shadcn` register handlers to implement policies for each component.
+- On `fret-ui-shadcn` triggers such as `Button::toggle_model(...)` and
+  `InputGroupButton::toggle_model(...)`, "toggle" is an intentional activation-policy verb for
+  flipping externally owned open/active state. It is not precedent for the `imui` boolean field
+  lane, where the canonical control name is `switch_model(...)`.
 - Legacy runtime shortcuts on `PressableProps` / dismissible roots have been removed from `crates/fret-ui`.
   Use component-owned action hooks (`fret-ui-kit::declarative::action_hooks::ActionHooksExt`) instead.
 

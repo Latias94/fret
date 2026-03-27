@@ -493,3 +493,12 @@ Older names now fall into one of two categories only:
 
 - deleted public compatibility names kept only in historical workstream notes,
 - or private/internal helper names inside split implementation modules.
+
+Boundary note:
+
+- The `imui` boolean field surface now stays on `switch_model(...)` /
+  `switch_model_with_options(...)`.
+- This does not apply to component-layer shadcn trigger hooks such as
+  `fret-ui-shadcn::Button::toggle_model(...)`, which remain intentional policy-surface verbs for
+  flipping externally owned open/active state. See
+  `docs/workstreams/imui-stack-fearless-refactor-v1/SHADCN_TOGGLE_BOUNDARY_AUDIT_2026-03-27.md`.

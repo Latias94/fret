@@ -746,6 +746,11 @@ impl Button {
         self
     }
 
+    /// Toggle an externally owned boolean model when the button activates.
+    ///
+    /// This is an intentional component-layer policy hook for trigger-style buttons such as
+    /// dialog, popover, sheet, and custom "open/close" controls. It is not the same concept as
+    /// the `imui` boolean field helper, whose canonical name is `switch_model(...)`.
     pub fn toggle_model(mut self, model: fret_runtime::Model<bool>) -> Self {
         self.toggle_model = Some(model);
         self
