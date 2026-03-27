@@ -4671,6 +4671,74 @@ mod tests {
     }
 
     #[test]
+    fn command_item_children_surface_renders_custom_row_while_preserving_option_label() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::new());
+        let bounds = bounds();
+        let mut services = FakeServices::default();
+
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "cmdk-item-children-surface",
+            |cx| {
+                let custom_text = ui::text("Custom row content")
+                    .test_id("cmd-item-profile-custom-text")
+                    .into_element(cx);
+                let shortcut = CommandShortcut::new("⌘P").into_element(cx);
+
+                vec![
+                    CommandPalette::new(
+                        query.clone(),
+                        vec![
+                            CommandItem::new("Profile")
+                                .test_id("cmd-item-profile")
+                                .on_select(CommandId::new("profile.open"))
+                                .children([custom_text, shortcut]),
+                        ],
+                    )
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::ListBoxOption
+                    && n.label.as_deref() == Some("Profile")
+                    && n.test_id.as_deref() == Some("cmd-item-profile")
+            }),
+            "expected custom-children command item to preserve the option semantics label"
+        );
+        assert!(
+            snapshot_contains_text(&snap, "Custom row content"),
+            "expected custom-children command item to render the supplied row content"
+        );
+
+        let _ = root;
+    }
+
+    #[test]
     fn command_dialog_close_on_select_closes_and_clears_query() {
         let window = AppWindowId::default();
         let mut app = App::new();

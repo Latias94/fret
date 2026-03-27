@@ -16,12 +16,11 @@ instead of API compatibility.
 
 ## Upstream references (source of truth)
 
-- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/base/command.mdx`
-- shadcn public docs examples: `repo-ref/ui/apps/v4/examples/base/command-demo.tsx`,
-  `repo-ref/ui/apps/v4/examples/radix/command-demo.tsx`,
-  `repo-ref/ui/apps/v4/examples/{base,radix}/command-{basic,shortcuts,groups,scrollable,rtl}.tsx`
-- shadcn registry (new-york-v4): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx`
-- shadcn registry demo chrome override: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-demo.tsx`
+- shadcn docs surface: `repo-ref/ui/apps/v4/content/docs/components/{base,radix}/command.mdx`
+- shadcn registry recipe surface: `repo-ref/ui/apps/v4/registry/bases/{base,radix}/ui/command.tsx`
+- shadcn docs demo surface: `repo-ref/ui/apps/v4/registry/bases/{base,radix}/examples/command-example.tsx`
+- Base UI headless/docs reference:
+  `repo-ref/base-ui/docs/src/app/(docs)/react/components/autocomplete/demos/command-palette/tailwind/index.tsx`
 - cmdk repo: `repo-ref/cmdk`
 
 Key upstream semantics:
@@ -77,6 +76,8 @@ Key upstream semantics:
 
 - Pass: `CommandItem.checkmark(bool)` + `CommandShortcut` support the common "left check + right shortcut" row layout.
 - Pass: `CommandItem.children(...)` allows rich custom row content.
+- Pass: Row-level children composability is already sufficient for upstream item chrome/custom layout
+  parity; no additional root-level children API is required just to match shadcn row content.
 - Pass: Highlighted rows use `accent` background and `accent-foreground` text (cmdk `data-[selected=true]` parity).
 - Pass: Default item icons stay `muted-foreground` even when the row is highlighted (aligns shadcn `[_svg:not([class*='text-'])]:text-muted-foreground`).
 - Pass: Default `CommandPalette` rows can render cmdk-style match highlighting (matched characters use `foreground`; non-matched characters use `muted-foreground`).
@@ -97,6 +98,7 @@ Key upstream semantics:
 - `cargo test -p fret-ui-shadcn --lib command::tests`
 - Contract test: `command_dialog_open_change_builders_set_handlers`
 - Contract test: `command_dialog_test_id_builders_forward_to_palette_semantics`
+- Contract test: `command_item_children_surface_renders_custom_row_while_preserving_option_label`
 - Contract test: `command_palette_list_viewport_test_id_mounts_scroll_semantics_surface`
 - Reason mapping test: `command_dialog_open_change_reason_maps_dismiss_reasons`
 - Reason behavior test: `command_dialog_open_change_with_reason_reports_item_press_when_close_on_select`
@@ -172,3 +174,7 @@ Key upstream semantics:
 - Composability: if split authoring (`CommandInput`/`CommandList`/`CommandItem`) becomes a goal, introduce a shared context model (query + active + selection) with an explicit contract/ADR first.
 - Composability status: `CommandInput` / `CommandList` remain available as lower-level shell pieces
   and for legacy roving-list use, but they are not a promoted cmdk-equivalent split children API.
+- Composability status: treat row-level and root-level composability as separate concerns.
+  `CommandItem::children(...)` already ships and is enough for item-local composition; the deferred
+  gap is only the shared root context that would let split `CommandInput` / `CommandList` /
+  `CommandEmpty` / `CommandGroup` authoring behave like upstream cmdk without manual wiring.

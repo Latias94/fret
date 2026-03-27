@@ -27,6 +27,7 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`CommandPalette::new(query, items)` and `.entries(...)` therefore remain the default embedded interactive lane for first-party Fret code when the goal is cmdk-aligned behavior rather than a custom shell.",
         "`CommandDialog::new(open, query, items)` wraps that palette with dialog lifecycle, close-on-select behavior, and open-change reason hooks for global command menus.",
         "`CommandItem` owns row-level affordances such as `leading_icon(...)`, `shortcut(...)`, `keywords(...)`, `checkmark(...)`, `force_mount(...)`, and `children(...)`.",
+        "`CommandItem::children(...)` already covers row-level composability today. The deferred gap is the shared root context that upstream cmdk uses so `CommandInput`, `CommandList`, `CommandEmpty`, and `CommandGroup` can compose without manual query/selection wiring.",
         "`Composable Shell (Fret)` shows the current explicit manual lane: share a query model between `CommandInput` and `CommandList` when you need a custom shell, but keep cmdk-style active-descendant, committed selection, and dialog lifecycle on `CommandPalette` / `CommandDialog`.",
         "A fully composable split `Command` + `CommandInput` + `CommandList` children API is still deferred: upstream cmdk composes those parts through shared internal state, so promoting the same shape in Fret would first require an explicit shared context contract for query, active row, and selection rather than ad-hoc glue.",
     ]);
@@ -34,6 +35,7 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes_stack = doc_layout::notes_block([
         "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
         "`command(...)` / `CommandPalette` remain the default recipe root story; split `CommandInput` / `CommandList` / `CommandItem` authoring stays out of the default surface until a shared context contract is explicitly introduced.",
+        "Treat row-level children support and root-level shared-context support as separate questions: `CommandItem::children(...)` already ships, while split root composition still needs an explicit context contract.",
         "No new runtime/mechanism bug was identified in this pass: Base UI and cmdk both support the conclusion that the remaining drift is teaching-surface ergonomics, not missing dialog/focus/dismiss infrastructure.",
         "Attach either `on_select`, `on_select_action`, or `on_select_value_action` for every interactive item; otherwise entries are treated as disabled.",
         "Mirror docs order even when APIs differ so parity gaps stay explicit and testable. For Command, root chrome is recipe-owned while width caps such as `max-w-sm` remain caller-owned.",
