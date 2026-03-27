@@ -97,7 +97,7 @@ fn focused_portal_text_input_prevents_key_events_from_reaching_underlay_root() {
         },
     );
 
-    let _portal_layer = ui.push_overlay_root_ex(portal_root, false, true);
+    let _portal_layer = ui.push_overlay_root(portal_root, false);
     ui.layout_all(&mut host, &mut services, bounds, 1.0);
 
     let input_pos = Point::new(Px(10.0), Px(10.0));

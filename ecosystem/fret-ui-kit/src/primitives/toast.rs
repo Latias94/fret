@@ -160,7 +160,7 @@ impl ToastViewport {
             if config_changed {
                 let _ = cx.app.models_mut().update(&store, |st| {
                     st.set_window_max_toasts(cx.window, self.max_toasts);
-                    st.set_window_swipe_config_ex(
+                    st.set_window_swipe_config_with_options(
                         cx.window,
                         ToastSwipeConfig {
                             direction: self.swipe_direction,

@@ -147,7 +147,7 @@ fn hit_test_can_make_overlay_pointer_transparent() {
     ui.set_root(base);
 
     let overlay = ui.create_node(TransparentOverlay);
-    let _ = ui.push_overlay_root_ex(overlay, false, true);
+    let _ = ui.push_overlay_root(overlay, false);
 
     let mut services = FakeUiServices;
     let bounds = Rect::new(
@@ -192,7 +192,7 @@ fn layer_hit_testable_flag_can_make_overlay_pointer_transparent() {
     let overlay = ui.create_node(ClickCounter {
         clicks: clicks.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    let layer = ui.push_overlay_root(overlay, false);
     ui.set_layer_hit_testable(layer, false);
 
     let mut services = FakeUiServices;
@@ -302,7 +302,7 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
         last_pos: overlay_last_pos.clone(),
     });
     ui.add_child(overlay_root, overlay_leaf);
-    let _layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let _layer = ui.push_overlay_root(overlay_root, false);
 
     let mut services = FakeUiServices;
     let bounds = Rect::new(
@@ -824,7 +824,7 @@ fn hit_test_works_with_view_cache_root_and_prepaint_reuse_under_render_transform
         normal: overlay_down.clone(),
     });
     ui.add_child(overlay_root, overlay_leaf);
-    ui.push_overlay_root_ex(overlay_root, false, true);
+    ui.push_overlay_root(overlay_root, false);
 
     let mut services = FakeUiServices;
     let bounds = Rect::new(

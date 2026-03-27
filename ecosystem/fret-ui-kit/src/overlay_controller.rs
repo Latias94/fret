@@ -1156,7 +1156,7 @@ mod tests {
             "overlay",
             |_| Vec::new(),
         );
-        let overlay_layer = ui.push_overlay_root_ex(overlay, false, true);
+        let overlay_layer = ui.push_overlay_root(overlay, false);
         ui.set_layer_pointer_occlusion(
             overlay_layer,
             fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
@@ -1182,7 +1182,7 @@ mod tests {
             "modal",
             |_| Vec::new(),
         );
-        let _modal_layer = ui.push_overlay_root_ex(modal, true, true);
+        let _modal_layer = ui.push_overlay_root(modal, true);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let snap = OverlayController::arbitration_snapshot(&ui);

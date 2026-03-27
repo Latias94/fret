@@ -52,9 +52,15 @@ pub(crate) fn render_diag_inspect_overlay(
             ROOT_NAME,
             |_cx| Vec::new(),
         );
-        let layer = ui
-            .node_layer(root_node)
-            .unwrap_or_else(|| ui.push_overlay_root_ex(root_node, false, false));
+        let layer = ui.node_layer(root_node).unwrap_or_else(|| {
+            ui.push_overlay_root_with_options(
+                root_node,
+                fret_ui::OverlayRootOptions {
+                    blocks_underlay_input: false,
+                    hit_testable: false,
+                },
+            )
+        });
         ui.set_layer_visible(layer, false);
         ui.set_layer_hit_testable(layer, false);
         ui.set_layer_wants_pointer_down_outside_events(layer, false);
@@ -473,9 +479,15 @@ pub(crate) fn render_diag_inspect_overlay(
         },
     );
 
-    let layer = ui
-        .node_layer(root_node)
-        .unwrap_or_else(|| ui.push_overlay_root_ex(root_node, false, false));
+    let layer = ui.node_layer(root_node).unwrap_or_else(|| {
+        ui.push_overlay_root_with_options(
+            root_node,
+            fret_ui::OverlayRootOptions {
+                blocks_underlay_input: false,
+                hit_testable: false,
+            },
+        )
+    });
     ui.set_layer_visible(layer, true);
     ui.set_layer_hit_testable(layer, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, false);

@@ -851,7 +851,7 @@ pub fn render<H: UiHost + 'static>(
             let entry = overlays.modals.entry(key).or_insert_with(|| {
                 created = true;
                 ActiveModal {
-                    layer: ui.push_overlay_root_ex(root, true, true),
+                    layer: ui.push_overlay_root(root, true),
                     root_name: root_name.clone(),
                     trigger,
                     initial_focus,
@@ -1133,7 +1133,7 @@ pub fn render<H: UiHost + 'static>(
             let entry = overlays.popovers.entry(key).or_insert_with(|| {
                 created = true;
                 ActivePopover {
-                    layer: ui.push_overlay_root_ex(root, false, true),
+                    layer: ui.push_overlay_root(root, false),
                     root_name: root_name.clone(),
                     trigger,
                     initial_focus,
@@ -1653,7 +1653,7 @@ pub fn render<H: UiHost + 'static>(
                 .hover_overlays
                 .entry(key)
                 .or_insert_with(|| ActiveHoverOverlay {
-                    layer: ui.push_overlay_root_ex(root, false, true),
+                    layer: ui.push_overlay_root(root, false),
                     root_name: req.root_name.clone(),
                     trigger: req.trigger,
                     open: req.open.clone(),
@@ -1756,7 +1756,13 @@ pub fn render<H: UiHost + 'static>(
                 .tooltips
                 .entry(key)
                 .or_insert_with(|| ActiveTooltip {
-                    layer: ui.push_overlay_root_ex(root, false, false),
+                    layer: ui.push_overlay_root_with_options(
+                        root,
+                        fret_ui::OverlayRootOptions {
+                            blocks_underlay_input: false,
+                            hit_testable: false,
+                        },
+                    ),
                     root_name: req.root_name.clone(),
                     open: req.open.clone(),
                     last_seen_frame: frame_id,
@@ -3205,7 +3211,7 @@ pub fn render<H: UiHost + 'static>(
                 .toast_layers
                 .entry(key)
                 .or_insert_with(|| ActiveToastLayer {
-                    layer: ui.push_overlay_root_ex(root, false, true),
+                    layer: ui.push_overlay_root(root, false),
                     root_name: req.root_name.clone(),
                 });
             entry.root_name = req.root_name.clone();

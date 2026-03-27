@@ -159,7 +159,7 @@ fn escape_cancels_dock_drag_and_does_not_dismiss_overlays() {
     let overlay = ui.create_node(TestStack);
     let overlay_element = crate::GlobalElementId(0xdead_beef);
     ui.set_node_element(overlay, Some(overlay_element));
-    let _layer = ui.push_overlay_root_ex(overlay, false, true);
+    let _layer = ui.push_overlay_root(overlay, false);
 
     crate::elements::with_element_state(
         &mut app,

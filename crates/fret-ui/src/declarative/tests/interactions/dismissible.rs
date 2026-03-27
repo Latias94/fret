@@ -62,7 +62,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
             Vec::new()
         },
     );
-    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_visible(layer, true);
     ui.set_layer_hit_testable(layer, true);
     ui.set_layer_wants_pointer_move_events(layer, true);
@@ -141,7 +141,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_escape() {
         },
     );
 
-    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_visible(layer, true);
 
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -207,7 +207,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
         },
     );
 
-    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
     ui.set_layer_visible(layer, true);
 
@@ -270,7 +270,7 @@ fn dismissible_outside_press_prevent_default_keeps_focus() {
         },
     );
 
-    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
     ui.set_layer_visible(layer, true);
 
@@ -334,7 +334,7 @@ fn dismissible_outside_press_without_prevent_default_clears_focus() {
         },
     );
 
-    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
     ui.set_layer_visible(layer, true);
 

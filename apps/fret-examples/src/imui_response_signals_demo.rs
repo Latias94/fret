@@ -140,7 +140,7 @@ impl View for ImUiResponseSignalsView {
             }
 
             ui.begin_popup_context_menu("ctx", trigger, |ui| {
-                let toggle = ui.menu_item_ex(
+                let toggle = ui.menu_item_with_options(
                     "Toggle flag",
                     fret_ui_kit::imui::MenuItemOptions {
                         test_id: Some(Arc::from("imui-resp-demo.ctx.toggle")),
@@ -153,7 +153,7 @@ impl View for ImUiResponseSignalsView {
                 }
 
                 let open = ui.popup_open_model("ctx");
-                let _ = ui.menu_item_ex(
+                let _ = ui.menu_item_with_options(
                     "Close menu",
                     fret_ui_kit::imui::MenuItemOptions {
                         close_popup: Some(open),

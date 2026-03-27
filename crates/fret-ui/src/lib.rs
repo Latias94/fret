@@ -88,7 +88,7 @@ pub use text::{TextAreaStyle, TextInputStyle};
 pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
 pub use theme_keys::{ThemeColorKey, ThemeMetricKey, ThemeNamedColorKey};
 pub use tree::{
-    PaintCachePolicy, UiDebugFrameStats, UiDebugHitTest,
+    OverlayRootOptions, PaintCachePolicy, UiDebugFrameStats, UiDebugHitTest,
     UiDebugHoverDeclarativeInvalidationHotspot, UiDebugLayerInfo, UiLayerId, UiTree,
 };
 pub use widget::CommandAvailability;

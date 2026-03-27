@@ -1,5 +1,5 @@
 use super::super::*;
-use super::{UiLayer, UiLayerId};
+use super::{OverlayRootOptions, UiLayer, UiLayerId};
 
 impl<H: UiHost> UiTree<H> {
     /// Returns the current UI layer order in paint order (back-to-front).
@@ -131,21 +131,20 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn push_overlay_root(&mut self, root: NodeId, blocks_underlay_input: bool) -> UiLayerId {
-        self.push_overlay_root_ex(root, blocks_underlay_input, true)
+        self.push_overlay_root_with_options(root, OverlayRootOptions::new(blocks_underlay_input))
     }
 
-    pub fn push_overlay_root_ex(
+    pub fn push_overlay_root_with_options(
         &mut self,
         root: NodeId,
-        blocks_underlay_input: bool,
-        hit_testable: bool,
+        options: OverlayRootOptions,
     ) -> UiLayerId {
         let id = self.layers.insert(UiLayer {
             root,
             visible: true,
-            blocks_underlay_input,
-            blocks_underlay_focus: blocks_underlay_input,
-            hit_testable,
+            blocks_underlay_input: options.blocks_underlay_input,
+            blocks_underlay_focus: options.blocks_underlay_input,
+            hit_testable: options.hit_testable,
             pointer_occlusion: PointerOcclusion::None,
             wants_pointer_down_outside_events: false,
             consume_pointer_down_outside_events: false,
@@ -157,7 +156,7 @@ impl<H: UiHost> UiTree<H> {
         self.root_to_layer.insert(root, id);
         self.layer_order.push(id);
 
-        if blocks_underlay_input {
+        if options.blocks_underlay_input {
             let (active_roots, _barrier_root) = self.active_input_layers();
             self.enforce_modal_barrier_scope(&active_roots);
         }
@@ -167,8 +166,9 @@ impl<H: UiHost> UiTree<H> {
 
     /// Uninstalls an overlay layer and removes its root subtree.
     ///
-    /// This is the symmetric operation to `push_overlay_root(_ex)` and exists to keep the overlay
-    /// substrate contract minimal but complete (ADR 0066).
+    /// This is the symmetric operation to `push_overlay_root(...)` /
+    /// `push_overlay_root_with_options(...)` and exists to keep the overlay substrate contract
+    /// minimal but complete (ADR 0066).
     ///
     /// Notes:
     /// - The base layer cannot be removed (use `set_base_root` instead).

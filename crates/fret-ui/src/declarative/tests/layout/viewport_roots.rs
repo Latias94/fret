@@ -2522,7 +2522,7 @@ fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
             })]
         },
     );
-    let _layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let _layer = ui.push_overlay_root(overlay_root, false);
 
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -2610,7 +2610,7 @@ fn overlay_root_scroll_precomputes_child_flow_islands() {
             })]
         },
     );
-    let _layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let _layer = ui.push_overlay_root(overlay_root, false);
 
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 

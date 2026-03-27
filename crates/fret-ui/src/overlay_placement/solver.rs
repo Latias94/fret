@@ -129,9 +129,9 @@ pub fn anchored_panel_bounds_sized(
     clamp_rect_to_outer(outer, Rect::new(origin, size))
 }
 
-/// Extended anchored panel placement that can return arrow layout data and supports Floating-like
-/// offsets. Keeps the same deterministic flip/clamp behavior as [`anchored_panel_bounds`].
-pub fn anchored_panel_layout_ex(
+/// Anchored panel placement that can return arrow layout data and supports Floating-like offsets.
+/// Keeps the same deterministic flip/clamp behavior as [`anchored_panel_bounds`].
+pub fn anchored_panel_layout(
     outer: Rect,
     anchor: Rect,
     content: Size,
@@ -144,14 +144,16 @@ pub fn anchored_panel_layout_ex(
     let content = Size::new(Px(content.width.0.max(0.0)), Px(content.height.0.max(0.0)));
     let gap = Px((side_offset.0 + options.offset.main_axis.0).max(0.0));
 
-    let preferred_origin = anchored_origin_ex(anchor, content, gap, preferred_side, align, options);
+    let preferred_origin =
+        anchored_origin_with_options(anchor, content, gap, preferred_side, align, options);
     let preferred = Rect::new(preferred_origin, content);
     if side_fits_without_clamp(outer, preferred, preferred_side) {
         return finalize_layout(outer, anchor, preferred, preferred_side, align, options);
     }
 
     let flipped_side = opposite_side(preferred_side);
-    let flipped_origin = anchored_origin_ex(anchor, content, gap, flipped_side, align, options);
+    let flipped_origin =
+        anchored_origin_with_options(anchor, content, gap, flipped_side, align, options);
     let flipped = Rect::new(flipped_origin, content);
     if side_fits_without_clamp(outer, flipped, flipped_side) {
         return finalize_layout(outer, anchor, flipped, flipped_side, align, options);
@@ -178,10 +180,10 @@ pub fn anchored_panel_layout_ex(
     finalize_layout(outer, anchor, chosen, chosen_side, align, options)
 }
 
-/// Like [`anchored_panel_layout_ex`], but also returns a debug trace describing solver decisions.
+/// Like [`anchored_panel_layout`], but also returns a debug trace describing solver decisions.
 ///
 /// This is intended for diagnostics evidence and MUST NOT be used as a normative contract surface.
-pub fn anchored_panel_layout_ex_with_trace(
+pub fn anchored_panel_layout_with_trace(
     outer: Rect,
     anchor: Rect,
     content: Size,
@@ -195,13 +197,15 @@ pub fn anchored_panel_layout_ex_with_trace(
     let desired = Size::new(Px(content.width.0.max(0.0)), Px(content.height.0.max(0.0)));
     let gap = Px((side_offset.0 + options.offset.main_axis.0).max(0.0));
 
-    let preferred_origin = anchored_origin_ex(anchor, desired, gap, preferred_side, align, options);
+    let preferred_origin =
+        anchored_origin_with_options(anchor, desired, gap, preferred_side, align, options);
     let preferred = Rect::new(preferred_origin, desired);
     let preferred_fits_without_main_clamp =
         side_fits_without_clamp(outer, preferred, preferred_side);
 
     let flipped_side = opposite_side(preferred_side);
-    let flipped_origin = anchored_origin_ex(anchor, desired, gap, flipped_side, align, options);
+    let flipped_origin =
+        anchored_origin_with_options(anchor, desired, gap, flipped_side, align, options);
     let flipped = Rect::new(flipped_origin, desired);
     let flipped_fits_without_main_clamp = side_fits_without_clamp(outer, flipped, flipped_side);
 
@@ -260,8 +264,8 @@ pub fn anchored_panel_layout_ex_with_trace(
     (layout, trace)
 }
 
-/// Like [`anchored_panel_layout_ex`], but clamps the panel `Size` to available space (see ADR 0064).
-pub fn anchored_panel_layout_sized_ex(
+/// Like [`anchored_panel_layout`], but clamps the panel `Size` to available space (see ADR 0064).
+pub fn anchored_panel_layout_sized(
     outer: Rect,
     anchor: Rect,
     desired: Size,
@@ -276,11 +280,12 @@ pub fn anchored_panel_layout_sized_ex(
     let gap = Px((side_offset.0 + options.offset.main_axis.0).max(0.0));
 
     let preferred_unclamped_origin =
-        anchored_origin_ex(anchor, desired, gap, preferred_side, align, options);
+        anchored_origin_with_options(anchor, desired, gap, preferred_side, align, options);
     let preferred_unclamped = Rect::new(preferred_unclamped_origin, desired);
     if side_fits_without_clamp(outer, preferred_unclamped, preferred_side) {
         let size = clamp_size_for_side(outer, anchor, desired, gap, preferred_side);
-        let origin = anchored_origin_ex(anchor, size, gap, preferred_side, align, options);
+        let origin =
+            anchored_origin_with_options(anchor, size, gap, preferred_side, align, options);
         return finalize_layout(
             outer,
             anchor,
@@ -293,11 +298,11 @@ pub fn anchored_panel_layout_sized_ex(
 
     let flipped_side = opposite_side(preferred_side);
     let flipped_unclamped_origin =
-        anchored_origin_ex(anchor, desired, gap, flipped_side, align, options);
+        anchored_origin_with_options(anchor, desired, gap, flipped_side, align, options);
     let flipped_unclamped = Rect::new(flipped_unclamped_origin, desired);
     if side_fits_without_clamp(outer, flipped_unclamped, flipped_side) {
         let size = clamp_size_for_side(outer, anchor, desired, gap, flipped_side);
-        let origin = anchored_origin_ex(anchor, size, gap, flipped_side, align, options);
+        let origin = anchored_origin_with_options(anchor, size, gap, flipped_side, align, options);
         return finalize_layout(
             outer,
             anchor,
@@ -337,7 +342,7 @@ pub fn anchored_panel_layout_sized_ex(
     };
 
     let size = clamp_size_for_side(outer, anchor, desired, gap, chosen_side);
-    let origin = anchored_origin_ex(anchor, size, gap, chosen_side, align, options);
+    let origin = anchored_origin_with_options(anchor, size, gap, chosen_side, align, options);
     finalize_layout(
         outer,
         anchor,
@@ -348,10 +353,10 @@ pub fn anchored_panel_layout_sized_ex(
     )
 }
 
-/// Like [`anchored_panel_layout_sized_ex`], but also returns a debug trace describing solver decisions.
+/// Like [`anchored_panel_layout_sized`], but also returns a debug trace describing solver decisions.
 ///
 /// This is intended for diagnostics evidence and MUST NOT be used as a normative contract surface.
-pub fn anchored_panel_layout_sized_ex_with_trace(
+pub fn anchored_panel_layout_sized_with_trace(
     outer: Rect,
     anchor: Rect,
     desired: Size,
@@ -366,14 +371,14 @@ pub fn anchored_panel_layout_sized_ex_with_trace(
     let gap = Px((side_offset.0 + options.offset.main_axis.0).max(0.0));
 
     let preferred_unclamped_origin =
-        anchored_origin_ex(anchor, desired, gap, preferred_side, align, options);
+        anchored_origin_with_options(anchor, desired, gap, preferred_side, align, options);
     let preferred_unclamped = Rect::new(preferred_unclamped_origin, desired);
     let preferred_fits_without_main_clamp =
         side_fits_without_clamp(outer, preferred_unclamped, preferred_side);
 
     let flipped_side = opposite_side(preferred_side);
     let flipped_unclamped_origin =
-        anchored_origin_ex(anchor, desired, gap, flipped_side, align, options);
+        anchored_origin_with_options(anchor, desired, gap, flipped_side, align, options);
     let flipped_unclamped = Rect::new(flipped_unclamped_origin, desired);
     let flipped_fits_without_main_clamp =
         side_fits_without_clamp(outer, flipped_unclamped, flipped_side);
@@ -383,11 +388,12 @@ pub fn anchored_panel_layout_sized_ex_with_trace(
 
     let (chosen_side, chosen_rect) = if preferred_fits_without_main_clamp {
         let size = clamp_size_for_side(outer, anchor, desired, gap, preferred_side);
-        let origin = anchored_origin_ex(anchor, size, gap, preferred_side, align, options);
+        let origin =
+            anchored_origin_with_options(anchor, size, gap, preferred_side, align, options);
         (preferred_side, Rect::new(origin, size))
     } else if flipped_fits_without_main_clamp {
         let size = clamp_size_for_side(outer, anchor, desired, gap, flipped_side);
-        let origin = anchored_origin_ex(anchor, size, gap, flipped_side, align, options);
+        let origin = anchored_origin_with_options(anchor, size, gap, flipped_side, align, options);
         (flipped_side, Rect::new(origin, size))
     } else {
         // Neither side fits on the main axis given the desired size. Prefer the side with more
@@ -415,7 +421,7 @@ pub fn anchored_panel_layout_sized_ex_with_trace(
         };
 
         let size = clamp_size_for_side(outer, anchor, desired, gap, chosen_side);
-        let origin = anchored_origin_ex(anchor, size, gap, chosen_side, align, options);
+        let origin = anchored_origin_with_options(anchor, size, gap, chosen_side, align, options);
         (chosen_side, Rect::new(origin, size))
     };
 
@@ -503,7 +509,7 @@ fn anchored_origin(
     Point::new(Px(x), Px(y))
 }
 
-fn anchored_origin_ex(
+fn anchored_origin_with_options(
     anchor: Rect,
     content: Size,
     gap: Px,

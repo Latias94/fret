@@ -41,8 +41,13 @@ fn key_events_route_to_focus_barrier_root_when_unfocused() {
     ui.set_root(base_root);
 
     let overlay_root = ui.create_node(KeyCounter::new(overlay_hits.clone()));
-    let overlay_layer =
-        ui.push_overlay_root_ex(overlay_root, /* blocks_underlay_input */ false, false);
+    let overlay_layer = ui.push_overlay_root_with_options(
+        overlay_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: false,
+            hit_testable: false,
+        },
+    );
     ui.set_layer_blocks_underlay_focus(overlay_layer, true);
 
     let mut services = FakeUiServices;

@@ -30,7 +30,7 @@ fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
     ui.set_root(base);
 
     let overlay = ui.create_node(CaptureOnPointerDownOutside);
-    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    let layer = ui.push_overlay_root(overlay, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
 
     let mut services = FakeUiServices;
@@ -168,7 +168,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
         normal: overlay_down.clone(),
     });
     ui.add_child(overlay_root, overlay_leaf);
-    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
 
     let mut services = FakeUiServices;
@@ -275,7 +275,7 @@ fn outside_press_observer_is_delayed_for_touch_until_pointer_up() {
     let overlay = ui.create_node(RecordObserverDown {
         observer: observer.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    let layer = ui.push_overlay_root(overlay, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
 
     let mut services = FakeUiServices;
@@ -390,7 +390,7 @@ fn dock_drag_suppresses_outside_press_observer_dispatch_window_globally() {
     let overlay = ui.create_node(RecordObserverDown {
         observer: observer_down.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    let layer = ui.push_overlay_root(overlay, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
 
     let mut services = FakeUiServices;
@@ -490,7 +490,7 @@ fn outside_press_observer_is_canceled_for_touch_drags() {
     let overlay = ui.create_node(RecordObserverDown {
         observer: observer.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    let layer = ui.push_overlay_root(overlay, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
 
     let mut services = FakeUiServices;
@@ -586,7 +586,7 @@ fn outside_press_observer_is_suppressed_during_dock_drag() {
     let overlay = ui.create_node(RecordObserverDown {
         observer: observer_down.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    let layer = ui.push_overlay_root(overlay, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
 
     let mut services = FakeUiServices;
@@ -718,7 +718,7 @@ fn outside_press_observer_is_suppressed_while_other_pointer_is_captured_in_diffe
     let overlay_root = ui.create_node(RecordObserverDown {
         observer: observer_down.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
     ui.set_layer_visible(layer, true);
 
@@ -864,7 +864,7 @@ fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
     });
     ui.add_child(overlay_root, overlay_leaf);
 
-    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
 
     let mut services = FakeUiServices;
@@ -1004,7 +1004,7 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
     let overlay = ui.create_node(RecordObserverPhase {
         phase: observer_phase.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    let layer = ui.push_overlay_root(overlay, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
 
     let mut services = FakeUiServices;
@@ -1079,13 +1079,13 @@ fn outside_press_observer_dispatches_only_topmost_dismissible_non_modal_overlay(
     let overlay_a = ui.create_node(RecordOutsidePress {
         observer_down: a_down.clone(),
     });
-    let layer_a = ui.push_overlay_root_ex(overlay_a, false, true);
+    let layer_a = ui.push_overlay_root(overlay_a, false);
     ui.set_layer_wants_pointer_down_outside_events(layer_a, true);
 
     let overlay_b = ui.create_node(RecordOutsidePress {
         observer_down: b_down.clone(),
     });
-    let layer_b = ui.push_overlay_root_ex(overlay_b, false, true);
+    let layer_b = ui.push_overlay_root(overlay_b, false);
     ui.set_layer_wants_pointer_down_outside_events(layer_b, true);
 
     let mut services = FakeUiServices;
@@ -1192,12 +1192,12 @@ fn outside_press_branches_can_exempt_triggers_outside_layer_subtree() {
         downs: trigger_downs.clone(),
     });
     ui.add_child(parent_root, trigger);
-    ui.push_overlay_root_ex(parent_root, false, true);
+    ui.push_overlay_root(parent_root, false);
 
     let submenu_root = ui.create_node(RecordOutsidePress {
         observer_down: submenu_observer_downs.clone(),
     });
-    let submenu_layer = ui.push_overlay_root_ex(submenu_root, false, true);
+    let submenu_layer = ui.push_overlay_root(submenu_root, false);
     ui.set_layer_wants_pointer_down_outside_events(submenu_layer, true);
     ui.set_layer_pointer_down_outside_branches(submenu_layer, vec![trigger]);
 
@@ -1322,7 +1322,7 @@ fn outside_press_observer_can_suppress_hit_test_dispatch() {
     let overlay = ui.create_node(RecordObserverDown {
         observer: observer_down.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    let layer = ui.push_overlay_root(overlay, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
     ui.set_layer_consume_pointer_down_outside_events(layer, true);
 
@@ -1446,7 +1446,7 @@ fn outside_press_observer_suppression_respects_dismissable_branches() {
     let overlay = ui.create_node(RecordObserverDown {
         observer: observer_down.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    let layer = ui.push_overlay_root(overlay, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
     ui.set_layer_consume_pointer_down_outside_events(layer, true);
     ui.set_layer_pointer_down_outside_branches(layer, vec![branch]);
@@ -1557,7 +1557,7 @@ fn outside_press_branch_containment_uses_child_edges_not_parent_pointers() {
     let overlay = ui.create_node(RecordObserverDown {
         observer: observer.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    let layer = ui.push_overlay_root(overlay, false);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
     ui.set_layer_pointer_down_outside_branches(layer, vec![branch_root]);
 

@@ -95,7 +95,7 @@ fn portal_pointer_region_blocks_underlay_only_inside_body_region() {
         },
     );
 
-    let _portal_layer = ui.push_overlay_root_ex(portal_root, false, true);
+    let _portal_layer = ui.push_overlay_root(portal_root, false);
     ui.layout_all(&mut host, &mut services, bounds, 1.0);
 
     let header_pos = Point::new(Px(30.0), Px(20.0));

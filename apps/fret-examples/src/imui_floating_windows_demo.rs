@@ -168,7 +168,7 @@ impl View for ImUiFloatingWindowsView {
                             let trigger = ui.button("Context menu (right click)");
                             ui.begin_popup_context_menu("ctx", trigger, |ui| {
                                 let open = ui.popup_open_model("ctx");
-                                let _ = ui.menu_item_ex(
+                                let _ = ui.menu_item_with_options(
                                     "Close menu",
                                     fret_ui_kit::imui::MenuItemOptions {
                                         close_popup: Some(open),
@@ -184,7 +184,7 @@ impl View for ImUiFloatingWindowsView {
                                 Arc::<str>::from("Beta"),
                                 Arc::<str>::from("Gamma"),
                             ];
-                            let _ = ui.select_model_ex(
+                            let _ = ui.select_model_with_options(
                                 "Mode",
                                 select_mode_state.model(),
                                 &select_items,

@@ -108,7 +108,7 @@ pub use debug::{
 };
 
 use layers::UiLayer;
-pub use layers::UiLayerId;
+pub use layers::{OverlayRootOptions, UiLayerId};
 use node_storage::{
     HitTestPathCache, Node, NodeMeasureCache, NodeMeasureCacheKey, PrepaintHitTestCache,
     ViewCacheFlags,

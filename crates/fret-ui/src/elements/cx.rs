@@ -3605,7 +3605,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn virtual_list_ex<F, I>(
+    pub fn virtual_list_with_range_extractor<F, I>(
         &mut self,
         len: usize,
         options: VirtualListOptions,
@@ -3617,7 +3617,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         F: FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> I,
         I: IntoIterator<Item = AnyElement>,
     {
-        self.virtual_list_with_layout_ex(
+        self.virtual_list_with_layout_and_range_extractor(
             LayoutStyle::default(),
             len,
             options,
@@ -3640,7 +3640,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         F: FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> I,
         I: IntoIterator<Item = AnyElement>,
     {
-        self.virtual_list_with_layout_ex(
+        self.virtual_list_with_layout_and_range_extractor(
             layout,
             len,
             options,
@@ -3651,7 +3651,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn virtual_list_with_layout_ex<F, I>(
+    pub fn virtual_list_with_layout_and_range_extractor<F, I>(
         &mut self,
         layout: LayoutStyle,
         len: usize,
@@ -4149,7 +4149,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     where
         H: 'static,
     {
-        self.virtual_list_keyed_retained_with_layout_ex(
+        self.virtual_list_keyed_retained_with_layout_and_range_extractor(
             layout,
             len,
             options,
@@ -4187,7 +4187,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
     #[track_caller]
     #[allow(clippy::too_many_arguments)]
-    pub fn virtual_list_keyed_retained_with_layout_ex(
+    pub fn virtual_list_keyed_retained_with_layout_and_range_extractor(
         &mut self,
         layout: LayoutStyle,
         len: usize,
@@ -4246,7 +4246,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
     #[track_caller]
     #[allow(clippy::too_many_arguments)]
-    pub fn virtual_list_keyed_retained_with_layout_ex_fn(
+    pub fn virtual_list_keyed_retained_with_layout_and_range_extractor_fn(
         &mut self,
         layout: LayoutStyle,
         len: usize,
@@ -4261,7 +4261,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn = Arc::new(key_at);
         let row: crate::windowed_surface_host::RetainedVirtualListRowFn<H> = Arc::new(row);
-        self.virtual_list_keyed_retained_with_layout_ex(
+        self.virtual_list_keyed_retained_with_layout_and_range_extractor(
             layout,
             len,
             options,
@@ -4273,7 +4273,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn virtual_list_keyed_ex(
+    pub fn virtual_list_keyed_with_range_extractor(
         &mut self,
         len: usize,
         options: VirtualListOptions,
@@ -4282,7 +4282,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
         row: impl FnMut(&mut Self, usize) -> AnyElement,
     ) -> AnyElement {
-        self.virtual_list_keyed_with_layout_ex(
+        self.virtual_list_keyed_with_layout_and_range_extractor(
             LayoutStyle::default(),
             len,
             options,
@@ -4303,7 +4303,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         key_at: impl FnMut(usize) -> crate::ItemKey,
         row: impl FnMut(&mut Self, usize) -> AnyElement,
     ) -> AnyElement {
-        self.virtual_list_keyed_with_layout_ex(
+        self.virtual_list_keyed_with_layout_and_range_extractor(
             layout,
             len,
             options,
@@ -4316,7 +4316,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
     #[track_caller]
     #[allow(clippy::too_many_arguments)]
-    pub fn virtual_list_keyed_with_layout_ex(
+    pub fn virtual_list_keyed_with_layout_and_range_extractor(
         &mut self,
         layout: LayoutStyle,
         len: usize,

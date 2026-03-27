@@ -835,7 +835,7 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
             )]
         },
     );
-    ui.push_overlay_root_ex(foreign_overlay_root, false, true);
+    ui.push_overlay_root(foreign_overlay_root, false);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     ui.dispatch_event(

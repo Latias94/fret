@@ -173,10 +173,10 @@ impl DockGraph {
         target_tabs: DockNodeId,
         zone: DropZone,
     ) -> bool {
-        self.move_panel_ex(window, panel, target_tabs, zone, None)
+        self.move_panel_with_insert_index(window, panel, target_tabs, zone, None)
     }
 
-    pub fn move_panel_ex(
+    pub fn move_panel_with_insert_index(
         &mut self,
         window: AppWindowId,
         panel: PanelKey,

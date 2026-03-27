@@ -366,7 +366,7 @@ fn pointer_occlusion_blocks_viewport_hover_and_down_but_allows_wheel_forwarding(
 
     // Install a window-level pointer occlusion layer (Radix `disableOutsidePointerEvents`-like).
     let overlay_root = harness.ui.create_node_retained(HitTestTransparent);
-    let overlay_layer = harness.ui.push_overlay_root_ex(overlay_root, false, true);
+    let overlay_layer = harness.ui.push_overlay_root(overlay_root, false);
     harness.ui.set_layer_pointer_occlusion(
         overlay_layer,
         fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
@@ -473,7 +473,7 @@ fn foreign_pointer_capture_suppresses_viewport_capture_start() {
     harness.layout();
 
     let overlay_root = harness.ui.create_node_retained(CaptureOverlay);
-    let _overlay_layer = harness.ui.push_overlay_root_ex(overlay_root, false, true);
+    let _overlay_layer = harness.ui.push_overlay_root(overlay_root, false);
     harness.layout();
 
     harness.ui.dispatch_event(
