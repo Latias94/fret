@@ -8,13 +8,11 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let username = cx.local_model_keyed("username", String::new);
-    let responsive_message = cx.local_model_keyed("responsive_message", String::new);
     let wide = cx.local_model_keyed("wide", || false);
 
     let wide_value = cx.watch_model(&wide).layout().copied().unwrap_or(false);
     let max_w = if wide_value { Px(900.0) } else { Px(520.0) };
     let name_id = "ui-gallery-field-responsive-name";
-    let message_id = "ui-gallery-field-responsive-message";
 
     let width_toggle = shadcn::FieldGroup::new([shadcn::Field::new([
         shadcn::FieldContent::new([
@@ -41,7 +39,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let content = shadcn::FieldSet::new([
         shadcn::FieldLegend::new("Profile").into_element(cx),
         shadcn::FieldDescription::new("Fill in your profile information.").into_element(cx),
-        shadcn::FieldSeparator::new().into_element(cx),
         shadcn::FieldGroup::new([
             shadcn::Field::new([
                 shadcn::FieldContent::new([
@@ -62,26 +59,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ])
             .orientation(shadcn::FieldOrientation::Responsive)
             .into_element(cx),
-            shadcn::FieldSeparator::new().into_element(cx),
-            shadcn::Field::new([
-                shadcn::FieldContent::new([
-                    shadcn::FieldLabel::new("Message")
-                        .for_control(message_id)
-                        .into_element(cx),
-                    shadcn::FieldDescription::new("Keep it short, preferably under 100 chars.")
-                        .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Textarea::new(responsive_message)
-                    .control_id(message_id)
-                    .a11y_label("Message")
-                    .placeholder("Hello, world!")
-                    .refine_layout(LayoutRefinement::default().h_px(Px(96.0)).min_w(Px(280.0)))
-                    .into_element(cx),
-            ])
-            .orientation(shadcn::FieldOrientation::Responsive)
-            .into_element(cx),
-            shadcn::FieldSeparator::new().into_element(cx),
             shadcn::Field::new([
                 shadcn::Button::new("Submit").into_element(cx),
                 shadcn::Button::new("Cancel")

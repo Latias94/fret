@@ -12,7 +12,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let lifetime_id = "ui-gallery-field-radio-lifetime";
 
     shadcn::FieldSet::new([
-        shadcn::FieldLabel::new("Subscription Plan").into_element(cx),
+        shadcn::FieldLegend::new("Subscription Plan")
+            .variant(shadcn::FieldLegendVariant::Label)
+            .into_element(cx),
         shadcn::FieldDescription::new("Yearly and lifetime plans offer significant savings.")
             .into_element(cx),
         shadcn::RadioGroup::uncontrolled(Some("monthly"))

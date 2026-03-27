@@ -7552,6 +7552,69 @@ fn field_page_usage_prefers_field_wrapper_family() {
 }
 
 #[test]
+fn field_docs_keep_recipe_shorthand_and_composable_children_lanes_explicit() {
+    let switch = read("src/ui/snippets/field/switch.rs");
+    assert!(
+        switch.contains("LayoutRefinement::default().w_auto()"),
+        "src/ui/snippets/field/switch.rs should keep the upstream-like intrinsic-width switch field"
+    );
+    assert!(
+        !switch.contains("FieldContent::new(["),
+        "src/ui/snippets/field/switch.rs should stay on the upstream minimal label + switch lane"
+    );
+    assert!(
+        !switch.contains("FieldDescription::new("),
+        "src/ui/snippets/field/switch.rs should avoid reintroducing helper copy into the minimal docs-aligned switch example"
+    );
+
+    let choice_card = read("src/ui/snippets/field/choice_card.rs");
+    assert!(
+        choice_card.contains("RadioGroupItemVariant::ChoiceCard"),
+        "src/ui/snippets/field/choice_card.rs should keep the recipe shorthand lane explicit"
+    );
+    assert!(
+        choice_card.contains("FieldLegend::new(\"Compute Environment\")"),
+        "src/ui/snippets/field/choice_card.rs should use the fieldset legend heading like the upstream docs example"
+    );
+
+    let composable = read("src/ui/snippets/field/composable_label.rs");
+    assert!(
+        composable.contains(".wrap([shadcn::Field::new(["),
+        "src/ui/snippets/field/composable_label.rs should keep `FieldLabel::wrap(...)` as the explicit composable-children lane"
+    );
+
+    let responsive = read("src/ui/snippets/field/responsive.rs");
+    assert!(
+        responsive.contains("shadcn::Button::new(\"Submit\")"),
+        "src/ui/snippets/field/responsive.rs should keep the upstream button row"
+    );
+    assert!(
+        !responsive.contains("ui-gallery-field-responsive-message"),
+        "src/ui/snippets/field/responsive.rs should stay closer to the upstream single-field responsive example"
+    );
+
+    let rtl = read("src/ui/snippets/field/rtl.rs");
+    assert!(
+        rtl.contains("نفس عنوان الشحن"),
+        "src/ui/snippets/field/rtl.rs should keep the fuller upstream payment-form RTL preview shape"
+    );
+    assert!(
+        rtl.contains("shadcn::FieldSeparator::new().into_element(cx)"),
+        "src/ui/snippets/field/rtl.rs should keep the upstream section separators in the richer RTL preview"
+    );
+
+    let page = read("src/ui/pages/field.rs");
+    assert!(
+        page.contains("Composable Children"),
+        "src/ui/pages/field.rs should name the extra `FieldLabel::wrap(...)` section as a composable-children lane"
+    );
+    assert!(
+        page.contains("recipe shorthand"),
+        "src/ui/pages/field.rs should keep the recipe-shorthand vs composable-children distinction explicit"
+    );
+}
+
+#[test]
 fn selected_ai_doc_pages_prefer_doc_layout_text_table_over_raw_table_builders() {
     for relative_path in [
         "src/ui/pages/ai_model_selector_demo.rs",

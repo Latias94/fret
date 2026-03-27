@@ -9,7 +9,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
 
     shadcn::FieldSet::new([
-        shadcn::FieldLabel::new("Compute Environment").into_element(cx),
+        shadcn::FieldLegend::new("Compute Environment")
+            .variant(shadcn::FieldLegendVariant::Label)
+            .into_element(cx),
         shadcn::FieldDescription::new("Select the compute environment for your cluster.")
             .into_element(cx),
         shadcn::RadioGroup::uncontrolled(Some("kubernetes"))
