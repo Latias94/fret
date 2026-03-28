@@ -2100,7 +2100,6 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
                 "pub fn new(value: Model<Option<Arc<str>>>) -> Self",
                 "pub fn new( group_value: Model<Option<Arc<str>>>, value: impl Into<Arc<str>>, label: impl Into<Arc<str>>, ) -> Self",
                 "pub fn from_open(open: Model<bool>) -> Self",
-                "pub fn new(open: Model<bool>) -> Self",
                 "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
             ][..],
         ),

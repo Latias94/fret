@@ -8,6 +8,7 @@ Related:
 - `docs/shadcn-declarative-progress.md`
 - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs`
 - `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/REMAINING_SURFACE_SHRINK_AUDIT_2026-03-17.md`
+- `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/SHADCN_TRIGGER_POLICY_SEAMS_AUDIT_2026-03-28.md`
 
 ## Why this note exists
 
@@ -74,6 +75,8 @@ Representative seams:
 Rule:
 
 - keep these explicit when the caller is intentionally managing root state,
+- delete compatibility aliases that duplicate one of these explicit advanced seams without adding a
+  distinct authoring concept,
 - do not copy this pattern onto compact/default constructors when a bridge trait is sufficient.
 
 ### 2. Source-aligned menu, command, and part-level control seams
