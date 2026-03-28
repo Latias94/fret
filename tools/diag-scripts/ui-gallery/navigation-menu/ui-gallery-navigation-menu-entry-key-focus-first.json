@@ -58,34 +58,34 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo" },
+      "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-docs-demo" },
       "delta_y": -240.0,
       "require_fully_within_window": true,
       "padding_px": 12.0,
       "timeout_frames": 1200
     },
 
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-trigger-components" } },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-docs-demo-trigger-components" } },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-viewport" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-docs-demo-viewport" } },
       "timeout_frames": 600
     },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-link-alert-dialog" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-docs-demo-link-alert-dialog" } },
       "timeout_frames": 600
     },
     {
       "type": "wait_until",
-      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-trigger-components" } },
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-docs-demo-trigger-components" } },
       "timeout_frames": 240
     },
 
     { "type": "press_key", "key": "arrow_down" },
     {
       "type": "wait_until",
-      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-link-alert-dialog" } },
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-docs-demo-link-alert-dialog" } },
       "timeout_frames": 600
     },
 

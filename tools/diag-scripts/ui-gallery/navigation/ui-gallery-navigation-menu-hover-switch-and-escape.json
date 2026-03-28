@@ -1,30 +1,71 @@
 {
   "schema_version": 2,
   "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
+
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
     { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "navigation menu" },
+    { "type": "type_text", "text": "navigation_menu" },
+    { "type": "wait_frames", "n": 2 },
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-navigation-menu" }
-      },
-      "timeout_frames": 240
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-navigation-menu" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
     },
     {
-      "type": "click",
+      "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-nav-navigation-menu" }
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-navigation-menu" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-docs-demo" },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 12.0,
+      "timeout_frames": 1200
+    },
 
     {
       "type": "wait_until",
@@ -32,17 +73,17 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-navigation-menu-demo-trigger-getting-started"
+          "id": "ui-gallery-navigation-menu-docs-demo-trigger-home"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
 
     {
       "type": "move_pointer",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-navigation-menu-demo-trigger-getting-started"
+        "id": "ui-gallery-navigation-menu-docs-demo-trigger-home"
       }
     },
     { "type": "wait_frames", "n": 12 },
@@ -52,17 +93,17 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-navigation-menu-demo-link-introduction"
+          "id": "ui-gallery-navigation-menu-docs-demo-link-introduction"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
 
     {
       "type": "move_pointer",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-navigation-menu-demo-trigger-components"
+        "id": "ui-gallery-navigation-menu-docs-demo-trigger-components"
       }
     },
     { "type": "wait_frames", "n": 12 },
@@ -72,10 +113,10 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-navigation-menu-demo-link-alert-dialog"
+          "id": "ui-gallery-navigation-menu-docs-demo-link-alert-dialog"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
 
     { "type": "press_key", "key": "escape" },
@@ -85,10 +126,10 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-navigation-menu-demo-link-alert-dialog"
+          "id": "ui-gallery-navigation-menu-docs-demo-link-alert-dialog"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
 
     {
