@@ -3808,6 +3808,29 @@ fn kbd_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn kbd_page_records_docs_path_and_narrow_children_surface() {
+    let page = read("src/ui/pages/kbd.rs");
+    assert!(
+        page.contains(
+            "Preview mirrors the shadcn Kbd docs path first: Demo, Usage, Group, Button, Tooltip, Input Group, RTL, and API Reference."
+        ),
+        "src/ui/pages/kbd.rs should keep the shadcn docs-path ordering explicit on the first-party gallery page"
+    );
+    assert!(
+        page.contains(
+            "`Kbd::from_children([...])` / `.children([...])` remain explicit escape hatches for icon-only or mixed-content caps, so no broader generic `asChild` / `compose()` surface is warranted here."
+        ),
+        "src/ui/pages/kbd.rs should explain why kbd keeps a narrow composable-children escape hatch instead of widening the default authoring lane"
+    );
+    assert!(
+        page.contains(
+            "Composition into buttons, tooltips, and input-group addons stays caller-owned, matching the upstream docs layering."
+        ),
+        "src/ui/pages/kbd.rs should record that button / tooltip / input-group placement is caller-owned composition rather than a mechanism bug"
+    );
+}
+
+#[test]
 fn icons_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -5068,6 +5091,7 @@ fn item_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Item vs Field\", item_vs_field)",
             "DocSection::build(cx, \"Variant\", variants)",
             "DocSection::build(cx, \"Size\", size)",
+            "DocSection::build(cx, \"Examples\", examples)",
             "DocSection::build(cx, \"Icon\", icon)",
             "DocSection::build(cx, \"Avatar\", avatar)",
             "DocSection::build(cx, \"Image\", image)",
@@ -5085,6 +5109,7 @@ fn item_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Item vs Field\", item_vs_field)",
             "DocSection::new(\"Variant\", variants)",
             "DocSection::new(\"Size\", size)",
+            "DocSection::new(\"Examples\", examples)",
             "DocSection::new(\"Icon\", icon)",
             "DocSection::new(\"Avatar\", avatar)",
             "DocSection::new(\"Image\", image)",
