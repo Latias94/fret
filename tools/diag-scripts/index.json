@@ -7136,6 +7136,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-progress-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-docs-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-progress-numeric-semantics",
+      "path": "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-numeric-semantics.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-radio-group-description-layout",
       "path": "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-description-layout.json",
       "required_capabilities": [],

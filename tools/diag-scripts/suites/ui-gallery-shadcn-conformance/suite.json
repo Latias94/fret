@@ -51,6 +51,8 @@
     "tools/diag-scripts/ui-gallery-input-otp-docs-smoke.json",
     "tools/diag-scripts/ui-gallery-popover-click-through-outside-press-focus-underlay.json",
     "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
+    "tools/diag-scripts/ui-gallery-progress-docs-smoke.json",
+    "tools/diag-scripts/ui-gallery-progress-numeric-semantics.json",
     "tools/diag-scripts/ui-gallery-radio-group-description-layout.json",
     "tools/diag-scripts/ui-gallery-scroll-into-view-padding-is-soft.json",
     "tools/diag-scripts/ui-gallery-sidebar-controlled-open-sync.json",
