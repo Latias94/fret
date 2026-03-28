@@ -17,14 +17,25 @@ pub(super) fn preview_skeleton(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`Skeleton::new()` matches the upstream leaf primitive path where the caller owns size and shape.",
         "`Skeleton::block()` is a Fret convenience for the common `w-full h-4` placeholder row, but it is intentionally not the default upstream path.",
-        "Skeleton remains a visual placeholder primitive, so no extra generic `compose()` or composable children API is needed here.",
+        "Skeleton remains a visual placeholder primitive, so no extra generic `compose()` or composable children API is needed here; neither Radix primitives nor Base UI define a richer headless contract for this family.",
         "Default chrome (`accent`, `rounded-md`, pulse animation) stays recipe-owned, while explicit width, height, aspect ratio, and fully rounded avatar shapes remain caller-owned.",
-        "This page is docs/public-surface parity work, not a mechanism-layer fix.",
+        "Existing layout + reduced-motion tests already cover runtime parity, so this page is docs/public-surface parity work rather than a mechanism-layer fix.",
+    ]);
+    let notes = doc_layout::notes_block([
+        "Upstream docs/source axes: `repo-ref/ui/apps/v4/content/docs/components/base/skeleton.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/skeleton.mdx`, and `repo-ref/ui/apps/v4/registry/{new-york-v4,bases/base,bases/radix}/ui/skeleton.tsx`.",
+        "Neither `repo-ref/primitives` nor `repo-ref/base-ui` defines a dedicated Skeleton primitive, so there is no missing mechanism contract to port into `fret-ui` or `fret-ui-kit` here.",
+        "Preview mirrors the shadcn Skeleton docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Examples` (`Avatar`, `Card`, `Text`, `Form`, `Table`), `RTL`, then Fret-only `API Reference` and `Notes`.",
+        "Examples stay split into dedicated copyable sections so each code tab remains self-contained instead of hiding width, aspect-ratio, or rounded-shape ownership in page-local helpers.",
+        "Existing `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/skeleton.rs` and `ecosystem/fret-ui-shadcn/tests/reduced_motion_continuous_frames.rs` already cover layout + motion parity; the remaining work here is docs/public-surface alignment.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .test_id_prefix("ui-gallery-skeleton-api-reference")
         .description("Public surface summary and ownership notes.");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .no_shell()
+        .test_id_prefix("ui-gallery-skeleton-notes")
+        .description("Source axes, docs-path mapping, and why no extra children API is needed.");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("Avatar row with two text lines.")
         .test_id_prefix("ui-gallery-skeleton-demo")
@@ -61,7 +72,7 @@ pub(super) fn preview_skeleton(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Skeleton docs path first: Demo, Usage, Avatar, Card, Text, Form, Table, RTL, and API Reference.",
+            "Use to show a placeholder while content is loading. Preview mirrors the shadcn Skeleton docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Examples` (`Avatar`, `Card`, `Text`, `Form`, `Table`), `RTL`, then Fret-only `API Reference` and `Notes`.",
         ),
         vec![
             demo,
@@ -73,6 +84,7 @@ pub(super) fn preview_skeleton(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             table,
             rtl,
             api_reference,
+            notes,
         ],
     );
 
