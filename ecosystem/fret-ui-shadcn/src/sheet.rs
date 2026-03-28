@@ -1497,6 +1497,16 @@ impl SheetContent {
     }
 
     #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
@@ -1738,6 +1748,16 @@ impl SheetHeader {
     }
 
     #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
@@ -1807,6 +1827,16 @@ impl SheetFooter {
             build: Some(build),
             _phantom: PhantomData,
         }
+    }
+
+    #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
     }
 
     #[track_caller]
@@ -1952,6 +1982,16 @@ mod tests {
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
+    fn contains_plain_text(el: &AnyElement, needle: &str) -> bool {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => true,
+            _ => el
+                .children
+                .iter()
+                .any(|child| contains_plain_text(child, needle)),
+        }
+    }
+
     fn scene_contains_full_window_solid_quad(
         scene: &fret_core::Scene,
         bounds: Rect,
@@ -2010,6 +2050,35 @@ mod tests {
         .ui()
         .test_id("content")
         .into_element(cx)
+    }
+
+    #[test]
+    fn sheet_content_with_children_accepts_composable_sections_surface() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            SheetContent::new([])
+                .show_close_button(false)
+                .with_children(cx, |cx| {
+                    vec![
+                        SheetHeader::new([]).with_children(cx, |cx| {
+                            vec![SheetTitle::new("Title").into_element(cx)]
+                        }),
+                        SheetFooter::new([]).with_children(cx, |cx| {
+                            vec![crate::button::Button::new("Close").into_element(cx)]
+                        }),
+                    ]
+                })
+        });
+
+        assert!(matches!(element.kind, ElementKind::Container(_)));
+        assert!(contains_plain_text(&element, "Title"));
+        assert!(contains_plain_text(&element, "Close"));
     }
 
     #[test]

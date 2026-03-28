@@ -1162,9 +1162,9 @@ fn selected_parts_pages_mark_adapter_surfaces_as_advanced_not_default() {
     let sheet_page = read("src/ui/pages/sheet.rs");
     assert!(
         sheet_page.contains(
-            "`Usage` is the default copyable path; `Parts` stays after `API Reference` as a focused advanced follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`)."
+            "`Usage` is the default copyable `children([...])` path, while `Parts` stays after `API Reference` as a focused advanced follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`)."
         ),
-        "src/ui/pages/sheet.rs should distinguish the default compose() lane from the advanced Parts lane"
+        "src/ui/pages/sheet.rs should distinguish the default docs-path children() lane from the advanced Parts lane"
     );
     assert!(
         sheet_page.contains(
@@ -3087,14 +3087,16 @@ fn sheet_page_marks_usage_as_default_and_parts_as_follow_up() {
         "src/ui/pages/sheet.rs should distinguish the default children() lane from the explicit part-adapter follow-up lane"
     );
     assert!(
-        sheet_page.contains("Default copyable `children([...])` path for common Sheet call sites."),
-        "src/ui/pages/sheet.rs should label Usage as the default copyable children() path"
+        sheet_page.contains(
+            "Default copyable `children([...])` root lane with composable `with_children(...)` content sections.",
+        ),
+        "src/ui/pages/sheet.rs should label Usage as the default copyable children() + with_children() path"
     );
     assert!(
         sheet_page.contains(
-            "`Usage` now teaches the root `children([...])` path because it is closer to upstream nested children composition; `compose()` stays as the focused builder-style follow-up and `Parts` keeps explicit adapter ownership visible."
+            "The docs-path examples now share the same `Sheet::children([...])` root lane plus `SheetContent::new([]).with_children(cx, ...)` content lane, while `compose()` and `SheetContent::build(...)` remain focused builder-first follow-ups."
         ),
-        "src/ui/pages/sheet.rs should keep compose() documented as a follow-up after the default children() lane"
+        "src/ui/pages/sheet.rs should keep compose() and build() documented as follow-ups after the default children() lane"
     );
 }
 
@@ -3106,9 +3108,10 @@ fn sheet_usage_snippet_prefers_children_root_path() {
             "shadcn::Sheet::new_controllable(cx, None, false)",
             ".children([",
             "shadcn::SheetPart::trigger(shadcn::SheetTrigger::build(",
-            "shadcn::SheetPart::content(shadcn::SheetContent::build(",
+            "shadcn::SheetPart::content_with(",
+            "shadcn::SheetContent::new([]).with_children(",
         ],
-        &[".compose()", ".content_with("],
+        &[".compose()", "shadcn::SheetContent::build("],
     );
 }
 
@@ -3123,11 +3126,16 @@ fn sheet_curated_snippets_prefer_children_root_path() {
     ] {
         let normalized = assert_normalized_markers_present(
             relative_path,
-            &[".children([", "shadcn::SheetPart::trigger("],
+            &[
+                ".children([",
+                "shadcn::SheetPart::trigger(",
+                "shadcn::SheetPart::content_with(",
+                ".with_children(",
+            ],
         );
         assert!(
-            normalized.contains("shadcn::SheetPart::content("),
-            "{} should keep Sheet content on the default children() lane",
+            !normalized.contains("shadcn::SheetContent::build("),
+            "{} should keep Sheet content off the builder-first lane in the default curated snippets",
             manifest_path(relative_path).display()
         );
     }
@@ -3137,7 +3145,6 @@ fn sheet_curated_snippets_prefer_children_root_path() {
 fn curated_sheet_snippets_prefer_sheet_close_scope_for_custom_close_actions() {
     for relative_path in [
         "src/ui/snippets/sheet/demo.rs",
-        "src/ui/snippets/sheet/no_close_button.rs",
         "src/ui/snippets/sheet/rtl.rs",
         "src/ui/snippets/sheet/side.rs",
     ] {
@@ -8126,8 +8133,12 @@ fn selected_radio_group_snippets_prefer_field_set_wrapper_family() {
 fn selected_radio_group_snippets_prefer_builder_preserving_helpers() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/radio_group/usage.rs",
+        &[
+            "shadcn::RadioGroup::uncontrolled(Some(\"option-one\"))",
+            ".into_element_parts(cx, |cx, parts| {",
+            "parts.control(cx, \"option-one\")",
+        ],
         &["shadcn::radio_group_uncontrolled("],
-        &["shadcn::RadioGroup::uncontrolled("],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
@@ -9026,39 +9037,48 @@ fn radio_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
-fn radio_group_page_teaches_rtl_on_the_default_helper_lane() {
+fn radio_group_page_teaches_docs_parity_parts_without_generic_children_api() {
     let radio_group_page = read("src/ui/pages/radio_group.rs");
 
     assert!(
         radio_group_page.contains(
-            "`RadioGroupItem::child(...)` / `children(...)` and `variant(RadioGroupItemVariant::ChoiceCard)` cover the richer description, RTL field-content, and choice-card compositions without introducing a generic root `compose()` / children API."
+            "`RadioGroup::into_element_parts(cx, |cx, parts| ...)` is the typed docs-parity seam for rows that need external `Field`, `Label`, `FieldLabel::for_control(...)`, or `FieldDescription` composition around the radio control."
         ),
-        "src/ui/pages/radio_group.rs should record that richer RTL rows stay on the existing item child surface"
+        "src/ui/pages/radio_group.rs should record the typed docs-parity parts seam for composed rows"
     );
     assert!(
         radio_group_page.contains(
-            "The `RTL` preview keeps the translated upstream three-row example shape. `DirectionProvider(Rtl)` plus `RadioGroupItem::child(...)` are sufficient to keep each item's text on the logical side and the indicator on the opposite edge, so no extra physical alignment prop is needed."
+            "Selection semantics, roving navigation, icon chrome, border, and focus ring remain recipe-owned; surrounding fieldset and row layout remain caller-owned composition, so a generic root children API is still unnecessary here."
         ),
-        "src/ui/pages/radio_group.rs should describe RTL as logical layout parity rather than a missing physical prop"
+        "src/ui/pages/radio_group.rs should explain why parts are sufficient without widening to a generic root children API"
     );
     assert!(
         radio_group_page.contains(
-            "Preview mirrors the shadcn Radio Group docs path first: Demo, Usage, Description, Choice Card, Fieldset, Disabled, Invalid, RTL, and API Reference, including the translated upstream RTL preview on the default helper lane. `Label Association` stays as a focused Fret follow-up."
+            "The `RTL` preview keeps the translated upstream three-row example shape. `DirectionProvider(Rtl)` plus `into_element_parts(...)`, `Field`, and `FieldContent` keep the label/description on the logical side and the indicator on the opposite edge without extra physical alignment props."
         ),
-        "src/ui/pages/radio_group.rs should keep the translated upstream RTL preview visible in the page-level teaching summary"
+        "src/ui/pages/radio_group.rs should describe RTL parity through the composed parts lane"
+    );
+    assert!(
+        radio_group_page.contains(
+            "Preview mirrors the shadcn Radio Group docs path first: Demo, Usage, Description, Choice Card, Fieldset, Disabled, Invalid, RTL, and API Reference. The docs-path rows now use `into_element_parts(...)` for source-shaped composition, while `Label Association` stays as a focused Fret follow-up."
+        ),
+        "src/ui/pages/radio_group.rs should summarize the shift to the docs-shaped parts lane"
     );
 }
 
 #[test]
-fn radio_group_rtl_snippet_keeps_translated_upstream_rows_on_the_helper_lane() {
+fn radio_group_rtl_snippet_keeps_translated_upstream_rows_on_the_parts_lane() {
     let normalized = assert_normalized_markers_present(
         "src/ui/snippets/radio_group/rtl.rs",
         &[
             "with_direction_provider(cx, LayoutDirection::Rtl, |cx| {",
             "shadcn::RadioGroup::uncontrolled(Some(\"comfortable\"))",
-            "shadcn::RadioGroupItem::new(\"default\", \"افتراضي\").child(",
-            "shadcn::RadioGroupItem::new(\"comfortable\", \"مريح\").child(",
-            "shadcn::RadioGroupItem::new(\"compact\", \"مضغوط\").child(",
+            ".into_element_parts(cx, |cx, parts| {",
+            "parts.control(cx, \"default\")",
+            "parts.control(cx, \"comfortable\")",
+            "parts.control(cx, \"compact\")",
+            "shadcn::FieldContent::new([",
+            "shadcn::FieldLabel::new(\"افتراضي\")",
             "\"تباعد قياسي لمعظم حالات الاستخدام.\"",
             "\"مساحة أكبر بين العناصر.\"",
             "\"تباعد أدنى للتخطيطات الكثيفة.\"",
@@ -9070,8 +9090,8 @@ fn radio_group_rtl_snippet_keeps_translated_upstream_rows_on_the_helper_lane() {
         "src/ui/snippets/radio_group/rtl.rs should keep the translated upstream copy instead of English labels"
     );
     assert!(
-        !normalized.contains("Field::new(["),
-        "src/ui/snippets/radio_group/rtl.rs should keep the default radio-group item helper lane instead of dropping to raw field row assembly"
+        !normalized.contains("RadioGroupItem::child("),
+        "src/ui/snippets/radio_group/rtl.rs should prefer the typed parts lane over the old item child helper lane"
     );
 }
 

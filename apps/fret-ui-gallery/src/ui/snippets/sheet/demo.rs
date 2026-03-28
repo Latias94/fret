@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -43,51 +42,48 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .variant(shadcn::ButtonVariant::Outline)
                     .test_id("ui-gallery-sheet-demo-trigger"),
             )),
-            shadcn::SheetPart::content(
-                shadcn::SheetContent::build(move |cx, out| {
-                    let fields = {
-                        let fields = profile_fields(cx, name_model.clone(), username_model.clone())
-                            .into_element(cx);
-                        let props = decl_style::container_props(
-                            Theme::global(&*cx.app),
-                            ChromeRefinement::default().px(Space::N4),
-                            LayoutRefinement::default()
-                                .w_full()
-                                .min_w_0()
-                                .min_h_0()
-                                .flex_1(),
-                        );
-                        cx.container(props, move |_cx| vec![fields])
-                    };
+            shadcn::SheetPart::content_with(move |cx| {
+                let fields = {
+                    let fields = profile_fields(cx, name_model.clone(), username_model.clone())
+                        .into_element(cx);
+                    let props = decl_style::container_props(
+                        Theme::global(&*cx.app),
+                        ChromeRefinement::default().px(Space::N4),
+                        LayoutRefinement::default()
+                            .w_full()
+                            .min_w_0()
+                            .min_h_0()
+                            .flex_1(),
+                    );
+                    cx.container(props, move |_cx| vec![fields])
+                };
 
-                    out.push_ui(
-                        cx,
-                        shadcn::SheetHeader::build(|cx, out| {
-                            out.push_ui(cx, shadcn::SheetTitle::new("Edit profile"));
-                            out.push_ui(
-                                cx,
+                shadcn::SheetContent::new([]).with_children(cx, |cx| {
+                    vec![
+                        shadcn::SheetHeader::new([]).with_children(cx, |cx| {
+                            vec![
+                                shadcn::SheetTitle::new("Edit profile").into_element(cx),
                                 shadcn::SheetDescription::new(
                                     "Make changes to your profile here. Click save when you're done.",
+                                )
+                                .into_element(cx),
+                            ]
+                        }),
+                        fields,
+                        shadcn::SheetFooter::new([]).with_children(cx, |cx| {
+                            vec![
+                                shadcn::Button::new("Save changes").into_element(cx),
+                                shadcn::SheetClose::from_scope().build(
+                                    cx,
+                                    shadcn::Button::new("Close")
+                                        .variant(shadcn::ButtonVariant::Outline),
                                 ),
-                            );
+                            ]
                         }),
-                    );
-                    out.push(fields);
-                    out.push_ui(
-                        cx,
-                        shadcn::SheetFooter::build(|cx, out| {
-                            out.push_ui(cx, shadcn::Button::new("Save changes"));
-                            let close = shadcn::SheetClose::from_scope().build(
-                                cx,
-                                shadcn::Button::new("Close")
-                                    .variant(shadcn::ButtonVariant::Outline),
-                            );
-                            out.push(close);
-                        }),
-                    );
+                    ]
                 })
-                .test_id("ui-gallery-sheet-demo-content"),
-            ),
+                .test_id("ui-gallery-sheet-demo-content")
+            }),
         ])
         .into_element(cx)
         .test_id("ui-gallery-sheet-demo")

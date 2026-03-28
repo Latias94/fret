@@ -600,13 +600,18 @@ fn gallery_sheet_usage_snippet_prefers_curated_part_lane() {
         path.display()
     );
     assert!(
-        source.contains("shadcn::SheetPart::content("),
+        source.contains("shadcn::SheetPart::content_with("),
         "{} should teach the curated sheet content part lane",
         path.display()
     );
     assert!(
-        source.contains("shadcn::SheetContent::build("),
+        source.contains("shadcn::SheetPart::content_with("),
         "{} should keep content composition on the copyable sheet lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::SheetContent::new([]).with_children("),
+        "{} should keep nested sheet sections on the composable with_children() lane",
         path.display()
     );
     assert!(

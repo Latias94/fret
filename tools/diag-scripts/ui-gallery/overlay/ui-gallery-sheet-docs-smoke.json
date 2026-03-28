@@ -2,7 +2,7 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-sheet-docs-smoke",
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "required_capabilities": ["diag.script_v2"]
   },
   "steps": [
     {
@@ -48,6 +48,34 @@
       }
     },
     {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-demo-content" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-content" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-no-close-content" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-rtl-content" }
+      }
+    },
+    {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-sheet-api-reference-content" },
@@ -72,7 +100,6 @@
       }
     },
     { "type": "wait_frames", "n": 4 },
-    { "type": "capture_screenshot", "label": "ui-gallery-sheet-docs-api-reference" },
     { "type": "capture_bundle", "label": "ui-gallery-sheet-docs-smoke" }
   ]
 }
