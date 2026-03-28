@@ -2267,6 +2267,8 @@ mod tests {
 
         for target in [
             "ui-gallery-input-group-demo",
+            "ui-gallery-input-group-usage-content",
+            "ui-gallery-input-group-parts-usage-content",
             "ui-gallery-input-group-align-inline-start-content",
             "ui-gallery-input-group-align-inline-end-content",
             "ui-gallery-input-group-align-block-start-content",
@@ -2280,6 +2282,10 @@ mod tests {
             "ui-gallery-input-group-textarea-content",
             "ui-gallery-input-group-custom-input-content",
             "ui-gallery-input-group-rtl-content",
+            "ui-gallery-input-group-api-reference-content",
+            "ui-gallery-input-group-tooltip-content",
+            "ui-gallery-input-group-label-content",
+            "ui-gallery-input-group-button-group-content",
         ] {
             scroll_test_id_into_gallery_viewport(&mut rendered, target);
             let bounds = visual_bounds_by_test_id(&rendered, target);
@@ -2852,7 +2858,7 @@ mod tests {
     #[test]
     fn notes_sections_keep_stable_height_while_scrolling_into_view() {
         let cases = [
-            (PAGE_ACCORDION, "ui-gallery-accordion-notes-content"),
+            (PAGE_ACCORDION, "ui-gallery-accordion-api-reference-content"),
             (PAGE_ALERT, "ui-gallery-alert-notes-content"),
             (PAGE_ALERT_DIALOG, "ui-gallery-alert-dialog-notes-content"),
             (PAGE_AVATAR, "ui-gallery-avatar-notes-content"),

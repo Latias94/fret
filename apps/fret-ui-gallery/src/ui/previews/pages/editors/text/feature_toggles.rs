@@ -52,12 +52,13 @@ pub(in crate::ui) fn preview_text_feature_toggles(
     .gap(Space::N2);
 
     fn toggle_button(
-        _cx: &mut UiCx<'_>,
+        cx: &mut UiCx<'_>,
         label: &'static str,
         value: bool,
         test_id: &'static str,
         on_activate: fret_ui::action::OnActivate,
     ) -> impl UiChild + use<> {
+        let _ = cx;
         let txt = format!("{label}: {}", if value { "on" } else { "off" });
         shadcn::Button::new(txt)
             .variant(shadcn::ButtonVariant::Outline)
@@ -214,11 +215,11 @@ pub(in crate::ui) fn preview_text_feature_toggles(
         },
     );
 
-    let page = doc_layout::wrap_preview_page_after(
+    let page = doc_layout::wrap_preview_page(
+        cx,
         None,
         "Text feature toggles",
         vec![header.into_element(cx), panel],
-        cx,
     );
 
     vec![page.into_element(cx)]

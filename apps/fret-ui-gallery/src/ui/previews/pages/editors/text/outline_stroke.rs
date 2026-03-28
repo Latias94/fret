@@ -58,12 +58,13 @@ pub(in crate::ui) fn preview_text_outline_stroke(
             .gap(Space::N2).into_element(cx);
 
     fn toggle_button(
-        _cx: &mut UiCx<'_>,
+        cx: &mut UiCx<'_>,
         label: &'static str,
         value: bool,
         test_id: &'static str,
         on_activate: fret_ui::action::OnActivate,
     ) -> impl UiChild + use<> {
+        let _ = cx;
         let txt = format!("{label}: {}", if value { "on" } else { "off" });
         shadcn::Button::new(txt)
             .variant(shadcn::ButtonVariant::Outline)
@@ -316,11 +317,11 @@ pub(in crate::ui) fn preview_text_outline_stroke(
         },
     );
 
-    let page = doc_layout::wrap_preview_page_after(
+    let page = doc_layout::wrap_preview_page(
+        cx,
         None,
         "Text Outline/Stroke (v1)",
         vec![header, toolbar, panel],
-        cx,
     );
 
     vec![page.into_element(cx)]

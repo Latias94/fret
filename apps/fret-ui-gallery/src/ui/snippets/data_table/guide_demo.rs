@@ -97,7 +97,8 @@ where
         .justify_end()
 }
 
-fn guide_demo_content(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let _ = cx;
     ui::v_flex(move |cx| {
         let assets = cx.slot_state(
             || {

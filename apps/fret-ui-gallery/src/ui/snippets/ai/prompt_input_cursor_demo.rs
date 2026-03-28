@@ -8,7 +8,7 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, Space};
-use fret_ui_shadcn::facade as shadcn;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 const ACTIVE_TABS: &[&str] = &["packages/elements/src/task-queue-panel.tsx"];

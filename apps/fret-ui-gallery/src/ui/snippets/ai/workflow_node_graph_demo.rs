@@ -5,7 +5,7 @@ use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_shadcn::facade as shadcn;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     use std::sync::Arc;

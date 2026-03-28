@@ -61,6 +61,17 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
+          "id": "ui-gallery-input-group-parts-usage-content"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
           "id": "ui-gallery-input-group-api-reference-content"
         }
       },

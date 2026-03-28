@@ -20,7 +20,7 @@ fn rtl_landscape_source() -> &'static ImageSource {
     })
 }
 
-fn rtl_landscape_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
+fn rtl_landscape_image_id<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
     cx.use_image_source_state(rtl_landscape_source()).image
 }
 
@@ -59,32 +59,55 @@ fn rtl_preview_rgba8(width: u32, height: u32, accent: [u8; 3]) -> Vec<u8> {
     out
 }
 
+fn rtl_image<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    demo_image: Option<Model<Option<fret_core::ImageId>>>,
+    content_test_id: &'static str,
+) -> impl IntoUiElement<H> + use<H> {
+    let model_image_id = demo_image
+        .as_ref()
+        .and_then(|model| cx.watch_model(model).layout().cloned().flatten());
+    let image_id = model_image_id.or_else(|| rtl_landscape_image_id(cx));
+    let loading = demo_image.is_none() || model_image_id.is_none();
+
+    shadcn::MediaImage::maybe(image_id)
+        .loading(loading)
+        .fit(fret_core::ViewportFit::Cover)
+        .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
+        .refine_layout(LayoutRefinement::default().w_full().h_full())
+        .into_element(cx)
+        .test_id(content_test_id)
+}
+
 fn ratio_example<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    content: AnyElement,
     ratio: f32,
     max_w: Px,
     test_id: &'static str,
     figure_test_id: &'static str,
+    content_test_id: &'static str,
     caption_test_id: &'static str,
-) -> AnyElement {
+    demo_image: Option<Model<Option<fret_core::ImageId>>>,
+) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let muted_bg = theme.color_token("muted");
     let border = theme.color_token("border");
     let muted_fg = theme.color_token("muted-foreground");
 
-    let frame = shadcn::AspectRatio::with_child(content)
-        .ratio(ratio)
-        .refine_style(
-            ChromeRefinement::default()
-                .rounded(Radius::Lg)
-                .border_1()
-                .bg(ColorRef::Color(muted_bg))
-                .border_color(ColorRef::Color(border)),
-        )
-        .refine_layout(LayoutRefinement::default().w_full().max_w(max_w))
-        .into_element(cx)
-        .test_id(test_id);
+    let frame = shadcn::AspectRatio::with_child(
+        rtl_image(cx, demo_image, content_test_id).into_element(cx),
+    )
+    .ratio(ratio)
+    .refine_style(
+        ChromeRefinement::default()
+            .rounded(Radius::Lg)
+            .border_1()
+            .bg(ColorRef::Color(muted_bg))
+            .border_color(ColorRef::Color(border)),
+    )
+    .refine_layout(LayoutRefinement::default().w_full().max_w(max_w))
+    .into_element(cx)
+    .test_id(test_id);
 
     let caption = ui::text("منظر طبيعي جميل")
         .text_sm()
@@ -103,22 +126,15 @@ fn ratio_example<H: UiHost>(
 #[allow(dead_code)]
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
-        let content = shadcn::MediaImage::maybe(rtl_landscape_image_id(cx))
-            .loading(true)
-            .fit(fret_core::ViewportFit::Cover)
-            .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
-            .refine_layout(LayoutRefinement::default().w_full().h_full())
-            .into_element(cx)
-            .test_id("ui-gallery-aspect-ratio-rtl-content");
-
         ratio_example(
             cx,
-            content,
             16.0 / 9.0,
             Px(384.0),
             "ui-gallery-aspect-ratio-rtl",
             "ui-gallery-aspect-ratio-rtl-figure",
+            "ui-gallery-aspect-ratio-rtl-content",
             "ui-gallery-aspect-ratio-rtl-caption",
+            None,
         )
         .into_element(cx)
     })
@@ -134,29 +150,15 @@ pub fn render_preview<H: UiHost>(
     demo_image: Option<Model<Option<fret_core::ImageId>>>,
 ) -> impl IntoUiElement<H> + use<H> {
     with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
-        let model_image_id = demo_image
-            .as_ref()
-            .and_then(|model| cx.watch_model(model).layout().cloned().flatten());
-        let asset_image = super::images::landscape_image_state(cx);
-        let image_id = model_image_id.or(asset_image.image);
-        let loading = model_image_id.is_none() && asset_image.loading;
-
-        let content = shadcn::MediaImage::maybe(image_id)
-            .loading(loading)
-            .fit(fret_core::ViewportFit::Cover)
-            .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
-            .refine_layout(LayoutRefinement::default().w_full().h_full())
-            .into_element(cx)
-            .test_id("ui-gallery-aspect-ratio-rtl-content");
-
         ratio_example(
             cx,
-            content,
             16.0 / 9.0,
             Px(384.0),
             "ui-gallery-aspect-ratio-rtl",
             "ui-gallery-aspect-ratio-rtl-figure",
+            "ui-gallery-aspect-ratio-rtl-content",
             "ui-gallery-aspect-ratio-rtl-caption",
+            demo_image,
         )
         .into_element(cx)
     })

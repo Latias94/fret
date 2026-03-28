@@ -132,8 +132,7 @@ fn avatar_api_reference(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let notes = doc_layout::notes_block([
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/avatar.mdx`.",
         "`className`-style upstream customization maps to `refine_style(...)` / `refine_layout(...)` in Fret; page/container width negotiation remains caller-owned.",
-        "`Avatar::new([..])` and `Avatar::children([..])` are already sufficient for composable avatar content; no extra generic children or slot-merge API is needed here.",
-        "`Avatar::empty().children([..])`, `AvatarGroup::empty().children([..])`, and `AvatarGroupCount::empty().children([..])` now cover the docs-shaped composable children lane without widening the family beyond its typed parts.",
+        "`Avatar::empty().children([..])`, `AvatarGroup::empty().children([..])`, and `AvatarGroupCount::empty().children([..])` keep the composable children lane aligned with the typed family without reintroducing slot-merge-only copy.",
         "`AvatarBadge` stays the icon/content child lane, and `avatar_sized(...)` remains the preferred helper when size-dependent parts should inherit scope before landing.",
     ])
     .into_element(cx);
@@ -165,7 +164,7 @@ pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Core parity is already in a good place: default size, circular clipping, fallback timing, overlap geometry, and dropdown trigger attribution all match the audited upstream outcomes.",
         "Gallery sections now mirror shadcn Avatar docs first: Demo, Usage, Basic, Badge, Badge with Icon, Avatar Group, Avatar Group Count, Avatar Group with Icon, Sizes, Dropdown, RTL, API Reference.",
         "The current follow-up work is docs/API surface alignment rather than a mechanism-layer fix: the page now mirrors the upstream part breakdown more directly, and group/count snippets also teach the docs-shaped builder lane.",
-        "Gallery snippets now resolve their demo image through the shared gallery demo asset bundle, keeping avatar demos aligned with the rest of the first-party media surface.",
+        "Gallery snippets now resolve their demo image through a self-contained inline RGBA8 preview source, so the snippet code stays copyable without gallery-only glue.",
         "`Fallback only` remains a Fret-specific follow-up section for compact regression coverage across sizes.",
     ]);
 
@@ -185,11 +184,11 @@ pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-avatar-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Minimal usage mirroring the upstream docs shape, adapted to Fret's `ImageId` asset model.")
+        .description("Minimal usage mirroring the upstream docs shape, adapted to Fret's self-contained `ImageId` demo asset model.")
         .test_id_prefix("ui-gallery-avatar-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let basic = DocSection::build(cx, "Basic", basic)
-        .description("Single avatar with an image + fallback using a bundle-backed demo image.")
+        .description("Single avatar with an inline RGBA8 demo image + fallback.")
         .test_id_prefix("ui-gallery-avatar-basic")
         .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let with_badge = DocSection::build(cx, "Badge", with_badge)

@@ -451,9 +451,9 @@ fn selected_ai_snippets_prefer_grouped_uicx_actions_when_widgets_have_native_act
                 "use fret::app::UiCxActionsExt as _;",
                 "cx.actions().models::<act::NavigateBack>(",
                 "cx.actions().models::<act::NavigateForward>(",
-                "ui_ai::WebPreviewNavigationButton::new([cx.text(\"←\")])",
+                "ui_ai::WebPreviewNavigationButton::go_back([cx.text(\"←\")])",
                 ".action(act::NavigateBack)",
-                "ui_ai::WebPreviewNavigationButton::new([cx.text(\"→\")])",
+                "ui_ai::WebPreviewNavigationButton::go_forward([cx.text(\"→\")])",
                 ".action(act::NavigateForward)",
             ][..],
         ),
@@ -1910,6 +1910,7 @@ fn input_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/input_group/icon.rs",
             "src/ui/snippets/input_group/kbd.rs",
             "src/ui/snippets/input_group/label.rs",
+            "src/ui/snippets/input_group/parts_usage.rs",
             "src/ui/snippets/input_group/rtl.rs",
             "src/ui/snippets/input_group/spinner.rs",
             "src/ui/snippets/input_group/text.rs",
@@ -1926,10 +1927,7 @@ fn input_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
 
     assert_sources_absent(
         "src/ui/snippets/input_group",
-        &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
-            ".into_element_parts(",
-        ],
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
     );
 }
 
@@ -1940,6 +1938,7 @@ fn input_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Parts Usage\", parts_usage)",
             "DocSection::build(cx, \"Align / inline-start\", align_inline_start)",
             "DocSection::build(cx, \"Align / inline-end\", align_inline_end)",
             "DocSection::build(cx, \"Align / block-start\", align_block_start)",
@@ -1960,6 +1959,7 @@ fn input_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Parts Usage\", parts_usage)",
             "DocSection::new(\"Align / inline-start\", align_inline_start)",
             "DocSection::new(\"Align / inline-end\", align_inline_end)",
             "DocSection::new(\"Align / block-start\", align_block_start)",
@@ -1987,11 +1987,14 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
         &[
             "shadcn::DropdownMenu::uncontrolled(cx)",
             ".compose()",
-            ".trigger(trigger)",
-            "shadcn::InputGroup::new(value)",
+            ".trigger(more_trigger)",
+            ".trigger(search_trigger)",
+            "shadcn::InputGroup::new(file_name)",
+            "shadcn::InputGroup::new(query)",
             ".placeholder(\"Enter file name\")",
             ".control_test_id(\"ui-gallery-input-group-dropdown-control\")",
-            ".trailing([dropdown])",
+            ".trailing([more_dropdown])",
+            ".trailing([search_dropdown])",
             ".trailing_has_button(true)",
             ".into_element(cx)",
         ],
@@ -2001,7 +2004,7 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
     let page = read("src/ui/pages/input_group.rs");
     assert!(
         page.contains(
-            "Prefer the high-level `InputGroup::new(model)` shorthand for first-party app code; keep the part-based surface for direct shadcn docs parity when you explicitly want addon/control parts."
+            "Prefer the high-level `InputGroup::new(model)` shorthand for first-party app code, then reach for the explicit parts lane when you want direct shadcn docs parity at the call site."
         ),
         "src/ui/pages/input_group.rs should keep the compact shorthand as the first-party usage lane"
     );
@@ -2027,9 +2030,24 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
     );
     assert!(
         page.contains(
-            "`Custom Input` now uses the narrow `custom_input(...)` / `custom_textarea(...)` seam for caller-owned controls; a generic root `children(...)` API is still intentionally absent."
+            "Use `into_element_parts(...)` for direct docs-parity composition; `custom_input(...)` / `custom_textarea(...)` stay the narrow caller-owned control seam, so a generic root `children(...)` API is still intentionally absent."
         ),
-        "src/ui/pages/input_group.rs should document the narrow custom-control seam instead of widening InputGroup to generic root children"
+        "src/ui/pages/input_group.rs should keep the parts lane narrow and avoid widening InputGroup to a generic root children API"
+    );
+    assert!(
+        page.contains(".code_rust_from_file_region(snippets::parts_usage::SOURCE, \"example\")"),
+        "src/ui/pages/input_group.rs should expose a copyable docs-parity parts example instead of relying on prose alone"
+    );
+
+    let parts_usage = read("src/ui/snippets/input_group/parts_usage.rs");
+    assert!(
+        parts_usage.contains(".into_element_parts(cx, |cx|"),
+        "src/ui/snippets/input_group/parts_usage.rs should show the explicit parts lane"
+    );
+    assert!(
+        parts_usage.contains("shadcn::InputGroupPart::input(")
+            && parts_usage.contains("shadcn::InputGroupPart::addon("),
+        "src/ui/snippets/input_group/parts_usage.rs should keep the upstream part names visible in copyable code"
     );
 }
 
@@ -6185,7 +6203,7 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/avatar.rs",
         &[
-            "let api_reference = doc_layout::notes_block([",
+            "fn avatar_api_reference(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
             "let notes = doc_layout::notes_block([",
             "DocSection::build(cx, \"API Reference\", api_reference)",
             "DocSection::build(cx, \"Notes\", notes)",
@@ -6320,8 +6338,19 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
         ],
     );
 
-    for relative_path in [
+    assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/accordion.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+        ],
+    );
+
+    for relative_path in [
         "src/ui/pages/alert.rs",
         "src/ui/pages/dialog.rs",
         "src/ui/pages/navigation_menu.rs",
@@ -7799,18 +7828,6 @@ fn selected_popover_demo_helpers_prefer_ui_child_over_host_bound_into_ui_element
 
 #[test]
 fn selected_resizable_snippet_helpers_prefer_into_ui_element_over_anyelement() {
-    assert_selected_generic_helpers_prefer_into_ui_element(
-        "src/ui/snippets/resizable/usage.rs",
-        &[
-            "fn panel<H: UiHost>(_cx: &mut ElementContext<'_, H>, label: &'static str,) -> impl IntoUiElement<H> + use<H>",
-            "shadcn::resizable_panel_group(",
-        ],
-        &[
-            "fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement",
-            "shadcn::ResizablePanelGroup::new(",
-        ],
-    );
-
     for relative_path in [
         "src/ui/snippets/resizable/vertical.rs",
         "src/ui/snippets/resizable/handle.rs",
@@ -9138,10 +9155,14 @@ fn resizable_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn selected_resizable_usage_helper_prefers_ui_child_over_host_bound_into_ui_element() {
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/snippets/resizable/usage.rs",
-        &["fn panel(_cx: &mut UiCx<'_>, label: &'static str) -> impl UiChild + use<>"],
+        &[
+            "fn panel(_cx: &mut UiCx<'_>, label: &'static str) -> impl UiChild + use<>",
+            "shadcn::resizable_panel_group(",
+        ],
         &[
             "fn panel<H: UiHost>(_cx: &mut ElementContext<'_, H>, label: &'static str,) -> impl IntoUiElement<H> + use<H>",
             "fn panel<H: UiHost>(_cx: &mut ElementContext<'_, H>, label: &'static str,) -> AnyElement",
+            "shadcn::ResizablePanelGroup::new(",
         ],
     );
 }

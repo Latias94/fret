@@ -70,9 +70,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
         .into_element(cx);
 
-    shadcn::Card::new([shadcn::CardContent::new([calendar])
-        .refine_style(ChromeRefinement::default().p(Space::N0))
-        .into_element(cx)])
+    shadcn::card(move |cx| {
+        ui::children![
+            cx;
+            shadcn::card_content(move |cx| ui::children![cx; calendar])
+                .refine_style(ChromeRefinement::default().p(Space::N0)),
+        ]
+    })
     .refine_style(ChromeRefinement::default().p(Space::N0))
     .into_element(cx)
 }
