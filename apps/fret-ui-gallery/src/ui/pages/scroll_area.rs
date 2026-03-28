@@ -17,9 +17,10 @@ pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/radix/scroll-area.mdx`; Base UI reference: `repo-ref/ui/apps/v4/content/docs/components/base/scroll-area.mdx`; registry chrome reference: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/scroll-area.tsx`.",
-        "`ScrollArea::new([...])` is now the default copyable wrapper lane for the docs surface. `scroll_area(cx, |cx| [...])` remains the compact Fret-first shorthand instead of the primary teaching surface.",
+        "`ScrollArea::new([...])` is the default copyable wrapper lane for the docs surface. Because the Fret recipe stays layout-only, the upstream root chrome (`rounded-md border` and fixed size) maps to a caller-owned wrapper container around the scroll surface. `scroll_area(cx, |cx| [...])` remains the compact Fret-first shorthand instead of the primary teaching surface.",
         "`ScrollAreaRoot::new(ScrollAreaViewport::new([...])).scrollbar(ScrollBar::new().orientation(...))` already covers the shadcn/Radix mixed `ScrollArea` + `ScrollBar` examples without widening this family into an untyped arbitrary-children API.",
         "Base UI's extra `Content` / `Thumb` parts are useful headless references, but Fret keeps the viewport content wrapper and thumb as runtime-owned implementation details; the public shadcn lane does not need separate promoted parts for them today.",
+        "No generic `children([...])` / `compose()` root API is warranted here because `ScrollArea::new([...])` already covers the upstream children-owned wrapper lane while `ScrollAreaRoot` / `ScrollAreaViewport` / `ScrollBar` keep the explicit parts path typed.",
         "No mechanism or default-style regression was identified in this pass. The remaining drift was the first-party docs/teaching surface.",
     ]);
     let notes = doc_layout::notes_block([
@@ -44,7 +45,7 @@ pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .description(
-            "Copyable minimal usage for the default `ScrollArea::new([...])` wrapper lane.",
+            "Copyable minimal usage for the default `ScrollArea::new([...])` lane, with caller-owned wrapper chrome that mirrors the upstream fixed-size border example.",
         )
         .test_id_prefix("ui-gallery-scroll-area-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");

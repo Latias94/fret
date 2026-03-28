@@ -10,8 +10,32 @@ pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let handle = snippets::handle::render(cx);
     let rtl = snippets::rtl::render(cx);
     let notes = snippets::notes::render(cx);
+    let about = doc_layout::notes_block([
+        "Docs sources: `repo-ref/ui/apps/v4/content/docs/components/base/resizable.mdx` and `repo-ref/ui/apps/v4/content/docs/components/radix/resizable.mdx`.",
+        "The current visual/chrome baseline comes from `repo-ref/ui/apps/v4/registry/new-york-v4/ui/resizable.tsx`, with parallel headless baselines in `repo-ref/ui/apps/v4/registry/bases/radix/ui/resizable.tsx` and `repo-ref/ui/apps/v4/registry/bases/base/ui/resizable.tsx`.",
+        "Unlike `slider` or `progress`, there is no direct `resizable` primitive in `repo-ref/primitives` or `repo-ref/base-ui`; those repos still inform general headless/mechanism decisions, but the concrete source axis here is shadcn plus the runtime panel-group contract.",
+        "This page is docs/public-surface parity work, not a mechanism-layer gap: drag routing, hit-testing, focusable splitter semantics, and min-size clamping already live in `fret-ui`.",
+    ]);
+    let api_reference = doc_layout::notes_block([
+        "`ResizablePanelGroup::new(model).entries([...])` and `shadcn::resizable_panel_group(cx, model, |cx| ..)` cover the documented authoring surface.",
+        "`resizable_panel_group(cx, model, |cx| ..)` is already the composable children-equivalent lane for Fret: it keeps `ResizablePanel` / `ResizableHandle` ordering explicit while preserving root-level `.axis(...)`, `.style(...)`, `.test_id_prefix(...)`, and layout refinements.",
+        "A generic composable children / `compose()` API is not warranted here: the typed `ResizableEntry` stream already carries the source-aligned `Panel / Handle / Panel` contract without hiding handle order or widening the public surface.",
+        "`ResizablePanelGroup` owns the upstream `w-full h-full` fill behavior plus handle chrome, while surrounding `rounded-lg border`, `max-w-*`, and fixed preview heights remain caller-owned like the shadcn docs/examples.",
+        "`ResizableHandle::with_handle(true)` maps the documented visible-grabber lane, while keyboard splitter semantics and focus order remain runtime-owned.",
+    ]);
+    let about = DocSection::build(cx, "About", about)
+        .no_shell()
+        .description(
+            "Source axes and why this component is already on the right runtime/mechanism split.",
+        )
+        .test_id_prefix("ui-gallery-resizable-about");
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .description("Public surface summary, ownership notes, and the children-API decision.")
+        .test_id_prefix("ui-gallery-resizable-api-reference");
     let notes = DocSection::build(cx, "Notes", notes)
-        .description("Parity notes and references.")
+        .no_shell()
+        .description("Remaining parity notes and diagnostics anchors.")
         .test_id_prefix("ui-gallery-resizable-notes");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("Nested vertical panels inside a horizontal group.")
@@ -39,9 +63,18 @@ pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the shadcn Resizable docs flow: Demo, Usage, Vertical, Handle, and RTL. Notes capture the Fret-specific parity conclusions.",
+            "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Notes` stays as the explicit Fret follow-up for parity conclusions and diagnostics anchors.",
         ),
-        vec![demo, usage, vertical, handle, rtl, notes],
+        vec![
+            demo,
+            about,
+            usage,
+            vertical,
+            handle,
+            rtl,
+            api_reference,
+            notes,
+        ],
     );
 
     let component = body.test_id("ui-gallery-resizable").into_element(cx);
