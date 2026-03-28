@@ -3,8 +3,8 @@ pub const SOURCE: &str = include_str!("menu.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
-use fret_ui_kit::declarative::viewport_queries;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::viewport_queries;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn section<H: UiHost>(
