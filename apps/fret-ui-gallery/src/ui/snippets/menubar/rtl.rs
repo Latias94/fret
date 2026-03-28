@@ -216,12 +216,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .item(shadcn::MenubarRadioItemSpec::new("luis", "Luis"))
                         .into(),
                     shadcn::MenubarSeparator::new().into(),
-                    shadcn::MenubarGroup::new([
-                        shadcn::MenubarItem::new("تعديل...").inset(true).into(),
-                        shadcn::MenubarItem::new("إضافة ملف شخصي...")
-                            .inset(true)
-                            .into(),
-                    ])
+                    shadcn::MenubarGroup::new([shadcn::MenubarItem::new("تعديل...")
+                        .inset(true)
+                        .into()])
+                    .into(),
+                    shadcn::MenubarSeparator::new().into(),
+                    shadcn::MenubarGroup::new([shadcn::MenubarItem::new("إضافة ملف شخصي...")
+                        .inset(true)
+                        .into()])
                     .into(),
                 ],
             );
