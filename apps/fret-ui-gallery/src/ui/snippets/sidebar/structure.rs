@@ -28,6 +28,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let search = cx.local_model_keyed("search", String::new);
     let selected = cx.local_model_keyed("selected", || Arc::<str>::from("overview"));
     let last_action = cx.local_model_keyed("last_action", || Arc::<str>::from("none"));
+    let help_group_open = cx.local_model_keyed("help_group_open", || true);
 
     let content = shadcn::SidebarProvider::new()
         .width(Px(288.0))
@@ -150,6 +151,64 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ])
             .into_element(cx);
 
+            let help_group = shadcn::CollapsibleRoot::new()
+                .open(help_group_open.clone())
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx, |cx| {
+                    let label_row = ui::h_flex(|cx| {
+                        vec![
+                            shadcn::raw::typography::small("Help").into_element(cx),
+                            sidebar_icon(cx, "lucide.chevron-down"),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .justify_between()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .test_id("ui-gallery-sidebar-structure-group-label-row")
+                    .into_element(cx);
+
+                    let trigger = shadcn::CollapsibleTriggerPart::new([label_row])
+                        .as_child(true)
+                        .into_element(cx);
+
+                    let label = shadcn::SidebarGroupLabel::new("Help")
+                        .as_child(true)
+                        .children([trigger])
+                        .into_element(cx);
+
+                    let content = shadcn::CollapsibleContentPart::new([
+                        shadcn::SidebarGroupContent::new([shadcn::SidebarMenu::new([
+                            shadcn::SidebarMenuItem::new(
+                                shadcn::SidebarMenuButton::new("Documentation")
+                                    .icon(IconId::new_static("lucide.book-open"))
+                                    .on_activate(set_text_model(
+                                        last_action.clone(),
+                                        "open-help-docs",
+                                    ))
+                                    .into_element(cx),
+                            )
+                            .into_element(cx),
+                            shadcn::SidebarMenuItem::new(
+                                shadcn::SidebarMenuButton::new("Keyboard shortcuts")
+                                    .icon(IconId::new_static("lucide.keyboard"))
+                                    .on_activate(set_text_model(
+                                        last_action.clone(),
+                                        "open-help-shortcuts",
+                                    ))
+                                    .into_element(cx),
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx)])
+                        .into_element(cx),
+                    ])
+                    .test_id("ui-gallery-sidebar-structure-group-label-content")
+                    .into_element(cx);
+
+                    vec![shadcn::SidebarGroup::new([label, content]).into_element(cx)]
+                });
+
             let footer = shadcn::SidebarFooter::new([shadcn::SidebarMenu::new([
                 shadcn::SidebarMenuItem::new(
                     shadcn::SidebarMenuButton::new("frank@example.com")
@@ -172,7 +231,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     workspace_switcher,
                 ])
                 .into_element(cx),
-                shadcn::SidebarContent::new([workspace_group]).into_element(cx),
+                shadcn::SidebarContent::new([workspace_group, help_group]).into_element(cx),
                 footer,
                 shadcn::SidebarRail::new()
                     .test_id("ui-gallery-sidebar-structure-rail")
@@ -196,6 +255,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             cx.text(format!("last_action={}", last_action_value.as_ref())),
                             cx.text(format!("collapsed={collapsed}")),
                             cx.text("This example consolidates the upstream Header/Footer/Content/Group/Menu/Action/Sub/Rail docs into one copyable Fret snippet."),
+                            cx.text("It also keeps the official SidebarGroup collapsible-label lane copyable via SidebarGroupLabel::as_child(true) + CollapsibleTriggerPart."),
                         ]
                     }),
                 ]
