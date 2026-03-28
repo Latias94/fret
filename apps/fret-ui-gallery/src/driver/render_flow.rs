@@ -4,20 +4,20 @@ use fret_app::{App, Model};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
-use fret_ui::Invalidation;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
     SpacerProps,
 };
+use fret_ui::Invalidation;
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
 use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget};
 use std::sync::Arc;
 
 use super::{
-    UiGalleryDriver, UiGalleryWindowState, chrome, debug_hud, debug_stats, inspector, menubar,
-    settings_sheet, shell, status_bar, toaster, ui_gallery_bisect_flags,
+    chrome, debug_hud, debug_stats, inspector, menubar, settings_sheet, shell, status_bar, toaster,
+    ui_gallery_bisect_flags, UiGalleryDriver, UiGalleryWindowState,
 };
 
 pub(super) struct PreparedFrame {
@@ -2297,6 +2297,64 @@ mod tests {
     }
 
     #[test]
+    fn gallery_popover_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page(PAGE_POPOVER);
+
+        for target in [
+            "ui-gallery-popover-demo-content",
+            "ui-gallery-popover-usage-content",
+            "ui-gallery-popover-basic-content",
+            "ui-gallery-popover-align-content",
+            "ui-gallery-popover-with-form-content",
+            "ui-gallery-popover-rtl-content",
+            "ui-gallery-popover-api-reference-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Popover page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_popover_follow_up_surfaces_stay_present() {
+        let mut rendered = render_gallery_page(PAGE_POPOVER);
+
+        for target in [
+            "ui-gallery-popover-detached-trigger-content",
+            "ui-gallery-popover-open-on-hover-content",
+            "ui-gallery-popover-inline-children-content",
+            "ui-gallery-popover-notes-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Popover follow-up target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_popover_rtl_includes_logical_side_targets() {
+        let mut rendered = render_gallery_page(PAGE_POPOVER);
+
+        for target in [
+            "ui-gallery-popover-rtl-inline-start-trigger.chrome",
+            "ui-gallery-popover-rtl-inline-end-trigger.chrome",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Popover RTL logical-side target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
     fn gallery_empty_demo_keeps_upstream_action_row_and_link_separation() {
         let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_EMPTY);
 
@@ -3425,8 +3483,8 @@ mod tests {
     }
 
     #[test]
-    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page()
-     {
+    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
+    ) {
         assert_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
             PAGE_SCROLL_AREA,
             "ui-gallery-scroll-area-drag-baseline-y-scrollbar",
