@@ -6,6 +6,7 @@
 //!
 //! Keep `ui-gallery-label-*` `test_id`s stable: diag scripts depend on them.
 
+pub mod children;
 pub mod demo;
 pub mod label_in_field;
 pub mod rtl;
