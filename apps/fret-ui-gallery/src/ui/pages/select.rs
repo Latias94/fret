@@ -30,18 +30,19 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
+        "Docs sources: `repo-ref/ui/apps/v4/content/docs/components/radix/select.mdx` and `repo-ref/ui/apps/v4/content/docs/components/base/select.mdx`.",
+        "The current visual/chrome baseline comes from `repo-ref/ui/apps/v4/registry/new-york-v4/ui/select.tsx`; semantics/headless references come from `repo-ref/primitives/packages/react/select/src/select.tsx` and `repo-ref/base-ui/packages/react/src/select/`.",
         "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) stay the default copyable root story.",
-        "`Select::into_element_parts(...)` plus `SelectContent::with_entries(...)` is the current typed equivalent of the upstream nested `SelectTrigger` / `SelectValue` / `SelectContent` children lane.",
-        "That composable seam should stay typed and narrow around `SelectEntry` (`SelectGroup` / `SelectItem` / `SelectLabel` / `SelectSeparator`) instead of widening `Select` to arbitrary generic children.",
+        "`Select::into_element_parts(...)` plus `SelectContent::with_entries(...)` is the typed docs-parity seam for the upstream nested `SelectTrigger` / `SelectValue` / `SelectContent` children lane; a generic root `children([...])` / `compose()` API is not warranted because the option tree is already typed as `SelectEntry` (`SelectGroup` / `SelectItem` / `SelectLabel` / `SelectSeparator`).",
         "`Select` remains a single-select text-keyed surface today; Base UI-style object values and multi-select remain separate public-surface work rather than a recipe/mechanism bug.",
-        "Width negotiation remains caller-owned at the trigger/root call site; overlay placement, dismissal, scroll buttons, and listbox semantics stay recipe/mechanism-owned in `fret-ui-kit` + `fret-ui-shadcn`.",
-        "No new mechanism bug was identified in this pass; the remaining drift was first-party docs discoverability around the already-landed parts surface.",
+        "Width negotiation remains caller-owned because the upstream `w-[180px]` / `w-[280px]` constraints live on example call sites, while overlay placement, dismissal, scroll buttons, and listbox semantics stay recipe/mechanism-owned in `fret-ui-kit` + `fret-ui-shadcn`.",
+        "No mechanism or default-style regression was identified in this pass; the remaining drift was the first-party docs/teaching surface.",
     ]);
     let notes = doc_layout::notes_block([
         "Select is a Popover + Listbox recipe. Use it for rich overlays and custom interactions.",
-        "Gallery order now mirrors the upstream shadcn/Base UI Select docs path first: `Demo`, `Usage`, `Align Item With Trigger`, `Groups`, `Scrollable`, `Disabled`, `Invalid`, `RTL`, and `API Reference`.",
+        "Preview now mirrors the upstream shadcn/Base UI Select docs path first after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Align Item With Trigger`, `Groups`, `Scrollable`, `Disabled`, `Invalid`, `RTL`, and `API Reference`.",
         "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) are now the default copyable root story; `into_element_parts(...)` remains the focused upstream-shaped adapter on the same lane rather than a separate `compose()` story.",
-        "`Composable Parts (Fret)` now makes that nested lane explicit with a full copyable example, so app authors do not need a broader generic children API just to match upstream docs ergonomics.",
+        "`Composable Parts (Fret)` now shows that typed `into_element_parts(...)` + `SelectContent::with_entries(...)` adapter explicitly, so app authors do not need a broader generic children API just to match upstream docs ergonomics.",
         "`Rich Items (Fret)` documents the current typed answer to richer `SelectItemText` content: use styled text runs for value + secondary label style instead of widening items to arbitrary child trees.",
         "`RTL` now keeps the translated upstream example shape more closely: a narrower `w-32`-equivalent trigger plus the full five-fruit / three-vegetable grouping instead of a reduced smoke-test list.",
         "`DirectionProvider(Rtl)` is sufficient for the RTL example: trigger text/chevron ordering and popup content layout already follow logical inline-start/end, so the gallery should not teach an extra physical alignment override here.",
@@ -55,7 +56,7 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .test_id_prefix("ui-gallery-select-api-reference")
         .description(
-            "Public surface summary, ownership notes, and the current parts/children guidance.",
+            "Source axes, public surface summary, ownership notes, and the current children API conclusion.",
         );
     let parts = DocSection::build(cx, "Composable Parts (Fret)", parts)
         .test_id_prefix("ui-gallery-select-composable-parts")
@@ -121,7 +122,7 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the upstream shadcn/Base UI Select docs path first, then keeps typed parts composition, label wiring, and diagnostics-specific surfaces as explicit Fret follow-ups.",
+            "Preview mirrors the upstream shadcn/Base UI Select docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`, then keeps typed parts composition, label wiring, and diagnostics-specific surfaces as explicit Fret follow-ups.",
         ),
         vec![
             demo,

@@ -1318,7 +1318,46 @@ fn direct_recipe_root_pages_mark_their_default_lane_without_inventing_compose() 
 
 #[test]
 fn selected_select_snippets_prefer_direct_builder_chain_for_default_recipe_root() {
-    assert_sources_absent("src/ui/snippets/select", &[".into_element_parts("]);
+    for relative_path in [
+        "src/ui/snippets/select/demo.rs",
+        "src/ui/snippets/select/usage.rs",
+        "src/ui/snippets/select/align_item_with_trigger.rs",
+        "src/ui/snippets/select/groups.rs",
+        "src/ui/snippets/select/scrollable.rs",
+        "src/ui/snippets/select/disabled.rs",
+        "src/ui/snippets/select/invalid.rs",
+        "src/ui/snippets/select/rtl.rs",
+        "src/ui/snippets/select/label.rs",
+        "src/ui/snippets/select/field_association.rs",
+        "src/ui/snippets/select/diag_surface.rs",
+        "src/ui/snippets/select/rich_items.rs",
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains(".into_element_parts("),
+            "{} should keep the direct builder chain on the default recipe-root lane",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn select_parts_snippet_keeps_the_typed_docs_parity_adapter_visible() {
+    let parts = read("src/ui/snippets/select/parts.rs");
+    assert!(
+        parts.contains(".into_element_parts("),
+        "src/ui/snippets/select/parts.rs should keep the typed parts adapter visible"
+    );
+    assert!(
+        parts.contains("shadcn::SelectContent::new().with_entries(["),
+        "src/ui/snippets/select/parts.rs should keep SelectContent::with_entries(...) visible"
+    );
+    assert!(
+        parts.contains(".test_id_prefix(\"ui-gallery-select-composable-parts\")"),
+        "src/ui/snippets/select/parts.rs should keep the diagnostics surface stable"
+    );
 }
 
 #[test]
