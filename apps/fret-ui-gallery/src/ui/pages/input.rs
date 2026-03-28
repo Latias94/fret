@@ -51,31 +51,35 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Usage guidance and parity notes.");
     let demo = DocSection::build(cx, "Demo", demo)
         .test_id_prefix("ui-gallery-input-demo")
-        .description("Default input preview matching the upstream top-of-page demo.")
+        .description("API key field preview matching the upstream top-of-page demo.")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .test_id_prefix("ui-gallery-input-usage")
-        .description("Copyable minimal usage for `Input` before the example matrix.")
+        .description("Minimal Fret translation of the upstream `import { Input } ...` and `<Input />` usage.")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let basic = DocSection::build(cx, "Basic", basic)
         .test_id_prefix("ui-gallery-input-basic")
-        .description("Single input field (used by IME routing regression scripts).")
+        .description("Single input field with the upstream basic placeholder.")
         .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let field = DocSection::build(cx, "Field", field)
         .test_id_prefix("ui-gallery-input-field")
-        .description("Field composition with label, description, and error slots.")
+        .description(
+            "Use `Field`, `FieldLabel`, and `FieldDescription` to compose a labeled input.",
+        )
         .code_rust_from_file_region(snippets::field::SOURCE, "example");
     let field_group = DocSection::build(cx, "Field Group", field_group)
         .test_id_prefix("ui-gallery-input-field-group")
-        .description("FieldGroup stacks related fields and action rows.")
+        .description("Use `FieldGroup` to stack related `Field` blocks and action rows.")
         .code_rust_from_file_region(snippets::field_group::SOURCE, "example");
     let disabled = DocSection::build(cx, "Disabled", disabled)
         .test_id_prefix("ui-gallery-input-disabled")
-        .description("Disabled inputs should block focus/interaction and use muted styling.")
+        .description("Use `disabled` on the input and disabled styling on the surrounding `Field`.")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let invalid = DocSection::build(cx, "Invalid", invalid)
         .test_id_prefix("ui-gallery-input-invalid")
-        .description("Invalid state uses `aria_invalid` plus field-level invalid styling.")
+        .description(
+            "Use `aria_invalid` on the input and invalid styling on the surrounding `Field`.",
+        )
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let file = DocSection::build(cx, "File", file)
         .test_id_prefix("ui-gallery-input-file-section")
@@ -83,35 +87,41 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::file::SOURCE, "example");
     let inline = DocSection::build(cx, "Inline", inline)
         .test_id_prefix("ui-gallery-input-inline")
-        .description("Horizontal Field orientation is useful for compact toolbars.")
+        .description("Use horizontal `Field` composition to pair an input with a search button.")
         .code_rust_from_file_region(snippets::inline::SOURCE, "example");
     let grid = DocSection::build(cx, "Grid", grid)
         .test_id_prefix("ui-gallery-input-grid")
-        .description("Two-column input layout with shared row alignment.")
+        .description("Place multiple fields side by side with a shared two-column layout.")
         .code_rust_from_file_region(snippets::grid::SOURCE, "example");
     let required = DocSection::build(cx, "Required", required)
         .test_id_prefix("ui-gallery-input-required")
-        .description("Required affordance is represented by label composition in this gallery.")
+        .description(
+            "Use `aria_required` on the input and compose the required marker in the label.",
+        )
         .code_rust_from_file_region(snippets::required::SOURCE, "example");
     let badge = DocSection::build(cx, "Badge", badge)
         .test_id_prefix("ui-gallery-input-badge")
-        .description("Use Badge inside a label row.")
+        .description("Use `Badge` inside the label row to highlight a recommended field.")
         .code_rust_from_file_region(snippets::badge::SOURCE, "example");
     let input_group = DocSection::build(cx, "Input Group", input_group)
         .test_id_prefix("ui-gallery-input-input-group")
-        .description("Inline addons and trailing buttons via InputGroup composition.")
+        .description("Use `InputGroup` for inline text, icons, and trailing addons.")
         .code_rust_from_file_region(snippets::input_group::SOURCE, "example");
     let button_group = DocSection::build(cx, "Button Group", button_group)
         .test_id_prefix("ui-gallery-input-button-group")
-        .description("ButtonGroup composes an input and a text button with shared chrome.")
+        .description(
+            "Use `ButtonGroup` to compose an input with trailing buttons and shared chrome.",
+        )
         .code_rust_from_file_region(snippets::button_group::SOURCE, "example");
     let form = DocSection::build(cx, "Form", form)
         .test_id_prefix("ui-gallery-input-form")
-        .description("Multi-field form layout using FieldGroup plus responsive rows.")
+        .description("Full form example with multiple inputs, a select, and action buttons.")
         .code_rust_from_file_region(snippets::form::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
         .test_id_prefix("ui-gallery-input-rtl")
-        .description("Password input plus Field composition under an RTL direction provider.")
+        .description(
+            "Password field under an RTL direction provider, following the upstream RTL example.",
+        )
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let label = DocSection::build(cx, "Label Association", label)
         .description(
@@ -123,7 +133,7 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Input docs path first: Demo, Usage, Basic, Field, Field Group, Disabled, Invalid, File, Inline, Grid, Required, Badge, Input Group, Button Group, Form, RTL. Field-backed examples now use explicit label/control association on that docs path; `Label Association` and `API Reference` stay as focused Fret follow-ups.",
+            "A text input component for forms and user data entry with built-in styling and accessibility features. This page mirrors the shadcn Input docs path first, then adds focused Fret follow-ups for label association, ownership notes, and diagnostics guidance.",
         ),
         vec![
             demo,

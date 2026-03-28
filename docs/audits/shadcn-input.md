@@ -42,6 +42,7 @@ base examples, and the in-repo web goldens that currently gate input chrome.
 ### Gallery / docs parity
 
 - Pass: the gallery mirrors the upstream base Input docs path first: `Usage`, `Basic`, `Field`, `Field Group`, `Disabled`, `Invalid`, `File`, `Inline`, `Grid`, `Required`, `Badge`, `Input Group`, `Button Group`, `Form`, and `RTL`.
+- Pass: `Demo` now matches the upstream top-of-page API key preview again, and `Usage` explicitly shows the Fret translation of the upstream minimal `<Input />` sample (`local_model` + `Input::new(...)` + `a11y_label(...)` for the unlabeled gallery control).
 - Pass: `Usage` now has a dedicated snippet source so the copyable code tab stays tied to compiled sample code instead of an inline page string.
 - Pass: `Label Association`, `API Reference`, and `Notes` remain explicit Fret follow-ups after the upstream path because they document the `control_id(...)` bridge, ownership notes, and diagnostics guidance rather than upstream section headings.
 - Pass: each Input docs section now exposes a page-scoped stable `test_id` prefix (`ui-gallery-input-*`), which lets geometry and screenshot gates target the real docs structure instead of only snippet-local nodes.
