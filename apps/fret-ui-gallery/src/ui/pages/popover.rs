@@ -10,6 +10,8 @@ pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let basic = snippets::basic::render(cx);
     let align = snippets::align::render(cx);
     let with_form = snippets::with_form::render(cx);
+    let detached_trigger = snippets::detached_trigger::render(cx);
+    let open_on_hover = snippets::open_on_hover::render(cx);
     let inline_children = snippets::inline_children::render(cx);
     let rtl = snippets::rtl::render(cx);
 
@@ -19,14 +21,19 @@ pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`side_offset(...)` and `align_offset(...)` are available when placement needs fine-grained tuning beyond the default popper gap.",
         "`PopoverContent::build(cx, ...)` pairs with `PopoverTrigger::build(...)` for the typed compound-parts lane, while `PopoverContent::refine_layout(...)` remains the caller-owned path for explicit widths such as `w-72`, `w-64`, or the wider `w-80` demo.",
         "`PopoverContent` keeps panel chrome and default width recipe-owned, but it no longer stretches inline-sized children by default; page/container width negotiation stays caller-owned.",
+        "`Popover::trigger_element(...)` and `Popover::anchor_element(...)` cover the detached-trigger, anchor-aware follow-up without widening the default shadcn docs lane.",
+        "`Popover::open_on_hover(...)`, `hover_open_delay_frames(...)`, and `hover_close_delay_frames(...)` cover the Base UI hover-open follow-up while staying outside the default docs path.",
         "A generic heterogeneous `children([...])` root API is not currently warranted here: unlike Dialog/Drawer, Popover root only needs trigger/content, while managed-open and anchor-aware cases already stay explicit on `from_open(...).into_element_with(...)` / `into_element_with_anchor(...)`.",
     ]);
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/popover.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/popover.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/popover.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx`, and `repo-ref/ui/apps/v4/registry/new-york-v4/examples/popover-demo.tsx`.",
-        "Preview mirrors the shadcn/base Popover docs path after `Installation`: `Demo`, `Usage`, `Basic`, `Align`, `With Form`, `RTL`, and `API Reference`; Fret-only regression sections stay afterwards.",
+        "Preview mirrors the shadcn/base Popover docs path after `Installation`: `Demo`, `Usage`, `Basic`, `Align`, `With Form`, `RTL`, and `API Reference`. `Detached Trigger (Fret)`, `Open on Hover (Base UI/Fret)`, and `Inline Children (Fret)` stay as explicit follow-ups.",
         "`Demo` keeps the official new-york `popover-demo` structure with the four dimensions rows, while `Basic` / `Align` / `With Form` / `RTL` track the docs examples.",
+        "`RTL` now keeps both the physical sides and the logical `inline-start` / `inline-end` cases from the upstream Base UI docs so direction-aware placement stays reviewable.",
+        "`Detached Trigger (Fret)` documents the current advanced seam via `trigger_element(...)` / `anchor_element(...)`; Base UI's handle-driven multi-trigger/payload surface would be a public-surface follow-up rather than a mechanism fix.",
         "Default recipe-level root authoring stays `Popover::new(cx, trigger, content)`, while `PopoverTrigger::build(...)` and `PopoverContent::build(cx, ...)` cover the typed compound-parts lane; anchor-aware sizing and detached-trigger cases still use the explicit advanced seams (`from_open(...).into_element_with(...)` / `into_element_with_anchor(...)`).",
+        "Base UI documents trigger-owned `openOnHover` / `delay` props, but Fret keeps hover-open as an explicit popover-root follow-up because the hover-intent corridor belongs to the renderer-owned mechanism layer.",
         "Keep content width explicit when the upstream example does (for example `w-40`, `w-64`, or `w-80`) so recipe chrome and page-level layout ownership stay separate.",
         "For dense input rows, prefer `Field` / `FieldGroup` recipes to keep spacing consistent with other form surfaces.",
     ]);
@@ -43,6 +50,7 @@ pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
+        .test_id_prefix("ui-gallery-popover-usage")
         .description(
             "Copyable shadcn-style composition reference using typed trigger/content parts.",
         )
@@ -63,6 +71,18 @@ pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-popover-rtl")
         .description("Popover layout should follow a right-to-left direction provider.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let detached_trigger = DocSection::build(cx, "Detached Trigger (Fret)", detached_trigger)
+        .test_id_prefix("ui-gallery-popover-detached-trigger")
+        .description(
+            "Advanced follow-up: keep the trigger outside the popover root and wire it explicitly with `trigger_element(...)` / `anchor_element(...)`.",
+        )
+        .code_rust_from_file_region(snippets::detached_trigger::SOURCE, "example");
+    let open_on_hover = DocSection::build(cx, "Open on Hover (Base UI/Fret)", open_on_hover)
+        .test_id_prefix("ui-gallery-popover-open-on-hover")
+        .description(
+            "Base UI/Fret follow-up: hover intent can open the popover without changing the default click-first docs lane.",
+        )
+        .code_rust_from_file_region(snippets::open_on_hover::SOURCE, "example");
     let inline_children = DocSection::build(cx, "Inline Children (Fret)", inline_children)
         .test_id_prefix("ui-gallery-popover-inline-children")
         .description(
@@ -73,7 +93,7 @@ pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn/base Popover docs path after `Installation`, using the dimensions form demo as the lead example; Fret-only regression sections stay afterwards.",
+            "Preview mirrors the shadcn/base Popover docs path through `API Reference`, using the dimensions form demo as the lead example; detached-trigger, hover-open, and inline-children follow-ups stay explicit afterwards.",
         ),
         vec![
             demo,
@@ -83,6 +103,8 @@ pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             with_form,
             rtl,
             api_reference,
+            detached_trigger,
+            open_on_hover,
             inline_children,
             notes,
         ],
