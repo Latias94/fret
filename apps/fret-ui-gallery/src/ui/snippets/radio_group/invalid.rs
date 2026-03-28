@@ -3,11 +3,12 @@ pub const SOURCE: &str = include_str!("invalid.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::Px;
-use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
+    let email_id = "ui-gallery-radio-group-invalid-email";
+    let sms_id = "ui-gallery-radio-group-invalid-sms";
+    let both_id = "ui-gallery-radio-group-invalid-both";
 
     let group = shadcn::RadioGroup::uncontrolled(Some("email"))
         .a11y_label("Notification Preferences")
@@ -15,49 +16,49 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .item(
             shadcn::RadioGroupItem::new("email", "Email only")
                 .aria_invalid(true)
-                .child(
-                    shadcn::Field::new([ui::label("Email only")
-                        .font_normal()
-                        .text_color(ColorRef::Color(destructive))
-                        .w_full()
-                        .min_w_0()
-                        .into_element(cx)])
-                    .invalid(true)
-                    .orientation(shadcn::FieldOrientation::Horizontal)
-                    .into_element(cx),
-                ),
+                .control_id(email_id),
         )
         .item(
             shadcn::RadioGroupItem::new("sms", "SMS only")
                 .aria_invalid(true)
-                .child(
-                    shadcn::Field::new([ui::label("SMS only")
-                        .font_normal()
-                        .text_color(ColorRef::Color(destructive))
-                        .w_full()
-                        .min_w_0()
-                        .into_element(cx)])
-                    .invalid(true)
-                    .orientation(shadcn::FieldOrientation::Horizontal)
-                    .into_element(cx),
-                ),
+                .control_id(sms_id),
         )
         .item(
             shadcn::RadioGroupItem::new("both", "Both Email & SMS")
                 .aria_invalid(true)
-                .child(
-                    shadcn::Field::new([ui::label("Both Email & SMS")
-                        .font_normal()
-                        .text_color(ColorRef::Color(destructive))
-                        .w_full()
-                        .min_w_0()
-                        .into_element(cx)])
-                    .invalid(true)
-                    .orientation(shadcn::FieldOrientation::Horizontal)
-                    .into_element(cx),
-                ),
+                .control_id(both_id),
         )
-        .into_element(cx);
+        .into_element_parts(cx, |cx, parts| {
+            vec![
+                shadcn::Field::new([
+                    parts.control(cx, "email"),
+                    shadcn::FieldLabel::new("Email only")
+                        .for_control(email_id)
+                        .into_element(cx),
+                ])
+                .invalid(true)
+                .orientation(shadcn::FieldOrientation::Horizontal)
+                .into_element(cx),
+                shadcn::Field::new([
+                    parts.control(cx, "sms"),
+                    shadcn::FieldLabel::new("SMS only")
+                        .for_control(sms_id)
+                        .into_element(cx),
+                ])
+                .invalid(true)
+                .orientation(shadcn::FieldOrientation::Horizontal)
+                .into_element(cx),
+                shadcn::Field::new([
+                    parts.control(cx, "both"),
+                    shadcn::FieldLabel::new("Both Email & SMS")
+                        .for_control(both_id)
+                        .into_element(cx),
+                ])
+                .invalid(true)
+                .orientation(shadcn::FieldOrientation::Horizontal)
+                .into_element(cx),
+            ]
+        });
 
     shadcn::field_set(|cx| {
         ui::children![

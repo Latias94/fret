@@ -26,10 +26,11 @@ base examples, and the existing radio-group gates.
 
 ### Authoring surface
 
-- Pass: `RadioGroup::uncontrolled(default)` and `RadioGroup::new(model)` cover the documented uncontrolled and controlled authoring paths.
-- Pass: `RadioGroupItem::children(...)` and `variant(RadioGroupItemVariant::ChoiceCard)` cover the richer description and choice-card compositions.
-- Pass: no extra generic `compose()` API is needed here because the existing item children surface already matches the upstream composition model, including the invalid row composition.
-- Pass: `control_id(...)` remains the focused Fret bridge for label-forwarding and stays out of the upstream docs path.
+- Pass: `RadioGroup::uncontrolled(default)` and `RadioGroup::new(model)` remain the compact quick-start helpers for uncontrolled and controlled authoring.
+- Pass: `RadioGroup::into_element_parts(...)` now covers the direct docs-parity row-composition lane for external `Field`, `Label`, `FieldLabel::for_control(...)`, and `FieldDescription` composition around the radio control.
+- Pass: no extra generic root `compose()` / `children(...)` API is needed here because `into_element_parts(...)` keeps the row-composition seam typed while preserving roving-order ownership on the group.
+- Pass: `RadioGroupItem::children(...)` and `variant(RadioGroupItemVariant::ChoiceCard)` remain valid Fret shorthands for full-row override and recipe-owned chrome, but they are no longer the only path for description / invalid / RTL row parity.
+- Pass: `control_id(...)` remains the focused Fret bridge for label-forwarding and item-specific label association.
 
 ### Interaction & default-style ownership
 
@@ -39,9 +40,10 @@ base examples, and the existing radio-group gates.
 
 ### Gallery / docs parity
 
-- Pass: the gallery now mirrors the upstream base Radio Group docs path first: `Demo`, `Usage`, `Description`, `Choice Card`, `Fieldset`, `Disabled`, `Invalid`, `RTL`, and `API Reference`.
-- Pass: `Label Association` remains a focused Fret follow-up after the upstream path because it documents the `control_id(...)` bridge.
-- Pass: this work is docs/public-surface parity, not a mechanism-layer fix.
+- Pass: the gallery mirrors the upstream base Radio Group docs path first: `Demo`, `Usage`, `Description`, `Choice Card`, `Fieldset`, `Disabled`, `Invalid`, `RTL`, and `API Reference`.
+- Pass: the docs-path rows now use `into_element_parts(...)` for source-shaped composition instead of forcing richer rows through the item-owned child lane.
+- Pass: `Label Association` remains a focused Fret follow-up after the upstream path because it documents the `control_id(...)` bridge rather than an upstream section heading.
+- Pass: this work remains docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
