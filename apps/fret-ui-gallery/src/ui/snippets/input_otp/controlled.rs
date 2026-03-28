@@ -16,9 +16,21 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| {
         let otp = shadcn::InputOTP::new(value)
             .length(6)
-            .test_id_prefix("ui-gallery-input-otp-controlled")
             .refine_layout(max_w_xs.clone())
-            .into_element(cx);
+            .test_id_prefix("ui-gallery-input-otp-controlled")
+            .into_element_parts(cx, |_cx| {
+                vec![
+                    shadcn::InputOTPGroup::new([
+                        shadcn::InputOTPSlot::new(0),
+                        shadcn::InputOTPSlot::new(1),
+                        shadcn::InputOTPSlot::new(2),
+                        shadcn::InputOTPSlot::new(3),
+                        shadcn::InputOTPSlot::new(4),
+                        shadcn::InputOTPSlot::new(5),
+                    ])
+                    .into(),
+                ]
+            });
 
         let message: Arc<str> = if current.is_empty() {
             Arc::from("Enter your one-time password.")

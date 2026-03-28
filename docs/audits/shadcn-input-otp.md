@@ -27,11 +27,17 @@ against shadcn/ui v4 `input-otp` composition and docs in `repo-ref/ui`.
   `InputOTPGroup`, `InputOTPSlot`, `InputOTPSeparator`, and `InputOtp::into_element_parts(...)`.
 - Pass: the bridge surface is now more copyable because `InputOtpPart` implements `From` for
   `InputOTPGroup`, `InputOTPSlot`, and `InputOTPSeparator`.
+- Fixed: `InputOTPSlot::aria_invalid(true)` now mirrors the upstream slot-level invalid lane and
+  also marks the hidden text input semantics invalid, so the visual docs path and the accessible
+  control surface stay aligned.
+- Fixed: `InputOTPGroup::{slot_size_px, slot_text_px, slot_line_height_px}` now carries the
+  upstream verification-form slot metrics on the parts lane instead of forcing that example back to
+  the compact root builder.
 - Pass: the UI Gallery page now mirrors the shadcn docs path more closely with explicit `About`
   and `API Reference` sections.
-- Fixed: `Usage` now mirrors the upstream parts-shaped composition lane, while `Compact Builder`
-  keeps `InputOTP::new(model)` plus `length(...)` / `group_size(...)` visible as the Fret
-  shorthand follow-up after the docs path.
+- Fixed: the docs-path Gallery snippets now stay on the upstream parts-shaped composition lane end
+  to end (`Demo` through `RTL`), while `Compact Builder` keeps `InputOTP::new(model)` plus
+  `length(...)` / `group_size(...)` visible as the Fret shorthand follow-up after the docs path.
 - Pass: no extra generic children API is needed; the existing `into_element_parts(...)` bridge is
   sufficient once the page teaches it directly and the part conversions are copy-friendly.
 - Fixed: `InputOTPSeparator` now emits `SemanticsRole::Separator`, matching upstream
@@ -60,11 +66,12 @@ against shadcn/ui v4 `input-otp` composition and docs in `repo-ref/ui`.
 ## Conclusion
 
 - Result: `InputOtp` did not need a default-style ownership rewrite.
-- Result: The real parity gaps were form association and separator semantics, not slot chrome.
+- Result: The real parity gaps were docs-lane expressiveness and teaching-surface drift, not
+  `fret-ui` mechanism defects or recipe default ownership.
 - Result: we still do not need a second root composition API; the existing parts bridge is enough
-  once it is taught directly and made easier to assemble.
+  once it can express the upstream invalid/form examples directly and is taught consistently.
 - Result: first-party app code can stay compact through `Compact Builder`, while docs-aligned copy
   surfaces can stay on the upstream-shaped bridge without conflicting with that shorthand.
 - Result: Gallery docs parity improves materially once the upstream verification-form example is
-  present, because it exercises the now-supported `control_id(...)` path instead of only isolated
-  OTP demos.
+  present on the same parts lane as the other docs examples, because it exercises the now-supported
+  `control_id(...)` path and group-level slot metrics instead of only isolated OTP demos.

@@ -2396,16 +2396,26 @@ fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
 
 #[test]
 fn input_otp_gallery_keeps_docs_bridge_and_compact_builder_lanes_distinct() {
-    assert_selected_generic_helpers_prefer_into_ui_element(
+    for relative_path in [
+        "src/ui/snippets/input_otp/alphanumeric.rs",
+        "src/ui/snippets/input_otp/controlled.rs",
+        "src/ui/snippets/input_otp/demo.rs",
+        "src/ui/snippets/input_otp/disabled.rs",
+        "src/ui/snippets/input_otp/form.rs",
+        "src/ui/snippets/input_otp/four_digits.rs",
+        "src/ui/snippets/input_otp/invalid.rs",
+        "src/ui/snippets/input_otp/pattern.rs",
+        "src/ui/snippets/input_otp/rtl.rs",
+        "src/ui/snippets/input_otp/separator.rs",
         "src/ui/snippets/input_otp/usage.rs",
-        &[
-            "shadcn::InputOTP::new(",
-            ".into_element_parts(",
-            "shadcn::InputOTPGroup::new([",
-            "shadcn::InputOTPSeparator::default().into()",
-        ],
-        &[],
-    );
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::InputOTP::new(", ".into_element_parts("],
+            &[".group_size(Some("],
+        );
+    }
+
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/input_otp/compact_builder.rs",
         &[
@@ -2416,57 +2426,12 @@ fn input_otp_gallery_keeps_docs_bridge_and_compact_builder_lanes_distinct() {
         &[".into_element_parts("],
     );
 
-    for relative_path in [
-        "src/ui/snippets/input_otp/alphanumeric.rs",
-        "src/ui/snippets/input_otp/compact_builder.rs",
-        "src/ui/snippets/input_otp/controlled.rs",
-        "src/ui/snippets/input_otp/demo.rs",
-        "src/ui/snippets/input_otp/disabled.rs",
-        "src/ui/snippets/input_otp/form.rs",
-        "src/ui/snippets/input_otp/four_digits.rs",
-        "src/ui/snippets/input_otp/invalid.rs",
-        "src/ui/snippets/input_otp/pattern.rs",
-        "src/ui/snippets/input_otp/rtl.rs",
-        "src/ui/snippets/input_otp/separator.rs",
-    ] {
-        assert_selected_generic_helpers_prefer_into_ui_element(
-            relative_path,
-            &["shadcn::InputOTP::new(", ".into_element(cx)"],
-            &[".into_element_parts("],
-        );
-    }
-
-    for relative_path in [
-        "src/ui/snippets/input_otp/alphanumeric.rs",
-        "src/ui/snippets/input_otp/compact_builder.rs",
-        "src/ui/snippets/input_otp/demo.rs",
-        "src/ui/snippets/input_otp/disabled.rs",
-        "src/ui/snippets/input_otp/form.rs",
-    ] {
-        assert_selected_generic_helpers_prefer_into_ui_element(
-            relative_path,
-            &[".group_size(Some(3))"],
-            &[],
-        );
-    }
-
-    for relative_path in [
-        "src/ui/snippets/input_otp/invalid.rs",
-        "src/ui/snippets/input_otp/separator.rs",
-    ] {
-        assert_selected_generic_helpers_prefer_into_ui_element(
-            relative_path,
-            &[".group_size(Some(2))"],
-            &[],
-        );
-    }
-
     let page = read("src/ui/pages/input_otp.rs");
     assert!(
         page.contains(
-            "`Usage` now mirrors the upstream parts-shaped docs lane, while `Compact Builder` keeps `InputOTP::new(model)` plus `group_size(...)` visible as the Fret shorthand after the docs path."
+            "`Demo` through `RTL` now stay on the upstream parts-shaped docs lane, while `Compact Builder` keeps `InputOTP::new(model)` plus `group_size(...)` visible as the explicit Fret shorthand follow-up."
         ),
-        "src/ui/pages/input_otp.rs should explain the split between the docs bridge and the compact shorthand"
+        "src/ui/pages/input_otp.rs should explain that the docs path now stays on the parts lane while the compact shorthand remains distinct"
     );
     assert!(
         page.contains(
@@ -2476,7 +2441,7 @@ fn input_otp_gallery_keeps_docs_bridge_and_compact_builder_lanes_distinct() {
     );
     assert!(
         page.contains(
-            "Preview mirrors the shadcn Input OTP docs path first: Demo, About, Usage, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, Form, RTL, API Reference. `Compact Builder` stays as the explicit Fret shorthand follow-up."
+            "Preview mirrors the shadcn Input OTP docs path first: Demo, About, Usage, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, Form, RTL, API Reference. `Compact Builder` stays as the explicit Fret shorthand follow-up after those docs-shaped examples."
         ),
         "src/ui/pages/input_otp.rs should mirror the shadcn docs path before the compact follow-up"
     );
