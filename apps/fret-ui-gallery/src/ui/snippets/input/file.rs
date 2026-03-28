@@ -32,13 +32,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::Input::new(file_value)
                 .control_id(picture_id)
                 .placeholder("Choose a file")
-                .into_element(cx)
+                .test_id("ui-gallery-input-file-control")
                 .into(),
             shadcn::Button::new("Browse")
                 .variant(shadcn::ButtonVariant::Outline)
                 .action(CMD_INPUT_PICTURE_BROWSE)
                 .test_id("ui-gallery-input-file-browse")
-                .into_element(cx)
                 .into(),
         ])
         .into_element(cx),

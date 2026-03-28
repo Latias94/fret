@@ -18,11 +18,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::Input::new(value)
                 .control_id(search_id)
                 .placeholder("Type to search...")
-                .into_element(cx)
+                .test_id("ui-gallery-input-button-group-control")
                 .into(),
             shadcn::Button::new("Search")
                 .variant(shadcn::ButtonVariant::Outline)
-                .into_element(cx)
                 .into(),
         ])
         .into_element(cx),

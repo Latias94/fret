@@ -6138,6 +6138,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-input-button-group-and-file-controls-fill",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button-group",
+        "file",
+        "input",
+        "layout",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Input page via the left nav search.",
+        "Asserts that the composed Input controls inside File and Button Group examples keep a visible width instead of collapsing to the button width."
+      ]
+    },
+    {
       "id": "ui-gallery-input-docs-screenshots",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-docs-screenshots.json",
       "required_capabilities": [

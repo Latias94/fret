@@ -337,6 +337,24 @@ pub enum ButtonGroupItem {
     Element(AnyElement),
 }
 
+impl ButtonGroupItem {
+    fn requests_horizontal_fill_lane(&self) -> bool {
+        match self {
+            Self::Input(_) | Self::InputGroup(_) => true,
+            Self::Group(group) => {
+                group.requests_horizontal_fill_lane()
+                    || group
+                        .layout
+                        .flex_item
+                        .as_ref()
+                        .and_then(|flex| flex.grow)
+                        .is_some_and(|grow| grow > 0.0)
+            }
+            _ => false,
+        }
+    }
+}
+
 impl std::fmt::Debug for ButtonGroupItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -492,6 +510,12 @@ impl ButtonGroup {
         self
     }
 
+    fn requests_horizontal_fill_lane(&self) -> bool {
+        self.items
+            .iter()
+            .any(ButtonGroupItem::requests_horizontal_fill_lane)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
@@ -507,8 +531,14 @@ impl ButtonGroup {
             ButtonGroupOrientation::Horizontal => Axis::Horizontal,
             ButtonGroupOrientation::Vertical => Axis::Vertical,
         };
+        let promote_root_width = self.orientation == ButtonGroupOrientation::Horizontal
+            && self.requests_horizontal_fill_lane();
 
         let mut outer_layout = decl_style::layout_style(&theme, self.layout);
+        if promote_root_width && matches!(outer_layout.size.width, Length::Auto) {
+            outer_layout.size.width = Length::Fill;
+            outer_layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
         // Upstream shadcn/ui v4 `ButtonGroup` includes `w-fit` so groups do not stretch under parent
         // stacks using `items-stretch`. Approximate that by opting out of cross-axis stretch unless
         // a width is explicitly requested.
@@ -985,6 +1015,30 @@ mod tests {
         assert_eq!(props.direction, fret_core::Axis::Horizontal);
         assert_eq!(props.align, fret_ui::element::CrossAlign::Stretch);
         assert_eq!(props.gap, Px(0.0).into());
+    }
+
+    #[test]
+    fn button_group_with_input_promotes_root_width_out_of_w_fit_auto_lane() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(String::new());
+        let element = render_group(
+            &mut app,
+            window,
+            ButtonGroup::new([
+                ButtonGroupItem::from(Input::new(model)),
+                ButtonGroupText::new("Search").into(),
+            ]),
+        );
+
+        let ElementKind::Flex(props) = &element.kind else {
+            panic!("expected ButtonGroup to render as a flex element");
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.align_self, None);
     }
 
     #[test]
