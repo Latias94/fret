@@ -5354,6 +5354,62 @@ fn tabs_page_teaches_rtl_activation_direction_and_fuller_example_shape() {
 }
 
 #[test]
+fn tabs_docs_path_snippets_keep_upstream_shapes() {
+    assert_normalized_markers_present(
+        "src/ui/snippets/tabs/line.rs",
+        &[
+            "TabsItem::new(\"overview\", \"Overview\", Vec::<AnyElement>::new())",
+            "TabsItem::new(\"analytics\", \"Analytics\", Vec::<AnyElement>::new())",
+            "TabsItem::new(\"reports\", \"Reports\", Vec::<AnyElement>::new())",
+        ],
+    );
+    assert_normalized_markers_present(
+        "src/ui/snippets/tabs/vertical.rs",
+        &[
+            "TabsItem::new(\"account\", \"Account\", Vec::<AnyElement>::new())",
+            "TabsItem::new(\"password\", \"Password\", Vec::<AnyElement>::new())",
+            "TabsItem::new(\"notifications\", \"Notifications\", Vec::<AnyElement>::new())",
+        ],
+    );
+    assert_normalized_markers_present(
+        "src/ui/snippets/tabs/disabled.rs",
+        &["TabsItem::new(\"settings\", \"Disabled\", Vec::<AnyElement>::new()).disabled(true)"],
+    );
+}
+
+#[test]
+fn tabs_icons_snippet_uses_trigger_children_for_upstream_icon_composition() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/tabs/icons.rs",
+        &[
+            ".trigger_children([",
+            "icon::icon(cx, IconId::new_static(\"lucide.app-window\"))",
+            "cx.text(\"Preview\")",
+            "icon::icon(cx, IconId::new_static(\"lucide.code\"))",
+            "cx.text(\"Code\")",
+        ],
+    );
+
+    assert!(
+        !normalized.contains(".trigger_leading_icon("),
+        "{} should use `trigger_children(...)` to mirror the upstream icon + label authoring shape",
+        manifest_path("src/ui/snippets/tabs/icons.rs").display()
+    );
+}
+
+#[test]
+fn tabs_page_records_docs_shape_and_trigger_children_alignment() {
+    let tabs_page = read("src/ui/pages/tabs.rs");
+
+    assert!(
+        tabs_page.contains(
+            "`Line`, `Vertical`, and `Disabled` now keep the same text/value shape as the upstream docs examples, while `Icons` demonstrates icon + label trigger composition through `TabsItem::trigger_children(...)` without leaving the default builder lane."
+        ),
+        "src/ui/pages/tabs.rs should record the docs-path shape alignment and trigger-children lane"
+    );
+}
+
+#[test]
 fn tabs_rtl_snippet_keeps_a_fuller_upstream_card_shape() {
     let normalized = assert_normalized_markers_present(
         "src/ui/snippets/tabs/rtl.rs",

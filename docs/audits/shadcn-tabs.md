@@ -66,6 +66,11 @@ Base UI `Tabs.Root` behavior.
   `Demo`, `Usage`, `Line`, `Vertical`, `Disabled`, `Icons`, `RTL`, and `API Reference`.
 - Pass: The lead UI Gallery `Demo` snippet now keeps the upstream `w-full max-w-sm` shell and no
   longer forces a full-width `TabsList`.
+- Pass: `Line`, `Vertical`, and `Disabled` now keep the same label/value shapes as the upstream
+  docs examples instead of reusing gallery-only trigger content.
+- Pass: `Icons` now demonstrates caller-owned icon + label trigger composition through
+  `TabsItem::trigger_children(...)`, proving the existing composable trigger-children lane without
+  widening the root API.
 - Pass: `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent` already cover the composable
   compound-parts lane, so no separate root `children([...])` API is needed for Tabs.
 - Pass: The gallery keeps a copyable `Composable Parts (Fret)` follow-up after `API Reference` so
@@ -95,4 +100,6 @@ Base UI `Tabs.Root` behavior.
 - `cargo nextest run -p fret-ui-gallery tabs_page_uses_typed_doc_sections_for_app_facing_snippets`
 - `cargo nextest run -p fret-ui-gallery tabs_demo_snippet_keeps_upstream_demo_width_lane_and_intrinsic_list`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - Web layout gates remain covered in `web_vs_fret_layout` tabs assertions.
