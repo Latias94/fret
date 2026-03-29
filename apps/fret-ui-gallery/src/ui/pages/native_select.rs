@@ -22,7 +22,7 @@ pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`native_select(model, open)` is the default controlled authoring helper, while `new_controllable(...)` stays available for controlled/uncontrolled bridging and default-value/open setup.",
         "`options(...)` and `optgroups(...)` are the source-aligned structured equivalent of upstream `NativeSelectOption` and `NativeSelectOptGroup` children, so no extra generic children API is needed here.",
-        "`size(...)`, `disabled(...)`, `aria_invalid(...)`, `control_id(...)`, `placeholder(...)`, and `a11y_label(...)` cover the documented control surface.",
+        "`size(...)`, `disabled(...)`, `required(...)`, `aria_invalid(...)`, `control_id(...)`, `placeholder(...)`, and `a11y_label(...)` cover the documented control surface.",
         "Trigger chrome, chevron icon, default heights (`default` / `sm`), and invalid/focus states remain recipe-owned; surrounding width caps and form/page layout remain caller-owned.",
         "True backend-native parity remains deferred until platform-native select widgets are in scope.",
     ]);

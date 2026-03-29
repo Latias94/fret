@@ -111,6 +111,7 @@ pub struct NativeSelect {
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
+    required: bool,
     aria_invalid: bool,
     disabled: bool,
     size: NativeSelectSize,
@@ -125,6 +126,7 @@ impl std::fmt::Debug for NativeSelect {
             .field("options_len", &self.options.len())
             .field("optgroups_len", &self.optgroups.len())
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field("required", &self.required)
             .field("aria_invalid", &self.aria_invalid)
             .field("disabled", &self.disabled)
             .field("size", &self.size)
@@ -146,6 +148,7 @@ impl NativeSelect {
             test_id_prefix: None,
             trigger_test_id: None,
             a11y_label: None,
+            required: false,
             aria_invalid: false,
             disabled: false,
             size: NativeSelectSize::default(),
@@ -221,6 +224,11 @@ impl NativeSelect {
         self
     }
 
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
     pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
         self.aria_invalid = aria_invalid;
         self
@@ -259,6 +267,7 @@ impl NativeSelect {
             self.test_id_prefix,
             self.trigger_test_id,
             self.a11y_label,
+            self.required,
             self.aria_invalid,
             self.disabled,
             self.size,
@@ -288,6 +297,7 @@ fn render_native_select<H: UiHost>(
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
+    required: bool,
     aria_invalid: bool,
     disabled: bool,
     size: NativeSelectSize,
@@ -511,6 +521,7 @@ fn render_native_select<H: UiHost>(
                     label: a11y_label_for_trigger.clone(),
                     test_id: trigger_test_id_for_trigger.clone(),
                     expanded: Some(is_open),
+                    required,
                     labelled_by_element: if has_a11y_label_for_trigger {
                         None
                     } else {
@@ -1001,6 +1012,55 @@ mod tests {
         let small_trigger = find_pressable_by_test_id(&small_element, "native-select-trigger-sm")
             .expect("small trigger pressable");
         assert_pressable_height_px(small_trigger, 32.0, "small native select trigger");
+    }
+
+    #[test]
+    fn native_select_required_exposes_required_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "native-select-required-semantics",
+            |cx| {
+                vec![
+                    NativeSelect::new(value.clone(), open.clone())
+                        .option(NativeSelectOption::new("a", "A"))
+                        .required(true)
+                        .a11y_label("Favorite fruit")
+                        .trigger_test_id("required-native-select")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("required-native-select"))
+            .expect("native select semantics node");
+        assert_eq!(node.role, SemanticsRole::ComboBox);
+        assert!(node.flags.required);
     }
 
     #[test]

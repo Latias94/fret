@@ -68,6 +68,7 @@ pub struct InputGroup {
     trailing_has_button: bool,
     leading_has_kbd: bool,
     trailing_has_kbd: bool,
+    required: bool,
     aria_invalid: bool,
     a11y_label: Option<Arc<str>>,
     submit_command: Option<CommandId>,
@@ -104,6 +105,7 @@ impl std::fmt::Debug for InputGroup {
             .field("trailing_has_button", &self.trailing_has_button)
             .field("leading_has_kbd", &self.leading_has_kbd)
             .field("trailing_has_kbd", &self.trailing_has_kbd)
+            .field("required", &self.required)
             .field("aria_invalid", &self.aria_invalid)
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("submit_command", &self.submit_command)
@@ -139,6 +141,7 @@ impl InputGroup {
             trailing_has_button: false,
             leading_has_kbd: false,
             trailing_has_kbd: false,
+            required: false,
             aria_invalid: false,
             a11y_label: None,
             submit_command: None,
@@ -211,6 +214,11 @@ impl InputGroup {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
         self
     }
 
@@ -503,6 +511,7 @@ impl InputGroup {
         let control_id = self.control_id;
         let control_on_key_down = self.control_on_key_down;
         let disabled = self.disabled;
+        let required = self.required;
         let border_width_override = self.border_width_override;
         let corner_radii_override = self.corner_radii_override;
 
@@ -664,12 +673,17 @@ impl InputGroup {
             };
 
             if is_block_layout {
+                let is_custom_control = custom_control.is_some();
                 let mut control_el = if let Some(mut custom_control) = custom_control {
                     if let Some(test_id) = control_test_id.clone() {
                         custom_control = custom_control.test_id(test_id);
                     }
                     if let Some(label) = a11y_label.clone() {
                         custom_control = custom_control.a11y_label(label);
+                    }
+                    if required {
+                        custom_control = custom_control
+                            .attach_semantics(SemanticsDecoration::default().required(true));
                     }
                     custom_control
                 } else {
@@ -715,6 +729,7 @@ impl InputGroup {
 
                             let mut input = TextInputProps::new(model.clone());
                             input.a11y_label = a11y_label.clone();
+                            input.a11y_required = required;
                             input.test_id = control_test_id.clone();
                             input.placeholder = placeholder.clone();
                             input.submit_command = submit_command;
@@ -756,6 +771,7 @@ impl InputGroup {
 
                             let mut props = TextAreaProps::new(model.clone());
                             props.a11y_label = a11y_label.clone();
+                            props.a11y_required = required;
                             props.test_id = control_test_id.clone();
                             props.placeholder = placeholder.clone();
                             props.enabled = !disabled;
@@ -818,13 +834,19 @@ impl InputGroup {
                         .ok()
                         .flatten();
 
-                    if labelled_by_element.is_some() || described_by_element.is_some() {
+                    if labelled_by_element.is_some()
+                        || described_by_element.is_some()
+                        || (is_custom_control && required)
+                    {
                         let mut decoration = SemanticsDecoration::default();
                         if let Some(label) = labelled_by_element {
                             decoration = decoration.labelled_by_element(label.0);
                         }
                         if let Some(desc) = described_by_element {
                             decoration = decoration.described_by_element(desc.0);
+                        }
+                        if is_custom_control && required {
+                            decoration = decoration.required(true);
                         }
                         control_el = control_el.attach_semantics(decoration);
                     }
@@ -1060,12 +1082,17 @@ impl InputGroup {
                 animated_control_id = Some(control_element_id);
                 vec![layout]
             } else {
+                let is_custom_control = custom_control.is_some();
                 let mut control_el = if let Some(mut custom_control) = custom_control {
                     if let Some(test_id) = control_test_id.clone() {
                         custom_control = custom_control.test_id(test_id);
                     }
                     if let Some(label) = a11y_label.clone() {
                         custom_control = custom_control.a11y_label(label);
+                    }
+                    if required {
+                        custom_control = custom_control
+                            .attach_semantics(SemanticsDecoration::default().required(true));
                     }
                     custom_control
                 } else {
@@ -1108,6 +1135,7 @@ impl InputGroup {
 
                     let mut input = TextInputProps::new(model.clone());
                     input.a11y_label = a11y_label.clone();
+                    input.a11y_required = required;
                     input.test_id = control_test_id.clone();
                     input.placeholder = placeholder.clone();
                     input.submit_command = submit_command;
@@ -1172,13 +1200,19 @@ impl InputGroup {
                         .ok()
                         .flatten();
 
-                    if labelled_by_element.is_some() || described_by_element.is_some() {
+                    if labelled_by_element.is_some()
+                        || described_by_element.is_some()
+                        || (is_custom_control && required)
+                    {
                         let mut decoration = SemanticsDecoration::default();
                         if let Some(label) = labelled_by_element {
                             decoration = decoration.labelled_by_element(label.0);
                         }
                         if let Some(desc) = described_by_element {
                             decoration = decoration.described_by_element(desc.0);
+                        }
+                        if is_custom_control && required {
+                            decoration = decoration.required(true);
                         }
                         control_el = control_el.attach_semantics(decoration);
                     }
@@ -1386,6 +1420,7 @@ impl InputGroupAddon {
 pub struct InputGroupInput {
     placeholder: Option<Arc<str>>,
     disabled: Option<bool>,
+    required: Option<bool>,
     aria_invalid: Option<bool>,
     a11y_label: Option<Arc<str>>,
     submit_command: Option<CommandId>,
@@ -1399,6 +1434,7 @@ impl std::fmt::Debug for InputGroupInput {
         f.debug_struct("InputGroupInput")
             .field("placeholder", &self.placeholder.as_deref())
             .field("disabled", &self.disabled)
+            .field("required", &self.required)
             .field("aria_invalid", &self.aria_invalid)
             .field("a11y_label", &self.a11y_label.as_deref())
             .field("submit_command", &self.submit_command)
@@ -1421,6 +1457,11 @@ impl InputGroupInput {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = Some(required);
         self
     }
 
@@ -1474,6 +1515,7 @@ impl InputGroupInput {
 pub struct InputGroupTextarea {
     placeholder: Option<Arc<str>>,
     disabled: Option<bool>,
+    required: Option<bool>,
     aria_invalid: Option<bool>,
     a11y_label: Option<Arc<str>>,
     submit_command: Option<CommandId>,
@@ -1489,6 +1531,7 @@ impl std::fmt::Debug for InputGroupTextarea {
         f.debug_struct("InputGroupTextarea")
             .field("placeholder", &self.placeholder.as_deref())
             .field("disabled", &self.disabled)
+            .field("required", &self.required)
             .field("aria_invalid", &self.aria_invalid)
             .field("a11y_label", &self.a11y_label.as_deref())
             .field("submit_command", &self.submit_command)
@@ -1513,6 +1556,11 @@ impl InputGroupTextarea {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = Some(required);
         self
     }
 
@@ -1655,6 +1703,9 @@ impl InputGroup {
                     if let Some(disabled) = input.disabled {
                         group.disabled = disabled;
                     }
+                    if let Some(required) = input.required {
+                        group.required = required;
+                    }
                     if let Some(aria_invalid) = input.aria_invalid {
                         group.aria_invalid = aria_invalid;
                     }
@@ -1682,6 +1733,9 @@ impl InputGroup {
                     }
                     if let Some(disabled) = textarea.disabled {
                         group.disabled = disabled;
+                    }
+                    if let Some(required) = textarea.required {
+                        group.required = required;
                     }
                     if let Some(aria_invalid) = textarea.aria_invalid {
                         group.aria_invalid = aria_invalid;
@@ -2179,7 +2233,7 @@ mod tests {
         TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
     };
     use fret_runtime::Model;
-    use fret_ui::element::{ElementKind, TextInputProps, TextProps};
+    use fret_ui::element::{ElementKind, TextAreaProps, TextInputProps, TextProps};
     use fret_ui::tree::UiTree;
 
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
@@ -2251,6 +2305,13 @@ mod tests {
         match &node.kind {
             ElementKind::TextInput(props) => Some(props),
             _ => node.children.iter().find_map(find_text_input),
+        }
+    }
+
+    fn find_text_area<'a>(node: &'a AnyElement) -> Option<&'a TextAreaProps> {
+        match &node.kind {
+            ElementKind::TextArea(props) => Some(props),
+            _ => node.children.iter().find_map(find_text_area),
         }
     }
 
@@ -2361,6 +2422,73 @@ mod tests {
     }
 
     #[test]
+    fn input_group_required_exposes_required_semantics_for_builtin_input() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+        let model: Model<String> = app.models_mut().insert(String::new());
+        let bounds = bounds();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "input-group-required-semantics",
+            |cx| {
+                vec![
+                    InputGroup::new(model.clone())
+                        .required(true)
+                        .a11y_label("Email")
+                        .control_test_id("required-input-group-control")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("required-input-group-control"))
+            .expect("input group control semantics node");
+        assert!(node.flags.required);
+    }
+
+    #[test]
+    fn input_group_parts_apply_required_to_textarea_control() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_parts_required_textarea",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model).into_element_parts(cx, |_cx| {
+                    vec![InputGroupPart::textarea(
+                        InputGroupTextarea::new().required(true).test_id("textarea"),
+                    )]
+                });
+
+                let props = find_text_area(&el).expect("expected text area in InputGroup");
+                assert!(props.a11y_required);
+            },
+        );
+    }
+
+    #[test]
     fn input_group_custom_control_stamps_group_control_test_id_and_a11y_label() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2380,13 +2508,20 @@ mod tests {
                 let el = InputGroup::new(model)
                     .custom_textarea(custom)
                     .control_test_id("input-group.custom.control")
+                    .required(true)
                     .a11y_label("Custom control")
                     .into_element(cx);
 
                 let mut found_test_id = false;
                 let mut found_label = false;
+                let mut found_required = false;
 
-                fn walk(node: &AnyElement, found_test_id: &mut bool, found_label: &mut bool) {
+                fn walk(
+                    node: &AnyElement,
+                    found_test_id: &mut bool,
+                    found_label: &mut bool,
+                    found_required: &mut bool,
+                ) {
                     if let Some(sem) = node.semantics_decoration.as_ref() {
                         if sem.test_id.as_deref() == Some("input-group.custom.control") {
                             *found_test_id = true;
@@ -2394,13 +2529,21 @@ mod tests {
                         if sem.label.as_deref() == Some("Custom control") {
                             *found_label = true;
                         }
+                        if sem.required == Some(true) {
+                            *found_required = true;
+                        }
                     }
                     for child in &node.children {
-                        walk(child, found_test_id, found_label);
+                        walk(child, found_test_id, found_label, found_required);
                     }
                 }
 
-                walk(&el, &mut found_test_id, &mut found_label);
+                walk(
+                    &el,
+                    &mut found_test_id,
+                    &mut found_label,
+                    &mut found_required,
+                );
                 assert!(
                     found_test_id,
                     "expected custom control to inherit control_test_id"
@@ -2408,6 +2551,10 @@ mod tests {
                 assert!(
                     found_label,
                     "expected custom control to inherit group a11y_label"
+                );
+                assert!(
+                    found_required,
+                    "expected custom control to inherit group required semantics"
                 );
             },
         );

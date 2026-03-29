@@ -38,6 +38,7 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Part-based API matches the upstream docs: `InputGroup`, `InputGroupAddon`, `InputGroupButton`, `InputGroupInput`, `InputGroupTextarea`, and `InputGroupText`.",
         "Fret also keeps the high-level `InputGroup::new(model)` shorthand for common input / textarea groups with `leading`, `trailing`, `block_start`, and `block_end` slots.",
         "Use `InputGroup::into_element_parts(...)` when you want direct docs-parity composition with authored-order `InputGroupInput` / `InputGroupTextarea` plus `InputGroupAddon` parts.",
+        "`required(...)` is available on the root shorthand and the `InputGroupInput` / `InputGroupTextarea` parts, and the recipe preserves that semantics for caller-owned custom controls too.",
         "`InputGroupAddon::align(...)` covers the documented addon positioning surface, while `InputGroupButton::size(...)` covers `xs`, `sm`, `icon-xs`, and `icon-sm`.",
         "Root `w-full min-w-0` remains recipe-owned because the upstream source puts it on the component root; explicit caller overrides still win when set.",
     ]);

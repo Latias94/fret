@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use fret_core::{FontWeight, Px};
 use fret_runtime::Model;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::controllable_state;
@@ -34,6 +34,7 @@ pub struct DatePicker {
     week_start: Weekday,
     placeholder: Arc<str>,
     format_selected: Arc<dyn Fn(Date) -> Arc<str> + Send + Sync + 'static>,
+    required: bool,
     disabled: bool,
     show_outside_days: bool,
     disable_outside_days: bool,
@@ -53,6 +54,7 @@ impl std::fmt::Debug for DatePicker {
             .field("week_start", &self.week_start)
             .field("placeholder", &self.placeholder)
             .field("format_selected", &"<fn>")
+            .field("required", &self.required)
             .field("disabled", &self.disabled)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
@@ -77,6 +79,7 @@ impl DatePicker {
             week_start: Weekday::Sunday,
             placeholder: Arc::from("Pick a date"),
             format_selected: Arc::new(format_selected_ppp_en),
+            required: false,
             disabled: false,
             show_outside_days: true,
             disable_outside_days: false,
@@ -172,6 +175,11 @@ impl DatePicker {
         self
     }
 
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -222,6 +230,7 @@ impl DatePicker {
             let disabled_predicate = self.disabled_predicate.clone();
             let open_trigger = open.clone();
             let close_on_select_open = self.close_on_select.then(|| open.clone());
+            let required = self.required;
             let initial_focus_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
             let trigger_chrome = self.chrome.clone();
@@ -277,11 +286,17 @@ impl DatePicker {
                             button = button.test_id(test_id);
                         }
 
-                        button.into_element(cx)
+                        let mut trigger = button.into_element(cx);
+                        if required {
+                            trigger = trigger
+                                .attach_semantics(SemanticsDecoration::default().required(true));
+                        }
+                        trigger
                     },
                     move |cx| {
                         let mut calendar = Calendar::new(month.clone(), selected.clone())
                             .week_start(self.week_start)
+                            .required(required)
                             .show_outside_days(self.show_outside_days)
                             .disable_outside_days(self.disable_outside_days)
                             .initial_focus_out(initial_focus_out.clone());
@@ -602,5 +617,62 @@ mod tests {
             fill_pressable.layout.size.width,
             fret_ui::element::Length::Fill
         );
+    }
+
+    #[test]
+    fn date_picker_required_exposes_required_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(480.0), Px(240.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(None::<Date>);
+
+        app.set_frame_id(FrameId(1));
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        OverlayController::begin_frame(&mut app, window);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "date-picker-required-semantics",
+            |cx| {
+                vec![
+                    DatePicker::new(open.clone(), month.clone(), selected.clone())
+                        .required(true)
+                        .test_id_prefix("required-date-picker")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("required-date-picker-trigger"))
+            .expect("date picker trigger semantics");
+        assert!(node.flags.required);
     }
 }
