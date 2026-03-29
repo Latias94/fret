@@ -13,9 +13,9 @@ Upstream sources:
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
-Status: Proposed active workstream
+Status: Completed active workstream
 
-Last updated: 2026-03-26
+Last updated: 2026-03-29
 
 ## Purpose
 
@@ -357,6 +357,23 @@ Evidence:
 - `ecosystem/fret-imui/src/lib.rs`
 - `ecosystem/fret-imui/src/frontend.rs`
 - `ecosystem/fret-imui/Cargo.toml`
+
+### Shared contract drift that did not happen
+
+The workstream also rechecked the shared authoring contract boundary:
+
+- `UiWriter` stayed in `ecosystem/fret-authoring`,
+- `Response` stayed the same small shared interaction struct,
+- `fret-imui` continued to re-export `Response` instead of forking it,
+- and no ADR update was required because the refactor changed facade shape, not the shared
+  contract.
+
+Evidence:
+
+- `ecosystem/fret-authoring/src/lib.rs`
+- `ecosystem/fret-authoring/tests/contract_surface_policy.rs`
+- `ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/UIWRITER_RESPONSE_CONTRACT_CLOSEOUT_2026-03-29.md`
 
 `ecosystem/fret-ui-kit::imui` survived as the richer generic facade layer, but with the
 implementation split by concern:

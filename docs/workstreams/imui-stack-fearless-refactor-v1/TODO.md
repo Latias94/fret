@@ -89,11 +89,21 @@ Current M3 closure evidence:
 - [x] Update workstream references and code comments that still teach deleted API names.
 - [x] Update any crate-usage or authoring guidance that would otherwise point users at removed entry
       points.
-- [ ] If `UiWriter` or `Response` contract shape changes materially, update the relevant ADR or
+- [x] If `UiWriter` or `Response` contract shape changes materially, update the relevant ADR or
       contract-tracking notes instead of leaving the change implicit.
+  - Closed on 2026-03-29:
+    - no material shared-contract change landed in this workstream,
+    - `UiWriter` / `Response` closeout evidence is now explicit in
+      `UIWRITER_RESPONSE_CONTRACT_CLOSEOUT_2026-03-29.md`,
+    - and `ecosystem/fret-authoring/tests/contract_surface_policy.rs` plus
+      `ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs` now lock the boundary.
 
 Current evidence anchors for M4 closure:
 
+- `ecosystem/fret-authoring/src/lib.rs`
+- `ecosystem/fret-authoring/tests/contract_surface_policy.rs`
+- `ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/UIWRITER_RESPONSE_CONTRACT_CLOSEOUT_2026-03-29.md`
 - `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - `apps/fret-demo/src/bin/imui_editor_proof_demo.rs`
@@ -118,6 +128,9 @@ Current M5 evidence:
   - `ecosystem/fret-imui/Cargo.toml`
   - `ecosystem/fret-imui/src/lib.rs`
   - `ecosystem/fret-imui/src/frontend.rs`
+  - `ecosystem/fret-authoring/src/lib.rs`
+  - `ecosystem/fret-authoring/tests/contract_surface_policy.rs`
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/UIWRITER_RESPONSE_CONTRACT_CLOSEOUT_2026-03-29.md`
 - Evidence for thin editor adapter coverage:
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs`

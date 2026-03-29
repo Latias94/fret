@@ -39,7 +39,7 @@ Exit gates:
 
 ## Phase B - Stack simplification and public surface reset
 
-Status: In progress
+Status: Completed
 
 Goal:
 
@@ -131,7 +131,7 @@ Exit gates:
 
 ## Phase D - Gates, proof surfaces, and documentation closure
 
-Status: Planned
+Status: Completed
 
 Goal:
 
@@ -161,6 +161,11 @@ Current landed slice:
 - the last non-legacy overlay-root `_ex` contract in `fret-ui` was replaced by
   `OverlayRootOptions` + `push_overlay_root_with_options(...)`,
 - the remaining live-code `_ex` helpers were eliminated from `crates/`, `ecosystem/`, and `apps/`,
+- the shared `UiWriter` / `Response` contract was re-audited and explicitly confirmed unchanged for
+  this workstream, so no ADR update was needed,
+- `ecosystem/fret-authoring/tests/contract_surface_policy.rs` now locks the small shared authoring
+  contract while `ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs` keeps the richer
+  facade-only response surface on the policy layer,
 - and the existing floating/window/select regression matrix remains green against the refactored
   canonical surface.
 
