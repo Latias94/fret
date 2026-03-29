@@ -29,7 +29,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         label,
         shadcn::Input::new(value)
             .control_id(required_id)
-            .aria_required(true)
+            .required(true)
             .placeholder("This field is required")
             .into_element(cx),
         shadcn::FieldDescription::new("This field must be filled out.")

@@ -16,7 +16,7 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`Textarea::new(model)` is the Fret equivalent of the upstream `<Textarea />`; `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `min_height(...)`, and `rows(...)` cover the documented core surface.",
+        "`Textarea::new(model)` is the Fret equivalent of the upstream `<Textarea />`; `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `required(...)`, `min_height(...)`, and `rows(...)` cover the documented core surface.",
         "`Textarea` keeps control chrome, root `w-full min-w-0`, minimum height, and resize-handle behavior recipe-owned; surrounding width caps and form layout stay caller-owned.",
         "`Field::build(...)` is the focused Fret lane for docs-path label/description association, while explicit `control_id(...)` plus `FieldLabel::for_control(...)` stays in the separate `Label Association` follow-up.",
         "No extra generic `compose()` / `asChild` surface is needed here: upstream composition happens around the textarea via `Field` or simple stacked layout, and Fret already matches that layering.",

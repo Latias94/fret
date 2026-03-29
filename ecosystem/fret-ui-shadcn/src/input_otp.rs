@@ -145,7 +145,7 @@ pub struct InputOtp {
     explicit_groups: Option<Vec<InputOtpGroup>>,
     separator_mode: InputOtpSeparatorMode,
     aria_invalid: bool,
-    aria_required: bool,
+    required: bool,
     disabled: bool,
     size: ComponentSize,
     chrome: ChromeRefinement,
@@ -175,7 +175,7 @@ impl std::fmt::Debug for InputOtp {
             )
             .field("separator_mode", &self.separator_mode)
             .field("aria_invalid", &self.aria_invalid)
-            .field("aria_required", &self.aria_required)
+            .field("required", &self.required)
             .field("disabled", &self.disabled)
             .field("size", &self.size)
             .field("chrome", &self.chrome)
@@ -210,7 +210,7 @@ impl InputOtp {
             explicit_groups: None,
             separator_mode: InputOtpSeparatorMode::AutoBetweenGroups,
             aria_invalid: false,
-            aria_required: false,
+            required: false,
             disabled: false,
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
@@ -275,8 +275,8 @@ impl InputOtp {
         self
     }
 
-    pub fn aria_required(mut self, aria_required: bool) -> Self {
-        self.aria_required = aria_required;
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
         self
     }
 
@@ -461,7 +461,7 @@ impl InputOtp {
                 input.test_id = input_test_id.clone();
                 input.a11y_label = self.a11y_label.clone();
                 input.a11y_invalid = any_aria_invalid.then_some(fret_core::SemanticsInvalid::True);
-                input.a11y_required = self.aria_required;
+                input.a11y_required = self.required;
                 input.enabled = !self.disabled;
                 input.focusable = !self.disabled;
                 input.layout = LayoutStyle {
@@ -1801,6 +1801,51 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("otp-slot-invalid.input"))
             .expect("expected semantics node otp-slot-invalid.input");
         assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
+    }
+
+    #[test]
+    fn input_otp_required_builder_exposes_required_semantics() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        let mut services = FakeServices::default();
+
+        let model = app.models_mut().insert("000000".to_string());
+
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(120.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "otp-required",
+            |cx| {
+                vec![
+                    InputOtp::new(model)
+                        .length(6)
+                        .required(true)
+                        .test_id_prefix("otp-required")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("otp-required.input"))
+            .expect("expected semantics node otp-required.input");
+        assert!(node.flags.required);
     }
 
     #[test]

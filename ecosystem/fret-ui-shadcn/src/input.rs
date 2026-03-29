@@ -95,7 +95,7 @@ pub struct Input {
     placeholder: Option<Arc<str>>,
     obscure_text: bool,
     aria_invalid: bool,
-    aria_required: bool,
+    required: bool,
     disabled: bool,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
@@ -122,7 +122,7 @@ impl Input {
             placeholder: None,
             obscure_text: false,
             aria_invalid: false,
-            aria_required: false,
+            required: false,
             disabled: false,
             active_descendant: None,
             expanded: None,
@@ -199,8 +199,8 @@ impl Input {
         self
     }
 
-    pub fn aria_required(mut self, aria_required: bool) -> Self {
-        self.aria_required = aria_required;
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
         self
     }
 
@@ -318,7 +318,7 @@ impl Input {
             self.placeholder,
             self.obscure_text,
             self.aria_invalid,
-            self.aria_required,
+            self.required,
             self.disabled,
             self.active_descendant,
             self.expanded,
@@ -353,7 +353,7 @@ fn input_element<H: UiHost>(
     placeholder: Option<Arc<str>>,
     obscure_text: bool,
     aria_invalid: bool,
-    aria_required: bool,
+    required: bool,
     disabled: bool,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
@@ -458,7 +458,7 @@ fn input_element<H: UiHost>(
     props.test_id = test_id;
     props.placeholder = placeholder;
     props.obscure_text = obscure_text;
-    props.a11y_required = aria_required;
+    props.a11y_required = required;
     props.a11y_invalid = aria_invalid.then_some(fret_core::SemanticsInvalid::True);
     props.active_descendant = active_descendant;
     props.expanded = expanded;
@@ -655,7 +655,7 @@ mod tests {
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::{Effect, FrameId, TextInteractionSettings};
-    use fret_ui::element::{ElementKind, Length};
+    use fret_ui::element::{ElementKind, Length, TextInputProps};
     use fret_ui::elements;
     use fret_ui::{UiTree, focus_visible};
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
@@ -1311,5 +1311,44 @@ mod tests {
             .as_ref()
             .expect("expected semantics decoration on TextInput");
         assert_eq!(decoration.labelled_by_element, Some(label_id.0));
+    }
+
+    fn find_text_input_props(el: &AnyElement) -> Option<&TextInputProps> {
+        if let ElementKind::TextInput(props) = &el.kind {
+            return Some(props);
+        }
+        for child in &el.children {
+            if let Some(found) = find_text_input_props(child) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn input_required_builder_sets_text_input_required_semantics() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+        let el = elements::with_element_cx(&mut app, window, bounds, "input-required", |cx| {
+            Input::new(model.clone())
+                .a11y_label("Email")
+                .required(true)
+                .into_element(cx)
+        });
+
+        let props = find_text_input_props(&el).expect("expected TextInput props");
+        assert!(props.a11y_required);
     }
 }

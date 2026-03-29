@@ -28,7 +28,7 @@ base examples, and the in-repo textarea web gates.
 ### Authoring surface
 
 - Pass: `Textarea::new(model)` covers the documented core authoring path.
-- Pass: `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `aria_required(...)`, `min_height(...)`, and `rows(...)` cover the practical control-level surface exposed by the upstream examples.
+- Pass: `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `required(...)`, `min_height(...)`, and `rows(...)` cover the practical control-level surface exposed by the upstream examples.
 - Pass: `Field::build(...)` is the focused field-local association lane for docs-path `Field`/`RTL` examples; explicit `control_id(...)` plus `FieldLabel::for_control(...)` remains the follow-up click-to-focus path without widening `Textarea` itself.
 - Pass: `Textarea` is a leaf text control, so Fret intentionally does not add a generic `compose()` builder here.
 

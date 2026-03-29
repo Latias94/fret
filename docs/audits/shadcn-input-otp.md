@@ -43,7 +43,7 @@ against shadcn/ui v4 `input-otp` composition and docs in `repo-ref/ui`.
 - Fixed: `InputOTPSeparator` now emits `SemanticsRole::Separator`, matching upstream
   `role="separator"` instead of remaining a purely visual icon.
 - Fixed: `InputOtp` now supports form association parity via `control_id(...)`,
-  `labelled_by_element(...)`, `a11y_label(...)`, and `aria_required(...)`.
+  `labelled_by_element(...)`, `a11y_label(...)`, and `required(...)`.
   - `FieldLabel::for_control(...)` / `FieldDescription::for_control(...)` can now attach
     `labelled-by` / `described-by` semantics to the hidden text input.
   - Label click forwarding uses the same control-registry contract as `Input` / `Textarea`.

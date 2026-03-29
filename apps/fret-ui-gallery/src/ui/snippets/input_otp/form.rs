@@ -38,7 +38,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         label_row,
         shadcn::InputOTP::new(otp)
             .control_id(CONTROL_ID)
-            .aria_required(true)
+            .required(true)
             .test_id_prefix("ui-gallery-input-otp-form")
             .into_element_parts(cx, |_cx| {
                 vec![
