@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-03-26
+Catalog updated: 2026-03-29
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -16,7 +16,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 169
+- Dedicated directories: 170
 - Standalone markdown files: 44 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -73,10 +73,16 @@ those files, keep historical names when they are the evidence.
 
 Current source of truth for the in-tree immediate-mode stack:
 
-- Active stack reset:
+- Completed stack reset / closeout record:
   - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
   - `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
   - `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+- Active follow-on for remaining editor-grade gaps:
+  - `docs/workstreams/imui-editor-grade-surface-closure-v1/DESIGN.md`
+  - `docs/workstreams/imui-editor-grade-surface-closure-v1/TODO.md`
+  - `docs/workstreams/imui-editor-grade-surface-closure-v1/MILESTONES.md`
+  - `docs/workstreams/imui-editor-grade-surface-closure-v1/EDITOR_GRADE_GAP_AUDIT_2026-03-29.md`
 
 Historical archive directories retained for rationale/audit history only:
 
@@ -95,7 +101,8 @@ Historical companion/audit notes retained under `standalone/`:
 
 Rule:
 
-- Prefer the active stack-reset docs for current API/ownership guidance.
+- Prefer the completed stack-reset docs for baseline API/ownership guidance.
+- Prefer the new editor-grade closure docs for the next missing-surface follow-on work.
 - Read the older `imui-*` files only as archive evidence, parity notes, or migration history.
 - Treat any old symbol names in those archive files as historical unless explicitly marked as retained.
 
@@ -181,7 +188,8 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
-- `docs/workstreams/imui-stack-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-27, 3 markdown docs (active immediate-mode source of truth)
+- `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 4 markdown docs
+- `docs/workstreams/imui-stack-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-27, 3 markdown docs (baseline immediate-mode source of truth; follow-on gap closure lives in `docs/workstreams/imui-editor-grade-surface-closure-v1/`)
 - `docs/workstreams/input-dispatch-v2/` — first 2026-01-22, latest 2026-02-14, 3 markdown docs
 - `docs/workstreams/into-element-surface-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-20, 6 markdown docs
 - `docs/workstreams/launcher-utility-windows-v1/` — first 2026-03-03, latest 2026-03-03, 4 markdown docs
