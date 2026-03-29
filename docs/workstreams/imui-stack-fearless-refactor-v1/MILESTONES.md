@@ -74,7 +74,7 @@ Exit gates:
 
 ## Phase C - Module split and editor adapter closure
 
-Status: In progress
+Status: Completed
 
 Goal:
 
@@ -107,7 +107,13 @@ Current landed slice:
 - text input / textarea widget helpers now live in `fret-ui-kit::imui::text_controls`,
 - `fret-ui-editor::imui` now exposes thin adapters for `ColorEdit`, `NumericInput`,
   `MiniSearchBox`, `TextAssistField`, `Vec2Edit`, `Vec3Edit`, `Vec4Edit`, `TransformEdit`,
-  `AxisDragValue`, and `IconButton`.
+  `AxisDragValue`, and `IconButton`,
+- the remaining editor-inventory question is now closed by audit instead of assumption:
+  `FieldStatusBadge` stays declarative-only, while the promoted input/editing starter set remains
+  adapter-covered,
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now locks the adapter file to a thin
+  one-hop `into_element` forwarding layer with no adapter-local models, action policy, or second
+  implementation path.
 
 Deliverables:
 

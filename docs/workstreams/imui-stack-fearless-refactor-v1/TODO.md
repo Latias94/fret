@@ -69,9 +69,16 @@ Verified proof surfaces for the current refactor batch:
 - [x] Add thin `imui` adapters for `TransformEdit`.
 - [x] Add thin `imui` adapters for `AxisDragValue`.
 - [x] Add thin `imui` adapters for `IconButton`.
-- [ ] Review whether the existing editor control inventory needs any declarative cleanup so the
+- [x] Review whether the existing editor control inventory needs any declarative cleanup so the
       adapters stay thin.
-- [ ] Ensure no editor control gains a second implementation path during adapter expansion.
+- [x] Ensure no editor control gains a second implementation path during adapter expansion.
+
+Current M3 closure evidence:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/EDITOR_IMUI_ADAPTER_AUDIT_2026-03-29.md`
+- `ecosystem/fret-ui-editor/src/imui.rs`
+- `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs`
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs`
 
 ## M4 - Tests, proof surfaces, and documentation closure
 
@@ -114,6 +121,8 @@ Current M5 evidence:
 - Evidence for thin editor adapter coverage:
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs`
+  - `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs`
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/EDITOR_IMUI_ADAPTER_AUDIT_2026-03-29.md`
 - Evidence for the final canonical/deleted/survived summary:
   - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
 - Evidence for canonical public floating/select naming:
