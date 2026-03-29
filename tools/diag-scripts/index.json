@@ -8167,6 +8167,22 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tooltip-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": [
+        "Navigates to the Tooltip page.",
+        "Verifies the docs-path sections plus the Fret follow-ups are present.",
+        "Captures a bounded bundle for docs-surface triage."
+      ]
+    },
+    {
       "id": "ui-gallery-tooltip-hovercard-scroll-clamp",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-hovercard-scroll-clamp.json",
       "required_capabilities": [],

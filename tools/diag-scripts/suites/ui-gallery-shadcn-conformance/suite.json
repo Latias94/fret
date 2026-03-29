@@ -64,6 +64,7 @@
     "tools/diag-scripts/ui-gallery-switch-docs-smoke.json",
     "tools/diag-scripts/ui-gallery/table/ui-gallery-table-docs-smoke.json",
     "tools/diag-scripts/ui-gallery-textarea-docs-screenshot.json",
+    "tools/diag-scripts/ui-gallery-tooltip-docs-smoke.json",
     "tools/diag-scripts/ui-gallery-tooltip-disabled-code-tab-scroll-range.json",
     "tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json",
     "tools/diag-scripts/ui-gallery-tooltip-keyboard-icon-centered.json",

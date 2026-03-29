@@ -1,10 +1,17 @@
 {
+  "schema_version": 2,
   "meta": {
     "name": "ui-gallery-tooltip-docs-smoke",
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Navigates to the Tooltip page.",
+      "Verifies the docs-path sections plus the Fret follow-ups are present.",
+      "Captures a bounded bundle for docs-surface triage."
+    ]
   },
-  "schema_version": 2,
   "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
       "predicate": {
@@ -13,34 +20,35 @@
       },
       "timeout_frames": 600
     },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-
     {
-      "type": "click",
-      "button": "left",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
+      },
+      "timeout_frames": 600
     },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
     { "type": "press_key", "key": "backspace" },
     { "type": "type_text", "text": "tooltip" },
     { "type": "wait_frames", "n": 2 },
-
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-tooltip" },
-        "padding_px": 8.0,
-        "eps_px": 1.0
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-tooltip" }
       },
       "timeout_frames": 600
     },
     {
-      "type": "click",
-      "button": "left",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-tooltip" }
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-tooltip" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
     },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-tooltip" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -53,41 +61,108 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-demo" }
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-demo-content" }
       },
       "timeout_frames": 600
     },
     {
-      "type": "assert",
+      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-tooltip-usage-content" }
-      }
-    },
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-tooltip-api-reference-content"
       },
-      "delta_y": 220.0,
-      "padding_px": 24.0,
-      "require_fully_within_container": false,
-      "require_fully_within_window": false,
       "timeout_frames": 600
     },
     {
-      "type": "assert",
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-side-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-keyboard-shortcut-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-disabled-button-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-rtl-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-api-reference-title"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
           "kind": "test_id",
           "id": "ui-gallery-tooltip-api-reference-content"
         }
-      }
+      },
+      "timeout_frames": 600
     },
-
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-long-content-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-keyboard-focus-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-notes-content" }
+      },
+      "timeout_frames": 600
+    },
     { "type": "capture_bundle", "label": "ui-gallery-tooltip-docs-smoke" }
   ]
 }
