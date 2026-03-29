@@ -8,6 +8,10 @@ use fret_authoring::UiWriter;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::composites::{
+    InspectorPanel, InspectorPanelCx, PropertyGrid, PropertyGridRowCx, PropertyGridVirtualized,
+    PropertyGridVirtualizedRowCx, PropertyGroup,
+};
 use crate::controls::{
     AxisDragValue, Checkbox, ColorEdit, DragValue, EnumSelect, IconButton, MiniSearchBox,
     NumericInput, Slider, TextAssistField, TextField, TransformEdit, Vec2Edit, Vec3Edit, Vec4Edit,
@@ -139,4 +143,53 @@ where
 #[track_caller]
 pub fn transform_edit<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: TransformEdit) {
     add_editor_element(ui, move |cx| control.into_element(cx));
+}
+
+/// Adds a `PropertyGroup` composite to an immediate-style authoring surface.
+#[track_caller]
+pub fn property_group<H: UiHost + 'static>(
+    ui: &mut impl UiWriter<H>,
+    composite: PropertyGroup,
+    header_actions: impl FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
+    contents: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) {
+    add_editor_element(ui, move |cx| {
+        composite.into_element(cx, header_actions, contents)
+    });
+}
+
+/// Adds a `PropertyGrid` composite to an immediate-style authoring surface.
+#[track_caller]
+pub fn property_grid<H: UiHost + 'static>(
+    ui: &mut impl UiWriter<H>,
+    composite: PropertyGrid,
+    rows: impl FnOnce(&mut ElementContext<'_, H>, PropertyGridRowCx) -> Vec<AnyElement>,
+) {
+    add_editor_element(ui, move |cx| composite.into_element(cx, rows));
+}
+
+/// Adds a `PropertyGridVirtualized` composite to an immediate-style authoring surface.
+#[track_caller]
+pub fn property_grid_virtualized<H: UiHost + 'static>(
+    ui: &mut impl UiWriter<H>,
+    composite: PropertyGridVirtualized,
+    len: usize,
+    key_at: impl FnMut(usize) -> fret_ui::ItemKey + 'static,
+    row_at: impl FnMut(&mut ElementContext<'_, H>, usize, PropertyGridVirtualizedRowCx) -> AnyElement
+    + 'static,
+) {
+    add_editor_element(ui, move |cx| {
+        composite.into_element(cx, len, key_at, row_at)
+    });
+}
+
+/// Adds an `InspectorPanel` composite to an immediate-style authoring surface.
+#[track_caller]
+pub fn inspector_panel<H: UiHost + 'static>(
+    ui: &mut impl UiWriter<H>,
+    composite: InspectorPanel,
+    toolbar: impl FnOnce(&mut ElementContext<'_, H>, &InspectorPanelCx) -> Vec<AnyElement>,
+    contents: impl FnOnce(&mut ElementContext<'_, H>, &InspectorPanelCx) -> Vec<AnyElement>,
+) {
+    add_editor_element(ui, move |cx| composite.into_element(cx, toolbar, contents));
 }

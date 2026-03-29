@@ -2506,164 +2506,172 @@ fn render_authoring_parity_imui_group(
     let value_presentation = authoring_parity_value_presentation();
     let blend_presentation = authoring_parity_blend_presentation();
 
-    PropertyGroup::new("imui authoring")
-        .options(fret_ui_editor::composites::PropertyGroupOptions {
-            test_id: Some(Arc::from("imui-editor-proof.authoring.imui.group")),
-            header_test_id: Some(Arc::from("imui-editor-proof.authoring.imui.group.header")),
-            content_test_id: Some(Arc::from("imui-editor-proof.authoring.imui.group.content")),
-            ..Default::default()
-        })
-        .into_element(
-            cx,
+    render_authoring_parity_imui_host(cx, move |ui| {
+        editor_imui::property_group(
+            ui,
+            PropertyGroup::new("imui authoring").options(
+                fret_ui_editor::composites::PropertyGroupOptions {
+                    test_id: Some(Arc::from("imui-editor-proof.authoring.imui.group")),
+                    header_test_id: Some(Arc::from(
+                        "imui-editor-proof.authoring.imui.group.header",
+                    )),
+                    content_test_id: Some(Arc::from(
+                        "imui-editor-proof.authoring.imui.group.content",
+                    )),
+                    ..Default::default()
+                },
+            ),
             |_cx| None,
             move |cx| {
-                vec![PropertyGrid::new().into_element(cx, move |cx, row_cx| {
-                    let mut rows = Vec::new();
+                let mut out = Vec::new();
+                fret_imui::imui_build(cx, &mut out, move |ui| {
+                    editor_imui::property_grid(ui, PropertyGrid::new(), move |cx, row_cx| {
+                        let mut rows = Vec::new();
 
-                    rows.push(row_cx.row_with(
-                        cx,
-                        PropertyRow::new().options(row_cx.row_options.clone()),
-                        |cx| cx.text("Name"),
-                        |cx| {
-                            render_authoring_parity_imui_host(cx, move |ui| {
-                                editor_imui::text_field(
-                                    ui,
-                                    TextField::new(name_model.clone()).options(TextFieldOptions {
-                                        clear_button: true,
-                                        selection_behavior:
-                                            EditorTextSelectionBehavior::SelectAllOnFocus,
-                                        test_id: Some(Arc::from(
-                                            "imui-editor-proof.authoring.imui.name",
-                                        )),
-                                        clear_test_id: Some(Arc::from(
-                                            "imui-editor-proof.authoring.imui.name.clear",
-                                        )),
-                                        ..Default::default()
-                                    }),
-                                );
-                            })
-                            .into_element(cx)
-                        },
-                        |_cx| None,
-                    ));
-
-                    rows.push(row_cx.row_with(
-                        cx,
-                        PropertyRow::new().options(row_cx.row_options.clone()),
-                        |cx| cx.text("Value"),
-                        |cx| {
-                            let value_presentation = value_presentation.clone();
-                            render_authoring_parity_imui_host(cx, move |ui| {
-                                editor_imui::drag_value(
-                                    ui,
-                                    DragValue::from_presentation(
-                                        drag_value_model.clone(),
-                                        value_presentation.clone(),
-                                    )
-                                    .options(
-                                        fret_ui_editor::controls::DragValueOptions {
-                                            id_source: Some(Arc::from(
-                                                "authoring-parity.imui.drag-value",
-                                            )),
-                                            test_id: Some(Arc::from(
-                                                "imui-editor-proof.authoring.imui.value",
-                                            )),
-                                            ..Default::default()
-                                        },
-                                    ),
-                                );
-                            })
-                            .into_element(cx)
-                        },
-                        |_cx| None,
-                    ));
-
-                    rows.push(row_cx.row_with(
-                        cx,
-                        PropertyRow::new().options(row_cx.row_options.clone()),
-                        |cx| cx.text("Blend"),
-                        |cx| {
-                            let blend_presentation = blend_presentation.clone();
-                            render_authoring_parity_imui_host(cx, move |ui| {
-                                editor_imui::slider(
-                                    ui,
-                                    Slider::from_presentation(
-                                        slider_model.clone(),
-                                        0.0,
-                                        1.0,
-                                        blend_presentation.clone(),
-                                    )
-                                    .options(
-                                        authoring_parity_blend_slider_options(
-                                            "authoring-parity.imui.slider",
-                                            "imui-editor-proof.authoring.imui.blend",
+                        rows.push(row_cx.row(
+                            cx,
+                            |cx| cx.text("Name"),
+                            |cx| {
+                                render_authoring_parity_imui_host(cx, move |ui| {
+                                    editor_imui::text_field(
+                                        ui,
+                                        TextField::new(name_model.clone()).options(
+                                            TextFieldOptions {
+                                                clear_button: true,
+                                                selection_behavior:
+                                                    EditorTextSelectionBehavior::SelectAllOnFocus,
+                                                test_id: Some(Arc::from(
+                                                    "imui-editor-proof.authoring.imui.name",
+                                                )),
+                                                clear_test_id: Some(Arc::from(
+                                                    "imui-editor-proof.authoring.imui.name.clear",
+                                                )),
+                                                ..Default::default()
+                                            },
                                         ),
-                                    ),
-                                );
-                            })
-                            .into_element(cx)
-                        },
-                        |_cx| None,
-                    ));
+                                    );
+                                })
+                                .into_element(cx)
+                            },
+                        ));
 
-                    rows.push(row_cx.row_with(
-                        cx,
-                        PropertyRow::new().options(row_cx.row_options.clone()),
-                        |cx| cx.text("Enabled"),
-                        |cx| {
-                            render_authoring_parity_imui_host(cx, move |ui| {
-                                editor_imui::checkbox(
-                                    ui,
-                                    Checkbox::new(enabled_model.clone()).options(
-                                        fret_ui_editor::controls::CheckboxOptions {
-                                            test_id: Some(Arc::from(
-                                                "imui-editor-proof.authoring.imui.enabled",
-                                            )),
-                                            ..Default::default()
-                                        },
-                                    ),
-                                );
-                            })
-                            .into_element(cx)
-                        },
-                        |_cx| None,
-                    ));
+                        rows.push(row_cx.row(
+                            cx,
+                            |cx| cx.text("Value"),
+                            |cx| {
+                                let value_presentation = value_presentation.clone();
+                                render_authoring_parity_imui_host(cx, move |ui| {
+                                    editor_imui::drag_value(
+                                        ui,
+                                        DragValue::from_presentation(
+                                            drag_value_model.clone(),
+                                            value_presentation.clone(),
+                                        )
+                                        .options(
+                                            fret_ui_editor::controls::DragValueOptions {
+                                                id_source: Some(Arc::from(
+                                                    "authoring-parity.imui.drag-value",
+                                                )),
+                                                test_id: Some(Arc::from(
+                                                    "imui-editor-proof.authoring.imui.value",
+                                                )),
+                                                ..Default::default()
+                                            },
+                                        ),
+                                    );
+                                })
+                                .into_element(cx)
+                            },
+                        ));
 
-                    rows.push(row_cx.row_with(
-                        cx,
-                        PropertyRow::new().options(row_cx.row_options.clone()),
-                        |cx| cx.text("Mode"),
-                        |cx| {
-                            render_authoring_parity_imui_host(cx, move |ui| {
-                                editor_imui::enum_select(
-                                    ui,
-                                    EnumSelect::new(shading_model.clone(), shading_items.clone())
-                                        .options(EnumSelectOptions {
-                                            id_source: Some(Arc::from(
-                                                "authoring-parity.imui.mode",
-                                            )),
-                                            test_id: Some(Arc::from(
-                                                "imui-editor-proof.authoring.imui.mode",
-                                            )),
-                                            list_test_id: Some(Arc::from(
-                                                "imui-editor-proof.authoring.imui.mode.list",
-                                            )),
-                                            search_test_id: Some(Arc::from(
-                                                "imui-editor-proof.authoring.imui.mode.search",
-                                            )),
-                                            ..Default::default()
-                                        }),
-                                );
-                            })
-                            .into_element(cx)
-                        },
-                        |_cx| None,
-                    ));
+                        rows.push(row_cx.row(
+                            cx,
+                            |cx| cx.text("Blend"),
+                            |cx| {
+                                let blend_presentation = blend_presentation.clone();
+                                render_authoring_parity_imui_host(cx, move |ui| {
+                                    editor_imui::slider(
+                                        ui,
+                                        Slider::from_presentation(
+                                            slider_model.clone(),
+                                            0.0,
+                                            1.0,
+                                            blend_presentation.clone(),
+                                        )
+                                        .options(
+                                            authoring_parity_blend_slider_options(
+                                                "authoring-parity.imui.slider",
+                                                "imui-editor-proof.authoring.imui.blend",
+                                            ),
+                                        ),
+                                    );
+                                })
+                                .into_element(cx)
+                            },
+                        ));
 
-                    rows
-                })]
+                        rows.push(row_cx.row(
+                            cx,
+                            |cx| cx.text("Enabled"),
+                            |cx| {
+                                render_authoring_parity_imui_host(cx, move |ui| {
+                                    editor_imui::checkbox(
+                                        ui,
+                                        Checkbox::new(enabled_model.clone()).options(
+                                            fret_ui_editor::controls::CheckboxOptions {
+                                                test_id: Some(Arc::from(
+                                                    "imui-editor-proof.authoring.imui.enabled",
+                                                )),
+                                                ..Default::default()
+                                            },
+                                        ),
+                                    );
+                                })
+                                .into_element(cx)
+                            },
+                        ));
+
+                        rows.push(row_cx.row(
+                            cx,
+                            |cx| cx.text("Mode"),
+                            |cx| {
+                                render_authoring_parity_imui_host(cx, move |ui| {
+                                    editor_imui::enum_select(
+                                        ui,
+                                        EnumSelect::new(
+                                            shading_model.clone(),
+                                            shading_items.clone(),
+                                        )
+                                        .options(
+                                            EnumSelectOptions {
+                                                id_source: Some(Arc::from(
+                                                    "authoring-parity.imui.mode",
+                                                )),
+                                                test_id: Some(Arc::from(
+                                                    "imui-editor-proof.authoring.imui.mode",
+                                                )),
+                                                list_test_id: Some(Arc::from(
+                                                    "imui-editor-proof.authoring.imui.mode.list",
+                                                )),
+                                                search_test_id: Some(Arc::from(
+                                                    "imui-editor-proof.authoring.imui.mode.search",
+                                                )),
+                                                ..Default::default()
+                                            },
+                                        ),
+                                    );
+                                })
+                                .into_element(cx)
+                            },
+                        ));
+
+                        rows
+                    });
+                });
+                out
             },
-        )
+        );
+    })
 }
 
 fn render_authoring_parity_imui_host<H, F>(

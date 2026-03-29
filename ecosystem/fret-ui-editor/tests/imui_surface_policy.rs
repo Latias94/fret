@@ -34,6 +34,10 @@ fn imui_module_stays_a_thin_into_element_adapter_layer() {
         "pub fn vec3_edit<H, T>(ui: &mut impl UiWriter<H>, control: Vec3Edit<T>)",
         "pub fn vec4_edit<H, T>(ui: &mut impl UiWriter<H>, control: Vec4Edit<T>)",
         "pub fn transform_edit<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: TransformEdit) {",
+        "pub fn property_group<H: UiHost + 'static>(",
+        "pub fn property_grid<H: UiHost + 'static>(",
+        "pub fn property_grid_virtualized<H: UiHost + 'static>(",
+        "pub fn inspector_panel<H: UiHost + 'static>(",
     ];
     let forbidden_markers = [
         "pub struct ",
@@ -69,6 +73,52 @@ fn imui_module_stays_a_thin_into_element_adapter_layer() {
             "add_editor_element(ui, move |cx| control.into_element(cx));",
         ),
         15,
-        "imui.rs should keep each promoted adapter as a one-hop `into_element` forwarder",
+        "imui.rs should keep each promoted control adapter as a one-hop `into_element` forwarder",
+    );
+
+    assert_eq!(
+        count_occurrences(
+            &normalized,
+            &normalize_ws(
+                "add_editor_element(ui, move |cx| {
+                    composite.into_element(cx, header_actions, contents)
+                });",
+            ),
+        ),
+        1,
+        "property_group should stay a one-hop `into_element` forwarder",
+    );
+
+    assert_eq!(
+        count_occurrences(
+            &normalized,
+            &normalize_ws("add_editor_element(ui, move |cx| composite.into_element(cx, rows));"),
+        ),
+        1,
+        "property_grid should stay a one-hop `into_element` forwarder",
+    );
+
+    assert_eq!(
+        count_occurrences(
+            &normalized,
+            &normalize_ws(
+                "add_editor_element(ui, move |cx| {
+                    composite.into_element(cx, len, key_at, row_at)
+                });",
+            ),
+        ),
+        1,
+        "property_grid_virtualized should stay a one-hop `into_element` forwarder",
+    );
+
+    assert_eq!(
+        count_occurrences(
+            &normalized,
+            &normalize_ws(
+                "add_editor_element(ui, move |cx| composite.into_element(cx, toolbar, contents));",
+            ),
+        ),
+        1,
+        "inspector_panel should stay a one-hop `into_element` forwarder",
     );
 }

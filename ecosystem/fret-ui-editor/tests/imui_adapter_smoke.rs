@@ -9,6 +9,11 @@ use fret_runtime::Model;
 use fret_ui::UiHost;
 use fret_ui_kit::headless::text_assist::TextAssistItem;
 
+use fret_ui_editor::composites::{
+    InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGridOptions,
+    PropertyGridVirtualized, PropertyGridVirtualizedOptions, PropertyGroup, PropertyGroupOptions,
+    PropertyRow,
+};
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
     ColorEdit, ColorEditOptions, DragValue, DragValueOptions, DragValueOutcome, EnumSelect,
@@ -304,6 +309,56 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
             ..Default::default()
         }),
     );
+
+    imui::property_group(
+        ui,
+        PropertyGroup::new("Metadata").options(PropertyGroupOptions {
+            test_id: Some(Arc::from("tests.property_group")),
+            ..Default::default()
+        }),
+        |_cx| None,
+        move |cx| vec![cx.text("Property group body")],
+    );
+
+    imui::property_grid(
+        ui,
+        PropertyGrid::new().options(PropertyGridOptions {
+            test_id: Some(Arc::from("tests.property_grid")),
+            ..Default::default()
+        }),
+        move |cx, row_cx| vec![row_cx.row(cx, |cx| cx.text("Name"), |cx| cx.text("Cube"))],
+    );
+
+    imui::property_grid_virtualized(
+        ui,
+        PropertyGridVirtualized::new().options(PropertyGridVirtualizedOptions {
+            id_source: Some(Arc::from("tests.property_grid_virtualized")),
+            test_id: Some(Arc::from("tests.property_grid_virtualized")),
+            ..Default::default()
+        }),
+        3,
+        |index| index as u64,
+        move |cx, index, row_cx| {
+            PropertyRow::new()
+                .options(row_cx.row_options.clone())
+                .into_element(
+                    cx,
+                    |cx| cx.text(format!("Item {index}")),
+                    |cx| cx.text("Value"),
+                    |_cx| None,
+                )
+        },
+    );
+
+    imui::inspector_panel(
+        ui,
+        InspectorPanel::new(None).options(InspectorPanelOptions {
+            test_id: Some(Arc::from("tests.inspector_panel")),
+            ..Default::default()
+        }),
+        |_cx, _panel_cx| Vec::new(),
+        |_cx, _panel_cx| vec![],
+    );
 }
 
 #[test]
@@ -328,4 +383,8 @@ fn editor_imui_adapter_option_defaults_compile() {
     let _ = EnumSelectOptions::default();
     let _ = VecEditOptions::default();
     let _ = TransformEditOptions::default();
+    let _ = PropertyGroupOptions::default();
+    let _ = PropertyGridOptions::default();
+    let _ = PropertyGridVirtualizedOptions::default();
+    let _ = InspectorPanelOptions::default();
 }

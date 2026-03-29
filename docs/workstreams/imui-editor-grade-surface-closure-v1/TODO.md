@@ -17,24 +17,26 @@ Compatibility shims are explicitly out of scope.
 
 ## M0 - Scope freeze and owner split
 
-- [ ] Freeze the follow-on scope to editor-grade closure, not another broad `imui` redesign.
-- [ ] Classify each candidate gap as one of:
+- [x] Freeze the follow-on scope to editor-grade closure, not another broad `imui` redesign.
+- [x] Classify each candidate gap as one of:
       `fret-ui-kit::imui`, `fret-ui-editor::imui`, or docking/workspace-owned.
-- [ ] Record which current gaps are P0 versus explicit defer.
-- [ ] Lock the non-goals:
+- [x] Record which current gaps are P0 versus explicit defer.
+- [x] Lock the non-goals:
       no style stack, no last-item implicit context, no compatibility aliases, no second widget implementations.
-- [ ] Record the proof/demo surfaces that must simplify if this workstream is successful.
+- [x] Record the proof/demo surfaces that must simplify if this workstream is successful.
 
 ## M1 - Close editor composite adapter gaps
 
-- [ ] Add a thin `imui` adapter for `PropertyGroup`.
-- [ ] Add a thin `imui` adapter for `PropertyGrid`.
-- [ ] Add a thin `imui` adapter for `PropertyGridVirtualized`.
-- [ ] Add a thin `imui` adapter for `InspectorPanel`.
-- [ ] Decide whether `GradientEditor` belongs in the promoted immediate composite set or remains a
+- [x] Add a thin `imui` adapter for `PropertyGroup`.
+- [x] Add a thin `imui` adapter for `PropertyGrid`.
+- [x] Add a thin `imui` adapter for `PropertyGridVirtualized`.
+- [x] Add a thin `imui` adapter for `InspectorPanel`.
+- [x] Decide whether `GradientEditor` belongs in the promoted immediate composite set or remains a
       declarative-only composite for now.
-- [ ] Add a source-policy test that locks composite adapters to one-hop `into_element` forwarding.
-- [ ] Migrate first-party proof/demo call sites that currently wrap these composites manually.
+      Decision: keep `GradientEditor` declarative-only for now; it is a richer editor recipe, not a
+      missing generic inspector skeleton.
+- [x] Add a source-policy test that locks composite adapters to one-hop `into_element` forwarding.
+- [x] Migrate first-party proof/demo call sites that currently wrap these composites manually.
 
 ## M2 - Close generic editor-shell helper gaps
 

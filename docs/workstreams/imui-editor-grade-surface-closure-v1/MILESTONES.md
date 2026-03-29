@@ -16,7 +16,7 @@ remaining editor-grade gaps without reopening the completed surface-cleanup effo
 
 ## Phase A - Scope freeze and gap classification
 
-Status: Planned
+Status: Completed
 
 Goal:
 
@@ -38,7 +38,7 @@ Exit gates:
 
 ## Phase B - Editor composite adapter closure
 
-Status: Planned
+Status: Completed
 
 Goal:
 
@@ -47,6 +47,7 @@ Goal:
 Deliverables:
 
 - thin adapters for `PropertyGroup`, `PropertyGrid`, `PropertyGridVirtualized`, and `InspectorPanel`,
+- explicit decision to keep `GradientEditor` declarative-only for now,
 - one source-policy test that keeps composite adapters thin,
 - migrated first-party proof/demo call sites for the promoted composites.
 
