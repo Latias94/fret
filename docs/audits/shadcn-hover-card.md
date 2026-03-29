@@ -95,11 +95,15 @@ headless references used to validate semantics and mechanism choices.
   collisions.
 - Pass: Source attribution now names both shadcn docs surfaces (base + radix), plus Radix/Base UI
   references, so the distinction between public recipe API and mechanism cross-checks is explicit.
+- Pass: UI Gallery now also locks the docs surface with a hover-card-specific docs-surface text test
+  plus broader docs-smoke selectors for each docs-path section, so docs drift is separated from
+  runtime parity.
 
 ## Validation
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn hover_card::tests`
+- `cargo test -p fret-ui-gallery --test hover_card_docs_surface`
 - Contract test: `hover_card_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `hover_card_open_change_events_complete_without_animation`
 - Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
