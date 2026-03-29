@@ -8668,6 +8668,18 @@ fn switch_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn switch_page_api_reference_keeps_parts_api_off_the_docs_surface() {
+    assert_normalized_markers_present(
+        "src/ui/pages/switch.rs",
+        &[
+            "without widening `Switch` into a generic children API.",
+            "Radix/Base UI expose `Root` / `Thumb` parts for DOM composition, but the self-drawn shadcn recipe keeps thumb painting internal here;",
+            "that belongs in a lower-level primitive/raw surface rather than the copyable docs-path `Switch`.",
+        ],
+    );
+}
+
+#[test]
 fn switch_docs_path_snippets_keep_upstream_label_binding_and_size_layout() {
     let airplane = assert_normalized_markers_present(
         "src/ui/snippets/switch/airplane_mode.rs",

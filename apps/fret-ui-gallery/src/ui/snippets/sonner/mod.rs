@@ -1,7 +1,10 @@
 use fret::{UiChild, UiCx};
+use fret_core::Px;
 use fret_runtime::Model;
-use fret_ui::Invalidation;
-use fret_ui_shadcn::facade as shadcn;
+use fret_ui::element::AnyElement;
+use fret_ui::{Invalidation, UiHost};
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, ui};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub(crate) const LOCAL_TOASTER_ID: &str = "ui-gallery-sonner-local";
@@ -60,6 +63,61 @@ pub(crate) fn local_toaster(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::Toaster::new()
         .id(LOCAL_TOASTER_ID)
         .position(position)
+}
+
+/// Match shadcn docs preview behavior locally without changing the shared docs shell.
+pub(crate) fn preview_frame<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B>
+where
+    B: IntoUiElement<H>,
+{
+    ui::h_flex(move |cx| [body.into_element(cx)])
+        .layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .h_px(Px(224.0))
+                .overflow_visible(),
+        )
+        .items_center()
+        .justify_center()
+}
+
+pub(crate) fn preview_controls_row<H: UiHost>(
+    gap: Space,
+    children: Vec<AnyElement>,
+) -> impl IntoUiElement<H> + use<H> {
+    ui::h_flex(move |_cx| children)
+        .gap(gap)
+        .items_center()
+        .justify_center()
+        .wrap()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+}
+
+pub(crate) fn preview_stack<H: UiHost>(
+    gap: Space,
+    children: Vec<AnyElement>,
+) -> impl IntoUiElement<H> + use<H> {
+    preview_frame(
+        ui::v_flex(move |_cx| children)
+            .gap(gap)
+            .items_center()
+            .layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_w_0()
+                    .max_w(Px(560.0)),
+            ),
+    )
+}
+
+pub(crate) fn preview_note(cx: &mut UiCx<'_>, text: impl Into<Arc<str>>) -> AnyElement {
+    let text = text.into();
+    ui::h_flex(move |cx| [shadcn::raw::typography::muted(text.clone()).into_element(cx)])
+        .items_center()
+        .justify_center()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
 }
 
 pub mod demo;

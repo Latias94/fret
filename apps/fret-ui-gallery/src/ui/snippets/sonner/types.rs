@@ -3,26 +3,16 @@ pub const DOCS_SOURCE: &str = include_str!("types.docs.rs.txt");
 pub const SOURCE: &str = include_str!("types.rs");
 
 // region: example
-use super::{last_action_model, message_request, request};
+use super::{
+    last_action_model, message_request, preview_controls_row, preview_note, preview_stack, request,
+};
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-fn wrap_controls_row<H: UiHost>(
-    gap: Space,
-    children: Vec<AnyElement>,
-) -> impl IntoUiElement<H> + use<H> {
-    ui::h_flex(move |_cx| children)
-        .gap(gap)
-        .items_center()
-        .wrap()
-        .layout(LayoutRefinement::default().w_full())
-}
 
 fn type_button(
     cx: &mut UiCx<'_>,
@@ -210,7 +200,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .flatten()
         .is_some();
 
-    let buttons = wrap_controls_row::<fret_app::App>(
+    let buttons = preview_controls_row::<fret_app::App>(
         Space::N2,
         vec![
             default_button,
@@ -223,20 +213,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     )
     .into_element(cx);
 
-    ui::v_flex(move |cx| {
+    preview_stack::<fret_app::App>(
+        Space::N3,
         vec![
             buttons,
-            shadcn::raw::typography::muted(if pending {
-                "Promise toast pending: click Promise again to resolve."
-            } else {
-                "Promise toast idle: click Promise to start loading state."
-            })
-            .into_element(cx),
-        ]
-    })
-    .gap(Space::N2)
-    .items_start()
-    .layout(LayoutRefinement::default().w_full().min_w_0())
+            preview_note(
+                cx,
+                if pending {
+                    "Promise toast pending: click Promise again to resolve."
+                } else {
+                    "Promise toast idle: click Promise to start loading state."
+                },
+            ),
+        ],
+    )
     .into_element(cx)
     .attach_semantics(
         SemanticsDecoration::default()

@@ -3,17 +3,18 @@ pub const DOCS_SOURCE: &str = include_str!("usage.docs.rs.txt");
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use super::{last_action_model, message_request};
+use super::{last_action_model, message_request, preview_frame};
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
-use fret_ui_shadcn::facade as shadcn;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let sonner = shadcn::Sonner::global(&mut *cx.app);
     let last_action = last_action_model(cx);
 
-    shadcn::Button::new("Show toast")
+    let button = shadcn::Button::new("Show Toast")
+        .variant(shadcn::ButtonVariant::Outline)
         .on_activate(cx.actions().listen(move |host, action_cx| {
             sonner.toast(
                 host,
@@ -30,6 +31,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             host.request_redraw(action_cx.window);
         }))
         .test_id("ui-gallery-sonner-usage")
-        .into_element(cx)
+        .into_element(cx);
+
+    preview_frame::<fret_app::App, _>(button).into_element(cx)
 }
 // endregion: example
