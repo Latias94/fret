@@ -469,6 +469,9 @@ impl ElementHostWidget {
             if let Some(read_only) = decoration.read_only {
                 cx.set_read_only(read_only);
             }
+            if let Some(required) = decoration.required {
+                cx.set_required(required);
+            }
             if let Some(hidden) = decoration.hidden {
                 cx.set_hidden(hidden);
             }

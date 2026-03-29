@@ -17,10 +17,11 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let style_override = snippets::bluetooth::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`Switch::new(model)` is the Fret equivalent of the upstream `<Switch />`; `size(...)`, `disabled(...)`, `aria_invalid(...)`, `control_id(...)`, and `a11y_label(...)` cover the documented control surface, while `Label::for_control(...)` / `FieldLabel::for_control(...)` carry the upstream `htmlFor` teaching path.",
+        "`Switch::new(model)` is the Fret equivalent of the upstream `<Switch />`; `size(...)`, `disabled(...)`, `read_only(...)`, `required(...)`, `aria_invalid(...)`, `control_id(...)`, and `a11y_label(...)` cover the documented control surface, while `Label::for_control(...)` / `FieldLabel::for_control(...)` carry the upstream `htmlFor` teaching path.",
         "Track/thumb chrome and the intrinsic switch sizes remain recipe-owned because the upstream component source defines those defaults on the switch itself.",
         "Caller-owned layout stays explicit for `max-w-*`, stacked field groups, and surrounding page/grid negotiation; the recipe should not absorb those constraints.",
         "`Label::for_control(...)` covers the inline `Demo` / `Size` rows, and `FieldLabel::for_control(...)` plus `FieldLabel::wrap(...)` cover the description and choice-card compositions without widening `Switch` into a generic children API.",
+        "Radix/Base UI expose `Root` / `Thumb` parts for DOM composition, but the self-drawn shadcn recipe keeps thumb painting internal here; if a future product truly needs custom parts, that belongs in a lower-level primitive/raw surface rather than the copyable docs-path `Switch`.",
         "The `RTL` preview keeps the translated upstream one-row example shape. `DirectionProvider(Rtl)` is sufficient here: `FieldContent` stays on the logical text side and `Switch` stays on the opposite edge without teaching an extra physical alignment prop.",
         "`SwitchStyle` remains a focused Fret follow-up for token-safe track/thumb overrides; it is not part of the upstream docs path, but it is the right escape hatch when product recipes need custom checked colors.",
     ]);

@@ -5,7 +5,7 @@ use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::{ActionId, CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
-    SizeStyle,
+    SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::IntoUiElement;
@@ -188,6 +188,8 @@ pub struct Switch {
     model: SwitchModel,
     size: SwitchSize,
     disabled: bool,
+    read_only: bool,
+    required: bool,
     aria_invalid: bool,
     control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
@@ -212,6 +214,8 @@ impl Switch {
             model: SwitchModel::Determinate(model.into_bool_model()),
             size: SwitchSize::Default,
             disabled: false,
+            read_only: false,
+            required: false,
             aria_invalid: false,
             control_id: None,
             a11y_label: None,
@@ -235,6 +239,8 @@ impl Switch {
             model: SwitchModel::Value(checked),
             size: SwitchSize::Default,
             disabled: false,
+            read_only: false,
+            required: false,
             aria_invalid: false,
             control_id: None,
             a11y_label: None,
@@ -256,6 +262,8 @@ impl Switch {
             model: SwitchModel::Optional(model.into_optional_bool_model()),
             size: SwitchSize::Default,
             disabled: false,
+            read_only: false,
+            required: false,
             aria_invalid: false,
             control_id: None,
             a11y_label: None,
@@ -303,6 +311,18 @@ impl Switch {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Keep the switch focusable while preventing model or action changes.
+    pub fn read_only(mut self, read_only: bool) -> Self {
+        self.read_only = read_only;
+        self
+    }
+
+    /// Expose required semantics without changing switch layout or chrome.
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
         self
     }
 
@@ -397,6 +417,8 @@ impl Switch {
         cx.scope(|cx| {
             let model = self.model;
             let size = self.size;
+            let read_only = self.read_only;
+            let required = self.required;
             let aria_invalid = self.aria_invalid;
 
             let (
@@ -498,22 +520,24 @@ impl Switch {
             let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
-                if let Some(payload) = action_payload.clone() {
-                    cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
-                        on_click.clone(),
-                        payload,
-                    );
-                } else {
-                    cx.pressable_dispatch_command_if_enabled_opt(on_click.clone());
-                }
-                match &model {
-                    SwitchModel::Determinate(model) => cx.pressable_toggle_bool(model),
-                    SwitchModel::Optional(model) => {
-                        cx.pressable_update_model(model, |v| {
-                            *v = toggle_optional_bool(*v);
-                        });
+                if !read_only {
+                    if let Some(payload) = action_payload.clone() {
+                        cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+                            on_click.clone(),
+                            payload,
+                        );
+                    } else {
+                        cx.pressable_dispatch_command_if_enabled_opt(on_click.clone());
                     }
-                    SwitchModel::Value(_) => {}
+                    match &model {
+                        SwitchModel::Determinate(model) => cx.pressable_toggle_bool(model),
+                        SwitchModel::Optional(model) => {
+                            cx.pressable_update_model(model, |v| {
+                                *v = toggle_optional_bool(*v);
+                            });
+                        }
+                        SwitchModel::Value(_) => {}
+                    }
                 }
 
                 let on = match &model {
@@ -618,21 +642,25 @@ impl Switch {
                         }
                         SwitchModel::Value(_) => None,
                     };
-                    let action = match (on_click.clone(), action_payload.clone(), toggle_action) {
-                        (Some(command), payload, Some(toggle_action)) => {
-                            Some(ControlAction::Sequence(
-                                vec![
-                                    ControlAction::DispatchCommand { command, payload },
-                                    toggle_action,
-                                ]
-                                .into(),
-                            ))
+                    let action = if read_only {
+                        None
+                    } else {
+                        match (on_click.clone(), action_payload.clone(), toggle_action) {
+                            (Some(command), payload, Some(toggle_action)) => {
+                                Some(ControlAction::Sequence(
+                                    vec![
+                                        ControlAction::DispatchCommand { command, payload },
+                                        toggle_action,
+                                    ]
+                                    .into(),
+                                ))
+                            }
+                            (Some(command), payload, None) => {
+                                Some(ControlAction::DispatchCommand { command, payload })
+                            }
+                            (None, _, Some(toggle_action)) => Some(toggle_action),
+                            (None, _, None) => None,
                         }
-                        (Some(command), payload, None) => {
-                            Some(ControlAction::DispatchCommand { command, payload })
-                        }
-                        (None, _, Some(toggle_action)) => Some(toggle_action),
-                        (None, _, None) => None,
                     };
                     if let Some(action) = action {
                         let entry = ControlEntry {
@@ -750,6 +778,19 @@ impl Switch {
 
                 (pressable_props, chrome_props, children)
             });
+
+            let pressable = if read_only || required {
+                let mut decoration = SemanticsDecoration::default();
+                if read_only {
+                    decoration = decoration.read_only(true);
+                }
+                if required {
+                    decoration = decoration.required(true);
+                }
+                pressable.attach_semantics(decoration)
+            } else {
+                pressable
+            };
 
             if disabled {
                 cx.opacity(0.5, |_cx| vec![pressable])
@@ -1081,6 +1122,131 @@ mod tests {
         assert_eq!(node.role, fret_core::SemanticsRole::Switch);
         assert_eq!(node.flags.checked, Some(true));
         assert_eq!(node.label.as_deref(), Some("Airplane mode"));
+    }
+
+    #[test]
+    fn switch_required_exposes_required_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-switch-required-semantics",
+            |cx| {
+                vec![
+                    Switch::from_checked(true)
+                        .required(true)
+                        .a11y_label("Airplane mode")
+                        .test_id("required-switch")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("required-switch"))
+            .expect("switch semantics node");
+        assert_eq!(node.role, fret_core::SemanticsRole::Switch);
+        assert!(node.flags.required);
+    }
+
+    #[test]
+    fn switch_read_only_exposes_semantics_and_blocks_activation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-switch-read-only",
+            |cx| {
+                vec![
+                    Switch::new(model.clone())
+                        .read_only(true)
+                        .a11y_label("Switch")
+                        .test_id("readonly-switch")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("readonly-switch"))
+            .expect("switch semantics node");
+        assert!(node.flags.read_only);
+        assert_eq!(node.flags.checked, Some(false));
+
+        let switch_node = ui.children(root)[0];
+        let switch_bounds = ui.debug_node_bounds(switch_node).expect("switch bounds");
+        let position = Point::new(
+            Px(switch_bounds.origin.x.0 + switch_bounds.size.width.0 * 0.5),
+            Px(switch_bounds.origin.y.0 + switch_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&model), Some(false));
     }
 
     #[test]
