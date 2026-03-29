@@ -9626,6 +9626,27 @@ fn typography_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
         ],
     );
+
+    assert_normalized_markers_present(
+        "src/ui/pages/typography.rs",
+        &[
+            "shadcn/ui does not ship typography styles by default;",
+            "For application-wide RTL, see the upstream shadcn RTL configuration guide.",
+            "caller-owned centering, matching the upstream docs sample",
+        ],
+    );
+}
+
+#[test]
+fn typography_h1_snippet_keeps_docs_page_centering_at_the_call_site() {
+    assert_normalized_markers_present(
+        "src/ui/snippets/typography/h1.rs",
+        &[
+            "ui::v_flex(|cx| {",
+            ".items_center()",
+            ".layout(LayoutRefinement::default().w_full())",
+        ],
+    );
 }
 
 #[test]

@@ -37,7 +37,9 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Full story sample following the upstream docs flow, including the inline-link sentence via the rich paragraph helper lane.")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let h1 = DocSection::build(cx, "h1", h1)
-        .description("Top-level heading example matching the upstream docs title.")
+        .description(
+            "Top-level heading example with caller-owned centering, matching the upstream docs sample without baking alignment into the helper.",
+        )
         .code_rust_from_file_region(snippets::h1::SOURCE, "example");
     let h2 = DocSection::build(cx, "h2", h2)
         .description("Second-level section heading.")
@@ -81,13 +83,16 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("De-emphasized hint/explanation text.")
         .code_rust_from_file_region(snippets::muted::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Direction-provider version of the full upstream typography story.")
+        .descriptions([
+            "Direction-provider version of the full upstream typography story.",
+            "For application-wide RTL, see the upstream shadcn RTL configuration guide.",
+        ])
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Typography page follows the shadcn docs order first; `Interactive Links` and `Notes` remain focused Fret follow-ups after the upstream path.",
+            "shadcn/ui does not ship typography styles by default; this page maps the upstream docs example onto Fret's helper surface first, then appends `Interactive Links` and `Notes` as focused Fret follow-ups.",
         ),
         vec![
             demo,
