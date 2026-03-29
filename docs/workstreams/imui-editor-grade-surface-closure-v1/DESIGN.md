@@ -177,6 +177,14 @@ contracts.
 If the portable boundary is not clean enough yet, we should write a defer note and keep the lane
 explicitly open rather than shipping a stringly stopgap.
 
+Status note (2026-03-29):
+
+- M3 landed a clean first slice in `fret-ui-kit::imui`:
+  `drag_source(...)` / `drop_target::<T>(...)`,
+- the helper is response-driven and model-backed,
+- and it deliberately avoids widening the object-safe runtime action-host seam just to create typed
+  `DragSession` payloads.
+
 ### 5) Shell surfaces must remain explicitly partitioned
 
 This workstream should evaluate shell-like immediate gaps, but it must not absorb docking/workspace
@@ -216,7 +224,7 @@ Expected new generic helper family:
 - `tooltip(...)` / `tooltip_with_options(...)`
 - `collapsing_header(...)` or equivalent
 - `tree_node(...)` or equivalent
-- optional generic drag/drop helper family if the runtime boundary is clean
+- `drag_source(...)` / `drop_target::<T>(...)`
 
 These helpers may contain policy glue, but they must remain generic and portable enough to justify
 living outside editor-specific crates.

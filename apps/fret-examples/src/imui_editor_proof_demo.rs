@@ -271,6 +271,12 @@ struct AuthoringParitySharedStateReadout {
     shading_line: String,
 }
 
+#[derive(Clone)]
+struct ProofDragAsset {
+    label: Arc<str>,
+    path: Arc<str>,
+}
+
 fn editor_text_assist_readout(
     cx: &mut UiCx<'_>,
     items: Arc<[TextAssistItem]>,
@@ -2805,6 +2811,67 @@ fn render_authoring_parity_imui_group(
                 );
             },
         );
+
+        ui.separator();
+        ui.text("Typed drag/drop helpers");
+        ui.text("Drag an asset chip onto the material slot. Payload stays app-defined.");
+
+        let asset_slot_model = authoring_parity_asset_slot_model(ui.cx_mut());
+        let asset_chips = authoring_parity_drag_assets();
+
+        ui.horizontal(|ui| {
+            for (ix, asset) in asset_chips.iter().enumerate() {
+                let trigger = ui.button_with_options(
+                    asset.label.clone(),
+                    fret_ui_kit::imui::ButtonOptions {
+                        test_id: Some(Arc::from(format!(
+                            "imui-editor-proof.authoring.imui.drag-drop.asset.{ix}"
+                        ))),
+                        ..Default::default()
+                    },
+                );
+                let _ = ui.drag_source_with_options(
+                    trigger,
+                    asset.clone(),
+                    fret_ui_kit::imui::DragSourceOptions {
+                        cross_window: true,
+                        ..Default::default()
+                    },
+                );
+            }
+        });
+
+        let assigned_asset = editor_string_model_readout(ui.cx_mut(), &asset_slot_model);
+        let slot_trigger = ui.button_with_options(
+            format!("Base color slot: {assigned_asset}"),
+            fret_ui_kit::imui::ButtonOptions {
+                test_id: Some(Arc::from("imui-editor-proof.authoring.imui.drag-drop.slot")),
+                ..Default::default()
+            },
+        );
+        let slot_drop = ui.drop_target::<ProofDragAsset>(slot_trigger);
+        if let Some(payload) = slot_drop.delivered_payload() {
+            let delivered = payload.path.as_ref().to_string();
+            let cx = ui.cx_mut();
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&asset_slot_model, |value: &mut String| {
+                    value.clear();
+                    value.push_str(delivered.as_str());
+                });
+        }
+
+        let drag_drop_status = if let Some(payload) = slot_drop.delivered_payload() {
+            format!("Delivered {}", payload.path)
+        } else if let Some(payload) = slot_drop.preview_payload() {
+            format!("Preview {}", payload.path)
+        } else if slot_drop.active() {
+            "Compatible drag active".to_string()
+        } else {
+            "Idle".to_string()
+        };
+        ui.text(drag_drop_status);
     })
 }
 
@@ -2828,6 +2895,24 @@ fn authoring_parity_shading_items() -> Arc<[EnumSelectItem]> {
         EnumSelectItem::new("lit", "Lit"),
         EnumSelectItem::new("unlit", "Unlit"),
         EnumSelectItem::new("matcap", "Matcap"),
+    ]
+    .into()
+}
+
+fn authoring_parity_drag_assets() -> Arc<[ProofDragAsset]> {
+    vec![
+        ProofDragAsset {
+            label: Arc::from("Stone Albedo"),
+            path: Arc::from("textures/stone/albedo.ktx2"),
+        },
+        ProofDragAsset {
+            label: Arc::from("Stone Normal"),
+            path: Arc::from("textures/stone/normal.ktx2"),
+        },
+        ProofDragAsset {
+            label: Arc::from("Stone ORM"),
+            path: Arc::from("textures/stone/orm.ktx2"),
+        },
     ]
     .into()
 }
@@ -3203,6 +3288,18 @@ fn authoring_parity_shading_model<H: UiHost>(
             cx.app
                 .models_mut()
                 .insert(Some::<Arc<str>>(Arc::from("lit")))
+        },
+    )
+}
+
+fn authoring_parity_asset_slot_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.asset_slot",
+        |cx| {
+            cx.app
+                .models_mut()
+                .insert("textures/default/basecolor.ktx2".to_string())
         },
     )
 }

@@ -6,6 +6,10 @@ TODO board: `docs/workstreams/imui-editor-grade-surface-closure-v1/TODO.md`
 
 Gap audit: `docs/workstreams/imui-editor-grade-surface-closure-v1/EDITOR_GRADE_GAP_AUDIT_2026-03-29.md`
 
+Drag/drop audit:
+
+- `docs/workstreams/imui-editor-grade-surface-closure-v1/DRAG_DROP_BOUNDARY_AUDIT_2026-03-29.md`
+
 Predecessor:
 
 - `docs/workstreams/imui-stack-fearless-refactor-v1/`
@@ -105,7 +109,7 @@ Exit gates:
 
 ## Phase D - Drag/drop decision and closeout
 
-Status: Planned
+Status: In progress
 
 Goal:
 
@@ -117,6 +121,23 @@ Deliverables:
 - either a typed immediate drag/drop helper family or a defer note,
 - proof on at least one editor-grade scenario,
 - final closeout notes and updated immediate-mode map/docs.
+
+Current landed slice:
+
+- the runtime-boundary audit concluded that `imui` should not widen `UiDragActionHost` for typed
+  payload creation,
+- `fret-ui-kit::imui` now exposes `drag_source(...)`, `drag_source_with_options(...)`,
+  `drop_target::<T>(...)`, and `drop_target_with_options::<T>(...)`,
+- the implementation uses a model-backed typed payload store keyed by `DragSessionId` while still
+  reusing the existing pressable drag threshold and runtime routing,
+- `DragSourceOptions::cross_window` upgrades a trigger to cross-window runtime drag routing without
+  introducing a second drag stack,
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now includes an asset-chip to material-slot
+  proof slice,
+- focused gates now cover the new surface in
+  `ecosystem/fret-ui-kit/tests/imui_drag_drop_smoke.rs` plus `drag_drop.rs` unit tests,
+- and `ecosystem/fret-imui/src/tests/interaction.rs` now locks the preview and source-side
+  delivery behavior with a real pointer interaction test.
 
 Exit gates:
 

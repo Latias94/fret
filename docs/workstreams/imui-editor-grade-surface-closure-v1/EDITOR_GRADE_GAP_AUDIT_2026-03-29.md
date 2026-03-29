@@ -143,19 +143,27 @@ Current issue:
 
 - editor-grade drag/drop workflows still have no explicit immediate payload authoring contract.
 
+Current status:
+
+- the runtime-boundary audit is now recorded in
+  `docs/workstreams/imui-editor-grade-surface-closure-v1/DRAG_DROP_BOUNDARY_AUDIT_2026-03-29.md`,
+- and the first clean typed source/target seam now ships from `fret-ui-kit::imui`.
+
 Owner:
 
-- undecided until runtime-boundary audit
+- `ecosystem/fret-ui-kit::imui`
 
 Reason:
 
-- the authoring surface must respect runtime drag-session contracts,
-- so this cannot be placed correctly by taste alone.
+- the authoring surface is generic immediate vocabulary,
+- the shipped helper reuses existing runtime drag-session routing,
+- and richer collision/sortable/workspace policy remains correctly outside this crate.
 
 Evidence:
 
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
 - `ecosystem/fret-ui-kit/src/imui.rs`
+- `ecosystem/fret-ui-kit/src/imui/drag_drop.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 
 ## Bucket 3: defer unless fresh evidence appears

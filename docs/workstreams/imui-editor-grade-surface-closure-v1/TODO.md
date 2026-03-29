@@ -6,6 +6,10 @@ Milestones: `docs/workstreams/imui-editor-grade-surface-closure-v1/MILESTONES.md
 
 Gap audit: `docs/workstreams/imui-editor-grade-surface-closure-v1/EDITOR_GRADE_GAP_AUDIT_2026-03-29.md`
 
+Drag/drop audit:
+
+- `docs/workstreams/imui-editor-grade-surface-closure-v1/DRAG_DROP_BOUNDARY_AUDIT_2026-03-29.md`
+
 Predecessor closeout:
 
 - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
@@ -44,9 +48,9 @@ Compatibility shims are explicitly out of scope.
 - [x] Add a generic collapsing-header / tree-node immediate family on `fret-ui-kit::imui`.
 - [x] Write explicit ID guidance for tree/outliner authoring so ImGui/egui ports do not invent
       ad hoc naming tricks.
-- [ ] Decide whether any currently requested shell-like helper is actually docking/workspace-owned
+- [x] Decide whether any currently requested shell-like helper is actually docking/workspace-owned
       and should be routed out of this workstream.
-- [ ] Keep `fret-imui` itself free of these richer policy helpers.
+- [x] Keep `fret-imui` itself free of these richer policy helpers.
 
 Current M2 progress:
 
@@ -74,18 +78,37 @@ Current M2 progress:
 
 ## M3 - Evaluate drag/drop immediate closure
 
-- [ ] Audit runtime drag contracts against Dear ImGui / egui payload expectations.
-- [ ] Decide whether a portable immediate drag/drop helper family can land cleanly.
-- [ ] If yes, add a typed thin authoring surface in the correct owner crate.
-- [ ] If no, write a defer note that states exactly what boundary is still missing.
-- [ ] Prove the decision on a real editor scenario (outliner reorder, asset drop target, or similar).
+- [x] Audit runtime drag contracts against Dear ImGui / egui payload expectations.
+- [x] Decide whether a portable immediate drag/drop helper family can land cleanly.
+- [x] If yes, add a typed thin authoring surface in the correct owner crate.
+- [x] If no, write a defer note that states exactly what boundary is still missing.
+      Not needed after the boundary audit; the runtime seam was clean enough through a model-backed
+      typed payload store, so no defer note was written.
+- [x] Prove the decision on a real editor scenario (outliner reorder, asset drop target, or similar).
+
+Current M3 progress:
+
+- `fret-ui-kit::imui` now exposes `drag_source(...)`, `drag_source_with_options(...)`,
+  `drop_target::<T>(...)`, and `drop_target_with_options::<T>(...)`.
+- The helper is response-driven and piggybacks on the existing pressable drag lifecycle instead of
+  adding a second immediate drag runtime.
+- Typed payloads are stored in a model-backed `imui` session store keyed by `DragSessionId`,
+  rather than widening the object-safe runtime action-host seam.
+- `DragSourceOptions::cross_window` upgrades the trigger to cross-window runtime routing without
+  adding a second multi-window policy stack.
+- Proof/demo coverage now includes an asset-chip to material-slot drag/drop slice in
+  `apps/fret-examples/src/imui_editor_proof_demo.rs`.
+- Focused drag/drop gates now live in `ecosystem/fret-ui-kit/tests/imui_drag_drop_smoke.rs`
+  and `ecosystem/fret-ui-kit/src/imui/drag_drop.rs` unit tests.
+- A real pointer interaction gate now verifies preview plus source-side delivery in
+  `ecosystem/fret-imui/src/tests/interaction.rs`.
 
 ## M4 - Tests, proof surfaces, and docs
 
 - [ ] Extend `imui_editor_proof_demo` with at least one composite-heavy inspector scenario.
-- [ ] Extend proof/demo coverage with at least one tree/outliner scenario.
-- [ ] Add focused tests for any new tooltip/tree/drag-drop surfaces.
-- [ ] Update `docs/workstreams/README.md` so the immediate-mode map points to this follow-on lane.
-- [ ] Update parity/audit notes if the shipped immediate surface meaningfully changes.
+- [x] Extend proof/demo coverage with at least one tree/outliner scenario.
+- [x] Add focused tests for any new tooltip/tree/drag-drop surfaces.
+- [x] Update `docs/workstreams/README.md` so the immediate-mode map points to this follow-on lane.
+- [x] Update parity/audit notes if the shipped immediate surface meaningfully changes.
 - [ ] Capture a closeout summary that says which gaps were closed, which were intentionally deferred,
       and which owner crate each surviving gap belongs to.

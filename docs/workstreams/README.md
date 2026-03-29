@@ -83,6 +83,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-editor-grade-surface-closure-v1/TODO.md`
   - `docs/workstreams/imui-editor-grade-surface-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-editor-grade-surface-closure-v1/EDITOR_GRADE_GAP_AUDIT_2026-03-29.md`
+  - `docs/workstreams/imui-editor-grade-surface-closure-v1/DRAG_DROP_BOUNDARY_AUDIT_2026-03-29.md`
 
 Historical archive directories retained for rationale/audit history only:
 
