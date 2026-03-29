@@ -138,4 +138,4 @@ Legend:
 | Toggle | `toggle` | TODO | TODO | TODO | TODO | |
 | Toggle Group | `toggle_group` | TODO | TODO | TODO | TODO | |
 | Tooltip | `tooltip` | `tools/diag-scripts/ui-gallery-tooltip-repeat-hover.json` | TODO | Hover repeat stability | In progress | Add dismiss + no-click-through assertions. |
-| Typography | `typography` | TODO | TODO | TODO | TODO | |
+| Typography | `typography` | `tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-docs-smoke.json`, `tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-inline-code-tab-scroll-range.json`, `tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-demo-story-bundle.json` | `ecosystem/fret-ui-shadcn/src/typography.rs`, `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` | Text metrics + logical-edge layout (blockquote/list RTL) + docs-path smoke + authoring-surface structure | Aligned (with gaps) | Helper defaults now match the shadcn docs recipe; remaining gaps are inline rich-text composition and call-site-owned page alignment details, not a generic children API hole. |

@@ -14,12 +14,12 @@ use fret_core::{
     TextSlant, TextStyle, TextWrap,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, MarginEdge,
     SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement};
 
 fn text_props(
     text: Arc<str>,
@@ -46,39 +46,82 @@ fn text_props(
     }
 }
 
-fn base_text_style(theme: &Theme) -> TextStyle {
-    let px = theme.metric_by_key("font.size").unwrap_or(Px(14.0));
-    let line_height = scaled_line_height(theme, px);
-    TextStyle {
-        font: FontId::default(),
-        size: px,
-        weight: FontWeight::NORMAL,
-        line_height,
-        ..Default::default()
-    }
+const TRACKING_TIGHT_EM: f32 = -0.025;
+const INLINE_CODE_PX_X: Px = Px(4.8);
+const INLINE_CODE_PX_Y: Px = Px(3.2);
+const H2_PADDING_BOTTOM: Px = Px(8.0);
+const H2_BORDER_BOTTOM: Px = Px(1.0);
+const BLOCKQUOTE_BORDER_INLINE_START: Px = Px(2.0);
+const BLOCKQUOTE_PADDING_INLINE_START: Px = Px(24.0);
+const LIST_MARGIN_INLINE_START: Px = Px(24.0);
+const LIST_ITEM_GAP: Px = Px(8.0);
+
+fn fixed_ui_style(size: Px, line_height: Px, weight: FontWeight) -> TextStyle {
+    let mut style = fret_ui_kit::typography::fixed_line_box_style(FontId::ui(), size, line_height);
+    style.weight = weight;
+    style
 }
 
-fn scaled_line_height(theme: &Theme, size: Px) -> Option<Px> {
-    let base_size = theme.metric_by_key("font.size").unwrap_or(Px(14.0)).0;
-    if base_size <= 0.0 {
-        return None;
-    }
-    let base_line_height = theme.metric_by_key("font.line_height")?.0;
-    if base_line_height <= 0.0 {
-        return None;
-    }
-
-    let ratio = base_line_height / base_size;
-    Some(Px((size.0 * ratio).max(size.0)))
+fn fixed_monospace_style(size: Px, line_height: Px, weight: FontWeight) -> TextStyle {
+    let mut style =
+        fret_ui_kit::typography::fixed_line_box_style(FontId::monospace(), size, line_height);
+    style.weight = weight;
+    style
 }
 
-fn heading_style(theme: &Theme, px: f32, weight: FontWeight) -> TextStyle {
-    TextStyle {
-        size: Px(px),
-        weight,
-        line_height: scaled_line_height(theme, Px(px)),
-        ..base_text_style(theme)
-    }
+fn tracking_tight(mut style: TextStyle) -> TextStyle {
+    style.letter_spacing_em = Some(TRACKING_TIGHT_EM);
+    style
+}
+
+fn h1_style() -> TextStyle {
+    tracking_tight(fixed_ui_style(Px(36.0), Px(40.0), FontWeight::EXTRA_BOLD))
+}
+
+fn h2_style() -> TextStyle {
+    tracking_tight(fixed_ui_style(Px(30.0), Px(36.0), FontWeight::SEMIBOLD))
+}
+
+fn h3_style() -> TextStyle {
+    tracking_tight(fixed_ui_style(Px(24.0), Px(32.0), FontWeight::SEMIBOLD))
+}
+
+fn h4_style() -> TextStyle {
+    tracking_tight(fixed_ui_style(Px(20.0), Px(28.0), FontWeight::SEMIBOLD))
+}
+
+fn paragraph_style() -> TextStyle {
+    fixed_ui_style(Px(16.0), Px(28.0), FontWeight::NORMAL)
+}
+
+fn lead_style() -> TextStyle {
+    fixed_ui_style(Px(20.0), Px(28.0), FontWeight::NORMAL)
+}
+
+fn large_style() -> TextStyle {
+    fixed_ui_style(Px(18.0), Px(28.0), FontWeight::SEMIBOLD)
+}
+
+fn small_style() -> TextStyle {
+    fixed_ui_style(Px(14.0), Px(14.0), FontWeight::MEDIUM)
+}
+
+fn muted_style() -> TextStyle {
+    fixed_ui_style(Px(14.0), Px(20.0), FontWeight::NORMAL)
+}
+
+fn inline_code_style() -> TextStyle {
+    fixed_monospace_style(Px(14.0), Px(20.0), FontWeight::SEMIBOLD)
+}
+
+fn blockquote_style() -> TextStyle {
+    let mut style = fixed_ui_style(Px(16.0), Px(24.0), FontWeight::NORMAL);
+    style.slant = TextSlant::Italic;
+    style
+}
+
+fn list_item_style() -> TextStyle {
+    fixed_ui_style(Px(16.0), Px(24.0), FontWeight::NORMAL)
 }
 
 fn muted_color(theme: &Theme) -> Color {
@@ -135,53 +178,63 @@ impl TypographyText {
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         match self.kind {
             TypographyTextKind::H1 => {
-                let style = {
-                    let theme = Theme::global(&*cx.app);
-                    heading_style(theme, 40.0, FontWeight::EXTRA_BOLD)
-                };
-                cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))
+                let style = h1_style();
+                cx.text_props(text_props(self.text, Some(style), None, TextWrap::Balance))
                     .attach_semantics(heading_semantics(1))
             }
             TypographyTextKind::H2 => {
-                let style = {
+                let (props, border_color, style) = {
                     let theme = Theme::global(&*cx.app);
-                    heading_style(theme, 32.0, FontWeight::BOLD)
+                    let mut layout =
+                        decl_style::layout_style(theme, LayoutRefinement::default().w_full());
+                    layout.size.min_width = Some(Length::Px(Px(0.0)));
+                    let props = ContainerProps {
+                        layout,
+                        padding: Edges {
+                            bottom: H2_PADDING_BOTTOM,
+                            ..Edges::all(Px(0.0))
+                        }
+                        .into(),
+                        background: None,
+                        shadow: None,
+                        border: Edges {
+                            bottom: H2_BORDER_BOTTOM,
+                            ..Edges::all(Px(0.0))
+                        },
+                        corner_radii: Corners::all(Px(0.0)),
+                        ..Default::default()
+                    };
+                    (props, theme.color_token("border"), h2_style())
                 };
-                cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))
-                    .attach_semantics(heading_semantics(2))
+                cx.container(
+                    ContainerProps {
+                        border_color: Some(border_color),
+                        ..props
+                    },
+                    move |cx| {
+                        [cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))]
+                    },
+                )
+                .attach_semantics(heading_semantics(2))
             }
             TypographyTextKind::H3 => {
-                let style = {
-                    let theme = Theme::global(&*cx.app);
-                    heading_style(theme, 24.0, FontWeight::BOLD)
-                };
+                let style = h3_style();
                 cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))
                     .attach_semantics(heading_semantics(3))
             }
             TypographyTextKind::H4 => {
-                let style = {
-                    let theme = Theme::global(&*cx.app);
-                    heading_style(theme, 20.0, FontWeight::SEMIBOLD)
-                };
+                let style = h4_style();
                 cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))
                     .attach_semantics(heading_semantics(4))
             }
             TypographyTextKind::Paragraph => {
-                let style = {
-                    let theme = Theme::global(&*cx.app);
-                    base_text_style(theme)
-                };
+                let style = paragraph_style();
                 cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))
             }
             TypographyTextKind::Lead => {
                 let (style, color) = {
                     let theme = Theme::global(&*cx.app);
-                    let style = TextStyle {
-                        size: Px(18.0),
-                        line_height: scaled_line_height(theme, Px(18.0)),
-                        ..base_text_style(theme)
-                    };
-                    (style, muted_color(theme))
+                    (lead_style(), muted_color(theme))
                 };
                 cx.text_props(text_props(
                     self.text,
@@ -191,38 +244,17 @@ impl TypographyText {
                 ))
             }
             TypographyTextKind::Large => {
-                let style = {
-                    let theme = Theme::global(&*cx.app);
-                    TextStyle {
-                        size: Px(18.0),
-                        weight: FontWeight::SEMIBOLD,
-                        line_height: scaled_line_height(theme, Px(18.0)),
-                        ..base_text_style(theme)
-                    }
-                };
+                let style = large_style();
                 cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))
             }
             TypographyTextKind::Small => {
-                let style = {
-                    let theme = Theme::global(&*cx.app);
-                    TextStyle {
-                        size: Px(12.0),
-                        weight: FontWeight::MEDIUM,
-                        line_height: scaled_line_height(theme, Px(12.0)),
-                        ..base_text_style(theme)
-                    }
-                };
-                cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))
+                let style = small_style();
+                cx.text_props(text_props(self.text, Some(style), None, TextWrap::None))
             }
             TypographyTextKind::Muted => {
                 let (style, color) = {
                     let theme = Theme::global(&*cx.app);
-                    let style = TextStyle {
-                        size: Px(12.0),
-                        line_height: scaled_line_height(theme, Px(12.0)),
-                        ..base_text_style(theme)
-                    };
-                    (style, muted_color(theme))
+                    (muted_style(), muted_color(theme))
                 };
                 cx.text_props(text_props(
                     self.text,
@@ -232,53 +264,59 @@ impl TypographyText {
                 ))
             }
             TypographyTextKind::InlineCode => {
-                let (props, base_style, line_height) = {
+                let (props, style) = {
                     let theme = Theme::global(&*cx.app);
-                    let chrome = ChromeRefinement::default()
-                        .bg(ColorRef::Color(theme.color_token("muted")))
-                        .rounded(Radius::Sm)
-                        .px(Space::N2)
-                        .py(Space::N1);
+                    let chrome =
+                        ChromeRefinement::default().bg(ColorRef::Color(theme.color_token("muted")));
                     let layout = LayoutRefinement::default();
-                    let props = container_props(theme, chrome, layout);
-                    let base_style = base_text_style(theme);
-                    let line_height = scaled_line_height(theme, Px(12.0));
-                    (props, base_style, line_height)
+                    let mut props = container_props(theme, chrome, layout);
+                    props.padding = Edges {
+                        top: INLINE_CODE_PX_Y,
+                        right: INLINE_CODE_PX_X,
+                        bottom: INLINE_CODE_PX_Y,
+                        left: INLINE_CODE_PX_X,
+                    }
+                    .into();
+                    props.corner_radii = Corners::all(Px(4.0));
+                    (props, inline_code_style())
                 };
                 cx.container(props, move |cx| {
-                    let style = TextStyle {
-                        size: Px(12.0),
-                        weight: FontWeight::MEDIUM,
-                        line_height,
-                        ..base_style.clone()
-                    };
                     [cx.text_props(text_props(self.text, Some(style), None, TextWrap::None))]
                 })
             }
             TypographyTextKind::Blockquote => {
-                let (layout, border_color, muted, base_style) = {
+                let (layout, border_color, style, dir) = {
                     let theme = Theme::global(&*cx.app);
+                    let dir = crate::direction::use_direction(cx, None);
                     let mut layout =
                         decl_style::layout_style(theme, LayoutRefinement::default().w_full());
                     layout.size.min_width = Some(Length::Px(Px(0.0)));
                     let border_color = theme.color_token("border");
-                    let muted = muted_color(theme);
-                    let base_style = base_text_style(theme);
-                    (layout, border_color, muted, base_style)
+                    (layout, border_color, blockquote_style(), dir)
                 };
+                let (border_left, border_right) = crate::rtl::physical_inline_start_end(
+                    dir,
+                    BLOCKQUOTE_BORDER_INLINE_START,
+                    Px(0.0),
+                );
+                let (padding_left, padding_right) = crate::rtl::physical_inline_start_end(
+                    dir,
+                    BLOCKQUOTE_PADDING_INLINE_START,
+                    Px(0.0),
+                );
                 let props = ContainerProps {
                     layout,
                     padding: Edges {
-                        left: Px(16.0),
-                        top: Px(8.0),
-                        right: Px(0.0),
-                        bottom: Px(8.0),
+                        left: padding_left,
+                        right: padding_right,
+                        ..Edges::all(Px(0.0))
                     }
                     .into(),
                     background: None,
                     shadow: None,
                     border: Edges {
-                        left: Px(2.0),
+                        left: border_left,
+                        right: border_right,
                         ..Edges::all(Px(0.0))
                     },
                     border_color: Some(border_color),
@@ -286,18 +324,7 @@ impl TypographyText {
                     ..Default::default()
                 };
                 cx.container(props, move |cx| {
-                    let style = TextStyle {
-                        size: Px(14.0),
-                        weight: FontWeight::MEDIUM,
-                        slant: TextSlant::Italic,
-                        ..base_style.clone()
-                    };
-                    [cx.text_props(text_props(
-                        self.text,
-                        Some(style),
-                        Some(muted),
-                        TextWrap::Word,
-                    ))]
+                    [cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))]
                 })
             }
         }
@@ -324,17 +351,23 @@ impl TypographyList {
 
     #[track_caller]
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let item_style = {
-            let theme = Theme::global(&*cx.app);
-            base_text_style(theme)
-        };
+        let dir = crate::direction::use_direction(cx, None);
+        let item_style = list_item_style();
         let mut layout = LayoutStyle::default();
         layout.size.width = Length::Fill;
+        match dir {
+            crate::direction::LayoutDirection::Ltr => {
+                layout.margin.left = MarginEdge::Px(LIST_MARGIN_INLINE_START);
+            }
+            crate::direction::LayoutDirection::Rtl => {
+                layout.margin.right = MarginEdge::Px(LIST_MARGIN_INLINE_START);
+            }
+        }
         cx.flex(
             FlexProps {
                 layout,
                 direction: fret_core::Axis::Vertical,
-                gap: Px(6.0).into(),
+                gap: LIST_ITEM_GAP.into(),
                 padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Stretch,
@@ -358,15 +391,20 @@ impl TypographyList {
                                 wrap: false,
                             },
                             move |cx| {
-                                vec![
-                                    cx.text("•"),
-                                    cx.text_props(text_props(
-                                        item.clone(),
-                                        Some(item_style),
-                                        None,
-                                        TextWrap::Word,
-                                    )),
-                                ]
+                                let bullet = cx.text_props(text_props(
+                                    Arc::<str>::from("•"),
+                                    Some(item_style.clone()),
+                                    None,
+                                    TextWrap::None,
+                                ));
+                                let label = cx.text_props(text_props(
+                                    item.clone(),
+                                    Some(item_style),
+                                    None,
+                                    TextWrap::Word,
+                                ));
+
+                                crate::rtl::vec_main_with_inline_start(dir, label, Some(bullet))
                             },
                         )
                     })
@@ -469,10 +507,16 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size as CoreSize};
+    use fret_ui::element::ElementKind;
     use fret_ui::elements;
 
     fn render(build: impl FnOnce(&mut ElementContext<'_, App>) -> AnyElement) -> AnyElement {
         let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
         let window = AppWindowId::default();
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -496,11 +540,208 @@ mod tests {
         assert_eq!(decoration.level, Some(expected_level));
     }
 
+    fn text_props_of(element: &AnyElement) -> &TextProps {
+        match &element.kind {
+            ElementKind::Text(props) => props,
+            other => panic!("expected ElementKind::Text, got {other:?}"),
+        }
+    }
+
+    fn container_props_of(element: &AnyElement) -> &ContainerProps {
+        match &element.kind {
+            ElementKind::Container(props) => props,
+            other => panic!("expected ElementKind::Container, got {other:?}"),
+        }
+    }
+
+    fn flex_props_of(element: &AnyElement) -> &FlexProps {
+        match &element.kind {
+            ElementKind::Flex(props) => props,
+            other => panic!("expected ElementKind::Flex, got {other:?}"),
+        }
+    }
+
     #[test]
     fn typography_headings_attach_heading_semantics_levels() {
         assert_heading_level(&render(|cx| h1("Heading 1").into_element(cx)), 1);
         assert_heading_level(&render(|cx| h2("Heading 2").into_element(cx)), 2);
         assert_heading_level(&render(|cx| h3("Heading 3").into_element(cx)), 3);
         assert_heading_level(&render(|cx| h4("Heading 4").into_element(cx)), 4);
+    }
+
+    #[test]
+    fn typography_helpers_match_shadcn_v4_text_metrics() {
+        let h1 = render(|cx| h1("Heading 1").into_element(cx));
+        let h1_props = text_props_of(&h1);
+        let h1_style = h1_props.style.as_ref().expect("expected h1 text style");
+        assert_eq!(h1_style.font, FontId::ui());
+        assert_eq!(h1_style.size, Px(36.0));
+        assert_eq!(h1_style.line_height, Some(Px(40.0)));
+        assert_eq!(h1_style.weight, FontWeight::EXTRA_BOLD);
+        assert_eq!(h1_style.letter_spacing_em, Some(TRACKING_TIGHT_EM));
+        assert_eq!(h1_props.wrap, TextWrap::Balance);
+
+        let h2 = render(|cx| h2("Heading 2").into_element(cx));
+        let h2_container = container_props_of(&h2);
+        assert_eq!(h2_container.padding.bottom, H2_PADDING_BOTTOM.into());
+        assert_eq!(h2_container.border.bottom, H2_BORDER_BOTTOM);
+        let h2_text = text_props_of(
+            h2.children
+                .first()
+                .expect("expected h2 container to wrap one text child"),
+        );
+        let h2_style = h2_text.style.as_ref().expect("expected h2 text style");
+        assert_eq!(h2_style.size, Px(30.0));
+        assert_eq!(h2_style.line_height, Some(Px(36.0)));
+        assert_eq!(h2_style.weight, FontWeight::SEMIBOLD);
+        assert_eq!(h2_style.letter_spacing_em, Some(TRACKING_TIGHT_EM));
+
+        let p = render(|cx| p("Paragraph").into_element(cx));
+        let p_props = text_props_of(&p);
+        let p_style = p_props
+            .style
+            .as_ref()
+            .expect("expected paragraph text style");
+        assert_eq!(p_style.font, FontId::ui());
+        assert_eq!(p_style.size, Px(16.0));
+        assert_eq!(p_style.line_height, Some(Px(28.0)));
+        assert_eq!(p_props.wrap, TextWrap::Word);
+
+        let lead = render(|cx| lead("Lead").into_element(cx));
+        let lead_props = text_props_of(&lead);
+        let lead_style = lead_props.style.as_ref().expect("expected lead text style");
+        assert_eq!(lead_style.size, Px(20.0));
+        assert_eq!(lead_style.line_height, Some(Px(28.0)));
+
+        let large = render(|cx| large("Large").into_element(cx));
+        let large_props = text_props_of(&large);
+        let large_style = large_props
+            .style
+            .as_ref()
+            .expect("expected large text style");
+        assert_eq!(large_style.size, Px(18.0));
+        assert_eq!(large_style.line_height, Some(Px(28.0)));
+        assert_eq!(large_style.weight, FontWeight::SEMIBOLD);
+
+        let small = render(|cx| small("Small").into_element(cx));
+        let small_props = text_props_of(&small);
+        let small_style = small_props
+            .style
+            .as_ref()
+            .expect("expected small text style");
+        assert_eq!(small_style.size, Px(14.0));
+        assert_eq!(small_style.line_height, Some(Px(14.0)));
+        assert_eq!(small_style.weight, FontWeight::MEDIUM);
+        assert_eq!(small_props.wrap, TextWrap::None);
+        assert_eq!(small_props.layout.size.width, Length::Auto);
+
+        let muted = render(|cx| muted("Muted").into_element(cx));
+        let muted_props = text_props_of(&muted);
+        let muted_style = muted_props
+            .style
+            .as_ref()
+            .expect("expected muted text style");
+        assert_eq!(muted_style.size, Px(14.0));
+        assert_eq!(muted_style.line_height, Some(Px(20.0)));
+        assert_eq!(muted_style.weight, FontWeight::NORMAL);
+
+        let inline_code = render(|cx| inline_code("code").into_element(cx));
+        let inline_code_container = container_props_of(&inline_code);
+        assert_eq!(inline_code_container.padding.top, INLINE_CODE_PX_Y.into());
+        assert_eq!(inline_code_container.padding.right, INLINE_CODE_PX_X.into());
+        assert_eq!(
+            inline_code_container.padding.bottom,
+            INLINE_CODE_PX_Y.into()
+        );
+        assert_eq!(inline_code_container.padding.left, INLINE_CODE_PX_X.into());
+        let inline_code_text = text_props_of(
+            inline_code
+                .children
+                .first()
+                .expect("expected inline code container child"),
+        );
+        let inline_code_style = inline_code_text
+            .style
+            .as_ref()
+            .expect("expected inline code text style");
+        assert_eq!(inline_code_style.font, FontId::monospace());
+        assert_eq!(inline_code_style.size, Px(14.0));
+        assert_eq!(inline_code_style.line_height, Some(Px(20.0)));
+        assert_eq!(inline_code_style.weight, FontWeight::SEMIBOLD);
+        assert_eq!(inline_code_text.wrap, TextWrap::None);
+    }
+
+    #[test]
+    fn typography_blockquote_and_list_follow_inline_start_direction() {
+        let blockquote_ltr = render(|cx| blockquote("Quote").into_element(cx));
+        let blockquote_ltr_props = container_props_of(&blockquote_ltr);
+        assert_eq!(
+            blockquote_ltr_props.border.left,
+            BLOCKQUOTE_BORDER_INLINE_START
+        );
+        assert_eq!(blockquote_ltr_props.border.right, Px(0.0));
+        assert_eq!(
+            blockquote_ltr_props.padding.left,
+            BLOCKQUOTE_PADDING_INLINE_START.into()
+        );
+        assert_eq!(blockquote_ltr_props.padding.right, Px(0.0).into());
+
+        let blockquote_rtl = render(|cx| {
+            crate::direction::with_direction_provider(
+                cx,
+                crate::direction::LayoutDirection::Rtl,
+                |cx| blockquote("Quote").into_element(cx),
+            )
+        });
+        let blockquote_rtl_props = container_props_of(&blockquote_rtl);
+        assert_eq!(blockquote_rtl_props.border.left, Px(0.0));
+        assert_eq!(
+            blockquote_rtl_props.border.right,
+            BLOCKQUOTE_BORDER_INLINE_START
+        );
+        assert_eq!(blockquote_rtl_props.padding.left, Px(0.0).into());
+        assert_eq!(
+            blockquote_rtl_props.padding.right,
+            BLOCKQUOTE_PADDING_INLINE_START.into()
+        );
+
+        let list_ltr = render(|cx| list(["One item"]).into_element(cx));
+        let list_ltr_props = flex_props_of(&list_ltr);
+        assert_eq!(
+            list_ltr_props.layout.margin.left,
+            MarginEdge::Px(LIST_MARGIN_INLINE_START)
+        );
+        assert_eq!(list_ltr_props.layout.margin.right, MarginEdge::Px(Px(0.0)));
+        assert_eq!(list_ltr_props.gap, LIST_ITEM_GAP.into());
+        let first_ltr_row = list_ltr.children.first().expect("expected list row");
+        let first_ltr_bullet = text_props_of(
+            first_ltr_row
+                .children
+                .first()
+                .expect("expected bullet at inline start"),
+        );
+        assert_eq!(first_ltr_bullet.text.as_ref(), "•");
+
+        let list_rtl = render(|cx| {
+            crate::direction::with_direction_provider(
+                cx,
+                crate::direction::LayoutDirection::Rtl,
+                |cx| list(["عنصر واحد"]).into_element(cx),
+            )
+        });
+        let list_rtl_props = flex_props_of(&list_rtl);
+        assert_eq!(list_rtl_props.layout.margin.left, MarginEdge::Px(Px(0.0)));
+        assert_eq!(
+            list_rtl_props.layout.margin.right,
+            MarginEdge::Px(LIST_MARGIN_INLINE_START)
+        );
+        let first_rtl_row = list_rtl.children.first().expect("expected rtl list row");
+        let last_rtl_bullet = text_props_of(
+            first_rtl_row
+                .children
+                .last()
+                .expect("expected bullet at rtl inline start"),
+        );
+        assert_eq!(last_rtl_bullet.text.as_ref(), "•");
     }
 }
