@@ -85,6 +85,89 @@ fn view_cache_skips_child_render_when_clean_and_preserves_element_state() {
 }
 
 #[test]
+fn view_cache_preserves_selectable_text_interactive_span_bounds() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+    let mut scene = Scene::default();
+
+    let leaf_id = Arc::new(std::sync::Mutex::new(
+        None::<crate::elements::GlobalElementId>,
+    ));
+
+    for frame in 0..6 {
+        let leaf_id = leaf_id.clone();
+        let root_node = render_root_for_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "view-cache-selectable-text-span-bounds",
+            move |cx| {
+                vec![
+                    cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                        let text = Arc::<str>::from("hello link world");
+                        let mut props = crate::element::SelectableTextProps::new(
+                            fret_core::AttributedText::new(
+                                text.clone(),
+                                Arc::from([fret_core::TextSpan::new(text.len())]),
+                            ),
+                        );
+                        props.interactive_spans =
+                            Arc::from([crate::element::SelectableTextInteractiveSpan {
+                                range: 6..10,
+                                tag: Arc::<str>::from("link"),
+                            }]);
+
+                        let leaf = cx.selectable_text_props(props);
+                        *leaf_id.lock().unwrap() = Some(leaf.id);
+                        vec![leaf]
+                    }),
+                ]
+            },
+        );
+
+        assert!(
+            ui.base_root().is_some(),
+            "expected render_root_for_frame to install the root layer for base roots"
+        );
+        if frame == 0 {
+            assert_eq!(ui.base_root(), Some(root_node));
+        }
+
+        layout_frame(&mut ui, &mut app, &mut services, bounds);
+        paint_frame(&mut ui, &mut app, &mut services, bounds, &mut scene);
+
+        app.advance_frame();
+    }
+
+    let leaf = leaf_id.lock().unwrap().expect("leaf id should be recorded");
+    let spans = crate::elements::with_element_state(
+        &mut app,
+        window,
+        leaf,
+        crate::element::SelectableTextState::default,
+        |state| state.interactive_span_bounds.clone(),
+    );
+    assert_eq!(
+        spans.len(),
+        1,
+        "expected cached selectable text state to survive"
+    );
+    assert_eq!(spans[0].range, 6..10);
+    assert_eq!(spans[0].tag.as_ref(), "link");
+}
+
+#[test]
 fn request_animation_frame_marks_view_cache_root_dirty() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

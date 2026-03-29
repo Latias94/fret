@@ -670,9 +670,14 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Rect, Size as CoreSize};
+    use fret_core::{
+        AppWindowId, Modifiers, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics,
+        PathService, PathStyle, Point, PointerId, PointerType, Rect, Scene, Size as CoreSize,
+        SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+    };
     use fret_ui::element::ElementKind;
     use fret_ui::elements;
+    use fret_ui::tree::UiTree;
 
     fn render(build: impl FnOnce(&mut ElementContext<'_, App>) -> AnyElement) -> AnyElement {
         let mut app = App::new();
@@ -952,6 +957,175 @@ mod tests {
                 color: None,
                 style: DecorationLineStyle::Solid,
             })
+        );
+    }
+
+    #[test]
+    fn typography_rich_paragraph_activates_link_handler_on_click() {
+        #[derive(Default)]
+        struct ByteIndexTextService {
+            last_len: usize,
+        }
+
+        impl TextService for ByteIndexTextService {
+            fn prepare(
+                &mut self,
+                input: &fret_core::TextInput,
+                _constraints: TextConstraints,
+            ) -> (TextBlobId, TextMetrics) {
+                self.last_len = input.text().len();
+                (
+                    TextBlobId::default(),
+                    TextMetrics {
+                        size: CoreSize::new(Px(self.last_len as f32), Px(10.0)),
+                        baseline: Px(8.0),
+                    },
+                )
+            }
+
+            fn hit_test_point(
+                &mut self,
+                _blob: TextBlobId,
+                point: Point,
+            ) -> fret_core::HitTestResult {
+                let idx = point.x.0.floor().max(0.0) as usize;
+                fret_core::HitTestResult {
+                    index: idx.min(self.last_len),
+                    affinity: fret_core::CaretAffinity::Downstream,
+                }
+            }
+
+            fn release(&mut self, _blob: TextBlobId) {}
+        }
+
+        impl PathService for ByteIndexTextService {
+            fn prepare(
+                &mut self,
+                _commands: &[PathCommand],
+                _style: PathStyle,
+                _constraints: PathConstraints,
+            ) -> (PathId, PathMetrics) {
+                (PathId::default(), PathMetrics::default())
+            }
+
+            fn release(&mut self, _path: PathId) {}
+        }
+
+        impl SvgService for ByteIndexTextService {
+            fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+                SvgId::default()
+            }
+
+            fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+                true
+            }
+        }
+
+        impl fret_core::MaterialService for ByteIndexTextService {
+            fn register_material(
+                &mut self,
+                _desc: fret_core::MaterialDescriptor,
+            ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+                Ok(fret_core::MaterialId::default())
+            }
+
+            fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+                true
+            }
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(40.0)),
+        );
+        let mut services = ByteIndexTextService::default();
+        let activated = app.models_mut().insert(None::<Arc<str>>);
+
+        let link_start = "hello ".len();
+        let link_href = "https://example.com/kings-plan";
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "typography-rich-paragraph-activate",
+            |cx| {
+                let activated = activated.clone();
+                vec![
+                    p_rich([
+                        inline_text("hello "),
+                        inline_link("link", link_href),
+                        inline_text(" world"),
+                    ])
+                    .on_activate_link(Arc::new(move |host, action_cx, _reason, activation| {
+                        let _ = host
+                            .models_mut()
+                            .update(&activated, |value| *value = Some(activation.tag.clone()));
+                        host.notify(action_cx);
+                    }))
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let selectable_node = ui.children(root)[0];
+        let selectable_bounds = ui
+            .debug_node_bounds(selectable_node)
+            .expect("expected rich paragraph bounds");
+        let pos = Point::new(
+            Px(selectable_bounds.origin.x.0 + link_start as f32 + 1.0),
+            Px(selectable_bounds.origin.y.0 + 5.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        assert!(
+            app.models()
+                .get_cloned(&activated)
+                .flatten()
+                .is_some_and(|href| href.as_ref() == link_href),
+            "expected rich paragraph click to activate the registered href"
         );
     }
 }

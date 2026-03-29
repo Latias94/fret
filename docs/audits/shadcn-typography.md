@@ -51,6 +51,8 @@ This audit records why Fret keeps typography as a docs/helper surface rather tha
 - Pass: the full demo/RTL story now tracks the upstream content order and vertical rhythm more closely, replacing the previous one-gap-fits-all stacking with section-specific spacing closer to the docs page.
 - Pass: the single inline-link sentence now uses the dedicated rich paragraph lane (`p_rich(...)` + `inline_link(...)`) instead of being flattened to plain text.
 - Pass: the gallery now also includes an explicit `Interactive Links` follow-up section that demonstrates `p_rich(...).on_activate_link(...)` on the app-facing surface without reopening raw selectable-text hooks in copyable docs.
+- Pass: helper-level click activation is now locked by a focused Rust test, so the narrow `p_rich(...).on_activate_link(...)` lane is covered beyond static structure checks.
+- Pass: the focused `Interactive Links` diagnostics script now also passes on the full UI Gallery surface after fixing cached-subtree `SelectableTextState` retention in `fret-ui`, so this is no longer just a helper-level proof.
 - Pass: the gallery now also uses the upstream "Inline code" heading spelling, which keeps the display copy and the existing `docsec-inline-code-*` diagnostics anchors aligned.
 - Pass: keeping the page available is still useful for copyable examples even though typography remains a docs/helper surface rather than a strict registry component baseline.
 - Pass: the remaining page-level differences are intentional and narrow:
@@ -61,7 +63,10 @@ This audit records why Fret keeps typography as a docs/helper surface rather tha
 
 ## Validation
 
+- `cargo nextest run -p fret-ui --lib view_cache_preserves_selectable_text_interactive_span_bounds`
 - `cargo nextest run -p fret-ui-shadcn --lib typography::tests::`
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app typography_`
+- `cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_typography_interactive_links_activation`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-docs-smoke.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-inline-code-tab-scroll-range.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`

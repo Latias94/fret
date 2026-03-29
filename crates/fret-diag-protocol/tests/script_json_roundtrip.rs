@@ -220,6 +220,13 @@ fn script_v2_roundtrip_ui_gallery_markdown_span_link_gate_activate() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_typography_interactive_links_activation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_avatar_dropdown_activate_open() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-activate-open.json"

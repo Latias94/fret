@@ -338,7 +338,7 @@ impl ElementRuntime {
         state.node_entry(element).map(|e| e.node)
     }
 
-    #[cfg(feature = "diagnostics")]
+    #[cfg(any(test, feature = "diagnostics"))]
     pub fn selectable_text_interactive_span_bounds_for_node(
         &self,
         window: AppWindowId,
@@ -346,6 +346,16 @@ impl ElementRuntime {
     ) -> Option<Vec<crate::element::SelectableTextInteractiveSpanBounds>> {
         let state = self.windows.get(&window)?;
         let element = state.element_for_node(node)?;
+        self.selectable_text_interactive_span_bounds_for_element(window, element)
+    }
+
+    #[cfg(any(test, feature = "diagnostics"))]
+    pub fn selectable_text_interactive_span_bounds_for_element(
+        &self,
+        window: AppWindowId,
+        element: GlobalElementId,
+    ) -> Option<Vec<crate::element::SelectableTextInteractiveSpanBounds>> {
+        let state = self.windows.get(&window)?;
         let key = (element, TypeId::of::<crate::element::SelectableTextState>());
 
         let boxed = state
@@ -1260,6 +1270,7 @@ impl WindowElementState {
             ));
             self.touch_state_key((element, TypeId::of::<crate::action::TimerActionHooks>()));
             self.touch_state_key((element, TypeId::of::<crate::action::RovingActionHooks>()));
+            self.touch_state_key((element, TypeId::of::<crate::element::SelectableTextState>()));
             self.touch_state_key((
                 element,
                 TypeId::of::<crate::action::SelectableTextActionHooks>(),
@@ -2508,6 +2519,7 @@ impl DebugIdentitySegment {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_core::{Point, Px, Size};
 
     #[test]
     fn primary_pointer_type_defaults_to_unknown_until_observed() {
@@ -2580,6 +2592,51 @@ mod tests {
                 last_seen_frame: FrameId(1),
                 root: GlobalElementId(2),
             },
+        );
+    }
+
+    #[test]
+    fn selectable_text_span_bounds_can_be_read_by_element() {
+        let window = AppWindowId::default();
+        let element = GlobalElementId(123);
+        let node = NodeId::default();
+        let expected = crate::element::SelectableTextInteractiveSpanBounds {
+            range: 1..4,
+            tag: std::sync::Arc::<str>::from("link"),
+            bounds_local: Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                Size::new(Px(30.0), Px(12.0)),
+            ),
+        };
+
+        let mut runtime = ElementRuntime::new();
+        runtime.prepare_window_for_frame(window, FrameId(1));
+        {
+            let state = runtime.for_window_mut(window);
+            state.set_node_entry(
+                element,
+                NodeEntry {
+                    node,
+                    last_seen_frame: FrameId(1),
+                    root: GlobalElementId(1),
+                },
+            );
+            state.with_state_mut(
+                element,
+                crate::element::SelectableTextState::default,
+                |span_state| {
+                    span_state.interactive_span_bounds = vec![expected.clone()];
+                },
+            );
+        }
+
+        assert_eq!(
+            runtime.selectable_text_interactive_span_bounds_for_node(window, node),
+            Some(vec![expected.clone()])
+        );
+        assert_eq!(
+            runtime.selectable_text_interactive_span_bounds_for_element(window, element),
+            Some(vec![expected])
         );
     }
 

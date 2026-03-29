@@ -1,0 +1,147 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-typography-interactive-links-activation",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "shadcn", "typography", "links", "activation", "selectable_text"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 960.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "typography" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-typography" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-typography" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-typography" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-typography" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-typography-interactive-links" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-typography-interactive-links" },
+      "delta_y": -180.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": true,
+      "padding_px": 20.0,
+      "timeout_frames": 1200
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-typography-interactive-links-status-idle"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-typography-interactive-links-before",
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_selectable_text_span_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-typography-interactive-links-paragraph"
+      },
+      "tag": "https://example.com/kings-plan",
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-typography-interactive-links-status-active"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-typography-interactive-links-status-idle"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-typography-interactive-links-after",
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-typography-interactive-links-activation"
+    }
+  ]
+}
