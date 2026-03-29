@@ -4,7 +4,7 @@ use fret::UiCx;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::table as snippets;
 
-const TABLE_PAGE_INTRO: &str = "Preview mirrors the shadcn Table docs path after `Installation`: `Demo`, `Usage`, `Footer`, `Actions`, `Data Table`, `RTL`, and `API Reference`; `Children (Fret)` and `Notes` stay as focused follow-ups for the remaining public-surface guidance.";
+const TABLE_PAGE_INTRO: &str = "Preview mirrors the shadcn Table docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Footer`, `Actions`, `Data Table`, `RTL`, and `API Reference`; `Children (Fret)` and `Notes` stay as focused follow-ups for the composable-children decision and remaining public-surface guidance.";
 
 pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
@@ -19,13 +19,20 @@ pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "The base `Table` surface should stay the low-level shadcn leaf: responsive wrapper, row/cell chrome, and a copyable parts API.",
     ]);
     let api_reference = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/table.rs`.",
+        "Docs source: `repo-ref/ui/apps/v4/content/docs/components/base/table.mdx`.",
+        "Visual/chrome baseline: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx` plus `repo-ref/ui/apps/v4/registry/new-york-v4/examples/table-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/table-footer.tsx`, `repo-ref/ui/apps/v4/examples/base/table-actions.tsx`, and `repo-ref/ui/apps/v4/examples/base/table-rtl.tsx`.",
         "`Table` still owns the responsive `w-full overflow-x-auto` wrapper outcome, while page/container sizing remains caller-owned.",
-        "`TableHead` and `TableCaption` now expose both compact text constructors (`table_head(...)`, `table_caption(...)`) and composable children helpers (`table_head_children(...)`, `table_caption_children(...)`).",
-        "`TableCell` still stays on a single-child-root surface, but `text_align_end()` now aligns both plain text and a composed child root (for example an actions trigger) without an extra wrapper helper.",
+        "`table(...)`, `table_header(...)`, `table_body(...)`, `table_row(...)`, `table_head(...)`, `table_cell(...)`, and `table_caption(...)` stay the default docs-shaped lane.",
+        "`TableHead` and `TableCaption` expose focused composable helpers (`table_head_children(...)` and `table_caption_children(...)`) for the upstream-shaped children pressure, while `TableCell` intentionally remains a single-child root surface.",
+        "No broader generic root `children(...)` / `compose()` API is warranted here: upstream pressure is already covered by the wrapper family plus the focused head/caption children lane.",
+        "Unlike overlay/listbox components, this pass did not find a separate Radix/Base UI primitive contract to port for `Table`; the remaining drift was recipe/docs-surface work rather than a missing `fret-ui` mechanism.",
+        "`TableCell::text_align_end()` now aligns both plain text and a composed child root (for example an actions trigger) without an extra wrapper helper.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/table.rs`.",
     ]);
     let notes = doc_layout::notes_block([
-        "This review did not indicate a missing `fret-ui` mechanism-layer fix: the remaining drift was in `fret-ui-shadcn` recipe semantics and the gallery teaching surface.",
+        "Preview now mirrors the upstream shadcn Table docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Footer`, `Actions`, `Data Table`, `RTL`, and `API Reference`.",
+        "`Children (Fret)` stays after `API Reference` as an explicit follow-up for the focused `table_head_children(...)` / `table_caption_children(...)` lane instead of widening the whole table family to a generic root children API.",
+        "This pass did not identify a `fret-ui` mechanism or default-style regression: the remaining drift lived in `fret-ui-shadcn` recipe semantics and the UI Gallery teaching surface.",
         "Horizontal overflow handling, header/body/footer ownership, and the handoff to `DataTable` remain in the right layer.",
         "Checkbox-column padding parity, mixed-height body-row vertical centering, and non-text `TableCell::text_align_end()` alignment now all live in `fret-ui-shadcn` recipe defaults without widening any runtime contract.",
     ]);

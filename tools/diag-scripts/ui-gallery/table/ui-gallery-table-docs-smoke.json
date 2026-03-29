@@ -58,6 +58,30 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-usage-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-footer-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-actions-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
         "target": {
           "kind": "test_id",
           "id": "ui-gallery-table-actions-trigger-wireless-mouse"
@@ -93,6 +117,14 @@
           "id": "ui-gallery-table-actions-title"
         },
         "padding_px": 0.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-rtl-content" }
       },
       "timeout_frames": 600
     },
@@ -180,6 +212,17 @@
         "target": {
           "kind": "test_id",
           "id": "ui-gallery-table-children-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-table-notes-content"
         }
       },
       "timeout_frames": 600
