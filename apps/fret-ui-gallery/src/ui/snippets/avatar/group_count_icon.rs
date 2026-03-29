@@ -55,11 +55,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let muted_fg = Theme::global(&*cx.app).color_token("muted-foreground");
     let fg = ColorRef::Color(muted_fg);
-    let count =
-        shadcn::AvatarGroupCount::new([icon(cx, "lucide.plus", Px(18.0), fg).into_element(cx)])
-            .into_element(cx);
+    let count = shadcn::AvatarGroupCount::empty()
+        .children([icon(cx, "lucide.plus", Px(18.0), fg).into_element(cx)])
+        .into_element(cx);
 
-    shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
+    shadcn::AvatarGroup::empty()
+        .children(avatars.into_iter().chain([count]).collect::<Vec<_>>())
         .size(shadcn::AvatarSize::Default)
         .into_element(cx)
         .test_id("ui-gallery-avatar-group-count-icon")

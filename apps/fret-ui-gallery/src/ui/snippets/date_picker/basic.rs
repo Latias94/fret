@@ -1,34 +1,12 @@
 pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
-use super::{default_month, fixed_today};
+use super::{default_month, fixed_today, format_date_ppp_en};
 use fret::{UiChild, UiCx};
 use fret_core::FontWeight;
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
-
-fn format_date_lll_dd_y_en(date: Date) -> String {
-    use time::Month;
-
-    let month = match date.month() {
-        Month::January => "Jan",
-        Month::February => "Feb",
-        Month::March => "Mar",
-        Month::April => "Apr",
-        Month::May => "May",
-        Month::June => "Jun",
-        Month::July => "Jul",
-        Month::August => "Aug",
-        Month::September => "Sep",
-        Month::October => "Oct",
-        Month::November => "Nov",
-        Month::December => "Dec",
-    };
-
-    let day = format!("{:02}", date.day());
-    format!("{month} {day}, {}", date.year())
-}
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let today = fixed_today();
@@ -45,7 +23,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     }
 
     let button_text = selected_now
-        .map(format_date_lll_dd_y_en)
+        .map(format_date_ppp_en)
         .unwrap_or_else(|| String::from("Pick a date"));
 
     shadcn::Field::new([

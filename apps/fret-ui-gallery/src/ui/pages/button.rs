@@ -36,16 +36,20 @@ pub(super) fn preview_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`leading_child(...)` / `trailing_child(...)` are the ergonomic single-node variants for the upstream `data-icon=\"inline-start|inline-end\"` child-composition path.",
         "`leading_children(...)` / `trailing_children(...)` remain available when you need multiple landed nodes on one side.",
         "`child(...)` / `children(...)` are the explicit full content override when you want to replace the entire inner row on purpose.",
-        "`ButtonRender::Link` is the Fret equivalent of the second upstream `Link` section: semantic link rendering stays button-owned instead of widening the public surface with a generic `asChild`/`compose()` API.",
+        "`ButtonRender::Link` is the shared Fret mapping for the Base UI docs' `As Link` section and the Radix docs' `As Child` link example, so semantic link rendering stays button-owned instead of widening the public surface with a generic root `asChild` / `compose()` API.",
+        "No extra generic root `asChild` / composable children API is currently warranted: `leading_child(...)` / `trailing_child(...)` already cover the documented inline icon/spinner lane, `child(...)` / `children(...)` keep the full-row override explicit, and `ButtonRender::Link` covers the semantics-sensitive link escape hatch.",
         "Intrinsic chrome stays recipe-owned; page-level width, wrapping, `flex-1`, `min-w-0`, and fully-rounded one-off examples stay caller-owned refinements.",
     ]);
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/button.rs`.",
-        "Gallery sections now mirror shadcn Button docs first: Demo, Usage, Cursor, Size, Default, Outline, Secondary, Ghost, Destructive, Link, Icon, With Icon, Rounded, Spinner, Button Group, Link (semantic), RTL, API Reference.",
-        "`Children (Fret)` stays after the upstream path to document the landed-element equivalent of JSX child composition without widening `Button` into a generic `asChild` surface.",
+        "Visual chrome stays aligned to the current `new-york-v4` button recipe, while the docs section order follows the published Base / Radix Button pages.",
+        "Gallery sections now mirror shadcn Button docs first: Demo, Usage, Cursor, Size, Default, Outline, Secondary, Ghost, Destructive, Link, Icon, With Icon, Rounded, Spinner, Button Group, As Link / As Child (Semantic), RTL, API Reference.",
+        "`Children (Fret)` stays after the upstream path to document the landed-element equivalent of JSX child composition without widening `Button` into a generic root `asChild` surface.",
         "`Variants Overview (Fret)` stays after the upstream path so existing variant chrome diagnostics remain easy to compare without displacing the docs order.",
-        "The main parity fix here is recipe/public-surface work: logical inline child slots now cover spinner/icon compositions, and the page now stamps stable button-scoped section ids so docs smoke gates can target the real page structure.",
+        "The `RTL` preview keeps the translated upstream row shape and makes the logical slot contract explicit: `trailing_icon(...)` still means inline-end and `leading_child(...)` still means inline-start, so the visual order flips automatically under `DirectionProvider(Rtl)`.",
+        "Icon glyph direction remains caller-owned rather than recipe-owned. The RTL submit example uses `lucide.arrow-left` to match the upstream web example's `ArrowRightIcon` plus `rtl:rotate-180` outcome without introducing a button-specific auto-mirror rule.",
+        "The main parity fix here is recipe/public-surface work: logical inline child slots now cover spinner/icon compositions, the semantic-link lane now bridges both the Base `As Link` and Radix `As Child` docs surfaces, and the page now stamps stable button-scoped section ids so docs smoke gates can target the real page structure.",
     ]);
 
     let cursor = DocSection::build(cx, "Cursor", cursor)
@@ -111,15 +115,17 @@ pub(super) fn preview_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-button-button-group")
         .description("See `ButtonGroup` for grouped actions with shared chrome.")
         .code_rust_from_file_region(snippets::button_group::SOURCE, "example");
-    let link_render = DocSection::build(cx, "Link (Semantic)", link_render)
+    let link_render = DocSection::build(cx, "As Link / As Child (Semantic)", link_render)
         .test_id_prefix("ui-gallery-button-link-semantic")
         .description(
-            "Fret equivalent of the upstream second `Link` example (`buttonVariants` on a semantic link).",
+            "Fret equivalent of the upstream semantic-link lane across both the Base UI `As Link` docs section and the Radix `asChild` link example.",
         )
         .code_rust_from_file_region(snippets::link_render::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
         .test_id_prefix("ui-gallery-button-rtl")
-        .description("Button layout under an RTL direction provider.")
+        .description(
+            "Translated upstream RTL row showing logical inline-start/inline-end slot flipping; icon glyph mirroring stays caller-owned.",
+        )
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let children = DocSection::build(cx, "Children (Fret)", children)
         .test_id_prefix("ui-gallery-button-children")
@@ -133,7 +139,7 @@ pub(super) fn preview_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Button docs order first, then keeps a compact Fret-specific variants overview for fast visual comparison and existing diag coverage.",
+            "Preview mirrors the shadcn Button docs order first while keeping the current `new-york-v4` button chrome baseline and a shared semantic-link lane for the Base `As Link` / Radix `As Child` follow-up.",
         ),
         vec![
             demo,

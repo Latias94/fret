@@ -27,9 +27,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ])
             .into_element(cx),
             shadcn::Field::new([
-                shadcn::FieldLabel::new("تفعيل الإشعارات")
-                    .for_control("ui-gallery-form-switch-rtl")
+                shadcn::FieldContent::new([
+                    shadcn::FieldLabel::new("تفعيل الإشعارات")
+                        .for_control("ui-gallery-form-switch-rtl")
+                        .into_element(cx),
+                    shadcn::FieldDescription::new(
+                        "استخدم هذا الصف لاختبار النص والمحاذاة المنطقية في الحقول الأفقية.",
+                    )
                     .into_element(cx),
+                ])
+                .into_element(cx),
                 shadcn::Switch::new(switch.clone())
                     .control_id("ui-gallery-form-switch-rtl")
                     .a11y_label("تفعيل الإشعارات")

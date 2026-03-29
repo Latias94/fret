@@ -483,8 +483,8 @@ First-party UI Gallery examples already using this rule now include:
 - `src/ui/snippets/sidebar/{demo,controlled,mobile,rtl}.rs::menu_button(...)`
 - `src/ui/snippets/aspect_ratio/{portrait,square,rtl}.rs::{portrait_image(...), square_image(...), rtl_image(...), ratio_example(...)}`
 - `src/ui/snippets/combobox/{long_list,input_group,trigger_button,groups_with_separator,groups,disabled,custom_items,clear_button,invalid}.rs::{state_row(...), state_rows(...)}`
-- `src/ui/snippets/popover/{basic,demo,with_form}.rs::centered(...)`
-- `src/ui/snippets/resizable/{usage,vertical,handle}.rs::panel(...)`
+- `src/ui/snippets/popover/{basic,with_form}.rs::centered(...)`
+- `src/ui/snippets/resizable/{vertical,handle}.rs::panel(...)`
 - `src/ui/snippets/resizable/{vertical,handle}.rs::box_group(...)`
 - `src/ui/snippets/data_table/{basic_demo,default_demo,guide_demo}.rs::align_end(...)`
 - `src/ui/snippets/data_table/{basic_demo,rtl_demo}.rs::bottom_controls(...)`
@@ -498,6 +498,13 @@ First-party UI Gallery examples already using this rule now include:
 - `src/ui/snippets/breadcrumb/dropdown.rs::dot_separator(...)`
 - `src/ui/snippets/carousel/{basic,sizes,plugin_wheel_gestures,spacing_responsive,loop_carousel,loop_downgrade_cannot_loop,spacing,usage,sizes_thirds,parts,duration_embla,rtl,plugin_autoplay,plugin_autoplay_controlled}.rs::{slide_card(...), slide(...)}`
 - `src/ui/snippets/carousel/{options,api,plugin_autoplay_delays,plugin_autoplay_stop_on_last_snap,events}.rs::slide_card(...)`
+
+Some helpers have already moved one step further up the default-app lane because they only serve
+copyable app-facing snippets rather than reusable generic wrappers:
+
+- `src/ui/snippets/popover/demo.rs::{centered(...), row(...)}`
+- `src/ui/snippets/pagination/{compact_builder,custom_text,demo,extras,routing,simple,usage}.rs::page_number(...)`
+- `src/ui/snippets/resizable/usage.rs::panel(...)`
 - `src/ui/snippets/carousel/plugin_autoplay_stop_on_focus.rs::slide(...)`
 - `src/ui/snippets/item/avatar.rs::{icon_button(...), item_team(...)}`
 - `src/ui/snippets/item/icon.rs::{icon(...), item_icon(...)}`

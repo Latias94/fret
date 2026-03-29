@@ -7,7 +7,7 @@ pub(crate) mod shared;
 #[command(
     name = "fretboard diag",
     about = "Diagnostics tooling for the Fret workspace.",
-    after_help = "Examples:\n  fretboard diag poke\n  fretboard diag latest\n  fretboard diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag campaign list --lane smoke --tag ui-gallery",
+    after_help = "Examples:\n  fretboard diag poke\n  fretboard diag latest\n  fretboard diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag suite ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag repro ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag campaign list --lane smoke --tag ui-gallery",
     disable_help_subcommand = true,
     arg_required_else_help = true
 )]
@@ -238,6 +238,49 @@ mod tests {
     fn repeat_contract_requires_a_script_argument() {
         let err = try_parse_contract(["fretboard", "repeat"])
             .expect_err("repeat should require a script");
+        assert_eq!(err.kind(), ErrorKind::MissingRequiredArgument);
+    }
+
+    #[test]
+    fn repeat_contract_rejects_zero_repeat_count() {
+        let err = try_parse_contract(["fretboard", "repeat", "demo.json", "--repeat", "0"])
+            .expect_err("repeat=0 should be rejected");
+        assert_eq!(err.kind(), ErrorKind::ValueValidation);
+    }
+
+    #[test]
+    fn run_contract_rejects_incomplete_devtools_transport_args() {
+        let missing_token = try_parse_contract([
+            "fretboard",
+            "run",
+            "demo.json",
+            "--devtools-ws-url",
+            "ws://127.0.0.1:7331/",
+        ])
+        .expect_err("devtools ws url should require a token");
+        assert_eq!(missing_token.kind(), ErrorKind::MissingRequiredArgument);
+
+        let missing_ws = try_parse_contract([
+            "fretboard",
+            "run",
+            "demo.json",
+            "--devtools-token",
+            "secret",
+        ])
+        .expect_err("devtools token should require a ws url");
+        assert_eq!(missing_ws.kind(), ErrorKind::MissingRequiredArgument);
+    }
+
+    #[test]
+    fn suite_contract_rejects_session_id_without_devtools_ws_url() {
+        let err = try_parse_contract([
+            "fretboard",
+            "suite",
+            "ui-gallery",
+            "--devtools-session-id",
+            "session-1",
+        ])
+        .expect_err("devtools session id should require a ws url");
         assert_eq!(err.kind(), ErrorKind::MissingRequiredArgument);
     }
 
@@ -2273,7 +2316,6 @@ mod tests {
         let cli = try_parse_contract([
             "fretboard",
             "repro",
-            "ui-gallery",
             "tools/diag-scripts/ui-gallery-intro-idle-screenshot.json",
             "--ai-only",
             "--include-screenshots",
@@ -2293,10 +2335,7 @@ mod tests {
 
         assert_eq!(
             args.targets,
-            vec![
-                "ui-gallery".to_string(),
-                "tools/diag-scripts/ui-gallery-intro-idle-screenshot.json".to_string(),
-            ]
+            vec!["tools/diag-scripts/ui-gallery-intro-idle-screenshot.json".to_string()]
         );
         assert!(args.pack.ai_only);
         assert!(args.pack.include_screenshots);
@@ -2516,5 +2555,50 @@ mod tests {
         assert!(triage_help.contains("--metric"));
         assert!(windows_help.contains("--warmup-frames"));
         assert!(windows_help.contains("Usage: fretboard diag windows"));
+    }
+
+    #[test]
+    fn high_risk_main_lane_help_has_drift_guards() {
+        let diag_help = render_command_help_path(&[]).expect("diag root help");
+        let run_help = render_command_help("run").expect("run help");
+        let suite_help = render_command_help("suite").expect("suite help");
+        let repro_help = render_command_help("repro").expect("repro help");
+        let perf_help = render_command_help("perf").expect("perf help");
+        let campaign_run_help =
+            render_command_help_path(&["campaign", "run"]).expect("campaign run help");
+
+        assert!(diag_help.contains(
+            "fretboard diag suite ui-gallery --launch -- cargo run -p fret-ui-gallery --release"
+        ));
+        assert!(diag_help.contains(
+            "fretboard diag repro ui-gallery --launch -- cargo run -p fret-ui-gallery --release"
+        ));
+
+        assert!(run_help.contains("Usage: fretboard diag run"));
+        assert!(run_help.contains("--launch"));
+        assert!(run_help.contains("--reuse-launch"));
+        assert!(run_help.contains("--devtools-ws-url"));
+        assert!(run_help.contains("--exit-after-run"));
+
+        assert!(suite_help.contains("Usage: fretboard diag suite"));
+        assert!(suite_help.contains("--script-dir"));
+        assert!(suite_help.contains("--glob"));
+        assert!(suite_help.contains("--reuse-launch"));
+        assert!(suite_help.contains("--launch"));
+
+        assert!(repro_help.contains("Usage: fretboard diag repro"));
+        assert!(repro_help.contains("--pack-out"));
+        assert!(repro_help.contains("--ai-only"));
+        assert!(repro_help.contains("--trace-chrome"));
+
+        assert!(perf_help.contains("Usage: fretboard diag perf"));
+        assert!(perf_help.contains("--prewarm-script"));
+        assert!(perf_help.contains("--perf-threshold-agg"));
+        assert!(perf_help.contains("--reuse-launch"));
+
+        assert!(campaign_run_help.contains("Usage: fretboard diag campaign run"));
+        assert!(campaign_run_help.contains("--lane"));
+        assert!(campaign_run_help.contains("--platform"));
+        assert!(campaign_run_help.contains("--launch"));
     }
 }

@@ -29,7 +29,7 @@ base example implementations in `repo-ref/ui`.
 - Pass: `ButtonGroup::new(...)` covers the primary upstream composition model for grouped action buttons.
 - Pass: `ButtonGroup::a11y_label(...)` and `ButtonGroup::labelled_by_element(...)` cover the upstream `aria-label` / `aria-labelledby` accessibility guidance without introducing DOM-only ids.
 - Pass: `ButtonGroupSeparator::new().orientation(...)` maps directly to the documented separator surface.
-- Pass: `ButtonGroupText::new(...)` and `ButtonGroupText::children(...)` cover the upstream `ButtonGroupText` use cases without adding a generic `asChild` slot merge surface.
+- Pass: `ButtonGroupText::new(...)`, `new_children(...)`, and `children(...)` cover the upstream `ButtonGroupText` use cases; `Label::for_control(...)` inside `ButtonGroupText::new_children(...)` maps the upstream `asChild` label example without adding a generic `asChild` slot merge surface.
 - Pass: first-party composition examples now also follow the child family defaults: the embedded
   `InputGroup` example uses the compact slot shorthand, and the embedded `Select` example uses the
   compact direct root chain instead of reintroducing child-family parts adapters inside
@@ -45,7 +45,7 @@ base example implementations in `repo-ref/ui`.
 ### Gallery / docs parity
 
 - Pass: The gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Accessibility`, `ButtonGroup vs ToggleGroup`, the example set through `RTL`, and `API Reference`.
-- Pass: `ButtonGroupText` appears as an explicit follow-up section after `API Reference`, which keeps the page source-comparable while still giving Fret a copyable equivalent for the upstream `ButtonGroupText` API examples.
+- Pass: `ButtonGroupText` appears as an explicit follow-up section after `API Reference`, which keeps the page source-comparable while still giving Fret a copyable equivalent for the upstream `ButtonGroupText` API examples, including the `asChild` label lane via `new_children(...)` + `Label::for_control(...)`.
 - Pass: `Flex-1 items` remains a Fret-specific extension after the upstream path because it demonstrates caller-owned flex negotiation rather than intrinsic recipe behavior.
 
 ## Validation

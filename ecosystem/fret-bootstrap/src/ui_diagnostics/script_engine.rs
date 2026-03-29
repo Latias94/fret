@@ -1217,6 +1217,8 @@ pub(super) fn dispatch_drive_script_step(
         step @ UiActionStepV2::SetSliderValue { .. } => {
             let handled = script_steps_slider::handle_set_slider_value_step(
                 service,
+                app,
+                services,
                 window,
                 window_bounds,
                 step_index,

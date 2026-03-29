@@ -10,7 +10,7 @@
     "target_hints": [
       "Sets theme preset to zinc/light.",
       "Boots the UI gallery directly on the Context Menu page.",
-      "Opens the Top/Right/Bottom/Left side examples and asserts overlay placement trace stays on the requested side without flipping."
+      "Opens the InlineStart/Left/Top/Bottom/Right/InlineEnd side examples and asserts overlay placement trace stays on the requested LTR-resolved side without flipping."
     ]
   },
   "steps": [
@@ -34,6 +34,54 @@
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-context-menu" } },
       "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-inline-start-trigger" },
+      "delta_y": -200.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "padding_insets_px": { "left_px": 16.0, "top_px": 240.0, "right_px": 16.0, "bottom_px": 240.0 },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "reset_diagnostics" },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-inline-start-trigger" } },
+    { "type": "click", "button": "right", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-inline-start-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-inline-start-content" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "anchored_panel",
+        "content_test_id": "ui-gallery-context-menu-sides-inline-start-content",
+        "preferred_side": "left",
+        "chosen_side": "left",
+        "flipped": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-inline-start-content" },
+        "padding_px": 2.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-inline-start-content" } },
+      "timeout_frames": 240
     },
 
     {
@@ -216,6 +264,54 @@
       "predicate": {
         "kind": "bounds_within_window",
         "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-left-content" },
+        "padding_px": 2.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-left-content" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-inline-end-trigger" },
+      "delta_y": -200.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "padding_insets_px": { "left_px": 16.0, "top_px": 240.0, "right_px": 16.0, "bottom_px": 240.0 },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "reset_diagnostics" },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-inline-end-trigger" } },
+    { "type": "click", "button": "right", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-inline-end-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-inline-end-content" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "anchored_panel",
+        "content_test_id": "ui-gallery-context-menu-sides-inline-end-content",
+        "preferred_side": "right",
+        "chosen_side": "right",
+        "flipped": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-sides-inline-end-content" },
         "padding_px": 2.0,
         "eps_px": 0.5
       },

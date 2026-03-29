@@ -38,6 +38,11 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 "Spacing parity depends on pairing `track_start_neg_margin` with `item_padding_start` (shadcn `-ml-*` + `pl-*`).",
                 "The follow-up sections below keep the Fret shorthand and the engine-facing regression harnesses visible without changing the upstream docs path.",
             ]);
+        let examples = doc_layout::notes_block([
+                "Gallery collapses the upstream top-of-page `ComponentPreview` into `Demo` and skips `Installation`, because the UI Gallery teaches live Rust surfaces rather than package-install steps.",
+                "The upstream docs group `Sizes`, `Spacing`, and `Orientation` under `Examples`; Gallery keeps that heading explicit here, then splits the multi-code-block `Sizes` / `Spacing` docs into separately previewable sections.",
+                "The first `Sizes` example maps the fixed `basis-1/3` code block, `Sizes (Responsive)` mirrors the docs preview (`md:basis-1/2` / `lg:basis-1/3`), and `Orientation` keeps the vertical preview shown upstream.",
+            ]);
         let fret_follow_ups = doc_layout::notes_block([
                 "The upstream shadcn docs stop after `RTL`; the sections below stay on the page to document Fret-specific authoring shortcuts and regression harnesses without diluting that docs path.",
                 "`Basic` remains a gallery follow-up baseline preview because the upstream docs jump straight from `Usage` into the `Sizes` examples instead of showing a separate single-slide baseline section.",
@@ -55,12 +60,16 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 "Docs-path snippets keep the upstream `w_full().max_w(...)` width lane on the carousel root itself; diagnostics follow-ups may switch to fixed-width shells (`w_px(...)`) when deterministic control geometry matters more than copyable docs parity.",
                 "For the common `setApi` docs outcome (slide counter / can-prev / can-next status), prefer `api_snapshot_model(...)`; reserve `api_handle_model(...)` + `CarouselEventCursor` for explicit event-stream examples such as `Events`.",
                 "Carousel chrome, buttons, and the Embla-style headless behaviors stay recipe-owned; surrounding width/height negotiation and breakpoint choices remain caller-owned.",
-                "We intentionally do not add a generic heterogeneous children API here: the upstream-shaped usage lane plus the compact shorthand already cover the shadcn authoring shapes without reopening another default teaching surface.",
+                "We intentionally do not add a generic heterogeneous `children([...])` API here: unlike overlay/provider families, carousel parts do not need a live scope before landing, and `Carousel::new(items)` plus `into_element_parts_content(...)` already cover the compact Fret shorthand and the upstream-shaped parts lane without widening the default teaching surface.",
             ]);
         let about = DocSection::build(cx, "About", about)
             .description("Background, ownership notes, and why extra diagnostics sections exist.")
             .no_shell()
             .test_id_prefix("ui-gallery-carousel-about");
+        let examples = DocSection::build(cx, "Examples", examples)
+            .description("How the upstream example group maps onto the previewable sections below.")
+            .no_shell()
+            .test_id_prefix("ui-gallery-carousel-examples");
         let fret_follow_ups = DocSection::build(cx, "Fret Follow-ups", fret_follow_ups)
             .description(
                 "Why the page continues after the upstream docs path and how the follow-up sections are grouped.",
@@ -95,12 +104,12 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .description("A minimal baseline (basis-full) on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-basic")
             .code_rust_from_file_region(snippets::basic::SOURCE, "example");
-        let sizes_thirds = DocSection::build(cx, "Sizes (1/3)", sizes_thirds)
-            .description("Fixed slide width (shadcn `basis-1/3`) on the compact builder lane.")
+        let sizes_thirds = DocSection::build(cx, "Sizes", sizes_thirds)
+            .description("First upstream `Sizes` code block: fixed `basis-1/3` items on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-sizes-thirds")
             .code_rust_from_file_region(snippets::sizes_thirds::SOURCE, "example");
-        let sizes = DocSection::build(cx, "Sizes", sizes)
-            .description("Three active items (`basis-1/3`) to mirror the docs layout on the compact builder lane.")
+        let sizes = DocSection::build(cx, "Sizes (Responsive)", sizes)
+            .description("Second upstream `Sizes` example / preview: `md:basis-1/2 lg:basis-1/3` on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-sizes")
             .code_rust_from_file_region(snippets::sizes::SOURCE, "example");
         let spacing = DocSection::build(cx, "Spacing", spacing)
@@ -117,8 +126,8 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .test_id_prefix("ui-gallery-carousel-spacing-responsive")
                 .code_rust_from_file_region(snippets::spacing_responsive::SOURCE, "example");
         let orientation_vertical =
-            DocSection::build(cx, "Orientation (Vertical)", orientation_vertical)
-                .description("A vertical carousel (orientation=\"vertical\") on the compact builder lane.")
+            DocSection::build(cx, "Orientation", orientation_vertical)
+                .description("Upstream orientation preview: `orientation=\"vertical\"` plus start-aligned snaps on the compact builder lane.")
                 .test_id_prefix("ui-gallery-carousel-orientation-vertical")
                 .code_rust_from_file_region(snippets::orientation_vertical::SOURCE, "example");
         let options = DocSection::build(cx, "Options", options)
@@ -133,8 +142,8 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .description("Listen to select/reInit events (`api_handle_model` + `CarouselEventCursor`, equivalent to shadcn `api.on(...)`); the status rows make the example self-verifying in Gallery, and the named controls stay only for diagnostics.")
             .test_id_prefix("ui-gallery-carousel-events")
             .code_rust_from_file_region(snippets::events::DOCS_SOURCE, "example");
-        let plugin = DocSection::build(cx, "Plugin (Autoplay)", plugin)
-            .description("Autoplay docs parity: `plugins=[Autoplay(...)]` plus hover pause/reset; the self-drawn example maps the docs' DOM hover handlers onto a hover region while staying on the compact builder lane.")
+        let plugin = DocSection::build(cx, "Plugins", plugin)
+            .description("Upstream plugin section preview: autoplay via `plugins=[Autoplay(...)]` plus hover pause/reset; the self-drawn example maps the docs' DOM hover handlers onto a hover region while staying on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-plugin")
             .code_rust_from_file_region(snippets::plugin_autoplay::DOCS_SOURCE, "example");
         let plugin_controlled =
@@ -226,12 +235,13 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         let body = doc_layout::render_doc_page(
             cx,
             Some(
-                "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Sizes/Spacing/Orientation), Options, API, Events, Plugin, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Basic`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`.",
+                "Preview mirrors the shadcn Carousel docs structure after collapsing the top preview into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Examples`, `Options`, `API`, `Events`, `Plugins`, and `RTL`. Under `Examples`, Gallery keeps the upstream sub-cases explicit: `Sizes`, `Sizes (Responsive)`, `Spacing`, `Spacing (Responsive)`, and `Orientation`. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Basic`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`.",
             ),
             vec![
                 demo,
                 about,
                 usage,
+                examples,
                 sizes_thirds,
                 sizes,
                 spacing,

@@ -1309,7 +1309,11 @@ fn menu_row_children<H: UiHost>(
             }
 
             if has_submenu {
-                row.push(submenu_chevron_right_text(cx, text_fg, text_style.clone()));
+                row.push(submenu_chevron_inline_end_text(
+                    cx,
+                    text_fg,
+                    text_style.clone(),
+                ));
             }
 
             vec![cx.flex(
@@ -1384,7 +1388,7 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 
-fn submenu_chevron_right_text<H: UiHost>(
+fn submenu_chevron_inline_end_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     fg: Color,
     _text_style: TextStyle,
@@ -4346,6 +4350,28 @@ mod tests {
             .find_map(find_first_inherited_foreground_node)
     }
 
+    fn find_first_svg_icon_props(el: &AnyElement) -> Option<&fret_ui::element::SvgIconProps> {
+        match &el.kind {
+            fret_ui::element::ElementKind::SvgIcon(props) => Some(props),
+            _ => el.children.iter().find_map(find_first_svg_icon_props),
+        }
+    }
+
+    fn svg_sources_match(lhs: &fret_ui::SvgSource, rhs: &fret_ui::SvgSource) -> bool {
+        match (lhs, rhs) {
+            (fret_ui::SvgSource::Id(lhs), fret_ui::SvgSource::Id(rhs)) => lhs == rhs,
+            (fret_ui::SvgSource::Static(lhs), fret_ui::SvgSource::Static(rhs)) => lhs == rhs,
+            (fret_ui::SvgSource::Bytes(lhs), fret_ui::SvgSource::Bytes(rhs)) => {
+                lhs.as_ref() == rhs.as_ref()
+            }
+            (fret_ui::SvgSource::Static(lhs), fret_ui::SvgSource::Bytes(rhs))
+            | (fret_ui::SvgSource::Bytes(rhs), fret_ui::SvgSource::Static(lhs)) => {
+                *lhs == rhs.as_ref()
+            }
+            _ => false,
+        }
+    }
+
     #[test]
     fn menubar_modal_builder_updates_flag() {
         let menubar = Menubar::new(std::iter::empty::<MenubarMenuEntries>()).modal(true);
@@ -4501,6 +4527,51 @@ mod tests {
                 "expected menubar row to attach inherited foreground without inserting a ForegroundScope"
             );
         });
+    }
+
+    #[test]
+    fn menubar_submenu_chevron_tracks_inline_end_direction() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        for dir in [
+            crate::direction::LayoutDirection::Ltr,
+            crate::direction::LayoutDirection::Rtl,
+        ] {
+            let element =
+                fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+                    crate::direction::with_direction_provider(cx, dir, |cx| {
+                        submenu_chevron_inline_end_text(
+                            cx,
+                            Color {
+                                r: 1.0,
+                                g: 1.0,
+                                b: 1.0,
+                                a: 1.0,
+                            },
+                            TextStyle::default(),
+                        )
+                    })
+                });
+
+            let icon = find_first_svg_icon_props(&element)
+                .expect("expected menubar submenu chevron helper to render an SvgIcon");
+            let expected = fret_ui_kit::declarative::icon::resolve_svg_source_from_globals(
+                &mut app,
+                &rtl::chevron_inline_end(dir),
+                "menubar_submenu_chevron_tracks_inline_end_direction",
+            );
+
+            assert!(
+                svg_sources_match(&icon.svg, &expected),
+                "expected menubar submenu chevron to point toward inline-end for {dir:?}; actual={:?} expected={expected:?}",
+                icon.svg,
+            );
+        }
     }
 
     #[derive(Default)]

@@ -76,14 +76,15 @@ Evidence anchors:
 
 ## 5) Residual work policy
 
-Residual hardening still exists, but it is no longer tracked as “unfinished parser reset” work in
-this lane.
-
-It is split into narrow follow-up lanes in `docs/workstreams/diag-cli-fearless-refactor-v1/FOLLOWUPS.md`:
+Residual hardening from the parser reset was split into narrow follow-up lanes in
+`docs/workstreams/diag-cli-fearless-refactor-v1/FOLLOWUPS.md`:
 
 - main execution lane hardening
 - first-party caller migration
 - help snapshots and smoke gates
+
+Those follow-up lanes are now closeout-ready as well. Any future `diag` CLI contract work should
+start in a new narrowly scoped workstream rather than reopening this parser reset lane.
 
 ## 6) Closeout decision
 

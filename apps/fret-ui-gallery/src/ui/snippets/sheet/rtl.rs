@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -22,8 +21,8 @@ fn profile_fields<H: UiHost>(
 
     shadcn::FieldSet::new(ui::children![
         cx;
-        field(cx, "Name", name),
-        field(cx, "Username", username)
+        field(cx, "الاسم", name),
+        field(cx, "اسم المستخدم", username)
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
@@ -41,11 +40,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .side(shadcn::SheetSide::Left)
             .children([
                 shadcn::SheetPart::trigger(shadcn::SheetTrigger::build(
-                    shadcn::Button::new("Open")
+                    shadcn::Button::new("فتح")
                         .variant(shadcn::ButtonVariant::Outline)
                         .test_id("ui-gallery-sheet-rtl-trigger"),
                 )),
-                shadcn::SheetPart::content(shadcn::SheetContent::build(move |cx, out| {
+                shadcn::SheetPart::content_with(move |cx| {
                     let fields = {
                         let fields = profile_fields(cx, name_model.clone(), username_model.clone())
                             .into_element(cx);
@@ -61,32 +60,32 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         cx.container(props, move |_cx| vec![fields])
                     };
 
-                    out.push_ui(
-                        cx,
-                        shadcn::SheetHeader::build(|cx, out| {
-                            out.push_ui(cx, shadcn::SheetTitle::new("Edit profile"));
-                            out.push_ui(
-                                cx,
-                                shadcn::SheetDescription::new(
-                                    "RTL layout keeps spacing and focus flow aligned.",
-                                ),
-                            );
-                        }),
-                    );
-                    out.push(fields);
-                    out.push_ui(
-                        cx,
-                        shadcn::SheetFooter::build(|cx, out| {
-                            out.push_ui(cx, shadcn::Button::new("Save changes"));
-                            let close = shadcn::SheetClose::from_scope().build(
-                                cx,
-                                shadcn::Button::new("Close")
-                                    .variant(shadcn::ButtonVariant::Outline),
-                            );
-                            out.push(close);
-                        }),
-                    );
-                })),
+                    shadcn::SheetContent::new([]).with_children(cx, |cx| {
+                        vec![
+                            shadcn::SheetHeader::new([]).with_children(cx, |cx| {
+                                vec![
+                                    shadcn::SheetTitle::new("تعديل الملف الشخصي")
+                                        .into_element(cx),
+                                    shadcn::SheetDescription::new(
+                                        "قم بإجراء تغييرات على ملفك الشخصي هنا. انقر حفظ عند الانتهاء.",
+                                    )
+                                    .into_element(cx),
+                                ]
+                            }),
+                            fields,
+                            shadcn::SheetFooter::new([]).with_children(cx, |cx| {
+                                vec![
+                                    shadcn::Button::new("حفظ التغييرات").into_element(cx),
+                                    shadcn::SheetClose::from_scope().build(
+                                        cx,
+                                        shadcn::Button::new("إغلاق")
+                                            .variant(shadcn::ButtonVariant::Outline),
+                                    ),
+                                ]
+                            }),
+                        ]
+                    })
+                }),
             ])
             .into_element(cx)
     })

@@ -13,29 +13,27 @@ pub(super) fn preview_separator(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`Separator::new()`, `Separator::orientation(...)`, and `Separator::decorative(...)` cover the public surface that matters for shadcn/Radix/Base UI parity.",
-        "shadcn-style separators stay decorative by default; opt into `.decorative(false)` only when the divider should participate in the accessibility tree as a real separator.",
-        "Vertical separators now translate the upstream `data-vertical:self-stretch` policy directly on the shadcn recipe surface, so callers own surrounding row height but should not need to restate self-stretch in normal docs-path usage.",
-        "Separator remains a leaf primitive: surrounding width/height negotiation stays caller-owned, while the 1px rule chrome and vertical self-stretch default stay recipe-owned.",
-        "No extra generic `children` / `compose()` / `asChild` surface is needed here because upstream composition happens around the separator rather than through the separator itself.",
+        "Docs path: `repo-ref/ui/apps/v4/content/docs/components/base/separator.mdx`; recipe sources: `repo-ref/ui/apps/v4/registry/bases/base/ui/separator.tsx` and `repo-ref/ui/apps/v4/registry/bases/radix/ui/separator.tsx`; headless references: `repo-ref/primitives/packages/react/separator/src/separator.tsx` and `repo-ref/base-ui/packages/react/src/separator/Separator.tsx`.",
+        "`fret_ui_kit::primitives::separator::Separator` owns the mechanism layer: orientation, separator semantics, and decorative hiding. `fret_ui_shadcn::Separator` owns the recipe defaults (`shrink-0`, 1px rule chrome, and the vertical self-stretch mapping).",
+        "`Separator::new()`, `Separator::orientation(...)`, and `Separator::decorative(...)` cover the public surface Fret needs for shadcn/Radix/Base UI parity. Fret keeps the Radix-aligned `.decorative(...)` knob on the shadcn lane even though the current Base UI docs axis does not surface that prop explicitly.",
+        "Vertical recipe parity maps upstream `data-vertical:self-stretch` to `align-self: stretch` plus auto cross-axis sizing, so surrounding row height remains caller-owned while the separator still stretches correctly in docs-style flex rows.",
+        "No generic composable children / `compose()` / `asChild` surface is warranted here because separator is a leaf primitive. Base UI's `render` prop is a tag-swap seam, not a content-owned children API.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .description("Public surface summary and ownership notes.");
 
     let demo = DocSection::build(cx, "Demo", demo)
-        .description(
-            "Official top-of-page preview from the docs: horizontal copy plus a vertical nav lane.",
-        )
+        .description("Official top-of-page preview from the current Base docs path.")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Copyable minimal usage for a decorative separator; use `.decorative(false)` only when the divider should be announced.")
+        .description("Copyable minimal usage for the default separator; use `.decorative(false)` when the divider should be announced.")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let vertical = DocSection::build(cx, "Vertical", vertical)
         .description("Use `orientation=vertical`; the shadcn surface already carries the upstream self-stretch default.")
         .code_rust_from_file_region(snippets::vertical::SOURCE, "example");
     let menu = DocSection::build(cx, "Menu", menu)
-        .description("Vertical separators between menu-like items with descriptions.")
+        .description("Responsive menu example: the trailing Help section and second divider appear from `md` upward, matching the docs composition.")
         .code_rust_from_file_region(snippets::menu::SOURCE, "example");
     let list = DocSection::build(cx, "List", list)
         .description("Horizontal separators between list items.")
@@ -47,7 +45,7 @@ pub(super) fn preview_separator(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Separator docs path first: Demo, Usage, Vertical, Menu, List, RTL, and API Reference.",
+            "Preview mirrors the current shadcn Base Separator docs path first: Demo, Usage, Vertical, Menu, List, RTL, and API Reference. The API Reference also calls out the Radix/Base UI split behind `decorative(...)`.",
         ),
         vec![demo, usage, vertical, menu, list, rtl, api_reference],
     );

@@ -6,7 +6,7 @@
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
       "Navigates to the Select page via the left nav search.",
-      "Captures representative screenshots for the docs-aligned path plus the Fret-only composable parts and rich items sections, including their code tabs."
+      "Captures the docs-path sections first (`Demo` through `API Reference`), then the Fret-only composable parts and rich items sections, including their code tabs."
     ]
   },
   "steps": [
@@ -67,7 +67,7 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-select-composable-parts-content" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-align-item-content" },
       "delta_y": -120.0,
       "require_fully_within_container": true,
       "require_fully_within_window": true,
@@ -75,15 +75,12 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.03-composable-parts-preview" },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-select-composable-parts-tabs-trigger-code" } },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.04-composable-parts-code" },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.03-align-item" },
 
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-select-rich-items-content" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-groups-content" },
       "delta_y": -120.0,
       "require_fully_within_container": true,
       "require_fully_within_window": true,
@@ -91,10 +88,59 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.05-rich-items-preview" },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-select-rich-items-tabs-trigger-code" } },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.04-groups" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.06-rich-items-code" },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.05-scrollable" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-disabled-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.06-disabled" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-invalid-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.07-invalid" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-rtl-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.08-rtl" },
 
     {
       "type": "scroll_into_view",
@@ -107,7 +153,39 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.07-api-reference" },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.09-api-reference" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-composable-parts-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.10-composable-parts-preview" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-select-composable-parts-tabs-trigger-code" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.11-composable-parts-code" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-rich-items-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.12-rich-items-preview" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-select-rich-items-tabs-trigger-code" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.13-rich-items-code" },
     { "type": "capture_bundle", "label": "ui-gallery-select-docs" }
   ]
 }

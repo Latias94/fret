@@ -36,6 +36,7 @@ base examples, and the current gallery/docs surface.
 - Pass: No extra generic `compose()` API is needed here because the parts/primitives surfaces already cover the free-form shadcn/Base UI composition model, while the top-level wrapper stays a compact Fret-first builder.
 - Pass: Supports a controlled open state (`Model<bool>`).
 - Pass: Supports uncontrolled `default_open` via `Collapsible::uncontrolled(...)`.
+- Pass: `CollapsibleContentPart` keeps `gap=0` and start-aligned children by default, so width/flex negotiation stays caller-owned like the upstream unstyled panel surface instead of introducing an implicit stretch policy.
 
 ### A11y and motion behavior
 

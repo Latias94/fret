@@ -2,41 +2,28 @@ use std::path::{Path, PathBuf};
 
 use crate::cli::workspace_root;
 
-pub(crate) fn hotpatch_cmd(args: Vec<String>) -> Result<(), String> {
-    let mut it = args.into_iter();
-    match it.next().as_deref() {
-        Some("poke") => {
-            let path = parse_hotpatch_path_arg(&mut it)?;
-            hotpatch_poke(path.as_deref())
-        }
-        Some("path") => {
+pub(crate) mod contracts;
+
+use self::contracts::{
+    HotpatchActionContract, HotpatchCommandArgs, HotpatchStatusCommandArgs,
+    HotpatchWatchCommandArgs,
+};
+
+pub(crate) fn run_hotpatch_contract(args: HotpatchCommandArgs) -> Result<(), String> {
+    match args.action {
+        HotpatchActionContract::Poke(args) => hotpatch_poke(args.path.as_deref()),
+        HotpatchActionContract::Path(args) => {
             let root = workspace_root()?;
-            let path = parse_hotpatch_path_arg(&mut it)?;
-            let path = path
+            let path = args
+                .path
                 .as_deref()
                 .map(|p| resolve_workspace_relative(&root, p))
                 .unwrap_or_else(|| hotpatch_trigger_path(&root));
             println!("{}", path.display());
             Ok(())
         }
-        Some("status") => hotpatch_status(it.collect()),
-        Some("watch") => hotpatch_watch(it.collect()),
-        Some("help") | Some("-h") | Some("--help") | None => {
-            println!(
-                r#"Usage:
-  fretboard hotpatch poke [--path <path>]   # update the trigger file (causes runner reload when enabled)
-  fretboard hotpatch path [--path <path>]   # print the trigger file path
-  fretboard hotpatch status [--tail <n>]    # show hotpatch-related log tails (read-only)
-  fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]
-
-Notes:
-  - Requires running the app with `--hotpatch` (sets `FRET_HOTPATCH=1`).
-  - The runner watches `FRET_HOTPATCH_TRIGGER_PATH` (default: `.fret/hotpatch.touch`).
-  - `watch` is polling-based and ignores `target/`, `.git/`, `.fret/`, and `repo-ref/`."#
-            );
-            Ok(())
-        }
-        Some(other) => Err(format!("unknown hotpatch subcommand: {other}")),
+        HotpatchActionContract::Status(args) => hotpatch_status(args),
+        HotpatchActionContract::Watch(args) => hotpatch_watch(args),
     }
 }
 
@@ -66,24 +53,9 @@ fn hotpatch_bootstrap_log_paths(workspace_root: &Path) -> Vec<PathBuf> {
     paths
 }
 
-fn hotpatch_status(args: Vec<String>) -> Result<(), String> {
+fn hotpatch_status(args: HotpatchStatusCommandArgs) -> Result<(), String> {
     let root = workspace_root()?;
-
-    let mut tail: usize = 40;
-
-    let mut it = args.into_iter();
-    while let Some(a) = it.next() {
-        match a.as_str() {
-            "--tail" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--tail requires a value".to_string())?;
-                tail = raw.parse::<usize>().map_err(|e| e.to_string())?;
-            }
-            "--help" | "-h" => return Ok(()),
-            other => return Err(format!("unknown argument for hotpatch status: {other}")),
-        }
-    }
+    let tail = args.tail;
 
     println!("Hotpatch status (read-only):");
     println!("  workspace: {}", root.display());
@@ -234,47 +206,14 @@ pub(crate) fn ensure_hotpatch_trigger_file_poked(path: &Path) -> Result<(), Stri
     Ok(())
 }
 
-fn hotpatch_watch(args: Vec<String>) -> Result<(), String> {
+fn hotpatch_watch(args: HotpatchWatchCommandArgs) -> Result<(), String> {
     let root = workspace_root()?;
 
-    let mut watch_paths: Vec<String> = Vec::new();
-    let mut trigger_path: Option<String> = None;
-    let mut poll_ms: u64 = 500;
-    let mut debounce_ms: u64 = 200;
-
-    let mut it = args.into_iter();
-    while let Some(a) = it.next() {
-        match a.as_str() {
-            "--path" => {
-                watch_paths.push(
-                    it.next()
-                        .ok_or_else(|| "--path requires a value".to_string())?,
-                );
-            }
-            "--trigger-path" => {
-                trigger_path = Some(
-                    it.next()
-                        .ok_or_else(|| "--trigger-path requires a value".to_string())?,
-                );
-            }
-            "--poll-ms" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--poll-ms requires a value".to_string())?;
-                poll_ms = raw.parse::<u64>().map_err(|e| e.to_string())?;
-            }
-            "--debounce-ms" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--debounce-ms requires a value".to_string())?;
-                debounce_ms = raw.parse::<u64>().map_err(|e| e.to_string())?;
-            }
-            "--help" | "-h" => return Ok(()),
-            other => return Err(format!("unknown argument for hotpatch watch: {other}")),
-        }
-    }
-
-    let trigger_path = trigger_path.as_deref().unwrap_or(".fret/hotpatch.touch");
+    let watch_paths = args.paths;
+    let trigger_path = args
+        .trigger_path
+        .as_deref()
+        .unwrap_or(".fret/hotpatch.touch");
     let trigger_path = resolve_workspace_relative(&root, trigger_path);
     ensure_hotpatch_trigger_file_initialized(&trigger_path)?;
 
@@ -293,8 +232,8 @@ fn hotpatch_watch(args: Vec<String>) -> Result<(), String> {
 
     eprintln!("Hotpatch watch: polling sources and poking trigger file on change");
     eprintln!("  trigger: {}", trigger_path.display());
-    eprintln!("  poll_ms: {poll_ms}");
-    eprintln!("  debounce_ms: {debounce_ms}");
+    eprintln!("  poll_ms: {}", args.poll_ms);
+    eprintln!("  debounce_ms: {}", args.debounce_ms);
     for p in &watch_roots {
         eprintln!("  watch: {}", p.display());
     }
@@ -303,7 +242,7 @@ fn hotpatch_watch(args: Vec<String>) -> Result<(), String> {
     let mut last_poke_at: Option<std::time::Instant> = None;
 
     loop {
-        std::thread::sleep(std::time::Duration::from_millis(poll_ms));
+        std::thread::sleep(std::time::Duration::from_millis(args.poll_ms));
         let sig = scan_watch_signature(&watch_roots)?;
         if sig == last_sig {
             continue;
@@ -311,9 +250,9 @@ fn hotpatch_watch(args: Vec<String>) -> Result<(), String> {
         last_sig = sig;
 
         let now = std::time::Instant::now();
-        if last_poke_at
-            .is_some_and(|t| now.duration_since(t) < std::time::Duration::from_millis(debounce_ms))
-        {
+        if last_poke_at.is_some_and(|t| {
+            now.duration_since(t) < std::time::Duration::from_millis(args.debounce_ms)
+        }) {
             continue;
         }
 
@@ -416,25 +355,6 @@ fn system_time_to_ns(t: std::time::SystemTime) -> u128 {
         .unwrap_or(0)
 }
 
-fn parse_hotpatch_path_arg(
-    it: &mut impl Iterator<Item = String>,
-) -> Result<Option<String>, String> {
-    let mut path: Option<String> = None;
-    while let Some(a) = it.next() {
-        match a.as_str() {
-            "--path" => {
-                path = Some(
-                    it.next()
-                        .ok_or_else(|| "--path requires a value".to_string())?,
-                );
-            }
-            "--help" | "-h" => return Ok(None),
-            other => return Err(format!("unknown argument for hotpatch command: {other}")),
-        }
-    }
-    Ok(path)
-}
-
 pub(crate) fn resolve_workspace_relative(workspace_root: &Path, raw: &str) -> PathBuf {
     let path = Path::new(raw);
     if path.is_absolute() {
@@ -458,5 +378,41 @@ pub(crate) fn parse_hotpatch_build_id(raw: &str) -> Result<HotpatchBuildIdArg, S
         other => Ok(HotpatchBuildIdArg::Value(
             other.parse::<u64>().map_err(|e| e.to_string())?,
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::contracts::HotpatchStatusCommandArgs;
+
+    use super::{parse_hotpatch_build_id, system_time_to_ns};
+
+    #[test]
+    fn parse_hotpatch_build_id_supports_keywords_and_numeric_values() {
+        assert!(matches!(
+            parse_hotpatch_build_id("auto"),
+            Ok(super::HotpatchBuildIdArg::Auto)
+        ));
+        assert!(matches!(
+            parse_hotpatch_build_id("none"),
+            Ok(super::HotpatchBuildIdArg::None)
+        ));
+        assert!(matches!(
+            parse_hotpatch_build_id("42"),
+            Ok(super::HotpatchBuildIdArg::Value(42))
+        ));
+    }
+
+    #[test]
+    fn hotpatch_status_defaults_tail_from_typed_args() {
+        let args = HotpatchStatusCommandArgs { tail: 40 };
+        assert_eq!(args.tail, 40);
+    }
+
+    #[test]
+    fn system_time_to_ns_is_monotonic_for_epoch_plus_one_second() {
+        let epoch = std::time::UNIX_EPOCH;
+        let later = epoch + std::time::Duration::from_secs(1);
+        assert!(system_time_to_ns(later) > system_time_to_ns(epoch));
     }
 }

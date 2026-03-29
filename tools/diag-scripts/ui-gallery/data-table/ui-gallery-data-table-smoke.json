@@ -130,6 +130,20 @@
       "type": "wait_until"
     },
     {
+      "container": {
+        "id": "ui-gallery-content-scroll",
+        "kind": "test_id"
+      },
+      "delta_y": -120.0,
+      "padding_px": 16.0,
+      "target": {
+        "id": "ui-gallery-data-table-cell-1-name",
+        "kind": "test_id"
+      },
+      "timeout_frames": 600,
+      "type": "scroll_into_view"
+    },
+    {
       "predicate": {
         "eps_px": 0.0,
         "kind": "bounds_within_window",

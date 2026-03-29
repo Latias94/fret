@@ -54,11 +54,14 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   buttons while preserving `DialogClose::new(open)` as the explicit constructor.
 - Pass: `Dialog::children([...])` provides a root-level part-children builder that is closer to
   upstream nested children composition while still lowering into the existing recipe-layer slots.
+- Pass: `DialogPart::content_with(...)` plus `DialogContent::with_children(...)`,
+  `DialogHeader::with_children(...)`, and `DialogFooter::with_children(...)` keep the default
+  copyable lane close to upstream nested children composition while preserving dialog-scope access
+  for `DialogClose::from_scope()`.
 - Pass: `Dialog::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
 - Pass: `DialogContent::build(...)` is the typed content-side companion on that same recipe lane,
-  so first-party snippets no longer need to pre-land `DialogHeader` / `DialogFooter` trees into a
-  raw `DialogContent::new([...])` array.
+  but it is now the secondary builder-first lane rather than the default copyable path.
 
 ### Dismissal behavior
 
@@ -133,6 +136,17 @@ Fret now exposes `DialogClose::from_scope()` as recipe-layer sugar.
 - Layering: this still lowers into the same recipe-layer trigger/content slots and does **not**
   change the underlying overlay/focus/dismiss mechanism.
 
+The default content lane now prefers deferred child composition:
+
+- `DialogPart::content_with(...)`
+- `DialogContent::with_children(...)`
+- `DialogHeader::with_children(...)`
+- `DialogFooter::with_children(...)`
+
+This keeps dialog-local close affordances on the same copyable lane as upstream nested JSX while
+leaving `DialogContent::build(...)` / `DialogHeader::build(...)` / `DialogFooter::build(...)`
+available for builder-first code that already has section builders.
+
 `Dialog::compose()` remains a recipe-layer bridge for authors who want a more explicit builder
 style than the raw closure root.
 
@@ -148,4 +162,7 @@ style than the raw closure root.
 
 ## Follow-ups (recommended)
 
+- Consider porting Base UI-style detached trigger handles (`Dialog.createHandle()` / detached
+  trigger focus-restore ownership) if the dialog authoring surface needs to mirror the richer
+  Base UI docs lane beyond the current shadcn page parity target.
 - Consider exposing optional per-surface motion variants if recipes need diverging durations/easing.

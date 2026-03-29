@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -34,58 +33,49 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let name = cx.local_model_keyed("name", || String::from("RTL user"));
     let username = cx.local_model_keyed("username", || String::from("@fret-user"));
 
-    let open_for_trigger = open.clone();
-    let save_open = open.clone();
     let name_model = name.clone();
     let username_model = username.clone();
 
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        shadcn::Dialog::new(open.clone()).into_element(
-            cx,
-            |cx| {
-                shadcn::Button::new("Open RTL Dialog")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-dialog-rtl-trigger")
-                    .toggle_model(open_for_trigger.clone())
-                    .into_element(cx)
-            },
-            |cx| {
-                let fields =
-                    profile_fields(cx, name_model.clone(), username_model.clone()).into_element(cx);
-                shadcn::DialogContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
-                        shadcn::DialogHeader::build(|cx, out| {
-                            out.push_ui(cx, shadcn::DialogTitle::new("RTL Profile"));
-                            out.push_ui(
-                                cx,
-                                shadcn::DialogDescription::new(
-                                    "This example renders dialog layout in right-to-left direction.",
-                                ),
-                            );
-                        }),
-                    );
-                    out.push(fields);
-                    out.push_ui(
-                        cx,
-                        shadcn::DialogFooter::build(|cx, out| {
-                            let cancel = shadcn::DialogClose::from_scope().build(
-                                cx,
-                                shadcn::Button::new("Cancel")
-                                    .variant(shadcn::ButtonVariant::Outline),
-                            );
-                            out.push(cancel);
-                            out.push_ui(
-                                cx,
-                                shadcn::Button::new("Save").toggle_model(save_open.clone()),
-                            );
-                        }),
-                    );
-                })
-                .into_element(cx)
-                .test_id("ui-gallery-dialog-rtl-content")
-            },
-        )
+        shadcn::Dialog::new(open.clone())
+            .children([
+                shadcn::DialogPart::trigger(shadcn::DialogTrigger::build(
+                    shadcn::Button::new("Open RTL Dialog")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .test_id("ui-gallery-dialog-rtl-trigger"),
+                )),
+                shadcn::DialogPart::content_with(move |cx| {
+                    let fields = profile_fields(cx, name_model.clone(), username_model.clone())
+                        .into_element(cx);
+                    shadcn::DialogContent::new([]).with_children(cx, |cx| {
+                        vec![
+                            shadcn::DialogHeader::new([]).with_children(cx, |cx| {
+                                vec![
+                                    shadcn::DialogTitle::new("RTL Profile").into_element(cx),
+                                    shadcn::DialogDescription::new(
+                                        "This example renders dialog layout in right-to-left direction.",
+                                    )
+                                    .into_element(cx),
+                                ]
+                            }),
+                            fields,
+                            shadcn::DialogFooter::new([]).with_children(cx, |cx| {
+                                vec![
+                                    shadcn::DialogClose::from_scope().build(
+                                        cx,
+                                        shadcn::Button::new("Cancel")
+                                            .variant(shadcn::ButtonVariant::Outline),
+                                    ),
+                                    shadcn::DialogClose::from_scope()
+                                        .build(cx, shadcn::Button::new("Save")),
+                                ]
+                            }),
+                        ]
+                    })
+                    .test_id("ui-gallery-dialog-rtl-content")
+                }),
+            ])
+            .into_element(cx)
     })
 }
 // endregion: example

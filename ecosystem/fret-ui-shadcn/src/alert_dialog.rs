@@ -6,7 +6,7 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::GlobalElementId;
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus, OnSelectableTextActivateSpan};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
     RenderTransformProps, SemanticFlexProps, SemanticsDecoration, SizeStyle,
@@ -1110,6 +1110,7 @@ pub struct AlertDialogContent {
     size: AlertDialogContentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
 }
 
 impl AlertDialogContent {
@@ -1120,6 +1121,7 @@ impl AlertDialogContent {
             size: AlertDialogContentSize::Default,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            test_id: None,
         }
     }
 
@@ -1152,8 +1154,30 @@ impl AlertDialogContent {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self {
+            children,
+            size,
+            chrome,
+            layout,
+            test_id,
+        } = self;
         let theme = Theme::global(&*cx.app).snapshot();
 
         let bg = theme.color_token("background");
@@ -1168,19 +1192,18 @@ impl AlertDialogContent {
             .bg(ColorRef::Color(bg))
             .border_color(ColorRef::Color(border))
             .p(Space::N6)
-            .merge(self.chrome);
+            .merge(chrome);
 
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(alert_dialog_content_default_max_width(self.size))
+            .max_w(alert_dialog_content_default_max_width(size))
             .min_w_0()
             .min_h_0()
-            .merge(self.layout);
+            .merge(layout);
 
         register_alert_dialog_content_max_width_hint(cx, &theme, &layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);
-        let children = self.children;
         let container = shadcn_layout::container_vstack(
             cx,
             ContainerProps {
@@ -1197,12 +1220,16 @@ impl AlertDialogContent {
         let (labelled_by_element, described_by_element) =
             crate::a11y_modal::modal_relations_for_current_scope(cx.app);
 
-        container.attach_semantics(SemanticsDecoration {
+        let mut content = container.attach_semantics(SemanticsDecoration {
             role: Some(SemanticsRole::AlertDialog),
             labelled_by_element,
             described_by_element,
             ..Default::default()
-        })
+        });
+        if let Some(test_id) = test_id {
+            content = content.test_id(test_id);
+        }
+        content
     }
 }
 
@@ -1257,13 +1284,13 @@ where
         ))
         .size(self.size)
         .refine_style(self.chrome)
-        .refine_layout(self.layout)
-        .into_element(cx);
-        if let Some(id) = self.test_id {
+        .refine_layout(self.layout);
+        let content = if let Some(id) = self.test_id {
             content.test_id(id)
         } else {
             content
-        }
+        };
+        content.into_element(cx)
     }
 }
 
@@ -1354,6 +1381,16 @@ impl AlertDialogHeader {
     }
 
     #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let content_max_w = crate::a11y_modal::modal_content_max_width_for_current_scope(cx.app);
         let content_is_sm = content_max_w.is_some_and(|w| (w.0 - 320.0).abs() < 0.5 || w.0 < 320.0);
@@ -1423,6 +1460,10 @@ impl AlertDialogHeader {
             .gap(Space::N1p5)
             .items_stretch()
             .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+        let media = ui::v_flex(move |_cx| vec![media])
+            .items_center()
+            .layout(LayoutRefinement::default().mb(Space::N2))
             .into_element(cx);
 
         cx.container(props, move |cx| {
@@ -1564,6 +1605,16 @@ impl AlertDialogFooter {
             build: Some(build),
             _phantom: PhantomData,
         }
+    }
+
+    #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
     }
 
     #[track_caller]
@@ -1905,15 +1956,45 @@ impl AlertDialogTitle {
 }
 
 /// shadcn/ui `AlertDialogDescription` (v4).
-#[derive(Debug)]
 pub struct AlertDialogDescription {
     content: AlertDialogDescriptionContent,
 }
 
-#[derive(Debug)]
 enum AlertDialogDescriptionContent {
     Text(Arc<str>),
     Children(Vec<AnyElement>),
+    SelectableText {
+        props: fret_ui::element::SelectableTextProps,
+        on_activate_span: Option<OnSelectableTextActivateSpan>,
+    },
+}
+
+impl std::fmt::Debug for AlertDialogDescription {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AlertDialogDescription")
+            .field("content", &self.content)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for AlertDialogDescriptionContent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Text(text) => f.debug_tuple("Text").field(text).finish(),
+            Self::Children(children) => f
+                .debug_struct("Children")
+                .field("len", &children.len())
+                .finish(),
+            Self::SelectableText {
+                props,
+                on_activate_span,
+            } => f
+                .debug_struct("SelectableText")
+                .field("props", props)
+                .field("on_activate_span", &on_activate_span.is_some())
+                .finish(),
+        }
+    }
 }
 
 impl AlertDialogDescription {
@@ -1926,6 +2007,27 @@ impl AlertDialogDescription {
     pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             content: AlertDialogDescriptionContent::Children(children.into_iter().collect()),
+        }
+    }
+
+    pub fn new_selectable(props: fret_ui::element::SelectableTextProps) -> Self {
+        Self {
+            content: AlertDialogDescriptionContent::SelectableText {
+                props,
+                on_activate_span: None,
+            },
+        }
+    }
+
+    pub fn new_selectable_with(
+        props: fret_ui::element::SelectableTextProps,
+        on_activate_span: Option<OnSelectableTextActivateSpan>,
+    ) -> Self {
+        Self {
+            content: AlertDialogDescriptionContent::SelectableText {
+                props,
+                on_activate_span,
+            },
         }
     }
 
@@ -1950,6 +2052,19 @@ impl AlertDialogDescription {
                 &theme,
                 "component.alert_dialog.description",
             ),
+            AlertDialogDescriptionContent::SelectableText {
+                props,
+                on_activate_span,
+            } => {
+                let selectable = match on_activate_span {
+                    Some(handler) => cx.selectable_text_with_id_props(|cx, id| {
+                        cx.selectable_text_on_activate_span_for(id, handler);
+                        props
+                    }),
+                    None => cx.selectable_text_props(props),
+                };
+                scope_description_text(selectable, &theme, "component.alert_dialog.description")
+            }
         };
         crate::a11y_modal::register_modal_description(cx.app, description.id);
         description
@@ -2454,6 +2569,110 @@ mod tests {
     }
 
     #[test]
+    fn alert_dialog_description_selectable_surface_activates_interactive_span_handler() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(120.0)),
+        );
+        let mut services = ByteIndexTextService::default();
+        let activated = app.models_mut().insert(None::<Arc<str>>);
+
+        let prefix = "This will permanently delete this chat conversation. View ";
+        let settings = "Settings";
+        let suffix = " to delete any memories saved during this chat.";
+        let full_text: Arc<str> = Arc::from(format!("{prefix}{settings}{suffix}"));
+        let href: Arc<str> = Arc::from("https://example.com/settings");
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-alert-dialog-description-selectable-activate",
+            |cx| {
+                let rich = fret_core::AttributedText::new(
+                    full_text.clone(),
+                    Arc::<[fret_core::TextSpan]>::from([
+                        fret_core::TextSpan::new(prefix.len()),
+                        fret_core::TextSpan::new(settings.len()),
+                        fret_core::TextSpan::new(suffix.len()),
+                    ]),
+                );
+
+                let mut props = fret_ui::element::SelectableTextProps::new(rich);
+                props.interactive_spans =
+                    Arc::from([fret_ui::element::SelectableTextInteractiveSpan {
+                        range: prefix.len()..prefix.len() + settings.len(),
+                        tag: href.clone(),
+                    }]);
+
+                let activated = activated.clone();
+                vec![
+                    AlertDialogDescription::new_selectable_with(
+                        props,
+                        Some(Arc::new(move |host, action_cx, _reason, activation| {
+                            let _ = host
+                                .models_mut()
+                                .update(&activated, |value| *value = Some(activation.tag.clone()));
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                        })),
+                    )
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = fret_core::scene::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let description_node = ui.children(root)[0];
+        let description_bounds = ui
+            .debug_node_bounds(description_node)
+            .expect("expected description bounds");
+        let click_pos = Point::new(
+            Px(description_bounds.origin.x.0 + prefix.len() as f32 + 1.0),
+            Px(description_bounds.origin.y.0 + 5.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: click_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: click_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(app.models().get_cloned(&activated), Some(Some(href)));
+    }
+
+    #[test]
     fn alert_dialog_action_children_override_visual_label_but_keep_semantic_label() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2597,6 +2816,91 @@ mod tests {
         }
     }
 
+    #[derive(Default)]
+    struct ByteIndexTextService {
+        last_len: usize,
+    }
+
+    impl TextService for ByteIndexTextService {
+        fn prepare(
+            &mut self,
+            input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            self.last_len = input.text().len();
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(self.last_len as f32), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn selection_rects(
+            &mut self,
+            _blob: TextBlobId,
+            range: (usize, usize),
+            out: &mut Vec<Rect>,
+        ) {
+            let (start, end) = range;
+            if start >= end {
+                return;
+            }
+
+            out.push(Rect::new(
+                Point::new(Px(start as f32), Px(0.0)),
+                Size::new(Px((end - start) as f32), Px(10.0)),
+            ));
+        }
+
+        fn hit_test_point(&mut self, _blob: TextBlobId, point: Point) -> fret_core::HitTestResult {
+            let idx = point.x.0.floor().max(0.0) as usize;
+            fret_core::HitTestResult {
+                index: idx.min(self.last_len),
+                affinity: fret_core::CaretAffinity::Downstream,
+            }
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for ByteIndexTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for ByteIndexTextService {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for ByteIndexTextService {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     #[test]
     fn alert_dialog_into_element_parts_trigger_opens_on_activate() {
         let window = AppWindowId::default();
@@ -2670,6 +2974,252 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn alert_dialog_selectable_description_records_interactive_span_bounds_in_overlay_state() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(480.0)),
+        );
+        let mut services = ByteIndexTextService::default();
+        let open = app.models_mut().insert(true);
+        let description_id_out = Rc::new(Cell::new(None));
+
+        let link_text: Arc<str> = Arc::from("Settings");
+        let link_tag: Arc<str> = Arc::from("https://example.com/settings");
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(&mut app, window);
+
+            let description_id_out = description_id_out.clone();
+            let open_for_dialog = open.clone();
+            let open_for_cancel = open.clone();
+            let link_text = link_text.clone();
+            let link_tag = link_tag.clone();
+
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "alert-dialog-selectable-description-overlay-runtime",
+                move |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st, _id| Vec::new(),
+                    );
+
+                    let description_id_out = description_id_out.clone();
+                    let open_for_cancel = open_for_cancel.clone();
+                    let link_text = link_text.clone();
+                    let link_tag = link_tag.clone();
+
+                    let alert = AlertDialog::new(open_for_dialog.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let rich = fret_core::AttributedText::new(
+                                link_text.clone(),
+                                Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(
+                                    link_text.len(),
+                                )]),
+                            );
+                            let mut props = fret_ui::element::SelectableTextProps::new(rich);
+                            props.interactive_spans =
+                                Arc::from([fret_ui::element::SelectableTextInteractiveSpan {
+                                    range: 0..link_text.len(),
+                                    tag: link_tag.clone(),
+                                }]);
+
+                            let description =
+                                AlertDialogDescription::new_selectable(props).into_element(cx);
+                            description_id_out.set(Some(description.id));
+
+                            let header = AlertDialogHeader::new(vec![
+                                AlertDialogTitle::new("Delete chat?").into_element(cx),
+                                description,
+                            ])
+                            .into_element(cx);
+                            let cancel = AlertDialogCancel::new("Cancel", open_for_cancel.clone())
+                                .into_element(cx);
+
+                            AlertDialogContent::new(vec![
+                                header,
+                                AlertDialogFooter::new(vec![cancel]).into_element(cx),
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                    vec![alert]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let mut scene = fret_core::scene::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let description_id = description_id_out
+            .get()
+            .expect("selectable description element id");
+        let spans = fret_ui::elements::with_element_state(
+            &mut app,
+            window,
+            description_id,
+            fret_ui::element::SelectableTextState::default,
+            |state| state.interactive_span_bounds.clone(),
+        );
+
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].tag.as_ref(), link_tag.as_ref());
+        assert!(
+            spans[0].bounds_local.size.width.0 > 0.0,
+            "expected overlay runtime to retain positive selectable span bounds, got {:?}",
+            spans[0]
+        );
+    }
+
+    #[test]
+    fn alert_dialog_selectable_description_test_id_resolves_to_same_node_as_element() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(480.0)),
+        );
+        let mut services = ByteIndexTextService::default();
+        let open = app.models_mut().insert(true);
+        let description_id_out = Rc::new(Cell::new(None));
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(&mut app, window);
+
+            let description_id_out = description_id_out.clone();
+            let open_for_dialog = open.clone();
+            let open_for_cancel = open.clone();
+
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "alert-dialog-selectable-description-test-id-node",
+                move |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st, _id| Vec::new(),
+                    );
+
+                    let description_id_out = description_id_out.clone();
+                    let open_for_cancel = open_for_cancel.clone();
+
+                    let alert = AlertDialog::new(open_for_dialog.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let rich = fret_core::AttributedText::new(
+                                Arc::<str>::from("Settings"),
+                                Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(8)]),
+                            );
+                            let mut props = fret_ui::element::SelectableTextProps::new(rich);
+                            props.interactive_spans =
+                                Arc::from([fret_ui::element::SelectableTextInteractiveSpan {
+                                    range: 0..8,
+                                    tag: Arc::<str>::from("https://example.com/settings"),
+                                }]);
+
+                            let description = AlertDialogDescription::new_selectable(props)
+                                .into_element(cx)
+                                .test_id("alert-dialog-selectable-description-link");
+                            description_id_out.set(Some(description.id));
+
+                            let header = AlertDialogHeader::new(vec![
+                                AlertDialogTitle::new("Delete chat?").into_element(cx),
+                                description,
+                            ])
+                            .into_element(cx);
+                            let cancel = AlertDialogCancel::new("Cancel", open_for_cancel.clone())
+                                .into_element(cx);
+
+                            AlertDialogContent::new(vec![
+                                header,
+                                AlertDialogFooter::new(vec![cancel]).into_element(cx),
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                    vec![alert]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        let description_id = description_id_out
+            .get()
+            .expect("selectable description element id");
+        let description_node =
+            fret_ui::elements::node_for_element(&mut app, window, description_id)
+                .expect("selectable description node");
+        let semantics_node = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.test_id.as_deref() == Some("alert-dialog-selectable-description-link")
+                    && n.role == fret_core::SemanticsRole::Text
+            })
+            .expect("semantics node by test_id");
+
+        assert_eq!(
+            semantics_node.id, description_node,
+            "expected test_id semantics node to map to the selectable description element node"
+        );
     }
 
     #[test]
@@ -2758,6 +3308,42 @@ mod tests {
     }
 
     #[test]
+    fn alert_dialog_content_new_accepts_composed_sections_and_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertDialogContent::new([
+                AlertDialogHeader::new([
+                    AlertDialogTitle::new("Title").into_element(cx),
+                    AlertDialogDescription::new("Description").into_element(cx),
+                ])
+                .into_element(cx),
+                AlertDialogFooter::new([crate::button::Button::new("Close").into_element(cx)])
+                    .into_element(cx),
+            ])
+            .test_id("content")
+            .into_element(cx)
+        });
+
+        assert!(matches!(element.kind, ElementKind::Container(_)));
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("content")
+        );
+        assert!(contains_plain_text(&element, "Title"));
+        assert!(contains_plain_text(&element, "Description"));
+        assert!(contains_plain_text(&element, "Close"));
+    }
+
+    #[test]
     fn alert_dialog_children_api_supports_from_scope_buttons() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2788,15 +3374,30 @@ mod tests {
                             )),
                             AlertDialogPart::portal(AlertDialogPortal::new()),
                             AlertDialogPart::overlay(AlertDialogOverlay::new()),
-                            AlertDialogPart::content(AlertDialogContent::build(|cx, out| {
-                                out.push(
-                                    AlertDialogFooter::new(vec![
-                                        AlertDialogCancel::from_scope("Cancel").into_element(cx),
-                                        AlertDialogAction::from_scope("Continue").into_element(cx),
-                                    ])
-                                    .into_element(cx),
-                                );
-                            })),
+                            AlertDialogPart::content_with(|cx| {
+                                AlertDialogContent::new([]).with_children(cx, |cx| {
+                                    vec![
+                                        AlertDialogHeader::new([]).with_children(cx, |cx| {
+                                            vec![
+                                                AlertDialogTitle::new("Delete project?")
+                                                    .into_element(cx),
+                                                AlertDialogDescription::new(
+                                                    "This action cannot be undone.",
+                                                )
+                                                .into_element(cx),
+                                            ]
+                                        }),
+                                        AlertDialogFooter::new([]).with_children(cx, |cx| {
+                                            vec![
+                                                AlertDialogCancel::from_scope("Cancel")
+                                                    .into_element(cx),
+                                                AlertDialogAction::from_scope("Continue")
+                                                    .into_element(cx),
+                                            ]
+                                        }),
+                                    ]
+                                })
+                            }),
                         ])
                         .into_element(cx),
                 ]
@@ -3081,6 +3682,7 @@ mod tests {
         title_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         description_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        media_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
     ) {
@@ -3115,6 +3717,7 @@ mod tests {
                 let title_id_out = title_id_out.clone();
                 let description_id_out = description_id_out.clone();
                 let content_id_out = content_id_out.clone();
+                let media_id_out = media_id_out.clone();
                 let cancel_id_out = cancel_id_out.clone();
                 let action_id_out = action_id_out.clone();
 
@@ -3134,6 +3737,7 @@ mod tests {
 
                             let media = AlertDialogMedia::new(ui::text("!").into_element(cx))
                                 .into_element(cx);
+                            media_id_out.set(Some(media.id));
 
                             children.push(
                                 AlertDialogHeader::new(vec![title, description])
@@ -3603,6 +4207,7 @@ mod tests {
         let title_id = Rc::new(Cell::new(None));
         let description_id = Rc::new(Cell::new(None));
         let content_id = Rc::new(Cell::new(None));
+        let media_id = Rc::new(Cell::new(None));
         let cancel_id = Rc::new(Cell::new(None));
         let action_id = Rc::new(Cell::new(None));
 
@@ -3625,6 +4230,7 @@ mod tests {
                 title_id.clone(),
                 description_id.clone(),
                 content_id.clone(),
+                media_id.clone(),
                 cancel_id.clone(),
                 action_id.clone(),
             );
@@ -3697,6 +4303,7 @@ mod tests {
         let title_id = Rc::new(Cell::new(None));
         let description_id = Rc::new(Cell::new(None));
         let content_id = Rc::new(Cell::new(None));
+        let media_id = Rc::new(Cell::new(None));
         let cancel_id = Rc::new(Cell::new(None));
         let action_id = Rc::new(Cell::new(None));
 
@@ -3719,6 +4326,7 @@ mod tests {
                 title_id.clone(),
                 description_id.clone(),
                 content_id.clone(),
+                media_id.clone(),
                 cancel_id.clone(),
                 action_id.clone(),
             );
@@ -3734,6 +4342,9 @@ mod tests {
         let title_bounds =
             bounds_for_element(&mut app, window, title_id.get().expect("title element id"))
                 .expect("title bounds");
+        let media_bounds =
+            bounds_for_element(&mut app, window, media_id.get().expect("media element id"))
+                .expect("media bounds");
         let description_bounds = bounds_for_element(
             &mut app,
             window,
@@ -3778,6 +4389,11 @@ mod tests {
                 "expected {label} to stay inside small media alert dialog content; content={content_bounds:?} node={bounds:?}"
             );
         }
+        assert!(
+            title_bounds.origin.y.0 - (media_bounds.origin.y.0 + media_bounds.size.height.0)
+                >= 12.0,
+            "expected small media title to keep visible space below the media block, got media={media_bounds:?} title={title_bounds:?}"
+        );
         assert!(
             (cancel_bounds.origin.y.0 - action_bounds.origin.y.0).abs() < 0.5,
             "expected small media footer buttons to share one row, got cancel={cancel_bounds:?} action={action_bounds:?}"

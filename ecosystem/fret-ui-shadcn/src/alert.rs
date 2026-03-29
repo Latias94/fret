@@ -9,6 +9,8 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 
+use crate::direction::LayoutDirection;
+
 use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, PaddingRefinement,
@@ -81,6 +83,7 @@ fn px_spacing_or_zero(length: SpacingLength) -> Px {
 fn translate_alert_action_to_padding_box(
     action: &mut AnyElement,
     top_padding: SpacingLength,
+    left_padding: SpacingLength,
     right_padding: SpacingLength,
 ) {
     let ElementKind::Container(props) = &mut action.kind else {
@@ -91,13 +94,57 @@ fn translate_alert_action_to_padding_box(
     }
 
     let top_padding = px_spacing_or_zero(top_padding);
+    let left_padding = px_spacing_or_zero(left_padding);
     let right_padding = px_spacing_or_zero(right_padding);
 
     if let InsetEdge::Px(top) = props.layout.inset.top {
         props.layout.inset.top = InsetEdge::Px(Px(top.0 - top_padding.0));
     }
+    if let InsetEdge::Px(left) = props.layout.inset.left {
+        props.layout.inset.left = InsetEdge::Px(Px(left.0 - left_padding.0));
+    }
     if let InsetEdge::Px(right) = props.layout.inset.right {
         props.layout.inset.right = InsetEdge::Px(Px(right.0 - right_padding.0));
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AlertActionHorizontalAnchor {
+    Left,
+    Right,
+}
+
+fn default_alert_action_horizontal_anchor(dir: LayoutDirection) -> AlertActionHorizontalAnchor {
+    match dir {
+        LayoutDirection::Ltr => AlertActionHorizontalAnchor::Right,
+        LayoutDirection::Rtl => AlertActionHorizontalAnchor::Left,
+    }
+}
+
+fn has_explicit_alert_action_horizontal_inset(layout: &LayoutRefinement) -> bool {
+    layout
+        .inset
+        .as_ref()
+        .is_some_and(|inset| inset.left.is_some() || inset.right.is_some())
+}
+
+fn alert_action_horizontal_anchor(
+    action: Option<&AnyElement>,
+    fallback_dir: LayoutDirection,
+) -> AlertActionHorizontalAnchor {
+    let fallback = default_alert_action_horizontal_anchor(fallback_dir);
+    let Some(action) = action else {
+        return fallback;
+    };
+    let ElementKind::Container(props) = &action.kind else {
+        return fallback;
+    };
+    let has_left = !matches!(props.layout.inset.left, InsetEdge::Auto);
+    let has_right = !matches!(props.layout.inset.right, InsetEdge::Auto);
+    match (has_left, has_right) {
+        (true, false) => AlertActionHorizontalAnchor::Left,
+        (false, true) => AlertActionHorizontalAnchor::Right,
+        _ => fallback,
     }
 }
 
@@ -150,6 +197,7 @@ impl AlertAction {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let theme_snapshot = theme.snapshot();
+        let dir = crate::direction::use_direction(cx, None);
         let has_explicit_width = self
             .layout
             .size
@@ -162,14 +210,31 @@ impl AlertAction {
             .as_ref()
             .and_then(|size| size.height.as_ref())
             .is_some();
-        let mut layout = decl_style::layout_style(
-            theme,
-            LayoutRefinement::default()
+        let has_explicit_horizontal_inset =
+            has_explicit_alert_action_horizontal_inset(&self.layout);
+        let action_anchor = default_alert_action_horizontal_anchor(dir);
+        let default_layout = {
+            let layout = LayoutRefinement::default()
                 .absolute()
-                .top_px(alert_action_top(&theme_snapshot))
-                .right_px(alert_action_right(&theme_snapshot))
-                .merge(self.layout),
-        );
+                .top_px(alert_action_top(&theme_snapshot));
+            if has_explicit_horizontal_inset {
+                layout
+            } else {
+                match action_anchor {
+                    AlertActionHorizontalAnchor::Left => {
+                        layout.left_px(alert_action_right(&theme_snapshot))
+                    }
+                    AlertActionHorizontalAnchor::Right => {
+                        layout.right_px(alert_action_right(&theme_snapshot))
+                    }
+                }
+            }
+        };
+        let mut layout = decl_style::layout_style(theme, default_layout.merge(self.layout));
+        // AlertAction is always an absolute slot inside Alert, even when caller refinements add
+        // inset shorthands that would otherwise coerce the intermediate LayoutRefinement to
+        // `Relative`.
+        layout.position = PositionStyle::Absolute;
         if !has_explicit_width {
             layout.size.width = Length::Auto;
         }
@@ -450,13 +515,14 @@ fn alert_with_patch<H: UiHost>(
     layout_override: LayoutRefinement,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
+    let dir = crate::direction::use_direction(cx, None);
     let padding_x = alert_padding_x(&theme);
     let padding_y = alert_padding_y(&theme);
     let gap_x = alert_gap_x(&theme);
     let gap_y = alert_gap_y(&theme);
     let icon_size = alert_icon_size(&theme);
     let icon_offset_y = alert_icon_offset_y(&theme);
-    let action_padding_right = alert_action_padding_right(&theme);
+    let action_padding_inline_end = alert_action_padding_right(&theme);
     let has_action = children.iter().any(|child| {
         child
             .semantics_decoration
@@ -496,6 +562,7 @@ fn alert_with_patch<H: UiHost>(
             == Some(ALERT_ACTION_MARKER_TEST_ID)
     });
     let mut action = action_idx.map(|idx| body_children.remove(idx));
+    let action_anchor = alert_action_horizontal_anchor(action.as_ref(), dir);
 
     if variant == AlertVariant::Destructive {
         if let Some(description) = body_children.get_mut(1) {
@@ -504,19 +571,24 @@ fn alert_with_patch<H: UiHost>(
         }
     }
 
+    let (padding_left, padding_right) = if has_action {
+        match action_anchor {
+            AlertActionHorizontalAnchor::Left => (action_padding_inline_end, padding_x),
+            AlertActionHorizontalAnchor::Right => (padding_x, action_padding_inline_end),
+        }
+    } else {
+        (padding_x, padding_x)
+    };
+
     let props = decl_style::container_props(
         &theme,
         ChromeRefinement::default()
             .merge(ChromeRefinement {
                 padding: Some(PaddingRefinement {
                     top: Some(MetricRef::Px(padding_y)),
-                    right: Some(if has_action {
-                        MetricRef::Px(action_padding_right)
-                    } else {
-                        MetricRef::Px(padding_x)
-                    }),
+                    right: Some(MetricRef::Px(padding_right)),
                     bottom: Some(MetricRef::Px(padding_y)),
-                    left: Some(MetricRef::Px(padding_x)),
+                    left: Some(MetricRef::Px(padding_left)),
                 }),
                 ..Default::default()
             })
@@ -557,7 +629,12 @@ fn alert_with_patch<H: UiHost>(
     let mut props = props;
     props.layout.position = PositionStyle::Relative;
     if let Some(action) = action.as_mut() {
-        translate_alert_action_to_padding_box(action, props.padding.top, props.padding.right);
+        translate_alert_action_to_padding_box(
+            action,
+            props.padding.top,
+            props.padding.left,
+            props.padding.right,
+        );
     }
 
     cx.container(props, move |_cx| {
@@ -1247,7 +1324,7 @@ mod tests {
     }
 
     #[test]
-    fn alert_with_action_reserves_right_padding_like_shadcn() {
+    fn alert_with_action_reserves_right_padding_like_shadcn_in_ltr() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
@@ -1276,7 +1353,39 @@ mod tests {
     }
 
     #[test]
-    fn alert_with_action_translates_absolute_action_offsets_to_padding_box() {
+    fn alert_with_action_reserves_left_padding_like_shadcn_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            crate::direction::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+                Alert::new([
+                    AlertTitle::new("Heads up!").into_element(cx),
+                    AlertDescription::new("You can add components to your app.").into_element(cx),
+                    AlertAction::new([cx.text("Undo")]).into_element(cx),
+                ])
+                .into_element(cx)
+            })
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!(
+                "expected Alert root to be a Container, got {:?}",
+                element.kind
+            );
+        };
+
+        assert_eq!(props.padding.left, SpacingLength::Px(Px(72.0)));
+        assert_eq!(props.padding.right, SpacingLength::Px(Px(16.0)));
+    }
+
+    #[test]
+    fn alert_with_action_translates_absolute_action_offsets_to_padding_box_in_ltr() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
@@ -1305,6 +1414,42 @@ mod tests {
         assert_eq!(props.layout.position, PositionStyle::Absolute);
         assert_eq!(props.layout.inset.top, InsetEdge::Px(Px(-4.0)));
         assert_eq!(props.layout.inset.right, InsetEdge::Px(Px(-64.0)));
+        assert_eq!(props.layout.inset.left, InsetEdge::Auto);
+    }
+
+    #[test]
+    fn alert_with_action_translates_absolute_action_offsets_to_padding_box_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            crate::direction::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+                Alert::new([
+                    AlertTitle::new("Heads up!").into_element(cx),
+                    AlertAction::new([cx.text("Undo")]).into_element(cx),
+                ])
+                .into_element(cx)
+            })
+        });
+
+        let action = find_element_by_test_id(&element, ALERT_ACTION_MARKER_TEST_ID)
+            .expect("expected Alert to keep the action child under the action marker test id");
+        let ElementKind::Container(props) = &action.kind else {
+            panic!(
+                "expected Alert action marker to resolve to a Container, got {:?}",
+                action.kind
+            );
+        };
+
+        assert_eq!(props.layout.position, PositionStyle::Absolute);
+        assert_eq!(props.layout.inset.top, InsetEdge::Px(Px(-4.0)));
+        assert_eq!(props.layout.inset.left, InsetEdge::Px(Px(-64.0)));
+        assert_eq!(props.layout.inset.right, InsetEdge::Auto);
     }
 
     #[test]
@@ -1374,6 +1519,119 @@ mod tests {
     }
 
     #[test]
+    fn alert_build_reserves_left_padding_like_shadcn_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            crate::direction::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+                Alert::build(|cx, out| {
+                    use fret_ui_kit::ui::UiElementSinkExt as _;
+
+                    out.push_ui(cx, AlertTitle::new("Heads up!"));
+                    out.push_ui(cx, AlertDescription::new("Built via Alert::build"));
+                    out.push_ui(
+                        cx,
+                        AlertAction::build(|cx, out| {
+                            out.push(cx.text("Undo"));
+                        }),
+                    );
+                })
+                .into_element(cx)
+            })
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!(
+                "expected Alert::build root to be a Container, got {:?}",
+                element.kind
+            );
+        };
+
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(
+            props.padding.left,
+            SpacingLength::Px(alert_action_padding_right(&theme))
+        );
+        assert_eq!(
+            props.padding.right,
+            SpacingLength::Px(alert_padding_x(&theme))
+        );
+        assert!(
+            find_text_element(&element, "Built via Alert::build").is_some(),
+            "expected Alert::build to retain nested description content in RTL"
+        );
+    }
+
+    #[test]
+    fn alert_action_explicit_right_override_wins_over_rtl_fallback() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+        let custom_right = Px(24.0);
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            crate::direction::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+                Alert::new([
+                    AlertTitle::new("Heads up!").into_element(cx),
+                    AlertAction::new([cx.text("Undo")])
+                        .refine_layout(
+                            LayoutRefinement::default()
+                                .right_px(custom_right)
+                                .w_px(Px(88.0)),
+                        )
+                        .into_element(cx),
+                ])
+                .into_element(cx)
+            })
+        });
+
+        let ElementKind::Container(root_props) = &element.kind else {
+            panic!(
+                "expected Alert root to be a Container, got {:?}",
+                element.kind
+            );
+        };
+
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(
+            root_props.padding.left,
+            SpacingLength::Px(alert_padding_x(&theme))
+        );
+        assert_eq!(
+            root_props.padding.right,
+            SpacingLength::Px(alert_action_padding_right(&theme))
+        );
+
+        let action = find_element_by_test_id(&element, ALERT_ACTION_MARKER_TEST_ID)
+            .expect("expected Alert to keep the action child under the action marker test id");
+        let ElementKind::Container(action_props) = &action.kind else {
+            panic!(
+                "expected Alert action marker to resolve to a Container, got {:?}",
+                action.kind
+            );
+        };
+
+        assert_eq!(action_props.layout.position, PositionStyle::Absolute);
+        assert_eq!(
+            action_props.layout.inset.top,
+            InsetEdge::Px(Px(alert_action_top(&theme).0 - alert_padding_y(&theme).0))
+        );
+        assert_eq!(
+            action_props.layout.inset.right,
+            InsetEdge::Px(Px(custom_right.0 - alert_action_padding_right(&theme).0,))
+        );
+        assert_eq!(action_props.layout.inset.left, InsetEdge::Auto);
+    }
+
+    #[test]
     fn alert_action_uses_upstream_offsets_and_merges_layout_refinement() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1404,6 +1662,46 @@ mod tests {
         );
         assert_eq!(
             props.layout.inset.right,
+            InsetEdge::Px(alert_action_right(&theme))
+        );
+        assert_eq!(props.layout.inset.left, InsetEdge::Auto);
+        assert_eq!(props.layout.size.width, Length::Px(Px(88.0)));
+    }
+
+    #[test]
+    fn alert_action_uses_logical_end_offsets_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            crate::direction::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+                AlertAction::new([cx.text("Undo")])
+                    .refine_layout(LayoutRefinement::default().w_px(Px(88.0)))
+                    .into_element(cx)
+            })
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!(
+                "expected AlertAction root to be a Container, got {:?}",
+                element.kind
+            );
+        };
+
+        assert_eq!(props.layout.position, PositionStyle::Absolute);
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(
+            props.layout.inset.top,
+            InsetEdge::Px(alert_action_top(&theme))
+        );
+        assert_eq!(props.layout.inset.right, InsetEdge::Auto);
+        assert_eq!(
+            props.layout.inset.left,
             InsetEdge::Px(alert_action_right(&theme))
         );
         assert_eq!(props.layout.size.width, Length::Px(Px(88.0)));
@@ -1442,6 +1740,48 @@ mod tests {
         );
         assert_eq!(
             props.layout.inset.right,
+            InsetEdge::Px(alert_action_right(&theme))
+        );
+        assert_eq!(props.layout.inset.left, InsetEdge::Auto);
+        assert_eq!(props.layout.size.width, Length::Px(Px(88.0)));
+    }
+
+    #[test]
+    fn alert_action_build_uses_logical_end_offsets_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            crate::direction::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+                AlertAction::build(|cx, out| {
+                    out.push(cx.text("Undo"));
+                })
+                .refine_layout(LayoutRefinement::default().w_px(Px(88.0)))
+                .into_element(cx)
+            })
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!(
+                "expected AlertAction::build root to be a Container, got {:?}",
+                element.kind
+            );
+        };
+
+        assert_eq!(props.layout.position, PositionStyle::Absolute);
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(
+            props.layout.inset.top,
+            InsetEdge::Px(alert_action_top(&theme))
+        );
+        assert_eq!(props.layout.inset.right, InsetEdge::Auto);
+        assert_eq!(
+            props.layout.inset.left,
             InsetEdge::Px(alert_action_right(&theme))
         );
         assert_eq!(props.layout.size.width, Length::Px(Px(88.0)));

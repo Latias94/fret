@@ -142,7 +142,7 @@ pub struct InputOtp {
     length: usize,
     pattern: InputOtpPattern,
     group_size: Option<usize>,
-    explicit_groups: Option<Vec<Vec<usize>>>,
+    explicit_groups: Option<Vec<InputOtpGroup>>,
     separator_mode: InputOtpSeparatorMode,
     aria_invalid: bool,
     aria_required: bool,
@@ -374,6 +374,13 @@ impl InputOtp {
         }
 
         let chars: Vec<char> = value.chars().collect();
+        let has_invalid_part_slots = self.explicit_groups.as_ref().is_some_and(|groups| {
+            groups
+                .iter()
+                .flat_map(|group| group.slots.iter())
+                .any(|slot| slot.aria_invalid)
+        });
+        let any_aria_invalid = self.aria_invalid || has_invalid_part_slots;
         let resolved = resolve_input_chrome(
             Theme::global(&*cx.app),
             self.size,
@@ -383,24 +390,12 @@ impl InputOtp {
 
         let default_slot_w = Px(resolved.min_height.0.max(0.0));
         let default_slot_h = Px(resolved.min_height.0.max(0.0));
-        let (slot_w, slot_h) = self
-            .slot_size_override
-            .unwrap_or((default_slot_w, default_slot_h));
 
         let container_gap = self
             .container_gap_override
             .unwrap_or_else(|| otp_gap(&theme));
-        let slot_gap = self.slot_gap_override.unwrap_or(Px(0.0));
-        let slot_gap_is_nonzero = slot_gap.0.abs() >= 0.5;
 
         let font_line_height = theme.metric_token("font.line_height");
-        let slot_line_height = self
-            .slot_line_height_px_override
-            .unwrap_or(font_line_height);
-        let slot_text_px = self.slot_text_px_override.unwrap_or(resolved.text_px);
-        let mut slot_text_style =
-            typography::fixed_line_box_style(FontId::ui(), slot_text_px, slot_line_height);
-        slot_text_style.weight = FontWeight::MEDIUM;
 
         let root_layout = decl_style::layout_style(&theme, self.layout.relative());
         let separator_color = otp_separator_color(&theme);
@@ -418,16 +413,16 @@ impl InputOtp {
                     .as_ref()
                     .map(|prefix| Arc::from(format!("{prefix}.input")));
 
-                let groups: Vec<Vec<usize>> =
+                let groups: Vec<InputOtpGroup> =
                     if let Some(explicit_groups) = self.explicit_groups.as_ref() {
                         explicit_groups.clone()
                     } else {
                         let group_size = self.group_size.unwrap_or(length).max(1);
-                        let mut out: Vec<Vec<usize>> = Vec::new();
+                        let mut out: Vec<InputOtpGroup> = Vec::new();
                         let mut start = 0;
                         while start < length {
                             let end = (start + group_size).min(length);
-                            out.push((start..end).collect());
+                            out.push(InputOtpGroup::new((start..end).map(InputOtpSlot::new)));
                             start = end;
                         }
                         out
@@ -452,12 +447,20 @@ impl InputOtp {
 
                 let mut input = TextInputProps::new(self.model);
                 input.chrome = chrome;
-                input.text_style = slot_text_style.clone();
+                let default_slot_line_height = self
+                    .slot_line_height_px_override
+                    .unwrap_or(font_line_height);
+                let default_slot_text_px = self.slot_text_px_override.unwrap_or(resolved.text_px);
+                let mut input_text_style = typography::fixed_line_box_style(
+                    FontId::ui(),
+                    default_slot_text_px,
+                    default_slot_line_height,
+                );
+                input_text_style.weight = FontWeight::MEDIUM;
+                input.text_style = input_text_style;
                 input.test_id = input_test_id.clone();
                 input.a11y_label = self.a11y_label.clone();
-                input.a11y_invalid = self
-                    .aria_invalid
-                    .then_some(fret_core::SemanticsInvalid::True);
+                input.a11y_invalid = any_aria_invalid.then_some(fret_core::SemanticsInvalid::True);
                 input.a11y_required = self.aria_required;
                 input.enabled = !self.disabled;
                 input.focusable = !self.disabled;
@@ -551,10 +554,37 @@ impl InputOtp {
                 let mut slot_ids: Vec<Option<fret_ui::elements::GlobalElementId>> =
                     vec![None; length];
                 let mut slot_corners: Vec<Option<Corners>> = vec![None; length];
+                let mut slot_invalids: Vec<bool> = vec![self.aria_invalid; length];
                 let mut pieces: Vec<AnyElement> = Vec::new();
-                for (group_idx, group_slots) in groups.iter().enumerate() {
+                for (group_idx, group) in groups.iter().enumerate() {
+                    let slot_gap = group
+                        .slot_gap_override
+                        .or(self.slot_gap_override)
+                        .unwrap_or(Px(0.0));
+                    let slot_gap_is_nonzero = slot_gap.0.abs() >= 0.5;
+                    let (slot_w, slot_h) = group
+                        .slot_size_override
+                        .or(self.slot_size_override)
+                        .unwrap_or((default_slot_w, default_slot_h));
+                    let slot_line_height = group
+                        .slot_line_height_px_override
+                        .or(self.slot_line_height_px_override)
+                        .unwrap_or(font_line_height);
+                    let slot_text_px = group
+                        .slot_text_px_override
+                        .or(self.slot_text_px_override)
+                        .unwrap_or(resolved.text_px);
+                    let mut slot_text_style = typography::fixed_line_box_style(
+                        FontId::ui(),
+                        slot_text_px,
+                        slot_line_height,
+                    );
+                    slot_text_style.weight = FontWeight::MEDIUM;
+
+                    let group_slots = &group.slots;
                     let mut slots: Vec<AnyElement> = Vec::new();
-                    for (slot_pos, idx) in group_slots.iter().copied().enumerate() {
+                    for (slot_pos, slot) in group_slots.iter().enumerate() {
+                        let idx = slot.index;
                         if idx >= length {
                             continue;
                         }
@@ -571,18 +601,22 @@ impl InputOtp {
 
                         let bg = resolved.background;
                         let border = resolved.border_width;
+                        let slot_invalid = self.aria_invalid || slot.aria_invalid;
                         let border_color = otp_slot_border_color(
                             &theme,
                             resolved.border_color,
                             resolved.border_color_focused,
                             is_active,
-                            self.aria_invalid,
+                            slot_invalid,
                         );
                         let radius = resolved.radius;
                         let fg = resolved.text_color;
 
                         let all_corners = slot_gap_is_nonzero
-                            || matches!(self.slot_corner_mode, InputOtpSlotCornerMode::All);
+                            || matches!(
+                                group.slot_corner_mode.unwrap_or(self.slot_corner_mode),
+                                InputOtpSlotCornerMode::All
+                            );
                         let corner_radii = if all_corners {
                             Corners::all(radius)
                         } else {
@@ -748,6 +782,7 @@ impl InputOtp {
 
                         slot_ids[idx] = Some(slot_el.id);
                         slot_corners[idx] = Some(corner_radii);
+                        slot_invalids[idx] = slot_invalid;
 
                         let mut decoration = SemanticsDecoration::default().selected(is_active);
                         if self.disabled {
@@ -890,12 +925,16 @@ impl InputOtp {
                     *st
                 });
 
+                let active_slot_invalid = active_slot_idx
+                    .and_then(|idx| slot_invalids.get(idx).copied())
+                    .unwrap_or(self.aria_invalid);
+
                 if wants_ring
                     && let (Some(left), Some(top), Some(width), Some(height), Some(corners)) =
                         (geom.left, geom.top, geom.width, geom.height, geom.corners)
                 {
                     let ring_w = otp_active_ring_width(&theme);
-                    let mut ring_color = otp_slot_ring_color(&theme, self.aria_invalid);
+                    let mut ring_color = otp_slot_ring_color(&theme, active_slot_invalid);
                     ring_color.a = (ring_color.a * ring_alpha.value).clamp(0.0, 1.0);
                     out.push(cx.hit_test_gate(false, move |cx| {
                         vec![cx.container(
@@ -947,14 +986,14 @@ impl InputOtp {
 
 #[derive(Debug, Clone)]
 struct ParsedInputOtpParts {
-    groups: Vec<Vec<usize>>,
+    groups: Vec<InputOtpGroup>,
     separators_after_groups: Vec<usize>,
     inferred_length: Option<usize>,
 }
 
 fn parse_input_otp_parts(parts: Vec<InputOtpPart>) -> ParsedInputOtpParts {
-    let mut groups: Vec<Vec<usize>> = Vec::new();
-    let mut current_group: Vec<usize> = Vec::new();
+    let mut groups: Vec<InputOtpGroup> = Vec::new();
+    let mut current_group: Vec<InputOtpSlot> = Vec::new();
     let mut separators_after_groups: Vec<usize> = Vec::new();
     let mut max_index: Option<usize> = None;
 
@@ -962,25 +1001,23 @@ fn parse_input_otp_parts(parts: Vec<InputOtpPart>) -> ParsedInputOtpParts {
         match part {
             InputOtpPart::Group(group) => {
                 if !current_group.is_empty() {
-                    groups.push(std::mem::take(&mut current_group));
+                    groups.push(InputOtpGroup::new(std::mem::take(&mut current_group)));
                 }
 
-                let mut indices: Vec<usize> = Vec::new();
-                for slot in group.slots {
-                    max_index = Some(max_index.map_or(slot.index, |m| m.max(slot.index)));
-                    indices.push(slot.index);
-                }
-                if !indices.is_empty() {
-                    groups.push(indices);
+                if !group.slots.is_empty() {
+                    for slot in &group.slots {
+                        max_index = Some(max_index.map_or(slot.index, |m| m.max(slot.index)));
+                    }
+                    groups.push(group);
                 }
             }
             InputOtpPart::Slot(slot) => {
                 max_index = Some(max_index.map_or(slot.index, |m| m.max(slot.index)));
-                current_group.push(slot.index);
+                current_group.push(slot);
             }
             InputOtpPart::Separator(_) => {
                 if !current_group.is_empty() {
-                    groups.push(std::mem::take(&mut current_group));
+                    groups.push(InputOtpGroup::new(std::mem::take(&mut current_group)));
                 }
 
                 if let Some(idx) = groups.len().checked_sub(1) {
@@ -993,7 +1030,7 @@ fn parse_input_otp_parts(parts: Vec<InputOtpPart>) -> ParsedInputOtpParts {
     }
 
     if !current_group.is_empty() {
-        groups.push(current_group);
+        groups.push(InputOtpGroup::new(current_group));
     }
 
     ParsedInputOtpParts {
@@ -1007,13 +1044,48 @@ fn parse_input_otp_parts(parts: Vec<InputOtpPart>) -> ParsedInputOtpParts {
 #[derive(Debug, Clone)]
 pub struct InputOtpGroup {
     slots: Vec<InputOtpSlot>,
+    slot_gap_override: Option<Px>,
+    slot_size_override: Option<(Px, Px)>,
+    slot_text_px_override: Option<Px>,
+    slot_line_height_px_override: Option<Px>,
+    slot_corner_mode: Option<InputOtpSlotCornerMode>,
 }
 
 impl InputOtpGroup {
     pub fn new(slots: impl IntoIterator<Item = InputOtpSlot>) -> Self {
         Self {
             slots: slots.into_iter().collect(),
+            slot_gap_override: None,
+            slot_size_override: None,
+            slot_text_px_override: None,
+            slot_line_height_px_override: None,
+            slot_corner_mode: None,
         }
+    }
+
+    pub fn slot_gap_px(mut self, gap: Px) -> Self {
+        self.slot_gap_override = Some(gap);
+        self
+    }
+
+    pub fn slot_size_px(mut self, w: Px, h: Px) -> Self {
+        self.slot_size_override = Some((w, h));
+        self
+    }
+
+    pub fn slot_text_px(mut self, px: Px) -> Self {
+        self.slot_text_px_override = Some(px);
+        self
+    }
+
+    pub fn slot_line_height_px(mut self, px: Px) -> Self {
+        self.slot_line_height_px_override = Some(px);
+        self
+    }
+
+    pub fn slot_corner_mode(mut self, mode: InputOtpSlotCornerMode) -> Self {
+        self.slot_corner_mode = Some(mode);
+        self
     }
 }
 
@@ -1021,11 +1093,20 @@ impl InputOtpGroup {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct InputOtpSlot {
     index: usize,
+    aria_invalid: bool,
 }
 
 impl InputOtpSlot {
     pub fn new(index: usize) -> Self {
-        Self { index }
+        Self {
+            index,
+            aria_invalid: false,
+        }
+    }
+
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
+        self
     }
 }
 
@@ -1664,6 +1745,137 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("otp.input"))
             .expect("expected semantics node otp.input");
         assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
+    }
+
+    #[test]
+    fn input_otp_slot_part_aria_invalid_sets_hidden_input_semantics_invalid() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        let mut services = FakeServices::default();
+
+        let model = app.models_mut().insert("000000".to_string());
+
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(120.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "otp-slot-invalid",
+            |cx| {
+                vec![
+                    InputOtp::new(model)
+                        .length(6)
+                        .test_id_prefix("otp-slot-invalid")
+                        .into_element_parts(cx, |_cx| {
+                            vec![
+                                InputOtpGroup::new([
+                                    InputOtpSlot::new(0).aria_invalid(true),
+                                    InputOtpSlot::new(1),
+                                    InputOtpSlot::new(2),
+                                    InputOtpSlot::new(3),
+                                    InputOtpSlot::new(4),
+                                    InputOtpSlot::new(5),
+                                ])
+                                .into(),
+                            ]
+                        }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("otp-slot-invalid.input"))
+            .expect("expected semantics node otp-slot-invalid.input");
+        assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
+    }
+
+    #[test]
+    fn input_otp_group_part_slot_size_override_affects_only_that_group() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let mut ui: UiTree<App> = UiTree::new();
+        let mut services = FakeServices::default();
+        let model = app.models_mut().insert(String::new());
+
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(120.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "otp-group-slot-size",
+            |cx| {
+                vec![
+                    InputOtp::new(model)
+                        .length(6)
+                        .test_id_prefix("otp-group-slot-size")
+                        .into_element_parts(cx, |_cx| {
+                            vec![
+                                InputOtpGroup::new([
+                                    InputOtpSlot::new(0),
+                                    InputOtpSlot::new(1),
+                                    InputOtpSlot::new(2),
+                                ])
+                                .slot_size_px(Px(44.0), Px(48.0))
+                                .into(),
+                                InputOtpSeparator.into(),
+                                InputOtpGroup::new([
+                                    InputOtpSlot::new(3),
+                                    InputOtpSlot::new(4),
+                                    InputOtpSlot::new(5),
+                                ])
+                                .into(),
+                            ]
+                        }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let slot0 = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("otp-group-slot-size.slot.0"))
+            .expect("expected semantics node for slot 0");
+        let slot3 = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("otp-group-slot-size.slot.3"))
+            .expect("expected semantics node for slot 3");
+
+        assert!((slot0.bounds.size.width.0 - 44.0).abs() <= 1.0);
+        assert!((slot0.bounds.size.height.0 - 48.0).abs() <= 1.0);
+        assert!(slot0.bounds.size.width.0 > slot3.bounds.size.width.0 + 1.0);
+        assert!(slot0.bounds.size.height.0 > slot3.bounds.size.height.0 + 1.0);
     }
 
     #[test]

@@ -1,12 +1,18 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::cli::{help, workspace_root};
+use crate::cli::workspace_root;
+
+pub(crate) mod contracts;
 
 mod fs;
 mod templates;
 mod wizard;
 
+use self::contracts::{
+    NewCommandArgs, NewTemplateContract, ScaffoldEmptyCommandArgs, ScaffoldHelloCommandArgs,
+    ScaffoldIconArgs, ScaffoldIconPackValue, ScaffoldOutputArgs, ScaffoldTodoCommandArgs,
+};
 use fs::{
     ensure_dir_is_new_or_empty, sanitize_package_name, workspace_prefix_from_out_dir,
     write_file_if_missing, write_new_file,
@@ -19,35 +25,17 @@ use templates::{
     todo_template_main_rs, todo_template_readme_md,
 };
 
-pub(crate) fn init_cmd(args: Vec<String>) -> Result<(), String> {
-    new_template_cmd("init", args)
-}
-
-pub(crate) fn new_cmd(args: Vec<String>) -> Result<(), String> {
-    if args.len() == 1 && matches!(args[0].as_str(), "--help" | "-h") {
-        return help();
-    }
-    if args.is_empty() {
+pub(crate) fn run_new_contract(args: NewCommandArgs) -> Result<(), String> {
+    let Some(template) = args.template else {
         return wizard::new_wizard();
-    }
-    new_template_cmd("new", args)
-}
-
-fn new_template_cmd(invoked_as: &str, args: Vec<String>) -> Result<(), String> {
-    let mut it = args.into_iter();
-    let Some(template) = it.next() else {
-        return Err(format!("missing template (try: {invoked_as} todo)"));
     };
-    if matches!(template.as_str(), "--help" | "-h") {
-        return help();
-    }
 
-    match template.as_str() {
-        "empty" => init_empty(it.collect()),
-        "todo" => init_todo(it.collect()),
-        "simple-todo" | "simple_todo" => init_simple_todo(it.collect()),
-        "hello" | "hello-world" => init_hello(it.collect()),
-        other => Err(format!("unknown template for {invoked_as}: {other}")),
+    let root = workspace_root()?;
+    match template {
+        NewTemplateContract::Empty(args) => run_empty_contract(&root, args),
+        NewTemplateContract::Hello(args) => run_hello_contract(&root, args),
+        NewTemplateContract::SimpleTodo(args) => run_simple_todo_contract(&root, args),
+        NewTemplateContract::Todo(args) => run_todo_contract(&root, args),
     }
 }
 
@@ -67,17 +55,6 @@ enum IconPack {
 }
 
 impl IconPack {
-    fn parse(raw: &str) -> Result<Self, String> {
-        match raw.trim().to_ascii_lowercase().as_str() {
-            "none" | "no" | "off" | "false" => Ok(Self::None),
-            "lucide" => Ok(Self::Lucide),
-            "radix" => Ok(Self::Radix),
-            other => Err(format!(
-                "unknown icon pack: {other} (expected: lucide|radix|none)"
-            )),
-        }
-    }
-
     fn as_str(self) -> &'static str {
         match self {
             IconPack::None => "none",
@@ -94,150 +71,81 @@ struct ScaffoldOptions {
     ui_assets: bool,
 }
 
-fn init_empty(args: Vec<String>) -> Result<(), String> {
-    let root = workspace_root()?;
-
-    let mut out_path: Option<PathBuf> = None;
-    let mut name: Option<String> = None;
-    let mut run_check = true;
-
-    let mut it = args.into_iter();
-    while let Some(a) = it.next() {
-        match a.as_str() {
-            "--path" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--path requires a value".to_string())?;
-                out_path = Some(PathBuf::from(raw));
-            }
-            "--name" => {
-                name = Some(
-                    it.next()
-                        .ok_or_else(|| "--name requires a value".to_string())?,
-                );
-            }
-            "--help" | "-h" => return help(),
-            "--no-check" => run_check = false,
-            other => return Err(format!("unknown argument for init empty: {other}")),
-        }
-    }
-
-    let package_name = sanitize_package_name(name.as_deref().unwrap_or("my-app"))?;
-
-    let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
+fn run_empty_contract(workspace_root: &Path, args: ScaffoldEmptyCommandArgs) -> Result<(), String> {
+    let (out_dir, package_name, run_check) =
+        resolve_scaffold_output(workspace_root, args.output, "my-app")?;
     init_empty_at(&out_dir, &package_name, run_check)
 }
 
-fn init_todo(args: Vec<String>) -> Result<(), String> {
-    let root = workspace_root()?;
-
-    let mut out_path: Option<PathBuf> = None;
-    let mut name: Option<String> = None;
-    let mut ui_assets = false;
-    let mut icon_pack = IconPack::Lucide;
-    let mut command_palette = false;
-    let mut run_check = true;
-
-    let mut it = args.into_iter();
-    while let Some(a) = it.next() {
-        match a.as_str() {
-            "--path" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--path requires a value".to_string())?;
-                out_path = Some(PathBuf::from(raw));
-            }
-            "--name" => {
-                name = Some(
-                    it.next()
-                        .ok_or_else(|| "--name requires a value".to_string())?,
-                );
-            }
-            "--ui-assets" => ui_assets = true,
-            "--icons" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--icons requires a value".to_string())?;
-                icon_pack = IconPack::parse(&raw)?;
-            }
-            "--no-icons" => icon_pack = IconPack::None,
-            "--command-palette" => command_palette = true,
-            "--help" | "-h" => return help(),
-            "--no-check" => run_check = false,
-            other => return Err(format!("unknown argument for init todo: {other}")),
-        }
-    }
-
-    let package_name = sanitize_package_name(name.as_deref().unwrap_or("todo-app"))?;
-
-    let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
+fn run_todo_contract(workspace_root: &Path, args: ScaffoldTodoCommandArgs) -> Result<(), String> {
+    let (out_dir, package_name, run_check) =
+        resolve_scaffold_output(workspace_root, args.output, "todo-app")?;
     init_todo_at(
-        &root,
+        workspace_root,
         &out_dir,
         &package_name,
-        ScaffoldOptions {
-            icon_pack,
-            command_palette,
-            ui_assets,
-        },
+        scaffold_options_from_icon_args(args.icons, args.ui_assets),
         run_check,
     )
 }
 
-fn init_simple_todo(args: Vec<String>) -> Result<(), String> {
-    let root = workspace_root()?;
-
-    let mut out_path: Option<PathBuf> = None;
-    let mut name: Option<String> = None;
-    let mut ui_assets = false;
-    let mut icon_pack = IconPack::Lucide;
-    let mut command_palette = false;
-    let mut run_check = true;
-
-    let mut it = args.into_iter();
-    while let Some(a) = it.next() {
-        match a.as_str() {
-            "--path" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--path requires a value".to_string())?;
-                out_path = Some(PathBuf::from(raw));
-            }
-            "--name" => {
-                name = Some(
-                    it.next()
-                        .ok_or_else(|| "--name requires a value".to_string())?,
-                );
-            }
-            "--ui-assets" => ui_assets = true,
-            "--icons" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--icons requires a value".to_string())?;
-                icon_pack = IconPack::parse(&raw)?;
-            }
-            "--no-icons" => icon_pack = IconPack::None,
-            "--command-palette" => command_palette = true,
-            "--help" | "-h" => return help(),
-            "--no-check" => run_check = false,
-            other => return Err(format!("unknown argument for init simple-todo: {other}")),
-        }
-    }
-
-    let package_name = sanitize_package_name(name.as_deref().unwrap_or("simple-todo-app"))?;
-
-    let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
+fn run_simple_todo_contract(
+    workspace_root: &Path,
+    args: ScaffoldTodoCommandArgs,
+) -> Result<(), String> {
+    let (out_dir, package_name, run_check) =
+        resolve_scaffold_output(workspace_root, args.output, "simple-todo-app")?;
     init_simple_todo_at(
-        &root,
+        workspace_root,
         &out_dir,
         &package_name,
-        ScaffoldOptions {
-            icon_pack,
-            command_palette,
-            ui_assets,
-        },
+        scaffold_options_from_icon_args(args.icons, args.ui_assets),
         run_check,
     )
+}
+
+fn run_hello_contract(workspace_root: &Path, args: ScaffoldHelloCommandArgs) -> Result<(), String> {
+    let (out_dir, package_name, run_check) =
+        resolve_scaffold_output(workspace_root, args.output, "hello-world")?;
+    init_hello_at(
+        workspace_root,
+        &out_dir,
+        &package_name,
+        scaffold_options_from_icon_args(args.icons, false),
+        run_check,
+    )
+}
+
+fn resolve_scaffold_output(
+    workspace_root: &Path,
+    args: ScaffoldOutputArgs,
+    default_name: &str,
+) -> Result<(PathBuf, String, bool), String> {
+    let package_name = sanitize_package_name(args.name.as_deref().unwrap_or(default_name))?;
+    let out_dir = args
+        .path
+        .unwrap_or_else(|| workspace_root.join("local").join(&package_name));
+    Ok((out_dir, package_name, !args.no_check))
+}
+
+fn scaffold_options_from_icon_args(args: ScaffoldIconArgs, ui_assets: bool) -> ScaffoldOptions {
+    ScaffoldOptions {
+        icon_pack: icon_pack_from_args(&args),
+        command_palette: args.command_palette,
+        ui_assets,
+    }
+}
+
+fn icon_pack_from_args(args: &ScaffoldIconArgs) -> IconPack {
+    if args.no_icons {
+        return IconPack::None;
+    }
+
+    match args.icons.unwrap_or(ScaffoldIconPackValue::Lucide) {
+        ScaffoldIconPackValue::Lucide => IconPack::Lucide,
+        ScaffoldIconPackValue::Radix => IconPack::Radix,
+        ScaffoldIconPackValue::None => IconPack::None,
+    }
 }
 
 fn init_simple_todo_at(
@@ -314,60 +222,6 @@ fn init_todo_at(
         out_dir.join("Cargo.toml").display()
     );
     Ok(())
-}
-
-fn init_hello(args: Vec<String>) -> Result<(), String> {
-    let root = workspace_root()?;
-
-    let mut out_path: Option<PathBuf> = None;
-    let mut name: Option<String> = None;
-    let mut icon_pack = IconPack::Lucide;
-    let mut command_palette = false;
-    let mut run_check = true;
-
-    let mut it = args.into_iter();
-    while let Some(a) = it.next() {
-        match a.as_str() {
-            "--path" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--path requires a value".to_string())?;
-                out_path = Some(PathBuf::from(raw));
-            }
-            "--name" => {
-                name = Some(
-                    it.next()
-                        .ok_or_else(|| "--name requires a value".to_string())?,
-                );
-            }
-            "--icons" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--icons requires a value".to_string())?;
-                icon_pack = IconPack::parse(&raw)?;
-            }
-            "--no-icons" => icon_pack = IconPack::None,
-            "--command-palette" => command_palette = true,
-            "--help" | "-h" => return help(),
-            "--no-check" => run_check = false,
-            other => return Err(format!("unknown argument for init hello: {other}")),
-        }
-    }
-
-    let package_name = sanitize_package_name(name.as_deref().unwrap_or("hello-world"))?;
-
-    let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
-    init_hello_at(
-        &root,
-        &out_dir,
-        &package_name,
-        ScaffoldOptions {
-            icon_pack,
-            command_palette,
-            ui_assets: false,
-        },
-        run_check,
-    )
 }
 
 fn init_hello_at(

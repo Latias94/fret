@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("side.rs");
 
 // region: example
-use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -25,75 +24,65 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
                         .test_id(format!("ui-gallery-sheet-side-{id}-trigger")),
                 )),
-                shadcn::SheetPart::content(
-                    shadcn::SheetContent::build(move |cx, out| {
-                        let fields = ui::v_flex(|cx| {
-                            vec![
-                                shadcn::Field::new([
-                                    shadcn::FieldLabel::new("Name").into_element(cx),
-                                    shadcn::Input::new(name_model.clone())
-                                        .refine_layout(LayoutRefinement::default().w_full())
-                                        .into_element(cx),
-                                ])
-                                .into_element(cx),
-                                shadcn::Field::new([
-                                    shadcn::FieldLabel::new("Username").into_element(cx),
-                                    shadcn::Input::new(username_model.clone())
-                                        .refine_layout(LayoutRefinement::default().w_full())
-                                        .into_element(cx),
-                                ])
-                                .into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N4)
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .into_element(cx);
+                shadcn::SheetPart::content_with(move |cx| {
+                    let fields = ui::v_flex(|cx| {
+                        vec![
+                            shadcn::Field::new([
+                                shadcn::FieldLabel::new("Name").into_element(cx),
+                                shadcn::Input::new(name_model.clone())
+                                    .refine_layout(LayoutRefinement::default().w_full())
+                                    .into_element(cx),
+                            ])
+                            .into_element(cx),
+                            shadcn::Field::new([
+                                shadcn::FieldLabel::new("Username").into_element(cx),
+                                shadcn::Input::new(username_model.clone())
+                                    .refine_layout(LayoutRefinement::default().w_full())
+                                    .into_element(cx),
+                            ])
+                            .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N4)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx);
 
-                        let fields = {
-                            let props = decl_style::container_props(
-                                Theme::global(&*cx.app),
-                                ChromeRefinement::default().px(Space::N4),
-                                LayoutRefinement::default()
-                                    .w_full()
-                                    .min_w_0()
-                                    .min_h_0()
-                                    .flex_1(),
-                            );
-                            cx.container(props, move |_cx| vec![fields])
-                        };
+                    let fields = {
+                        let props = decl_style::container_props(
+                            Theme::global(&*cx.app),
+                            ChromeRefinement::default().px(Space::N4),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .min_w_0()
+                                .min_h_0()
+                                .flex_1(),
+                        );
+                        cx.container(props, move |_cx| vec![fields])
+                    };
 
-                        out.push_ui(
-                            cx,
-                            shadcn::SheetHeader::build(|cx, out| {
-                                out.push_ui(cx, shadcn::SheetTitle::new("Edit profile"));
-                                out.push_ui(
-                                    cx,
+                    shadcn::SheetContent::new([]).with_children(cx, |cx| {
+                        vec![
+                            shadcn::SheetHeader::new([]).with_children(cx, |cx| {
+                                vec![
+                                    shadcn::SheetTitle::new("Edit profile").into_element(cx),
                                     shadcn::SheetDescription::new(
                                         "Make changes to your profile here. Click save when you're done.",
-                                    ),
-                                );
+                                    )
+                                    .into_element(cx),
+                                ]
                             }),
-                        );
-                        out.push(fields);
-                        out.push_ui(
-                            cx,
-                            shadcn::SheetFooter::build(|cx, out| {
-                                out.push_ui(
+                            fields,
+                            shadcn::SheetFooter::new([]).with_children(cx, |cx| {
+                                vec![shadcn::SheetClose::from_scope().build(
                                     cx,
                                     shadcn::Button::new("Save changes")
                                         .test_id(format!("ui-gallery-sheet-side-{id}-save")),
-                                );
-                                let cancel = shadcn::SheetClose::from_scope().build(
-                                    cx,
-                                    shadcn::Button::new("Cancel")
-                                        .variant(shadcn::ButtonVariant::Outline),
-                                );
-                                out.push(cancel);
+                                )]
                             }),
-                        );
+                        ]
                     })
-                    .test_id(format!("ui-gallery-sheet-side-{id}-content")),
-                ),
+                    .test_id(format!("ui-gallery-sheet-side-{id}-content"))
+                }),
             ])
             .into_element(cx)
     };

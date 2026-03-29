@@ -97,7 +97,8 @@ where
         .justify_end()
 }
 
-fn guide_demo_content(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let _ = cx;
     ui::v_flex(move |cx| {
         let assets = cx.slot_state(
             || {
@@ -240,6 +241,13 @@ fn guide_demo_content(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         } else {
             shadcn::DataTableToolbarResponsiveQuery::Viewport
         };
+        let viewport_lg = fret_ui_kit::declarative::viewport_width_at_least(
+            cx,
+            fret_ui::Invalidation::Layout,
+            fret_ui_kit::declarative::viewport_tailwind::LG,
+            fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+        );
+        let filter_width = if viewport_lg { Px(250.0) } else { Px(150.0) };
 
         let responsive_toggle = shadcn::FieldGroup::new([shadcn::Field::new([
             shadcn::FieldContent::new([
@@ -270,7 +278,11 @@ fn guide_demo_content(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             |col: &ColumnDef<DemoProcessRow>| col.id.clone(),
         )
         .show_global_filter(false)
-        .filter_layout(LayoutRefinement::default().h_px(Px(32.0)).w_px(Px(250.0)))
+        .filter_layout(
+            LayoutRefinement::default()
+                .h_px(Px(32.0))
+                .w_px(filter_width),
+        )
         .column_filter("name")
         .column_filter_placeholder("Filter processes...")
         .column_filter_a11y_label("Name filter")
@@ -288,6 +300,7 @@ fn guide_demo_content(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         )
         .faceted_filter_counts(status_facets)
         .faceted_selected_badges_query(faceted_badges_query)
+        .show_columns_menu(viewport_lg)
         .columns_button_label("View")
         .show_pinning_menu(false)
         .show_selected_text(false)

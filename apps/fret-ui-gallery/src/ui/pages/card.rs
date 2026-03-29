@@ -111,6 +111,13 @@ pub(crate) fn card_doc_scaffold_metrics_json(bisect: u32) -> serde_json::Value {
             shell: false,
         },
         CardDocSectionDiagnostics {
+            title: "Rich Description (Fret)",
+            description: "Copyable `card_description_children(...)` lane for attributed text and caller-owned description composition.",
+            disable_flag: 0,
+            code_source: Some(snippets::description_children::SOURCE),
+            shell: false,
+        },
+        CardDocSectionDiagnostics {
             title: "Compositions",
             description: "Spot-check slot combinations: header/content/footer permutations.",
             disable_flag: BISECT_DISABLE_CARD_SECTION_COMPOSITIONS,
@@ -175,7 +182,7 @@ pub(crate) fn card_doc_scaffold_metrics_json(bisect: u32) -> serde_json::Value {
         .then_some(CARD_PAGE_INTRO.len() as u64)
         .unwrap_or(0);
     serde_json::json!({
-        "card_doc_section_slots_total": 11u64,
+        "card_doc_section_slots_total": 12u64,
         "card_doc_visible_sections_count": visible_sections,
         "card_doc_visible_sections_with_code_count": visible_sections_with_code,
         "card_doc_visible_sections_with_shell_count": visible_sections_with_shell,
@@ -194,8 +201,9 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let show_intro = (bisect & BISECT_DISABLE_CARD_PAGE_INTRO) == 0;
     let api_reference = doc_layout::notes_block([
         "`card(...)` plus the slot helper family is the default copyable path; `Card::new([...])` remains the explicit raw/root collection surface.",
+        "`Card`, `CardHeader`, `CardAction`, `CardContent`, and `CardFooter` already accept composable children via `...::new([...])` or the helper-family builders, so no extra generic root-level `children(...)` API is needed for shadcn parity.",
         "`CardTitle::new(text)` stays the compact text lane, and `CardTitle::new_children(...)` / `card_title_children(...)` cover composable children when you need rich/selectable text or a caller-owned inline composition root.",
-        "`CardDescription::new(text)` and `card_description_children(...)` both scope description typography at the recipe level instead of pushing muted/body text styling to the call site.",
+        "`CardDescription::new(text)` stays the compact supporting-text lane, and `CardDescription::new_children(...)` / `card_description_children(...)` cover matching composable children when the description needs attributed text or a caller-owned inline composition root.",
         "`CardAction` remains the recipe-owned top-right header slot, while card width (`w-full`, `max-w-sm`, fixed px width) stays caller-owned via `refine_layout(...)` on the card root.",
         "`CardFooter` direction/gap are the recipe-level knobs for the documented column/row outcomes; page/grid/container negotiation remains caller-owned and should not be baked into the Card recipe.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
@@ -275,6 +283,19 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Copyable `card_title_children(...)` lane for attributed text and caller-owned title composition.",
         );
     sections.push(with_card_code(rich_title, snippets::title_children::SOURCE));
+    let rich_description = snippets::description_children::render(cx);
+    let rich_description = DocSection::build(cx, "Rich Description (Fret)", rich_description)
+        .test_id_root("ui-gallery-card-section-rich-description")
+        .test_id_prefix("ui-gallery-card-section-rich-description")
+        .no_shell()
+        .max_w(Px(980.0))
+        .description(
+            "Copyable `card_description_children(...)` lane for attributed text and caller-owned description composition.",
+        );
+    sections.push(with_card_code(
+        rich_description,
+        snippets::description_children::SOURCE,
+    ));
     if (bisect & BISECT_DISABLE_CARD_SECTION_COMPOSITIONS) == 0 {
         let compositions = snippets::compositions::render(cx);
         let section = DocSection::build(cx, "Compositions", compositions)
@@ -311,7 +332,7 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Grid/flex demo pages should put `w_full`, `min_w_0`, and `max_w(...)` on the page cell rather than baking them into the Card recipe.",
             "`CardFooter` now owns a fill-width + `min-w-0` inner row/column budget so footer-only text wraps against the card width instead of collapsing into one word per line.",
             "Default first-party teaching should prefer `card(...)` plus the slot helper family; `Card::build(...)` remains a lower-level builder option when call sites need explicit late child collection.",
-            "`Rich Title (Fret)` keeps the `card_title_children(...)` lane copyable on the default app-facing surface instead of making callers drop to `CardTitle::build(...)` for rich title content.",
+            "`Rich Title (Fret)` and `Rich Description (Fret)` keep the `card_title_children(...)` / `card_description_children(...)` lanes copyable on the default app-facing surface instead of making callers drop to slot builders for rich text content.",
             "Gallery order now mirrors the upstream Card docs path through `API Reference` before appending Fret-only regression sections.",
             "The Image section now resolves its cover image from a gallery-owned logical package bundle, so the teaching surface reflects shipped asset ownership rather than inline demo RGBA buffers.",
         ]);

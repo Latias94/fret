@@ -2360,7 +2360,7 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                                             row.push(t);
                                         }
                                         if has_submenu {
-                                            row.push(submenu_chevron_right_text(
+                                            row.push(submenu_chevron_inline_end_text(
                                                 cx,
                                                 icon_fg,
                                                 item_style.font_size,
@@ -3066,7 +3066,7 @@ fn checkable_menu_row_children<H: UiHost>(
     ]
 }
 
-fn submenu_chevron_right_text<H: UiHost>(
+fn submenu_chevron_inline_end_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     fg: fret_core::Color,
     _font_size: Px,
@@ -4850,7 +4850,7 @@ impl DropdownMenu {
                                                                                     row.push(t);
                                                                                 }
                                                                                 if has_submenu {
-                                                                                    row.push(submenu_chevron_right_text(
+                                                                                    row.push(submenu_chevron_inline_end_text(
                                                                                         cx,
                                                                                         icon_fg,
                                                                                         font_size,
@@ -5370,6 +5370,28 @@ mod tests {
             .find_map(find_first_inherited_foreground_node)
     }
 
+    fn find_first_svg_icon_props(el: &AnyElement) -> Option<&fret_ui::element::SvgIconProps> {
+        match &el.kind {
+            ElementKind::SvgIcon(props) => Some(props),
+            _ => el.children.iter().find_map(find_first_svg_icon_props),
+        }
+    }
+
+    fn svg_sources_match(lhs: &fret_ui::SvgSource, rhs: &fret_ui::SvgSource) -> bool {
+        match (lhs, rhs) {
+            (fret_ui::SvgSource::Id(lhs), fret_ui::SvgSource::Id(rhs)) => lhs == rhs,
+            (fret_ui::SvgSource::Static(lhs), fret_ui::SvgSource::Static(rhs)) => lhs == rhs,
+            (fret_ui::SvgSource::Bytes(lhs), fret_ui::SvgSource::Bytes(rhs)) => {
+                lhs.as_ref() == rhs.as_ref()
+            }
+            (fret_ui::SvgSource::Static(lhs), fret_ui::SvgSource::Bytes(rhs))
+            | (fret_ui::SvgSource::Bytes(rhs), fret_ui::SvgSource::Static(lhs)) => {
+                *lhs == rhs.as_ref()
+            }
+            _ => false,
+        }
+    }
+
     #[test]
     fn dropdown_menu_logical_sides_follow_layout_direction() {
         assert_eq!(
@@ -5388,6 +5410,49 @@ mod tests {
             dropdown_menu_overlay_side(LayoutDirection::Rtl, DropdownMenuSide::InlineEnd),
             Side::Left
         );
+    }
+
+    #[test]
+    fn dropdown_menu_submenu_chevron_tracks_inline_end_direction() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        for dir in [LayoutDirection::Ltr, LayoutDirection::Rtl] {
+            let element =
+                fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+                    crate::direction::with_direction_provider(cx, dir, |cx| {
+                        submenu_chevron_inline_end_text(
+                            cx,
+                            fret_core::Color {
+                                r: 1.0,
+                                g: 1.0,
+                                b: 1.0,
+                                a: 1.0,
+                            },
+                            Px(14.0),
+                            Px(20.0),
+                        )
+                    })
+                });
+
+            let icon = find_first_svg_icon_props(&element)
+                .expect("expected submenu chevron helper to render an SvgIcon");
+            let expected = fret_ui_kit::declarative::icon::resolve_svg_source_from_globals(
+                &mut app,
+                &rtl::chevron_inline_end(dir),
+                "dropdown_menu_submenu_chevron_tracks_inline_end_direction",
+            );
+
+            assert!(
+                svg_sources_match(&icon.svg, &expected),
+                "expected submenu chevron to point toward inline-end for {dir:?}; actual={:?} expected={expected:?}",
+                icon.svg,
+            );
+        }
     }
 
     #[test]

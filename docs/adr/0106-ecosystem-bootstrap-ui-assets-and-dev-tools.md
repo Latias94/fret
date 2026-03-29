@@ -135,7 +135,7 @@ Implemented:
 - `ecosystem/fret-ui-assets` exists as the preferred UI render-asset surface (images/SVG caches and upload helpers).
 - `ecosystem/fret-bootstrap` exists as the ecosystem "golden path" startup layer (wrapper over `fret-launch`).
 - `apps/fretboard` exists as a dev-tools binary for running native/web demos with consistent flags.
-- `fretboard init todo` provides a starter template for new apps (see `docs/examples/todo-app-golden-path.md`).
+- `fretboard new todo` provides a starter template for new apps (see `docs/examples/todo-app-golden-path.md`).
 
 In progress / next:
 
@@ -216,7 +216,7 @@ breaking stable contracts.
 1) Add `ecosystem/fret-bootstrap` and update demos to use it (optional but recommended).
 2) Introduce `fret-ui-assets` as a re-export wrapper around `fret-asset-cache` (or rename directly if early enough).
 3) Add `fretboard` CLI once the bootstrap patterns stabilize.
-4) Add a starter template command (`fretboard init`) once the crate boundaries prove stable. (Implemented: `fretboard init todo`.)
+4) Add a starter template command (`fretboard new`) once the crate boundaries prove stable. (Implemented: `fretboard new todo`.)
 
 ## References
 

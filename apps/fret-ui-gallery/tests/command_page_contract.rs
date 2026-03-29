@@ -23,6 +23,12 @@ fn command_page_records_shell_vs_cmdk_split_children_contract() {
     let source = read("src/ui/pages/command.rs");
     assert!(
         source.contains(
+            "`CommandItem::children(...)` already covers row-level composability today. The deferred gap is the shared root context that upstream cmdk uses so `CommandInput`, `CommandList`, `CommandEmpty`, and `CommandGroup` can compose without manual query/selection wiring."
+        ),
+        "src/ui/pages/command.rs should keep row-level children support distinct from the deferred root shared-context API"
+    );
+    assert!(
+        source.contains(
             "`CommandInput` / `CommandList` stay available for lower-level shell composition and legacy roving lists, but they do not share the cmdk query + active-descendant state machine."
         ),
         "src/ui/pages/command.rs should keep the lower-level shell status of CommandInput/CommandList explicit"
@@ -38,5 +44,11 @@ fn command_page_records_shell_vs_cmdk_split_children_contract() {
             "upstream cmdk composes those parts through shared internal state, so promoting the same shape in Fret would first require an explicit shared context contract for query, active row, and selection rather than ad-hoc glue."
         ),
         "src/ui/pages/command.rs should explain why the default surface does not promote split children authoring yet"
+    );
+    assert!(
+        source.contains(
+            "Treat row-level children support and root-level shared-context support as separate questions: `CommandItem::children(...)` already ships, while split root composition still needs an explicit context contract."
+        ),
+        "src/ui/pages/command.rs should keep the item-level vs root-level composability distinction explicit in Notes"
     );
 }

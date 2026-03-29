@@ -16,12 +16,12 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/pagination.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/pagination.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/pagination.mdx`, and `repo-ref/ui/apps/v4/registry/new-york-v4/ui/pagination.tsx`.",
-        "No local `Pagination` equivalent currently exists under `repo-ref/primitives` or `repo-ref/base-ui`, so shadcn docs + registry source remain the primary parity axis here.",
+        "No direct `Pagination` primitive exists under `repo-ref/primitives` or `repo-ref/base-ui`; the closest secondary references are the shadcn base/radix registry copies in `repo-ref/ui/apps/v4/registry/bases/{base,radix}/ui/pagination.tsx`, and they confirm the same nav/list/link recipe shape rather than a missing mechanism layer.",
         "`Usage` now teaches the upstream-shaped parts lane directly: `Pagination`, `PaginationContent`, `PaginationItem`, and `PaginationLink` already support explicit composable children without needing an extra generic `compose()` API.",
-        "`Routing` is the Fret app-layer equivalent of the upstream Next.js section: keep link semantics on `PaginationLink`, but bind navigation via `.action(...)` instead of a DOM-only `href` swap.",
-        "`Custom Text` maps the upstream changelog update onto the existing `.text(...)` support on `PaginationPrevious` / `PaginationNext`.",
+        "`Routing / Next.js` is the Fret app-layer equivalent of the upstream Next.js section: keep link semantics on `PaginationLink`, but bind navigation via `.action(...)` instead of a DOM-only `href` swap.",
+        "`Custom Text / Changelog` maps the upstream changelog update onto the existing `.text(...)` support on `PaginationPrevious` / `PaginationNext`.",
         "`Compact Builder` keeps the Fret shorthand lane explicit for common app call sites: `pagination(...)`, `pagination_content(...)`, `pagination_item(...)`, and `pagination_link(...)` reduce child landing noise without replacing the upstream-shaped parts surface.",
-        "The underlying component remains a shadcn-layer concern rather than a mechanism gap: root semantics still approximate `<nav aria-label=\"pagination\">` with `Region + label`, and content/items emit `List` / `ListItem` semantics until a dedicated navigation landmark role exists in core.",
+        "The remaining semantic gap is still core-level naming rather than pagination recipe structure: root semantics approximate `<nav aria-label=\"pagination\">` with `Region + label`, and content/items emit `List` / `ListItem` semantics until a dedicated navigation landmark role exists in core.",
     ]);
     let notes = DocSection::build(cx, "Notes", notes)
         .title_test_id("ui-gallery-pagination-section-title-notes")
@@ -46,7 +46,7 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Use just the previous and next buttons without page numbers.")
         .test_id_prefix("ui-gallery-pagination-icons-only")
         .code_rust_from_file_region(snippets::icons_only::SOURCE, "example");
-    let routing = DocSection::build(cx, "Routing", routing)
+    let routing = DocSection::build(cx, "Routing / Next.js", routing)
         .title_test_id("ui-gallery-pagination-section-title-routing")
         .description(
             "App-layer equivalent of upstream Next.js `Link`: preserve link semantics, bind routing with `.action(...)`.",
@@ -58,7 +58,7 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("RTL docs example with localized numerals and mirrored previous/next icons.")
         .test_id_prefix("ui-gallery-pagination-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
-    let custom_text = DocSection::build(cx, "Custom Text", custom_text)
+    let custom_text = DocSection::build(cx, "Custom Text / Changelog", custom_text)
         .title_test_id("ui-gallery-pagination-section-title-custom-text")
         .description("Use `text(...)` on previous/next, mirroring the upstream changelog update.")
         .test_id_prefix("ui-gallery-pagination-custom-text")
@@ -74,7 +74,7 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Pagination docs path after `Installation`: `Demo`, `Usage`, `Simple`, `Icons Only`, `Routing`, `RTL`, and `Custom Text`; `Compact Builder` stays as the explicit Fret follow-up.",
+            "Preview mirrors the shadcn Pagination docs path after `Installation`: `Demo`, `Usage`, `Simple`, `Icons Only`, `Routing / Next.js`, `RTL`, and `Custom Text / Changelog`; `Compact Builder` stays as the explicit Fret follow-up.",
         ),
         vec![
             demo,

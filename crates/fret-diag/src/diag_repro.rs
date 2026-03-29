@@ -8,7 +8,8 @@ mod summary;
 mod util;
 
 pub(crate) struct ReproCmdContext {
-    pub rest: Vec<String>,
+    pub scripts: Vec<PathBuf>,
+    pub suite_name: Option<String>,
     pub workspace_root: PathBuf,
     pub resolved_run_context: ResolvedRunContext,
     pub pack_out: Option<PathBuf>,
@@ -46,6 +47,19 @@ pub(crate) struct ReproCmdContext {
     pub max_render_text_atlas_bytes_live_estimate_total: Option<u64>,
     pub check_redraw_hitches_max_total_ms_threshold: Option<u64>,
     pub checks: diag_run::RunChecks,
+}
+
+pub(crate) fn resolve_repro_targets(
+    targets: &[String],
+    workspace_root: &Path,
+) -> Result<(Vec<PathBuf>, Option<String>), String> {
+    scripts::resolve_repro_scripts(targets, workspace_root)
+}
+
+pub(crate) fn merged_repro_script_env_defaults(
+    scripts: &[PathBuf],
+) -> Result<Vec<(String, String)>, String> {
+    scripts::merged_script_env_defaults(scripts)
 }
 
 fn bundle_artifact_alias_string(path: Option<&Path>) -> Option<String> {
@@ -86,7 +100,8 @@ fn build_repro_packed_bundle_entry(item: &crate::ReproPackItem, idx: usize) -> s
 
 pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let ReproCmdContext {
-        rest,
+        scripts,
+        suite_name,
         workspace_root,
         resolved_run_context,
         pack_out,
@@ -237,53 +252,11 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         ..
     } = checks;
 
-    if rest.is_empty() {
-        return Err(
-            "missing script path or suite name (try: fretboard diag repro ui-gallery | fretboard diag repro ./script.json)"
-                .to_string(),
-        );
-    }
-
     let pack_defaults = util::pack_defaults_with_fallback(
         pack_include_root_artifacts,
         pack_include_triage,
         pack_include_screenshots,
     );
-
-    let (scripts, suite_name) = scripts::resolve_repro_scripts(&rest, &workspace_root)?;
-
-    let mut launch_env = launch_env;
-    if !scripts.is_empty() {
-        use std::collections::BTreeMap;
-
-        let mut defaults: BTreeMap<String, String> = BTreeMap::new();
-        let mut conflicts: Vec<String> = Vec::new();
-        for script in &scripts {
-            for (key, value) in script_env_defaults(script) {
-                if let Some(prev) = defaults.insert(key.clone(), value.clone())
-                    && prev != value
-                {
-                    conflicts.push(format!(
-                        "meta.env_defaults conflict for {key}: {prev} vs {value} (script={})",
-                        script.display()
-                    ));
-                }
-            }
-        }
-        if !conflicts.is_empty() {
-            conflicts.sort();
-            return Err(format!(
-                "conflicting script meta.env_defaults in repro:\n- {}",
-                conflicts.join("\n- ")
-            ));
-        }
-        for (key, value) in defaults {
-            if launch_env.iter().any(|(k, _v)| k == &key) {
-                continue;
-            }
-            launch_env.push((key, value));
-        }
-    }
 
     let summary_path = resolved_out_dir.join("repro.summary.json");
 

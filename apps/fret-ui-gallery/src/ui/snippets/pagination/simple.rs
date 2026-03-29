@@ -2,13 +2,13 @@ pub const SOURCE: &str = include_str!("simple.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_ui_kit::{IntoUiElement, ui};
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_kit::ui;
+use fret_ui_shadcn::facade as shadcn;
 
 const CMD_APP_OPEN: &str = "ui_gallery.pagination.simple.open";
 const CMD_APP_SAVE: &str = "ui_gallery.pagination.simple.save";
 
-fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H> {
+fn page_number(label: &'static str) -> impl UiChild + use<> {
     fret_ui_kit::ui::text(label).tabular_nums()
 }
 

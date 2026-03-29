@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("custom_text.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_ui_kit::{IntoUiElement, ui};
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_kit::ui;
+use fret_ui_shadcn::facade as shadcn;
 
 const CMD_PAGE_PREVIOUS: &str = "ui_gallery.pagination.custom_text.previous";
 const CMD_PAGE_11: &str = "ui_gallery.pagination.custom_text.page_11";
@@ -11,7 +11,7 @@ const CMD_PAGE_12: &str = "ui_gallery.pagination.custom_text.page_12";
 const CMD_PAGE_13: &str = "ui_gallery.pagination.custom_text.page_13";
 const CMD_PAGE_NEXT: &str = "ui_gallery.pagination.custom_text.next";
 
-fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H> {
+fn page_number(label: &'static str) -> impl UiChild + use<> {
     ui::text(label).tabular_nums()
 }
 

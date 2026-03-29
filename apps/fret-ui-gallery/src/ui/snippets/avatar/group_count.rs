@@ -35,11 +35,12 @@ fn group_with_count<H: UiHost>(
         })
         .collect::<Vec<_>>();
 
-    let count =
-        shadcn::AvatarGroupCount::new([ui::text("+3").font_medium().nowrap().into_element(cx)])
-            .into_element(cx);
+    let count = shadcn::AvatarGroupCount::empty()
+        .children([ui::text("+3").font_medium().nowrap().into_element(cx)])
+        .into_element(cx);
 
-    shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
+    shadcn::AvatarGroup::empty()
+        .children(avatars.into_iter().chain([count]).collect::<Vec<_>>())
         .size(size)
         .into_element(cx)
         .test_id(test_id)

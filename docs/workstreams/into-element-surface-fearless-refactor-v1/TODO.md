@@ -1310,7 +1310,7 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
   while leaving the broader upstream form/state logic untouched.
 - another low-risk sweep now lands on the same card-family teaching rule:
   `motion_presets/{preset_selector,token_snapshot}.rs`, `skeleton/card.rs`,
-  `accordion/extras.rs`, `collapsible/settings_panel.rs`, and `card/meeting_notes.rs`
+  `accordion/showcase.rs`, `collapsible/settings_panel.rs`, and `card/meeting_notes.rs`
   now teach `card(...)` plus the slot helper family instead of eager `Card::*` constructors,
   with `meeting_notes.rs` also switching its header action to `card_action(...)`.
 - the last remaining low-risk non-material/non-carousel card shell in this sweep is now gone too:
@@ -1404,9 +1404,10 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
   with explicit `.into_element(cx)` only at sibling child-collection and render-boundary seams.
 - selected UI Gallery pagination snippets now also keep local page label helpers off raw landed
   returns by default:
-  `src/ui/snippets/pagination/{simple,usage}.rs`
-  now use `page_number(...) -> impl IntoUiElement<H> + use<H>`,
-  with explicit `.into_element(cx)` only at the `PaginationLink::new([..])` seam.
+  `src/ui/snippets/pagination/{compact_builder,custom_text,demo,extras,routing,simple,usage}.rs`
+  now use `page_number(...) -> impl UiChild + use<>`,
+  with explicit `.into_element(cx)` only at the remaining `PaginationLink::new([..])` seams where
+  the surrounding type-first API still lands children eagerly.
 - selected UI Gallery carousel snippets now also keep local slide helpers off raw landed returns
   by default:
   `src/ui/snippets/carousel/{basic,sizes,plugin_wheel_gestures,spacing_responsive,loop_carousel,options,loop_downgrade_cannot_loop,spacing,usage,sizes_thirds,parts,api,duration_embla,rtl,plugin_autoplay,plugin_autoplay_delays,plugin_autoplay_controlled,plugin_autoplay_stop_on_focus,plugin_autoplay_stop_on_last_snap,events}.rs`
@@ -1421,10 +1422,16 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
   with explicit `.into_element(cx)` only at the stack/row collection seam.
 - selected UI Gallery popover snippets now also keep layout-wrapper helpers off raw landed returns
   by default:
-  `src/ui/snippets/popover/{basic,demo,with_form}.rs`
-  now uses `centered<H, B>(body: B) -> impl IntoUiElement<H> + use<H, B>`
+  `src/ui/snippets/popover/{basic,with_form}.rs`
+  now use `centered<H, B>(body: B) -> impl IntoUiElement<H> + use<H, B>`
   where `B: IntoUiElement<H>`,
   so the wrapper no longer forces callers to pre-land `AnyElement`.
+- `src/ui/snippets/popover/demo.rs`
+  now takes the stricter app-facing helper lane instead:
+  `centered<B>(body: B) -> impl UiChild + use<B>` and
+  `row(...) -> impl UiChild + use<>`,
+  because both helpers only serve the default-app snippet surface and no longer need a host-bound
+  generic contract.
 - selected UI Gallery dropdown-menu snippets now also keep preview wrappers on the unified
   conversion contract:
   `src/ui/snippets/dropdown_menu/mod.rs`
@@ -1573,7 +1580,7 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
 - selected UI Gallery resizable snippets now also keep panel/container wrapper helpers off raw
   landed returns by default:
   `src/ui/snippets/resizable/usage.rs`
-  now uses `panel(...) -> impl IntoUiElement<H> + use<H>`;
+  now uses `panel(...) -> impl UiChild + use<>`;
   `src/ui/snippets/resizable/{vertical,handle}.rs`
   now use `box_group<H, B>(..., body: B) -> impl IntoUiElement<H> + use<H, B>` where
   `B: IntoUiElement<H>`,
@@ -1753,8 +1760,8 @@ Implementation note on 2026-03-12:
   `combobox/*` snippet `state_row(...)` and `state_rows(...)` helpers stay on
   `IntoUiElement<fret_app::App>` rather than reverting to raw `AnyElement`.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
-  `pagination/*` snippet page-number helpers stay on `IntoUiElement<H>` rather than reverting to
-  raw `AnyElement`.
+  `pagination/*` snippet page-number helpers stay on the stricter app-facing `impl UiChild` lane
+  rather than reintroducing host-bound `IntoUiElement<H>` or raw `AnyElement`.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
   `carousel/*` snippet slide helpers stay on `IntoUiElement<fret_app::App>` rather than
   reverting to raw `AnyElement`.
@@ -1762,8 +1769,9 @@ Implementation note on 2026-03-12:
   `skeleton/*` snippet shape/row helpers stay on `IntoUiElement<H>` rather than reverting to raw
   `AnyElement`.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
-  `popover/*` wrapper helpers accept/return `IntoUiElement<H>` rather than forcing pre-landed
-  `AnyElement`.
+  `popover/basic.rs` and `popover/with_form.rs` wrapper helpers accept/return `IntoUiElement<H>`
+  rather than forcing pre-landed `AnyElement`, while `popover/demo.rs::{centered,row}` stay on the
+  stricter app-facing `impl UiChild` lane instead of reintroducing host-bound `IntoUiElement<H>`.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that
   `dropdown_menu/mod.rs` preview wrappers stay on `IntoUiElement<H>` rather than forcing
   pre-landed `AnyElement`.

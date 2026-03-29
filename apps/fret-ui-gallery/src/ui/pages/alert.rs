@@ -18,7 +18,7 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`Alert::new([...])` and `Alert::build(...)` cover the default root composition lane.",
         "`variant(...)` covers the documented `default` and `destructive` recipe surface.",
-        "`AlertAction::build(...)` is the preferred typed slot surface for top-right actions; `AlertAction::new([...])` remains valid when the action subtree is already landed.",
+        "`AlertAction::build(...)` is the preferred typed slot surface for top-end actions; `AlertAction::new([...])` remains valid when the action subtree is already landed.",
         "`AlertTitle::new(...)` keeps the compact title lane, while `AlertTitle::new_children(...)` and `AlertTitle::build(...)` cover attributed or precomposed title content.",
         "`AlertDescription::new(...)` keeps the plain-text lane, while `AlertDescription::new_children(...)` and `AlertDescription::build(...)` cover multi-paragraph or composed description content.",
         "Recipe-owned defaults stop at intrinsic alert chrome and `w-full`; caller-owned width negotiation such as `max-w-*`, `min-w-0`, or page centering stays on the surrounding layout.",
@@ -78,9 +78,7 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Use `variant(\"destructive\")` to create a destructive alert.")
         .code_rust_from_file_region(snippets::destructive::SOURCE, "example");
     let action = DocSection::build(cx, "Action", action)
-        .description(
-            "Use `AlertAction` to add button or badge content to the top-right action slot.",
-        )
+        .description("Use `AlertAction` to add button or badge content to the top-end action slot.")
         .code_rust_from_file_region(snippets::action::SOURCE, "example");
     let rich_title = DocSection::build(cx, "Rich Title", rich_title)
         .description(

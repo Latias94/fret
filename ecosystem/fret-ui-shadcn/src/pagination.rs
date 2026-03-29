@@ -1,4 +1,8 @@
-use crate::direction::LayoutDirection;
+use crate::{
+    button::{ButtonVariant, variant_style},
+    direction::LayoutDirection,
+    overlay_motion, rtl,
+};
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::CommandId;
 use fret_ui::element::{
@@ -8,30 +12,25 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::motion::{
+    drive_tween_color_for_element, drive_tween_f32_for_element,
+};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::viewport_queries;
 use fret_ui_kit::{
-    IntoUiElement, LayoutRefinement, MetricRef, Radius, Space, UiPatch, UiPatchTarget,
-    UiSupportsLayout,
+    ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Radius, Space, UiPatch, UiPatchTarget,
+    UiSupportsLayout, WidgetStates,
 };
 use std::marker::PhantomData;
 use std::sync::Arc;
-
-use crate::rtl;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PaginationLinkSize {
     Default,
     #[default]
     Icon,
-}
-
-fn alpha(color: Color, a: f32) -> Color {
-    Color {
-        a: a.clamp(0.0, 1.0),
-        ..color
-    }
 }
 
 fn radius(theme: &ThemeSnapshot) -> Px {
@@ -52,24 +51,41 @@ fn icon_button_size(theme: &ThemeSnapshot) -> Px {
         .unwrap_or(Px(36.0))
 }
 
-fn border_color(theme: &ThemeSnapshot) -> Color {
-    theme.color_token("border")
-}
-
-fn accent(theme: &ThemeSnapshot) -> Color {
-    theme.color_token("accent")
-}
-
-fn accent_fg(theme: &ThemeSnapshot) -> Color {
-    theme.color_token("accent-foreground")
-}
-
 fn base_fg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("foreground")
 }
 
-fn disabled_fg(theme: &ThemeSnapshot) -> Color {
-    alpha(base_fg(theme), 0.5)
+#[derive(Debug, Clone, Copy)]
+struct PaginationLinkChromeTargets {
+    background: Color,
+    foreground: Color,
+    border_color: Color,
+}
+
+fn pagination_button_variant(is_active: bool) -> ButtonVariant {
+    if is_active {
+        ButtonVariant::Outline
+    } else {
+        ButtonVariant::Ghost
+    }
+}
+
+fn pagination_link_chrome_targets(
+    theme: &ThemeSnapshot,
+    is_active: bool,
+    states: WidgetStates,
+) -> PaginationLinkChromeTargets {
+    let variant = variant_style(pagination_button_variant(is_active));
+
+    PaginationLinkChromeTargets {
+        background: variant.background.resolve(states).resolve(theme),
+        foreground: variant.foreground.resolve(states).resolve(theme),
+        border_color: variant.border_color.resolve(states).resolve(theme),
+    }
+}
+
+fn tailwind_transition_ease_in_out(t: f32) -> f32 {
+    fret_ui_kit::headless::easing::CubicBezier::new(0.4, 0.0, 0.2, 1.0).sample(t)
 }
 
 #[derive(Debug)]
@@ -297,36 +313,21 @@ impl PaginationLink {
         let px_2p5 = MetricRef::space(Space::N2p5).resolve(&theme);
         let py_2 = MetricRef::space(Space::N2).resolve(&theme);
 
-        let enabled = self
+        let command_enabled = self
             .command
             .as_ref()
-            .is_some_and(|cmd| cx.command_is_enabled(cmd))
-            && !self.disabled;
+            .is_none_or(|cmd| cx.command_is_enabled(cmd));
+        let visually_disabled = self.disabled || !command_enabled;
+        let interactive = self.command.is_some() && !visually_disabled;
         let focus_ring = decl_style::focus_ring(&theme, r);
-
-        let base_bg = if self.is_active {
-            theme.color_token("background")
-        } else {
-            Color::TRANSPARENT
-        };
-
         let border_width = if self.is_active { Px(1.0) } else { Px(0.0) };
-        let base_border = self.is_active.then(|| border_color(&theme));
         let shadow = self.is_active.then(|| decl_style::shadow_xs(&theme, r));
-
-        let acc = accent(&theme);
-        let hover_bg = alpha(acc, 1.0);
-        let pressed_bg = alpha(acc, 1.0);
-
-        let base_fg = if enabled {
-            base_fg(&theme)
-        } else {
-            disabled_fg(&theme)
-        };
 
         let children = self.children;
         let a11y_label = self.a11y_label;
         let test_id = self.test_id;
+        let command = self.command;
+        let is_active = self.is_active;
 
         let (layout, padding, inner_gap, inner_wrap) = match self.size {
             PaginationLinkSize::Icon => (
@@ -357,56 +358,86 @@ impl PaginationLink {
             ),
         };
 
-        cx.pressable(
-            PressableProps {
+        let pressable = cx.pressable_with_id_props(move |cx, st, id| {
+            let states = WidgetStates::from_pressable(cx, st, !visually_disabled);
+            let chrome = pagination_link_chrome_targets(&theme, is_active, states);
+            let duration = overlay_motion::shadcn_motion_duration_150(cx);
+
+            let bg_motion = drive_tween_color_for_element(
+                cx,
+                id,
+                "pagination.link.bg",
+                chrome.background,
+                duration,
+                tailwind_transition_ease_in_out,
+            );
+            let fg_motion = drive_tween_color_for_element(
+                cx,
+                id,
+                "pagination.link.fg",
+                chrome.foreground,
+                duration,
+                tailwind_transition_ease_in_out,
+            );
+            let border_motion = drive_tween_color_for_element(
+                cx,
+                id,
+                "pagination.link.border",
+                chrome.border_color,
+                duration,
+                tailwind_transition_ease_in_out,
+            );
+            let ring_alpha = drive_tween_f32_for_element(
+                cx,
+                id,
+                "pagination.link.ring.alpha",
+                if states.contains(WidgetStates::FOCUS_VISIBLE) {
+                    1.0
+                } else {
+                    0.0
+                },
+                duration,
+                tailwind_transition_ease_in_out,
+            );
+
+            cx.pressable_dispatch_command_if_enabled_opt(command);
+
+            let mut animated_focus_ring = focus_ring;
+            animated_focus_ring.color.a =
+                (animated_focus_ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+            if let Some(offset_color) = animated_focus_ring.offset_color {
+                animated_focus_ring.offset_color = Some(Color {
+                    a: (offset_color.a * ring_alpha.value).clamp(0.0, 1.0),
+                    ..offset_color
+                });
+            }
+
+            let pressable_props = PressableProps {
                 layout,
-                enabled,
-                focus_ring: Some(focus_ring),
+                enabled: interactive,
+                focus_ring: Some(animated_focus_ring),
+                focus_ring_always_paint: ring_alpha.animating,
                 key_activation: PressableKeyActivation::EnterOnly,
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::Link),
                     label: a11y_label,
                     test_id,
-                    selected: self.is_active,
+                    selected: is_active,
                     ..Default::default()
                 },
                 ..Default::default()
-            },
-            move |cx, st| {
-                cx.pressable_dispatch_command_if_enabled_opt(self.command);
+            };
 
-                let bg = if !enabled {
-                    base_bg
-                } else if st.pressed {
-                    pressed_bg
-                } else if st.hovered {
-                    hover_bg
-                } else {
-                    base_bg
-                };
-
-                let fg = if !enabled {
-                    base_fg
-                } else if st.pressed || st.hovered {
-                    accent_fg(&theme)
-                } else {
-                    base_fg
-                };
-
+            let row = {
                 let inner_layout =
                     decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+                let children = current_color::scope_children(
+                    cx,
+                    ColorRef::Color(fg_motion.value),
+                    move |_cx| children,
+                );
 
-                let mut children = children;
-                for child in &mut children {
-                    if let fret_ui::element::ElementKind::Text(ref mut p) = child.kind {
-                        p.color = Some(fg);
-                    }
-                    if let fret_ui::element::ElementKind::SvgIcon(ref mut p) = child.kind {
-                        p.color = fg;
-                    }
-                }
-
-                let row = cx.flex(
+                cx.flex(
                     FlexProps {
                         layout: inner_layout,
                         direction: fret_core::Axis::Horizontal,
@@ -417,23 +448,31 @@ impl PaginationLink {
                         wrap: inner_wrap,
                     },
                     move |_cx| children,
-                );
+                )
+            };
 
-                vec![cx.container(
-                    ContainerProps {
-                        layout,
-                        padding: padding.into(),
-                        background: Some(bg),
-                        shadow,
-                        border: Edges::all(border_width),
-                        border_color: base_border,
-                        corner_radii: Corners::all(r),
-                        ..Default::default()
-                    },
-                    move |_cx| vec![row],
-                )]
-            },
-        )
+            let container = cx.container(
+                ContainerProps {
+                    layout,
+                    padding: padding.into(),
+                    background: Some(bg_motion.value),
+                    shadow,
+                    border: Edges::all(border_width),
+                    border_color: Some(border_motion.value),
+                    corner_radii: Corners::all(r),
+                    ..Default::default()
+                },
+                move |_cx| vec![row],
+            );
+
+            (pressable_props, vec![container])
+        });
+
+        if visually_disabled {
+            cx.opacity(0.5, move |_cx| vec![pressable])
+        } else {
+            pressable
+        }
     }
 }
 
@@ -1099,6 +1138,62 @@ mod tests {
             el.semantics_decoration.as_ref().and_then(|d| d.hidden),
             Some(true),
             "expected PaginationEllipsis to be semantics-hidden (aria-hidden parity)"
+        );
+    }
+
+    #[test]
+    fn pagination_active_link_focus_visible_border_uses_ring_token() {
+        let app = App::new();
+        let theme = Theme::global(&app).snapshot();
+        let chrome = pagination_link_chrome_targets(&theme, true, WidgetStates::FOCUS_VISIBLE);
+
+        assert_eq!(
+            chrome.border_color,
+            theme.color_token("ring"),
+            "expected active pagination link focus-visible border to follow the shared outline button ring token"
+        );
+    }
+
+    #[test]
+    fn pagination_link_without_action_keeps_enabled_visual_chrome() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            PaginationLink::new([cx.text("1")]).into_element(cx)
+        });
+
+        assert!(
+            !matches!(el.kind, ElementKind::Opacity(_)),
+            "expected a pagination link without an app action to keep enabled visual chrome rather than looking disabled"
+        );
+    }
+
+    #[test]
+    fn pagination_disabled_link_wraps_in_opacity() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            PaginationLink::new([cx.text("1")])
+                .disabled(true)
+                .into_element(cx)
+        });
+
+        let ElementKind::Opacity(props) = &el.kind else {
+            panic!("expected disabled PaginationLink to render through an opacity wrapper");
+        };
+        assert!(
+            (props.opacity - 0.5).abs() < 1e-6,
+            "expected disabled PaginationLink opacity to match shadcn disabled opacity"
+        );
+
+        let Some(child) = el.children.first() else {
+            panic!("expected opacity wrapper to contain the pressable");
+        };
+        assert!(
+            matches!(child.kind, ElementKind::Pressable(_)),
+            "expected opacity wrapper child to remain the pagination pressable"
         );
     }
 }

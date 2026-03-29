@@ -48,6 +48,8 @@ upstream shadcn/ui v4 docs plus Radix/Base UI interaction expectations.
 
 - Pass: `Avatar::children(...)` now exists, so avatar content can be authored in a composable way
   without forcing only the convenience constructor path.
+- Pass: `Avatar::empty().children([..])` now gives the docs-facing builder lane a natural entry
+  point instead of forcing placeholder empty iterators in copyable snippets.
 - Pass: image/fallback authoring remains close to the upstream Radix/shadcn mental model.
 
 ### Pointer/open/restore behavior
@@ -112,8 +114,11 @@ Observed outcomes:
 
 - Result: `Avatar` itself was not the problem.
 - Result: this was not a missing semantic-defaults fix in `fret-ui`, nor a hit-test bug in the renderer.
-- Result: this was also not a missing `Avatar` children API issue; `Avatar::new([..])` and
-  `Avatar::children([..])` are already sufficient for avatar composition.
+- Result: this was not a missing mechanism-layer children API issue. The useful follow-up was
+  authoring-surface polish: keep `Avatar::new([..])` for direct construction, and expose
+  `Avatar::empty().children([..])` for the docs-aligned builder lane.
+- Result: Gallery media sourcing also belonged to the teaching surface, not the avatar mechanism:
+  the snippets now use the shared UI Gallery demo asset bundle instead of inline RGBA generation.
 - Result: the correct parity move for this component is **recipe alignment**:
   - the authored pressable child owns trigger semantics;
   - the nested avatar stays presentational.

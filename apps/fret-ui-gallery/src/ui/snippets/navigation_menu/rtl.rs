@@ -285,7 +285,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         };
 
         let home = shadcn::NavigationMenuItem::new("home", "الرئيسية", [home_content])
-            .trigger_test_id("ui-gallery-navigation-menu-rtl-trigger-getting-started");
+            .trigger_test_id("ui-gallery-navigation-menu-rtl-trigger-home");
 
         let components_w_px = if lg_breakpoint {
             Px(600.0)

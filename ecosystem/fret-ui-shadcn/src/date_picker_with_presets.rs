@@ -44,6 +44,7 @@ pub struct DatePickerWithPresets {
     disabled: bool,
     show_outside_days: bool,
     disable_outside_days: bool,
+    close_on_select: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -62,6 +63,7 @@ impl std::fmt::Debug for DatePickerWithPresets {
             .field("disabled", &self.disabled)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
+            .field("close_on_select", &self.close_on_select)
             .finish()
     }
 }
@@ -85,6 +87,7 @@ impl DatePickerWithPresets {
             disabled: false,
             show_outside_days: true,
             disable_outside_days: false,
+            close_on_select: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -150,6 +153,14 @@ impl DatePickerWithPresets {
         self
     }
 
+    /// Closes the popover after selecting a day from the embedded calendar.
+    ///
+    /// Default: `false`, matching the upstream presets example.
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
+        self
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
         self
@@ -181,7 +192,7 @@ impl DatePickerWithPresets {
             let chrome = self.chrome.clone();
             let layout = self.layout.clone();
             let open_trigger = open.clone();
-            let open_content = open.clone();
+            let close_on_select_open = self.close_on_select.then(|| open.clone());
             let initial_focus_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
             let trigger_test_id = test_id_prefix
@@ -329,8 +340,10 @@ impl DatePickerWithPresets {
                             .today(today)
                             .show_outside_days(show_outside_days)
                             .disable_outside_days(disable_outside_days)
-                            .close_on_select(open_content.clone())
                             .initial_focus_out(initial_focus_out.clone());
+                        if let Some(open) = close_on_select_open.clone() {
+                            calendar = calendar.close_on_select(open);
+                        }
                         if let Some(prefix) = calendar_test_id.clone() {
                             calendar = calendar.test_id_prefix(prefix);
                         }

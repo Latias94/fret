@@ -107,19 +107,8 @@ fn find_by_role_and_label<'a>(
         .unwrap_or_else(|| panic!("missing semantics node role={role:?} label={label:?}"))
 }
 
-fn is_missing_or_hidden_by_label(
-    snap: &fret_core::SemanticsSnapshot,
-    role: SemanticsRole,
-    label: &str,
-) -> bool {
-    snap.nodes
-        .iter()
-        .find(|n| n.role == role && n.label.as_deref() == Some(label))
-        .is_none_or(|n| n.flags.hidden)
-}
-
 #[test]
-fn data_table_pagination_page_size_dropdown_updates_state_and_resets_page_index() {
+fn data_table_pagination_page_size_select_updates_state_and_resets_page_index() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -157,12 +146,12 @@ fn data_table_pagination_page_size_dropdown_updates_state_and_resets_page_index(
         pump_effects(&mut ui, &mut app, &mut services, &mut timers);
     }
 
-    // Open the "Rows per page" dropdown.
+    // Open the "Rows per page" select.
     let snap = ui
         .semantics_snapshot()
         .cloned()
         .expect("expected semantics snapshot");
-    let trigger = find_by_role_and_label(&snap, SemanticsRole::Button, "Rows per page: 10");
+    let trigger = find_by_role_and_label(&snap, SemanticsRole::ComboBox, "Rows per page");
     click_at(
         &mut ui,
         &mut app,
@@ -188,21 +177,21 @@ fn data_table_pagination_page_size_dropdown_updates_state_and_resets_page_index(
                 .semantics_snapshot()
                 .cloned()
                 .expect("expected semantics snapshot");
-            let trigger = find_by_role_and_label(&snap, SemanticsRole::Button, "Rows per page: 10");
+            let trigger = find_by_role_and_label(&snap, SemanticsRole::ComboBox, "Rows per page");
             assert!(
                 trigger.flags.expanded,
                 "expected trigger expanded while open"
             );
-            find_by_role_and_label(&snap, SemanticsRole::MenuItemRadio, "25");
+            find_by_role_and_label(&snap, SemanticsRole::ListBoxOption, "25");
         }
     }
 
-    // Select "25" (should close the menu and update TableState on next render).
+    // Select "25" (should close the listbox and update TableState on next render).
     let snap = ui
         .semantics_snapshot()
         .cloned()
         .expect("expected semantics snapshot");
-    let item = find_by_role_and_label(&snap, SemanticsRole::MenuItemRadio, "25");
+    let item = find_by_role_and_label(&snap, SemanticsRole::ListBoxOption, "25");
     click_at(&mut ui, &mut app, &mut services, rect_center(item.bounds));
     pump_effects(&mut ui, &mut app, &mut services, &mut timers);
 
@@ -234,9 +223,9 @@ fn data_table_pagination_page_size_dropdown_updates_state_and_resets_page_index(
         .semantics_snapshot()
         .cloned()
         .expect("expected semantics snapshot");
-    find_by_role_and_label(&snap, SemanticsRole::Button, "Rows per page: 25");
+    let trigger = find_by_role_and_label(&snap, SemanticsRole::ComboBox, "Rows per page");
     assert!(
-        is_missing_or_hidden_by_label(&snap, SemanticsRole::MenuItemRadio, "25"),
-        "expected menu items to be absent or hidden after selection"
+        !trigger.flags.expanded,
+        "expected page-size select trigger collapsed after selection"
     );
 }

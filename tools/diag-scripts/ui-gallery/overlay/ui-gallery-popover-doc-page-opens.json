@@ -126,6 +126,52 @@
         "target": { "kind": "test_id", "id": "ui-gallery-popover-api-reference-content" }
       }
     },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-popover-detached-trigger-content"
+      },
+      "delta_y": 220.0,
+      "padding_px": 24.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-popover-detached-trigger-content"
+        }
+      }
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-popover-open-on-hover-content"
+      },
+      "delta_y": 220.0,
+      "padding_px": 24.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-popover-open-on-hover-content"
+        }
+      }
+    },
     { "type": "wait_frames", "n": 4 },
     { "type": "capture_screenshot", "label": "ui-gallery-popover-docs-api-reference" },
     { "type": "capture_bundle", "label": "ui-gallery-popover-doc-page-opens" }

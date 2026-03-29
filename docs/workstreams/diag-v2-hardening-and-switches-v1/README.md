@@ -415,7 +415,7 @@ tools/diag-scripts/
 
 Notes:
 
-- Put shared reset scripts under `_prelude/` and drive them via `--suite-prelude`.
+- Put shared reset scripts under `_prelude/` and drive them via `--prelude-script`.
 - Avoid “misc/”: if a script does not fit, the taxonomy is missing a bucket.
 - Prefer stable IDs over filenames for long-lived suites; filenames remain human-friendly.
 - `diag suite` already supports directory inputs and expands `**/*.json` with deterministic ordering (sorted set),

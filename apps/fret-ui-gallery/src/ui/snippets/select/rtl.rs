@@ -10,7 +10,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
             .trigger_test_id("ui-gallery-select-rtl-trigger")
-            .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+            .refine_layout(LayoutRefinement::default().w_px(Px(128.0)))
             .trigger(shadcn::SelectTrigger::new())
             .value(shadcn::SelectValue::new().placeholder("اختر فاكهة"))
             .content(shadcn::SelectContent::new())
@@ -24,6 +24,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .test_id("ui-gallery-select-rtl-item-banana")
                         .into(),
                     shadcn::SelectItem::new("blueberry", "توت أزرق").into(),
+                    shadcn::SelectItem::new("grapes", "عنب").into(),
+                    shadcn::SelectItem::new("pineapple", "أناناس").into(),
                 ])
                 .into(),
                 shadcn::SelectSeparator::default().into(),

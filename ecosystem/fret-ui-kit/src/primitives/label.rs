@@ -11,11 +11,12 @@ use super::control_registry::{ControlAction, ControlId, LabelEntry, control_regi
 use crate::declarative::text::label_text_refinement;
 use crate::typography;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Label {
     text: Arc<str>,
     for_control: Option<ControlId>,
     test_id: Option<Arc<str>>,
+    wrapped_root: Option<AnyElement>,
 }
 
 impl Label {
@@ -24,6 +25,7 @@ impl Label {
             text: text.into(),
             for_control: None,
             test_id: None,
+            wrapped_root: None,
         }
     }
 
@@ -43,17 +45,27 @@ impl Label {
         self
     }
 
+    /// Wraps an arbitrary already-built subtree in this label's association semantics.
+    ///
+    /// This keeps the label's accessible name and control forwarding behavior while letting higher
+    /// layers own the visible layout/chrome subtree.
+    pub fn wrap_root(mut self, root: AnyElement) -> Self {
+        self.wrapped_root = Some(root);
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let wrapped_root = self.wrapped_root;
         let Some(for_control) = self.for_control else {
-            let mut el = label(cx, self.text);
+            let mut el = wrapped_root.unwrap_or_else(|| label(cx, self.text));
             if let Some(test_id) = self.test_id {
                 el = el.test_id(test_id);
             }
             return el;
         };
 
-        label_for_control(cx, self.text, for_control, self.test_id)
+        label_for_control(cx, self.text, for_control, self.test_id, wrapped_root)
     }
 }
 
@@ -99,6 +111,7 @@ fn label_for_control<H: UiHost>(
     text: Arc<str>,
     for_control: ControlId,
     test_id: Option<Arc<str>>,
+    wrapped_root: Option<AnyElement>,
 ) -> AnyElement {
     let control_registry = control_registry_model(cx);
     let control_snapshot = cx
@@ -216,7 +229,7 @@ fn label_for_control<H: UiHost>(
                 .as_ref()
                 .map(|c| c.enabled)
                 .unwrap_or(true);
-            let child = label(cx, text.clone());
+            let child = wrapped_root.unwrap_or_else(|| label(cx, text.clone()));
             if enabled {
                 vec![child]
             } else {

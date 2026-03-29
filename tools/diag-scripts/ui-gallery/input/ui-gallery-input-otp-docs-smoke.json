@@ -219,6 +219,22 @@
       "timeout_frames": 240
     },
 
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-input-otp-form" },
+      "delta_y": -240.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-otp-form" }
+      },
+      "timeout_frames": 240
+    },
+
     { "type": "capture_bundle", "label": "ui-gallery-input-otp-docs-smoke" }
   ]
 }

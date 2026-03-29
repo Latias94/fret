@@ -1,4 +1,4 @@
-# Radix Primitives Audit бк Separator
+# Radix Primitives Audit - Separator
 
 
 ## Upstream references (non-normative)
@@ -31,8 +31,10 @@ Key upstream concepts:
 ## Current parity notes
 
 - Pass: Provides `orientation` outcomes (horizontal vs vertical sizing).
-- Note: Fret's semantics roles do not currently include a dedicated `Separator` role, and
-  `aria-orientation` has no direct mapping in `SemanticsProps` today.
-- Note: The current implementation is a visual/layout separator; a11y parity can be revisited
-  once the semantics bridge grows a `Separator` role and/or orientation metadata.
-
+- Pass: Non-decorative separators map to `SemanticsRole::Separator`, and vertical separators also
+  carry `SemanticsOrientation::Vertical`.
+- Pass: Decorative separators are hidden from the semantics tree, matching the Radix `role="none"`
+  outcome.
+- Note: Base UI's headless separator is always semantic; Fret keeps that substrate in
+  `fret-ui-kit::primitives::separator::Separator`, while the shadcn recipe layer adds the
+  Radix-style `.decorative(...)` override.

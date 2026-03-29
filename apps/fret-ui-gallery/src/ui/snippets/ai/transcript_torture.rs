@@ -13,7 +13,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
-use fret_ui_shadcn::facade as shadcn;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {

@@ -28,6 +28,32 @@ fn assert_curated_facade_only(relative_paths: &[&str]) {
     }
 }
 
+fn assert_curated_facade_root_only(relative_paths: &[&str]) {
+    for relative_path in relative_paths {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        assert!(
+            source.contains("use fret_ui_shadcn::facade as shadcn;"),
+            "{} should import the curated shadcn facade root lane",
+            path.display()
+        );
+
+        for line in source.lines() {
+            if !line.contains("fret_ui_shadcn::") {
+                continue;
+            }
+
+            assert_eq!(
+                line.trim(),
+                "use fret_ui_shadcn::facade as shadcn;",
+                "{} reintroduced a direct fret_ui_shadcn root path: {}",
+                path.display(),
+                line.trim()
+            );
+        }
+    }
+}
+
 fn assert_only_documented_raw_shadcn_modules(path: &std::path::Path, source: &str) {
     for (line_idx, line) in source.lines().enumerate() {
         let trimmed = line.trim();
@@ -268,7 +294,6 @@ fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
         "src/ui/snippets/breadcrumb/link_component.rs",
         "src/ui/snippets/breadcrumb/responsive.rs",
         "src/ui/snippets/breadcrumb/rtl.rs",
-        "src/ui/snippets/breadcrumb/usage.rs",
     ];
 
     for relative_path in relative_paths {
@@ -304,6 +329,90 @@ fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
 }
 
 #[test]
+fn gallery_breadcrumb_docs_examples_prefer_curated_parts_aliases() {
+    let relative_paths = [
+        "src/ui/snippets/breadcrumb/basic.rs",
+        "src/ui/snippets/breadcrumb/collapsed.rs",
+        "src/ui/snippets/breadcrumb/custom_separator.rs",
+    ];
+    assert_curated_facade_only(&relative_paths);
+
+    for relative_path in relative_paths {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        assert!(
+            source.contains("shadcn::BreadcrumbRoot::new()"),
+            "{} should keep the docs-path root on the curated breadcrumb facade lane",
+            path.display()
+        );
+        assert!(
+            source.contains("shadcn::BreadcrumbList::new()"),
+            "{} should keep the docs-path list on the curated breadcrumb facade lane",
+            path.display()
+        );
+        assert!(
+            source.contains("shadcn::BreadcrumbItemPart::new()"),
+            "{} should keep the docs-path item composition on the curated breadcrumb facade lane",
+            path.display()
+        );
+        assert!(
+            source.contains("shadcn::BreadcrumbSeparatorPart::new()"),
+            "{} should keep the docs-path separator on the curated breadcrumb facade lane",
+            path.display()
+        );
+        assert!(
+            !source.contains("shadcn::raw::breadcrumb::primitives"),
+            "{} should not reopen the raw breadcrumb primitive escape hatch for docs-path examples",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn gallery_breadcrumb_usage_snippet_prefers_curated_parts_aliases() {
+    let relative_path = "src/ui/snippets/breadcrumb/usage.rs";
+    assert_curated_facade_only(&[relative_path]);
+
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    assert!(
+        source.contains("shadcn::BreadcrumbRoot::new()"),
+        "{} should teach the curated breadcrumb root alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::BreadcrumbList::new()"),
+        "{} should keep the breadcrumb list on the curated facade lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::BreadcrumbItemPart::new()"),
+        "{} should teach the curated breadcrumb item alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::BreadcrumbSeparatorPart::new()"),
+        "{} should teach the curated breadcrumb separator alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::BreadcrumbLink::new(\"Home\")"),
+        "{} should keep link composition on the curated facade lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::BreadcrumbPage::new(\"Breadcrumb\")"),
+        "{} should keep current-page composition on the curated facade lane",
+        path.display()
+    );
+    assert!(
+        !source.contains("shadcn::raw::breadcrumb::primitives"),
+        "{} should not require the raw breadcrumb primitive escape hatch for the copyable usage lane",
+        path.display()
+    );
+}
+
+#[test]
 fn gallery_collapsible_usage_snippet_prefers_curated_parts_aliases() {
     let relative_path = "src/ui/snippets/collapsible/usage.rs";
     assert_curated_facade_only(&[relative_path]);
@@ -328,6 +437,186 @@ fn gallery_collapsible_usage_snippet_prefers_curated_parts_aliases() {
     assert!(
         !source.contains("shadcn::raw::collapsible::primitives::{"),
         "{} should not require the raw collapsible escape hatch for the copyable usage lane",
+        path.display()
+    );
+}
+
+#[test]
+fn gallery_accordion_usage_snippet_prefers_curated_parts_aliases() {
+    let relative_path = "src/ui/snippets/accordion/usage.rs";
+    assert_curated_facade_only(&[relative_path]);
+
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    assert!(
+        source.contains("shadcn::AccordionRoot::single_uncontrolled("),
+        "{} should teach the curated accordion root alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::AccordionItemPart::new("),
+        "{} should teach the curated accordion item alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::AccordionTriggerPart::new("),
+        "{} should teach the curated accordion trigger alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::AccordionContentPart::new("),
+        "{} should teach the curated accordion content alias",
+        path.display()
+    );
+    assert!(
+        !source.contains("shadcn::raw::accordion::composable"),
+        "{} should not require the raw accordion composable escape hatch for the copyable usage lane",
+        path.display()
+    );
+}
+
+#[test]
+fn gallery_alert_dialog_usage_snippet_prefers_curated_part_lane() {
+    let relative_path = "src/ui/snippets/alert_dialog/usage.rs";
+    assert_curated_facade_root_only(&[relative_path]);
+
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    assert!(
+        source.contains("shadcn::AlertDialog::new_controllable("),
+        "{} should keep the alert-dialog root on the curated facade lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::AlertDialogPart::trigger("),
+        "{} should teach the curated alert-dialog trigger part lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::AlertDialogPart::content_with("),
+        "{} should teach the deferred alert-dialog content part lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::AlertDialogContent::new([]).with_children"),
+        "{} should keep content composition on the copyable alert-dialog lane",
+        path.display()
+    );
+    assert!(
+        !source.contains("shadcn::raw::alert_dialog::"),
+        "{} should not require the raw alert-dialog escape hatch for the copyable usage lane",
+        path.display()
+    );
+}
+
+#[test]
+fn gallery_dialog_usage_snippet_prefers_curated_part_lane() {
+    let relative_path = "src/ui/snippets/dialog/usage.rs";
+    assert_curated_facade_root_only(&[relative_path]);
+
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    assert!(
+        source.contains("shadcn::Dialog::new_controllable("),
+        "{} should keep the dialog root on the curated facade lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::DialogPart::trigger("),
+        "{} should teach the curated dialog trigger part lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::DialogPart::content_with("),
+        "{} should teach the deferred curated dialog content part lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::DialogContent::new([]).with_children("),
+        "{} should keep content composition on the copyable dialog with_children lane",
+        path.display()
+    );
+    assert!(
+        !source.contains("shadcn::raw::dialog::"),
+        "{} should not require the raw dialog escape hatch for the copyable usage lane",
+        path.display()
+    );
+}
+
+#[test]
+fn gallery_drawer_usage_snippet_prefers_curated_part_lane() {
+    let relative_path = "src/ui/snippets/drawer/usage.rs";
+    assert_curated_facade_root_only(&[relative_path]);
+
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    assert!(
+        source.contains("shadcn::Drawer::new_controllable("),
+        "{} should keep the drawer root on the curated facade lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::DrawerPart::trigger("),
+        "{} should teach the curated drawer trigger part lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::DrawerPart::content_with("),
+        "{} should teach the deferred drawer content part lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::DrawerContent::new([]).with_children("),
+        "{} should keep content composition on the copyable drawer with_children lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::DrawerClose::from_scope().build("),
+        "{} should keep close actions on the copyable drawer lane",
+        path.display()
+    );
+    assert!(
+        !source.contains("shadcn::raw::drawer::"),
+        "{} should not require the raw drawer escape hatch for the copyable usage lane",
+        path.display()
+    );
+}
+
+#[test]
+fn gallery_sheet_usage_snippet_prefers_curated_part_lane() {
+    let relative_path = "src/ui/snippets/sheet/usage.rs";
+    assert_curated_facade_root_only(&[relative_path]);
+
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    assert!(
+        source.contains("shadcn::Sheet::new_controllable("),
+        "{} should keep the sheet root on the curated facade lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::SheetPart::trigger("),
+        "{} should teach the curated sheet trigger part lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::SheetPart::content_with("),
+        "{} should teach the curated sheet content part lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::SheetPart::content_with("),
+        "{} should keep content composition on the copyable sheet lane",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::SheetContent::new([]).with_children("),
+        "{} should keep nested sheet sections on the composable with_children() lane",
+        path.display()
+    );
+    assert!(
+        !source.contains("shadcn::raw::sheet::"),
+        "{} should not require the raw sheet escape hatch for the copyable usage lane",
         path.display()
     );
 }

@@ -10,6 +10,7 @@ pub mod dropdown;
 pub mod icon;
 pub mod kbd;
 pub mod label;
+pub mod parts_usage;
 pub mod rtl;
 pub mod spinner;
 pub mod text;

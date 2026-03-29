@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("sticky_footer.rs");
 
 // region: example
-use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
@@ -16,75 +15,79 @@ fn lorem_block<H: UiHost>(
     ui::v_flex(move |cx| {
         (0..lines)
             .map(|index| {
-                cx.text(format!(
+                let text = ui::raw_text(format!(
                     "{prefix} {}: This dialog row is intentionally verbose to validate scroll behavior and footer visibility.",
                     index + 1
                 ))
+                .layout(LayoutRefinement::default().w_full().min_w_0());
+
+                if index == 0 {
+                    text.test_id("ui-gallery-dialog-sticky-footer-row-01")
+                        .into_element(cx)
+                } else {
+                    text.into_element(cx)
+                }
             })
             .collect::<Vec<_>>()
     })
     .gap(Space::N2)
-    .items_start()
-    .layout(LayoutRefinement::default().w_full())
+    .items_stretch()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
 
-    let open_for_trigger = open.clone();
-    shadcn::Dialog::new(open.clone()).into_element(
-        cx,
-        move |cx| {
-            shadcn::Button::new("Sticky Footer")
-                .variant(shadcn::ButtonVariant::Outline)
-                .test_id("ui-gallery-dialog-sticky-footer-trigger")
-                .toggle_model(open_for_trigger.clone())
-                .into_element(cx)
-        },
-        move |cx| {
-            let scroll_body = shadcn::ScrollArea::new(ui::children![
-                cx;
-                lorem_block(cx, "Sticky", 14)
-            ])
-            .refine_layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .h_px(Px(220.0))
-                    .min_w_0()
-                    .min_h_0(),
-            )
-            .viewport_test_id("ui-gallery-dialog-sticky-footer-viewport")
-            .into_element(cx);
+    shadcn::Dialog::new(open.clone())
+        .children([
+            shadcn::DialogPart::trigger(shadcn::DialogTrigger::build(
+                shadcn::Button::new("Sticky Footer")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dialog-sticky-footer-trigger"),
+            )),
+            shadcn::DialogPart::content_with(move |cx| {
+                let scroll_body = shadcn::ScrollArea::new(ui::children![
+                    cx;
+                    lorem_block(cx, "Sticky", 14)
+                ])
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_px(Px(220.0))
+                        .min_w_0()
+                        .min_h_0(),
+                )
+                .viewport_test_id("ui-gallery-dialog-sticky-footer-viewport")
+                .into_element(cx);
 
-            shadcn::DialogContent::build(|cx, out| {
-                out.push_ui(
-                    cx,
-                    shadcn::DialogHeader::build(|cx, out| {
-                        out.push_ui(cx, shadcn::DialogTitle::new("Sticky Footer"));
-                        out.push_ui(
-                            cx,
-                            shadcn::DialogDescription::new(
-                                "The footer remains visible while the content area scrolls.",
-                            ),
-                        );
-                    }),
-                );
-                out.push(scroll_body);
-                out.push_ui(
-                    cx,
-                    shadcn::DialogFooter::build(|cx, out| {
-                        let close = shadcn::DialogClose::from_scope().build(
-                            cx,
-                            shadcn::Button::new("Close").variant(shadcn::ButtonVariant::Outline),
-                        );
-                        out.push(close);
-                        out.push_ui(cx, shadcn::Button::new("Save changes"));
-                    }),
-                );
-            })
-            .into_element(cx)
-            .test_id("ui-gallery-dialog-sticky-footer-content")
-        },
-    )
+                shadcn::DialogContent::new([])
+                    .with_children(cx, |cx| {
+                        vec![
+                            shadcn::DialogHeader::new([]).with_children(cx, |cx| {
+                                vec![
+                                shadcn::DialogTitle::new("Sticky Footer").into_element(cx),
+                                shadcn::DialogDescription::new(
+                                    "The footer remains visible while the content area scrolls.",
+                                )
+                                .into_element(cx),
+                            ]
+                            }),
+                            scroll_body,
+                            shadcn::DialogFooter::new([]).with_children(cx, |cx| {
+                                vec![
+                                    shadcn::DialogClose::from_scope().build(
+                                        cx,
+                                        shadcn::Button::new("Close")
+                                            .variant(shadcn::ButtonVariant::Outline),
+                                    ),
+                                    shadcn::Button::new("Save changes").into_element(cx),
+                                ]
+                            }),
+                        ]
+                    })
+                    .test_id("ui-gallery-dialog-sticky-footer-content")
+            }),
+        ])
+        .into_element(cx)
 }
 // endregion: example

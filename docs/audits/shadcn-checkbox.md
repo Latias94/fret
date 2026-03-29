@@ -48,6 +48,7 @@ base implementation in `repo-ref/ui`.
 
 ### Gallery / docs parity
 
+- Pass: `Demo` now mirrors the upstream `checkbox-demo.tsx` teaching surface by keeping the four-row `FieldGroup` composite preview (`Label`, description, disabled, and wrapped title/content) instead of collapsing the first section into a single row.
 - Pass: the gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Checked State`, `Invalid State`, `Basic`, `Description`, `Disabled`, `Group`, `Table`, `RTL`, and `API Reference`.
 - Pass: `Checked State` now teaches both the model-backed path and the narrower
   `Checkbox::from_checked(...)` + `.action(...)` snapshot/action path directly in the copyable

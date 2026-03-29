@@ -3,12 +3,12 @@ pub const SOURCE: &str = include_str!("usage.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::ImageId;
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let image: Option<ImageId> = None;
 
-    shadcn::Avatar::new(Vec::<AnyElement>::new())
+    shadcn::Avatar::empty()
         .children([
             shadcn::AvatarImage::maybe(image).into_element(cx),
             shadcn::AvatarFallback::new("CN")

@@ -57,6 +57,31 @@ fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
     scrim
 }
 
+fn apply_text_fill_width_recursive(mut element: AnyElement) -> AnyElement {
+    let apply_text = |layout: &mut LayoutStyle| {
+        if matches!(layout.size.width, Length::Auto) {
+            layout.size.width = Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
+    };
+
+    match &mut element.kind {
+        ElementKind::Text(props) => apply_text(&mut props.layout),
+        ElementKind::StyledText(props) => apply_text(&mut props.layout),
+        ElementKind::SelectableText(props) => apply_text(&mut props.layout),
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .map(apply_text_fill_width_recursive)
+        .collect();
+    element
+}
+
 /// Overlay backdrop visual style for shadcn `Dialog`.
 ///
 /// Note: This is a policy/recipe surface (ecosystem layer). Mechanism-level overlay contracts
@@ -1148,6 +1173,16 @@ impl DialogContent {
     }
 
     #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
@@ -1506,6 +1541,16 @@ impl DialogHeader {
     }
 
     #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         use fret_ui_kit::declarative::ViewportQueryHysteresis;
 
@@ -1637,6 +1682,16 @@ impl DialogFooter {
             build: Some(build),
             _phantom: PhantomData,
         }
+    }
+
+    #[track_caller]
+    pub fn with_children<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children = build(cx);
+        self.into_element(cx)
     }
 
     #[track_caller]
@@ -1806,11 +1861,16 @@ impl DialogDescription {
                 "component.dialog.description",
             ),
             DialogDescriptionContent::Children(children) => scope_description_text(
-                ui::v_flex(move |_cx| children)
-                    .gap(Space::N1)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .into_element(cx),
+                ui::v_flex(move |_cx| {
+                    children
+                        .into_iter()
+                        .map(apply_text_fill_width_recursive)
+                        .collect::<Vec<_>>()
+                })
+                .gap(Space::N1)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx),
                 &theme,
                 "component.dialog.description",
             ),
@@ -1914,6 +1974,34 @@ mod tests {
         });
 
         assert!(matches!(element.kind, ElementKind::Container(_)));
+        assert!(contains_plain_text(&element, "Title"));
+        assert!(contains_plain_text(&element, "Close"));
+    }
+
+    #[test]
+    fn dialog_content_with_children_accepts_composable_sections_surface() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogContent::new([])
+                .show_close_button(false)
+                .with_children(cx, |cx| {
+                    vec![
+                        DialogHeader::new([]).with_children(cx, |cx| {
+                            vec![DialogTitle::new("Title").into_element(cx)]
+                        }),
+                        DialogFooter::new([]).with_children(cx, |cx| {
+                            vec![crate::button::Button::new("Close").into_element(cx)]
+                        }),
+                    ]
+                })
+        });
+
         assert!(contains_plain_text(&element, "Title"));
         assert!(contains_plain_text(&element, "Close"));
     }
@@ -2029,6 +2117,8 @@ mod tests {
         let props = find_text(&element, "Nested description").expect("expected nested text child");
         assert!(props.style.is_none());
         assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
 
         let theme = fret_ui::Theme::global(&app).snapshot();
         assert_eq!(

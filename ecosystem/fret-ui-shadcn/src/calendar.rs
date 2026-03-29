@@ -815,11 +815,18 @@ impl Calendar {
         let layout_override = self.layout;
         let test_id_prefix = self.test_id_prefix.clone();
 
+        let query_region_layout = if number_of_months > 1
+            && !matches!(
+                surface_slot_in_scope(cx),
+                Some(ShadcnSurfaceSlot::PopoverContent)
+            ) {
+            LayoutRefinement::default().w_full().min_w_0()
+        } else {
+            LayoutRefinement::default()
+        };
+
         let region_props = LayoutQueryRegionProps {
-            layout: decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default().w_full().min_w_0(),
-            ),
+            layout: decl_style::layout_style(&theme, query_region_layout),
             name: None,
         };
 
@@ -2722,7 +2729,18 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::{ContainerProps, ElementKind, Length};
+    use fret_ui::element::{ContainerProps, ElementKind, LayoutQueryRegionProps, Length};
+
+    fn find_layout_query_region(root: &AnyElement) -> &LayoutQueryRegionProps {
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            if let ElementKind::LayoutQueryRegion(props) = &node.kind {
+                return props;
+            }
+            stack.extend(node.children.iter());
+        }
+        panic!("expected Calendar to include a layout query region wrapper");
+    }
 
     fn find_element_by_test_id<'a>(node: &'a AnyElement, test_id: &str) -> Option<&'a AnyElement> {
         if node
@@ -2844,6 +2862,40 @@ mod tests {
                 fill_layout.size.width,
                 Length::Fill,
                 "expected caller-owned refine_layout(.w_full()) to override the intrinsic width"
+            );
+        });
+    }
+
+    #[test]
+    fn calendar_query_region_stays_intrinsic_for_single_month_and_fill_for_multi_month() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let month = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::March));
+            let selected = cx.app.models_mut().insert(None::<Date>);
+
+            let single = Calendar::new(month.clone(), selected.clone()).into_element(cx);
+            let multi = Calendar::new(month, selected)
+                .number_of_months(2)
+                .into_element(cx);
+
+            assert_eq!(
+                find_layout_query_region(&single).layout.size.width,
+                Length::Auto,
+                "expected single-month Calendar query region to stay intrinsic so popup surfaces do not reserve trailing whitespace"
+            );
+            assert_eq!(
+                find_layout_query_region(&multi).layout.size.width,
+                Length::Fill,
+                "expected multi-month Calendar query region to keep fill-width behavior for non-popover container queries"
             );
         });
     }

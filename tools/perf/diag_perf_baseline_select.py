@@ -154,22 +154,22 @@ def main() -> int:
     ap.add_argument("--launch-bin", default="target/release/fret-ui-gallery")
     ap.add_argument("--timeout-ms", type=int, default=300_000)
     ap.add_argument(
-        "--suite-prewarm",
+        "--prewarm-script",
         action="append",
         default=[],
-        help="Forwarded to `fretboard diag perf --suite-prewarm <script.json>` (repeatable).",
+        help="Forwarded to `fretboard diag perf --prewarm-script <script.json>` (repeatable).",
     )
     ap.add_argument(
-        "--suite-prelude",
+        "--prelude-script",
         action="append",
         default=[],
-        help="Forwarded to `fretboard diag perf --suite-prelude <script.json>` (repeatable).",
+        help="Forwarded to `fretboard diag perf --prelude-script <script.json>` (repeatable).",
     )
     ap.add_argument(
-        "--suite-prelude-each-run",
+        "--prelude-each-run",
         action="store_true",
         default=False,
-        help="Forwarded to `fretboard diag perf --suite-prelude-each-run`.",
+        help="Forwarded to `fretboard diag perf --prelude-each-run`.",
     )
     ap.add_argument(
         "--env",
@@ -196,8 +196,8 @@ def main() -> int:
     baseline_out.parent.mkdir(parents=True, exist_ok=True)
 
     env_specs = _split_env_specs(list(args.env))
-    suite_prewarm_scripts = [str(_resolve_workspace_path(workspace_root, p)) for p in args.suite_prewarm]
-    suite_prelude_scripts = [str(_resolve_workspace_path(workspace_root, p)) for p in args.suite_prelude]
+    prewarm_scripts = [str(_resolve_workspace_path(workspace_root, p)) for p in args.prewarm_script]
+    prelude_scripts = [str(_resolve_workspace_path(workspace_root, p)) for p in args.prelude_script]
 
     candidate_results: list[dict[str, Any]] = []
     best: tuple[int, int, int, str] | None = None
@@ -218,12 +218,12 @@ def main() -> int:
             "--timeout-ms",
             str(int(args.timeout_ms)),
         ]
-        for script in suite_prewarm_scripts:
-            cmd += ["--suite-prewarm", script]
-        for script in suite_prelude_scripts:
-            cmd += ["--suite-prelude", script]
-        if bool(args.suite_prelude_each_run):
-            cmd += ["--suite-prelude-each-run"]
+        for script in prewarm_scripts:
+            cmd += ["--prewarm-script", script]
+        for script in prelude_scripts:
+            cmd += ["--prelude-script", script]
+        if bool(args.prelude_each_run):
+            cmd += ["--prelude-each-run"]
         cmd += [
             "--reuse-launch",
             "--sort",

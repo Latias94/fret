@@ -79,9 +79,12 @@ Upstream exports a thin wrapper around `vaul`:
   while managed-open ownership remains explicit on `Drawer::new(open)` / `new_controllable(...)`.
 - Pass: `DrawerContent` / `DrawerHeader` / `DrawerFooter` provide Drawer-specific layout while
   reusing shared dialog substrate building blocks (`Title` / `Description`).
-- Pass: `DrawerContent::build(...)` is the typed content-side companion on that same recipe lane,
-  so first-party snippets no longer need to pre-land `DrawerHeader` / `DrawerFooter` trees into a
-  raw `DrawerContent::new([...])` array.
+- Pass: `DrawerContent::new([]).with_children(cx, ...)` plus
+  `DrawerHeader::new([]).with_children(cx, ...)` / `DrawerFooter::new([]).with_children(cx, ...)`
+  now cover the default nested content side of the copyable recipe lane, so first-party snippets
+  can stay closer to the upstream nested mental model without dropping into sink mutation.
+- Pass: `DrawerContent::build(...)` remains available as the typed builder-first companion when
+  a snippet genuinely wants `push_ui(...)` assembly.
 - Note: Root authoring still lowers through recipe-layer deferred parts rather than true JSX-style
   nesting, but the default curated surface now matches the upstream mental model more closely via
   `children([...])`.
@@ -151,9 +154,11 @@ Upstream exports a thin wrapper around `vaul`:
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn drawer::tests`
 - `cargo test -p fret-ui-shadcn --lib drawer::tests::drawer_content_build_accepts_builder_first_sections -- --exact`
+- `cargo test -p fret-ui-shadcn --lib drawer::tests::drawer_content_with_children_accepts_composable_sections_surface -- --exact`
 - `cargo nextest run -p fret-ui-shadcn drawer_open_change_handlers_forward_to_sheet`
 - `cargo nextest run -p fret-ui-shadcn drawer_snap_point_model_initializes_to_controlled_index_on_open drawer_snap_points_settle_to_nearest_point_on_release drawer_close_resets_snap_point_model_to_default_index drawer_snap_to_sequential_points_advances_one_step_per_drag`
 - `cargo nextest run -p fret-ui-shadcn drawer_nested_open_blocks_parent_drag_start drawer_nested_open_updates_parent_frontmost_height drawer_nested_close_restores_parent_drag_start`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-responsive-dialog-smoke.json --dir <unique-dir> --session-auto --pack --ai-packet --include-screenshots --launch cargo run -p fret-ui-gallery`
 
 ## Authoring note: `children([...])` and `compose()`
 
@@ -163,8 +168,13 @@ equivalent to upstream nested parts without widening the mechanism contract.
 - Scope: ergonomics only; it lowers into `Drawer::into_element_parts(...)`.
 - Default teaching path: first-party examples now prefer
   `Drawer::new_controllable(cx, None, false).children([DrawerPart::trigger(...), DrawerPart::content_with(...)])`.
+- Default nested content path: first-party examples now prefer
+  `DrawerContent::new([]).with_children(cx, ...)` plus
+  `DrawerHeader::new([]).with_children(cx, ...)` / `DrawerFooter::new([]).with_children(cx, ...)`.
 - `Drawer::compose()` remains the builder-first alternative when explicit trigger/content chaining
   reads better at the call site.
+- `DrawerContent::build(...)` remains the builder-first content companion when callers already have
+  a sink-driven assembly flow.
 - Follow-up policy lane: Vaul-oriented `snap_points(...)` / `default_snap_point(...)` remain
   explicit recipe policy on that same root surface rather than a separate authoring seam.
 - Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.

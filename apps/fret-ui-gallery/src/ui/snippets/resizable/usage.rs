@@ -4,13 +4,9 @@ pub const SOURCE: &str = include_str!("usage.rs");
 use fret::{UiChild, UiCx};
 use fret_core::Axis;
 use fret_core::Px;
-use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn panel<H: UiHost>(
-    _cx: &mut ElementContext<'_, H>,
-    label: &'static str,
-) -> impl IntoUiElement<H> + use<H> {
+fn panel(_cx: &mut UiCx<'_>, label: &'static str) -> impl UiChild + use<> {
     ui::v_flex(move |cx| vec![shadcn::raw::typography::small(label).into_element(cx)])
         .layout(LayoutRefinement::default().w_full().h_full())
         .items_center()

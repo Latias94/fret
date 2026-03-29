@@ -4,35 +4,34 @@ pub const SOURCE: &str = include_str!("basic.rs");
 use fret::{UiChild, UiCx};
 #[allow(unused_imports)]
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use shadcn::raw::breadcrumb::primitives as bc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    bc::Breadcrumb::new()
+    shadcn::BreadcrumbRoot::new()
         .into_element(cx, |cx| {
-            vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+            vec![shadcn::BreadcrumbList::new().into_element(cx, |cx| {
                 vec![
-                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                         vec![
-                            bc::BreadcrumbLink::new("Home")
+                            shadcn::BreadcrumbLink::new("Home")
                                 .href("/")
                                 .action(CMD_APP_OPEN)
                                 .into_element(cx),
                         ]
                     }),
-                    bc::BreadcrumbSeparator::new().into_element(cx),
-                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    shadcn::BreadcrumbSeparatorPart::new().into_element(cx),
+                    shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                         vec![
-                            bc::BreadcrumbLink::new("Components")
+                            shadcn::BreadcrumbLink::new("Components")
                                 .href("/components")
                                 .action(CMD_APP_OPEN)
                                 .into_element(cx),
                         ]
                     }),
-                    bc::BreadcrumbSeparator::new().into_element(cx),
-                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
-                        vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                    shadcn::BreadcrumbSeparatorPart::new().into_element(cx),
+                    shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
+                        vec![shadcn::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
                     }),
                 ]
             })]

@@ -37,7 +37,8 @@ fn group<H: UiHost>(
         })
         .collect::<Vec<_>>();
 
-    shadcn::AvatarGroup::new(avatars)
+    shadcn::AvatarGroup::empty()
+        .children(avatars)
         .size(size)
         .into_element(cx)
         .test_id(test_id)

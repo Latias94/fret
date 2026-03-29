@@ -3,54 +3,13 @@ use std::path::{Path, PathBuf};
 
 use fret_assets::{AssetBundleId, FileAssetManifestBundleV1, FileAssetManifestV1};
 
-pub(crate) fn assets_cmd(args: Vec<String>) -> Result<(), String> {
-    let mut it = args.into_iter();
-    let Some(target) = it.next() else {
-        return Err(
-            "missing assets target (try: fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-app)"
-                .to_string(),
-        );
-    };
+pub(crate) mod contracts;
 
-    match target.as_str() {
-        "--help" | "-h" => crate::cli::help(),
-        "manifest" => manifest_cmd(it.collect()),
-        "rust" => rust_cmd(it.collect()),
-        other => Err(format!("unknown assets target: {other}")),
-    }
-}
-
-fn manifest_cmd(args: Vec<String>) -> Result<(), String> {
-    let mut it = args.into_iter();
-    let Some(target) = it.next() else {
-        return Err(
-            "missing manifest action (try: fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-app)"
-                .to_string(),
-        );
-    };
-
-    match target.as_str() {
-        "--help" | "-h" => crate::cli::help(),
-        "write" => manifest_write_cmd(it.collect()),
-        other => Err(format!("unknown assets manifest action: {other}")),
-    }
-}
-
-fn rust_cmd(args: Vec<String>) -> Result<(), String> {
-    let mut it = args.into_iter();
-    let Some(target) = it.next() else {
-        return Err(
-            "missing rust action (try: fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle my-app)"
-                .to_string(),
-        );
-    };
-
-    match target.as_str() {
-        "--help" | "-h" => crate::cli::help(),
-        "write" => rust_write_cmd(it.collect()),
-        other => Err(format!("unknown assets rust action: {other}")),
-    }
-}
+use self::contracts::{
+    AssetBundleSelectorArgs, AssetsCommandArgs, AssetsManifestActionContract,
+    AssetsManifestWriteCommandArgs, AssetsRustActionContract, AssetsRustSurfaceContract,
+    AssetsRustWriteCommandArgs, AssetsTargetContract,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum AssetBundleSelector {
@@ -84,13 +43,10 @@ enum RustSurface {
 }
 
 impl RustSurface {
-    fn parse(value: &str) -> Result<Self, String> {
+    fn from_contract(value: AssetsRustSurfaceContract) -> Self {
         match value {
-            "fret" => Ok(Self::Fret),
-            "framework" => Ok(Self::Framework),
-            other => Err(format!(
-                "unknown assets rust surface: {other} (expected `fret` or `framework`)"
-            )),
+            AssetsRustSurfaceContract::Fret => Self::Fret,
+            AssetsRustSurfaceContract::Framework => Self::Framework,
         }
     }
 
@@ -102,65 +58,36 @@ impl RustSurface {
     }
 }
 
-fn manifest_write_cmd(args: Vec<String>) -> Result<(), String> {
-    let mut dir: Option<PathBuf> = None;
-    let mut out: Option<PathBuf> = None;
-    let mut bundle: Option<AssetBundleSelector> = None;
-    let mut force = false;
-
-    let mut it = args.into_iter();
-    while let Some(arg) = it.next() {
-        match arg.as_str() {
-            "--dir" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--dir requires a value".to_string())?;
-                dir = Some(PathBuf::from(raw));
-            }
-            "--out" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--out requires a value".to_string())?;
-                out = Some(PathBuf::from(raw));
-            }
-            "--bundle" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--bundle requires a value".to_string())?;
-                set_bundle_arg(&mut bundle, "--bundle", AssetBundleSelector::Raw(raw))?;
-            }
-            "--app-bundle" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--app-bundle requires a value".to_string())?;
-                set_bundle_arg(&mut bundle, "--app-bundle", AssetBundleSelector::App(raw))?;
-            }
-            "--package-bundle" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--package-bundle requires a value".to_string())?;
-                set_bundle_arg(
-                    &mut bundle,
-                    "--package-bundle",
-                    AssetBundleSelector::Package(raw),
-                )?;
-            }
-            "--force" => force = true,
-            "--help" | "-h" => return crate::cli::help(),
-            other => {
-                return Err(format!(
-                    "unknown argument for assets manifest write: {other}"
-                ));
-            }
-        }
+pub(crate) fn run_assets_contract(args: AssetsCommandArgs) -> Result<(), String> {
+    match args.target {
+        AssetsTargetContract::Manifest(args) => match args.action {
+            AssetsManifestActionContract::Write(args) => manifest_write_cmd(args),
+        },
+        AssetsTargetContract::Rust(args) => match args.action {
+            AssetsRustActionContract::Write(args) => rust_write_cmd(args),
+        },
     }
+}
 
-    let dir = dir.ok_or_else(|| "--dir is required".to_string())?;
-    let out = out.ok_or_else(|| "--out is required".to_string())?;
-    let bundle = bundle.ok_or_else(|| {
-        "one bundle selector is required: --app-bundle <name> | --package-bundle <name> | --bundle <id>"
-            .to_string()
-    })?;
+fn bundle_selector_from_contract(
+    args: AssetBundleSelectorArgs,
+) -> Result<AssetBundleSelector, String> {
+    match (args.bundle, args.app_bundle, args.package_bundle) {
+        (Some(raw), None, None) => Ok(AssetBundleSelector::Raw(raw)),
+        (None, Some(app), None) => Ok(AssetBundleSelector::App(app)),
+        (None, None, Some(package)) => Ok(AssetBundleSelector::Package(package)),
+        _ => Err(
+            "one bundle selector is required: --app-bundle <name> | --package-bundle <name> | --bundle <id>"
+                .to_string(),
+        ),
+    }
+}
+
+fn manifest_write_cmd(args: AssetsManifestWriteCommandArgs) -> Result<(), String> {
+    let dir = args.dir;
+    let out = args.out;
+    let bundle = bundle_selector_from_contract(args.bundle)?;
+    let force = args.force;
 
     reject_out_path_inside_bundle_dir(&dir, &out)?;
 
@@ -194,77 +121,13 @@ fn manifest_write_cmd(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
-fn rust_write_cmd(args: Vec<String>) -> Result<(), String> {
-    let mut dir: Option<PathBuf> = None;
-    let mut out: Option<PathBuf> = None;
-    let mut crate_root: Option<PathBuf> = None;
-    let mut bundle: Option<AssetBundleSelector> = None;
-    let mut surface = RustSurface::Fret;
-    let mut force = false;
-
-    let mut it = args.into_iter();
-    while let Some(arg) = it.next() {
-        match arg.as_str() {
-            "--dir" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--dir requires a value".to_string())?;
-                dir = Some(PathBuf::from(raw));
-            }
-            "--out" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--out requires a value".to_string())?;
-                out = Some(PathBuf::from(raw));
-            }
-            "--crate-root" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--crate-root requires a value".to_string())?;
-                crate_root = Some(PathBuf::from(raw));
-            }
-            "--surface" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--surface requires a value".to_string())?;
-                surface = RustSurface::parse(&raw)?;
-            }
-            "--bundle" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--bundle requires a value".to_string())?;
-                set_bundle_arg(&mut bundle, "--bundle", AssetBundleSelector::Raw(raw))?;
-            }
-            "--app-bundle" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--app-bundle requires a value".to_string())?;
-                set_bundle_arg(&mut bundle, "--app-bundle", AssetBundleSelector::App(raw))?;
-            }
-            "--package-bundle" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--package-bundle requires a value".to_string())?;
-                set_bundle_arg(
-                    &mut bundle,
-                    "--package-bundle",
-                    AssetBundleSelector::Package(raw),
-                )?;
-            }
-            "--force" => force = true,
-            "--help" | "-h" => return crate::cli::help(),
-            other => {
-                return Err(format!("unknown argument for assets rust write: {other}"));
-            }
-        }
-    }
-
-    let dir = dir.ok_or_else(|| "--dir is required".to_string())?;
-    let out = out.ok_or_else(|| "--out is required".to_string())?;
-    let bundle = bundle.ok_or_else(|| {
-        "one bundle selector is required: --app-bundle <name> | --package-bundle <name> | --bundle <id>"
-            .to_string()
-    })?;
+fn rust_write_cmd(args: AssetsRustWriteCommandArgs) -> Result<(), String> {
+    let dir = args.dir;
+    let out = args.out;
+    let crate_root = args.crate_root;
+    let bundle = bundle_selector_from_contract(args.bundle)?;
+    let surface = RustSurface::from_contract(args.surface);
+    let force = args.force;
 
     reject_out_path_inside_bundle_dir(&dir, &out)?;
 
@@ -545,21 +408,6 @@ fn stable_asset_revision(bytes: &[u8]) -> u64 {
     hash
 }
 
-fn set_bundle_arg(
-    slot: &mut Option<AssetBundleSelector>,
-    flag: &'static str,
-    value: AssetBundleSelector,
-) -> Result<(), String> {
-    if let Some(existing) = slot {
-        return Err(format!(
-            "bundle selector already set to {} (cannot also use {flag})",
-            existing.asset_bundle_id().as_str()
-        ));
-    }
-    *slot = Some(value);
-    Ok(())
-}
-
 fn reject_out_path_inside_bundle_dir(dir: &Path, out: &Path) -> Result<(), String> {
     let dir_abs = dir
         .canonicalize()
@@ -619,6 +467,11 @@ fn resolve_output_path(cwd: &Path, out: &Path) -> Result<PathBuf, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::assets::contracts::{
+        AssetBundleSelectorArgs, AssetsCommandArgs, AssetsManifestActionContract,
+        AssetsManifestCommandArgs, AssetsManifestWriteCommandArgs, AssetsRustSurfaceContract,
+        AssetsRustWriteCommandArgs, AssetsTargetContract,
+    };
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn make_temp_dir(prefix: &str) -> PathBuf {
@@ -639,14 +492,16 @@ mod tests {
         std::fs::write(asset_dir.join("logo.png"), b"png").expect("write asset");
 
         let out = root.join("assets.manifest.json");
-        manifest_write_cmd(vec![
-            "--dir".into(),
-            root.join("assets").display().to_string(),
-            "--out".into(),
-            out.display().to_string(),
-            "--app-bundle".into(),
-            "demo-app".into(),
-        ])
+        manifest_write_cmd(AssetsManifestWriteCommandArgs {
+            dir: root.join("assets"),
+            out: out.clone(),
+            bundle: AssetBundleSelectorArgs {
+                bundle: None,
+                app_bundle: Some("demo-app".into()),
+                package_bundle: None,
+            },
+            force: false,
+        })
         .expect("manifest write should succeed");
 
         let manifest =
@@ -667,14 +522,16 @@ mod tests {
         std::fs::create_dir_all(&asset_dir).expect("create asset dir");
         std::fs::write(asset_dir.join("logo.png"), b"png").expect("write asset");
 
-        let err = manifest_write_cmd(vec![
-            "--dir".into(),
-            asset_dir.display().to_string(),
-            "--out".into(),
-            asset_dir.join("assets.manifest.json").display().to_string(),
-            "--app-bundle".into(),
-            "demo-app".into(),
-        ])
+        let err = manifest_write_cmd(AssetsManifestWriteCommandArgs {
+            dir: asset_dir.clone(),
+            out: asset_dir.join("assets.manifest.json"),
+            bundle: AssetBundleSelectorArgs {
+                bundle: None,
+                app_bundle: Some("demo-app".into()),
+                package_bundle: None,
+            },
+            force: false,
+        })
         .expect_err("manifest write should reject out path under dir");
 
         assert!(err.contains("--out must live outside --dir"));
@@ -682,22 +539,25 @@ mod tests {
 
     #[test]
     fn manifest_write_rejects_multiple_bundle_selectors() {
-        let root = make_temp_dir("fretboard-assets-manifest-bundle-conflict");
-        std::fs::create_dir_all(root.join("assets")).expect("create asset dir");
+        let cli = AssetsCommandArgs {
+            target: AssetsTargetContract::Manifest(AssetsManifestCommandArgs {
+                action: AssetsManifestActionContract::Write(AssetsManifestWriteCommandArgs {
+                    dir: PathBuf::from("assets"),
+                    out: PathBuf::from("assets.manifest.json"),
+                    bundle: AssetBundleSelectorArgs {
+                        bundle: Some("legacy".into()),
+                        app_bundle: Some("demo-app".into()),
+                        package_bundle: None,
+                    },
+                    force: false,
+                }),
+            }),
+        };
 
-        let err = manifest_write_cmd(vec![
-            "--dir".into(),
-            root.join("assets").display().to_string(),
-            "--out".into(),
-            root.join("assets.manifest.json").display().to_string(),
-            "--app-bundle".into(),
-            "demo-app".into(),
-            "--bundle".into(),
-            "legacy".into(),
-        ])
-        .expect_err("manifest write should reject conflicting bundle selectors");
+        let err = run_assets_contract(cli)
+            .expect_err("runtime contract should reject conflicting bundle selectors");
 
-        assert!(err.contains("bundle selector already set"));
+        assert!(err.contains("one bundle selector is required"));
     }
 
     #[test]
@@ -708,16 +568,18 @@ mod tests {
         std::fs::create_dir_all(&asset_dir).expect("create asset dir");
         std::fs::write(asset_dir.join("search.svg"), br#"<svg></svg>"#).expect("write asset");
 
-        rust_write_cmd(vec![
-            "--dir".into(),
-            root.join("assets").display().to_string(),
-            "--out".into(),
-            out.display().to_string(),
-            "--crate-root".into(),
-            root.display().to_string(),
-            "--app-bundle".into(),
-            "demo-app".into(),
-        ])
+        rust_write_cmd(AssetsRustWriteCommandArgs {
+            dir: root.join("assets"),
+            out: out.clone(),
+            crate_root: Some(root.clone()),
+            surface: AssetsRustSurfaceContract::Fret,
+            bundle: AssetBundleSelectorArgs {
+                bundle: None,
+                app_bundle: Some("demo-app".into()),
+                package_bundle: None,
+            },
+            force: false,
+        })
         .expect("rust write should succeed");
 
         let generated = std::fs::read_to_string(&out).expect("read generated module");
@@ -768,18 +630,18 @@ mod tests {
         std::fs::create_dir_all(&asset_dir).expect("create asset dir");
         std::fs::write(asset_dir.join("ui.ttf"), b"font-bytes").expect("write asset");
 
-        rust_write_cmd(vec![
-            "--dir".into(),
-            root.join("assets").display().to_string(),
-            "--out".into(),
-            out.display().to_string(),
-            "--crate-root".into(),
-            root.display().to_string(),
-            "--surface".into(),
-            "framework".into(),
-            "--package-bundle".into(),
-            "demo-kit".into(),
-        ])
+        rust_write_cmd(AssetsRustWriteCommandArgs {
+            dir: root.join("assets"),
+            out: out.clone(),
+            crate_root: Some(root.clone()),
+            surface: AssetsRustSurfaceContract::Framework,
+            bundle: AssetBundleSelectorArgs {
+                bundle: None,
+                app_bundle: None,
+                package_bundle: Some("demo-kit".into()),
+            },
+            force: false,
+        })
         .expect("framework surface rust write should succeed");
 
         let generated = std::fs::read_to_string(&out).expect("read generated module");
@@ -803,16 +665,18 @@ mod tests {
         std::fs::create_dir_all(external_assets.join("images")).expect("create asset dir");
         std::fs::write(external_assets.join("images/logo.png"), b"png").expect("write asset");
 
-        let err = rust_write_cmd(vec![
-            "--dir".into(),
-            external_assets.display().to_string(),
-            "--out".into(),
-            out.display().to_string(),
-            "--crate-root".into(),
-            root.display().to_string(),
-            "--app-bundle".into(),
-            "demo-app".into(),
-        ])
+        let err = rust_write_cmd(AssetsRustWriteCommandArgs {
+            dir: external_assets.clone(),
+            out: out.clone(),
+            crate_root: Some(root.clone()),
+            surface: AssetsRustSurfaceContract::Fret,
+            bundle: AssetBundleSelectorArgs {
+                bundle: None,
+                app_bundle: Some("demo-app".into()),
+                package_bundle: None,
+            },
+            force: false,
+        })
         .expect_err("rust write should reject assets outside crate root");
 
         assert!(err.contains("must live under crate root"));
@@ -825,16 +689,18 @@ mod tests {
         std::fs::create_dir_all(asset_dir.join("images")).expect("create asset dir");
         std::fs::write(asset_dir.join("images/logo.png"), b"png").expect("write asset");
 
-        let err = rust_write_cmd(vec![
-            "--dir".into(),
-            asset_dir.display().to_string(),
-            "--out".into(),
-            asset_dir.join("generated_assets.rs").display().to_string(),
-            "--crate-root".into(),
-            root.display().to_string(),
-            "--app-bundle".into(),
-            "demo-app".into(),
-        ])
+        let err = rust_write_cmd(AssetsRustWriteCommandArgs {
+            dir: asset_dir.clone(),
+            out: asset_dir.join("generated_assets.rs"),
+            crate_root: Some(root.clone()),
+            surface: AssetsRustSurfaceContract::Fret,
+            bundle: AssetBundleSelectorArgs {
+                bundle: None,
+                app_bundle: Some("demo-app".into()),
+                package_bundle: None,
+            },
+            force: false,
+        })
         .expect_err("rust write should reject out path under dir");
 
         assert!(err.contains("--out must live outside --dir"));

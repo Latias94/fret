@@ -8,10 +8,13 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model(String::new);
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(420.0));
+    let url_id = "ui-gallery-input-badge-webhook-url";
 
     let label = ui::h_row(|cx| {
         vec![
-            shadcn::FieldLabel::new("Webhook URL").into_element(cx),
+            shadcn::FieldLabel::new("Webhook URL")
+                .for_control(url_id)
+                .into_element(cx),
             shadcn::Badge::new("Beta")
                 .variant(shadcn::BadgeVariant::Secondary)
                 .into_element(cx),
@@ -26,7 +29,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::Field::new([
         label,
         shadcn::Input::new(value)
-            .a11y_label("Webhook URL")
+            .control_id(url_id)
             .placeholder("https://api.example.com/webhook")
             .into_element(cx),
     ])

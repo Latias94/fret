@@ -2522,6 +2522,16 @@ mod tests {
         });
     }
 
+    #[test]
+    fn curated_facade_exposes_accordion_parts_aliases() {
+        let _ = crate::facade::AccordionRoot::single_uncontrolled(Option::<&str>::None);
+        let _ = crate::facade::AccordionItemPart::new("item-1");
+        let _ =
+            crate::facade::AccordionTriggerPart::new(Vec::<fret_ui::element::AnyElement>::new());
+        let _ =
+            crate::facade::AccordionContentPart::new(Vec::<fret_ui::element::AnyElement>::new());
+    }
+
     #[derive(Default)]
     struct FakeServices;
 

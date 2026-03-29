@@ -5,6 +5,7 @@
     "required_capabilities": ["diag.script_v2"]
   },
   "steps": [
+    { "type": "reset_diagnostics" },
     {
       "type": "wait_until",
       "predicate": {
@@ -36,10 +37,45 @@
     },
     {
       "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-demo-content" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-kbd-usage-tabs-trigger-preview" }
       },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-usage-content" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-group-content" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-button-content" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-tooltip-content" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-input-group-content" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-rtl-content" } },
       "timeout_frames": 240
     },
     {

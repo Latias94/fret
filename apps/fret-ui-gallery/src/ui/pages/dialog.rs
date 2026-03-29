@@ -16,7 +16,8 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "`Dialog::children([...])` is the default copyable root path for part-based composition, and `DialogPart` is available on the curated `shadcn` facade so the default import lane stays copyable.",
-        "`DialogContent::build(...)` is the typed content-side companion on that same lane, so copyable snippets do not need to hand-land already-built content arrays.",
+        "`DialogPart::content_with(...)` plus `DialogContent::with_children(...)`, `DialogHeader::with_children(...)`, and `DialogFooter::with_children(...)` form the default copyable content lane when child parts need the current dialog scope.",
+        "`DialogContent::build(...)`, `DialogHeader::build(...)`, and `DialogFooter::build(...)` still work for already-materialized sections, but they are now the secondary builder-first lane instead of the default teaching path.",
         "`DialogContent` owns the upstream-style default close affordance; opt out with `show_close_button(false)`.",
         "`DialogClose::from_scope().build(cx, button)` is the closest Fret equivalent to upstream `<DialogClose asChild>` for footer or custom close actions.",
         "`Dialog::compose()` remains available as a focused bridge when a page wants explicit builder-style `trigger(...).content_with(...)` assembly.",
@@ -31,7 +32,7 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "API reference: `ecosystem/fret-ui-shadcn/src/dialog.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/dialog.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx`, and `repo-ref/ui/apps/v4/registry/new-york-v4/examples/dialog-demo.tsx`.",
         "Preview mirrors the shadcn/base Dialog docs path after `Installation`: `Demo`, `Usage`, `Custom Close Button`, `No Close Button`, `Sticky Footer`, `Scrollable Content`, `RTL`, and `API Reference`.",
         "`Usage` is the default copyable path; `Parts` stays as the advanced adapter section for explicit `DialogTrigger` / `DialogPortal` / `DialogOverlay` ownership.",
-        "`Usage` now teaches the root `children([...])` path because it is closer to upstream nested children composition; `Parts` keeps the explicit adapter lane for portal/overlay ownership.",
+        "`Usage` now teaches the root `children([...])` path plus deferred `content_with(...)` / `with_children(...)` composition because it is closer to upstream nested children composition and keeps `DialogClose::from_scope()` in scope for footer actions.",
         "Default close and footer close examples now use `DialogClose` semantics instead of teaching raw model toggles for dialog-local dismiss actions.",
         "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
         "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
@@ -54,7 +55,7 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
-        .description("Copyable shadcn-style composition reference using typed content builders.")
+        .description("Copyable shadcn-style composition reference using deferred content_with + with_children.")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let custom_close = DocSection::build(cx, "Custom Close Button", custom_close)
         .description("Replace the close affordance with a custom footer action.")

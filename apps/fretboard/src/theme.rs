@@ -1,100 +1,29 @@
-use std::path::PathBuf;
-
 use fret_ui::theme::ThemeConfig;
 use fret_vscode_theme::{
     MappingEntry, VscodeImportMapping, VscodeSyntaxImportOptions,
     syntax_theme_patch_and_report_from_vscode_json_with_options_and_mapping,
 };
 
-pub(crate) fn theme_cmd(args: Vec<String>) -> Result<(), String> {
-    let mut it = args.into_iter();
-    let Some(target) = it.next() else {
-        return Err(
-            "missing theme target (try: fretboard theme import-vscode <theme.json>)".to_string(),
-        );
-    };
+pub(crate) mod contracts;
 
-    match target.as_str() {
-        "--help" | "-h" => crate::cli::help(),
-        "import-vscode" => import_vscode_cmd(it.collect()),
-        other => Err(format!("unknown theme target: {other}")),
+use self::contracts::{ThemeCommandArgs, ThemeImportVscodeCommandArgs, ThemeTargetContract};
+
+pub(crate) fn run_theme_contract(args: ThemeCommandArgs) -> Result<(), String> {
+    match args.target {
+        ThemeTargetContract::ImportVscode(args) => import_vscode_cmd(args),
     }
 }
 
-fn import_vscode_cmd(args: Vec<String>) -> Result<(), String> {
-    let mut input: Option<PathBuf> = None;
-    let mut out: Option<PathBuf> = None;
-    let mut base: Option<PathBuf> = None;
-    let mut report: Option<PathBuf> = None;
-    let mut map: Option<PathBuf> = None;
-    let mut sets: Vec<(String, String)> = Vec::new();
-    let mut all_tags = false;
-    let mut force = false;
-    let mut name_override: Option<String> = None;
+fn import_vscode_cmd(args: ThemeImportVscodeCommandArgs) -> Result<(), String> {
+    let input = args.input;
+    let out = args.out;
+    let base = args.base;
+    let report = args.report;
+    let map = args.map;
+    let all_tags = args.all_tags;
+    let force = args.force;
+    let name_override = args.name;
 
-    let mut it = args.into_iter();
-    while let Some(a) = it.next() {
-        match a.as_str() {
-            "--out" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--out requires a value".to_string())?;
-                out = Some(PathBuf::from(raw));
-            }
-            "--base" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--base requires a value".to_string())?;
-                base = Some(PathBuf::from(raw));
-            }
-            "--name" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--name requires a value".to_string())?;
-                name_override = Some(raw);
-            }
-            "--report" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--report requires a value".to_string())?;
-                report = Some(PathBuf::from(raw));
-            }
-            "--map" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--map requires a value".to_string())?;
-                map = Some(PathBuf::from(raw));
-            }
-            "--set" => {
-                let raw = it
-                    .next()
-                    .ok_or_else(|| "--set requires a value like key=value".to_string())?;
-                let (k, v) = raw
-                    .split_once('=')
-                    .ok_or_else(|| "--set requires a value like key=value".to_string())?;
-                let k = k.trim();
-                let v = v.trim();
-                if k.is_empty() || v.is_empty() {
-                    return Err("--set requires a non-empty key and value".to_string());
-                }
-                sets.push((k.to_string(), v.to_string()));
-            }
-            "--all-tags" => all_tags = true,
-            "--force" => force = true,
-            "--help" | "-h" => return crate::cli::help(),
-            other if other.starts_with('-') => {
-                return Err(format!("unknown argument for theme import-vscode: {other}"));
-            }
-            other => {
-                if input.is_some() {
-                    return Err(format!("unexpected extra argument: {other}"));
-                }
-                input = Some(PathBuf::from(other));
-            }
-        }
-    }
-
-    let input = input.ok_or_else(|| "missing input theme json".to_string())?;
     let bytes = std::fs::read(&input).map_err(|e| e.to_string())?;
 
     let mut mapping: Option<VscodeImportMapping> = if let Some(map_path) = map {
@@ -106,9 +35,14 @@ fn import_vscode_cmd(args: Vec<String>) -> Result<(), String> {
         None
     };
 
-    if !sets.is_empty() {
+    if !args.sets.is_empty() {
         let m = mapping.get_or_insert_with(VscodeImportMapping::default);
-        for (k, v) in sets {
+        for (k, v) in args
+            .sets
+            .iter()
+            .map(|raw| parse_mapping_set(raw))
+            .collect::<Result<Vec<_>, _>>()?
+        {
             if k.starts_with("color.syntax.") {
                 m.tokens.insert(
                     k,
@@ -217,5 +151,33 @@ fn import_vscode_cmd(args: Vec<String>) -> Result<(), String> {
             print!("{json}");
             Ok(())
         }
+    }
+}
+
+fn parse_mapping_set(raw: &str) -> Result<(String, String), String> {
+    let (k, v) = raw
+        .split_once('=')
+        .ok_or_else(|| "--set requires a value like key=value".to_string())?;
+    let k = k.trim();
+    let v = v.trim();
+    if k.is_empty() || v.is_empty() {
+        return Err("--set requires a non-empty key and value".to_string());
+    }
+    Ok((k.to_string(), v.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_mapping_set;
+
+    #[test]
+    fn parse_mapping_set_requires_non_empty_key_and_value() {
+        assert_eq!(
+            parse_mapping_set("color.syntax.keyword=#ff00aa"),
+            Ok(("color.syntax.keyword".to_string(), "#ff00aa".to_string()))
+        );
+        assert!(parse_mapping_set("missing-separator").is_err());
+        assert!(parse_mapping_set("=value").is_err());
+        assert!(parse_mapping_set("key=").is_err());
     }
 }

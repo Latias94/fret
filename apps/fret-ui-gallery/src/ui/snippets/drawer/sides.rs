@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("sides.rs");
 
 // region: example
-use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -49,35 +48,33 @@ fn side_button<H: UiHost + 'static>(
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .into_element(cx);
 
-                shadcn::DrawerContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
-                        shadcn::DrawerHeader::build(|cx, out| {
-                            out.push_ui(cx, shadcn::DrawerTitle::new(format!("{title} Drawer")));
-                            out.push_ui(
-                                cx,
-                                shadcn::DrawerDescription::new(
-                                    "Use the `direction` prop to control drawer placement.",
-                                ),
-                            );
-                        }),
-                    );
-                    out.push(body);
-                    out.push_ui(
-                        cx,
-                        shadcn::DrawerFooter::build(|cx, out| {
-                            out.push_ui(cx, shadcn::Button::new("Submit"));
-                            let cancel = shadcn::DrawerClose::from_scope().build(
-                                cx,
-                                shadcn::Button::new("Cancel")
-                                    .variant(shadcn::ButtonVariant::Outline),
-                            );
-                            out.push(cancel);
-                        }),
-                    );
-                })
-                .into_element(cx)
-                .test_id(format!("{test_id_prefix}-content"))
+                shadcn::DrawerContent::new([])
+                    .with_children(cx, |cx| {
+                        vec![
+                            shadcn::DrawerHeader::new([]).with_children(cx, |cx| {
+                                vec![
+                                    shadcn::DrawerTitle::new(format!("{title} Drawer"))
+                                        .into_element(cx),
+                                    shadcn::DrawerDescription::new(
+                                        "Use the `direction` prop to control drawer placement.",
+                                    )
+                                    .into_element(cx),
+                                ]
+                            }),
+                            body,
+                            shadcn::DrawerFooter::new([]).with_children(cx, |cx| {
+                                vec![
+                                    shadcn::Button::new("Submit").into_element(cx),
+                                    shadcn::DrawerClose::from_scope().build(
+                                        cx,
+                                        shadcn::Button::new("Cancel")
+                                            .variant(shadcn::ButtonVariant::Outline),
+                                    ),
+                                ]
+                            }),
+                        ]
+                    })
+                    .test_id(format!("{test_id_prefix}-content"))
             }),
         ])
         .into_element(cx)

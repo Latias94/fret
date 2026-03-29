@@ -118,7 +118,7 @@ Legend:
 | Navigation Menu | `navigation_menu` | `tools/diag-scripts/ui-gallery-navigation-menu-docs-layout-smoke.json`, `tools/diag-scripts/ui-gallery-navigation-menu-hover-switch-and-escape.json`, `tools/diag-scripts/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json` | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | Layout + interaction (responsive breakpoint semantics; hover/escape) | In progress | Add bounds gates for viewport sizing vs anchor width tracking. |
 | Pagination | `pagination` | TODO | TODO | TODO | TODO | |
 | Popover | `popover` | `tools/diag-scripts/ui-gallery-popover-click-through-outside-press-focus-underlay.json`, `tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json` | TODO | Click-through + outside press + focus | In progress | Add placement bounds gate. |
-| Progress | `progress` | TODO | TODO | TODO | TODO | |
+| Progress | `progress` | `tools/diag-scripts/ui-gallery-progress-docs-smoke.json`, `tools/diag-scripts/ui-gallery-progress-numeric-semantics.json` | `ecosystem/fret-ui-shadcn/src/progress.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/progress.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`, `apps/fret-ui-gallery/tests/progress_docs_surface.rs` | Docs-path smoke + semantics + chrome/layout (track/indicator geometry, numeric semantics, timer/RTL teaching surface) | Aligned (with gaps) | Default shadcn lane is aligned; Base UI label/value parts remain a separate headless follow-up rather than a default generic children API. |
 | Radio Group | `radio_group` | TODO | TODO | TODO | TODO | |
 | Resizable | `resizable` | TODO | TODO | TODO | TODO | |
 | Scroll Area | `scroll_area` | TODO | TODO | TODO | TODO | |

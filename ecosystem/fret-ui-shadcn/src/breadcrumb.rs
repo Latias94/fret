@@ -1751,6 +1751,17 @@ mod tests {
     }
 
     #[test]
+    fn curated_facade_exposes_breadcrumb_parts_aliases() {
+        let _ = crate::facade::BreadcrumbRoot::new();
+        let _ = crate::facade::BreadcrumbList::new();
+        let _ = crate::facade::BreadcrumbItemPart::new();
+        let _ = crate::facade::BreadcrumbLink::new("Home");
+        let _ = crate::facade::BreadcrumbPage::new("Breadcrumb");
+        let _ = crate::facade::BreadcrumbSeparatorPart::new();
+        let _ = crate::facade::BreadcrumbEllipsis::new();
+    }
+
+    #[test]
     fn breadcrumb_link_children_with_command_keep_link_semantics_without_open_url_fallback() {
         let window = AppWindowId::default();
         let mut app = App::new();

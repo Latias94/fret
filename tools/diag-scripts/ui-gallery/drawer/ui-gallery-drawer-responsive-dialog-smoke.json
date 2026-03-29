@@ -1,0 +1,269 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-drawer-responsive-dialog-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "shadcn", "drawer", "responsive_dialog", "dialog"],
+    "target_hints": [
+      "Navigate to the UI Gallery Drawer page and scroll to the Responsive Dialog section.",
+      "Open the desktop Dialog branch on a wide window, then close it with Escape and verify focus restore.",
+      "Resize to mobile width, open the Drawer branch, then close it with the explicit Cancel action and verify focus restore."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_outer_position", "x_px": 120.0, "y_px": 120.0 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "drawer",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-drawer" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-drawer" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-drawer" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-drawer-responsive-desktop-trigger"
+      },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-responsive-desktop-trigger"
+        },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-drawer-responsive-desktop-trigger"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-responsive-desktop-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-drawer-responsive-dialog-desktop-open"
+    },
+    {
+      "type": "press_key",
+      "key": "escape"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-responsive-desktop-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-responsive-desktop-trigger"
+        }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "set_window_inner_size", "width_px": 520.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 15 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-drawer-responsive-mobile-trigger"
+      },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-responsive-mobile-trigger"
+        },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-drawer-responsive-mobile-trigger"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-responsive-mobile-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-responsive-mobile-form"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-responsive-mobile-email"
+        },
+        "text": "shadcn@example.com"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-responsive-mobile-username"
+        },
+        "text": "@shadcn"
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-drawer-responsive-dialog-mobile-open"
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-drawer-responsive-mobile-cancel"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-responsive-mobile-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-responsive-mobile-trigger"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-drawer-responsive-dialog-smoke"
+    }
+  ]
+}

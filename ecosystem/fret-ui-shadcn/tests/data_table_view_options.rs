@@ -31,6 +31,7 @@ fn render_frame(
     open: Model<bool>,
     state: Model<TableState>,
     columns: Arc<[ColumnDef<()>]>,
+    always_visible: bool,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
     app.set_frame_id(next_frame);
@@ -44,7 +45,7 @@ fn render_frame(
         bounds,
         "data-table-view-options",
         move |cx| {
-            let view_options = shadcn::DataTableViewOptions::from_table_state(
+            let mut view_options = shadcn::DataTableViewOptions::from_table_state(
                 open.clone(),
                 state.clone(),
                 columns.clone(),
@@ -53,8 +54,11 @@ fn render_frame(
                     "title" => Arc::<str>::from("Title"),
                     _ => col.id.clone(),
                 },
-            )
-            .into_element(cx);
+            );
+            if always_visible {
+                view_options = view_options.always_visible();
+            }
+            let view_options = view_options.into_element(cx);
             vec![view_options]
         },
     );
@@ -127,6 +131,31 @@ fn has_role_and_label(
         .any(|n| n.role == role && n.label.as_deref() == Some(label))
 }
 
+fn find_button_by_label<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+    label: &str,
+) -> Option<&'a fret_core::SemanticsNode> {
+    snap.nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(label))
+}
+
+fn is_missing_or_hidden_button(snap: &fret_core::SemanticsSnapshot, label: &str) -> bool {
+    find_button_by_label(snap, label).is_none_or(|n| n.flags.hidden)
+}
+
+fn largest_menu<'a>(snap: &'a fret_core::SemanticsSnapshot) -> &'a fret_core::SemanticsNode {
+    snap.nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .max_by(|a, b| {
+            let area_a = a.bounds.size.width.0 * a.bounds.size.height.0;
+            let area_b = b.bounds.size.width.0 * b.bounds.size.height.0;
+            area_a.total_cmp(&area_b)
+        })
+        .expect("expected open menu semantics")
+}
+
 fn mount_view_options(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -136,8 +165,11 @@ fn mount_view_options(
     open: &Model<bool>,
     state: &Model<TableState>,
     columns: &Arc<[ColumnDef<()>]>,
+    always_visible: bool,
 ) {
-    for _ in 0..2 {
+    // Responsive viewport queries can lag the first committed frame in this harness,
+    // so settle one extra frame before asserting visibility outcomes.
+    for _ in 0..3 {
         render_frame(
             ui,
             app,
@@ -147,6 +179,7 @@ fn mount_view_options(
             open.clone(),
             state.clone(),
             columns.clone(),
+            always_visible,
         );
     }
 }
@@ -161,6 +194,7 @@ fn open_view_options_menu(
     open: &Model<bool>,
     state: &Model<TableState>,
     columns: &Arc<[ColumnDef<()>]>,
+    always_visible: bool,
 ) {
     let snap = ui
         .semantics_snapshot()
@@ -181,6 +215,7 @@ fn open_view_options_menu(
             open.clone(),
             state.clone(),
             columns.clone(),
+            always_visible,
         );
         pump_effects(ui, app, services, timers);
     }
@@ -191,7 +226,7 @@ fn data_table_view_options_from_table_state_updates_column_visibility_and_resets
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(900.0), Px(240.0)),
+        CoreSize::new(Px(1200.0), Px(240.0)),
     );
 
     let mut app = App::new();
@@ -228,6 +263,7 @@ fn data_table_view_options_from_table_state_updates_column_visibility_and_resets
         &open,
         &state,
         &columns,
+        false,
     );
     open_view_options_menu(
         &mut ui,
@@ -239,6 +275,7 @@ fn data_table_view_options_from_table_state_updates_column_visibility_and_resets
         &open,
         &state,
         &columns,
+        false,
     );
 
     let snap = ui
@@ -263,6 +300,7 @@ fn data_table_view_options_from_table_state_updates_column_visibility_and_resets
         &open,
         &state,
         &columns,
+        false,
     );
 
     let st = app.models().get_cloned(&state).expect("table state");
@@ -278,11 +316,72 @@ fn data_table_view_options_from_table_state_updates_column_visibility_and_resets
 }
 
 #[test]
+fn data_table_view_options_from_table_state_uses_tasks_menu_width_default() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1200.0), Px(240.0)),
+    );
+
+    let mut app = App::new();
+    shadcn::themes::apply_shadcn_new_york(
+        &mut app,
+        shadcn::themes::ShadcnBaseColor::Neutral,
+        shadcn::themes::ShadcnColorScheme::Light,
+    );
+
+    let columns: Arc<[ColumnDef<()>]> =
+        Arc::from(vec![ColumnDef::<()>::new("a"), ColumnDef::<()>::new("b")].into_boxed_slice());
+    let state = app.models_mut().insert(TableState::default());
+    let open = app.models_mut().insert(false);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    mount_view_options(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        &open,
+        &state,
+        &columns,
+        false,
+    );
+    open_view_options_menu(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &open,
+        &state,
+        &columns,
+        false,
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    let menu = largest_menu(&snap);
+    assert!(
+        menu.bounds.size.width.0 >= 149.0,
+        "expected DataTableViewOptions menu width to follow the upstream tasks default (>=150px), got {}",
+        menu.bounds.size.width.0
+    );
+}
+
+#[test]
 fn data_table_view_options_from_table_state_preserves_external_visibility_updates() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(900.0), Px(240.0)),
+        CoreSize::new(Px(1200.0), Px(240.0)),
     );
 
     let mut app = App::new();
@@ -318,6 +417,7 @@ fn data_table_view_options_from_table_state_preserves_external_visibility_update
         &open,
         &state,
         &columns,
+        false,
     );
 
     let external_page_index = 5;
@@ -335,6 +435,7 @@ fn data_table_view_options_from_table_state_preserves_external_visibility_update
         &open,
         &state,
         &columns,
+        false,
     );
 
     let st = app.models().get_cloned(&state).expect("table state");
@@ -354,7 +455,7 @@ fn data_table_view_options_from_table_state_uses_group_leaf_columns() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(900.0), Px(240.0)),
+        CoreSize::new(Px(1200.0), Px(240.0)),
     );
 
     let mut app = App::new();
@@ -388,6 +489,7 @@ fn data_table_view_options_from_table_state_uses_group_leaf_columns() {
         &open,
         &state,
         &columns,
+        false,
     );
     open_view_options_menu(
         &mut ui,
@@ -399,6 +501,7 @@ fn data_table_view_options_from_table_state_uses_group_leaf_columns() {
         &open,
         &state,
         &columns,
+        false,
     );
 
     let snap = ui
@@ -416,5 +519,97 @@ fn data_table_view_options_from_table_state_uses_group_leaf_columns() {
     assert!(
         !has_role_and_label(&snap, SemanticsRole::MenuItemCheckbox, "Group"),
         "expected grouped columns to skip non-leaf group headers"
+    );
+}
+
+#[test]
+fn data_table_view_options_from_table_state_hides_trigger_below_lg() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(900.0), Px(240.0)),
+    );
+
+    let mut app = App::new();
+    shadcn::themes::apply_shadcn_new_york(
+        &mut app,
+        shadcn::themes::ShadcnBaseColor::Neutral,
+        shadcn::themes::ShadcnColorScheme::Light,
+    );
+
+    let columns: Arc<[ColumnDef<()>]> =
+        Arc::from(vec![ColumnDef::<()>::new("a"), ColumnDef::<()>::new("b")].into_boxed_slice());
+    let state = app.models_mut().insert(TableState::default());
+    let open = app.models_mut().insert(false);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    mount_view_options(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        &open,
+        &state,
+        &columns,
+        false,
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    assert!(
+        is_missing_or_hidden_button(&snap, "View"),
+        "expected tasks-aligned DataTableViewOptions trigger to stay hidden below the lg breakpoint"
+    );
+}
+
+#[test]
+fn data_table_view_options_always_visible_override_keeps_trigger_below_lg() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(900.0), Px(240.0)),
+    );
+
+    let mut app = App::new();
+    shadcn::themes::apply_shadcn_new_york(
+        &mut app,
+        shadcn::themes::ShadcnBaseColor::Neutral,
+        shadcn::themes::ShadcnColorScheme::Light,
+    );
+
+    let columns: Arc<[ColumnDef<()>]> =
+        Arc::from(vec![ColumnDef::<()>::new("a"), ColumnDef::<()>::new("b")].into_boxed_slice());
+    let state = app.models_mut().insert(TableState::default());
+    let open = app.models_mut().insert(false);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    mount_view_options(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        &open,
+        &state,
+        &columns,
+        true,
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    assert!(
+        !is_missing_or_hidden_button(&snap, "View"),
+        "expected always_visible() to keep the DataTableViewOptions trigger visible below lg"
     );
 }

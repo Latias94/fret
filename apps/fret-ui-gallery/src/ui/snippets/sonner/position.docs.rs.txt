@@ -1,0 +1,91 @@
+// region: example
+use fret::app::UiCxActionsExt as _;
+use fret::{UiChild, UiCx};
+use fret_ui::Invalidation;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
+
+fn toast_position_key(position: shadcn::ToastPosition) -> &'static str {
+    match position {
+        shadcn::ToastPosition::TopLeft => "top-left",
+        shadcn::ToastPosition::TopCenter => "top-center",
+        shadcn::ToastPosition::TopRight => "top-right",
+        shadcn::ToastPosition::BottomLeft => "bottom-left",
+        shadcn::ToastPosition::BottomCenter => "bottom-center",
+        shadcn::ToastPosition::BottomRight => "bottom-right",
+    }
+}
+
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let sonner = shadcn::Sonner::global(&mut *cx.app);
+    let toaster_position = cx.local_model_keyed("docs_sonner_position", || {
+        shadcn::ToastPosition::TopCenter
+    });
+
+    let current = cx
+        .get_model_copied(&toaster_position, Invalidation::Layout)
+        .unwrap_or(shadcn::ToastPosition::TopCenter);
+
+    let position_button =
+        |cx: &mut UiCx<'_>, label: &'static str, target: shadcn::ToastPosition| {
+            let sonner = sonner.clone();
+            let toaster_position = toaster_position.clone();
+
+            shadcn::Button::new(label)
+                .variant(shadcn::ButtonVariant::Outline)
+                .on_activate(cx.actions().listen(move |host, action_cx| {
+                    let _ = host.models_mut().update(&toaster_position, |value| *value = target);
+                    sonner.toast(
+                        host,
+                        action_cx.window,
+                        shadcn::ToastRequest::new("Event has been created")
+                            .position(target)
+                            .description(format!("position: {}", toast_position_key(target))),
+                    );
+                    host.request_redraw(action_cx.window);
+                }))
+                .into_element(cx)
+        };
+
+    let top_row = ui::h_flex(move |cx| {
+        vec![
+            position_button(cx, "Top Left", shadcn::ToastPosition::TopLeft),
+            position_button(cx, "Top Center", shadcn::ToastPosition::TopCenter),
+            position_button(cx, "Top Right", shadcn::ToastPosition::TopRight),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .justify_center()
+    .wrap()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let bottom_row = ui::h_flex(move |cx| {
+        vec![
+            position_button(cx, "Bottom Left", shadcn::ToastPosition::BottomLeft),
+            position_button(cx, "Bottom Center", shadcn::ToastPosition::BottomCenter),
+            position_button(cx, "Bottom Right", shadcn::ToastPosition::BottomRight),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .justify_center()
+    .wrap()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let current_label = shadcn::raw::typography::muted(format!(
+        "Current toaster position: {}",
+        toast_position_key(current)
+    ))
+    .into_element(cx);
+
+    let toaster = shadcn::Toaster::new().position(current).into_element(cx);
+
+    ui::v_flex(move |_cx| vec![top_row, bottom_row, current_label, toaster])
+        .gap(Space::N2)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+}
+// endregion: example

@@ -58,14 +58,25 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: `AlertDialog::children([...])` now provides a root-level part-children surface that is
   closer to upstream nested children authoring while still lowering into the existing slot-based
   recipe.
+- Pass: `AlertDialogPart::content_with(...)` together with `AlertDialogContent::with_children(...)`,
+  `AlertDialogHeader::with_children(...)`, and `AlertDialogFooter::with_children(...)` now forms
+  the default copyable content-side composition lane for first-party examples, so
+  `AlertDialogAction::from_scope(...)` / `AlertDialogCancel::from_scope(...)` are rendered inside
+  the alert-dialog content scope instead of being taught through an eager array path.
+- Pass: `AlertDialogContent::new([...])`, `AlertDialogHeader::new([...])`, and
+  `AlertDialogFooter::new([...])` remain available for already-materialized children and composed
+  sections, but they are no longer treated as the default teaching lane for scope-sensitive parts.
 - Pass: `AlertDialogPart` is now reachable from the curated `facade` import lane, so the default
   `use fret_ui_shadcn::{facade as shadcn, prelude::*};` teaching path can author
   `AlertDialog::children([...])` without dropping to `raw::*`.
 - Pass: `AlertDialog::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
-- Pass: `AlertDialogContent::build(...)` is the typed content-side companion on that same recipe
-  lane, so first-party snippets no longer need to pre-land `AlertDialogHeader` /
-  `AlertDialogFooter` trees into a raw `AlertDialogContent::new([...])` array.
+- Pass: `AlertDialogContent::build(...)` remains the typed content-side companion when staged or
+  conditional assembly is clearer than deferred `with_children(...)`.
+- Pass: `AlertDialogDescription::new_selectable(...)` /
+  `AlertDialogDescription::new_selectable_with(...)` now provide a first-class recipe seam for
+  inline interactive spans (for example the upstream destructive `Settings` link) without forcing
+  callers back through the generic `new_children([...])` escape hatch.
 - Note: Public-surface drift still exists compared with full React/JSX nesting. Fret now supports
   root-level part children, but it still collects recipe parts explicitly instead of accepting
   arbitrary nested JSX-like children.
@@ -105,6 +116,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - `cargo check -p fret-ui-gallery`
 - `cargo test -p fret-ui-shadcn --lib alert_dialog::tests`
 - `cargo test -p fret-ui-shadcn --lib alert_dialog::tests::alert_dialog_content_build_accepts_builder_first_sections -- --exact`
+- `cargo test -p fret-ui-shadcn --lib alert_dialog::tests::alert_dialog_content_new_accepts_composed_sections_and_test_id -- --exact`
 - Contract test: `alert_dialog_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `alert_dialog_open_change_events_complete_without_animation`
 - Shadcn Web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
@@ -113,8 +125,16 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   (`web_vs_fret_alert_dialog_demo_overlay_center_matches`).
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_alert_dialog_open_geometry_matches_fret`).
+- Overlay selectable-span state gate:
+  `cargo test -p fret-ui-shadcn --lib alert_dialog::tests::alert_dialog_selectable_description_records_interactive_span_bounds_in_overlay_state -- --exact`
+  (proves the alert dialog description keeps interactive span bounds after overlay paint).
 - UI Gallery docs-example screenshot gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-docs-example-open-screenshots.json`
   (covers `Small`, `Media`, `Small with Media`, and `Destructive` on the first-party docs page).
+- UI Gallery destructive inline-link click gate:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json`
+  (passes against the real `ui-gallery-alert-dialog-destructive-description-link` selectable-text
+  node; the remaining issue was in diagnostics timing/selector alignment, not in
+  `fret-ui-shadcn` authoring).
 
 ## Authoring note: `from_scope(...)`
 
@@ -137,9 +157,33 @@ recipe-layer sugar.
 - Shape: root-level `AlertDialogPart::{trigger, portal, overlay, content}` adapters keep the part
   collection explicit while still reading closer to upstream nested children.
 - Default teaching path: first-party examples now prefer
-  `AlertDialog::new_controllable(cx, None, false).children([AlertDialogPart::trigger(...), AlertDialogPart::content(...)])`.
+  `AlertDialog::new_controllable(cx, None, false).children([AlertDialogPart::trigger(...), AlertDialogPart::content_with(|cx| { ... })])`.
 - Limitation: this is still not a full React-style nested children API; Fret stores deferred recipe
   parts and assembles them at the final call site.
+
+## Authoring note: deferred content children
+
+First-party examples now pair the root `children([...])` path with deferred content assembly:
+
+- `AlertDialogPart::content_with(|cx| { ... })`
+- `AlertDialogContent::new([]).with_children(cx, |cx| ...)`
+- `AlertDialogHeader::new([]).with_children(cx, |cx| ...)`
+- `AlertDialogFooter::new([]).with_children(cx, |cx| ...)`
+- `AlertDialogDescription::new_selectable_with(props, Some(handler))`
+
+Why this is the default teaching path:
+
+- it keeps `AlertDialogAction::from_scope(...)` / `AlertDialogCancel::from_scope(...)` inside the
+  alert-dialog content scope where they are valid,
+- it gives inline links / interactive description spans an explicit recipe seam instead of teaching
+  them through generic child escape hatches,
+- it stays close to the upstream nested-children mental model without widening the mechanism
+  contract,
+- it keeps automation-friendly hooks available through `AlertDialogContent::test_id(...)`.
+
+The eager `new([...])` constructors remain useful when children are already materialized `AnyElement`
+values or when a section is being assembled outside the scope-sensitive lane. `build(...)` remains
+the typed fallback when the content really is easier to assemble in stages.
 
 ## Authoring note: `compose()`
 

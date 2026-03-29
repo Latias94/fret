@@ -17,10 +17,11 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let extras = snippets::extras::render(cx);
     let api_reference = doc_layout::notes_block([
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/radix/slider.mdx`. Base UI reference: `repo-ref/ui/apps/v4/content/docs/components/base/slider.mdx`.",
+        "Registry source axis: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/slider.tsx`, `repo-ref/ui/apps/v4/registry/bases/radix/ui/slider.tsx`, and `repo-ref/ui/apps/v4/registry/bases/base/ui/slider.tsx`.",
+        "Slider already exposes the important authoring surface (`new`, `new_controllable`, range/step/orientation/on_value_commit), so the main parity gap here is usage clarity rather than missing composition APIs.",
         "`slider(model)` is the default controlled helper for first-party teaching surfaces, while `new_controllable(...)` stays available when the example needs a default-value bridge or element-owned state.",
-        "`slider(model)` and `new_controllable(...)` already cover the main recipe root surface, so the remaining parity work is example grouping and teaching clarity rather than missing composition APIs.",
-        "Slider remains a leaf recipe on the shadcn lane: labels, value readouts, and field layout are composed outside the control, so no extra generic children/`compose()` API is needed here.",
-        "Base UI's `Slider.Root/Label/Value/Control/Track/Indicator/Thumb` family is a useful headless reference, but if we promote that compound-children surface it should live in `fret-ui-kit` / a headless lane rather than on `fret-ui-shadcn::Slider`.",
+        "Slider remains a leaf recipe on the shadcn lane: labels, value readouts, and field layout are composed outside the control, so no extra generic composable children / `compose()` API is needed here.",
+        "Base UI's `Slider.Root/Label/Value/Control/Track/Indicator/Thumb` family is a useful headless reference, but it belongs to a future `fret-ui-kit`-level surface rather than the `fret-ui-shadcn::Slider` recipe.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
     ]);
     let notes = doc_layout::notes_block([
@@ -35,23 +36,25 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-slider-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Copyable minimal usage for `slider(model)` on the first-party app surface.")
+        .description("Copyable minimal controlled usage for `slider(model)` on the first-party app surface; use `new_controllable(...)` for the upstream `defaultValue`-style lane.")
         .test_id_prefix("ui-gallery-slider-usage-section")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let range = DocSection::build(cx, "Range", range)
-        .description("Use two values for a range slider.")
+        .description("Mirrors the upstream two-thumb range example (`[25, 50]`, `step(5)`).")
         .test_id_prefix("ui-gallery-slider-range-section")
         .code_rust_from_file_region(snippets::range::SOURCE, "example");
     let multiple = DocSection::build(cx, "Multiple Thumbs", multiple)
-        .description("Use three values for a multi-thumb slider.")
+        .description("Mirrors the upstream three-thumb example (`[10, 20, 70]`, `step(10)`).")
         .test_id_prefix("ui-gallery-slider-multiple-section")
         .code_rust_from_file_region(snippets::multiple::SOURCE, "example");
     let vertical = DocSection::build(cx, "Vertical", vertical)
-        .description("Use `orientation(Vertical)` and give the slider an explicit height.")
+        .description(
+            "Mirrors the upstream two-slider vertical example and keeps height caller-owned.",
+        )
         .test_id_prefix("ui-gallery-slider-vertical-section")
         .code_rust_from_file_region(snippets::vertical::SOURCE, "example");
     let controlled = DocSection::build(cx, "Controlled", controlled)
-        .description("Shared model state with a live value readout.")
+        .description("Mirrors the upstream label + readout demo with `ControlId` / `Label::for_control(...)` on the Fret surface.")
         .test_id_prefix("ui-gallery-slider-controlled-section")
         .code_rust_from_file_region(snippets::controlled::SOURCE, "example");
     let disabled = DocSection::build(cx, "Disabled", disabled)
@@ -82,7 +85,7 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn/Base UI slider docs path first: Demo, Usage, Range, Multiple Thumbs, Vertical, Controlled, Disabled, RTL. `API Reference` then records the public-surface owner split and why Base UI's compound children surface stays a headless reference instead of the default shadcn recipe lane. `Label Association`, `Extras`, and `Notes` stay as focused Fret follow-ups.",
+            "Preview now mirrors the upstream shadcn/Base UI slider docs path first: `Demo`, `Usage`, `Range`, `Multiple Thumbs`, `Vertical`, `Controlled`, `Disabled`, `RTL`, and `API Reference`. `Label Association`, `Extras`, and `Notes` then stay as focused Fret follow-ups.",
         ),
         vec![
             demo,

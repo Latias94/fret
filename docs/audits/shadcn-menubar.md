@@ -32,6 +32,8 @@ Key upstream behaviors/surfaces:
 - Component code: `ecosystem/fret-ui-shadcn/src/menubar.rs`
 - Overlay policy substrate: `ecosystem/fret-ui-kit/src/overlay_controller.rs`
 - Dismissible popover policy: `ecosystem/fret-ui-kit/src/window_overlays/mod.rs`
+- Gallery page: `apps/fret-ui-gallery/src/ui/pages/menubar.rs`
+- Gallery snippets: `apps/fret-ui-gallery/src/ui/snippets/menubar/*.rs`
 
 ## Audit checklist
 
@@ -100,6 +102,24 @@ Key upstream behaviors/surfaces:
 - Pass: Root and submenu panels animate with shadcn’s overlay motion taxonomy (fade + zoom, plus slide-in on enter).
 - Pass: Leading icons are aligned within a fixed 16×16 slot; when any row provides a leading icon,
   the menu reserves the slot across the panel for consistent label alignment.
+
+### Docs-surface findings
+
+- Fixed: the gallery `Demo` and `RTL` snippets now keep the `Profiles` menu on the same grouped
+  structure as the upstream base docs/demo, with `Edit...` and `Add Profile...` separated by their
+  own `MenubarSeparator`.
+- Fixed: the gallery now has a dedicated `ui-gallery-menubar-docs-smoke` diag gate that asserts the
+  docs-path section anchors (`Demo`, `Usage`, `Checkbox`, `Radio`, `Submenu`, `With Icons`, `RTL`,
+  `API Reference`, `Parts`, `Notes`) end to end.
+
+### Gallery / docs parity
+
+- Pass: the gallery mirrors the upstream docs path first: `Demo`, `Usage`, `Checkbox`, `Radio`,
+  `Submenu`, `With Icons`, `RTL`, and `API Reference`.
+- Pass: the `Parts` section remains a Fret follow-up after the upstream docs path instead of
+  replacing it.
+- Pass: the `API Reference` section records why the typed `MenubarEntry` tree remains the default
+  Fret surface and why a generic heterogeneous children API is still unnecessary for this family.
 
 ## Missing surfaces (significant)
 
@@ -231,3 +251,4 @@ _None tracked at this time._
   (`web_vs_fret_menubar_demo_submenu_small_viewport_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu-kbd-vp1440x320.open.json`).
 - shadcn-web submenu menu content inset gate (constrained viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu-kbd-vp1440x320.open.json`).
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-docs-smoke.json --dir target/fret-diag-menubar-codex --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`

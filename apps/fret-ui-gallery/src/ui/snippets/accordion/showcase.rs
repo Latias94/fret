@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("extras.rs");
+pub const SOURCE: &str = include_str!("showcase.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
@@ -26,17 +26,17 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::AccordionItem::new(
                 "notifications",
                 shadcn::AccordionTrigger::new(vec![cx.text("Notifications")])
-                    .test_id("ui-gallery-accordion-extras-multiple-trigger-notifications"),
+                    .test_id("ui-gallery-accordion-showcase-multiple-trigger-notifications"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
                     shadcn::raw::typography::p("Configure email, push, and in-app notifications.")
                 ])
-                .test_id("ui-gallery-accordion-extras-multiple-content-notifications"),
+                .test_id("ui-gallery-accordion-showcase-multiple-content-notifications"),
             ),
             shadcn::AccordionItem::new(
                 "security",
                 shadcn::AccordionTrigger::new(vec![cx.text("Security")])
-                    .test_id("ui-gallery-accordion-extras-multiple-trigger-security"),
+                    .test_id("ui-gallery-accordion-showcase-multiple-trigger-security"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
                     shadcn::raw::typography::p("Manage passwords, 2FA, and active sessions.")
@@ -46,7 +46,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     })
     .refine_layout(max_w_lg.clone())
     .into_element(cx)
-    .test_id("ui-gallery-accordion-extras-multiple");
+    .test_id("ui-gallery-accordion-showcase-multiple");
 
     let disabled = shadcn::accordion_single_uncontrolled(cx, Some("item-1"), |cx| {
         [shadcn::AccordionItem::new(
@@ -90,7 +90,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         });
 
         cx.container(props, move |_cx| [accordion])
-            .test_id("ui-gallery-accordion-extras-borders")
+            .test_id("ui-gallery-accordion-showcase-borders")
     };
 
     let card = {
@@ -140,7 +140,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         })
         .refine_layout(max_w_sm.clone())
         .into_element(cx)
-        .test_id("ui-gallery-accordion-extras-card")
+        .test_id("ui-gallery-accordion-showcase-card")
     };
 
     let rtl = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
@@ -148,7 +148,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             [shadcn::AccordionItem::new(
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("RTL")])
-                    .test_id("ui-gallery-accordion-extras-rtl-trigger"),
+                    .test_id("ui-gallery-accordion-showcase-rtl-trigger"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
                     shadcn::raw::typography::p(
@@ -208,9 +208,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx)
-            .test_id("ui-gallery-accordion-extras-rtl-section");
+            .test_id("ui-gallery-accordion-showcase-rtl-section");
 
-    let extras = ui::v_flex(move |_cx| {
+    let showcase = ui::v_flex(move |_cx| {
         vec![
             multiple_section,
             disabled_section,
@@ -223,8 +223,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .items_start()
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx)
-    .test_id("ui-gallery-accordion-extras");
+    .test_id("ui-gallery-accordion-showcase");
 
-    extras
+    showcase
 }
 // endregion: example

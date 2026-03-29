@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("scrollable_content.rs");
 
 // region: example
-use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Theme;
@@ -68,35 +67,32 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     cx.container(props, move |_cx| [scroller])
                 };
 
-                shadcn::DrawerContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
-                        shadcn::DrawerHeader::build(|cx, out| {
-                            out.push_ui(cx, shadcn::DrawerTitle::new("Scrollable Content"));
-                            out.push_ui(
-                                cx,
-                                shadcn::DrawerDescription::new(
-                                    "Keep actions visible while the content scrolls.",
-                                ),
-                            );
-                        }),
-                    );
-                    out.push(padded);
-                    out.push_ui(
-                        cx,
-                        shadcn::DrawerFooter::build(|cx, out| {
-                            out.push_ui(cx, shadcn::Button::new("Submit"));
-                            let cancel = shadcn::DrawerClose::from_scope().build(
-                                cx,
-                                shadcn::Button::new("Cancel")
-                                    .variant(shadcn::ButtonVariant::Outline),
-                            );
-                            out.push(cancel);
-                        }),
-                    );
-                })
-                .into_element(cx)
-                .test_id("ui-gallery-drawer-scrollable-content")
+                shadcn::DrawerContent::new([])
+                    .with_children(cx, |cx| {
+                        vec![
+                            shadcn::DrawerHeader::new([]).with_children(cx, |cx| {
+                                vec![
+                                    shadcn::DrawerTitle::new("Scrollable Content").into_element(cx),
+                                    shadcn::DrawerDescription::new(
+                                        "Keep actions visible while the content scrolls.",
+                                    )
+                                    .into_element(cx),
+                                ]
+                            }),
+                            padded,
+                            shadcn::DrawerFooter::new([]).with_children(cx, |cx| {
+                                vec![
+                                    shadcn::Button::new("Submit").into_element(cx),
+                                    shadcn::DrawerClose::from_scope().build(
+                                        cx,
+                                        shadcn::Button::new("Cancel")
+                                            .variant(shadcn::ButtonVariant::Outline),
+                                    ),
+                                ]
+                            }),
+                        ]
+                    })
+                    .test_id("ui-gallery-drawer-scrollable-content")
             }),
         ])
         .into_element(cx)

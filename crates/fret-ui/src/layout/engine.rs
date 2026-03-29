@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use fret_core::{FrameId, NodeId, Point, Px, Rect, Size};
 use rustc_hash::FxHashMap;
-use serde_json::json;
+use serde_json::{Value, json};
 use slotmap::SecondaryMap;
 use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
 
@@ -67,6 +67,12 @@ pub struct TaffyLayoutEngine {
     measure_profiling_enabled: bool,
     last_solve_measure_time: Duration,
     last_solve_measure_hotspots: Vec<LayoutEngineMeasureHotspot>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct DebugDumpNodeInfo {
+    pub label: Option<String>,
+    pub debug: Option<Value>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1636,6 +1642,19 @@ impl TaffyLayoutEngine {
         root: NodeId,
         mut label_for_node: impl FnMut(NodeId) -> Option<String>,
     ) -> serde_json::Value {
+        self.debug_dump_subtree_json_with_info(root, |node| DebugDumpNodeInfo {
+            label: label_for_node(node),
+            debug: None,
+        })
+    }
+
+    /// Dump a layout subtree with both a human-readable label and optional structured debug
+    /// metadata per node.
+    pub fn debug_dump_subtree_json_with_info(
+        &self,
+        root: NodeId,
+        mut info_for_node: impl FnMut(NodeId) -> DebugDumpNodeInfo,
+    ) -> serde_json::Value {
         fn sanitize_for_filename(s: &str) -> String {
             s.chars()
                 .map(|ch| match ch {
@@ -1707,9 +1726,10 @@ impl TaffyLayoutEngine {
                 .map(|s| format!("{s:?}"))
                 .unwrap_or_else(|| "<missing>".to_string());
 
-            let label_dbg = label_for_node(node).unwrap_or_else(|| "<unknown>".to_string());
+            let info = info_for_node(node);
+            let label_dbg = info.label.unwrap_or_else(|| "<unknown>".to_string());
 
-            nodes.push(json!({
+            let mut node_json = json!({
                 "node": format!("{node:?}"),
                 "label": label_dbg,
                 "measured": measured,
@@ -1729,7 +1749,13 @@ impl TaffyLayoutEngine {
                     "h": abs.size.height.0,
                 },
                 "style": style_dbg,
-            }));
+            });
+            if let Some(debug) = info.debug
+                && let Some(obj) = node_json.as_object_mut()
+            {
+                obj.insert("debug".to_string(), debug);
+            }
+            nodes.push(node_json);
         }
 
         let filename = sanitize_for_filename(&format!("{root:?}"));
@@ -1745,6 +1771,13 @@ impl TaffyLayoutEngine {
             },
             "nodes": nodes,
         })
+    }
+
+    pub fn debug_independent_root_nodes(&self) -> Vec<NodeId> {
+        self.node_to_layout
+            .iter()
+            .filter_map(|(node, _)| self.parent.get(node).is_none().then_some(node))
+            .collect()
     }
 
     pub fn debug_write_subtree_json(

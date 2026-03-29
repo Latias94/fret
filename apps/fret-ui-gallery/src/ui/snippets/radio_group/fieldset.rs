@@ -6,21 +6,45 @@ use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let monthly_id = "ui-gallery-radio-group-fieldset-monthly";
+    let yearly_id = "ui-gallery-radio-group-fieldset-yearly";
+    let lifetime_id = "ui-gallery-radio-group-fieldset-lifetime";
+
     let group = shadcn::RadioGroup::uncontrolled(Some("monthly"))
         .a11y_label("Subscription plan")
-        .item(shadcn::RadioGroupItem::new(
-            "monthly",
-            "Monthly ($9.99/month)",
-        ))
-        .item(shadcn::RadioGroupItem::new(
-            "yearly",
-            "Yearly ($99.99/year)",
-        ))
-        .item(shadcn::RadioGroupItem::new(
-            "lifetime",
-            "Lifetime ($299.99)",
-        ))
-        .into_element(cx);
+        .item(
+            shadcn::RadioGroupItem::new("monthly", "Monthly ($9.99/month)").control_id(monthly_id),
+        )
+        .item(shadcn::RadioGroupItem::new("yearly", "Yearly ($99.99/year)").control_id(yearly_id))
+        .item(shadcn::RadioGroupItem::new("lifetime", "Lifetime ($299.99)").control_id(lifetime_id))
+        .into_element_parts(cx, |cx, parts| {
+            vec![
+                shadcn::Field::new([
+                    parts.control(cx, "monthly"),
+                    shadcn::FieldLabel::new("Monthly ($9.99/month)")
+                        .for_control(monthly_id)
+                        .into_element(cx),
+                ])
+                .orientation(shadcn::FieldOrientation::Horizontal)
+                .into_element(cx),
+                shadcn::Field::new([
+                    parts.control(cx, "yearly"),
+                    shadcn::FieldLabel::new("Yearly ($99.99/year)")
+                        .for_control(yearly_id)
+                        .into_element(cx),
+                ])
+                .orientation(shadcn::FieldOrientation::Horizontal)
+                .into_element(cx),
+                shadcn::Field::new([
+                    parts.control(cx, "lifetime"),
+                    shadcn::FieldLabel::new("Lifetime ($299.99)")
+                        .for_control(lifetime_id)
+                        .into_element(cx),
+                ])
+                .orientation(shadcn::FieldOrientation::Horizontal)
+                .into_element(cx),
+            ]
+        });
 
     shadcn::field_set(|cx| {
         ui::children![

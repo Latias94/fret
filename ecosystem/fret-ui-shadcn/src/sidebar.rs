@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, CursorIcon, Edges, FontId, FontWeight, KeyCode, Modifiers, Px, SemanticsRole,
-    TextOverflow, TextStyle, TextWrap,
+    Color, CursorIcon, Edges, FontId, FontWeight, KeyCode, Modifiers, Point, Px, SemanticsRole,
+    TextOverflow, TextStyle, TextWrap, Transform2D,
 };
 use fret_icons::IconId;
 use fret_runtime::keymap::Binding;
@@ -15,7 +15,7 @@ use fret_ui::action::{OnActivate, OnCommand, OnCommandAvailability, OnKeyDown};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, HoverRegionProps, LayoutStyle,
     Length, MainAlign, OpacityProps, Overflow, PressableProps, RingStyle, SemanticsDecoration,
-    SizeStyle, SpacerProps,
+    SizeStyle, SpacerProps, VisualTransformProps,
 };
 use fret_ui::{CommandAvailability, ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -1375,11 +1375,12 @@ impl SidebarTrigger {
                 }))
             };
 
+        let trigger_icon = sidebar_trigger_icon(cx);
         let mut trigger = Button::new("")
             .a11y_label("Toggle Sidebar")
             .variant(ButtonVariant::Ghost)
             .size(ButtonSize::Icon)
-            .icon(IconId::new_static("lucide.panel-left"))
+            .children([trigger_icon])
             .disabled(self.disabled)
             .refine_style(self.chrome)
             .refine_layout(
@@ -1401,6 +1402,36 @@ impl SidebarTrigger {
 
         trigger.into_element(cx)
     }
+}
+
+fn sidebar_trigger_icon<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let icon_px = Px(16.0);
+    let icon = decl_icon::icon_with(
+        cx,
+        IconId::new_static("lucide.panel-left"),
+        Some(icon_px),
+        None,
+    );
+    if crate::direction::use_direction(cx, None) != crate::direction::LayoutDirection::Rtl {
+        return icon;
+    }
+
+    let center = Point::new(Px(icon_px.0 * 0.5), Px(icon_px.0 * 0.5));
+    let mut layout = LayoutStyle::default();
+    layout.size = SizeStyle {
+        width: Length::Px(icon_px),
+        height: Length::Px(icon_px),
+        ..Default::default()
+    };
+    layout.flex.shrink = 0.0;
+
+    cx.visual_transform_props(
+        VisualTransformProps {
+            layout,
+            transform: Transform2D::rotation_about_degrees(180.0, center),
+        },
+        move |_cx| vec![icon],
+    )
 }
 
 #[derive(Clone)]
@@ -1482,7 +1513,6 @@ impl SidebarRail {
         let sidebar_ctx = use_sidebar(cx);
         let surface_ctx = use_sidebar_surface(cx);
         let side = surface_ctx.map(|ctx| ctx.side).unwrap_or_default();
-        let collapsible = surface_ctx.map(|ctx| ctx.collapsible).unwrap_or_default();
         let variant = surface_ctx.map(|ctx| ctx.variant).unwrap_or_default();
 
         let rail_layout = {
@@ -1497,13 +1527,6 @@ impl SidebarRail {
                 SidebarSide::Left => layout.right_neg_px(Px(8.0)),
                 SidebarSide::Right => layout.left_neg_px(Px(8.0)),
             };
-
-            if matches!(collapsible, SidebarCollapsible::Offcanvas) {
-                layout = match side {
-                    SidebarSide::Left => layout.right_neg_px(Px(4.0)),
-                    SidebarSide::Right => layout.left_neg_px(Px(4.0)),
-                };
-            }
 
             if matches!(variant, SidebarVariant::Floating | SidebarVariant::Inset) {
                 layout = match side {
@@ -1965,18 +1988,42 @@ impl SidebarGroup {
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct SidebarGroupLabel {
     text: Arc<str>,
+    children: Option<Vec<AnyElement>>,
+    as_child: bool,
     collapsed: bool,
+}
+
+impl std::fmt::Debug for SidebarGroupLabel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SidebarGroupLabel")
+            .field("text", &self.text)
+            .field("children_len", &self.children.as_ref().map(Vec::len))
+            .field("as_child", &self.as_child)
+            .field("collapsed", &self.collapsed)
+            .finish()
+    }
 }
 
 impl SidebarGroupLabel {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
             text: text.into(),
+            children: None,
+            as_child: false,
             collapsed: false,
         }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self
+    }
+
+    pub fn as_child(mut self, as_child: bool) -> Self {
+        self.as_child = as_child;
+        self
     }
 
     pub fn collapsed(mut self, collapsed: bool) -> Self {
@@ -2003,14 +2050,9 @@ impl SidebarGroupLabel {
             (fg, size, line_height)
         };
 
-        let text = ui::text(self.text)
-            .text_size_px(size)
-            .line_height_px(line_height)
-            .font_medium()
-            .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
-            .into_element(cx);
+        let label = self.text;
+        let slot_children = self.children;
+        let as_child = self.as_child;
 
         let (layout, props) = {
             let theme = Theme::global(&*cx.app);
@@ -2048,14 +2090,41 @@ impl SidebarGroupLabel {
                 ..Default::default()
             };
 
-            let text = text;
             vec![cx.flex(row, move |cx| {
+                let content = if as_child {
+                    slot_children.unwrap_or_else(|| {
+                        vec![
+                            ui::text(label.clone())
+                                .text_size_px(size)
+                                .line_height_px(line_height)
+                                .font_medium()
+                                .text_color(ColorRef::Color(fg))
+                                .wrap(TextWrap::Word)
+                                .overflow(TextOverflow::Clip)
+                                .into_element(cx),
+                        ]
+                    })
+                } else if let Some(children) = slot_children {
+                    children
+                } else {
+                    vec![
+                        ui::text(label.clone())
+                            .text_size_px(size)
+                            .line_height_px(line_height)
+                            .font_medium()
+                            .text_color(ColorRef::Color(fg))
+                            .wrap(TextWrap::Word)
+                            .overflow(TextOverflow::Clip)
+                            .into_element(cx),
+                    ]
+                };
+
                 vec![cx.opacity_props(
                     OpacityProps {
                         layout,
                         opacity: motion.progress,
                     },
-                    move |_cx| vec![text],
+                    move |_cx| content,
                 )]
             })]
         })
@@ -2316,16 +2385,25 @@ impl SidebarGroupContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let props = {
+        let (props, text_refinement) = {
             let theme = Theme::global(&*cx.app);
-            decl_style::container_props(
-                theme,
-                self.chrome,
-                LayoutRefinement::default().w_full().merge(self.layout),
+            (
+                decl_style::container_props(
+                    theme,
+                    self.chrome,
+                    LayoutRefinement::default().w_full().merge(self.layout),
+                ),
+                typography::composable_refinement_from_style(&typography::control_text_style(
+                    theme,
+                    typography::UiTextSize::Sm,
+                )),
             )
         };
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        typography::scope_text_style(
+            shadcn_layout::container_flow(cx, props, children),
+            text_refinement,
+        )
     }
 }
 
@@ -3985,7 +4063,10 @@ mod tests {
         TextMetrics, TextService,
     };
     use fret_runtime::{Effect, FrameId, TickId};
-    use fret_ui::element::ContainerProps;
+    use fret_ui::element::{
+        AnyElement, ContainerProps, ElementKind, Length, SvgIconProps, TextProps,
+        VisualTransformProps,
+    };
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
     use fret_ui_kit::OverlayController;
@@ -4043,6 +4124,30 @@ mod tests {
 
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
+        }
+    }
+
+    fn find_first_visual_transform(el: &AnyElement) -> Option<&VisualTransformProps> {
+        match &el.kind {
+            ElementKind::VisualTransform(props) => Some(props),
+            _ => el.children.iter().find_map(find_first_visual_transform),
+        }
+    }
+
+    fn find_first_svg_icon(el: &AnyElement) -> Option<&SvgIconProps> {
+        match &el.kind {
+            ElementKind::SvgIcon(props) => Some(props),
+            _ => el.children.iter().find_map(find_first_svg_icon),
+        }
+    }
+
+    fn find_text<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text(child, needle)),
         }
     }
 
@@ -5964,6 +6069,14 @@ mod tests {
                 .expect("expected sidebar rail semantics node")
         };
 
+        let left_default = render_case(
+            &mut ui,
+            &mut app,
+            &mut services,
+            SidebarSide::Left,
+            SidebarCollapsible::Icon,
+            "sidebar-rail-left-default",
+        );
         let left_offcanvas = render_case(
             &mut ui,
             &mut app,
@@ -5971,6 +6084,14 @@ mod tests {
             SidebarSide::Left,
             SidebarCollapsible::Offcanvas,
             "sidebar-rail-left-offcanvas",
+        );
+        let right_default = render_case(
+            &mut ui,
+            &mut app,
+            &mut services,
+            SidebarSide::Right,
+            SidebarCollapsible::Icon,
+            "sidebar-rail-right-default",
         );
         let right_offcanvas = render_case(
             &mut ui,
@@ -5985,6 +6106,18 @@ mod tests {
             left_offcanvas.origin.x.0 > right_offcanvas.origin.x.0,
             "expected left-side rail to be anchored on the right edge, got left={} right={}",
             left_offcanvas.origin.x.0,
+            right_offcanvas.origin.x.0
+        );
+        assert!(
+            (left_default.origin.x.0 - left_offcanvas.origin.x.0).abs() <= 1.0,
+            "expected left offcanvas rail to keep the same hit-box origin as the default rail; default={} offcanvas={}",
+            left_default.origin.x.0,
+            left_offcanvas.origin.x.0
+        );
+        assert!(
+            (right_default.origin.x.0 - right_offcanvas.origin.x.0).abs() <= 1.0,
+            "expected right offcanvas rail to keep the same hit-box origin as the default rail; default={} offcanvas={}",
+            right_default.origin.x.0,
             right_offcanvas.origin.x.0
         );
 
@@ -7131,6 +7264,146 @@ mod tests {
             button.role,
             SemanticsRole::Button,
             "expected as_child sidebar menu button to retain button semantics"
+        );
+    }
+
+    #[test]
+    fn sidebar_trigger_flips_icon_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+
+        let ltr =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-trigger-ltr", |cx| {
+                SidebarTrigger::new().into_element(cx)
+            });
+        let rtl =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-trigger-rtl", |cx| {
+                crate::direction::DirectionProvider::new(crate::direction::LayoutDirection::Rtl)
+                    .into_element(cx, |cx| SidebarTrigger::new().into_element(cx))
+            });
+
+        assert!(
+            find_first_visual_transform(&ltr).is_none(),
+            "expected LTR sidebar trigger to keep the icon unwrapped"
+        );
+
+        let transform = find_first_visual_transform(&rtl)
+            .expect("expected RTL sidebar trigger icon to be wrapped in a visual transform");
+        let icon = find_first_svg_icon(&rtl).expect("expected sidebar trigger icon");
+        let icon_px = Px(16.0);
+        let expected = Transform2D::rotation_about_degrees(
+            180.0,
+            Point::new(Px(icon_px.0 * 0.5), Px(icon_px.0 * 0.5)),
+        );
+
+        assert_eq!(transform.layout.size.width, Length::Px(icon_px));
+        assert_eq!(transform.layout.size.height, Length::Px(icon_px));
+        assert_eq!(
+            transform.transform, expected,
+            "expected RTL sidebar trigger to rotate the panel icon 180 degrees"
+        );
+        assert_eq!(icon.layout.size.width, Length::Px(icon_px));
+        assert_eq!(icon.layout.size.height, Length::Px(icon_px));
+    }
+
+    #[test]
+    fn sidebar_group_content_scopes_text_sm_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(120.0)),
+        );
+
+        let element =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-group-content", |cx| {
+                SidebarGroupContent::new([cx.text("Group body text")]).into_element(cx)
+            });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!("expected SidebarGroupContent to render a container");
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+
+        let theme = Theme::global(&app);
+        let expected = typography::composable_refinement_from_style(
+            &typography::control_text_style(theme, typography::UiTextSize::Sm),
+        );
+        assert_eq!(element.inherited_text_style.as_ref(), Some(&expected));
+
+        let text = find_text(&element, "Group body text").expect("expected nested group body text");
+        assert!(
+            text.style.is_none(),
+            "expected group content to scope text-sm through inherited typography rather than patching the leaf"
+        );
+    }
+
+    #[test]
+    fn sidebar_group_label_as_child_renders_custom_child_and_keeps_child_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-group-label-as-child",
+            |cx| {
+                let trigger = Button::new("Toggle Group")
+                    .variant(ButtonVariant::Ghost)
+                    .test_id("sidebar-group-label-trigger")
+                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx);
+                let label = SidebarGroupLabel::new("Group")
+                    .as_child(true)
+                    .children([trigger])
+                    .into_element(cx);
+                vec![label]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("sidebar-group-label-trigger")),
+            "expected as_child sidebar group label to render the custom child trigger"
+        );
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-group-label-trigger"))
+            .expect("expected sidebar group label child semantics node");
+        assert_eq!(
+            trigger.role,
+            SemanticsRole::Button,
+            "expected as_child sidebar group label path to keep child button semantics"
         );
     }
 

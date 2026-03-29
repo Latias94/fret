@@ -34,15 +34,14 @@ docs, registry examples, and the current label layout/interaction gates.
 
 - Pass: `Label::new(text)` plus `for_control(...)` covers the documented label surface.
 - Pass: `Label::for_control(...)` plus control-side `control_id(...)` is the right Fret bridge for the upstream `htmlFor` / `id` pairing.
+- Pass: `Label::children(...)` now covers the common composable-inline lane in the shadcn recipe layer while preserving the label text as the accessible name and association label.
 - Pass: form-specific structure remains on `Field`, `FieldLabel`, `FieldDescription`, and `FieldError`; Fret does not need to widen `Label` itself.
-- Decision: do not widen `Label` into a generic compound-children / `compose()` API yet.
-  The current shadcn/base/radix docs path only needs text children plus association, and richer
-  clickable subtrees already have a recipe-owned home in `FieldLabel::wrap(...)`. Revisit this
-  only if a first-party non-field `Label` use case needs wrapped-child ownership.
+- Pass: `Label::wrap(...)` is now the explicit full-subtree lane when a first-party non-field label needs custom visible content; `FieldLabel::wrap(...)` remains the form-specific richer structure surface.
 
 ### Layout & default-style ownership
 
 - Pass: text sizing and line-height remain recipe-owned on the label primitive.
+- Pass: `fret-ui-shadcn::Label` now owns the upstream `flex items-center gap-2` row outcome instead of short-circuiting directly to the headless primitive export.
 - Pass: disabled associated labels now match the upstream `opacity-50` outcome.
 - Pass: plain associated labels no longer let ambient pressable shells suppress the documented click-to-toggle / click-to-focus path.
 - Pass: surrounding form layout, width caps, and label-plus-control stacking remain caller-owned composition.
@@ -51,14 +50,18 @@ docs, registry examples, and the current label layout/interaction gates.
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream docs path first: checkbox `Demo`, `Usage`, `Label in Field`, `RTL`, and `API Reference`.
-- Pass: this work is mostly docs/public-surface parity plus two narrow primitive fixes: disabled associated-label opacity and associated-label forwarding under ambient pressable shells.
+- Pass: the gallery keeps the official docs path first, then adds a small Fret-only `Composable Content` appendix to document the inline children lane with a copyable snippet and a dedicated diag gate.
+- Pass: this work is still a narrow public-surface/recipe alignment plus existing primitive association fixes: disabled associated-label opacity and associated-label forwarding under ambient pressable shells.
 
 ## Validation
 
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
 - `cargo test -p fret-ui-kit label_for_disabled_control_uses_half_opacity -- --nocapture`
 - `cargo test -p fret-ui-kit label_for_control_click_invokes_registered_control_action_inside_ancestor_pressable -- --nocapture`
+- `cargo test -p fret-ui-shadcn label_children_surface_renders_inline_children_before_text -- --nocapture`
+- `cargo test -p fret-ui-shadcn label_children_for_control_keeps_control_registry_labelled_by_link -- --nocapture`
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs` (`web_vs_fret_layout_label_demo_geometry`)
 - Existing targeted marker gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_misc_targeted.rs`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-docs-smoke.json --launch -- cargo run -p fret-ui-gallery --release`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-label-toggles-checkbox.json --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-children-click-label-toggles-checkbox.json --launch -- cargo run -p fret-ui-gallery --release`

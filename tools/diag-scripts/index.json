@@ -2223,22 +2223,13 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-accordion-basic-long-text-wraps",
-      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-basic-long-text-wraps.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
+      "id": "ui-gallery-accordion-borders-card-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-borders-card-screenshots.json",
+      "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
-      "tags": [
-        "accordion",
-        "layout",
-        "shadcn",
-        "ui_gallery",
-        "wrap"
-      ],
+      "tags": [],
       "target_hints": []
     },
     {
@@ -2252,20 +2243,9 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-accordion-extras-borders-card-screenshots",
-      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-borders-card-screenshots.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-accordion-extras-multiple-compact-layout",
-      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-multiple-compact-layout.json",
+      "id": "ui-gallery-accordion-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-docs-smoke.json",
       "required_capabilities": [
-        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "suite_memberships": [
@@ -2273,21 +2253,10 @@
       ],
       "tags": [
         "accordion",
-        "extras",
-        "layout",
+        "docs-smoke",
         "shadcn",
-        "ui_gallery"
+        "ui-gallery"
       ],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-accordion-extras-rtl-trigger-non-overlap",
-      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-rtl-trigger-non-overlap.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [],
       "target_hints": []
     },
     {
@@ -2301,8 +2270,36 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-multiple-compact-layout",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-multiple-compact-layout.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "accordion",
+        "layout",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-accordion-returns-first-open-height",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-returns-first-open-height.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-accordion-rtl-trigger-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-rtl-trigger-non-overlap.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
@@ -2727,6 +2724,24 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-alert-dialog-destructive-inline-link-activate",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "alert_dialog",
+        "links",
+        "overlay",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-alert-dialog-detached-trigger-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-detached-trigger-focus-restore.json",
       "required_capabilities": [
@@ -3064,6 +3079,25 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-calendar-custom-cell-size-responsive",
+      "path": "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "calendar",
+        "cell-size",
+        "responsive",
+        "shadcn",
+        "ui-gallery"
+      ],
       "target_hints": []
     },
     {
@@ -6104,6 +6138,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-input-button-group-and-file-controls-fill",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button-group",
+        "file",
+        "input",
+        "layout",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Input page via the left nav search.",
+        "Asserts that the composed Input controls inside File and Button Group examples keep a visible width instead of collapsing to the button width."
+      ]
+    },
+    {
       "id": "ui-gallery-input-docs-screenshots",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-docs-screenshots.json",
       "required_capabilities": [
@@ -7079,6 +7136,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-progress-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-docs-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-progress-numeric-semantics",
+      "path": "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-numeric-semantics.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-radio-group-description-layout",
       "path": "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-description-layout.json",
       "required_capabilities": [],
@@ -7631,6 +7711,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-sonner-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-sonner-docs"
+      ],
+      "tags": [
+        "docs",
+        "screenshots",
+        "shadcn",
+        "sonner",
+        "toast",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Sonner page via the left nav search.",
+        "Captures the docs-path sections first (`Demo` through `API Reference`) so docs-surface parity stays reviewable."
+      ]
     },
     {
       "id": "ui-gallery-sonner-interrupt-fixed-frame-delta",

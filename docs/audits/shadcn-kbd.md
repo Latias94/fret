@@ -42,7 +42,7 @@ registry examples, and the in-repo layout/docs gates.
 
 - Fixed: the gallery `Usage` section now uses a real snippet-backed single-key example (`Kbd::new("Ctrl")`) instead of an abbreviated page-local code string.
 - Fixed: the lead `Demo`, `Button`, `Tooltip`, and `Input Group` snippets now prefer the upstream textual/glyph lane (`⌘`, `⇧`, `⌥`, `⌃`, `⏎`) before falling back to Fret-only icon escape hatches.
-- Fixed: the page now exposes stable section-scoped `ui-gallery-kbd-*` ids for docs diagnostics (`Demo`, `Usage`, `Group`, `Button`, `Tooltip`, `Input Group`, `RTL`, `API Reference`).
+- Fixed: the page now exposes stable section-scoped `ui-gallery-kbd-*` ids for docs diagnostics (`Demo`, `Usage`, `Group`, `Button`, `Tooltip`, `Input Group`, `RTL`, `API Reference`), and the `ui-gallery-kbd-docs-smoke` diag gate now asserts those docs-path anchors end to end.
 
 ### Gallery / docs parity
 

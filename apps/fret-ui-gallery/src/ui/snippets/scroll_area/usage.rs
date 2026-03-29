@@ -17,9 +17,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .p_4()
     .into_element(cx);
 
-    shadcn::ScrollArea::new([content])
-        .refine_layout(LayoutRefinement::default().w_px(Px(350.0)).h_px(Px(200.0)))
+    let area = shadcn::ScrollArea::new([content])
+        .refine_layout(LayoutRefinement::default().w_full().h_full())
         .into_element(cx)
-        .test_id("ui-gallery-scroll-area-usage")
+        .test_id("ui-gallery-scroll-area-usage");
+
+    let props = decl_style::container_props(
+        cx.theme(),
+        ChromeRefinement::default().border_1().rounded(Radius::Md),
+        LayoutRefinement::default()
+            .w_px(Px(350.0))
+            .h_px(Px(200.0))
+            .overflow_hidden(),
+    );
+
+    cx.container(props, move |_cx| [area])
 }
 // endregion: example

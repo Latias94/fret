@@ -10,13 +10,13 @@ use std::sync::Arc;
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
+fn page_number(label: &'static str) -> impl UiChild + use<> {
+    ui::text(label).tabular_nums()
+}
+
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let rows_per_page = cx.local_model_keyed("rows_per_page", || Some(Arc::<str>::from("25")));
     let rows_per_page_open = cx.local_model_keyed("rows_per_page_open", || false);
-
-    fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H> {
-        ui::text(label).tabular_nums()
-    }
 
     let simple = {
         shadcn::pagination(|cx| {

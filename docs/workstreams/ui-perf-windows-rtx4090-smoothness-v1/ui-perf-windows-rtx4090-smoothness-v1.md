@@ -70,17 +70,17 @@ Workflow when it fails:
 If suite results look inconsistent (a script is fast when run alone but slow inside a suite), use
 suite normalization hooks to reduce cross-script state contamination:
 
-- `--suite-prewarm <script.json>...`: run once per launched process before the suite.
-- `--suite-prelude <script.json>...`: run before each measured script (and per-run when combined with
-  `--suite-prelude-each-run`).
+- `--prewarm-script <script.json>...`: run once per launched process before the suite.
+- `--prelude-script <script.json>...`: run before each measured script (and per-run when combined with
+  `--prelude-each-run`).
 - If the suite still drifts (or you hit a long-run crash), consider isolating scripts by relaunching
   once per script:
   - `--reuse-launch --reuse-launch-per-script --launch -- <cmd...>`
 
 Suggested defaults for UI-gallery perf work:
 
-- `--suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json`
-- `--suite-prelude tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json`
+- `--prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json`
+- `--prelude-script tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json`
 
 ## Complex UI suite (typical perf)
 
@@ -89,15 +89,15 @@ frame-time distributions.
 
 Tail / spikes (worst-frame `top_*`):
 
-- `target/release/fretboard.exe diag perf ui-gallery-complex-steady --repeat 7 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-gallery-complex-steady --repeat 7 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json --env ... --launch -- target/release/fret-ui-gallery.exe`
 
 Typical perf gate (bundle frame percentiles `frame_p95_*`):
 
-- `target/release/fretboard.exe diag perf ui-gallery-complex-typical --repeat 11 --warmup-frames 5 --reuse-launch --perf-threshold-agg p90 --perf-baseline docs/workstreams/perf-baselines/ui-gallery-complex-typical.windows-rtx4090.v1.json --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json --suite-prelude-each-run --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-gallery-complex-typical --repeat 11 --warmup-frames 5 --reuse-launch --perf-threshold-agg p90 --perf-baseline docs/workstreams/perf-baselines/ui-gallery-complex-typical.windows-rtx4090.v1.json --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json --prelude-each-run --env ... --launch -- target/release/fret-ui-gallery.exe`
 
 Notes:
 
-- Use `--suite-prelude-each-run` for typical gates to reduce cross-run drift when using `--reuse-launch`.
+- Use `--prelude-each-run` for typical gates to reduce cross-run drift when using `--reuse-launch`.
 - Use `--repeat >= 11` when gating percentiles (with small repeat counts, `p90` collapses to `max`).
 
 To inspect “normal” (non-tail) performance, prefer frame percentiles from each evidence bundle:

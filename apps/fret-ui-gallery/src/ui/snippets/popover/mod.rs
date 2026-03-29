@@ -1,7 +1,9 @@
 pub mod align;
 pub mod basic;
 pub mod demo;
+pub mod detached_trigger;
 pub mod inline_children;
+pub mod open_on_hover;
 pub mod rtl;
 pub mod usage;
 pub mod with_form;

@@ -2,8 +2,9 @@ use std::any::Any;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, FontId, FontWeight, Point, Px, SemanticsRole, TextFontAxisSetting,
-    TextFontFeatureSetting, Transform2D,
+    AttributedText, Color, Corners, DecorationLineStyle, FontId, FontWeight, Point, Px,
+    SemanticsRole, TextFontAxisSetting, TextFontFeatureSetting, TextPaintStyle, TextSpan,
+    Transform2D, UnderlineStyle,
 };
 use fret_icons::IconId;
 use fret_runtime::{ActionId, Effect};
@@ -427,6 +428,94 @@ fn apply_badge_inherited_fg(
     element
 }
 
+fn underline_rich_text(rich: AttributedText) -> AttributedText {
+    let spans = rich
+        .spans
+        .iter()
+        .map(|span| {
+            let mut span = span.clone();
+            if span.paint.underline.is_none() {
+                span.paint.underline = Some(UnderlineStyle {
+                    color: None,
+                    style: DecorationLineStyle::Solid,
+                });
+            }
+            span
+        })
+        .collect::<Vec<_>>();
+    AttributedText::new(rich.text, Arc::from(spans.into_boxed_slice()))
+}
+
+fn apply_badge_hover_underline(mut element: AnyElement) -> AnyElement {
+    element.children = element
+        .children
+        .into_iter()
+        .map(apply_badge_hover_underline)
+        .collect();
+
+    match element.kind {
+        ElementKind::Text(props) => {
+            let text = props.text.clone();
+            let mut span = TextSpan::new(text.as_ref().len());
+            span.paint = TextPaintStyle {
+                underline: Some(UnderlineStyle {
+                    color: None,
+                    style: DecorationLineStyle::Solid,
+                }),
+                ..Default::default()
+            };
+            let rich = AttributedText::new(text, Arc::from(vec![span].into_boxed_slice()));
+
+            let mut styled = fret_ui::element::StyledTextProps::new(rich);
+            styled.layout = props.layout;
+            styled.style = props.style;
+            styled.color = props.color;
+            styled.wrap = props.wrap;
+            styled.overflow = props.overflow;
+            styled.align = props.align;
+            styled.ink_overflow = props.ink_overflow;
+            AnyElement::new(
+                element.id,
+                ElementKind::StyledText(styled),
+                element.children,
+            )
+        }
+        ElementKind::StyledText(mut props) => {
+            props.rich = underline_rich_text(props.rich);
+            AnyElement::new(element.id, ElementKind::StyledText(props), element.children)
+        }
+        ElementKind::SelectableText(mut props) => {
+            props.rich = underline_rich_text(props.rich);
+            AnyElement::new(
+                element.id,
+                ElementKind::SelectableText(props),
+                element.children,
+            )
+        }
+        kind => AnyElement::new(element.id, kind, element.children),
+    }
+}
+
+fn link_hover_bg_for(theme: &ThemeSnapshot, variant: BadgeVariant) -> Option<Color> {
+    match variant {
+        BadgeVariant::Default | BadgeVariant::Secondary | BadgeVariant::Destructive => {
+            bg_for(theme, variant).map(|bg| with_alpha(bg, 0.9))
+        }
+        BadgeVariant::Outline | BadgeVariant::Ghost => Some(theme.color_token("accent")),
+        BadgeVariant::Link => None,
+    }
+}
+
+fn link_hover_fg_for(theme: &ThemeSnapshot, variant: BadgeVariant, base_fg: Color) -> Color {
+    match variant {
+        BadgeVariant::Outline | BadgeVariant::Ghost => theme.color_token("accent-foreground"),
+        BadgeVariant::Default
+        | BadgeVariant::Secondary
+        | BadgeVariant::Destructive
+        | BadgeVariant::Link => base_fg,
+    }
+}
+
 pub fn badge<H: UiHost, T>(label: T, variant: BadgeVariant) -> impl IntoUiElement<H> + use<H, T>
 where
     T: Into<Arc<str>>,
@@ -479,13 +568,14 @@ fn badge_with_patch<H: UiHost>(
         .text_color
         .clone()
         .unwrap_or_else(|| ColorRef::Color(fg_for(&theme, variant)));
-    let fg = fg_ref.resolve(&theme);
+    let base_fg = fg_ref.resolve(&theme);
     let theme_fg = theme.color_token("foreground");
     let theme_muted_fg = theme.color_by_key("muted-foreground").unwrap_or(theme_fg);
 
     let mut chrome_props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
     chrome_props.layout.size = pressable_layout.size;
     chrome_props.layout.overflow = fret_ui::element::Overflow::Clip;
+    let base_bg = chrome_props.background;
 
     let text_px = theme
         .metric_by_key("component.badge.text_px")
@@ -496,15 +586,18 @@ fn badge_with_patch<H: UiHost>(
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-    let content_children = move |cx: &mut ElementContext<'_, H>| {
-        current_color::scope_children(cx, fg_ref.clone(), |cx| {
+    let build_content_children = move |cx: &mut ElementContext<'_, H>,
+                                       resolved_fg_ref: ColorRef,
+                                       resolved_fg: Color,
+                                       hover_underline: bool| {
+        current_color::scope_children(cx, resolved_fg_ref.clone(), |cx| {
             let mut label = ui::text(label_for_content.clone())
                 .text_size_px(text_px)
                 .fixed_line_box_px(line_height)
                 .line_box_in_bounds()
                 .font_weight(label_weight_override.unwrap_or(FontWeight::MEDIUM))
                 .nowrap()
-                .text_color(fg_ref.clone());
+                .text_color(resolved_fg_ref.clone());
 
             if let Some(font) = label_font_override {
                 label = label.font(font);
@@ -516,7 +609,10 @@ fn badge_with_patch<H: UiHost>(
                 label = label.font_axis(axis.tag.to_string(), axis.value);
             }
 
-            let label = label.into_element(cx);
+            let mut label = label.into_element(cx);
+            if hover_underline {
+                label = apply_badge_hover_underline(label);
+            }
 
             // Upstream shadcn badge enforces `[&>svg]:size-3` (12px) for direct svg children.
             let icon_px = Px(12.0);
@@ -529,7 +625,14 @@ fn badge_with_patch<H: UiHost>(
             let children = children
                 .into_iter()
                 .map(|child| apply_badge_child_icon_size(child, icon_px))
-                .map(|child| apply_badge_inherited_fg(child, fg, theme_fg, theme_muted_fg))
+                .map(|child| apply_badge_inherited_fg(child, resolved_fg, theme_fg, theme_muted_fg))
+                .map(|child| {
+                    if hover_underline {
+                        apply_badge_hover_underline(child)
+                    } else {
+                        child
+                    }
+                })
                 .collect::<Vec<_>>();
             content.extend(children);
             content.push(label);
@@ -537,7 +640,14 @@ fn badge_with_patch<H: UiHost>(
             let trailing_children = trailing_children
                 .into_iter()
                 .map(|child| apply_badge_child_icon_size(child, icon_px))
-                .map(|child| apply_badge_inherited_fg(child, fg, theme_fg, theme_muted_fg))
+                .map(|child| apply_badge_inherited_fg(child, resolved_fg, theme_fg, theme_muted_fg))
+                .map(|child| {
+                    if hover_underline {
+                        apply_badge_hover_underline(child)
+                    } else {
+                        child
+                    }
+                })
                 .collect::<Vec<_>>();
             content.extend(trailing_children);
 
@@ -600,6 +710,7 @@ fn badge_with_patch<H: UiHost>(
                 st.focused && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
             let duration = crate::overlay_motion::shadcn_motion_duration_150(cx);
             let ease = crate::overlay_motion::shadcn_ease;
+            let link_hovered = render_role == Some(SemanticsRole::Link) && st.hovered;
 
             let ring_color = theme.color_token("ring");
             let destructive = theme.color_token("destructive");
@@ -627,6 +738,33 @@ fn badge_with_patch<H: UiHost>(
                 id,
                 "badge-ring-alpha",
                 if focus_visible { 1.0 } else { 0.0 },
+                duration,
+                ease,
+            );
+            let target_fg = if link_hovered {
+                link_hover_fg_for(&theme, variant, base_fg)
+            } else {
+                base_fg
+            };
+            let fg_motion = drive_tween_color_for_element(
+                cx,
+                id,
+                "badge-foreground-color",
+                target_fg,
+                duration,
+                ease,
+            );
+            let target_bg = if link_hovered {
+                link_hover_bg_for(&theme, variant).or(base_bg)
+            } else {
+                base_bg
+            }
+            .unwrap_or(Color::TRANSPARENT);
+            let bg_motion = drive_tween_color_for_element(
+                cx,
+                id,
+                "badge-background-color",
+                target_bg,
                 duration,
                 ease,
             );
@@ -662,13 +800,15 @@ fn badge_with_patch<H: UiHost>(
 
             let mut chrome_props = chrome_props;
             chrome_props.border_color = Some(border_motion.value);
-            // Upstream shadcn applies `[a&]:hover:bg-*/90` for the default/secondary/destructive
-            // badge variants. Model this only for link semantics (our `asChild` equivalent).
-            if render_role == Some(SemanticsRole::Link) && st.hovered {
-                if let Some(bg) = bg_for(&theme, variant) {
-                    chrome_props.background = Some(with_alpha(bg, 0.9));
-                }
-            }
+            chrome_props.background = (base_bg.is_some()
+                || (link_hovered && link_hover_bg_for(&theme, variant).is_some())
+                || bg_motion.animating)
+                .then_some(bg_motion.value);
+            let resolved_fg_ref = ColorRef::Color(fg_motion.value);
+            let hover_underline = link_hovered && variant == BadgeVariant::Link;
+            let content_children = move |cx: &mut ElementContext<'_, H>| {
+                build_content_children(cx, resolved_fg_ref, fg_motion.value, hover_underline)
+            };
             (pressable_props, chrome_props, content_children)
         });
     }
@@ -676,7 +816,9 @@ fn badge_with_patch<H: UiHost>(
     let mut root_props = chrome_props;
     root_props.layout = pressable_layout;
     root_props.layout.overflow = fret_ui::element::Overflow::Clip;
-    let mut out = cx.container(root_props, content_children);
+    let mut out = cx.container(root_props, move |cx| {
+        build_content_children(cx, fg_ref, base_fg, false)
+    });
     if let Some(test_id) = test_id {
         out = out.test_id(test_id);
     }
@@ -969,6 +1111,76 @@ mod tests {
         }
     }
 
+    fn color_eq_eps(a: Color, b: Color, eps: f32) -> bool {
+        (a.r - b.r).abs() <= eps
+            && (a.g - b.g).abs() <= eps
+            && (a.b - b.b).abs() <= eps
+            && (a.a - b.a).abs() <= eps
+    }
+
+    #[derive(Debug, Clone, Copy, Default)]
+    struct BadgeVisualState {
+        background: Option<Color>,
+        label_color: Option<Color>,
+        label_underlined: bool,
+    }
+
+    fn find_label_visual(el: &AnyElement, needle: &str) -> Option<BadgeVisualState> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => {
+                return Some(BadgeVisualState {
+                    label_color: props.color,
+                    label_underlined: false,
+                    ..Default::default()
+                });
+            }
+            ElementKind::StyledText(props) if props.rich.text.as_ref() == needle => {
+                return Some(BadgeVisualState {
+                    label_color: props.color,
+                    label_underlined: props
+                        .rich
+                        .spans
+                        .iter()
+                        .any(|span| span.paint.underline.is_some()),
+                    ..Default::default()
+                });
+            }
+            ElementKind::SelectableText(props) if props.rich.text.as_ref() == needle => {
+                return Some(BadgeVisualState {
+                    label_color: props.color,
+                    label_underlined: props
+                        .rich
+                        .spans
+                        .iter()
+                        .any(|span| span.paint.underline.is_some()),
+                    ..Default::default()
+                });
+            }
+            _ => {}
+        }
+
+        for child in &el.children {
+            if let Some(found) = find_label_visual(child, needle) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    fn capture_badge_visual_state(el: &AnyElement, label: &str) -> BadgeVisualState {
+        let chrome = el
+            .children
+            .first()
+            .expect("expected badge pressable to contain chrome");
+        let ElementKind::Container(props) = &chrome.kind else {
+            panic!("expected badge chrome container");
+        };
+
+        let mut state = find_label_visual(el, label).expect("badge label visual");
+        state.background = props.background;
+        state
+    }
+
     #[test]
     fn badge_focus_ring_tweens_in_and_out_like_a_transition() {
         use std::cell::Cell;
@@ -1152,6 +1364,297 @@ mod tests {
         assert!(
             !always_paint_final,
             "expected focus ring to stop requesting painting after settling"
+        );
+    }
+
+    #[test]
+    fn outline_link_badge_hover_uses_accent_chrome_and_foreground() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        use fret_core::{FrameId, MouseButtons, PointerType};
+        use fret_ui::elements::GlobalElementId;
+        use fret_ui::tree::UiTree;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let badge_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let state_out: Rc<Cell<Option<BadgeVisualState>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            badge_id: Rc<Cell<Option<GlobalElementId>>>,
+            state_out: Rc<Cell<Option<BadgeVisualState>>>,
+        ) {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "badge-outline-link-hover",
+                move |cx| {
+                    let el = Badge::new("Outline")
+                        .variant(BadgeVariant::Outline)
+                        .render(BadgeRender::Link {
+                            href: Arc::from("https://example.com"),
+                            target: None,
+                            rel: None,
+                        })
+                        .test_id("badge-outline-link-hover")
+                        .into_element(cx);
+                    badge_id.set(Some(el.id));
+                    state_out.set(Some(capture_badge_visual_state(&el, "Outline")));
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, bounds, 1.0);
+        }
+
+        let theme = Theme::global(&app).snapshot();
+        let expected_fg = theme.color_token("accent-foreground");
+        let expected_bg = theme.color_token("accent");
+        let base_fg = theme.color_token("foreground");
+
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            badge_id.clone(),
+            state_out.clone(),
+        );
+
+        let baseline = state_out.get().expect("baseline outline link badge state");
+        assert!(
+            color_eq_eps(
+                baseline.background.unwrap_or(Color::TRANSPARENT),
+                Color::TRANSPARENT,
+                1e-6,
+            ),
+            "expected idle outline link badge to have a transparent background, got {:?}",
+            baseline.background
+        );
+        assert!(
+            color_eq_eps(
+                baseline.label_color.expect("outline link label color"),
+                base_fg,
+                1e-6,
+            ),
+            "expected idle outline link badge fg to match theme foreground"
+        );
+
+        let id = badge_id.get().expect("outline link badge id");
+        let node =
+            fret_ui::elements::node_for_element(&mut app, window, id).expect("outline link node");
+        let rect = ui
+            .debug_node_bounds(node)
+            .expect("outline link badge bounds");
+        let center = Point::new(
+            Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+            Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(2 + i));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                badge_id.clone(),
+                state_out.clone(),
+            );
+        }
+
+        let hovered = state_out.get().expect("hovered outline link badge state");
+        assert!(
+            color_eq_eps(
+                hovered.background.expect("hovered outline link background"),
+                expected_bg,
+                1e-4,
+            ),
+            "expected hovered outline link badge bg to match accent"
+        );
+        assert!(
+            color_eq_eps(
+                hovered
+                    .label_color
+                    .expect("hovered outline link label color"),
+                expected_fg,
+                1e-4,
+            ),
+            "expected hovered outline link badge fg to match accent-foreground"
+        );
+        assert!(
+            !hovered.label_underlined,
+            "expected outline variant hover to recolor, not underline"
+        );
+    }
+
+    #[test]
+    fn link_badge_hover_underlines_label_when_rendered_as_link() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        use fret_core::{FrameId, MouseButtons, PointerType};
+        use fret_ui::elements::GlobalElementId;
+        use fret_ui::tree::UiTree;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(280.0), Px(120.0)),
+        );
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let badge_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let state_out: Rc<Cell<Option<BadgeVisualState>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            badge_id: Rc<Cell<Option<GlobalElementId>>>,
+            state_out: Rc<Cell<Option<BadgeVisualState>>>,
+        ) {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "badge-link-hover-underline",
+                move |cx| {
+                    let el = Badge::new("Open Link")
+                        .variant(BadgeVariant::Link)
+                        .render(BadgeRender::Link {
+                            href: Arc::from("https://example.com"),
+                            target: None,
+                            rel: None,
+                        })
+                        .test_id("badge-link-hover-underline")
+                        .into_element(cx);
+                    badge_id.set(Some(el.id));
+                    state_out.set(Some(capture_badge_visual_state(&el, "Open Link")));
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, bounds, 1.0);
+        }
+
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            badge_id.clone(),
+            state_out.clone(),
+        );
+
+        let baseline = state_out.get().expect("baseline link badge state");
+        assert!(
+            !baseline.label_underlined,
+            "expected idle link badge label to start without underline"
+        );
+
+        let id = badge_id.get().expect("link badge id");
+        let node = fret_ui::elements::node_for_element(&mut app, window, id).expect("link node");
+        let rect = ui.debug_node_bounds(node).expect("link badge bounds");
+        let center = Point::new(
+            Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+            Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(2 + i));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                badge_id.clone(),
+                state_out.clone(),
+            );
+        }
+
+        let hovered = state_out.get().expect("hovered link badge state");
+        assert!(
+            hovered.label_underlined,
+            "expected link badge hover to underline the label"
+        );
+        assert!(
+            color_eq_eps(
+                hovered.background.unwrap_or(Color::TRANSPARENT),
+                Color::TRANSPARENT,
+                1e-6,
+            ),
+            "expected link badge hover to keep a transparent background"
         );
     }
 }

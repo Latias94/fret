@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 
 use fret_core::{Corners, Edges, Px};
@@ -110,96 +109,94 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
                     let content = ui::v_stack(|cx| {
                         vec![
-                            shadcn::DrawerHeader::build(|cx, out| {
-                                out.push_ui(cx, shadcn::DrawerTitle::new("حرّك الهدف"));
-                                out.push_ui(
-                                    cx,
-                                    shadcn::DrawerDescription::new("اضبط هدف نشاطك اليومي."),
-                                );
-                            })
-                            .into_element(cx),
-                            ui::v_stack(|cx| {
+                            ui::h_flex(|cx| {
                                 vec![
-                                    ui::h_flex(|cx| {
+                                    goal_adjust_button(
+                                        cx,
+                                        goal_for_decrease.clone(),
+                                        -GOAL_STEP,
+                                        "lucide.minus",
+                                        "تقليل",
+                                        current_goal <= GOAL_MIN,
+                                    )
+                                    .into_element(cx),
+                                    ui::v_stack(|cx| {
                                         vec![
-                                            goal_adjust_button(
-                                                cx,
-                                                goal_for_decrease.clone(),
-                                                -GOAL_STEP,
-                                                "lucide.minus",
-                                                "تقليل",
-                                                current_goal <= GOAL_MIN,
-                                            )
-                                            .into_element(cx),
-                                            ui::v_stack(|cx| {
-                                                vec![
-                                                    ui::text(current_goal.to_string())
-                                                        .text_size_px(Px(56.0))
-                                                        .font_bold()
-                                                        .tabular_nums()
-                                                        .into_element(cx),
-                                                    ui::text("سعرات حرارية/يوم")
-                                                        .text_sm()
-                                                        .font_medium()
-                                                        .text_color(ColorRef::Color(muted_fg))
-                                                        .into_element(cx),
-                                                ]
-                                            })
-                                            .gap(Space::N1)
-                                            .items_center()
-                                            .layout(LayoutRefinement::default().flex_1().min_w_0())
-                                            .into_element(cx),
-                                            goal_adjust_button(
-                                                cx,
-                                                goal_for_increase.clone(),
-                                                GOAL_STEP,
-                                                "lucide.plus",
-                                                "زيادة",
-                                                current_goal >= GOAL_MAX,
-                                            )
-                                            .into_element(cx),
+                                            ui::text(current_goal.to_string())
+                                                .text_size_px(Px(56.0))
+                                                .font_bold()
+                                                .tabular_nums()
+                                                .into_element(cx),
+                                            ui::text("سعرات حرارية/يوم")
+                                                .text_sm()
+                                                .font_medium()
+                                                .text_color(ColorRef::Color(muted_fg))
+                                                .into_element(cx),
                                         ]
                                     })
-                                    .gap(Space::N3)
+                                    .gap(Space::N1)
                                     .items_center()
-                                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                                    .layout(LayoutRefinement::default().flex_1().min_w_0())
                                     .into_element(cx),
-                                    goal_chart(cx, current_goal).into_element(cx),
+                                    goal_adjust_button(
+                                        cx,
+                                        goal_for_increase.clone(),
+                                        GOAL_STEP,
+                                        "lucide.plus",
+                                        "زيادة",
+                                        current_goal >= GOAL_MAX,
+                                    )
+                                    .into_element(cx),
                                 ]
                             })
                             .gap(Space::N3)
-                            .px_4()
-                            .pb(Space::N0)
+                            .items_center()
                             .layout(LayoutRefinement::default().w_full().min_w_0())
                             .into_element(cx),
-                            shadcn::DrawerFooter::build(|cx, out| {
-                                out.push_ui(cx, shadcn::Button::new("إرسال"));
-                                let cancel = shadcn::DrawerClose::from_scope().build(
-                                    cx,
-                                    shadcn::Button::new("إلغاء")
-                                        .variant(shadcn::ButtonVariant::Outline),
-                                );
-                                out.push(cancel);
-                            })
-                            .into_element(cx),
+                            goal_chart(cx, current_goal).into_element(cx),
                         ]
                     })
-                    .gap(Space::N0)
+                    .gap(Space::N3)
+                    .px_4()
+                    .pb(Space::N0)
                     .items_stretch()
-                    .layout(
-                        LayoutRefinement::default()
-                            .w_full()
-                            .max_w(Px(384.0))
-                            .min_w_0()
-                            .mx_auto(),
-                    )
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
                     .into_element(cx);
 
-                    shadcn::DrawerContent::build(move |_cx, out| {
-                        out.push(content);
-                    })
-                    .test_id("ui-gallery-drawer-rtl-content")
-                    .into_element(cx)
+                    shadcn::DrawerContent::new([])
+                        .with_children(cx, |cx| {
+                            vec![
+                                shadcn::DrawerHeader::new([]).with_children(cx, |cx| {
+                                    vec![
+                                        shadcn::DrawerTitle::new("حرّك الهدف").into_element(cx),
+                                        shadcn::DrawerDescription::new("اضبط هدف نشاطك اليومي.")
+                                            .into_element(cx),
+                                    ]
+                                }),
+                                ui::v_stack(move |_cx| vec![content])
+                                    .gap(Space::N0)
+                                    .items_stretch()
+                                    .layout(
+                                        LayoutRefinement::default()
+                                            .w_full()
+                                            .max_w(Px(384.0))
+                                            .min_w_0()
+                                            .mx_auto(),
+                                    )
+                                    .into_element(cx),
+                                shadcn::DrawerFooter::new([]).with_children(cx, |cx| {
+                                    vec![
+                                        shadcn::Button::new("إرسال").into_element(cx),
+                                        shadcn::DrawerClose::from_scope().build(
+                                            cx,
+                                            shadcn::Button::new("إلغاء")
+                                                .variant(shadcn::ButtonVariant::Outline),
+                                        ),
+                                    ]
+                                }),
+                            ]
+                        })
+                        .test_id("ui-gallery-drawer-rtl-content")
                 }),
             ])
             .into_element(cx)

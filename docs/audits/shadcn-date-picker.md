@@ -44,8 +44,10 @@ See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
 - Pass: `DatePicker::new(open, month, selected)` covers the compact single-date recipe path.
 - Pass: `DatePicker::new_controllable(...)` keeps the common controlled/uncontrolled authoring path lightweight.
+- Pass: Compact wrappers now default to the same open/close semantics as upstream shadcn docs examples: single/range/presets selections do not dismiss automatically unless the caller opts into `.close_on_select(true)` or wires a controlled `open` model on the composed surface.
 - Pass: `placeholder(...)`, `format_selected_by(...)`, `format_selected_iso()`, `week_start(...)`, `control_id(...)`, `test_id_prefix(...)`, and disabled/outside-day controls cover the current docs/examples surface.
 - Pass: `DateRangePicker` and `DatePickerWithPresets` now expose the same `control_id(...)` / `test_id_prefix(...)` convenience surface for form-control wiring and diagnostics parity across the family.
+- Pass: The `Input` gallery snippet now spells the upstream `InputGroupButton` chrome explicitly (`ghost` + `icon-xs`) instead of relying on broader local defaults, so the copyable authoring surface stays aligned even if input-group defaults evolve.
 - Pass: The compact builder does not need a generic children API; upstream docs are still a recipe over `Popover + Calendar`, not an open-ended slot surface.
 
 ### Default-style ownership
@@ -60,19 +62,25 @@ See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
 - Pass: Date picker remains a `Popover` + `Calendar` composition, matching shadcn docs structure.
 - Pass: Calendar focus handoff on open is covered by a component unit test.
-- Pass: Gallery docs order follows the upstream docs flow (`Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL`), with `Label Association` kept as an extra Fret-specific section after the main path.
+- Pass: Gallery docs order follows the upstream docs flow (`Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL`), then appends `With Presets` as the upstream registry follow-up and keeps `Label Association` / `With Dropdowns` as focused Fret-gallery follow-ups after the main path.
 
 ## Conclusion
 
-- Result: The current mismatch was not a mechanism-layer gap; it was a recipe-level ownership drift where trigger width had been baked into the default builder.
+- Result: The original family mismatch was not a mechanism-layer gap; it was a recipe-level ownership drift where trigger width had been baked into the default builder.
 - Result: After removing the default `w_full()`, the compact `DatePicker` aligns better with shadcn source ownership: recipe-owned chrome stays in the component, while page/form width negotiation stays at the call site.
 - Result: The same ownership fix now holds across the adjacent range/presets recipes, so the date-picker family no longer mixes intrinsic-width and fill-width defaults for equivalent trigger surfaces.
 - Result: The remaining family-level consistency gap was public surface parity, not runtime mechanics; `DateRangePicker` and `DatePickerWithPresets` now match `DatePicker` on `control_id(...)` and `test_id_prefix(...)` support.
+- Result: The compact wrapper family also no longer hard-codes "select then dismiss"; that behavior now matches the upstream docs defaults, while explicit dismiss-on-select remains available as a recipe-level opt-in.
+- Result: The latest follow-up drift was on the gallery teaching surface, not in `fret-ui` or the shadcn recipes: the `Input` example had widened the trailing trigger beyond the upstream `ghost` + `icon-xs` shape, and the docs page had incorrectly described `With Presets` as a gallery-only extension even though it has an upstream registry source.
 - Result: No generic children API is required for the current shadcn/Base UI parity target.
 
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn --lib date_picker_trigger_width_is_intrinsic_unless_caller_overrides_it --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --lib date_range_picker_trigger_width_is_intrinsic_unless_caller_overrides_it date_picker_with_presets_trigger_width_is_intrinsic_unless_caller_overrides_it --status-level fail`
+- `cargo nextest run -p fret-ui-shadcn --test date_picker_close_on_select --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --lib date_range_picker_control_id_uses_registry_labelled_by_and_described_by_elements date_range_picker_test_id_prefix_stamps_trigger_content_and_calendar date_picker_with_presets_control_id_uses_registry_labelled_by_and_described_by_elements date_picker_with_presets_test_id_prefix_stamps_trigger_content_select_and_calendar --status-level fail`
 - `cargo nextest run -p fret-ui-gallery --lib gallery_date_picker_core_examples_keep_upstream_aligned_targets_present --status-level fail`
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_page_uses_typed_doc_sections_for_app_facing_snippets date_picker_input_snippet_keeps_upstream_ghost_icon_xs_trigger_surface date_picker_time_snippet_explicitly_opts_into_close_on_select --status-level fail`
+- `cargo run -p fretboard -- diag run --dir target/fret-diag --session-auto tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-input-open-calendar.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag run --dir target/fret-diag --session-auto tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-docs-screenshots.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`

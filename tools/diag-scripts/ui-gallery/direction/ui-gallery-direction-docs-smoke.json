@@ -6,7 +6,7 @@
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
       "Navigate to the Direction page via the left nav search.",
-      "Verify the docs surface exposes the page root plus the `use_direction` and `Composed Children` sections."
+      "Verify the docs surface exposes the page root plus the `useDirection` and `Composable Children (Fret)` sections."
     ]
   },
   "steps": [

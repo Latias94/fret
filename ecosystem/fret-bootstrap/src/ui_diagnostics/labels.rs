@@ -129,11 +129,57 @@ fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
         "click_selectable_text_span_stable_impossible_stable_frames_gt_timeout_frames" => {
             Some("click_selectable_text_span_stable.impossible_stable_frames_gt_timeout_frames")
         }
+        "click_selectable_text_span_stable_no_semantics_match" => {
+            Some("click_selectable_text_span_stable.no_semantics_match")
+        }
+        "click_selectable_text_span_stable_no_semantics_match_timeout" => {
+            Some("click_selectable_text_span_stable.no_semantics_match_timeout")
+        }
+        "click_selectable_text_span_stable_tag_not_found" => {
+            Some("click_selectable_text_span_stable.tag_not_found")
+        }
+        "click_selectable_text_span_stable_no_runtime_state_timeout" => {
+            Some("click_selectable_text_span_stable.no_runtime_state_timeout")
+        }
+        "click_selectable_text_span_stable_empty_span_bounds_timeout" => {
+            Some("click_selectable_text_span_stable.empty_span_bounds_timeout")
+        }
         _ if reason.contains("focus") => Some("focus.mismatch"),
         _ if reason.ends_with("_timeout") => Some("timeout"),
         _ if reason.contains("no_semantics_match") || reason.contains("no_match") => {
             Some("selector.not_found")
         }
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod labels_reason_code_tests {
+    use super::reason_code_for_script_failure;
+
+    #[test]
+    fn selectable_text_span_timeout_reason_codes_preserve_runtime_detail() {
+        assert_eq!(
+            reason_code_for_script_failure("click_selectable_text_span_stable_no_semantics_match"),
+            Some("click_selectable_text_span_stable.no_semantics_match")
+        );
+        assert_eq!(
+            reason_code_for_script_failure(
+                "click_selectable_text_span_stable_no_semantics_match_timeout"
+            ),
+            Some("click_selectable_text_span_stable.no_semantics_match_timeout")
+        );
+        assert_eq!(
+            reason_code_for_script_failure("click_selectable_text_span_stable_tag_not_found"),
+            Some("click_selectable_text_span_stable.tag_not_found")
+        );
+        assert_eq!(
+            reason_code_for_script_failure("click_selectable_text_span_stable_no_runtime_state_timeout"),
+            Some("click_selectable_text_span_stable.no_runtime_state_timeout")
+        );
+        assert_eq!(
+            reason_code_for_script_failure("click_selectable_text_span_stable_empty_span_bounds_timeout"),
+            Some("click_selectable_text_span_stable.empty_span_bounds_timeout")
+        );
     }
 }

@@ -64,6 +64,47 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-item-section-title-usage"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-item-examples-title" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-item-api-reference-title"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-item-gallery-section-title"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-item-link-render" }
       },
       "timeout_frames": 600

@@ -293,6 +293,10 @@ pub mod raw {
 /// and fully raw escape hatches explicit submodules instead of whatever happens to exist on the
 /// full crate root.
 pub mod facade {
+    pub use crate::accordion::composable::{
+        AccordionContent as AccordionContentPart, AccordionItem as AccordionItemPart,
+        AccordionRoot, AccordionTrigger as AccordionTriggerPart,
+    };
     pub use crate::accordion::{
         Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionOrientation,
         AccordionTrigger, accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
@@ -385,7 +389,7 @@ pub mod facade {
     pub use crate::data_table::DataTable;
     pub use crate::data_table_controls::{
         DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState,
-        DataTableViewOptionItem, DataTableViewOptions,
+        DataTableViewOptionItem, DataTableViewOptions, DataTableViewOptionsVisibility,
     };
     pub use crate::data_table_recipes::{
         DataTableFacetedFilterOption, DataTablePagination, DataTableToolbar,

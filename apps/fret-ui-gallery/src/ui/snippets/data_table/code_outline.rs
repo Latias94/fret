@@ -49,26 +49,23 @@ fn reusable_view_options(
 ) -> AnyElement {
     ui::h_flex(move |cx| {
         vec![
-            shadcn::raw::typography::muted(
-                "Sortable header chrome lives on DataTable itself; standalone view options and pagination stay reusable.",
-            )
-            .into_element(cx),
-            cx.spacer(fret_ui::element::SpacerProps::default()),
-            shadcn::DataTableViewOptions::from_table_state(open.clone(), state.clone(), columns, |col| {
-                match col.id.as_ref() {
+            shadcn::DataTableViewOptions::from_table_state(
+                open.clone(),
+                state.clone(),
+                columns,
+                |col| match col.id.as_ref() {
                     "status" => Arc::<str>::from("Status"),
                     "email" => Arc::<str>::from("Email"),
                     "amount" => Arc::<str>::from("Amount"),
                     _ => col.id.clone(),
-                }
-            })
+                },
+            )
             .into_element(cx)
             .test_id("ui-gallery-data-table-reusable-view-options"),
         ]
     })
-    .gap(Space::N3)
-    .items_center()
     .layout(LayoutRefinement::default().w_full())
+    .justify_end()
     .into_element(cx)
 }
 

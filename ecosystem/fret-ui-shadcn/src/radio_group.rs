@@ -1,3 +1,6 @@
+use std::cell::Cell;
+use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::direction::LayoutDirection;
@@ -18,7 +21,7 @@ use fret_ui_kit::declarative::motion::{
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{
-    ControlAction, ControlEntry, ControlId, control_registry_model,
+    ControlAction, ControlEntry, ControlId, ControlRegistry, control_registry_model,
 };
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::primitives::roving_focus_group;
@@ -95,6 +98,527 @@ fn radio_indicator(theme: &ThemeSnapshot) -> Color {
 }
 
 pub use fret_ui_kit::primitives::radio_group::RadioGroupOrientation;
+
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RadioGroupRenderMode {
+    FullItem,
+    ControlOnly,
+}
+
+#[derive(Clone)]
+struct RadioGroupRenderContext {
+    theme: ThemeSnapshot,
+    fit_width: bool,
+    is_rtl: bool,
+    orientation: RadioGroupOrientation,
+    root: radio_group_prim::RadioGroupRoot,
+    model: Model<Option<Arc<str>>>,
+    control_id_for_register: Option<ControlId>,
+    control_registry_for_register: Option<Model<ControlRegistry>>,
+    set_size: Option<u32>,
+    gap_x: Px,
+    icon: Px,
+    indicator: Px,
+    text_style: TextStyle,
+    style_override: RadioGroupStyle,
+    default_icon_border_color: WidgetStateProperty<ColorRef>,
+    default_label_color: WidgetStateProperty<ColorRef>,
+    default_indicator_color: WidgetStateProperty<ColorRef>,
+    pressable_layout_full: LayoutStyle,
+}
+
+#[derive(Clone, Debug)]
+struct RadioGroupPartsItem {
+    value: Arc<str>,
+    label: Arc<str>,
+    control_id: Option<ControlId>,
+    enabled: bool,
+    aria_invalid: bool,
+    idx: usize,
+    tab_stop: bool,
+    item_test_id: Option<Arc<str>>,
+}
+
+#[derive(Clone)]
+pub struct RadioGroupParts {
+    render: RadioGroupRenderContext,
+    items: Arc<[RadioGroupPartsItem]>,
+    by_value: Arc<HashMap<Arc<str>, usize>>,
+    next_expected_index: Rc<Cell<usize>>,
+}
+
+impl RadioGroupParts {
+    /// Renders the radio control for a previously declared item.
+    ///
+    /// Items must be rendered in the same order they were added to [`RadioGroup`], which keeps the
+    /// roving-focus order aligned with the visual row order for docs-shaped compositions.
+    #[track_caller]
+    pub fn control<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        value: impl Into<Arc<str>>,
+    ) -> AnyElement {
+        let value = value.into();
+        let Some(idx) = self.by_value.get(&value).copied() else {
+            panic!("unknown radio-group parts item value: {}", value.as_ref());
+        };
+        let expected = self.next_expected_index.get();
+        debug_assert_eq!(
+            idx, expected,
+            "radio-group parts items must render in declaration order"
+        );
+        self.next_expected_index.set(expected.saturating_add(1));
+
+        build_radio_item_element(
+            cx,
+            &self.render,
+            &self.items[idx],
+            None,
+            RadioGroupItemVariant::Default,
+            RadioGroupRenderMode::ControlOnly,
+        )
+    }
+}
+
+#[track_caller]
+fn build_radio_item_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    render: &RadioGroupRenderContext,
+    item: &RadioGroupPartsItem,
+    item_children: Option<Vec<AnyElement>>,
+    item_variant: RadioGroupItemVariant,
+    render_mode: RadioGroupRenderMode,
+) -> AnyElement {
+    let theme = render.theme.clone();
+    let icon = render.icon;
+    let indicator = render.indicator;
+    let gap_x = render.gap_x;
+    let fit_width = render.fit_width;
+    let is_rtl = render.is_rtl;
+    let orientation = render.orientation;
+    let root_for_item = render.root.clone();
+    let model_for_control = render.model.clone();
+    let control_id_for_register = render.control_id_for_register.clone();
+    let control_registry_for_register = render.control_registry_for_register.clone();
+    let style_override = render.style_override.clone();
+    let default_icon_border_color = render.default_icon_border_color.clone();
+    let default_label_color = render.default_label_color.clone();
+    let default_indicator_color = render.default_indicator_color.clone();
+    let pressable_layout_full = render.pressable_layout_full;
+    let text_style = render.text_style.clone();
+    let set_size = render.set_size;
+
+    let item_test_id = item.item_test_id.clone();
+    let item_enabled = item.enabled;
+    let tab_stop = item.tab_stop;
+    let aria_invalid = item.aria_invalid;
+    let item_control_id = item.control_id.clone();
+    let visible_label = item.label.clone();
+    let value_for_semantics = item.value.clone();
+    let radio_value = item.value.clone();
+    let value_for_control = item.value.clone();
+
+    let labelled_by_element = if let (Some(control_id), Some(control_registry)) = (
+        item_control_id.as_ref(),
+        control_registry_for_register.as_ref(),
+    ) {
+        cx.app
+            .models()
+            .read(control_registry, |reg| {
+                reg.label_for(cx.window, control_id).map(|l| l.element)
+            })
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
+    let described_by_element = if let (Some(control_id), Some(control_registry)) = (
+        item_control_id.as_ref(),
+        control_registry_for_register.as_ref(),
+    ) {
+        cx.app
+            .models()
+            .read(control_registry, |reg| {
+                reg.described_by_for(cx.window, control_id)
+            })
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
+
+    let radius = Px((icon.0 * 0.5).max(0.0));
+    let mut ring_style = decl_style::focus_ring(&theme, radius);
+    // Upstream shadcn radio-group uses `focus-visible:ring-[3px]` (no offset).
+    ring_style.width = theme
+        .metric_by_key("component.radio_group.focus_ring_width_px")
+        .unwrap_or(Px(3.0));
+    ring_style.offset = theme
+        .metric_by_key("component.radio_group.focus_ring_offset_px")
+        .unwrap_or(Px(0.0));
+    if ring_style.offset.0 <= 0.0 {
+        ring_style.offset_color = None;
+    }
+    if aria_invalid {
+        ring_style.color = crate::theme_variants::invalid_control_ring_color(
+            &theme,
+            theme.color_token("destructive"),
+        );
+    }
+
+    let mut element = radio_group_prim::RadioGroupItem::new(radio_value)
+        .label(item.label.clone())
+        .disabled(!item_enabled)
+        .index(item.idx)
+        .tab_stop(tab_stop)
+        .set_size(set_size)
+        .into_element_with_props_hook(
+            cx,
+            &root_for_item,
+            PressableProps {
+                layout: match render_mode {
+                    RadioGroupRenderMode::ControlOnly => LayoutStyle::default(),
+                    RadioGroupRenderMode::FullItem => {
+                        let has_custom_children = item_children.is_some();
+                        if !fit_width
+                            || (has_custom_children
+                                && orientation == RadioGroupOrientation::Vertical
+                                && matches!(item_variant, RadioGroupItemVariant::Default))
+                        {
+                            pressable_layout_full
+                        } else {
+                            LayoutStyle::default()
+                        }
+                    }
+                },
+                enabled: item_enabled,
+                focusable: tab_stop,
+                focus_ring: Some(ring_style.clone()),
+                focus_ring_bounds: match render_mode {
+                    RadioGroupRenderMode::ControlOnly => Some(Rect::new(
+                        Point::new(Px(0.0), Px(0.0)),
+                        Size::new(icon, icon),
+                    )),
+                    RadioGroupRenderMode::FullItem => match item_variant {
+                        RadioGroupItemVariant::Default => Some(Rect::new(
+                            Point::new(Px(0.0), Px(0.0)),
+                            Size::new(icon, icon),
+                        )),
+                        RadioGroupItemVariant::ChoiceCard => None,
+                    },
+                },
+                ..Default::default()
+            },
+            move |cx, st, id, checked, props| {
+                if let Some(test_id) = item_test_id.clone() {
+                    props.a11y.test_id = Some(test_id);
+                }
+                if let (Some(control_id), Some(control_registry)) = (
+                    item_control_id.clone(),
+                    control_registry_for_register.clone(),
+                ) {
+                    let entry = ControlEntry {
+                        element: id,
+                        enabled: item_enabled,
+                        action: ControlAction::SetOptionalArcStr(
+                            model_for_control.clone(),
+                            value_for_control.clone(),
+                        ),
+                    };
+                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                        reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                    });
+                }
+                if tab_stop
+                    && let (Some(control_id), Some(control_registry)) = (
+                        control_id_for_register.clone(),
+                        control_registry_for_register.clone(),
+                    )
+                {
+                    let entry = ControlEntry {
+                        element: id,
+                        enabled: item_enabled,
+                        action: ControlAction::Noop,
+                    };
+                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                        reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                    });
+                }
+
+                let theme = Theme::global(&*cx.app).snapshot();
+                let theme_for_icon = theme.clone();
+
+                let mut states = WidgetStates::from_pressable(cx, st, item_enabled);
+                states.set(WidgetState::Selected, checked);
+
+                let border_color = resolve_override_slot(
+                    style_override.icon_border_color.as_ref(),
+                    &default_icon_border_color,
+                    states,
+                )
+                .resolve(&theme);
+                let border_color = if aria_invalid {
+                    let destructive = theme.color_token("destructive");
+                    if item_enabled {
+                        destructive
+                    } else {
+                        alpha_mul(destructive, 0.5)
+                    }
+                } else {
+                    border_color
+                };
+                let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                let focus_visible = states.contains(WidgetStates::FOCUS_VISIBLE);
+                let ring_alpha = drive_tween_f32_for_element(
+                    cx,
+                    id,
+                    "radio_group.item.ring.alpha",
+                    if focus_visible { 1.0 } else { 0.0 },
+                    duration,
+                    overlay_motion::shadcn_ease,
+                );
+                props.focus_ring_always_paint = ring_alpha.animating;
+
+                let ring_style = if ring_alpha.animating {
+                    let mut ring_style = ring_style.clone();
+                    ring_style.color.a = (ring_style.color.a * ring_alpha.value).clamp(0.0, 1.0);
+                    if let Some(offset_color) = ring_style.offset_color {
+                        ring_style.offset_color = Some(Color {
+                            a: (offset_color.a * ring_alpha.value).clamp(0.0, 1.0),
+                            ..offset_color
+                        });
+                    }
+                    ring_style
+                } else {
+                    ring_style.clone()
+                };
+                props.focus_ring = Some(ring_style);
+
+                let border_color = drive_tween_color_for_element(
+                    cx,
+                    id,
+                    "radio_group.item.icon.border",
+                    border_color,
+                    duration,
+                    overlay_motion::shadcn_ease,
+                )
+                .value;
+                let fg = resolve_override_slot(
+                    style_override.label_color.as_ref(),
+                    &default_label_color,
+                    states,
+                )
+                .resolve(&theme);
+                let dot = resolve_override_slot(
+                    style_override.indicator_color.as_ref(),
+                    &default_indicator_color,
+                    states,
+                )
+                .resolve(&theme);
+
+                let has_custom_children = item_children.is_some();
+                let icon_layout = decl_style::layout_style(
+                    &theme,
+                    if matches!(render_mode, RadioGroupRenderMode::FullItem) && has_custom_children
+                    {
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(icon)
+                            .h_px(icon)
+                            .mt_px(Px(1.0))
+                    } else {
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(icon)
+                            .h_px(icon)
+                    },
+                );
+                // Upstream shadcn radio-group uses `dark:bg-input/30` for the icon chrome.
+                let icon_bg = theme
+                    .color_by_key("component.input.bg")
+                    .unwrap_or(Color::TRANSPARENT);
+                let icon_props = ContainerProps {
+                    layout: icon_layout,
+                    padding: Edges::all(Px(0.0)).into(),
+                    background: Some(icon_bg),
+                    shadow: Some(decl_style::shadow_xs(&theme, radius)),
+                    border: Edges::all(Px(1.0)),
+                    border_color: Some(border_color),
+                    corner_radii: Corners::all(radius),
+                    ..Default::default()
+                };
+
+                let indicator_layout = decl_style::layout_style(
+                    &theme,
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(indicator)
+                        .h_px(indicator),
+                );
+                let indicator_props = ContainerProps {
+                    layout: indicator_layout,
+                    padding: Edges::all(Px(0.0)).into(),
+                    background: Some(dot),
+                    shadow: None,
+                    border: Edges::all(Px(0.0)),
+                    border_color: None,
+                    corner_radii: Corners::all(Px((indicator.0 * 0.5).max(0.0))),
+                    ..Default::default()
+                };
+
+                let icon_element = cx.container(icon_props, move |cx| {
+                    if !checked {
+                        return Vec::new();
+                    }
+
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: decl_style::layout_style(
+                                &theme_for_icon,
+                                fret_ui_kit::LayoutRefinement::default().size_full(),
+                            ),
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: MainAlign::Center,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| vec![cx.container(indicator_props, |_cx| Vec::new())],
+                    )]
+                });
+
+                if matches!(render_mode, RadioGroupRenderMode::ControlOnly) {
+                    return vec![icon_element];
+                }
+
+                let force_full_row = is_rtl
+                    && orientation == RadioGroupOrientation::Vertical
+                    && item_variant == RadioGroupItemVariant::Default;
+                let row_layout = LayoutStyle {
+                    size: SizeStyle {
+                        width: if fit_width && !force_full_row {
+                            Length::Auto
+                        } else {
+                            Length::Fill
+                        },
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                let label_props = TextProps {
+                    layout: decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default().flex_grow(1.0).min_w_0(),
+                    ),
+                    text: visible_label.clone(),
+                    style: Some(text_style.clone()),
+                    color: Some(fg),
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
+                };
+
+                let justify = if is_rtl && item_variant == RadioGroupItemVariant::Default {
+                    MainAlign::End
+                } else {
+                    MainAlign::Start
+                };
+
+                let align = if has_custom_children {
+                    CrossAlign::Start
+                } else {
+                    CrossAlign::Center
+                };
+
+                let item_content = cx.flex(
+                    FlexProps {
+                        layout: row_layout,
+                        direction: fret_core::Axis::Horizontal,
+                        gap: gap_x.into(),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify,
+                        align,
+                        wrap: false,
+                    },
+                    move |cx| {
+                        let mut out = Vec::new();
+                        let mut label_children = if let Some(children) = item_children {
+                            children
+                        } else {
+                            vec![cx.text_props(label_props)]
+                        };
+
+                        match item_variant {
+                            RadioGroupItemVariant::Default => {
+                                if is_rtl {
+                                    out.append(&mut label_children);
+                                    out.push(icon_element);
+                                } else {
+                                    out.push(icon_element);
+                                    out.append(&mut label_children);
+                                }
+                            }
+                            RadioGroupItemVariant::ChoiceCard => {
+                                out.append(&mut label_children);
+                                out.push(icon_element);
+                            }
+                        }
+
+                        out
+                    },
+                );
+
+                match item_variant {
+                    RadioGroupItemVariant::Default => vec![item_content],
+                    RadioGroupItemVariant::ChoiceCard => {
+                        let primary = radio_indicator(&theme);
+                        let checked_bg = crate::theme_variants::radio_group_choice_card_checked_bg(
+                            &theme, primary,
+                        );
+                        let border = radio_border(&theme);
+
+                        let mut chrome = ChromeRefinement::default()
+                            .p_4()
+                            .rounded_md()
+                            .border_1()
+                            .border_color(ColorRef::Color(border));
+                        if checked {
+                            chrome = chrome
+                                .bg(ColorRef::Color(checked_bg))
+                                .border_color(ColorRef::Color(primary));
+                        }
+
+                        let container = decl_style::container_props(
+                            &theme,
+                            chrome,
+                            fret_ui_kit::LayoutRefinement::default().w_full(),
+                        );
+                        vec![cx.container(container, move |_cx| vec![item_content])]
+                    }
+                }
+            },
+        );
+
+    if labelled_by_element.is_some() || described_by_element.is_some() {
+        let mut decoration = SemanticsDecoration::default();
+        if let Some(labelled_by) = labelled_by_element {
+            decoration.labelled_by_element = Some(labelled_by.0);
+        }
+        if let Some(desc) = described_by_element {
+            decoration.described_by_element = Some(desc.0);
+        }
+        element = element.attach_semantics(decoration);
+    }
+
+    debug_assert!(
+        !value_for_semantics.is_empty(),
+        "radio-group item values must not be empty"
+    );
+
+    element
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RadioGroupItemVariant {
@@ -890,6 +1414,251 @@ impl RadioGroup {
                         }));
                     }
                     out
+                },
+            );
+            let list_element = if labelled_by_element.is_some() || described_by_element.is_some() {
+                let mut decoration = SemanticsDecoration::default();
+                if a11y_label.is_none() {
+                    if let Some(labelled_by) = labelled_by_element {
+                        decoration.labelled_by_element = Some(labelled_by.0);
+                    }
+                }
+                if let Some(desc) = described_by_element {
+                    decoration.described_by_element = Some(desc.0);
+                }
+                list_element.attach_semantics(decoration)
+            } else {
+                list_element
+            };
+
+            cx.container(container_props, move |_cx| vec![list_element])
+        })
+    }
+
+    /// Renders the group using the already-declared item metadata while letting callers compose
+    /// each row around `parts.control(...)`.
+    ///
+    /// This is the typed docs-parity lane for examples that need external `Field`,
+    /// `FieldLabel::for_control(...)`, or `FieldDescription` layout around the radio control
+    /// without widening `RadioGroup` to a generic root children API.
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        f: impl FnOnce(&mut ElementContext<'_, H>, &RadioGroupParts) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        let Self {
+            model,
+            default_value,
+            items,
+            disabled,
+            control_id,
+            a11y_label,
+            test_id_prefix,
+            orientation,
+            loop_navigation,
+            chrome,
+            layout,
+            style,
+        } = self;
+        let has_item_control_ids = items.iter().any(|item| item.control_id.is_some());
+
+        cx.scope(|cx| {
+            let control_id = control_id.clone();
+            let control_registry = (control_id.is_some() || has_item_control_ids)
+                .then(|| control_registry_model(cx));
+            let labelled_by_element = if a11y_label.is_some() {
+                None
+            } else if let (Some(control_id), Some(control_registry)) =
+                (control_id.as_ref(), control_registry.as_ref())
+            {
+                cx.app
+                    .models()
+                    .read(control_registry, |reg| {
+                        reg.label_for(cx.window, control_id).map(|l| l.element)
+                    })
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+            let described_by_element = if let (Some(control_id), Some(control_registry)) =
+                (control_id.as_ref(), control_registry.as_ref())
+            {
+                cx.app
+                    .models()
+                    .read(control_registry, |reg| reg.described_by_for(cx.window, control_id))
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+
+            let theme = Theme::global(&*cx.app).snapshot();
+            let gap_y = row_gap(&theme);
+            let gap_x = label_gap(&theme);
+            let icon = icon_size(&theme);
+            let indicator = indicator_size(&theme);
+            let text_style = radio_text_style(&theme);
+            let fg = radio_fg(&theme);
+            let border = radio_border(&theme);
+            let ring = radio_ring(&theme);
+            let dot = radio_indicator(&theme);
+
+            let default_icon_border_color = WidgetStateProperty::new(ColorRef::Color(border))
+                .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring))
+                .when(
+                    WidgetStates::DISABLED,
+                    ColorRef::Color(alpha_mul(border, 0.5)),
+                );
+            let default_label_color = WidgetStateProperty::new(ColorRef::Color(fg)).when(
+                WidgetStates::DISABLED,
+                ColorRef::Color(alpha_mul(fg, 0.5)),
+            );
+            let default_indicator_color = WidgetStateProperty::new(ColorRef::Color(dot))
+                .when(WidgetStates::DISABLED, ColorRef::Color(alpha_mul(dot, 0.5)));
+
+            let group_disabled = disabled;
+            let group_label = a11y_label.clone();
+            let test_id_prefix = test_id_prefix.clone();
+            let style_override = style;
+            let model = radio_group_prim::radio_group_use_model(cx, model.clone(), || {
+                default_value.clone()
+            })
+            .model();
+            let is_rtl = crate::direction::use_direction(cx, None) == LayoutDirection::Rtl;
+
+            let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
+            let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
+            let disabled_by_idx: Vec<bool> =
+                items.iter().map(|i| group_disabled || i.disabled).collect();
+            let active = roving_focus_group::active_index_from_str_keys(
+                &values,
+                selected.as_deref(),
+                &disabled_by_idx,
+            );
+
+            let values_arc: Arc<[Arc<str>]> = Arc::from(values.into_boxed_slice());
+            let disabled_arc: Arc<[bool]> = Arc::from(disabled_by_idx.clone().into_boxed_slice());
+            let set_size = u32::try_from(items.len())
+                .ok()
+                .and_then(|n| (n > 0).then_some(n));
+
+            let mut radix_root = radio_group_prim::RadioGroupRoot::new(model.clone())
+                .disabled(group_disabled)
+                .orientation(orientation)
+                .loop_navigation(loop_navigation);
+            if let Some(label) = group_label.clone() {
+                radix_root = radix_root.a11y_label(label);
+            }
+
+            let list = radix_root
+                .clone()
+                .list(values_arc.clone(), disabled_arc.clone());
+            let control_id_for_register = control_id.clone();
+            let control_registry_for_register = control_registry.clone();
+
+            let container_props = decl_style::container_props(&theme, chrome, layout);
+            let fit_width = matches!(container_props.layout.size.width, Length::Auto);
+            let list_layout = if fit_width {
+                LayoutStyle::default()
+            } else {
+                decl_style::layout_style(&theme, fret_ui_kit::LayoutRefinement::default().w_full())
+            };
+
+            let render = RadioGroupRenderContext {
+                theme: theme.clone(),
+                fit_width,
+                is_rtl,
+                orientation,
+                root: radix_root.clone(),
+                model: model.clone(),
+                control_id_for_register,
+                control_registry_for_register,
+                set_size,
+                gap_x,
+                icon,
+                indicator,
+                text_style,
+                style_override,
+                default_icon_border_color,
+                default_label_color,
+                default_indicator_color,
+                pressable_layout_full: decl_style::layout_style(
+                    &theme,
+                    fret_ui_kit::LayoutRefinement::default().w_full(),
+                ),
+            };
+
+            let parts_items: Vec<RadioGroupPartsItem> = items
+                .iter()
+                .enumerate()
+                .map(|(idx, item)| RadioGroupPartsItem {
+                    value: item.value.clone(),
+                    label: item.label.clone(),
+                    control_id: item.control_id.clone(),
+                    enabled: !disabled_by_idx.get(idx).copied().unwrap_or(true),
+                    aria_invalid: item.aria_invalid,
+                    idx,
+                    tab_stop: active.is_some_and(|a| a == idx),
+                    item_test_id: test_id_prefix
+                        .as_ref()
+                        .map(|p| Arc::<str>::from(format!("{p}-item-{idx}"))),
+                })
+                .collect();
+
+            let by_value: HashMap<Arc<str>, usize> = parts_items
+                .iter()
+                .enumerate()
+                .map(|(idx, item)| (item.value.clone(), idx))
+                .collect();
+            let parts = RadioGroupParts {
+                render,
+                items: Arc::from(parts_items.into_boxed_slice()),
+                by_value: Arc::new(by_value),
+                next_expected_index: Rc::new(Cell::new(0)),
+            };
+
+            let parts_for_children = parts.clone();
+            let list_element = list.into_element(
+                cx,
+                RovingFlexProps {
+                    flex: FlexProps {
+                        layout: list_layout,
+                        direction: match orientation {
+                            RadioGroupOrientation::Vertical => fret_core::Axis::Vertical,
+                            RadioGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
+                        },
+                        gap: match orientation {
+                            RadioGroupOrientation::Vertical => gap_y,
+                            RadioGroupOrientation::Horizontal => gap_x,
+                        }
+                        .into(),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: MainAlign::Start,
+                        align: match orientation {
+                            RadioGroupOrientation::Vertical => {
+                                if is_rtl {
+                                    CrossAlign::End
+                                } else {
+                                    CrossAlign::Stretch
+                                }
+                            }
+                            RadioGroupOrientation::Horizontal => CrossAlign::Center,
+                        },
+                        wrap: false,
+                        ..Default::default()
+                    },
+                    roving: RovingFocusProps::default(),
+                },
+                move |cx| {
+                    let children = f(cx, &parts_for_children);
+                    debug_assert_eq!(
+                        parts_for_children.next_expected_index.get(),
+                        parts_for_children.items.len(),
+                        "radio-group into_element_parts must render each declared item exactly once and in order"
+                    );
+                    children
                 },
             );
             let list_element = if labelled_by_element.is_some() || described_by_element.is_some() {

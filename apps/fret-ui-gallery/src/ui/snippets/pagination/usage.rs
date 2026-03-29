@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("usage.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 
 const CMD_PAGE_PREVIOUS: &str = "ui_gallery.pagination.previous";
 const CMD_PAGE_1: &str = "ui_gallery.pagination.page_1";
@@ -11,7 +11,7 @@ const CMD_PAGE_2: &str = "ui_gallery.pagination.page_2";
 const CMD_PAGE_3: &str = "ui_gallery.pagination.page_3";
 const CMD_PAGE_NEXT: &str = "ui_gallery.pagination.next";
 
-fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H> {
+fn page_number(label: &'static str) -> impl UiChild + use<> {
     fret_ui_kit::ui::text(label).tabular_nums()
 }
 

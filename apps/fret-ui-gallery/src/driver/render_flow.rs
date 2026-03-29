@@ -4,20 +4,20 @@ use fret_app::{App, Model};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
-use fret_ui::Invalidation;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
     SpacerProps,
 };
+use fret_ui::Invalidation;
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
 use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget};
 use std::sync::Arc;
 
 use super::{
-    UiGalleryDriver, UiGalleryWindowState, chrome, debug_hud, debug_stats, inspector, menubar,
-    settings_sheet, shell, status_bar, toaster, ui_gallery_bisect_flags,
+    chrome, debug_hud, debug_stats, inspector, menubar, settings_sheet, shell, status_bar, toaster,
+    ui_gallery_bisect_flags, UiGalleryDriver, UiGalleryWindowState,
 };
 
 pub(super) struct PreparedFrame {
@@ -2267,6 +2267,8 @@ mod tests {
 
         for target in [
             "ui-gallery-input-group-demo",
+            "ui-gallery-input-group-usage-content",
+            "ui-gallery-input-group-parts-usage-content",
             "ui-gallery-input-group-align-inline-start-content",
             "ui-gallery-input-group-align-inline-end-content",
             "ui-gallery-input-group-align-block-start-content",
@@ -2280,12 +2282,74 @@ mod tests {
             "ui-gallery-input-group-textarea-content",
             "ui-gallery-input-group-custom-input-content",
             "ui-gallery-input-group-rtl-content",
+            "ui-gallery-input-group-api-reference-content",
+            "ui-gallery-input-group-tooltip-content",
+            "ui-gallery-input-group-label-content",
+            "ui-gallery-input-group-button-group-content",
         ] {
             scroll_test_id_into_gallery_viewport(&mut rendered, target);
             let bounds = visual_bounds_by_test_id(&rendered, target);
             assert!(
                 bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
                 "expected Input Group page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_popover_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page(PAGE_POPOVER);
+
+        for target in [
+            "ui-gallery-popover-demo-content",
+            "ui-gallery-popover-usage-content",
+            "ui-gallery-popover-basic-content",
+            "ui-gallery-popover-align-content",
+            "ui-gallery-popover-with-form-content",
+            "ui-gallery-popover-rtl-content",
+            "ui-gallery-popover-api-reference-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Popover page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_popover_follow_up_surfaces_stay_present() {
+        let mut rendered = render_gallery_page(PAGE_POPOVER);
+
+        for target in [
+            "ui-gallery-popover-detached-trigger-content",
+            "ui-gallery-popover-open-on-hover-content",
+            "ui-gallery-popover-inline-children-content",
+            "ui-gallery-popover-notes-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Popover follow-up target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_popover_rtl_includes_logical_side_targets() {
+        let mut rendered = render_gallery_page(PAGE_POPOVER);
+
+        for target in [
+            "ui-gallery-popover-rtl-inline-start-trigger.chrome",
+            "ui-gallery-popover-rtl-inline-end-trigger.chrome",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Popover RTL logical-side target to render with non-zero bounds: target={target} bounds={bounds:?}"
             );
         }
     }
@@ -2852,7 +2916,7 @@ mod tests {
     #[test]
     fn notes_sections_keep_stable_height_while_scrolling_into_view() {
         let cases = [
-            (PAGE_ACCORDION, "ui-gallery-accordion-notes-content"),
+            (PAGE_ACCORDION, "ui-gallery-accordion-api-reference-content"),
             (PAGE_ALERT, "ui-gallery-alert-notes-content"),
             (PAGE_ALERT_DIALOG, "ui-gallery-alert-dialog-notes-content"),
             (PAGE_AVATAR, "ui-gallery-avatar-notes-content"),
@@ -2939,22 +3003,23 @@ mod tests {
         assert_visible_section_contents_do_not_overlap_while_scrolling(
             PAGE_COMBOBOX,
             &[
-                "docsec-conformance-demo-content",
                 "docsec-basic-content",
                 "ui-gallery-combobox-usage-content",
-                "ui-gallery-combobox-label-content",
-                "docsec-auto-highlight-content",
+                "docsec-custom-items-content",
+                "docsec-multiple-selection-content",
                 "docsec-clear-button-content",
                 "docsec-groups-content",
+                "docsec-invalid-content",
+                "docsec-disabled-content",
+                "docsec-auto-highlight-content",
+                "docsec-popup-content",
+                "docsec-input-group-content",
+                "docsec-rtl-content",
+                "ui-gallery-combobox-api-reference-content",
+                "docsec-conformance-demo-content",
                 "docsec-groups-separator-content",
-                "docsec-trigger-button-content",
-                "docsec-multiple-selection-content",
-                "docsec-extras-custom-items-content",
-                "docsec-extras-long-list-content",
-                "docsec-extras-invalid-content",
-                "docsec-extras-disabled-content",
-                "docsec-extras-input-group-content",
-                "docsec-extras-rtl-content",
+                "ui-gallery-combobox-label-content",
+                "docsec-long-list-content",
                 "ui-gallery-combobox-notes-content",
             ],
         );
@@ -3418,8 +3483,8 @@ mod tests {
     }
 
     #[test]
-    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page()
-     {
+    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
+    ) {
         assert_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
             PAGE_SCROLL_AREA,
             "ui-gallery-scroll-area-drag-baseline-y-scrollbar",

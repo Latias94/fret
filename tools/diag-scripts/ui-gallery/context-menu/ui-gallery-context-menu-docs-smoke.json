@@ -39,6 +39,14 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-examples-title" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-context-menu-demo-trigger" }
       },
       "timeout_frames": 240

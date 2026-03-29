@@ -53,9 +53,11 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
-        "Field page now mirrors the upstream docs path first, then adds one explicit Fret teaching seam: Composable Labels via `FieldLabel::wrap(...)`.",
+        "Field page now mirrors the upstream docs path first, then adds one explicit Fret teaching seam: Composable Children via `FieldLabel::wrap(...)`.",
         "The Select example now uses `Field::build(...)` so Fret can preserve the upstream label + control + description order without forcing explicit ids into the snippet.",
         "`Field::build(...)` now also supports `Input` / `Textarea` auto association, but this page keeps explicit-id text-field examples so the default teaching surface stays closer to the upstream docs.",
+        "Choice Card keeps the recipe shorthand (`RadioGroupItemVariant::ChoiceCard`) on purpose, while the next composable-children section shows the explicit wrapper lane.",
+        "The responsive section keeps one gallery-only width toggle so the docs-aligned responsive layout can be exercised across the container breakpoint.",
         "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
         "The current audit points to docs/public-surface drift rather than a `fret-ui` mechanism bug: the upstream layout semantics are already covered by the existing field web-parity tests.",
         "`FieldTitle` and plain `FieldLabel` keep upstream-like intrinsic width defaults; full-width behavior belongs to `Field` orientation rules, `RadioGroupItemVariant::ChoiceCard`, or wrapped card-style labels via `FieldLabel::wrap(...)`.",
@@ -117,27 +119,27 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         )
         .code_rust_from_file_region(snippets::radio::SOURCE, "example");
     let switch = DocSection::build(cx, "Switch", switch)
-        .description("Switch composed with title + description.")
+        .description("Minimal horizontal switch field aligned with the upstream docs example.")
         .code_rust_from_file_region(snippets::switch::SOURCE, "example");
     let choice_card = DocSection::build(cx, "Choice Card", choice_card)
         .description(
-            "Choice-card radios keep whole-card activation on the recipe surface and stay close to the upstream radio-card teaching surface.",
+            "Choice-card radios keep whole-card activation on the recipe shorthand; the next section shows the explicit composable-children lane.",
         )
         .code_rust_from_file_region(snippets::choice_card::SOURCE, "example");
-    let composable_label = DocSection::build(cx, "Composable Labels", composable_label)
+    let composable_label = DocSection::build(cx, "Composable Children", composable_label)
         .description(
-            "Use `FieldLabel::wrap(...)` when a richer subtree should behave like one clickable label for a non-radio control.",
+            "Use `FieldLabel::wrap(...)` when a richer subtree should behave like one clickable label, mirroring the upstream wrapped-label pattern.",
         )
         .code_rust_from_file_region(snippets::composable_label::SOURCE, "example");
     let field_group = DocSection::build(cx, "Field Group", field_group)
         .description("FieldGroup provides separators and checkbox-group composition.")
         .code_rust_from_file_region(snippets::field_group::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("All Field compositions should render correctly under RTL direction.")
+        .description("Mirrors the fuller upstream payment-form preview under RTL direction.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let responsive = DocSection::build(cx, "Responsive Layout", responsive)
         .description(
-            "Responsive orientation collapses label/content layouts for narrow containers.",
+            "Responsive orientation keeps the upstream layout shape while the gallery-only width toggle exercises the container breakpoint.",
         )
         .code_rust_from_file_region(snippets::responsive::SOURCE, "example");
     let validation_and_errors =
@@ -148,7 +150,7 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Field docs order first, then adds one Fret-specific authoring seam: Demo, Usage, Anatomy, Form, Input, Textarea, Select, Slider, Fieldset, Checkbox, Radio, Switch, Choice Card, Composable Labels, Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
+            "Preview follows shadcn Field docs order first, then adds one Fret-specific authoring seam: Demo, Usage, Anatomy, Form, Input, Textarea, Select, Slider, Fieldset, Checkbox, Radio, Switch, Choice Card, Composable Children, Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
         ),
         vec![
             demo,

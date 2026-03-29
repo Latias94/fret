@@ -13,6 +13,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let email = cx.local_model_keyed("email", String::new);
 
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
+    let username_id = ControlId::from("ui-gallery-input-group-label-username");
     let email_id = ControlId::from("ui-gallery-input-group-label-email");
 
     shadcn::TooltipProvider::new()
@@ -20,10 +21,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
             let at_group = shadcn::InputGroup::new(username)
-                .a11y_label("Username")
                 .placeholder("shadcn")
+                .control_id(username_id.clone())
                 .control_test_id("ui-gallery-input-group-label-at-control")
-                .trailing([shadcn::InputGroupText::new("@").into_element(cx)])
+                .leading([shadcn::Label::new("@")
+                    .for_control(username_id.clone())
+                    .into_element(cx)])
                 .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                 .into_element(cx);
 

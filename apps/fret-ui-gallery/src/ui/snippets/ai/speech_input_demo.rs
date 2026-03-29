@@ -79,7 +79,7 @@ fn body_text(
     style: TextStyle,
     color: Color,
     align: TextAlign,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     cx.text_props(TextProps {
         layout: fill_text_layout(),
         text: text.into(),

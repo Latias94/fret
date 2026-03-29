@@ -19,17 +19,17 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Sidebar` owns `side`, `variant`, and `collapsible`; `SidebarInset` remains required for the inset variant.",
         "`SidebarHeader`, `SidebarFooter`, `SidebarContent`, `SidebarGroup`, `SidebarGroupLabel`, `SidebarGroupAction`, and `SidebarGroupContent` cover the upstream section structure directly.",
         "`SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuAction`, `SidebarMenuBadge`, `SidebarMenuSub`, `SidebarMenuSubItem`, `SidebarMenuSubButton`, and `SidebarRail` are already landed in the recipe layer.",
-        "Focused composition seams already exist: `SidebarMenuButton::children(...)`, `SidebarGroupAction::children(...)`, `SidebarMenuAction::children(...)`, `Sidebar::into_element_with_children(...)`, and `SidebarMenuItem::into_element_with_children(...)`.",
-        "Current conclusion: sidebar does not primarily need a broader generic children API; the bigger gap was that the gallery page did not teach the existing composition surface clearly enough.",
+        "Focused composition seams now cover the docs-critical children lanes: `SidebarGroupLabel::children(...).as_child(true)`, `SidebarMenuButton::children(...)`, `SidebarGroupAction::children(...)`, `SidebarMenuAction::children(...)`, `Sidebar::into_element_with_children(...)`, and `SidebarMenuItem::into_element_with_children(...)`.",
+        "Current conclusion: sidebar still does not primarily need a broader generic root-children API; the meaningful remaining gap was the missing `SidebarGroupLabel asChild` lane plus the gallery not teaching it clearly enough.",
     ]);
 
     let notes = doc_layout::notes_block([
         "Width ownership follows upstream: use `SidebarProvider::width`, `width_icon`, and `width_mobile` first; `Sidebar` keeps theme-token fallback defaults.",
         "Keep `test_id_prefix` stable: `tools/diag-scripts/ui-gallery/sidebar/*` depend on DocSection tab trigger IDs.",
         "Mobile example forces `is_mobile(true)` for deterministic overlay + focus-restore diagnostics.",
-        "The official docs split many sidebar parts into separate headings; the gallery keeps one consolidated `Structure` section so the copyable Fret authoring surface stays compact.",
+        "The official docs split many sidebar parts into separate headings; the gallery keeps one consolidated `Structure` section so the copyable Fret authoring surface stays compact, but it now explicitly includes the `SidebarGroupLabel asChild + CollapsibleTrigger` lane from the upstream `SidebarGroup` docs.",
         "The new `AppSidebar` section is intentionally closer to shadcn block `sidebar-07`: it favors a single inline file over upstream's multi-file split so app authors can copy and trim it directly.",
-        "Children/composition support is already present on the sidebar family. The page now makes that explicit instead of implying the recipe is incomplete.",
+        "Children/composition support is already present on the sidebar family. The page now makes that explicit instead of implying the recipe is incomplete, and the `Structure` snippet demonstrates the one docs-path seam that previously stayed implicit.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
@@ -60,7 +60,7 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell();
     let structure = DocSection::build(cx, "Structure", structure)
         .description(
-            "Copyable Fret consolidation of the upstream Header/Footer/Content/Group/Menu/Action/Sub/Rail sidebar parts.",
+            "Copyable Fret consolidation of the upstream Header/Footer/Content/Group/Menu/Action/Sub/Rail sidebar parts, including the `SidebarGroupLabel asChild` collapsible-group lane.",
         )
         .max_w(Px(980.0))
         .test_id_prefix("ui-gallery-sidebar-structure")
@@ -96,7 +96,7 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the shadcn Sidebar docs path first, then adds a block-aligned `AppSidebar` template based on `sidebar-07` before the lower-level `Structure` surface. Mobile remains a gallery-specific extra for deterministic diagnostics.",
+            "Preview follows the shadcn Sidebar docs path first, then adds a block-aligned `AppSidebar` template based on `sidebar-07` before the lower-level `Structure` surface. The structure snippet now carries the official `SidebarGroupLabel asChild` collapsible-group lane, while Mobile remains a gallery-specific extra for deterministic diagnostics.",
         ),
         vec![
             usage,

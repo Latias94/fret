@@ -13,8 +13,9 @@ pub(super) fn preview_direction(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`DirectionProvider` is a policy-layer/provider surface in `fret-ui-shadcn`; the underlying direction resolution contract already lives in `fret-ui-kit::primitives::direction`.",
         "`DirectionProvider::new(dir)` is the concise Rust lane. `direction(...)` and `dir(...)` are upstream-shaped aliases when you want docs/source parity.",
+        "Use `into_element(...)` for the default single-subtree lane that mirrors the upstream docs. Keep `with(...)` for the explicit provider-owned siblings lane when you want to avoid an extra wrapper element.",
         "`use_direction(cx, local)` matches the Radix rule `local || inherited || ltr` and is the Fret equivalent of upstream `useDirection()`.",
-        "`DirectionProvider::with(...)` is the default multi-child authoring lane for provider-owned subtrees; `into_element(...)` remains the single-composed-child lane.",
+        "For app-wide direction, `fret-bootstrap` can install a root `LayoutDirection` global once; `DirectionProvider` remains the local subtree override, analogous to the web docs separating host `dir` from the provider surface.",
         "This page closes a docs/public-surface gap. No `fret-ui` mechanism change was needed for `direction` itself.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -27,24 +28,24 @@ pub(super) fn preview_direction(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-direction-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Wrap a subtree once and let descendants resolve RTL automatically.")
+        .description("Single-subtree copyable lane aligned with the upstream Direction docs usage.")
         .test_id_prefix("ui-gallery-direction-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
-    let use_direction = DocSection::build(cx, "use_direction", use_direction)
+    let use_direction = DocSection::build(cx, "useDirection", use_direction)
         .description("Resolve the effective direction from local override, inherited scope, and the LTR fallback.")
         .test_id_prefix("ui-gallery-direction-use-direction")
         .code_rust_from_file_region(snippets::use_direction::SOURCE, "example");
-    let composed_children = DocSection::build(cx, "Composed Children", composed_children)
-        .description("Fret-specific provider lane for composing multiple sibling children inside one direction scope.")
+    let composed_children = DocSection::build(cx, "Composable Children (Fret)", composed_children)
+        .description("Fret follow-up: use `with(...)` when one direction scope should own multiple sibling children without an extra wrapper.")
         .test_id_prefix("ui-gallery-direction-composed-children")
         .code_rust_from_file_region(snippets::composed_children::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the upstream Direction docs order first (`Demo`, `Usage`, `useDirection`) and then appends a Fret-specific `Composed Children` authoring section.",
+            "Preview mirrors the shadcn/Base UI Direction docs path after skipping `Installation`: `Demo`, `Usage`, `useDirection`, and `API Reference`. `Composable Children (Fret)` stays as the explicit provider-owned siblings follow-up.",
         ),
-        vec![demo, usage, use_direction, composed_children, api_reference],
+        vec![demo, usage, use_direction, api_reference, composed_children],
     );
 
     vec![body.into_element(cx)]

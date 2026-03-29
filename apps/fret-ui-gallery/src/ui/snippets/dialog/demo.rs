@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
@@ -35,65 +34,49 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let name = cx.local_model_keyed("name", || String::from("Pedro Duarte"));
     let username = cx.local_model_keyed("username", || String::from("@peduarte"));
 
-    let trigger_open = open.clone();
-    let save_open = open.clone();
-
     let name_model = name.clone();
     let username_model = username.clone();
 
-    shadcn::Dialog::new(open.clone()).into_element(
-        cx,
-        move |cx| {
-            ui::h_flex(|cx| {
-                vec![
-                    shadcn::Button::new("Open Dialog")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .refine_layout(LayoutRefinement::default().flex_1())
-                        .test_id("ui-gallery-dialog-demo-trigger")
-                        .toggle_model(trigger_open.clone())
-                        .into_element(cx),
-                ]
-            })
-            .gap(Space::N2)
-            .items_center()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
-            .into_element(cx)
-        },
-        move |cx| {
-            let fields =
-                profile_fields(cx, name_model.clone(), username_model.clone()).into_element(cx);
-            shadcn::DialogContent::build(|cx, out| {
-                out.push_ui(
-                    cx,
-                    shadcn::DialogHeader::build(|cx, out| {
-                        out.push_ui(cx, shadcn::DialogTitle::new("Edit profile"));
-                        out.push_ui(
-                            cx,
-                            shadcn::DialogDescription::new(
-                                "Make changes to your profile here. Click save when you're done.",
-                            ),
-                        );
-                    }),
-                );
-                out.push(fields);
-                out.push_ui(
-                    cx,
-                    shadcn::DialogFooter::build(|cx, out| {
-                        let cancel = shadcn::DialogClose::from_scope().build(
-                            cx,
-                            shadcn::Button::new("Cancel").variant(shadcn::ButtonVariant::Outline),
-                        );
-                        out.push(cancel);
-                        out.push_ui(
-                            cx,
-                            shadcn::Button::new("Save changes").toggle_model(save_open.clone()),
-                        );
-                    }),
-                );
-            })
-            .into_element(cx)
-            .test_id("ui-gallery-dialog-demo-content")
-        },
-    )
+    shadcn::Dialog::new(open.clone())
+        .children([
+            shadcn::DialogPart::trigger(shadcn::DialogTrigger::build(
+                shadcn::Button::new("Open Dialog")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+                    .test_id("ui-gallery-dialog-demo-trigger"),
+            )),
+            shadcn::DialogPart::content_with(move |cx| {
+                let fields =
+                    profile_fields(cx, name_model.clone(), username_model.clone()).into_element(cx);
+                shadcn::DialogContent::new([]).with_children(cx, |cx| {
+                    vec![
+                        shadcn::DialogHeader::new([]).with_children(cx, |cx| {
+                            vec![
+                                shadcn::DialogTitle::new("Edit profile").into_element(cx),
+                                shadcn::DialogDescription::new(
+                                    "Make changes to your profile here. Click save when you're done.",
+                                )
+                                .into_element(cx),
+                            ]
+                        }),
+                        fields,
+                        shadcn::DialogFooter::new([]).with_children(cx, |cx| {
+                            vec![
+                                shadcn::DialogClose::from_scope()
+                                    .build(
+                                        cx,
+                                        shadcn::Button::new("Cancel")
+                                            .variant(shadcn::ButtonVariant::Outline),
+                                    ),
+                                shadcn::DialogClose::from_scope()
+                                    .build(cx, shadcn::Button::new("Save changes")),
+                            ]
+                        }),
+                    ]
+                })
+                .test_id("ui-gallery-dialog-demo-content")
+            }),
+        ])
+        .into_element(cx)
 }
 // endregion: example

@@ -9,6 +9,40 @@
     { "type": "reset_diagnostics" },
     {
       "type": "wait_until",
+      "timeout_frames": 600,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-date-picker" }
+      }
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-date-picker" },
+      "delta_y": 240.0,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-date-picker.chrome" },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 600,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-date-picker" }
+      }
+    },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
       "timeout_frames": 1800,
       "predicate": {
         "kind": "exists",

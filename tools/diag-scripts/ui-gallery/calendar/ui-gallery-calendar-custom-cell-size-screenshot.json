@@ -59,8 +59,8 @@
       "predicate": {
         "kind": "bounds_min_size",
         "target": { "kind": "test_id", "id": "ui-gallery.calendar.custom-cell:2026-12-12" },
-        "min_w_px": 43.0,
-        "min_h_px": 43.0,
+        "min_w_px": 47.0,
+        "min_h_px": 47.0,
         "eps_px": 1.0
       }
     },
@@ -69,8 +69,8 @@
       "predicate": {
         "kind": "bounds_max_size",
         "target": { "kind": "test_id", "id": "ui-gallery.calendar.custom-cell:2026-12-12" },
-        "max_w_px": 45.0,
-        "max_h_px": 45.0,
+        "max_w_px": 49.0,
+        "max_h_px": 49.0,
         "eps_px": 1.0
       }
     },

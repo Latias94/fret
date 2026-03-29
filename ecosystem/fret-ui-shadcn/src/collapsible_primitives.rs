@@ -386,7 +386,7 @@ impl CollapsibleContent {
 
             let inner = ui::v_stack(move |_cx| children)
                 .gap(gap)
-                .items_stretch()
+                .items_start()
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .into_element(cx);
             let children = if force_mount && !is_open {
@@ -403,5 +403,44 @@ impl CollapsibleContent {
             el = el.test_id(test_id);
         }
         el
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{CrossAlign, ElementKind, SpacingLength};
+
+    #[test]
+    fn collapsible_content_defaults_use_zero_gap_and_do_not_stretch_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let open = cx.app.models_mut().insert(true);
+            let scope = CollapsibleScope {
+                open,
+                disabled: false,
+                content_id: cx.root_id(),
+            };
+
+            let el = with_collapsible_scope_provider(cx, scope, |cx| {
+                CollapsibleContent::new([cx.text("a"), cx.text("b")]).into_element(cx)
+            });
+
+            let child = el.children.first().expect("content stack child");
+            let inner = child.children.first().expect("inner flex child");
+            let ElementKind::Flex(props) = &inner.kind else {
+                panic!("expected Flex child");
+            };
+            assert_eq!(props.align, CrossAlign::Start);
+            assert_eq!(props.gap, SpacingLength::Px(Px(0.0)));
+        });
     }
 }

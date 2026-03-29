@@ -38,7 +38,10 @@ impl Separator {
         Self {
             orientation: SeparatorOrientation::Horizontal,
             align_self_stretch: false,
-            flex_stretch_cross_axis: false,
+            // Upstream `registry/bases/{base,radix}/ui/separator.tsx` uses
+            // `data-vertical:self-stretch`, which maps to `height: auto`
+            // plus `align-self: stretch` in Fret's flex model.
+            flex_stretch_cross_axis: true,
             inner: prim::Separator::new()
                 .decorative(true)
                 .refine_layout(LayoutRefinement::default().flex_shrink_0()),
@@ -65,9 +68,9 @@ impl Separator {
         self
     }
 
-    /// Escape hatch for the rare cases where a vertical separator should keep `height: auto`
-    /// instead of the default fill-height lane. The default shadcn surface already applies
-    /// `align-self: stretch` for the documented centered-row usage.
+    /// Controls whether vertical separators keep the upstream `self-stretch` lane (`true`,
+    /// default) or use the rarer fill-height lane (`false`) for custom compositions that really
+    /// want `height: 100%`.
     pub fn flex_stretch_cross_axis(mut self, stretch: bool) -> Self {
         self.flex_stretch_cross_axis = stretch;
         self.inner = self.inner.flex_stretch_cross_axis(stretch);
@@ -172,8 +175,8 @@ mod tests {
         );
         assert_eq!(
             props.layout.size.height,
-            Length::Fill,
-            "expected vertical Separator to preserve fill-height outside flex-row stretch cases"
+            Length::Auto,
+            "expected vertical Separator to map upstream self-stretch to auto cross-axis sizing"
         );
         assert_eq!(
             props.layout.flex.align_self,
@@ -183,7 +186,7 @@ mod tests {
     }
 
     #[test]
-    fn vertical_separator_auto_cross_axis_is_explicit_opt_in() {
+    fn vertical_separator_fill_height_lane_is_explicit_opt_out() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
@@ -195,7 +198,7 @@ mod tests {
         let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             Separator::new()
                 .orientation(SeparatorOrientation::Vertical)
-                .flex_stretch_cross_axis(true)
+                .flex_stretch_cross_axis(false)
                 .into_element(cx)
         });
 
@@ -205,8 +208,8 @@ mod tests {
 
         assert_eq!(
             props.layout.size.height,
-            Length::Auto,
-            "expected explicit auto cross-axis sizing to remain available as an escape hatch"
+            Length::Fill,
+            "expected fill-height to remain available as an explicit escape hatch"
         );
         assert_eq!(props.layout.flex.align_self, Some(CrossAlign::Stretch));
     }
