@@ -9538,6 +9538,7 @@ fn typography_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/typography/h3.rs",
             "src/ui/snippets/typography/h4.rs",
             "src/ui/snippets/typography/p.rs",
+            "src/ui/snippets/typography/interactive_links.rs",
             "src/ui/snippets/typography/blockquote.rs",
             "src/ui/snippets/typography/table.rs",
             "src/ui/snippets/typography/list.rs",
@@ -9574,6 +9575,14 @@ fn typography_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "shadcn::raw::typography::inline_link(\"خطة عبقرية\", \"#\")",
         ],
     );
+    assert_normalized_markers_present(
+        "src/ui/snippets/typography/interactive_links.rs",
+        &[
+            "shadcn::raw::typography::p_rich([",
+            ".on_activate_link(Arc::new({",
+            "activation.tag.clone()",
+        ],
+    );
 }
 
 #[test]
@@ -9587,6 +9596,7 @@ fn typography_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"h3\", h3)",
             "DocSection::build(cx, \"h4\", h4)",
             "DocSection::build(cx, \"p\", p)",
+            "DocSection::build(cx, \"Interactive Links\", interactive_links)",
             "DocSection::build(cx, \"blockquote\", blockquote)",
             "DocSection::build(cx, \"table\", table)",
             "DocSection::build(cx, \"list\", list)",
@@ -9604,6 +9614,7 @@ fn typography_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"h3\", h3)",
             "DocSection::new(\"h4\", h4)",
             "DocSection::new(\"p\", p)",
+            "DocSection::new(\"Interactive Links\", interactive_links)",
             "DocSection::new(\"blockquote\", blockquote)",
             "DocSection::new(\"table\", table)",
             "DocSection::new(\"list\", list)",

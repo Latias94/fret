@@ -50,9 +50,11 @@ This audit records why Fret keeps typography as a docs/helper surface rather tha
 - Pass: the gallery mirrors the upstream typography page structure (`Demo`, headings, paragraph, blockquote, table, list, inline code, lead, large, small, muted, and RTL) and now uses the same sample headings/body copy for the focused sections.
 - Pass: the full demo/RTL story now tracks the upstream content order and vertical rhythm more closely, replacing the previous one-gap-fits-all stacking with section-specific spacing closer to the docs page.
 - Pass: the single inline-link sentence now uses the dedicated rich paragraph lane (`p_rich(...)` + `inline_link(...)`) instead of being flattened to plain text.
+- Pass: the gallery now also includes an explicit `Interactive Links` follow-up section that demonstrates `p_rich(...).on_activate_link(...)` on the app-facing surface without reopening raw selectable-text hooks in copyable docs.
 - Pass: the gallery now also uses the upstream "Inline code" heading spelling, which keeps the display copy and the existing `docsec-inline-code-*` diagnostics anchors aligned.
 - Pass: keeping the page available is still useful for copyable examples even though typography remains a docs/helper surface rather than a strict registry component baseline.
 - Pass: the remaining page-level differences are intentional and narrow:
+  - `Interactive Links` is a Fret-specific follow-up section appended after the upstream docs path.
   - `Notes` is a Fret-specific follow-up section appended after the upstream docs flow.
   - Single-sample `h1` centering is still owned by the page/snippet, not baked into the helper defaults.
   - Broader mixed inline composition beyond link spans is still deferred until the text composition surface grows past the current narrow paragraph-link lane.

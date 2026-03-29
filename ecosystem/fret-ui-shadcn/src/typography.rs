@@ -608,7 +608,7 @@ pub fn inline_link(
     TypographyInlineSegment::link(text, href)
 }
 
-pub fn p_rich<H: UiHost, I>(segments: I) -> impl IntoUiElement<H> + use<H, I>
+pub fn p_rich<I>(segments: I) -> TypographyRichParagraph
 where
     I: IntoIterator<Item = TypographyInlineSegment>,
 {

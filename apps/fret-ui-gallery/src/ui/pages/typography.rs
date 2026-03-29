@@ -11,6 +11,7 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let h3 = snippets::h3::render(cx);
     let h4 = snippets::h4::render(cx);
     let p = snippets::p::render(cx);
+    let interactive_links = snippets::interactive_links::render(cx);
     let blockquote = snippets::blockquote::render(cx);
     let table = snippets::table::render(cx);
     let list = snippets::list::render(cx);
@@ -25,6 +26,7 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "API reference: `ecosystem/fret-ui-shadcn/src/typography.rs` and `ecosystem/fret-ui-shadcn/src/table.rs`.",
         "Heading helpers attach `SemanticsRole::Heading` with levels 1-4; keep the document hierarchy intentional.",
         "Typography remains a docs/helper surface. Use `p_rich(...)` with `inline_link(...)` for inline link spans instead of widening the surface to generic `children(...)`.",
+        "Use `Interactive Links` when you want a copyable app-facing example for `p_rich(...).on_activate_link(...)` without dropping to raw selectable-text hooks.",
         "Use `lead` for intros, `muted` for hints, and keep width/alignment decisions owned by the surrounding page.",
         "For long-form content, combine typography helpers with table/list blocks and validate RTL plus narrow-viewport wrapping before shipping.",
     ]);
@@ -49,6 +51,11 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let p = DocSection::build(cx, "p", p)
         .description("Body paragraph text.")
         .code_rust_from_file_region(snippets::p::SOURCE, "example");
+    let interactive_links = DocSection::build(cx, "Interactive Links", interactive_links)
+        .description(
+            "Fret follow-up showing the copyable app-facing `p_rich(...).on_activate_link(...)` lane.",
+        )
+        .code_rust_from_file_region(snippets::interactive_links::SOURCE, "example");
     let blockquote = DocSection::build(cx, "blockquote", blockquote)
         .description("Quoted callout text.")
         .code_rust_from_file_region(snippets::blockquote::SOURCE, "example");
@@ -80,7 +87,7 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Typography page follows the shadcn docs order first; Notes remains the focused Fret follow-up after the upstream path.",
+            "Typography page follows the shadcn docs order first; `Interactive Links` and `Notes` remain focused Fret follow-ups after the upstream path.",
         ),
         vec![
             demo,
@@ -98,6 +105,7 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             small,
             muted,
             rtl,
+            interactive_links,
             notes,
         ],
     );
