@@ -7,6 +7,7 @@ Related:
 
 - `docs/shadcn-declarative-progress.md`
 - `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/SHADCN_RAW_MODEL_ALLOWLIST_AUDIT_2026-03-19.md`
+- `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/SHADCN_FORWARDING_ALIAS_CLOSEOUT_2026-03-29.md`
 - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs`
 
 ## Why this note exists
@@ -103,12 +104,17 @@ Evidence:
 - `ecosystem/fret-ui-shadcn/src/context_menu.rs`
 - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs`
 
-## Next shrink candidates
+## Follow-up status
 
-Potential future work, but not auto-landed by this audit:
+This audit left one explicit follow-up question open:
 
-- keep checking for any further `Compatibility alias` comments or zero-caller forwarding roots in
-  `fret-ui-shadcn`
+- after deleting `ContextMenu::new(open)`, was there another delete-now forwarding-alias batch left
+  in `fret-ui-shadcn`?
 
-These should be treated as separate evidence-backed batches, not as justification to rename the
-component-policy verbs themselves.
+That follow-up is now closed by
+`SHADCN_FORWARDING_ALIAS_CLOSEOUT_2026-03-29.md`.
+
+Current maintainer rule:
+
+- keep deleting newly introduced zero-concept compatibility aliases when they appear,
+- but do not treat one-hop snapshot or recipe conveniences as automatic delete targets.
