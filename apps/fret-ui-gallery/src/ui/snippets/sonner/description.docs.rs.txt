@@ -1,0 +1,30 @@
+// region: example
+use fret::app::UiCxActionsExt as _;
+use fret::{UiChild, UiCx};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
+
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let sonner = shadcn::Sonner::global(&mut *cx.app);
+
+    let button = shadcn::Button::new("Show Toast")
+        .variant(shadcn::ButtonVariant::Outline)
+        .on_activate(cx.actions().listen(move |host, action_cx| {
+            sonner.toast_message(
+                host,
+                action_cx.window,
+                "Event has been created",
+                shadcn::ToastMessageOptions::new().description("Monday, January 3rd at 6:00pm"),
+            );
+            host.request_redraw(action_cx.window);
+        }))
+        .into_element(cx);
+
+    let toaster = shadcn::Toaster::new().into_element(cx);
+
+    ui::v_flex(move |_cx| vec![button, toaster])
+        .gap(Space::N3)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+}
+// endregion: example

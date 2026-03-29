@@ -7713,6 +7713,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-sonner-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-sonner-docs"
+      ],
+      "tags": [
+        "docs",
+        "screenshots",
+        "shadcn",
+        "sonner",
+        "toast",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Sonner page via the left nav search.",
+        "Captures the docs-path sections first (`Demo` through `API Reference`) so docs-surface parity stays reviewable."
+      ]
+    },
+    {
       "id": "ui-gallery-sonner-interrupt-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-interrupt-fixed-frame-delta.json",
       "required_capabilities": [],

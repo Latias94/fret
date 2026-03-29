@@ -1,3 +1,5 @@
+pub const DOCS_SOURCE: &str = include_str!("extras.docs.rs.txt");
+#[allow(dead_code)]
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example

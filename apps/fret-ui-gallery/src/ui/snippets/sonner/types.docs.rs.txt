@@ -1,0 +1,145 @@
+// region: example
+use fret::app::UiCxActionsExt as _;
+use fret::{UiChild, UiCx};
+use fret_ui::Invalidation;
+use fret_ui::action::{ActionCx, UiActionHost};
+use fret_ui::element::AnyElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
+
+fn type_button(
+    cx: &mut UiCx<'_>,
+    label: &'static str,
+    on_activate: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static,
+) -> AnyElement {
+    shadcn::Button::new(label)
+        .variant(shadcn::ButtonVariant::Outline)
+        .on_activate(cx.actions().listen(on_activate))
+        .into_element(cx)
+}
+
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let sonner = shadcn::Sonner::global(&mut *cx.app);
+    let pending_promise = cx.local_model_keyed("docs_sonner_pending_promise", || {
+        None::<shadcn::ToastId>
+    });
+
+    let default_button = {
+        let sonner = sonner.clone();
+        type_button(cx, "Default", move |host, action_cx| {
+            sonner.toast_message(
+                host,
+                action_cx.window,
+                "Event has been created",
+                shadcn::ToastMessageOptions::new(),
+            );
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let success_button = {
+        let sonner = sonner.clone();
+        type_button(cx, "Success", move |host, action_cx| {
+            sonner.toast_success_message(
+                host,
+                action_cx.window,
+                "Event has been created",
+                shadcn::ToastMessageOptions::new(),
+            );
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let info_button = {
+        let sonner = sonner.clone();
+        type_button(cx, "Info", move |host, action_cx| {
+            sonner.toast_info_message(
+                host,
+                action_cx.window,
+                "Be at the area 10 minutes before the event time",
+                shadcn::ToastMessageOptions::new(),
+            );
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let warning_button = {
+        let sonner = sonner.clone();
+        type_button(cx, "Warning", move |host, action_cx| {
+            sonner.toast_warning_message(
+                host,
+                action_cx.window,
+                "Event start time cannot be earlier than 8am",
+                shadcn::ToastMessageOptions::new(),
+            );
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let error_button = {
+        let sonner = sonner.clone();
+        type_button(cx, "Error", move |host, action_cx| {
+            sonner.toast_error_message(
+                host,
+                action_cx.window,
+                "Event has not been created",
+                shadcn::ToastMessageOptions::new(),
+            );
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let promise_button = {
+        let sonner = sonner.clone();
+        let pending_promise = pending_promise.clone();
+        type_button(cx, "Promise", move |host, action_cx| {
+            let pending = host.models_mut().get_copied(&pending_promise).flatten();
+            if let Some(id) = pending {
+                sonner.toast_success_update(host, action_cx.window, id, "Event has been created");
+                let _ = host.models_mut().update(&pending_promise, |slot| *slot = None);
+            } else {
+                let promise = sonner.toast_promise(host, action_cx.window, "Loading...");
+                let _ = host
+                    .models_mut()
+                    .update(&pending_promise, |slot| *slot = Some(promise.id()));
+            }
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let pending = cx
+        .get_model_copied(&pending_promise, Invalidation::Layout)
+        .flatten()
+        .is_some();
+
+    let buttons = ui::h_flex(move |_cx| {
+        vec![
+            default_button,
+            success_button,
+            info_button,
+            warning_button,
+            error_button,
+            promise_button,
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .wrap()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let status = shadcn::raw::typography::muted(if pending {
+        "Promise toast pending: click Promise again to resolve."
+    } else {
+        "Promise toast idle: click Promise to start loading state."
+    })
+    .into_element(cx);
+
+    let toaster = shadcn::Toaster::new().into_element(cx);
+
+    ui::v_flex(move |_cx| vec![buttons, status, toaster])
+        .gap(Space::N2)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+}
+// endregion: example

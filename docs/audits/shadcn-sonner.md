@@ -13,9 +13,12 @@ integration of `sonner` (toast notifications) in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/sonner.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/sonner.mdx`
 - shadcn wrapper: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sonner.tsx`
-- Demo usage (action/cancel/promise): `repo-ref/ui/apps/v4/app/(internal)/sink/components/sonner-demo.tsx`
+- Demo usage (action/cancel/promise): `repo-ref/ui/apps/v4/registry/new-york-v4/examples/sonner-demo.tsx`,
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/sonner-types.tsx`
+- Headless/compound-toast references: `repo-ref/primitives/packages/react/toast/src/toast.tsx`,
+  `repo-ref/base-ui/packages/react/src/toast/`
 
 Notes:
 - Upstream uses the `sonner` JS library. We do **not** aim for API compatibility; we port behavior
@@ -41,14 +44,22 @@ Notes:
   - Options via `ToastMessageOptions` (description/action/cancel/duration/pinned/dismissible).
 - Pass: Upsert-by-id exists for `loading -> success/error` flows.
 - Pass: Manual promise handle via `Sonner::toast_promise(...) -> ToastPromise`.
-- Pass: The UI Gallery now mirrors the docs-facing preview split:
+- Pass: The UI Gallery now mirrors the docs-facing structure after collapsing shadcn's top
+  `ComponentPreview` into `Demo` and skipping npm-install prose:
   - `Demo`
+  - `About`
+  - `Usage`
+  - `Examples`
   - `Types`
   - `Description`
   - `Position`
+  - `API Reference`
+- Pass: Sonner code tabs now use standalone docs sources instead of page-local gallery helpers, so
+  copied snippets include the required `Toaster` mount + message dispatch wiring.
 - Note: A composable children/custom-content API is still not exposed on the shadcn-facing
-  surface. The current renderer is message-template-oriented; the underlying overlay mechanism could
-  support a richer surface later if a concrete product use-case appears.
+  surface. That remains the right call for now: upstream Sonner is message-template-oriented, while
+  a richer custom-content lane would belong on a lower-level toast primitive rather than widening
+  the default shadcn recipe surface.
 
 ### Interaction behavior
 
@@ -67,15 +78,19 @@ Notes:
 
 - Result: This component does not currently indicate a missing mechanism-layer gap in the shadcn-facing surface.
 - Result: The main drift was in the shadcn recipe/documentation surface, not in the toast mechanism.
-- Result: `Toaster::new()` now behaves more like the upstream wrapper default, and the gallery page now matches the docs example split.
-- Result: Follow-up work should focus on richer async/app integration helpers or a future custom-content API only if a concrete product need appears.
+- Result: `Toaster::new()` behaves like the upstream wrapper defaults, and the gallery page now
+  mirrors the docs structure more directly instead of only mirroring the example subset.
+- Result: Follow-up work should focus on richer async/app integration helpers or a lower-level
+  custom-content toast primitive only if a concrete product need appears.
 
 ## Validation
 
 - `cargo test -p fret-ui-kit window_overlays::toast`
 - `cargo test -p fret-ui-shadcn --lib sonner`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app sonner_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test sonner_docs_surface -- --nocapture`
 - `cargo check -p fret-ui-gallery --message-format short`
+- `tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-docs-screenshots.json`
 
 ## Follow-ups (recommended)
 
