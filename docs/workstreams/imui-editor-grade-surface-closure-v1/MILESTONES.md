@@ -84,7 +84,18 @@ Current landed slice:
   immediate-only tooltip runtime,
 - `apps/fret-examples/src/imui_editor_proof_demo.rs` now demonstrates tooltip authoring on the
   editor proof controls,
-- and `ecosystem/fret-ui-kit/tests/imui_tooltip_smoke.rs` now locks the new authoring surface.
+- `ecosystem/fret-ui-kit/tests/imui_tooltip_smoke.rs` now locks the new authoring surface,
+- `fret-ui-kit::imui` now also exposes a first-class tree/disclosure family:
+  `collapsing_header(...)`, `collapsing_header_with_options(...)`, `tree_node(...)`, and
+  `tree_node_with_options(...)`,
+- `CollapsingHeaderOptions`, `TreeNodeOptions`, and `DisclosureResponse` now define the first
+  stable immediate disclosure/tree policy surface,
+- tree/outliner authoring guidance is now explicit on the API surface:
+  callers provide stable semantic ids and explicit `TreeNodeOptions::level` values instead of
+  relying on label-derived ids or an implicit stack,
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now demonstrates a first-party outliner slice,
+- and `ecosystem/fret-ui-kit/tests/imui_disclosure_smoke.rs` now locks the new disclosure/tree
+  authoring surface.
 
 Exit gates:
 

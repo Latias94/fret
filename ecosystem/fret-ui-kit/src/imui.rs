@@ -28,6 +28,7 @@ pub mod adapters;
 mod boolean_controls;
 mod button_controls;
 mod containers;
+mod disclosure_controls;
 mod floating_surface;
 mod floating_window;
 mod floating_window_on_area;
@@ -65,13 +66,15 @@ use interaction_runtime::{
     prepare_pressable_drag_on_pointer_down, sanitize_response_for_enabled,
 };
 pub use options::{
-    ButtonOptions, GridOptions, HorizontalOptions, InputTextOptions, MenuItemOptions,
-    PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectOptions, SliderOptions,
-    SwitchOptions, TextAreaOptions, TooltipOptions, VerticalOptions,
+    ButtonOptions, CollapsingHeaderOptions, GridOptions, HorizontalOptions, InputTextOptions,
+    MenuItemOptions, PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectOptions,
+    SliderOptions, SwitchOptions, TextAreaOptions, TooltipOptions, TreeNodeOptions,
+    VerticalOptions,
 };
 use popup_store::{drop_popup_scope_for_id, with_popup_store_for_id};
 pub use response::{
-    DragResponse, FloatingAreaResponse, FloatingWindowResponse, ImUiHoveredFlags, ResponseExt,
+    DisclosureResponse, DragResponse, FloatingAreaResponse, FloatingWindowResponse,
+    ImUiHoveredFlags, ResponseExt,
 };
 
 /// Extension trait bridging `fret-ui-kit` authoring (`UiBuilder<T>`) into an immediate-mode output.
@@ -633,6 +636,53 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         resp
     }
 
+    pub fn collapsing_header(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        self.collapsing_header_with_options(id, label, CollapsingHeaderOptions::default(), f)
+    }
+
+    pub fn collapsing_header_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: CollapsingHeaderOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::collapsing_header_with_options(
+            self, id, label, options, f,
+        );
+        self.record_focusable(resp.id(), enabled);
+        resp
+    }
+
+    pub fn tree_node(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        self.tree_node_with_options(id, label, TreeNodeOptions::default(), f)
+    }
+
+    pub fn tree_node_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: TreeNodeOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let resp =
+            <Self as UiWriterImUiFacadeExt<H>>::tree_node_with_options(self, id, label, options, f);
+        self.record_focusable(resp.id(), enabled);
+        resp
+    }
+
     pub fn input_text_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
         self.input_text_model_with_options(model, InputTextOptions::default())
     }
@@ -1053,6 +1103,53 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
         popup_overlay::begin_popup_modal_with_options(self, id, trigger, options, f)
+    }
+
+    /// Build a generic immediate collapsing header with explicit stable identity.
+    ///
+    /// `id` must be stable and semantic across frames. Do not derive identity from the visible
+    /// label alone; prefer domain keys such as `"scene.sections.rendering"`.
+    fn collapsing_header(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        self.collapsing_header_with_options(id, label, CollapsingHeaderOptions::default(), f)
+    }
+
+    fn collapsing_header_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: CollapsingHeaderOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        disclosure_controls::collapsing_header_with_options(self, id, label.into(), options, f)
+    }
+
+    /// Build a generic immediate tree node with explicit stable identity and explicit depth.
+    ///
+    /// Fret does not emulate ImGui's implicit ID/indent stack here. Child nodes should use their
+    /// own stable ids (for example `"scene/root/camera"`) and set `TreeNodeOptions::level`
+    /// explicitly instead of inventing `"##suffix"` tricks.
+    fn tree_node(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        self.tree_node_with_options(id, label, TreeNodeOptions::default(), f)
+    }
+
+    fn tree_node_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: TreeNodeOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        disclosure_controls::tree_node_with_options(self, id, label.into(), options, f)
     }
 
     fn tooltip_text(&mut self, id: &str, trigger: ResponseExt, text: impl Into<Arc<str>>) -> bool {

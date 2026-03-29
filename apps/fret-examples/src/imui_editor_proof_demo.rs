@@ -39,6 +39,7 @@ use fret_ui_kit::headless::text_assist::{
     TextAssistItem, TextAssistMatch, TextAssistMatchMode, controller_with_active_item_id,
     input_owned_text_assist_expanded,
 };
+use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const AUX_LOGICAL_WINDOW_ID: &str = "aux";
@@ -2694,6 +2695,114 @@ fn render_authoring_parity_imui_group(
                     });
                 });
                 out
+            },
+        );
+
+        ui.separator();
+        ui.text("Generic tree/collapsing helpers");
+        let _ = ui.collapsing_header_with_options(
+            "imui-editor-proof.authoring.imui.outliner.section",
+            "Scene outliner",
+            fret_ui_kit::imui::CollapsingHeaderOptions {
+                default_open: true,
+                test_id: Some(Arc::from(
+                    "imui-editor-proof.authoring.imui.outliner.section",
+                )),
+                header_test_id: Some(Arc::from(
+                    "imui-editor-proof.authoring.imui.outliner.section.header",
+                )),
+                content_test_id: Some(Arc::from(
+                    "imui-editor-proof.authoring.imui.outliner.section.content",
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                let _ = ui.tree_node_with_options(
+                    "imui-editor-proof.authoring.imui.outliner.scene",
+                    "Scene",
+                    fret_ui_kit::imui::TreeNodeOptions {
+                        default_open: true,
+                        test_id: Some(Arc::from(
+                            "imui-editor-proof.authoring.imui.outliner.scene",
+                        )),
+                        content_test_id: Some(Arc::from(
+                            "imui-editor-proof.authoring.imui.outliner.scene.content",
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        let _ = ui.tree_node_with_options(
+                            "imui-editor-proof.authoring.imui.outliner.scene.camera",
+                            "Camera",
+                            fret_ui_kit::imui::TreeNodeOptions {
+                                leaf: true,
+                                level: 2,
+                                selected: true,
+                                test_id: Some(Arc::from(
+                                    "imui-editor-proof.authoring.imui.outliner.scene.camera",
+                                )),
+                                ..Default::default()
+                            },
+                            |_ui| {},
+                        );
+                        let _ = ui.tree_node_with_options(
+                            "imui-editor-proof.authoring.imui.outliner.scene.geometry",
+                            "Geometry",
+                            fret_ui_kit::imui::TreeNodeOptions {
+                                default_open: true,
+                                level: 2,
+                                test_id: Some(Arc::from(
+                                    "imui-editor-proof.authoring.imui.outliner.scene.geometry",
+                                )),
+                                content_test_id: Some(Arc::from(
+                                    "imui-editor-proof.authoring.imui.outliner.scene.geometry.content",
+                                )),
+                                ..Default::default()
+                            },
+                            |ui| {
+                                let _ = ui.tree_node_with_options(
+                                    "imui-editor-proof.authoring.imui.outliner.scene.geometry.cube",
+                                    "Cube",
+                                    fret_ui_kit::imui::TreeNodeOptions {
+                                        leaf: true,
+                                        level: 3,
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.authoring.imui.outliner.scene.geometry.cube",
+                                        )),
+                                        ..Default::default()
+                                    },
+                                    |_ui| {},
+                                );
+                                let _ = ui.tree_node_with_options(
+                                    "imui-editor-proof.authoring.imui.outliner.scene.geometry.key-light",
+                                    "Key light",
+                                    fret_ui_kit::imui::TreeNodeOptions {
+                                        leaf: true,
+                                        level: 3,
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.authoring.imui.outliner.scene.geometry.key-light",
+                                        )),
+                                        ..Default::default()
+                                    },
+                                    |_ui| {},
+                                );
+                            },
+                        );
+                        let _ = ui.tree_node_with_options(
+                            "imui-editor-proof.authoring.imui.outliner.scene.postfx",
+                            "Post FX",
+                            fret_ui_kit::imui::TreeNodeOptions {
+                                leaf: true,
+                                level: 2,
+                                test_id: Some(Arc::from(
+                                    "imui-editor-proof.authoring.imui.outliner.scene.postfx",
+                                )),
+                                ..Default::default()
+                            },
+                            |_ui| {},
+                        );
+                    },
+                );
             },
         );
     })

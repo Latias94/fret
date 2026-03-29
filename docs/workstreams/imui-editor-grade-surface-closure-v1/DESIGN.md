@@ -221,6 +221,16 @@ Expected new generic helper family:
 These helpers may contain policy glue, but they must remain generic and portable enough to justify
 living outside editor-specific crates.
 
+Stable tree/outliner authoring guidance:
+
+- tree identity is an explicit `id` argument, not the visible label,
+- nested items should use semantic, path-like ids (`scene/root/camera`, `assets/materials/pbr`)
+  rather than ImGui-style `"##"` suffix tricks,
+- hierarchy depth is explicit (`TreeNodeOptions::level`) rather than inferred from an implicit
+  push/pop stack,
+- and selection/open state should stay app-owned or model-owned instead of being smuggled through
+  label text.
+
 ### Proof surfaces
 
 The closure work should prove itself on:

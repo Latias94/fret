@@ -199,6 +199,35 @@ impl FloatingWindowResponse {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DisclosureResponse {
+    pub trigger: ResponseExt,
+    pub open: bool,
+    pub toggled: bool,
+}
+
+impl DisclosureResponse {
+    pub fn id(self) -> Option<GlobalElementId> {
+        self.trigger.id
+    }
+
+    pub fn open(self) -> bool {
+        self.open
+    }
+
+    pub fn toggled(self) -> bool {
+        self.toggled
+    }
+
+    pub fn clicked(self) -> bool {
+        self.trigger.clicked()
+    }
+
+    pub fn hovered_like_imgui(self) -> bool {
+        self.trigger.hovered_like_imgui()
+    }
+}
+
 impl ResponseExt {
     pub fn clicked(self) -> bool {
         self.core.clicked()

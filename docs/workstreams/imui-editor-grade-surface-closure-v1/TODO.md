@@ -41,8 +41,8 @@ Compatibility shims are explicitly out of scope.
 ## M2 - Close generic editor-shell helper gaps
 
 - [x] Add a first-class immediate tooltip helper on `fret-ui-kit::imui`.
-- [ ] Add a generic collapsing-header / tree-node immediate family on `fret-ui-kit::imui`.
-- [ ] Write explicit ID guidance for tree/outliner authoring so ImGui/egui ports do not invent
+- [x] Add a generic collapsing-header / tree-node immediate family on `fret-ui-kit::imui`.
+- [x] Write explicit ID guidance for tree/outliner authoring so ImGui/egui ports do not invent
       ad hoc naming tricks.
 - [ ] Decide whether any currently requested shell-like helper is actually docking/workspace-owned
       and should be routed out of this workstream.
@@ -60,6 +60,17 @@ Current M2 progress:
   `apps/fret-examples/src/imui_editor_proof_demo.rs`.
 - Focused tooltip smoke coverage now lives in
   `ecosystem/fret-ui-kit/tests/imui_tooltip_smoke.rs`.
+- `fret-ui-kit::imui` now also exposes `collapsing_header(...)`,
+  `collapsing_header_with_options(...)`, `tree_node(...)`, and `tree_node_with_options(...)`.
+- `CollapsingHeaderOptions`, `TreeNodeOptions`, and `DisclosureResponse` now lock the first stable
+  immediate disclosure/tree surface without reintroducing implicit last-item context.
+- Tree/outliner authoring guidance is now explicit:
+  tree identity is a caller-supplied stable `id`, and hierarchy depth is caller-supplied
+  `TreeNodeOptions::level` rather than an implicit push/pop stack.
+- Proof/demo coverage now includes a first-party outliner example in
+  `apps/fret-examples/src/imui_editor_proof_demo.rs`.
+- Focused disclosure/tree smoke coverage now lives in
+  `ecosystem/fret-ui-kit/tests/imui_disclosure_smoke.rs`.
 
 ## M3 - Evaluate drag/drop immediate closure
 
