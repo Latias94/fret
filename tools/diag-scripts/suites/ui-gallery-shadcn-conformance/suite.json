@@ -11,6 +11,7 @@
     "tools/diag-scripts/ui-gallery-accordion-trigger-hover-underline-pixels-changed.json",
     "tools/diag-scripts/ui-gallery-alert-action-text-non-overlap.json",
     "tools/diag-scripts/ui-gallery-alert-dialog-basic-code-tab-scroll-range.json",
+    "tools/diag-scripts/ui-gallery-alert-dialog-docs-smoke.json",
     "tools/diag-scripts/ui-gallery-alert-dialog-detached-trigger-focus-restore.json",
     "tools/diag-scripts/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
     "tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
