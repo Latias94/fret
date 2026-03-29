@@ -10,23 +10,19 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow,
-    TextSlant, TextStyle, TextWrap,
+    Color, Corners, DecorationLineStyle, Edges, FontId, FontWeight, Px, SemanticsRole, TextAlign,
+    TextOverflow, TextSlant, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
+use fret_ui::action::OnSelectableTextActivateSpan;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, MarginEdge,
-    SemanticsDecoration, TextProps,
+    SelectableTextInteractiveSpan, SelectableTextProps, SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement};
 
-fn text_props(
-    text: Arc<str>,
-    style: Option<TextStyle>,
-    color: Option<Color>,
-    wrap: TextWrap,
-) -> TextProps {
+fn text_layout_for_wrap(wrap: TextWrap) -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     // Typography helpers are intended for long-form / block-like content (shadcn docs parity).
     // Default to full-width layout for wrapped text so headings/paragraphs don't shrink-wrap to
@@ -34,8 +30,17 @@ fn text_props(
     if !matches!(wrap, TextWrap::None) {
         layout.size.width = Length::Fill;
     }
+    layout
+}
+
+fn text_props(
+    text: Arc<str>,
+    style: Option<TextStyle>,
+    color: Option<Color>,
+    wrap: TextWrap,
+) -> TextProps {
     TextProps {
-        layout,
+        layout: text_layout_for_wrap(wrap),
         text,
         style,
         color,
@@ -122,6 +127,17 @@ fn blockquote_style() -> TextStyle {
 
 fn list_item_style() -> TextStyle {
     fixed_ui_style(Px(16.0), Px(24.0), FontWeight::NORMAL)
+}
+
+fn rich_paragraph_link_span(theme: &Theme, text_len: usize) -> TextSpan {
+    let mut span = TextSpan::new(text_len);
+    span.shaping.weight = Some(FontWeight::MEDIUM);
+    span.paint.fg = Some(theme.color_token("primary"));
+    span.paint.underline = Some(UnderlineStyle {
+        color: None,
+        style: DecorationLineStyle::Solid,
+    });
+    span
 }
 
 fn muted_color(theme: &Theme) -> Color {
@@ -333,6 +349,136 @@ impl TypographyText {
 
 fret_ui_kit::ui_component_passthrough!(TypographyText);
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypographyInlineSegment {
+    text: Arc<str>,
+    kind: TypographyInlineSegmentKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum TypographyInlineSegmentKind {
+    Text,
+    Link { href: Arc<str> },
+}
+
+impl TypographyInlineSegment {
+    pub fn text(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: text.into(),
+            kind: TypographyInlineSegmentKind::Text,
+        }
+    }
+
+    pub fn link(text: impl Into<Arc<str>>, href: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: text.into(),
+            kind: TypographyInlineSegmentKind::Link { href: href.into() },
+        }
+    }
+}
+
+impl From<&str> for TypographyInlineSegment {
+    fn from(value: &str) -> Self {
+        Self::text(value)
+    }
+}
+
+impl From<String> for TypographyInlineSegment {
+    fn from(value: String) -> Self {
+        Self::text(value)
+    }
+}
+
+impl From<Arc<str>> for TypographyInlineSegment {
+    fn from(value: Arc<str>) -> Self {
+        Self::text(value)
+    }
+}
+
+pub struct TypographyRichParagraph {
+    segments: Arc<[TypographyInlineSegment]>,
+    on_activate_link: Option<OnSelectableTextActivateSpan>,
+}
+
+impl TypographyRichParagraph {
+    fn new<I>(segments: I) -> Self
+    where
+        I: IntoIterator<Item = TypographyInlineSegment>,
+    {
+        Self {
+            segments: segments.into_iter().collect::<Vec<_>>().into(),
+            on_activate_link: None,
+        }
+    }
+
+    pub fn on_activate_link(mut self, handler: OnSelectableTextActivateSpan) -> Self {
+        self.on_activate_link = Some(handler);
+        self
+    }
+
+    fn build_props(self, theme: &Theme) -> SelectableTextProps {
+        let mut text = String::new();
+        let mut spans = Vec::with_capacity(self.segments.len());
+        let mut interactive_spans = Vec::new();
+
+        for segment in self.segments.iter() {
+            if segment.text.is_empty() {
+                continue;
+            }
+
+            let start = text.len();
+            text.push_str(segment.text.as_ref());
+            let len = text.len().saturating_sub(start);
+            let span = match &segment.kind {
+                TypographyInlineSegmentKind::Text => TextSpan::new(len),
+                TypographyInlineSegmentKind::Link { href } => {
+                    interactive_spans.push(SelectableTextInteractiveSpan {
+                        range: start..start + len,
+                        tag: href.clone(),
+                    });
+                    rich_paragraph_link_span(theme, len)
+                }
+            };
+            spans.push(span);
+        }
+
+        SelectableTextProps {
+            layout: text_layout_for_wrap(TextWrap::Word),
+            rich: fret_core::AttributedText::new(
+                Arc::<str>::from(text),
+                Arc::<[TextSpan]>::from(spans),
+            ),
+            style: Some(paragraph_style()),
+            color: None,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
+            ink_overflow: Default::default(),
+            interactive_spans: Arc::<[SelectableTextInteractiveSpan]>::from(interactive_spans),
+        }
+    }
+
+    #[track_caller]
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let handler = self.on_activate_link.clone();
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            self.build_props(theme)
+        };
+
+        if let Some(handler) = handler {
+            cx.selectable_text_with_id_props(move |cx, id| {
+                cx.selectable_text_on_activate_span_for(id, handler.clone());
+                props
+            })
+        } else {
+            cx.selectable_text_props(props)
+        }
+    }
+}
+
+fret_ui_kit::ui_component_passthrough!(TypographyRichParagraph);
+
 #[derive(Debug, Clone)]
 struct TypographyList {
     items: Vec<Arc<str>>,
@@ -451,6 +597,24 @@ where
     TypographyText::new(TypographyTextKind::Paragraph, text)
 }
 
+pub fn inline_text(text: impl Into<Arc<str>>) -> TypographyInlineSegment {
+    TypographyInlineSegment::text(text)
+}
+
+pub fn inline_link(
+    text: impl Into<Arc<str>>,
+    href: impl Into<Arc<str>>,
+) -> TypographyInlineSegment {
+    TypographyInlineSegment::link(text, href)
+}
+
+pub fn p_rich<H: UiHost, I>(segments: I) -> impl IntoUiElement<H> + use<H, I>
+where
+    I: IntoIterator<Item = TypographyInlineSegment>,
+{
+    TypographyRichParagraph::new(segments)
+}
+
 pub fn lead<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T>
 where
     T: Into<Arc<str>>,
@@ -558,6 +722,13 @@ mod tests {
         match &element.kind {
             ElementKind::Flex(props) => props,
             other => panic!("expected ElementKind::Flex, got {other:?}"),
+        }
+    }
+
+    fn selectable_text_props_of(element: &AnyElement) -> &SelectableTextProps {
+        match &element.kind {
+            ElementKind::SelectableText(props) => props,
+            other => panic!("expected ElementKind::SelectableText, got {other:?}"),
         }
     }
 
@@ -743,5 +914,44 @@ mod tests {
                 .expect("expected bullet at rtl inline start"),
         );
         assert_eq!(last_rtl_bullet.text.as_ref(), "•");
+    }
+
+    #[test]
+    fn typography_rich_paragraph_uses_selectable_text_link_spans() {
+        let rich = render(|cx| {
+            p_rich([
+                inline_text("The king thought long and hard, and finally came up with "),
+                inline_link("a brilliant plan", "#"),
+                inline_text(": he would tax the jokes in the kingdom."),
+            ])
+            .into_element(cx)
+        });
+
+        let props = selectable_text_props_of(&rich);
+        assert_eq!(
+            props.rich.text.as_ref(),
+            "The king thought long and hard, and finally came up with a brilliant plan: he would tax the jokes in the kingdom."
+        );
+        assert_eq!(props.rich.spans.len(), 3);
+        assert_eq!(props.interactive_spans.len(), 1);
+        assert_eq!(props.interactive_spans[0].tag.as_ref(), "#");
+        assert_eq!(props.interactive_spans[0].range, 57..73);
+        let style = props
+            .style
+            .as_ref()
+            .expect("expected rich paragraph base text style");
+        assert_eq!(style.size, Px(16.0));
+        assert_eq!(style.line_height, Some(Px(28.0)));
+        assert_eq!(props.wrap, TextWrap::Word);
+        let link_span = &props.rich.spans[1];
+        assert_eq!(link_span.shaping.weight, Some(FontWeight::MEDIUM));
+        assert!(link_span.paint.fg.is_some());
+        assert_eq!(
+            link_span.paint.underline,
+            Some(UnderlineStyle {
+                color: None,
+                style: DecorationLineStyle::Solid,
+            })
+        );
     }
 }

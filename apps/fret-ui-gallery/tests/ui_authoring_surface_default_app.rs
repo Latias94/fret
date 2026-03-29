@@ -9559,6 +9559,21 @@ fn typography_snippets_prefer_ui_cx_on_the_default_app_surface() {
         "src/ui/snippets/typography",
         &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
     );
+
+    assert_normalized_markers_present(
+        "src/ui/snippets/typography/demo.rs",
+        &[
+            "shadcn::raw::typography::p_rich([",
+            "shadcn::raw::typography::inline_link(\"a brilliant plan\", \"#\")",
+        ],
+    );
+    assert_normalized_markers_present(
+        "src/ui/snippets/typography/rtl.rs",
+        &[
+            "shadcn::raw::typography::p_rich([",
+            "shadcn::raw::typography::inline_link(\"خطة عبقرية\", \"#\")",
+        ],
+    );
 }
 
 #[test]

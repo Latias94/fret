@@ -35,9 +35,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             )
             .into_element(cx),
             story_block(
-                shadcn::raw::typography::p(
-                    "The king thought long and hard, and finally came up with a brilliant plan: he would tax the jokes in the kingdom.",
-                ),
+                shadcn::raw::typography::p_rich([
+                    shadcn::raw::typography::inline_text(
+                        "The king thought long and hard, and finally came up with ",
+                    ),
+                    shadcn::raw::typography::inline_link("a brilliant plan", "#"),
+                    shadcn::raw::typography::inline_text(
+                        ": he would tax the jokes in the kingdom.",
+                    ),
+                ]),
                 Some(Px(24.0)),
             )
             .into_element(cx),

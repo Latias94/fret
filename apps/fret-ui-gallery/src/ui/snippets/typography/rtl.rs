@@ -35,13 +35,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     Some(Px(40.0)),
                 )
                 .into_element(cx),
-                story_block(
-                    shadcn::raw::typography::p(
-                        "فكر الملك طويلاً وبجد، وأخيراً توصل إلى خطة عبقرية: سيفرض ضريبة على النكات في المملكة.",
+            story_block(
+                shadcn::raw::typography::p_rich([
+                    shadcn::raw::typography::inline_text(
+                        "فكر الملك طويلاً وبجد، وأخيراً توصل إلى ",
                     ),
-                    Some(Px(24.0)),
-                )
-                .into_element(cx),
+                    shadcn::raw::typography::inline_link("خطة عبقرية", "#"),
+                    shadcn::raw::typography::inline_text(
+                        ": سيفرض ضريبة على النكات في المملكة.",
+                    ),
+                ]),
+                Some(Px(24.0)),
+            )
+            .into_element(cx),
                 story_block(
                     shadcn::raw::typography::blockquote(
                         "\"في النهاية،\" قال، \"الجميع يستمتع بنكتة جيدة، لذا من العدل أن يدفعوا مقابل هذا الامتياز.\"",

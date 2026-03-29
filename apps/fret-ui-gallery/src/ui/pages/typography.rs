@@ -24,7 +24,7 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/typography.rs` and `ecosystem/fret-ui-shadcn/src/table.rs`.",
         "Heading helpers attach `SemanticsRole::Heading` with levels 1-4; keep the document hierarchy intentional.",
-        "Typography remains a docs/helper surface. Do not widen it with a generic `children(...)` API until inline rich-text composition has a stable contract.",
+        "Typography remains a docs/helper surface. Use `p_rich(...)` with `inline_link(...)` for inline link spans instead of widening the surface to generic `children(...)`.",
         "Use `lead` for intros, `muted` for hints, and keep width/alignment decisions owned by the surrounding page.",
         "For long-form content, combine typography helpers with table/list blocks and validate RTL plus narrow-viewport wrapping before shipping.",
     ]);
@@ -32,7 +32,7 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-typography-notes")
         .description("API reference pointers and authoring notes.");
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("Full story sample following the upstream docs flow; the inline-link sentence stays plain text on the raw helper lane.")
+        .description("Full story sample following the upstream docs flow, including the inline-link sentence via the rich paragraph helper lane.")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let h1 = DocSection::build(cx, "h1", h1)
         .description("Top-level heading example matching the upstream docs title.")
