@@ -52,10 +52,6 @@ controlled/uncontrolled root helper rather than the default compact constructor.
 
 Audited files:
 
-- `alert_dialog.rs`
-- `calendar.rs`
-- `calendar_multiple.rs`
-- `calendar_range.rs`
 - `context_menu.rs`
 - `dialog.rs`
 - `drawer.rs`
@@ -69,7 +65,6 @@ Representative seams:
 
 - `from_open(open: Model<bool>)`
 - `new_controllable(..., open: Option<Model<bool>>, default_open: bool, ...)`
-- `close_on_select(open: Model<bool>)`
 - `open(...)` / `open_mobile(...)`
 
 Rule:
@@ -86,7 +81,6 @@ because they are explicit builder-level escape hatches.
 
 Audited files:
 
-- `button.rs`
 - `command.rs`
 - `context_menu.rs`
 - `dropdown_menu.rs`
@@ -97,16 +91,17 @@ Representative seams:
 
 - menu checkbox/radio item constructors
 - command query/highlight/value models
-- `toggle_model(...)`
 - `TabsRoot::new(model: Model<Option<Arc<str>>>)`
 
 Rule:
 
 - keep these seams explicit when they truly represent owned control state,
-- treat `Button::toggle_model(...)` / `InputGroupButton::toggle_model(...)` as component-owned
-  activation-policy hooks for trigger affordances, not as a naming precedent for the `imui`
-  boolean field surface,
 - prefer shrinking first-contact helpers before adding more raw part-level constructors.
+
+As of 2026-03-28, `Button::toggle_model(...)`, `InputGroupButton::toggle_model(...)`, and the
+calendar `close_on_select(...)` trigger hooks no longer belong to this raw-model allowlist because
+they were narrowed onto `impl IntoBoolModel`. Their ownership remains documented in
+`SHADCN_TRIGGER_POLICY_SEAMS_AUDIT_2026-03-28.md`.
 
 ### 3. Output/controller handoff seams
 

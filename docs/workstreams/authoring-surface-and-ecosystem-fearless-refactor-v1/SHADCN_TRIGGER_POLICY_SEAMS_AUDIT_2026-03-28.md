@@ -47,6 +47,8 @@ Why these stay:
 - they attach activation policy to a trigger-like or composite component,
 - they are not generic form-field constructors,
 - first-party callers still use them for explicit open/close choreography,
+- they now accept the narrower `impl IntoBoolModel` bridge instead of forcing raw `Model<bool>`
+  ownership at the public call site,
 - and the verb communicates trigger behavior rather than widget value ownership.
 
 Representative evidence:
@@ -105,9 +107,6 @@ Evidence:
 
 Potential future work, but not auto-landed by this audit:
 
-- consider whether trigger/policy bool hooks such as `toggle_model(...)` and
-  `close_on_select(...)` should accept `impl IntoBoolModel` instead of raw `Model<bool>`
-  while preserving their current verbs and ownership semantics
 - keep checking for any further `Compatibility alias` comments or zero-caller forwarding roots in
   `fret-ui-shadcn`
 

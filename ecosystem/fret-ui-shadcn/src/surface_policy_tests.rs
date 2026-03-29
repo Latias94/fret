@@ -1008,6 +1008,12 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
         ),
         (
+            "button.rs",
+            BUTTON_RS,
+            &["pub fn toggle_model(mut self, model: impl IntoBoolModel) -> Self {"][..],
+            &["pub fn toggle_model(mut self, model: fret_runtime::Model<bool>) -> Self {"][..],
+        ),
+        (
             "command.rs",
             COMMAND_RS,
             &[
@@ -1023,10 +1029,12 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             &[
                 "impl InputGroup { pub fn new(model: impl IntoTextValueModel) -> Self {",
                 "pub fn input_group<H: UiHost>(group: InputGroup) -> impl IntoUiElement<H> + use<H> {",
+                "pub fn toggle_model(mut self, model: impl IntoBoolModel) -> Self {",
             ][..],
             &[
                 "pub fn new(model: Model<String>) -> Self {",
                 "pub fn input_group<H: UiHost>(cx: &mut ElementContext<'_, H>, group: InputGroup) -> AnyElement",
+                "pub fn toggle_model(mut self, model: Model<bool>) -> Self {",
             ][..],
         ),
         (
@@ -1066,25 +1074,35 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             CALENDAR_RS,
             &[
                 "pub fn new(month: impl IntoCalendarMonthModel, selected: impl IntoOptionalDateModel) -> Self {",
+                "pub fn close_on_select(mut self, open: impl IntoBoolModel) -> Self {",
             ][..],
-            &["pub fn new(month: Model<CalendarMonth>, selected: Model<Option<Date>>) -> Self {"][..],
+            &[
+                "pub fn new(month: Model<CalendarMonth>, selected: Model<Option<Date>>) -> Self {",
+                "pub fn close_on_select(mut self, open: Model<bool>) -> Self {",
+            ][..],
         ),
         (
             "calendar_multiple.rs",
             CALENDAR_MULTIPLE_RS,
             &[
                 "pub fn new(month: impl IntoCalendarMonthModel, selected: impl IntoDateVecModel) -> Self {",
+                "pub fn close_on_select(mut self, open: impl IntoBoolModel) -> Self {",
             ][..],
-            &["pub fn new(month: Model<CalendarMonth>, selected: Model<Vec<Date>>) -> Self {"][..],
+            &[
+                "pub fn new(month: Model<CalendarMonth>, selected: Model<Vec<Date>>) -> Self {",
+                "pub fn close_on_select(mut self, open: Model<bool>) -> Self {",
+            ][..],
         ),
         (
             "calendar_range.rs",
             CALENDAR_RANGE_RS,
             &[
                 "pub fn new( month: impl IntoCalendarMonthModel, selected: impl IntoDateRangeSelectionModel, ) -> Self {",
+                "pub fn close_on_select(mut self, open: impl IntoBoolModel) -> Self {",
             ][..],
             &[
                 "pub fn new(month: Model<CalendarMonth>, selected: Model<DateRangeSelection>) -> Self {",
+                "pub fn close_on_select(mut self, open: Model<bool>) -> Self {",
             ][..],
         ),
         (
@@ -2026,27 +2044,11 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
             ][..],
         ),
         (
-            "button.rs",
-            BUTTON_RS,
-            &["pub fn toggle_model(mut self, model: fret_runtime::Model<bool>) -> Self"][..],
-        ),
-        (
             "calendar.rs",
             CALENDAR_RS,
             &[
                 "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, selected: Option<Model<Option<Date>>>, default_selected: Option<Date>, ) -> Self",
-                "pub fn close_on_select(mut self, open: Model<bool>) -> Self",
             ][..],
-        ),
-        (
-            "calendar_multiple.rs",
-            CALENDAR_MULTIPLE_RS,
-            &["pub fn close_on_select(mut self, open: Model<bool>) -> Self"][..],
-        ),
-        (
-            "calendar_range.rs",
-            CALENDAR_RANGE_RS,
-            &["pub fn close_on_select(mut self, open: Model<bool>) -> Self"][..],
         ),
         (
             "carousel.rs",
@@ -2173,11 +2175,6 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
                 "pub fn new_controllable_raw<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: AnyElement, content: impl Into<HoverCardContentArg>, ) -> Self",
                 "pub fn open(mut self, open: Option<Model<bool>>) -> Self",
             ][..],
-        ),
-        (
-            "input_group.rs",
-            INPUT_GROUP_RS,
-            &["pub fn toggle_model(mut self, model: Model<bool>) -> Self"][..],
         ),
         (
             "media_image.rs",

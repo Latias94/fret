@@ -24,6 +24,7 @@ use fret_ui_kit::{
 };
 use time::{Date, OffsetDateTime, Weekday};
 
+use crate::bool_model::IntoBoolModel;
 use crate::calendar_month_model::IntoCalendarMonthModel;
 use crate::optional_date_model::IntoOptionalDateModel;
 use crate::rtl;
@@ -672,8 +673,8 @@ impl Calendar {
         self
     }
 
-    pub fn close_on_select(mut self, open: Model<bool>) -> Self {
-        self.close_on_select = Some(open);
+    pub fn close_on_select(mut self, open: impl IntoBoolModel) -> Self {
+        self.close_on_select = Some(open.into_bool_model());
         self
     }
 

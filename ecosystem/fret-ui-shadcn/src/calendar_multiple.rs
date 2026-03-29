@@ -17,6 +17,7 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 use time::{Date, OffsetDateTime, Weekday};
 
+use crate::bool_model::IntoBoolModel;
 use crate::calendar::{
     CalendarLocale, clamp_start_month, date_in_month_bounds, max_start_month, month_le, month_lt,
 };
@@ -208,8 +209,8 @@ impl CalendarMultiple {
         self
     }
 
-    pub fn close_on_select(mut self, open: Model<bool>) -> Self {
-        self.close_on_select = Some(open);
+    pub fn close_on_select(mut self, open: impl IntoBoolModel) -> Self {
+        self.close_on_select = Some(open.into_bool_model());
         self
     }
 
