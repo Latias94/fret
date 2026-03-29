@@ -19,18 +19,20 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Textarea::new(model)` is the Fret equivalent of the upstream `<Textarea />`; `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `required(...)`, `min_height(...)`, and `rows(...)` cover the documented core surface.",
         "`Textarea` keeps control chrome, root `w-full min-w-0`, minimum height, and resize-handle behavior recipe-owned; surrounding width caps and form layout stay caller-owned.",
         "`Field::build(...)` is the focused Fret lane for docs-path label/description association, while explicit `control_id(...)` plus `FieldLabel::for_control(...)` stays in the separate `Label Association` follow-up.",
-        "No extra generic `compose()` / `asChild` surface is needed here: upstream composition happens around the textarea via `Field` or simple stacked layout, and Fret already matches that layering.",
+        "Upstream docs/source axes: `repo-ref/ui/apps/v4/content/docs/components/base/textarea.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/textarea.tsx`, `repo-ref/ui/apps/v4/examples/base/textarea-{demo,field,disabled,invalid,button,rtl}.tsx`, and `repo-ref/ui/apps/v4/registry/new-york-v4/examples/textarea-{demo,disabled,with-label,with-text}.tsx`.",
+        "Neither `repo-ref/primitives` nor `repo-ref/base-ui` defines a dedicated Textarea primitive or compound children contract; they only treat `<textarea>` as a labelable/render target, so this pass did not identify a missing `fret-ui` mechanism bug.",
+        "No extra generic `compose()` / `asChild` / children API is needed here: upstream composition happens around the textarea via `Field` or simple stacked layout, and Fret already matches that leaf-control layering.",
         "Placeholder text is shown when the model is empty, `rows(...)` raises the initial height without lowering the default 64px minimum, and the resize affordance is available unless the textarea is disabled.",
     ]);
     let notes = doc_layout::notes_block([
-        "This page mirrors the upstream Textarea docs first, with `Field` and `RTL` examples now staying closer to the upstream feedback copy and four-row composition.",
+        "This page mirrors the upstream Textarea docs path first: `Field` now stays on the `Message` + helper-text-before-control example, while `RTL` keeps the translated feedback-style four-row composition.",
         "Reach for plain `Textarea` when you only need multi-line editing; compose around it with `Field` parts or stacked actions instead of widening the textarea surface itself.",
         "The most fragile outcomes here are resize-handle behavior, placeholder visibility, rows-driven initial height, and label/control wiring, so stable `ui-gallery-textarea-*` ids are part of the regression surface.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .test_id_prefix("ui-gallery-textarea-api-reference")
-        .description("Public surface summary and ownership notes.");
+        .description("Public surface summary, source axes, and ownership notes.");
     let notes = DocSection::build(cx, "Notes", notes)
         .no_shell()
         .test_id_prefix("ui-gallery-textarea-notes")
@@ -44,7 +46,7 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-textarea-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let field = DocSection::build(cx, "Field", field)
-        .description("Field composition with inherited label/description association and a four-row initial height.")
+        .description("Field composition matching the upstream `Message` label + helper-text-before-control example.")
         .test_id_prefix("ui-gallery-textarea-field")
         .code_rust_from_file_region(snippets::field::SOURCE, "example");
     let disabled = DocSection::build(cx, "Disabled", disabled)
@@ -60,7 +62,7 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-textarea-button")
         .code_rust_from_file_region(snippets::button::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Feedback-style textarea composition under an RTL direction provider.")
+        .description("Translated feedback-style textarea composition under an RTL direction provider with a four-row initial height.")
         .test_id_prefix("ui-gallery-textarea-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let with_text = DocSection::build(cx, "With Text", with_text)
@@ -77,7 +79,7 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Textarea docs path first: Demo, Usage, Field, Disabled, Invalid, Button, RTL, and API Reference. The docs-path `Field` and `RTL` examples now stay closer to the upstream feedback copy and four-row composition, while `With Text` and `Label Association` stay as focused Fret follow-ups.",
+            "Preview mirrors the upstream Textarea docs path first after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Field`, `Disabled`, `Invalid`, `Button`, `RTL`, and `API Reference`. `With Text` and `Label Association` stay as focused Fret follow-ups.",
         ),
         vec![
             demo,
