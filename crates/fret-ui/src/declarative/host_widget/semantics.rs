@@ -99,6 +99,9 @@ impl ElementHostWidget {
                 if props.read_only {
                     cx.set_read_only(true);
                 }
+                if props.required {
+                    cx.set_required(true);
+                }
                 if props.hidden {
                     cx.set_hidden(true);
                 }
@@ -268,6 +271,9 @@ impl ElementHostWidget {
                     }
                     if props.a11y.multiselectable {
                         cx.set_multiselectable(true);
+                    }
+                    if props.a11y.required {
+                        cx.set_required(true);
                     }
                     if let Some(expanded) = props.a11y.expanded {
                         cx.set_expanded(expanded);

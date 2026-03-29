@@ -18,6 +18,7 @@ pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`radio_group_uncontrolled(default, items)` and `radio_group(model, items)` remain the compact quick-start helpers for uncontrolled and controlled radio-group authoring.",
         "`RadioGroup::into_element_parts(cx, |cx, parts| ...)` is the typed docs-parity seam for rows that need external `Field`, `Label`, `FieldLabel::for_control(...)`, or `FieldDescription` composition around the radio control.",
+        "`RadioGroup::required(true)` now marks the group root as required, matching the upstream group-level required semantics instead of scattering the state across individual radio items.",
         "`RadioGroupItem::child(...)` / `children(...)` and `variant(RadioGroupItemVariant::ChoiceCard)` remain recipe-owned shorthands for full-row content overrides, but the docs-path rows on this page now prefer `into_element_parts(...)` + `parts.control(...)`.",
         "Selection semantics, roving navigation, icon chrome, border, and focus ring remain recipe-owned; surrounding fieldset and row layout remain caller-owned composition, so a generic root children API is still unnecessary here.",
         "The `RTL` preview keeps the translated upstream three-row example shape. `DirectionProvider(Rtl)` plus `into_element_parts(...)`, `Field`, and `FieldContent` keep the label/description on the logical side and the indicator on the opposite edge without extra physical alignment props.",

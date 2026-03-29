@@ -25,11 +25,16 @@ use crate::declarative::action_hooks::ActionHooksExt as _;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
 
 /// Semantics wrapper props for a radio group container.
-pub fn radio_group_semantics(label: Option<Arc<str>>, disabled: bool) -> SemanticsProps {
+pub fn radio_group_semantics(
+    label: Option<Arc<str>>,
+    disabled: bool,
+    required: bool,
+) -> SemanticsProps {
     SemanticsProps {
         role: SemanticsRole::RadioGroup,
         label,
         disabled,
+        required,
         ..Default::default()
     }
 }
@@ -67,6 +72,7 @@ pub enum RadioGroupOrientation {
 pub struct RadioGroupRoot {
     model: Model<Option<Arc<str>>>,
     disabled: bool,
+    required: bool,
     orientation: RadioGroupOrientation,
     loop_navigation: bool,
     a11y_label: Option<Arc<str>>,
@@ -77,6 +83,7 @@ impl RadioGroupRoot {
         Self {
             model,
             disabled: false,
+            required: false,
             orientation: RadioGroupOrientation::default(),
             loop_navigation: true,
             a11y_label: None,
@@ -104,6 +111,11 @@ impl RadioGroupRoot {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
         self
     }
 
@@ -164,6 +176,7 @@ impl RadioGroupList {
         let disabled_for_roving = self.disabled.clone();
         let values_for_roving = self.values.clone();
         let disabled_group = self.root.disabled;
+        let required = self.root.required;
         let label = self.root.a11y_label.clone();
 
         props.flex.direction = match self.root.orientation {
@@ -176,13 +189,16 @@ impl RadioGroupList {
             disabled: disabled_for_roving,
         };
 
-        cx.semantics(radio_group_semantics(label, disabled_group), move |cx| {
-            vec![cx.roving_flex(props, move |cx| {
-                cx.roving_nav_apg();
-                cx.roving_select_option_arc_str(&model, values_for_roving.clone());
-                f(cx)
-            })]
-        })
+        cx.semantics(
+            radio_group_semantics(label, disabled_group, required),
+            move |cx| {
+                vec![cx.roving_flex(props, move |cx| {
+                    cx.roving_nav_apg();
+                    cx.roving_select_option_arc_str(&model, values_for_roving.clone());
+                    f(cx)
+                })]
+            },
+        )
     }
 }
 

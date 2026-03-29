@@ -1105,6 +1105,7 @@ pub struct SemanticsProps {
     pub value_editable: Option<bool>,
     pub disabled: bool,
     pub read_only: bool,
+    pub required: bool,
     pub hidden: bool,
     pub visited: bool,
     pub multiselectable: bool,
@@ -1162,6 +1163,7 @@ impl Default for SemanticsProps {
             value_editable: None,
             disabled: false,
             read_only: false,
+            required: false,
             hidden: false,
             visited: false,
             multiselectable: false,
@@ -1647,6 +1649,7 @@ pub struct PressableA11y {
     ///
     /// This is a portable approximation of ARIA `aria-multiselectable`.
     pub multiselectable: bool,
+    pub required: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,

@@ -79,6 +79,7 @@ pub(super) fn preview_combobox(
     let api_reference = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/combobox.rs`.",
         "`Combobox::new(value, open)` plus the direct builder chain (`.trigger(...).input(...).clear(...).content(...)`) is the default recipe root lane, while `into_element_parts(...)` stays the focused upstream-shaped patch seam on that same lane rather than a separate `compose()` story.",
+        "`Combobox::required(true)` now covers both the closed trigger surface and the open search input surface, so required semantics follow the actual combobox node across states without widening the recipe to a generic children API.",
         "Combobox is intentionally a Popover + Command recipe surface; the current parity work here is page/public-surface alignment rather than a missing overlay, focus, or dismissal mechanism.",
         "Upstream nested children composition maps to typed parts in Fret: `ComboboxContent::new([ComboboxContentPart::...])`, `ComboboxList::{items,groups}`, and `ComboboxInput::children([InputGroupAddon...])` cover the documented lanes without widening the root to arbitrary generic children.",
         "`Input Group` demonstrates typed `ComboboxInput::children([InputGroupAddon...])` composition for inline addons; keep that surface narrow instead of widening to generic arbitrary children.",

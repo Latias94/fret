@@ -1295,6 +1295,7 @@ pub struct Select {
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
+    required: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_change: Option<OnOpenChange>,
     on_open_change_complete: Option<OnOpenChange>,
@@ -1340,6 +1341,7 @@ impl Select {
             trigger_test_id: None,
             a11y_label: None,
             aria_invalid: false,
+            required: false,
             on_dismiss_request: None,
             on_open_change: None,
             on_open_change_complete: None,
@@ -1569,6 +1571,11 @@ impl Select {
         self
     }
 
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
     /// When set, Escape/outside-press dismissals route through this handler. To prevent default
@@ -1743,6 +1750,7 @@ impl Select {
             self.trigger_test_id,
             self.a11y_label,
             self.aria_invalid,
+            self.required,
             self.on_dismiss_request,
             self.on_open_change,
             self.on_open_change_complete,
@@ -1791,6 +1799,7 @@ fn select_impl<H: UiHost>(
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
+    required: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_change: Option<OnOpenChange>,
     on_open_change_complete: Option<OnOpenChange>,
@@ -2595,6 +2604,7 @@ fn select_impl<H: UiHost>(
                 a11y: radix_select::select_trigger_a11y(a11y_label.clone(), is_open, None),
                 ..Default::default()
             };
+            props.a11y.required = required;
             props.a11y.test_id = trigger_test_id_for_trigger.clone();
             if !has_a11y_label_for_trigger {
                 props.a11y.labelled_by_element =
@@ -5920,6 +5930,65 @@ mod tests {
             "expected explicit width refinement (180px) to affect trigger bounds; got {:?}",
             trigger_bounds
         );
+    }
+
+    #[test]
+    fn select_required_exposes_required_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+            SelectItem::new("gamma", "Gamma"),
+        ];
+
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "select-required-semantics",
+            |cx| {
+                vec![
+                    Select::new(model, open)
+                        .items(items)
+                        .required(true)
+                        .a11y_label("Favorite fruit")
+                        .trigger_test_id("required-select")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("required-select"))
+            .expect("select trigger semantics");
+        assert_eq!(trigger.role, SemanticsRole::ComboBox);
+        assert!(trigger.flags.required);
     }
 
     #[test]

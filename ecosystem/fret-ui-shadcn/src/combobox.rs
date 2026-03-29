@@ -829,6 +829,7 @@ pub struct Combobox {
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
     aria_invalid: bool,
+    required: bool,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     search_enabled: bool,
@@ -936,6 +937,7 @@ impl Combobox {
             search_placeholder: Arc::from("Search..."),
             empty_text: Arc::from("No results."),
             aria_invalid: false,
+            required: false,
             disabled: false,
             a11y_label: None,
             search_enabled: true,
@@ -1102,6 +1104,11 @@ impl Combobox {
         self
     }
 
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
     pub fn search_enabled(mut self, enabled: bool) -> Self {
         self.search_enabled = enabled;
         self
@@ -1191,6 +1198,7 @@ impl Combobox {
             self.search_placeholder,
             self.empty_text,
             self.aria_invalid,
+            self.required,
             self.disabled,
             self.control_id,
             self.a11y_label,
@@ -1237,6 +1245,7 @@ fn combobox_with_patch<H: UiHost>(
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
     aria_invalid: bool,
+    required: bool,
     disabled: bool,
     control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
@@ -1660,6 +1669,7 @@ fn combobox_with_patch<H: UiHost>(
                                     },
                                     test_id: trigger_test_id_for_trigger.clone(),
                                     expanded: Some(is_open),
+                                    required,
                                     labelled_by_element: if a11y_label_for_trigger.is_some() {
                                         None
                                     } else {
@@ -2090,6 +2100,7 @@ fn combobox_with_patch<H: UiHost>(
                                         .entries(entries)
                                         .a11y_label("Combobox list")
                                         .input_role(SemanticsRole::ComboBox)
+                                        .input_required(required)
                                         .input_expanded(true)
                                         .a11y_selected_mode(
                                             crate::command::CommandPaletteA11ySelectedMode::Checked,
@@ -2457,6 +2468,7 @@ fn combobox_with_patch<H: UiHost>(
                             },
                             test_id: trigger_test_id_for_trigger.clone(),
                             expanded: Some(is_open),
+                            required,
                             labelled_by_element: if a11y_label_for_trigger.is_some() {
                                 None
                             } else {
@@ -2874,6 +2886,7 @@ fn combobox_with_patch<H: UiHost>(
                             .entries(entries)
                             .a11y_label("Combobox list")
                             .input_role(SemanticsRole::ComboBox)
+                            .input_required(required)
                             .input_expanded(true)
                             .input_id_out_cell(search_input_id.clone().expect(
                                 "combobox search-enabled popover should provide input-id cell",
@@ -4552,6 +4565,84 @@ mod tests {
             .expect("combobox search input node after typing");
         assert_eq!(input.role, SemanticsRole::ComboBox);
         assert_eq!(input.value.as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn combobox_required_exposes_required_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = || {
+            vec![
+                ComboboxItem::new("alpha", "Alpha"),
+                ComboboxItem::new("beta", "Beta"),
+                ComboboxItem::new("gamma", "Gamma"),
+            ]
+        };
+
+        let render_required =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices| {
+                let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+                app.set_frame_id(next_frame);
+
+                fret_ui_kit::OverlayController::begin_frame(app, window);
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "combobox-required-semantics",
+                    |cx| {
+                        vec![
+                            Combobox::new(model.clone(), open.clone())
+                                .required(true)
+                                .a11y_label("Favorite framework")
+                                .test_id_prefix("required-combobox")
+                                .items(items())
+                                .into_element(cx),
+                        ]
+                    },
+                );
+                ui.set_root(root);
+                fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        render_required(&mut ui, &mut app, &mut services);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("required-combobox-trigger"))
+            .expect("combobox trigger semantics");
+        assert_eq!(trigger.role, SemanticsRole::ComboBox);
+        assert!(trigger.flags.required);
+
+        let _ = app.models_mut().update(&open, |value| *value = true);
+        render_required(&mut ui, &mut app, &mut services);
+        render_required(&mut ui, &mut app, &mut services);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("required-combobox-input"))
+            .expect("combobox search input semantics");
+        assert_eq!(input.role, SemanticsRole::ComboBox);
+        assert!(input.flags.required);
     }
 
     #[test]

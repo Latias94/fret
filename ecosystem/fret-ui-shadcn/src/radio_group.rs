@@ -734,6 +734,7 @@ pub struct RadioGroup {
     default_value: Option<Arc<str>>,
     items: Vec<RadioGroupItem>,
     disabled: bool,
+    required: bool,
     control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
     test_id_prefix: Option<Arc<str>>,
@@ -751,6 +752,7 @@ impl RadioGroup {
             default_value: None,
             items: Vec::new(),
             disabled: false,
+            required: false,
             control_id: None,
             a11y_label: None,
             test_id_prefix: None,
@@ -769,6 +771,7 @@ impl RadioGroup {
             default_value: default_value.map(Into::into),
             items: Vec::new(),
             disabled: false,
+            required: false,
             control_id: None,
             a11y_label: None,
             test_id_prefix: None,
@@ -787,6 +790,11 @@ impl RadioGroup {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
         self
     }
 
@@ -855,6 +863,7 @@ impl RadioGroup {
             default_value,
             items,
             disabled,
+            required,
             control_id,
             a11y_label,
             test_id_prefix,
@@ -926,6 +935,7 @@ impl RadioGroup {
                 .when(WidgetStates::DISABLED, ColorRef::Color(alpha_mul(dot, 0.5)));
 
             let group_disabled = disabled;
+            let group_required = required;
             let group_label = a11y_label.clone();
             let test_id_prefix = test_id_prefix.clone();
             let style_override = style;
@@ -954,6 +964,7 @@ impl RadioGroup {
 
             let mut radix_root = radio_group_prim::RadioGroupRoot::new(model.clone())
                 .disabled(group_disabled)
+                .required(group_required)
                 .orientation(orientation)
                 .loop_navigation(loop_navigation);
             if let Some(label) = group_label.clone() {
@@ -1452,6 +1463,7 @@ impl RadioGroup {
             default_value,
             items,
             disabled,
+            required,
             control_id,
             a11y_label,
             test_id_prefix,
@@ -1519,6 +1531,7 @@ impl RadioGroup {
                 .when(WidgetStates::DISABLED, ColorRef::Color(alpha_mul(dot, 0.5)));
 
             let group_disabled = disabled;
+            let group_required = required;
             let group_label = a11y_label.clone();
             let test_id_prefix = test_id_prefix.clone();
             let style_override = style;
@@ -1546,6 +1559,7 @@ impl RadioGroup {
 
             let mut radix_root = radio_group_prim::RadioGroupRoot::new(model.clone())
                 .disabled(group_disabled)
+                .required(group_required)
                 .orientation(orientation)
                 .loop_navigation(loop_navigation);
             if let Some(label) = group_label.clone() {
@@ -2255,6 +2269,58 @@ mod tests {
         assert_eq!(beta.flags.checked, Some(true));
         assert_eq!(beta.pos_in_set, Some(2));
         assert_eq!(beta.set_size, Some(2));
+    }
+
+    #[test]
+    fn radio_group_required_exposes_required_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("b")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "radio-group-required",
+            |cx| {
+                vec![
+                    RadioGroup::new(model.clone())
+                        .required(true)
+                        .a11y_label("Options")
+                        .item(RadioGroupItem::new("a", "Alpha"))
+                        .item(RadioGroupItem::new("b", "Beta"))
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let group = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::RadioGroup && n.label.as_deref() == Some("Options"))
+            .expect("radio group semantics node");
+        assert!(group.flags.required);
     }
 
     fn render(

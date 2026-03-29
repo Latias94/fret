@@ -195,6 +195,7 @@ fn command_text_input<H: UiHost>(
     a11y_label: Arc<str>,
     placeholder: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
+    a11y_required: bool,
     test_id: Option<Arc<str>>,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
@@ -231,6 +232,7 @@ fn command_text_input<H: UiHost>(
     let mut props = TextInputProps::new(model);
     props.a11y_label = Some(a11y_label);
     props.a11y_role = a11y_role;
+    props.a11y_required = a11y_required;
     props.test_id = test_id;
     props.placeholder = placeholder;
     props.active_descendant = active_descendant;
@@ -748,6 +750,7 @@ impl CommandInput {
                     a11y_label,
                     placeholder,
                     Some(SemanticsRole::ComboBox),
+                    false,
                     input_test_id,
                     None,
                     None,
@@ -1836,6 +1839,7 @@ pub struct CommandPalette {
     a11y_label: Arc<str>,
     placeholder: Option<Arc<str>>,
     input_role: Option<SemanticsRole>,
+    input_required: bool,
     input_expanded: Option<bool>,
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
@@ -2156,6 +2160,7 @@ impl std::fmt::Debug for CommandPalette {
             .field("empty_text", &self.empty_text.as_ref())
             .field("a11y_label", &self.a11y_label.as_ref())
             .field("input_role", &self.input_role)
+            .field("input_required", &self.input_required)
             .field("input_expanded", &self.input_expanded)
             .field("on_value_change", &self.on_value_change.is_some())
             .field("chrome", &self.chrome)
@@ -2209,6 +2214,7 @@ impl CommandPalette {
             a11y_label: Arc::from("Command input"),
             placeholder: None,
             input_role: Some(SemanticsRole::ComboBox),
+            input_required: false,
             input_expanded: None,
             input_test_id: None,
             list_test_id: None,
@@ -2382,6 +2388,11 @@ impl CommandPalette {
 
     pub fn input_role(mut self, role: SemanticsRole) -> Self {
         self.input_role = Some(role);
+        self
+    }
+
+    pub fn input_required(mut self, required: bool) -> Self {
+        self.input_required = required;
         self
     }
 
@@ -3176,6 +3187,7 @@ impl CommandPalette {
                 a11y_label,
                 self.placeholder.clone(),
                 self.input_role,
+                self.input_required,
                 effective_input_test_id.clone(),
                 active_descendant,
                 self.input_expanded,
