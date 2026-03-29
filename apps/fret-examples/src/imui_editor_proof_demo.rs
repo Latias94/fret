@@ -277,6 +277,90 @@ struct ProofDragAsset {
     path: Arc<str>,
 }
 
+#[derive(Clone, PartialEq, Eq)]
+struct ProofOutlinerItem {
+    id: Arc<str>,
+    label: Arc<str>,
+}
+
+#[derive(Clone)]
+struct ProofOutlinerDragItem {
+    id: Arc<str>,
+    label: Arc<str>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ProofOutlinerInsertionSide {
+    Before,
+    After,
+}
+
+impl ProofOutlinerInsertionSide {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Before => "before",
+            Self::After => "after",
+        }
+    }
+}
+
+fn proof_outliner_insertion_side(
+    trigger: fret_ui_kit::imui::ResponseExt,
+    drop: &fret_ui_kit::imui::DropTargetResponse<ProofOutlinerDragItem>,
+) -> Option<ProofOutlinerInsertionSide> {
+    let rect = trigger.core.rect?;
+    let position = drop
+        .delivered_position()
+        .or_else(|| drop.preview_position())?;
+    let split_y = rect.origin.y.0 + rect.size.height.0 * 0.5;
+
+    Some(if position.y.0 < split_y {
+        ProofOutlinerInsertionSide::Before
+    } else {
+        ProofOutlinerInsertionSide::After
+    })
+}
+
+fn proof_outliner_order_line(items: &[ProofOutlinerItem]) -> String {
+    let labels = items
+        .iter()
+        .map(|item| item.label.as_ref())
+        .collect::<Vec<_>>()
+        .join(" -> ");
+    format!("Order: {labels}")
+}
+
+fn apply_proof_outliner_reorder(
+    items: &mut Vec<ProofOutlinerItem>,
+    active_id: &str,
+    over_id: &str,
+    side: ProofOutlinerInsertionSide,
+) -> bool {
+    if active_id == over_id {
+        return false;
+    }
+
+    let Some(from_index) = items.iter().position(|item| item.id.as_ref() == active_id) else {
+        return false;
+    };
+    let Some(over_index_before_remove) = items.iter().position(|item| item.id.as_ref() == over_id)
+    else {
+        return false;
+    };
+
+    let moving = items.remove(from_index);
+    let mut insert_index = items
+        .iter()
+        .position(|item| item.id.as_ref() == over_id)
+        .unwrap_or(over_index_before_remove.min(items.len()));
+    if side == ProofOutlinerInsertionSide::After {
+        insert_index = insert_index.saturating_add(1).min(items.len());
+    }
+
+    items.insert(insert_index, moving);
+    true
+}
+
 fn editor_text_assist_readout(
     cx: &mut UiCx<'_>,
     items: Arc<[TextAssistItem]>,
@@ -2872,6 +2956,132 @@ fn render_authoring_parity_imui_group(
             "Idle".to_string()
         };
         ui.text(drag_drop_status);
+
+        ui.separator();
+        ui.text("Reorderable outliner proof");
+        ui.text(
+            "Sortable math stays app-owned. `imui` only provides typed payloads + drop positions.",
+        );
+
+        let outliner_items_model = authoring_parity_outliner_items_model(ui.cx_mut());
+        let outliner_status_model = authoring_parity_outliner_status_model(ui.cx_mut());
+        let outliner_items = ui
+            .cx_mut()
+            .app
+            .models()
+            .read(&outliner_items_model, |items| items.clone())
+            .unwrap_or_default();
+        let mut pending_reorder: Option<(
+            Arc<str>,
+            Arc<str>,
+            Arc<str>,
+            Arc<str>,
+            ProofOutlinerInsertionSide,
+        )> = None;
+        let mut preview_status: Option<String> = None;
+
+        let _ = ui.tree_node_with_options(
+            "imui-editor-proof.authoring.imui.outliner.reorder.scene",
+            "Scene",
+            fret_ui_kit::imui::TreeNodeOptions {
+                default_open: true,
+                test_id: Some(Arc::from(
+                    "imui-editor-proof.authoring.imui.outliner.reorder.scene",
+                )),
+                content_test_id: Some(Arc::from(
+                    "imui-editor-proof.authoring.imui.outliner.reorder.scene.content",
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                for item in &outliner_items {
+                    let row = ui.tree_node_with_options(
+                        item.id.as_ref(),
+                        item.label.clone(),
+                        fret_ui_kit::imui::TreeNodeOptions {
+                            leaf: true,
+                            level: 2,
+                            test_id: Some(Arc::from(format!(
+                                "imui-editor-proof.authoring.imui.outliner.reorder.row.{}",
+                                item.id
+                            ))),
+                            ..Default::default()
+                        },
+                        |_ui| {},
+                    );
+
+                    let payload = ProofOutlinerDragItem {
+                        id: item.id.clone(),
+                        label: item.label.clone(),
+                    };
+                    let _drag = ui.drag_source(row.trigger, payload.clone());
+                    let drop = ui.drop_target::<ProofOutlinerDragItem>(row.trigger);
+                    let side = proof_outliner_insertion_side(row.trigger, &drop);
+
+                    if let Some(dragged) = drop.delivered_payload() {
+                        if dragged.id != item.id
+                            && let Some(side) = side
+                        {
+                            pending_reorder = Some((
+                                dragged.id.clone(),
+                                dragged.label.clone(),
+                                item.id.clone(),
+                                item.label.clone(),
+                                side,
+                            ));
+                        }
+                    } else if let Some(dragged) = drop.preview_payload()
+                        && dragged.id != item.id
+                        && let Some(side) = side
+                    {
+                        preview_status = Some(format!(
+                            "Preview: move {} {} {}",
+                            dragged.label,
+                            side.label(),
+                            item.label
+                        ));
+                    }
+                }
+            },
+        );
+
+        if let Some((active_id, active_label, over_id, over_label, side)) = pending_reorder {
+            let moved = ui
+                .cx_mut()
+                .app
+                .models_mut()
+                .update(&outliner_items_model, |items| {
+                    apply_proof_outliner_reorder(items, &active_id, &over_id, side)
+                })
+                .unwrap_or(false);
+            let next_status = if moved {
+                format!("Moved {} {} {}", active_label, side.label(), over_label)
+            } else {
+                "Drop ignored".to_string()
+            };
+            let _ = ui
+                .cx_mut()
+                .app
+                .models_mut()
+                .update(&outliner_status_model, |status| {
+                    status.clear();
+                    status.push_str(&next_status);
+                });
+        }
+
+        let outliner_order = ui
+            .cx_mut()
+            .app
+            .models()
+            .read(&outliner_items_model, |items| {
+                proof_outliner_order_line(items)
+            })
+            .unwrap_or_else(|_| "Order: unavailable".to_string());
+        let persisted_outliner_status =
+            editor_string_model_readout(ui.cx_mut(), &outliner_status_model);
+        let visible_outliner_status = preview_status.unwrap_or_else(|| persisted_outliner_status);
+        ui.text(outliner_order);
+        ui.text(format!("Status: {visible_outliner_status}"));
     })
 }
 
@@ -2912,6 +3122,28 @@ fn authoring_parity_drag_assets() -> Arc<[ProofDragAsset]> {
         ProofDragAsset {
             label: Arc::from("Stone ORM"),
             path: Arc::from("textures/stone/orm.ktx2"),
+        },
+    ]
+    .into()
+}
+
+fn authoring_parity_outliner_items() -> Arc<[ProofOutlinerItem]> {
+    vec![
+        ProofOutlinerItem {
+            id: Arc::from("camera"),
+            label: Arc::from("Camera"),
+        },
+        ProofOutlinerItem {
+            id: Arc::from("cube"),
+            label: Arc::from("Cube"),
+        },
+        ProofOutlinerItem {
+            id: Arc::from("key-light"),
+            label: Arc::from("Key light"),
+        },
+        ProofOutlinerItem {
+            id: Arc::from("post-fx"),
+            label: Arc::from("Post FX"),
         },
     ]
     .into()
@@ -3304,6 +3536,30 @@ fn authoring_parity_asset_slot_model<H: UiHost>(cx: &mut ElementContext<'_, H>) 
     )
 }
 
+fn authoring_parity_outliner_items_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<Vec<ProofOutlinerItem>> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.outliner_items",
+        |cx| {
+            cx.app
+                .models_mut()
+                .insert(authoring_parity_outliner_items().iter().cloned().collect())
+        },
+    )
+}
+
+fn authoring_parity_outliner_status_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<String> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.outliner_status",
+        |cx| cx.app.models_mut().insert("Idle".to_string()),
+    )
+}
+
 fn install_dock_panel_registry(app: &mut KernelApp) {
     let mut registry = DockPanelRegistryBuilder::new();
     registry.register(ImUiEditorProofControlsPanelFactory);
@@ -3641,5 +3897,41 @@ mod tests {
         assert_eq!(committed_char_count_label(""), "0 chars");
         assert_eq!(committed_char_count_label("a"), "1 char");
         assert_eq!(committed_char_count_label("abc"), "3 chars");
+    }
+
+    #[test]
+    fn proof_outliner_reorder_moves_item_after_target() {
+        let mut items = authoring_parity_outliner_items()
+            .iter()
+            .cloned()
+            .collect::<Vec<_>>();
+        assert!(apply_proof_outliner_reorder(
+            &mut items,
+            "camera",
+            "cube",
+            ProofOutlinerInsertionSide::After
+        ));
+        assert_eq!(
+            proof_outliner_order_line(&items),
+            "Order: Cube -> Camera -> Key light -> Post FX"
+        );
+    }
+
+    #[test]
+    fn proof_outliner_reorder_moves_item_before_target() {
+        let mut items = authoring_parity_outliner_items()
+            .iter()
+            .cloned()
+            .collect::<Vec<_>>();
+        assert!(apply_proof_outliner_reorder(
+            &mut items,
+            "post-fx",
+            "cube",
+            ProofOutlinerInsertionSide::Before
+        ));
+        assert_eq!(
+            proof_outliner_order_line(&items),
+            "Order: Camera -> Post FX -> Cube -> Key light"
+        );
     }
 }

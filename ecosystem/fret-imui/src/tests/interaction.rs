@@ -5,6 +5,197 @@ struct TestDragPayload {
     label: Arc<str>,
 }
 
+#[derive(Clone, PartialEq, Eq)]
+struct TestSortableItem {
+    id: Arc<str>,
+    label: Arc<str>,
+}
+
+#[derive(Clone)]
+struct TestSortablePayload {
+    id: Arc<str>,
+    label: Arc<str>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TestSortableInsertionSide {
+    Before,
+    After,
+}
+
+impl TestSortableInsertionSide {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Before => "before",
+            Self::After => "after",
+        }
+    }
+}
+
+fn test_sortable_items() -> Vec<TestSortableItem> {
+    vec![
+        TestSortableItem {
+            id: Arc::from("camera"),
+            label: Arc::from("Camera"),
+        },
+        TestSortableItem {
+            id: Arc::from("cube"),
+            label: Arc::from("Cube"),
+        },
+        TestSortableItem {
+            id: Arc::from("key-light"),
+            label: Arc::from("Key light"),
+        },
+    ]
+}
+
+fn test_sortable_order_line(items: &[TestSortableItem]) -> String {
+    items
+        .iter()
+        .map(|item| item.label.as_ref())
+        .collect::<Vec<_>>()
+        .join(" -> ")
+}
+
+fn apply_test_sortable_reorder(
+    items: &mut Vec<TestSortableItem>,
+    active_id: &str,
+    over_id: &str,
+    side: TestSortableInsertionSide,
+) -> bool {
+    if active_id == over_id {
+        return false;
+    }
+
+    let Some(from_index) = items.iter().position(|item| item.id.as_ref() == active_id) else {
+        return false;
+    };
+    let Some(over_index_before_remove) = items.iter().position(|item| item.id.as_ref() == over_id)
+    else {
+        return false;
+    };
+
+    let moving = items.remove(from_index);
+    let mut insert_index = items
+        .iter()
+        .position(|item| item.id.as_ref() == over_id)
+        .unwrap_or(over_index_before_remove.min(items.len()));
+    if side == TestSortableInsertionSide::After {
+        insert_index = insert_index.saturating_add(1).min(items.len());
+    }
+
+    items.insert(insert_index, moving);
+    true
+}
+
+fn test_sortable_insertion_side(
+    trigger: fret_ui_kit::imui::ResponseExt,
+    drop: &fret_ui_kit::imui::DropTargetResponse<TestSortablePayload>,
+) -> Option<TestSortableInsertionSide> {
+    let rect = trigger.core.rect?;
+    let position = drop
+        .delivered_position()
+        .or_else(|| drop.preview_position())?;
+    let split_y = rect.origin.y.0 + rect.size.height.0 * 0.5;
+
+    Some(if position.y.0 < split_y {
+        TestSortableInsertionSide::Before
+    } else {
+        TestSortableInsertionSide::After
+    })
+}
+
+fn render_test_sortable_rows(
+    items: &Rc<RefCell<Vec<TestSortableItem>>>,
+    preview_status: &Rc<RefCell<String>>,
+    delivered_status: &Rc<RefCell<String>>,
+    order_status: &Rc<RefCell<String>>,
+    delivered_flag: &Rc<Cell<bool>>,
+) -> impl FnOnce(&mut ElementContext<'_, TestHost>) -> crate::Elements + use<> {
+    let items = items.clone();
+    let preview_status = preview_status.clone();
+    let delivered_status = delivered_status.clone();
+    let order_status = order_status.clone();
+    let delivered_flag = delivered_flag.clone();
+
+    move |cx| {
+        crate::imui(cx, |ui| {
+            let snapshot = items.borrow().clone();
+            let mut pending_reorder: Option<(
+                Arc<str>,
+                Arc<str>,
+                Arc<str>,
+                Arc<str>,
+                TestSortableInsertionSide,
+            )> = None;
+            let mut preview = String::new();
+
+            ui.vertical(|ui| {
+                for item in &snapshot {
+                    let row = ui.button_with_options(
+                        item.label.clone(),
+                        fret_ui_kit::imui::ButtonOptions {
+                            test_id: Some(Arc::from(format!("imui-sortable-row.{}", item.id))),
+                            ..Default::default()
+                        },
+                    );
+                    let payload = TestSortablePayload {
+                        id: item.id.clone(),
+                        label: item.label.clone(),
+                    };
+                    let _drag = ui.drag_source(row, payload.clone());
+                    let drop = ui.drop_target::<TestSortablePayload>(row);
+                    let side = test_sortable_insertion_side(row, &drop);
+
+                    if let Some(dragged) = drop.delivered_payload() {
+                        if dragged.id != item.id
+                            && let Some(side) = side
+                        {
+                            pending_reorder = Some((
+                                dragged.id.clone(),
+                                dragged.label.clone(),
+                                item.id.clone(),
+                                item.label.clone(),
+                                side,
+                            ));
+                        }
+                    } else if let Some(dragged) = drop.preview_payload()
+                        && dragged.id != item.id
+                        && let Some(side) = side
+                    {
+                        preview = format!(
+                            "Preview: move {} {} {}",
+                            dragged.label,
+                            side.label(),
+                            item.label
+                        );
+                    }
+                }
+            });
+
+            let mut delivered_message = String::new();
+            let mut delivered = false;
+            if let Some((active_id, active_label, over_id, over_label, side)) = pending_reorder {
+                delivered = apply_test_sortable_reorder(
+                    &mut items.borrow_mut(),
+                    &active_id,
+                    &over_id,
+                    side,
+                );
+                if delivered {
+                    delivered_message =
+                        format!("Moved {} {} {}", active_label, side.label(), over_label);
+                }
+            }
+
+            preview_status.replace(preview);
+            delivered_status.replace(delivered_message);
+            delivered_flag.set(delivered);
+            order_status.replace(test_sortable_order_line(&items.borrow()));
+        })
+    }
+}
+
 #[test]
 fn click_sets_clicked_true_once() {
     let window = AppWindowId::default();
@@ -988,6 +1179,142 @@ fn drag_drop_helper_previews_and_delivers_payload() {
     assert!(delivered.get());
     assert!(preview_label.borrow().is_empty());
     assert_eq!(delivered_label.borrow().as_str(), "Stone");
+}
+
+#[test]
+fn sortable_rows_reorder_using_drop_positions() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let items = Rc::new(RefCell::new(test_sortable_items()));
+    let preview_status = Rc::new(RefCell::new(String::new()));
+    let delivered_status = Rc::new(RefCell::new(String::new()));
+    let order_status = Rc::new(RefCell::new(String::new()));
+    let delivered_flag = Rc::new(Cell::new(false));
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-sortable-rows",
+        render_test_sortable_rows(
+            &items,
+            &preview_status,
+            &delivered_status,
+            &order_status,
+            &delivered_flag,
+        ),
+    );
+
+    assert_eq!(
+        order_status.borrow().as_str(),
+        "Camera -> Cube -> Key light"
+    );
+    assert!(preview_status.borrow().is_empty());
+    assert!(delivered_status.borrow().is_empty());
+    assert!(!delivered_flag.get());
+
+    let source_point = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-sortable-row.camera",
+    );
+    let _target_point = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-sortable-row.cube",
+    );
+    let target_bounds = bounds_for_test_id(&ui, "imui-sortable-row.cube");
+    let target_lower = Point::new(
+        Px(target_bounds.origin.x.0 + target_bounds.size.width.0 * 0.5),
+        Px(target_bounds.origin.y.0 + target_bounds.size.height.0 * 0.75),
+    );
+
+    pointer_down_at(&mut ui, &mut app, &mut services, source_point);
+    pointer_move_at(
+        &mut ui,
+        &mut app,
+        &mut services,
+        target_lower,
+        MouseButtons {
+            left: true,
+            ..MouseButtons::default()
+        },
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-sortable-rows",
+        render_test_sortable_rows(
+            &items,
+            &preview_status,
+            &delivered_status,
+            &order_status,
+            &delivered_flag,
+        ),
+    );
+
+    assert_eq!(
+        preview_status.borrow().as_str(),
+        "Preview: move Camera after Cube"
+    );
+    assert!(delivered_status.borrow().is_empty());
+    assert_eq!(
+        order_status.borrow().as_str(),
+        "Camera -> Cube -> Key light"
+    );
+    assert!(!delivered_flag.get());
+
+    pointer_up_at_with_is_click(&mut ui, &mut app, &mut services, target_lower, false);
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-sortable-rows",
+        render_test_sortable_rows(
+            &items,
+            &preview_status,
+            &delivered_status,
+            &order_status,
+            &delivered_flag,
+        ),
+    );
+
+    assert!(preview_status.borrow().is_empty());
+    assert_eq!(
+        delivered_status.borrow().as_str(),
+        "Moved Camera after Cube"
+    );
+    assert_eq!(
+        order_status.borrow().as_str(),
+        "Cube -> Camera -> Key light"
+    );
+    assert!(delivered_flag.get());
 }
 
 #[test]

@@ -147,7 +147,9 @@ Current status:
 
 - the runtime-boundary audit is now recorded in
   `docs/workstreams/imui-editor-grade-surface-closure-v1/DRAG_DROP_BOUNDARY_AUDIT_2026-03-29.md`,
-- and the first clean typed source/target seam now ships from `fret-ui-kit::imui`.
+- the first clean typed source/target seam now ships from `fret-ui-kit::imui`,
+- and drop responses now expose pointer positions so outliner/sortable policy can stay in
+  app/recipe space instead of expanding `imui`.
 
 Owner:
 

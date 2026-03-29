@@ -130,14 +130,18 @@ Current landed slice:
   `drop_target::<T>(...)`, and `drop_target_with_options::<T>(...)`,
 - the implementation uses a model-backed typed payload store keyed by `DragSessionId` while still
   reusing the existing pressable drag threshold and runtime routing,
+- `DropTargetResponse` now carries preview/delivery pointer positions so upper layers can derive
+  reorder insertion math without adding that policy to `imui`,
 - `DragSourceOptions::cross_window` upgrades a trigger to cross-window runtime drag routing without
   introducing a second drag stack,
 - `apps/fret-examples/src/imui_editor_proof_demo.rs` now includes an asset-chip to material-slot
   proof slice,
+- the same proof demo now includes a reorderable outliner slice that keeps sortable policy
+  app-owned,
 - focused gates now cover the new surface in
   `ecosystem/fret-ui-kit/tests/imui_drag_drop_smoke.rs` plus `drag_drop.rs` unit tests,
-- and `ecosystem/fret-imui/src/tests/interaction.rs` now locks the preview and source-side
-  delivery behavior with a real pointer interaction test.
+- and `ecosystem/fret-imui/src/tests/interaction.rs` now locks both the preview/source-side
+  delivery behavior and an app-owned reorder flow with real pointer interaction tests.
 
 Exit gates:
 

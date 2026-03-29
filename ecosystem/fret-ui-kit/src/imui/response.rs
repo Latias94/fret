@@ -158,6 +158,8 @@ pub struct DropTargetResponse<T: 'static> {
     pub delivered: bool,
     pub source_id: Option<GlobalElementId>,
     pub session_id: Option<fret_runtime::DragSessionId>,
+    pub(super) preview_position: Option<Point>,
+    pub(super) delivered_position: Option<Point>,
     pub(super) preview_payload: Option<Rc<T>>,
     pub(super) delivered_payload: Option<Rc<T>>,
 }
@@ -266,6 +268,8 @@ impl<T: 'static> Default for DropTargetResponse<T> {
             delivered: false,
             source_id: None,
             session_id: None,
+            preview_position: None,
+            delivered_position: None,
             preview_payload: None,
             delivered_payload: None,
         }
@@ -289,8 +293,16 @@ impl<T: 'static> DropTargetResponse<T> {
         self.preview_payload.clone()
     }
 
+    pub fn preview_position(&self) -> Option<Point> {
+        self.preview_position
+    }
+
     pub fn delivered_payload(&self) -> Option<Rc<T>> {
         self.delivered_payload.clone()
+    }
+
+    pub fn delivered_position(&self) -> Option<Point> {
+        self.delivered_position
     }
 
     pub fn source_id(&self) -> Option<GlobalElementId> {

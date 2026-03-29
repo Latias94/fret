@@ -51,6 +51,8 @@ fn drag_drop_response_accessors_compile() {
     assert!(!target.active());
     assert!(!target.over());
     assert!(!target.delivered());
+    assert!(target.preview_position().is_none());
+    assert!(target.delivered_position().is_none());
     assert!(target.preview_payload().is_none());
     assert!(target.delivered_payload().is_none());
 }

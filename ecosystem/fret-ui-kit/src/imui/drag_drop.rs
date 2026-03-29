@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{MouseButton, PointerId};
+use fret_core::{MouseButton, Point, PointerId};
 use fret_runtime::{DragKindId, DragSessionId, Model, TickId};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
@@ -39,6 +39,7 @@ struct DeliveredDragPayload {
     tick_id: TickId,
     session_id: DragSessionId,
     source_id: GlobalElementId,
+    position: Point,
     payload: Rc<dyn Any>,
 }
 
@@ -121,7 +122,7 @@ fn source_response_for<H: UiHost>(
 fn first_active_payload_for<T: Any, H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     store: &Model<ImUiDragDropStore>,
-) -> Option<(DragSessionId, GlobalElementId, Rc<T>)> {
+) -> Option<(DragSessionId, GlobalElementId, Point, Rc<T>)> {
     cx.read_model(store, Invalidation::Paint, |app, st| {
         st.active
             .iter()
@@ -135,11 +136,14 @@ fn first_active_payload_for<T: Any, H: UiHost>(
                     active.pointer_id,
                     drag.session_id,
                     active.source_id,
+                    drag.position,
                     payload,
                 ))
             })
-            .min_by_key(|(pointer_id, _, _, _)| pointer_id.0)
-            .map(|(_, session_id, source_id, payload)| (session_id, source_id, payload))
+            .min_by_key(|(pointer_id, _, _, _, _)| pointer_id.0)
+            .map(|(_, session_id, source_id, position, payload)| {
+                (session_id, source_id, position, payload)
+            })
     })
     .ok()
     .flatten()
@@ -149,7 +153,7 @@ fn take_delivered_payload_for<T: Any, H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     store: &Model<ImUiDragDropStore>,
     target_id: GlobalElementId,
-) -> Option<(DragSessionId, GlobalElementId, Rc<T>)> {
+) -> Option<(DragSessionId, GlobalElementId, Point, Rc<T>)> {
     let current_tick = cx.app.tick_id();
     cx.app
         .models_mut()
@@ -159,7 +163,12 @@ fn take_delivered_payload_for<T: Any, H: UiHost>(
                 return None;
             }
             let payload = delivered.payload.downcast::<T>().ok()?;
-            Some((delivered.session_id, delivered.source_id, payload))
+            Some((
+                delivered.session_id,
+                delivered.source_id,
+                delivered.position,
+                payload,
+            ))
         })
         .ok()
         .flatten()
@@ -284,6 +293,7 @@ pub(super) fn drag_source_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
                                 tick_id: up.tick_id,
                                 session_id,
                                 source_id: trigger_id,
+                                position: up.position,
                                 payload,
                             },
                         );
@@ -316,17 +326,19 @@ pub(super) fn drop_target_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
             return response;
         }
 
-        if let Some((session_id, source_id, payload)) =
+        if let Some((session_id, source_id, position, payload)) =
             take_delivered_payload_for::<T, _>(cx, &store, trigger_id)
         {
             response.active = true;
             response.delivered = true;
             response.source_id = Some(source_id);
             response.session_id = Some(session_id);
+            response.delivered_position = Some(position);
             response.delivered_payload = Some(payload);
         }
 
-        if let Some((session_id, source_id, payload)) = first_active_payload_for::<T, _>(cx, &store)
+        if let Some((session_id, source_id, position, payload)) =
+            first_active_payload_for::<T, _>(cx, &store)
         {
             response.active = true;
             if response.source_id.is_none() {
@@ -335,6 +347,7 @@ pub(super) fn drop_target_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
             if response.session_id.is_none() {
                 response.session_id = Some(session_id);
             }
+            response.preview_position = Some(position);
             let _ = cx.app.models_mut().update(&store, |st| {
                 if let Some(active) = st.active.get_mut(&session_id) {
                     if trigger.pointer_hovered_raw {

@@ -75,6 +75,7 @@ This matches the already-shipped tooltip pattern better than cloning Dear ImGui'
 
 - active typed payloads by `DragSessionId`,
 - source `GlobalElementId`,
+- active/delivered pointer positions for upper-layer policy derivation,
 - and one-frame delivery records for typed drop targets.
 
 This store is populated from pointer hooks and read back during the next render.
@@ -115,6 +116,12 @@ workflows such as:
 - tool-panel item transfer,
 - lightweight outliner/item target handoff when collision math is not required.
 
+It also now exposes enough geometry context for upper layers to derive sortable insertion policies
+without widening the runtime contract:
+
+- preview pointer position on an active compatible target,
+- delivered pointer position on the next render after drop.
+
 ## What this intentionally does not close
 
 This slice does not try to solve:
@@ -125,6 +132,10 @@ This slice does not try to solve:
 - docking/workspace shell choreography,
 - OS/native external drag-and-drop,
 - or preview-tooltip chrome.
+
+The first reorderable outliner proof now computes insertion side at the app layer from
+`DropTargetResponse::{preview_position, delivered_position}` rather than from an `imui`-owned
+sortable policy helper.
 
 Those remain correctly owned by:
 
@@ -139,13 +150,15 @@ Those remain correctly owned by:
 Proof surface:
 
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
-  now includes a typed asset-chip to material-slot drag/drop slice.
+  now includes a typed asset-chip to material-slot drag/drop slice plus a reorderable outliner
+  proof that keeps sortable math app-owned.
 
 Focused gates:
 
 - `ecosystem/fret-ui-kit/tests/imui_drag_drop_smoke.rs`
 - `cargo test -p fret-ui-kit --features imui drag_drop --lib`
 - `cargo test -p fret-imui drag_drop_helper_previews_and_delivers_payload`
+- `cargo test -p fret-imui sortable_rows_reorder_using_drop_positions`
 
 Implementation anchors:
 

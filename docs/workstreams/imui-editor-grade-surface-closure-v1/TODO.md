@@ -94,6 +94,8 @@ Current M3 progress:
   adding a second immediate drag runtime.
 - Typed payloads are stored in a model-backed `imui` session store keyed by `DragSessionId`,
   rather than widening the object-safe runtime action-host seam.
+- `DropTargetResponse` now exposes preview/delivery pointer positions so upper layers can derive
+  insertion math without pushing sortable policy into `imui`.
 - `DragSourceOptions::cross_window` upgrades the trigger to cross-window runtime routing without
   adding a second multi-window policy stack.
 - Proof/demo coverage now includes an asset-chip to material-slot drag/drop slice in
@@ -101,6 +103,8 @@ Current M3 progress:
 - Focused drag/drop gates now live in `ecosystem/fret-ui-kit/tests/imui_drag_drop_smoke.rs`
   and `ecosystem/fret-ui-kit/src/imui/drag_drop.rs` unit tests.
 - A real pointer interaction gate now verifies preview plus source-side delivery in
+  `ecosystem/fret-imui/src/tests/interaction.rs`.
+- A second interaction gate now verifies app-owned reorder policy built from drop positions in
   `ecosystem/fret-imui/src/tests/interaction.rs`.
 
 ## M4 - Tests, proof surfaces, and docs
@@ -110,5 +114,7 @@ Current M3 progress:
 - [x] Add focused tests for any new tooltip/tree/drag-drop surfaces.
 - [x] Update `docs/workstreams/README.md` so the immediate-mode map points to this follow-on lane.
 - [x] Update parity/audit notes if the shipped immediate surface meaningfully changes.
+- [x] Prove that app-owned outliner reorder can be built on the shipped drag/drop seam without
+      adding sortable policy to `imui`.
 - [ ] Capture a closeout summary that says which gaps were closed, which were intentionally deferred,
       and which owner crate each surviving gap belongs to.
