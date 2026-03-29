@@ -1,8 +1,16 @@
 # imui editor-grade surface closure v1 - milestones
 
+Status: closed closeout record
+
+Last updated: 2026-03-29
+
 Tracking doc: `docs/workstreams/imui-editor-grade-surface-closure-v1/DESIGN.md`
 
 TODO board: `docs/workstreams/imui-editor-grade-surface-closure-v1/TODO.md`
+
+Closeout audit:
+
+- `docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md`
 
 Gap audit: `docs/workstreams/imui-editor-grade-surface-closure-v1/EDITOR_GRADE_GAP_AUDIT_2026-03-29.md`
 
@@ -14,9 +22,16 @@ Predecessor:
 
 - `docs/workstreams/imui-stack-fearless-refactor-v1/`
 
-This file is forward-looking only.
-The predecessor stack-reset workstream is already closed; this follow-on exists to close the
-remaining editor-grade gaps without reopening the completed surface-cleanup effort.
+Closeout reading rule on 2026-03-29:
+
+- treat this file as the historical progress record for the now-closed editor-grade helper lane
+- read `CLOSEOUT_AUDIT_2026-03-29.md` for the shipped outcome and surviving defer list
+- read `docs/workstreams/imui-sortable-recipe-v1/` for the active reusable reorder/sortable
+  follow-on
+
+The predecessor stack-reset workstream is already closed, and this follow-on is now also closed.
+The remaining reusable reorder/sortable work is intentionally split into its own policy/recipe lane
+so the helper closure record stays historically accurate.
 
 ## Phase A - Scope freeze and gap classification
 
@@ -63,7 +78,7 @@ Exit gates:
 
 ## Phase C - Generic editor-shell helper closure
 
-Status: In progress
+Status: Completed
 
 Goal:
 
@@ -109,7 +124,7 @@ Exit gates:
 
 ## Phase D - Drag/drop decision and closeout
 
-Status: In progress
+Status: Completed
 
 Goal:
 
@@ -120,7 +135,8 @@ Deliverables:
 - one runtime-boundary audit result,
 - either a typed immediate drag/drop helper family or a defer note,
 - proof on at least one editor-grade scenario,
-- final closeout notes and updated immediate-mode map/docs.
+- final closeout notes and updated immediate-mode map/docs,
+- explicit handoff of reusable sortable/reorder policy to `imui-sortable-recipe-v1`.
 
 Current landed slice:
 
@@ -148,3 +164,11 @@ Exit gates:
 - drag/drop is either cleanly shipped or cleanly deferred,
 - proof/demo surfaces show the new editor-grade closure,
 - and the remaining `imui` gap list is short, explicit, and correctly owned.
+
+Closeout note:
+
+- the typed drag/drop seam is now closed in `fret-ui-kit::imui`,
+- app-owned reorder proof is now closed in `apps/fret-examples` plus
+  `ecosystem/fret-imui/src/tests/interaction.rs`,
+- and reusable sortable/reorder policy is explicitly handed off to
+  `docs/workstreams/imui-sortable-recipe-v1/`.

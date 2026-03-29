@@ -11,9 +11,32 @@ Upstream sources:
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
-Status: Proposed active workstream
+Status: closed closeout lane (editor-grade helper closure landed; sortable follow-on split out)
 
 Last updated: 2026-03-29
+
+Related:
+
+- `docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md`
+- `docs/workstreams/imui-editor-grade-surface-closure-v1/EDITOR_GRADE_GAP_AUDIT_2026-03-29.md`
+- `docs/workstreams/imui-editor-grade-surface-closure-v1/DRAG_DROP_BOUNDARY_AUDIT_2026-03-29.md`
+- `docs/workstreams/imui-sortable-recipe-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+
+Closeout reading rule on 2026-03-29:
+
+- treat this document as the historical design record for the now-closed editor-grade helper
+  closure lane
+- read the shipped outcome from `CLOSEOUT_AUDIT_2026-03-29.md`
+- read the remaining reusable reorder/sortable policy work from
+  `docs/workstreams/imui-sortable-recipe-v1/DESIGN.md`
+- references below to "remaining gaps" should be read as historical unless they are explicitly
+  called out as follow-on recipe/policy work
+
+Status note (2026-03-29): this lane closed after landing the missing editor composite adapters,
+tooltip/tree helpers, and typed drag/drop seam. The remaining reusable sortable/reorder gap is no
+longer owned here; it is intentionally handed off to `imui-sortable-recipe-v1` so sortable policy
+does not drift back into `fret-ui-kit::imui`.
 
 ## Purpose
 

@@ -1,8 +1,16 @@
 # imui editor-grade surface closure v1 - TODO
 
+Status: closed closeout board
+
+Last updated: 2026-03-29
+
 Tracking doc: `docs/workstreams/imui-editor-grade-surface-closure-v1/DESIGN.md`
 
 Milestones: `docs/workstreams/imui-editor-grade-surface-closure-v1/MILESTONES.md`
+
+Closeout audit:
+
+- `docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md`
 
 Gap audit: `docs/workstreams/imui-editor-grade-surface-closure-v1/EDITOR_GRADE_GAP_AUDIT_2026-03-29.md`
 
@@ -18,6 +26,14 @@ Predecessor closeout:
 
 This board assumes a fearless refactor posture.
 Compatibility shims are explicitly out of scope.
+
+Closeout note (2026-03-29):
+
+- this lane is complete as an editor-grade helper closure pass
+- reusable sortable/reorder policy now belongs to
+  `docs/workstreams/imui-sortable-recipe-v1/`
+- `fret-ui-kit::imui` should keep only the typed drag/drop seam plus geometry signals, not grow a
+  sortable helper layer
 
 ## M0 - Scope freeze and owner split
 
@@ -109,12 +125,12 @@ Current M3 progress:
 
 ## M4 - Tests, proof surfaces, and docs
 
-- [ ] Extend `imui_editor_proof_demo` with at least one composite-heavy inspector scenario.
+- [x] Extend `imui_editor_proof_demo` with at least one composite-heavy inspector scenario.
 - [x] Extend proof/demo coverage with at least one tree/outliner scenario.
 - [x] Add focused tests for any new tooltip/tree/drag-drop surfaces.
 - [x] Update `docs/workstreams/README.md` so the immediate-mode map points to this follow-on lane.
 - [x] Update parity/audit notes if the shipped immediate surface meaningfully changes.
 - [x] Prove that app-owned outliner reorder can be built on the shipped drag/drop seam without
       adding sortable policy to `imui`.
-- [ ] Capture a closeout summary that says which gaps were closed, which were intentionally deferred,
+- [x] Capture a closeout summary that says which gaps were closed, which were intentionally deferred,
       and which owner crate each surviving gap belongs to.
