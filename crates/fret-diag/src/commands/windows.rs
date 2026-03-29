@@ -5,6 +5,26 @@ use serde_json::Value;
 use super::resolve;
 use super::sidecars;
 
+fn bounds_component(bounds: &Value, logical_key: &str, physical_key: &str) -> f64 {
+    bounds
+        .get(logical_key)
+        .and_then(|v| v.as_f64())
+        .or_else(|| bounds.get(physical_key).and_then(|v| v.as_f64()))
+        .unwrap_or(0.0)
+}
+
+fn format_window_bounds(bounds: &Value) -> String {
+    if bounds.is_object() {
+        let x = bounds_component(bounds, "x", "x_px");
+        let y = bounds_component(bounds, "y", "y_px");
+        let ww = bounds_component(bounds, "w", "w_px");
+        let hh = bounds_component(bounds, "h", "h_px");
+        format!("x={x:.1} y={y:.1} w={ww:.1} h={hh:.1}")
+    } else {
+        "null".to_string()
+    }
+}
+
 pub(crate) fn cmd_windows(
     rest: &[String],
     pack_after_run: bool,
@@ -140,15 +160,7 @@ fn print_windows_report(window_map: &Value, window_map_path: &Path, bundle_path:
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
         let bounds = last_seen.get("window_bounds").unwrap_or(&Value::Null);
-        let bounds_str = if bounds.is_object() {
-            let x = bounds.get("x_px").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let y = bounds.get("y_px").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let ww = bounds.get("w_px").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let hh = bounds.get("h_px").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            format!("x={x:.1} y={y:.1} w={ww:.1} h={hh:.1}")
-        } else {
-            "null".to_string()
-        };
+        let bounds_str = format_window_bounds(bounds);
         println!(
             "    - window={} snapshots={} events={} last_frame={} hover_detection={} docking_present={} bounds={}",
             window, snapshots_total, events_total, last_frame, hover, docking, bounds_str
@@ -156,5 +168,24 @@ fn print_windows_report(window_map: &Value, window_map_path: &Path, bundle_path:
     }
     if windows.len() > max {
         println!("    - ... ({} more)", windows.len() - max);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::format_window_bounds;
+
+    #[test]
+    fn windows_report_supports_logical_bounds_keys() {
+        let bounds = json!({ "x": 1.0, "y": 2.0, "w": 300.0, "h": 200.0 });
+        assert_eq!(format_window_bounds(&bounds), "x=1.0 y=2.0 w=300.0 h=200.0");
+    }
+
+    #[test]
+    fn windows_report_supports_physical_bounds_keys() {
+        let bounds = json!({ "x_px": 1.0, "y_px": 2.0, "w_px": 300.0, "h_px": 200.0 });
+        assert_eq!(format_window_bounds(&bounds), "x=1.0 y=2.0 w=300.0 h=200.0");
     }
 }

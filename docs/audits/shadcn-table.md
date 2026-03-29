@@ -100,11 +100,11 @@ current registry implementation in `repo-ref/ui`.
   `fret-ui-shadcn` + UI Gallery, not a `fret-ui` mechanism defect.
 - Pass: the checkbox/table gallery snippet now uses a header cell surface for the select-all
   column instead of bypassing `TableHead` through `table_cell(...)`.
-- Note: the refreshed `ui-gallery-table-docs-smoke` script can still hit a native diagnostics
-  timeout on `bounds_within_window` for the actions heading even when the target `test_id` is
-  present in the captured bundle. The current evidence points to a diagnostics/window-bounds issue
-  (`diag windows` reported a zero-sized window in the timeout bundle), so this is not being treated
-  as a `Table` parity regression.
+- Pass: the former native diagnostics timeout was split into two concrete issues and resolved:
+  `diag windows` was misreporting `window_bounds` for older/logical-key sidecars, and the table docs
+  smoke script was letting `scroll_into_view` succeed on partial intersection before a stricter
+  `bounds_within_window` check. The diagnostics command now reads both bounds-key shapes, and the
+  `Actions` / `RTL` scroll steps now require the headings to land fully within the visible region.
 
 ## Validation
 

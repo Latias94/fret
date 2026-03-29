@@ -97,8 +97,8 @@
         "id": "ui-gallery-table-actions-title"
       },
       "delta_y": -160.0,
-      "require_fully_within_container": false,
-      "require_fully_within_window": false,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
       "padding_px": 16.0,
       "padding_insets_px": {
         "left_px": 16.0,
@@ -144,8 +144,8 @@
         "id": "ui-gallery-table-rtl-title"
       },
       "delta_y": -180.0,
-      "require_fully_within_container": false,
-      "require_fully_within_window": false,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
       "padding_px": 16.0,
       "padding_insets_px": {
         "left_px": 16.0,

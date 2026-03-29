@@ -993,10 +993,22 @@ fn build_window_map_payload_from_json(
         .ok_or_else(|| "missing windows".to_string())?;
 
     fn get_rect(v: &Value) -> Option<Value> {
-        let x = v.get("x_px").and_then(|v| v.as_f64());
-        let y = v.get("y_px").and_then(|v| v.as_f64());
-        let w = v.get("w_px").and_then(|v| v.as_f64());
-        let h = v.get("h_px").and_then(|v| v.as_f64());
+        let x = v
+            .get("x_px")
+            .and_then(|v| v.as_f64())
+            .or_else(|| v.get("x").and_then(|v| v.as_f64()));
+        let y = v
+            .get("y_px")
+            .and_then(|v| v.as_f64())
+            .or_else(|| v.get("y").and_then(|v| v.as_f64()));
+        let w = v
+            .get("w_px")
+            .and_then(|v| v.as_f64())
+            .or_else(|| v.get("w").and_then(|v| v.as_f64()));
+        let h = v
+            .get("h_px")
+            .and_then(|v| v.as_f64())
+            .or_else(|| v.get("h").and_then(|v| v.as_f64()));
         match (x, y, w, h) {
             (Some(x), Some(y), Some(w), Some(h)) => Some(json!({
                 "x_px": x,
@@ -1626,6 +1638,29 @@ mod tests {
         })
     }
 
+    fn sample_v2_bundle_with_window_map_fields_logical_keys() -> Value {
+        json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "events": [{ "kind": "noop" }],
+                "snapshots": [
+                    {
+                        "tick_id": 8,
+                        "frame_id": 43,
+                        "timestamp_unix_ms": 124,
+                        "window_snapshot_seq": 101,
+                        "window": 1,
+                        "scale_factor": 2.0,
+                        "window_bounds": { "x": 4.0, "y": 5.0, "w": 640.0, "h": 480.0 },
+                        "primary_pointer_type": "mouse",
+                        "caps": { "ui_window_hover_detection": "reliable" }
+                    }
+                ]
+            }]
+        })
+    }
+
     fn sample_v2_bundle_with_dock_routing_fields() -> Value {
         json!({
             "schema_version": 2,
@@ -1860,6 +1895,20 @@ mod tests {
         assert_eq!(bounds.get("y_px").and_then(|v| v.as_f64()), Some(2.0));
         assert_eq!(bounds.get("w_px").and_then(|v| v.as_f64()), Some(300.0));
         assert_eq!(bounds.get("h_px").and_then(|v| v.as_f64()), Some(200.0));
+    }
+
+    #[test]
+    fn window_map_accepts_logical_window_bounds_keys() {
+        let bundle = sample_v2_bundle_with_window_map_fields_logical_keys();
+        let map = build_window_map_payload_from_json(&bundle, "bundle.json", 0).unwrap();
+
+        let windows = map["windows"].as_array().unwrap();
+        let last = windows[0]["last_seen"].as_object().unwrap();
+        let bounds = last.get("window_bounds").unwrap().as_object().unwrap();
+        assert_eq!(bounds.get("x_px").and_then(|v| v.as_f64()), Some(4.0));
+        assert_eq!(bounds.get("y_px").and_then(|v| v.as_f64()), Some(5.0));
+        assert_eq!(bounds.get("w_px").and_then(|v| v.as_f64()), Some(640.0));
+        assert_eq!(bounds.get("h_px").and_then(|v| v.as_f64()), Some(480.0));
     }
 
     #[test]

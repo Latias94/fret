@@ -128,4 +128,35 @@ fn table_docs_diag_script_covers_docs_path_and_fret_followups() {
             "table docs diag script should cover the docs path and Fret follow-ups; missing `{needle}`",
         );
     }
+
+    let parsed: serde_json::Value = serde_json::from_str(script).expect("valid table diag script");
+    let steps = parsed["steps"].as_array().expect("steps array");
+    for title_id in [
+        "ui-gallery-table-actions-title",
+        "ui-gallery-table-rtl-title",
+    ] {
+        let step = steps
+            .iter()
+            .find(|step| {
+                step.get("type").and_then(|v| v.as_str()) == Some("scroll_into_view")
+                    && step
+                        .get("target")
+                        .and_then(|target| target.get("id"))
+                        .and_then(|v| v.as_str())
+                        == Some(title_id)
+            })
+            .unwrap_or_else(|| panic!("missing scroll_into_view step for {title_id}"));
+        assert_eq!(
+            step.get("require_fully_within_container")
+                .and_then(|v| v.as_bool()),
+            Some(true),
+            "{title_id} scroll step should keep the heading fully inside the scroll container",
+        );
+        assert_eq!(
+            step.get("require_fully_within_window")
+                .and_then(|v| v.as_bool()),
+            Some(true),
+            "{title_id} scroll step should keep the heading fully inside the window before the strict wait",
+        );
+    }
 }
