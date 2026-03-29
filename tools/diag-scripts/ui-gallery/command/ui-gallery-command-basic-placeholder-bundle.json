@@ -113,6 +113,17 @@
         }
       }
     },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "button",
+          "name": "Close"
+        }
+      }
+    },
     { "type": "capture_bundle", "label": "ui-gallery-command-basic-placeholder" }
   ]
 }

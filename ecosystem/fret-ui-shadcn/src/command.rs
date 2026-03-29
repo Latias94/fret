@@ -3561,6 +3561,7 @@ pub struct CommandDialog {
     entries: Vec<CommandEntry>,
     a11y_label: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
+    show_close_button: bool,
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
     list_viewport_test_id: Option<Arc<str>>,
@@ -3593,6 +3594,7 @@ impl std::fmt::Debug for CommandDialog {
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("show_close_button", &self.show_close_button)
             .field(
                 "input_test_id",
                 &self.input_test_id.as_ref().map(|s| s.as_ref()),
@@ -3651,6 +3653,7 @@ impl CommandDialog {
             entries: items.into_iter().map(CommandEntry::Item).collect(),
             a11y_label: None,
             placeholder: None,
+            show_close_button: true,
             input_test_id: None,
             list_test_id: None,
             list_viewport_test_id: None,
@@ -3703,6 +3706,7 @@ impl CommandDialog {
             entries: command_entries_from_host_commands(cx),
             a11y_label: None,
             placeholder: None,
+            show_close_button: true,
             input_test_id: None,
             list_test_id: None,
             list_viewport_test_id: None,
@@ -3737,6 +3741,11 @@ impl CommandDialog {
 
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn show_close_button(mut self, show_close_button: bool) -> Self {
+        self.show_close_button = show_close_button;
         self
     }
 
@@ -3896,6 +3905,7 @@ impl CommandDialog {
             .a11y_label
             .unwrap_or_else(|| Arc::from("Command palette"));
         let placeholder = self.placeholder;
+        let show_close_button = self.show_close_button;
         let input_test_id = self.input_test_id;
         let list_test_id = self.list_test_id;
         let list_viewport_test_id = self.list_viewport_test_id;
@@ -4134,7 +4144,7 @@ impl CommandDialog {
                 let palette = palette.into_element(cx);
 
                 DialogContent::new(vec![palette])
-                    .show_close_button(false)
+                    .show_close_button(show_close_button)
                     .refine_style(ChromeRefinement::default().p(Space::N0))
                     .a11y_label(a11y_label)
                     .into_element(cx)
@@ -4454,6 +4464,19 @@ mod tests {
             dialog.placeholder.as_deref(),
             Some("Type a command or search...")
         );
+    }
+
+    #[test]
+    fn command_dialog_show_close_button_defaults_to_true_and_can_opt_out() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let query = app.models_mut().insert(String::new());
+
+        let default_dialog = CommandDialog::new(open.clone(), query.clone(), Vec::new());
+        assert!(default_dialog.show_close_button);
+
+        let opt_out_dialog = CommandDialog::new(open, query, Vec::new()).show_close_button(false);
+        assert!(!opt_out_dialog.show_close_button);
     }
 
     #[test]

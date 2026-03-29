@@ -25,7 +25,8 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`command(...)` is the direct visual shell helper. `CommandInput` / `CommandList` stay available for lower-level shell composition and legacy roving lists, but they do not share the cmdk query + active-descendant state machine.",
         "`CommandPalette::new(query, items)` and `.entries(...)` therefore remain the default embedded interactive lane for first-party Fret code when the goal is cmdk-aligned behavior rather than a custom shell.",
-        "`CommandDialog::new(open, query, items)` wraps that palette with dialog lifecycle, input placeholder forwarding, close-on-select behavior, and open-change reason hooks for global command menus.",
+        "`CommandDialog::new(open, query, items)` wraps that palette with dialog lifecycle, input placeholder forwarding, the default new-york close affordance, and open-change reason hooks for global command menus.",
+        "`CommandDialog` keeps the upstream new-york-v4 close button visible by default; opt out with `.show_close_button(false)` when a caller explicitly wants the leaner radix/base dialog surface.",
         "`CommandItem` owns row-level affordances such as `leading_icon(...)`, `shortcut(...)`, `keywords(...)`, `checkmark(...)`, `force_mount(...)`, and `children(...)`.",
         "`CommandItem::children(...)` already covers row-level composability today. The deferred gap is the shared root context that upstream cmdk uses so `CommandInput`, `CommandList`, `CommandEmpty`, and `CommandGroup` can compose without manual query/selection wiring.",
         "`Composable Shell (Fret)` shows the current explicit manual lane: share a query model between `CommandInput` and `CommandList` when you need a custom shell, but keep cmdk-style active-descendant, committed selection, and dialog lifecycle on `CommandPalette` / `CommandDialog`.",

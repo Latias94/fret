@@ -35,9 +35,15 @@ fn command_page_records_shell_vs_cmdk_split_children_contract() {
     );
     assert!(
         source.contains(
-            "`CommandDialog::new(open, query, items)` wraps that palette with dialog lifecycle, input placeholder forwarding, close-on-select behavior, and open-change reason hooks for global command menus."
+            "`CommandDialog::new(open, query, items)` wraps that palette with dialog lifecycle, input placeholder forwarding, the default new-york close affordance, and open-change reason hooks for global command menus."
         ),
-        "src/ui/pages/command.rs should keep CommandDialog's placeholder-forwarding surface explicit"
+        "src/ui/pages/command.rs should keep CommandDialog's default close-affordance surface explicit"
+    );
+    assert!(
+        source.contains(
+            "`CommandDialog` keeps the upstream new-york-v4 close button visible by default; opt out with `.show_close_button(false)` when a caller explicitly wants the leaner radix/base dialog surface."
+        ),
+        "src/ui/pages/command.rs should record the close-button default and explicit opt-out for CommandDialog"
     );
     assert!(
         source.contains(
