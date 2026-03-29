@@ -42,15 +42,18 @@ base examples, and the existing toggle web gates.
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream base Toggle docs path first: `Demo`, `Usage`, `Outline`, `With Text`, `Size`, `Disabled`, and `RTL`.
+- Pass: the gallery now states the layering decision explicitly: existing toggle semantics/chrome gates cover the Radix/Base UI behavior axis, so the remaining work here is docs/public-surface parity rather than a `fret-ui` mechanism fix.
 - Pass: `Children (Fret)` now follows the upstream path as an explicit Fret-only authoring note, so callers can see the landed-element equivalent of JSX children without confusing it with the default copyable lane.
+- Pass: the docs page now keeps the builder-preserving helper lane (`toggle_uncontrolled(cx, ...)` / `toggle(cx, ...)`) as the source-shaped composable-children path while leaving `Toggle::children([...])` as the landed-content follow-up.
 - Pass: `Label Association` remains a focused Fret follow-up after the upstream path because it documents the Fret-specific `control_id(...)` bridge.
+- Pass: the RTL snippet now uses a translated visible label so the gallery stays closer to the upstream base docs teaching surface instead of showing an English-only placeholder.
 - Pass: `API Reference` remains the concise ownership summary after the Fret-specific follow-ups.
 - Pass: this work is docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
-- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_toggle --failure-output final`
-- `cargo test -p fret-ui-shadcn --lib toggle_children_accept_prebuilt_landed_content`
-- `env CARGO_TARGET_DIR=target-codex-fretboard-toggle cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-docs-smoke.json --dir target/fret-diag-toggle-audit --session-auto --timeout-ms 240000 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-toggle cargo run -p fret-ui-gallery`
-- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- `cargo nextest run -p fret-ui-shadcn web_vs_fret_toggle toggle_children_accept_prebuilt_landed_content`
+- `cargo nextest run -p fret-ui-gallery --test toggle_docs_surface`
+- `cargo nextest run -p fret-ui-gallery toggle_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface selected_toggle_snippets_prefer_builder_preserving_helpers toggle_children_snippet_prefers_explicit_root_children_followup toggle_page_uses_typed_doc_sections_for_app_facing_snippets`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - Existing chrome + focus gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`toggle-demo`, `toggle-demo.focus`)
