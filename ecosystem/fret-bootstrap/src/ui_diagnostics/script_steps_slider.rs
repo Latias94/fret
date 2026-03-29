@@ -1,7 +1,56 @@
 use super::*;
 
+fn supports_numeric_set_value(node: &fret_core::SemanticsNode) -> bool {
+    node.actions.set_value
+        && matches!(
+            node.role,
+            fret_core::SemanticsRole::Slider
+                | fret_core::SemanticsRole::SpinButton
+                | fret_core::SemanticsRole::Splitter
+        )
+}
+
+fn is_descendant_of(
+    snapshot: &fret_core::SemanticsSnapshot,
+    descendant: fret_core::NodeId,
+    ancestor: fret_core::NodeId,
+) -> bool {
+    let mut current = Some(descendant);
+    while let Some(node_id) = current {
+        if node_id == ancestor {
+            return true;
+        }
+        current = snapshot
+            .nodes
+            .iter()
+            .find(|node| node.id == node_id)
+            .and_then(|node| node.parent);
+    }
+    false
+}
+
+fn numeric_set_value_target(
+    snapshot: &fret_core::SemanticsSnapshot,
+    selected: &fret_core::SemanticsNode,
+) -> Option<fret_core::NodeId> {
+    if supports_numeric_set_value(selected) {
+        return Some(selected.id);
+    }
+
+    snapshot
+        .nodes
+        .iter()
+        .find(|candidate| {
+            supports_numeric_set_value(candidate)
+                && is_descendant_of(snapshot, candidate.id, selected.id)
+        })
+        .map(|candidate| candidate.id)
+}
+
 pub(super) fn handle_set_slider_value_step(
     svc: &mut UiDiagnosticsService,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     window_bounds: Rect,
     step_index: usize,
@@ -81,6 +130,23 @@ pub(super) fn handle_set_slider_value_step(
                 let target_t = ((value - min) / span).clamp(0.0, 1.0);
 
                 if state.phase == 0 {
+                    if let Some(ui) = ui.as_deref_mut()
+                        && let Some(numeric_target) = numeric_set_value_target(snapshot, node)
+                    {
+                        active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                        fret_ui_app::accessibility_actions::set_value_numeric(
+                            ui,
+                            app,
+                            services,
+                            numeric_target,
+                            value as f64,
+                        );
+                        state.phase = 1;
+                        active.v2_step_state = Some(V2StepState::SetSliderValue(state));
+                        output.request_redraw = true;
+                        return true;
+                    }
+
                     let x = clamp_x(left + width * target_t);
                     let start = center_of_rect_clamped_to_rect(bounds, window_bounds);
                     let start_x = state.last_drag_x.unwrap_or(start.x.0);
@@ -236,4 +302,93 @@ pub(super) fn handle_set_slider_value_step(
     }
 
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::{
+        NodeId, Point, Px, Rect, SemanticsActions, SemanticsNode, SemanticsNodeExtra,
+        SemanticsRole, SemanticsSnapshot, Size,
+    };
+    use slotmap::KeyData;
+
+    fn node_id(id: u64) -> NodeId {
+        NodeId::from(KeyData::from_ffi(id))
+    }
+
+    fn rect() -> Rect {
+        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)))
+    }
+
+    fn semantics_node(
+        id: NodeId,
+        parent: Option<NodeId>,
+        role: SemanticsRole,
+        set_value: bool,
+    ) -> SemanticsNode {
+        SemanticsNode {
+            id,
+            parent,
+            role,
+            bounds: rect(),
+            flags: Default::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            extra: SemanticsNodeExtra::default(),
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions {
+                set_value,
+                ..Default::default()
+            },
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn numeric_set_value_target_keeps_direct_slider_selection() {
+        let slider = semantics_node(node_id(2), None, SemanticsRole::Slider, true);
+        let snapshot = SemanticsSnapshot {
+            nodes: vec![slider.clone()],
+            ..Default::default()
+        };
+
+        assert_eq!(
+            numeric_set_value_target(&snapshot, &slider),
+            Some(slider.id)
+        );
+    }
+
+    #[test]
+    fn numeric_set_value_target_finds_slider_descendant_from_generic_selection() {
+        let root = semantics_node(node_id(1), None, SemanticsRole::Generic, false);
+        let slider = semantics_node(node_id(2), Some(root.id), SemanticsRole::Slider, true);
+        let thumb = semantics_node(node_id(3), Some(slider.id), SemanticsRole::Generic, false);
+        let snapshot = SemanticsSnapshot {
+            nodes: vec![root.clone(), slider.clone(), thumb],
+            ..Default::default()
+        };
+
+        assert_eq!(numeric_set_value_target(&snapshot, &root), Some(slider.id));
+    }
+
+    #[test]
+    fn numeric_set_value_target_ignores_descendants_without_numeric_set_value() {
+        let root = semantics_node(node_id(1), None, SemanticsRole::Generic, false);
+        let generic_child = semantics_node(node_id(2), Some(root.id), SemanticsRole::Generic, true);
+        let snapshot = SemanticsSnapshot {
+            nodes: vec![root.clone(), generic_child],
+            ..Default::default()
+        };
+
+        assert_eq!(numeric_set_value_target(&snapshot, &root), None);
+    }
 }

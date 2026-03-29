@@ -13,12 +13,19 @@ pub fn render(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .range(0.0, 100.0)
                 .step(1.0)
                 .orientation(SliderOrientation::Vertical)
-                .a11y_label("Vertical slider")
-                .refine_layout(LayoutRefinement::default().h_px(Px(176.0)))
+                .refine_layout(LayoutRefinement::default().h_px(Px(160.0)))
                 .test_id_prefix("ui-gallery-slider-vertical")
+                .into_element(cx),
+            shadcn::Slider::new_controllable(cx, None, || vec![25.0])
+                .range(0.0, 100.0)
+                .step(1.0)
+                .orientation(SliderOrientation::Vertical)
+                .refine_layout(LayoutRefinement::default().h_px(Px(160.0)))
+                .test_id_prefix("ui-gallery-slider-vertical-secondary")
                 .into_element(cx),
         ]
     })
+    .gap(Space::N6)
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .items_center()
 }

@@ -58,12 +58,15 @@ used as an extra reference for compound-parts ownership.
 
 - Pass: Exposes slider semantics on each thumb (`SemanticsRole::Slider`) with numeric value, min/max, step, and focusability, matching the Radix/Base UI ownership split more closely than a root-level role would.
 - Pass: The root keeps the overall bounds/test-id/value summary needed for diagnostics and `set_slider_value` automation, while thumb nodes carry the interactive slider role.
+- Pass: The diagnostics `set_slider_value` driver now resolves from the root summary node down to the descendant thumb slider semantics before using numeric accessibility actions, so the existing slider automation gate passes again without changing the shadcn recipe surface.
 
 ### Gallery / docs parity
 
 - Pass: The UI Gallery page now mirrors the upstream docs path first: `Demo`, `Usage`, `Range`, `Multiple Thumbs`, `Vertical`, `Controlled`, `Disabled`, `RTL`, and `API Reference`.
+- Pass: The docs-path snippets now mirror the upstream example shapes more closely: `Range` uses `[25, 50]` with `step(5)`, `Multiple Thumbs` uses `[10, 20, 70]` with `step(10)`, `Vertical` shows the two-slider `h-40` layout, and `Controlled` keeps the upstream label/readout association via `ControlId` + `Label::for_control(...)`.
 - Pass: `Label Association`, `Extras`, and `Notes` stay after the docs path because they are Fret-specific follow-ups rather than upstream shadcn sections.
 - Pass: Stable `ui-gallery-slider-*` root/test-id anchors are restored so the existing diag scripts target the real preview controls again.
+- Pass: A docs-surface screenshot script now captures the docs-path sections so visual/page-order drift is reviewable without manual browsing.
 - Pass: This work is docs/public-surface parity and diagnostics-surface repair, not a mechanism-layer rewrite.
 
 ## Validation
@@ -77,6 +80,8 @@ used as an extra reference for compound-parts ownership.
   - `tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-set-value.json`
   - `tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-range-drag-stability.json`
   - `tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-label-click-focus.json`
+  - `tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-docs-screenshots.json`
+  - The `ui-gallery-slider-set-value.json` gate is green again after the diagnostics driver started preferring descendant slider semantics for numeric `SetValue`.
 
 ## Follow-ups (recommended)
 
