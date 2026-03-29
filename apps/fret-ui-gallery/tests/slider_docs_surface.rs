@@ -152,6 +152,36 @@ fn slider_docs_diag_script_covers_docs_path_sections() {
 }
 
 #[test]
+fn slider_docs_diag_script_is_promoted_in_registry_and_suite() {
+    let registry = include_str!("../../../tools/diag-scripts/index.json");
+    let suite =
+        include_str!("../../../tools/diag-scripts/suites/ui-gallery-slider-docs/suite.json");
+
+    for needle in [
+        "\"id\": \"ui-gallery-slider-docs-screenshots\"",
+        "\"path\": \"tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-docs-screenshots.json\"",
+        "\"ui-gallery-slider-docs\"",
+        "\"slider\"",
+        "\"screenshots\"",
+    ] {
+        assert!(
+            registry.contains(needle),
+            "slider docs diag script should stay promoted in the registry; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "\"kind\": \"diag_script_suite_manifest\"",
+        "\"tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-docs-screenshots.json\"",
+    ] {
+        assert!(
+            suite.contains(needle),
+            "slider docs diag suite should keep the promoted docs screenshot script; missing `{needle}`",
+        );
+    }
+}
+
+#[test]
 fn slider_vertical_upstream_axes_keep_example_height_and_recipe_floor_split() {
     let example = include_str!("../../../repo-ref/ui/apps/v4/examples/radix/slider-vertical.tsx");
     let radix_nova = include_str!("../../../repo-ref/ui/apps/v4/styles/radix-nova/ui/slider.tsx");

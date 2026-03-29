@@ -7703,6 +7703,28 @@
       ]
     },
     {
+      "id": "ui-gallery-slider-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-slider-docs"
+      ],
+      "tags": [
+        "docs",
+        "screenshots",
+        "shadcn",
+        "slider",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Slider page via the left nav search.",
+        "Captures the docs-path sections first (`Demo` through `API Reference`) so docs-surface parity stays reviewable."
+      ]
+    },
+    {
       "id": "ui-gallery-slider-set-value",
       "path": "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-set-value.json",
       "required_capabilities": [],
@@ -7754,6 +7776,28 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-spinner-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/spinner/ui-gallery-spinner-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-spinner-docs"
+      ],
+      "tags": [
+        "docs",
+        "screenshots",
+        "shadcn",
+        "spinner",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Spinner page via the left nav search.",
+        "Captures the upstream docs-path sections first, then the Fret-only `Extras` and `API Reference` follow-ups."
+      ]
     },
     {
       "id": "ui-gallery-switch-docs-label-clicks",
