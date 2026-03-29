@@ -675,6 +675,21 @@ mod tests {
             .unwrap_or_else(|| panic!("missing visual/layout bounds for test_id={test_id}"))
     }
 
+    fn layout_bounds_by_test_id(rendered: &RenderedGalleryPage, test_id: &str) -> Rect {
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after layout");
+        let node = node_by_test_id(snapshot, test_id);
+        rendered
+            .state
+            .ui
+            .debug_node_bounds(node.id)
+            .or(Some(node.bounds))
+            .unwrap_or_else(|| panic!("missing layout bounds for test_id={test_id}"))
+    }
+
     fn visual_bounds_by_test_id_if_present(
         rendered: &RenderedGalleryPage,
         test_id: &str,
@@ -2595,6 +2610,34 @@ mod tests {
                 "expected Button Group page target to render with non-zero bounds: target={target} bounds={bounds:?}"
             );
         }
+    }
+
+    #[test]
+    fn gallery_slider_vertical_examples_keep_upstream_recipe_min_height_floor() {
+        let mut rendered = render_gallery_page(PAGE_SLIDER);
+        scroll_test_id_into_gallery_viewport(
+            &mut rendered,
+            "ui-gallery-slider-vertical-section-content",
+        );
+
+        let primary = layout_bounds_by_test_id(&rendered, "ui-gallery-slider-vertical");
+        let secondary = layout_bounds_by_test_id(&rendered, "ui-gallery-slider-vertical-secondary");
+        let expected_height = 176.0;
+        let epsilon = 1.0;
+
+        for (target, bounds) in [
+            ("ui-gallery-slider-vertical", primary),
+            ("ui-gallery-slider-vertical-secondary", secondary),
+        ] {
+            assert!(
+                (bounds.size.height.0 - expected_height).abs() <= epsilon,
+                "expected Slider vertical example root to keep the upstream `min-h-44` recipe floor even when the docs lane asks for `h-40`: target={target} bounds={bounds:?} expected_height={expected_height} epsilon={epsilon}"
+            );
+        }
+        assert!(
+            (primary.size.height.0 - secondary.size.height.0).abs() <= 0.01,
+            "expected both Slider vertical example roots to clamp to the same recipe floor: primary={primary:?} secondary={secondary:?}"
+        );
     }
 
     #[test]

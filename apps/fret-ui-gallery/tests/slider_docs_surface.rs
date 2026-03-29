@@ -9,12 +9,16 @@ fn slider_page_documents_source_axes_and_children_api_decision() {
     for needle in [
         "repo-ref/ui/apps/v4/content/docs/components/radix/slider.mdx",
         "repo-ref/ui/apps/v4/content/docs/components/base/slider.mdx",
+        "repo-ref/ui/apps/v4/examples/radix/slider-demo.tsx",
+        "repo-ref/ui/apps/v4/examples/radix/slider-vertical.tsx",
         "repo-ref/ui/apps/v4/registry/new-york-v4/ui/slider.tsx",
         "repo-ref/ui/apps/v4/registry/bases/radix/ui/slider.tsx",
         "repo-ref/ui/apps/v4/registry/bases/base/ui/slider.tsx",
+        "The upstream docs surface intentionally splits the top-of-page preview (`[75]`) from the `Usage` code block (`[33]`), so this page mirrors those two lanes instead of normalizing them to one demo value.",
         "Slider already exposes the important authoring surface (`new`, `new_controllable`, range/step/orientation/on_value_commit), so the main parity gap here is usage clarity rather than missing composition APIs.",
         "generic composable children / `compose()` API",
         "Base UI's `Slider.Root/Label/Value/Control/Track/Indicator/Thumb` family is a useful headless reference, but it belongs to a future `fret-ui-kit`-level surface rather than the `fret-ui-shadcn::Slider` recipe.",
+        "Vertical sliders keep the upstream `min-h-44` floor; examples can still pass an explicit height to bound the docs lane, but values below the floor clamp upward unless the caller asks for something taller.",
         "Preview now mirrors the upstream shadcn/Base UI slider docs path first: `Demo`, `Usage`, `Range`, `Multiple Thumbs`, `Vertical`, `Controlled`, `Disabled`, `RTL`, and `API Reference`.",
     ] {
         assert!(
@@ -50,11 +54,19 @@ fn slider_page_documents_source_axes_and_children_api_decision() {
 
 #[test]
 fn slider_snippets_stay_copyable_and_upstream_example_aligned() {
+    let demo = include_str!("../src/ui/snippets/slider/demo.rs");
     let usage = include_str!("../src/ui/snippets/slider/usage.rs");
     let range = include_str!("../src/ui/snippets/slider/range.rs");
     let multiple = include_str!("../src/ui/snippets/slider/multiple.rs");
     let vertical = include_str!("../src/ui/snippets/slider/vertical.rs");
     let controlled = include_str!("../src/ui/snippets/slider/controlled.rs");
+
+    for needle in ["vec![75.0]", ".a11y_label(\"Slider\")"] {
+        assert!(
+            demo.contains(needle),
+            "slider demo snippet should mirror the upstream preview lane; missing `{needle}`",
+        );
+    }
 
     for needle in [
         "use fret::{UiChild, UiCx};",
@@ -137,4 +149,30 @@ fn slider_docs_diag_script_covers_docs_path_sections() {
             "slider docs diag script should cover the docs-path sections; missing `{needle}`",
         );
     }
+}
+
+#[test]
+fn slider_vertical_upstream_axes_keep_example_height_and_recipe_floor_split() {
+    let example = include_str!("../../../repo-ref/ui/apps/v4/examples/radix/slider-vertical.tsx");
+    let radix_nova = include_str!("../../../repo-ref/ui/apps/v4/styles/radix-nova/ui/slider.tsx");
+    let new_york = include_str!("../../../repo-ref/ui/apps/v4/registry/new-york-v4/ui/slider.tsx");
+
+    assert_eq!(
+        example.matches("orientation=\"vertical\"").count(),
+        2,
+        "upstream radix slider vertical example should keep the two-slider authoring shape",
+    );
+    assert_eq!(
+        example.matches("className=\"h-40\"").count(),
+        2,
+        "upstream radix slider vertical example should keep caller-owned `h-40` on both sliders",
+    );
+    assert!(
+        radix_nova.contains("data-vertical:min-h-40"),
+        "upstream radix-nova slider recipe should keep the docs/example lane vertical floor",
+    );
+    assert!(
+        new_york.contains("data-[orientation=vertical]:min-h-44"),
+        "upstream new-york-v4 slider recipe should keep the registry/default-lane vertical floor",
+    );
 }

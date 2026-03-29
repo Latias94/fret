@@ -412,6 +412,9 @@ fn slider_element<H: UiHost>(
                 .metric_by_key("component.slider.thumb_size")
                 .unwrap_or(Px(16.0))
         });
+        let vertical_min_height = theme
+            .metric_by_key("component.slider.vertical_min_height")
+            .unwrap_or(Px(176.0));
 
         let track_bg = theme
             .color_by_key("muted")
@@ -451,9 +454,10 @@ fn slider_element<H: UiHost>(
             radix_slider::SliderOrientation::Horizontal => {
                 LayoutRefinement::default().relative().w_full()
             }
-            radix_slider::SliderOrientation::Vertical => {
-                LayoutRefinement::default().relative().h_full()
-            }
+            radix_slider::SliderOrientation::Vertical => LayoutRefinement::default()
+                .relative()
+                .h_full()
+                .min_h(vertical_min_height),
         };
         let mut root_layout = decl_style::layout_style(&theme, default_layout.merge(layout));
         root_layout.overflow = fret_ui::element::Overflow::Visible;
@@ -1415,6 +1419,7 @@ mod tests {
     };
     use fret_runtime::FrameId;
     use fret_ui::element::ElementKind;
+    use fret_ui::elements;
     use fret_ui::tree::UiTree;
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 
@@ -1435,6 +1440,54 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some(test_id))
             .unwrap_or_else(|| panic!("missing semantics test_id={test_id}"))
             .id
+    }
+
+    fn render_vertical_slider_root_height(requested_height: Px) -> Px {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+        let model = app.models_mut().insert(vec![50.0]);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-slider-vertical-root-height",
+            |cx| {
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .orientation(radix_slider::SliderOrientation::Vertical)
+                        .refine_layout(LayoutRefinement::default().h_px(requested_height))
+                        .test_id("slider")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let slider_node = node_id_by_test_id(&ui, "slider");
+        ui.debug_node_bounds(slider_node)
+            .expect("slider bounds")
+            .size
+            .height
     }
 
     #[test]
@@ -1921,6 +1974,111 @@ mod tests {
             range_bounds.size.height.0 > 1.0,
             "expected range height > 1px, got {:?}",
             range_bounds.size.height
+        );
+    }
+
+    #[test]
+    fn slider_vertical_root_keeps_upstream_min_height_floor() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(240.0)),
+        );
+        let model = app.models_mut().insert(vec![50.0]);
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "shadcn-slider-vertical-min-height-floor",
+            |cx| {
+                Slider::new(model.clone())
+                    .range(0.0, 100.0)
+                    .orientation(radix_slider::SliderOrientation::Vertical)
+                    .into_element(cx)
+            },
+        );
+
+        let ElementKind::Semantics(props) = &element.kind else {
+            panic!("expected slider root to render as a semantics wrapper");
+        };
+
+        assert_eq!(
+            props.layout.size.min_height,
+            Some(Length::Px(Px(176.0))),
+            "vertical slider root should keep the upstream min-h-44 floor",
+        );
+    }
+
+    #[test]
+    fn slider_vertical_explicit_height_merges_with_upstream_floor_in_root_layout() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(240.0)),
+        );
+        let model = app.models_mut().insert(vec![50.0]);
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "shadcn-slider-vertical-height-floor-merge",
+            |cx| {
+                Slider::new(model.clone())
+                    .range(0.0, 100.0)
+                    .orientation(radix_slider::SliderOrientation::Vertical)
+                    .refine_layout(LayoutRefinement::default().h_px(Px(160.0)))
+                    .into_element(cx)
+            },
+        );
+
+        let ElementKind::Semantics(props) = &element.kind else {
+            panic!("expected slider root to render as a semantics wrapper");
+        };
+
+        assert_eq!(
+            props.layout.size.height,
+            Length::Px(Px(160.0)),
+            "vertical slider should preserve caller-authored explicit height in the layout request",
+        );
+        assert_eq!(
+            props.layout.size.min_height,
+            Some(Length::Px(Px(176.0))),
+            "vertical slider should keep the upstream min-h-44 floor alongside caller height",
+        );
+    }
+
+    #[test]
+    fn slider_vertical_layout_uses_upstream_floor_as_minimum_not_fixed_height() {
+        let constrained_height = render_vertical_slider_root_height(Px(160.0));
+        assert!(
+            (constrained_height.0 - 176.0).abs() < 0.01,
+            "vertical slider should clamp a smaller caller height up to the upstream min-h-44 floor; got {:?}",
+            constrained_height,
+        );
+
+        let expanded_height = render_vertical_slider_root_height(Px(220.0));
+        assert!(
+            (expanded_height.0 - 220.0).abs() < 0.01,
+            "vertical slider should honor caller heights that exceed the upstream floor; got {:?}",
+            expanded_height,
         );
     }
 
