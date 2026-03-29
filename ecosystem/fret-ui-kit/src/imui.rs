@@ -40,6 +40,7 @@ mod response;
 mod select_controls;
 mod slider_controls;
 mod text_controls;
+mod tooltip_overlay;
 
 use containers::{
     grid_container_element, horizontal_container_element, scroll_container_element,
@@ -66,7 +67,7 @@ use interaction_runtime::{
 pub use options::{
     ButtonOptions, GridOptions, HorizontalOptions, InputTextOptions, MenuItemOptions,
     PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectOptions, SliderOptions,
-    SwitchOptions, TextAreaOptions, VerticalOptions,
+    SwitchOptions, TextAreaOptions, TooltipOptions, VerticalOptions,
 };
 use popup_store::{drop_popup_scope_for_id, with_popup_store_for_id};
 pub use response::{
@@ -1052,6 +1053,39 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
         popup_overlay::begin_popup_modal_with_options(self, id, trigger, options, f)
+    }
+
+    fn tooltip_text(&mut self, id: &str, trigger: ResponseExt, text: impl Into<Arc<str>>) -> bool {
+        self.tooltip_text_with_options(id, trigger, text, TooltipOptions::default())
+    }
+
+    fn tooltip_text_with_options(
+        &mut self,
+        id: &str,
+        trigger: ResponseExt,
+        text: impl Into<Arc<str>>,
+        options: TooltipOptions,
+    ) -> bool {
+        tooltip_overlay::tooltip_text_with_options(self, id, trigger, text.into(), options)
+    }
+
+    fn tooltip(
+        &mut self,
+        id: &str,
+        trigger: ResponseExt,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        self.tooltip_with_options(id, trigger, TooltipOptions::default(), f)
+    }
+
+    fn tooltip_with_options(
+        &mut self,
+        id: &str,
+        trigger: ResponseExt,
+        options: TooltipOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        tooltip_overlay::tooltip_with_options(self, id, trigger, options, f)
     }
 
     fn menu_separator(&mut self) {

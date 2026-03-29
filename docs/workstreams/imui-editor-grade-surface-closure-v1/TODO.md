@@ -40,13 +40,26 @@ Compatibility shims are explicitly out of scope.
 
 ## M2 - Close generic editor-shell helper gaps
 
-- [ ] Add a first-class immediate tooltip helper on `fret-ui-kit::imui`.
+- [x] Add a first-class immediate tooltip helper on `fret-ui-kit::imui`.
 - [ ] Add a generic collapsing-header / tree-node immediate family on `fret-ui-kit::imui`.
 - [ ] Write explicit ID guidance for tree/outliner authoring so ImGui/egui ports do not invent
       ad hoc naming tricks.
 - [ ] Decide whether any currently requested shell-like helper is actually docking/workspace-owned
       and should be routed out of this workstream.
 - [ ] Keep `fret-imui` itself free of these richer policy helpers.
+
+Current M2 progress:
+
+- `fret-ui-kit::imui` now exposes `tooltip_text(...)`, `tooltip_text_with_options(...)`,
+  `tooltip(...)`, and `tooltip_with_options(...)`.
+- `TooltipOptions` now records placement, estimated size, window margin, hoverable-content policy,
+  delay overrides, and `test_id`.
+- The helper stays in `fret-ui-kit::imui` and reuses the existing tooltip/overlay substrate instead
+  of adding a second tooltip state machine or widening `fret-imui`.
+- Proof/demo coverage now includes tooltip usage on the editor proof controls in
+  `apps/fret-examples/src/imui_editor_proof_demo.rs`.
+- Focused tooltip smoke coverage now lives in
+  `ecosystem/fret-ui-kit/tests/imui_tooltip_smoke.rs`.
 
 ## M3 - Evaluate drag/drop immediate closure
 

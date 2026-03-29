@@ -640,21 +640,46 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                     let controls = fret_ui_kit::ui::h_flex_build(move |cx, out| {
                         fret_imui::imui_build(cx, out, |ui| {
-                            if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
+                            let reset = <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
                                 ui,
                                 "Reset layout",
-                            )
-                            .clicked()
-                            {
+                            );
+                            let _ = ui.tooltip_text_with_options(
+                                "imui-editor-proof.controls.reset-layout.tooltip",
+                                reset,
+                                "Restore the canonical dock graph for this proof window.",
+                                fret_ui_kit::imui::TooltipOptions {
+                                    open_delay_frames_override: Some(0),
+                                    close_delay_frames_override: Some(0),
+                                    test_id: Some(Arc::from(
+                                        "imui-editor-proof.controls.reset-layout.tooltip",
+                                    )),
+                                    ..Default::default()
+                                },
+                            );
+                            if reset.clicked() {
                                 reset_dock_graph(ui.cx_mut().app, window);
                                 dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
                             }
-                            if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
+                            let recenter =
+                                <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
                                 ui,
                                 "Center floatings",
-                            )
-                            .clicked()
-                            {
+                            );
+                            let _ = ui.tooltip_text_with_options(
+                                "imui-editor-proof.controls.center-floatings.tooltip",
+                                recenter,
+                                "Recenter in-window floating panels without resetting content state.",
+                                fret_ui_kit::imui::TooltipOptions {
+                                    open_delay_frames_override: Some(0),
+                                    close_delay_frames_override: Some(0),
+                                    test_id: Some(Arc::from(
+                                        "imui-editor-proof.controls.center-floatings.tooltip",
+                                    )),
+                                    ..Default::default()
+                                },
+                            );
+                            if recenter.clicked() {
                                 dock_runtime::recenter_in_window_floatings(ui.cx_mut().app, window);
                             }
                         });

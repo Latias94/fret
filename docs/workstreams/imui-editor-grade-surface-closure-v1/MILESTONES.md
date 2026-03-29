@@ -59,7 +59,7 @@ Exit gates:
 
 ## Phase C - Generic editor-shell helper closure
 
-Status: Planned
+Status: In progress
 
 Goal:
 
@@ -71,6 +71,20 @@ Deliverables:
 - a first-class collapsing/tree immediate family,
 - explicit authoring guidance for stable IDs in tree/outliner scenarios,
 - owner decisions for any shell-like helper that should be routed to docking/workspace instead.
+
+Current landed slice:
+
+- `fret-ui-kit::imui` now exposes a first-class tooltip helper family:
+  `tooltip_text(...)`, `tooltip_text_with_options(...)`, `tooltip(...)`, and
+  `tooltip_with_options(...)`,
+- the new helper is owned by `fret-ui-kit::imui` rather than `fret-imui`,
+- `TooltipOptions` captures the first stable tooltip policy surface without introducing
+  compatibility aliases,
+- the implementation reuses the existing tooltip/overlay substrate instead of adding a parallel
+  immediate-only tooltip runtime,
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now demonstrates tooltip authoring on the
+  editor proof controls,
+- and `ecosystem/fret-ui-kit/tests/imui_tooltip_smoke.rs` now locks the new authoring surface.
 
 Exit gates:
 
