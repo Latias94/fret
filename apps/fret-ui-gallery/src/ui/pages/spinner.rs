@@ -20,16 +20,19 @@ pub(super) fn preview_spinner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Spinner::new()` mirrors the upstream leaf spinner with the default loader icon, intrinsic 16px box, and continuous spin.",
         "The default icon, current-color inheritance, size-4 box, and spin animation remain recipe-owned because the upstream component source defines those defaults on the spinner itself.",
         "Spinner now exposes status-style loading semantics (`role=status` equivalent with polite live-region behavior) instead of pretending to be a numeric progress bar.",
+        "Upstream docs/source axes: `repo-ref/ui/apps/v4/content/docs/components/radix/spinner.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/spinner.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-{demo,custom,size,button,badge,input-group,empty}.tsx`, and `repo-ref/ui/apps/v4/examples/base/spinner-rtl.tsx`.",
+        "Secondary shadcn headless references: `repo-ref/ui/apps/v4/registry/bases/radix/ui/spinner.tsx`, `repo-ref/ui/apps/v4/registry/bases/base/ui/spinner.tsx`, `repo-ref/ui/apps/v4/registry/bases/radix/examples/spinner-example.tsx`, and `repo-ref/ui/apps/v4/registry/bases/base/examples/spinner-example.tsx` all keep Spinner as a leaf `svg` recipe plus host-owned slot composition.",
+        "Neither `repo-ref/primitives` nor `repo-ref/base-ui` defines a dedicated Spinner primitive, so this pass did not identify a missing `fret-ui` mechanism bug.",
         "`Button::leading_children(...)` / `trailing_children(...)` are the preferred Fret equivalent of the upstream `Spinner data-icon=\"inline-start|inline-end\"` composition story.",
         "Custom icon choice (`icon(...)`), explicit size (`refine_layout(...)`), and optional color (`color(...)`) remain caller-owned refinements; if your app wants a different default glyph, wrap `Spinner::new().icon(...)` in a local helper instead of widening the leaf API.",
         "`speed(...)` stays a focused Fret follow-up and is documented under `Extras`, not the upstream docs path.",
         "Button, badge, and input-group spacing stay owned by those host recipes rather than the spinner itself.",
-        "Spinner is a visual leaf primitive; Button/Badge/InputGroup already cover composition through host-owned slots, so no generic `compose()` / children API is needed on Spinner itself.",
+        "Spinner is a visual leaf primitive; Button/Badge/InputGroup already cover composition through host-owned slots, so no extra generic `compose()` or composable children API is needed here.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .test_id_prefix("ui-gallery-spinner-api-reference")
-        .description("Public surface summary and ownership notes.");
+        .description("Public surface summary, source axes, and ownership notes.");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("Default top-of-page preview matching the upstream spinner item example.")
         .test_id_prefix("ui-gallery-spinner-demo")
@@ -77,7 +80,7 @@ pub(super) fn preview_spinner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Spinner docs path first: Demo, Usage, Customization, Size, Button, Badge, Input Group, Empty, RTL, then keeps `Extras` and `API Reference` as focused Fret follow-ups.",
+            "Preview mirrors the shadcn Spinner docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Customization`, `Size`, `Button`, `Badge`, `Input Group`, `Empty`, `RTL`, then keeps Fret-only `Extras` and `API Reference` as focused follow-ups.",
         ),
         vec![
             demo,

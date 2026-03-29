@@ -1,3 +1,5 @@
+//! Keep `ui-gallery-spinner-*` `test_id`s stable: diag scripts depend on them.
+
 pub mod badges;
 pub mod buttons;
 pub mod customization;
