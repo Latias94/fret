@@ -32,6 +32,7 @@
     "tools/diag-scripts/ui-gallery-chart-accessibility-layer-keyboard.json",
     "tools/diag-scripts/ui-gallery-checkbox-invalid-code-tab-scroll-range.json",
     "tools/diag-scripts/ui-gallery-collapsible-basic-double-click-close.json",
+    "tools/diag-scripts/ui-gallery-collapsible-docs-smoke.json",
     "tools/diag-scripts/ui-gallery-collapsible-demo-first-open-height.json",
     "tools/diag-scripts/ui-gallery-collapsible-demo-repository-list-shows-items.json",
     "tools/diag-scripts/ui-gallery-collapsible-file-tree-open-components-ui-shows-button.json",

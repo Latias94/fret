@@ -4600,6 +4600,22 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-collapsible-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": [
+        "Navigates to the Collapsible page.",
+        "Verifies the docs-path sections plus the Notes follow-up are present.",
+        "Captures a bounded bundle for docs-surface triage."
+      ]
+    },
+    {
       "id": "ui-gallery-collapsible-file-tree-open-components-ui-shows-button",
       "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-file-tree-open-components-ui-shows-button.json",
       "required_capabilities": [

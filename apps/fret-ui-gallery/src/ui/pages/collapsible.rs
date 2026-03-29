@@ -17,14 +17,28 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Collapsible::new(Model<bool>)` and `Collapsible::uncontrolled(default_open)` cover the documented controlled and uncontrolled authoring paths.",
         "`shadcn::CollapsibleRoot`, `shadcn::CollapsibleTriggerPart`, and `shadcn::CollapsibleContentPart` provide the curated composable children lane; `shadcn::raw::collapsible::primitives::*` remains the explicit source-alignment escape hatch.",
         "The top-level `shadcn::Collapsible` wrapper stays a compact Fret-first builder for dense editor UIs, while the parts aliases keep the official shadcn children composition copyable on the curated facade.",
+        "`CollapsibleTriggerPart::as_child(true)` keeps the official trigger-as-child lane copyable on the curated facade, while the compact wrapper still exposes the dense editor-friendly trigger/content builder.",
         "The `Demo` section now mirrors the official shadcn `@peduarte starred 3 repositories` example instead of the previous base-style order-details card.",
         "Disclosure state, trigger semantics, and measured open/close motion remain recipe/primitive-owned; surrounding width, gap, and card/layout constraints remain caller-owned.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
+    ]);
+    let notes = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/collapsible.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/collapsible.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/collapsible.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/collapsible-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/{collapsible-basic,collapsible-settings,collapsible-file-tree,collapsible-rtl}.tsx`, `repo-ref/primitives/packages/react/collapsible/src/collapsible.tsx`, `repo-ref/base-ui/packages/react/src/collapsible/root/CollapsibleRoot.tsx`, `repo-ref/base-ui/packages/react/src/collapsible/trigger/CollapsibleTrigger.tsx`, and `repo-ref/base-ui/packages/react/src/collapsible/panel/CollapsiblePanel.tsx`.",
+        "Preview mirrors the shadcn/base Collapsible docs path first after skipping `Installation`: `Demo`, `Usage`, `Controlled State`, `Basic`, `Settings Panel`, `File Tree`, `RTL`, and `API Reference`.",
+        "`Demo` follows the current `repo-ref/ui/apps/v4/registry/new-york-v4/examples/collapsible-demo.tsx` repository-list surface, while `Basic`, `Settings Panel`, `File Tree`, and `RTL` track the base docs examples under `repo-ref/ui/apps/v4/examples/base/`.",
+        "`shadcn::Collapsible` remains the compact Fret-first builder for the common trigger/content lane, while `shadcn::CollapsibleRoot`, `shadcn::CollapsibleTriggerPart`, and `shadcn::CollapsibleContentPart` cover the copyable composable children lane on the curated facade.",
+        "A broader generic `Collapsible::children([...])` / `compose()` root API is not currently warranted here: Collapsible only needs trigger/content, and the typed parts lane plus `shadcn::raw::collapsible::primitives::*` already cover the upstream nested composition / `asChild` story without widening the default recipe surface.",
+        "Radix Primitives and Base UI agree on the relevant semantics axis here: controllable/uncontrolled open state, trigger-expanded/controls relationships, and measured panel lifecycle. Those outcomes are already handled in `fret-ui-kit` / `fret-ui-shadcn`, so the remaining work here is docs/public-surface alignment rather than a `fret-ui` mechanism bug.",
+        "Keep width, gap, and card layout caller-owned when the upstream example does; the recipe owns disclosure semantics, trigger/content wiring, and the measured open/close motion substrate.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .test_id_prefix("ui-gallery-collapsible-api-reference")
         .description("Public surface summary and ownership notes.");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .title_test_id("ui-gallery-section-notes-title")
+        .test_id_prefix("ui-gallery-collapsible-notes")
+        .description("Parity notes, source axes, and the current children-API decision.");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("Official shadcn repository-list demo with `Trigger(asChild)` and a composable content section.")
         .test_id_prefix("ui-gallery-collapsible-demo")
@@ -58,7 +72,7 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Collapsible docs path first: Demo, Usage, Controlled State, Basic, Settings Panel, File Tree, RTL, and API Reference. The lead demo now follows the official repository-list example, while the usage section keeps the composable children API on the curated facade.",
+            "Preview mirrors the shadcn Collapsible docs path first: Demo, Usage, Controlled State, Basic, Settings Panel, File Tree, RTL, and API Reference. The lead demo follows the current repository-list example, the usage section keeps the composable children API on the curated facade, and `Notes` records the source axes plus the current children-API decision.",
         ),
         vec![
             demo,
@@ -69,6 +83,7 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             file_tree,
             rtl,
             api_reference,
+            notes,
         ],
     );
 
