@@ -53,6 +53,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     shadcn::CommandDialog::new(open.clone(), query.clone(), Vec::new())
         .entries(entries)
+        .placeholder("Type a command or search...")
         .empty_text("No results found.")
         .test_id_input("ui-gallery-command-groups-input")
         .list_test_id("ui-gallery-command-groups-listbox")

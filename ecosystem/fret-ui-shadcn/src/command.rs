@@ -3560,6 +3560,7 @@ pub struct CommandDialog {
     query: Model<String>,
     entries: Vec<CommandEntry>,
     a11y_label: Option<Arc<str>>,
+    placeholder: Option<Arc<str>>,
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
     list_viewport_test_id: Option<Arc<str>>,
@@ -3588,6 +3589,10 @@ impl std::fmt::Debug for CommandDialog {
             .field("query", &"<model>")
             .field("entries_len", &self.entries.len())
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field(
+                "placeholder",
+                &self.placeholder.as_ref().map(|s| s.as_ref()),
+            )
             .field(
                 "input_test_id",
                 &self.input_test_id.as_ref().map(|s| s.as_ref()),
@@ -3645,6 +3650,7 @@ impl CommandDialog {
             query,
             entries: items.into_iter().map(CommandEntry::Item).collect(),
             a11y_label: None,
+            placeholder: None,
             input_test_id: None,
             list_test_id: None,
             list_viewport_test_id: None,
@@ -3696,6 +3702,7 @@ impl CommandDialog {
             query,
             entries: command_entries_from_host_commands(cx),
             a11y_label: None,
+            placeholder: None,
             input_test_id: None,
             list_test_id: None,
             list_viewport_test_id: None,
@@ -3725,6 +3732,11 @@ impl CommandDialog {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
         self
     }
 
@@ -3883,6 +3895,7 @@ impl CommandDialog {
         let a11y_label = self
             .a11y_label
             .unwrap_or_else(|| Arc::from("Command palette"));
+        let placeholder = self.placeholder;
         let input_test_id = self.input_test_id;
         let list_test_id = self.list_test_id;
         let list_viewport_test_id = self.list_viewport_test_id;
@@ -4079,6 +4092,10 @@ impl CommandDialog {
                     .disable_pointer_selection(disable_pointer_selection)
                     .empty_text(empty_text)
                     .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h));
+
+                if let Some(placeholder) = placeholder.as_ref() {
+                    palette = palette.placeholder(placeholder.clone());
+                }
 
                 if close_on_select {
                     palette = palette.pending_dispatch(pending_dispatch_cell.clone());
@@ -4422,6 +4439,21 @@ mod tests {
         assert!(dialog.on_open_change.is_some());
         assert!(dialog.on_open_change_with_reason.is_some());
         assert!(dialog.on_open_change_complete.is_some());
+    }
+
+    #[test]
+    fn command_dialog_placeholder_builder_sets_placeholder() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let query = app.models_mut().insert(String::new());
+
+        let dialog =
+            CommandDialog::new(open, query, Vec::new()).placeholder("Type a command or search...");
+
+        assert_eq!(
+            dialog.placeholder.as_deref(),
+            Some("Type a command or search...")
+        );
     }
 
     #[test]
