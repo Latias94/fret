@@ -1519,16 +1519,15 @@ mod tests {
                 r.size.width.0 > 0.0 && r.size.height.0 > 0.0,
                 "expected non-degenerate selection rects, got {r:?}"
             );
-            if let Some(p) = prev {
-                if (p.origin.y.0 - r.origin.y.0).abs() < 1e-3
-                    && (p.size.height.0 - r.size.height.0).abs() < 1e-3
-                {
-                    let p_end = p.origin.x.0 + p.size.width.0;
-                    assert!(
-                        r.origin.x.0 + 1e-3 >= p_end,
-                        "expected coalesced selection rects to be non-overlapping on the same line: prev={p:?} next={r:?}"
-                    );
-                }
+            if let Some(p) = prev
+                && (p.origin.y.0 - r.origin.y.0).abs() < 1e-3
+                && (p.size.height.0 - r.size.height.0).abs() < 1e-3
+            {
+                let p_end = p.origin.x.0 + p.size.width.0;
+                assert!(
+                    r.origin.x.0 + 1e-3 >= p_end,
+                    "expected coalesced selection rects to be non-overlapping on the same line: prev={p:?} next={r:?}"
+                );
             }
             prev = Some(*r);
         }

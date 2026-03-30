@@ -185,7 +185,7 @@ pub(super) fn update_hovered_node_pointer_move_action_host(
         .unwrap_or(6.0);
     let view = host
         .models_mut()
-        .read(view_state, |state| view_from_state(state))
+        .read(view_state, view_from_state)
         .ok()
         .unwrap_or_default();
 

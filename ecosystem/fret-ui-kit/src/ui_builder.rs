@@ -482,10 +482,10 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
                 left,
             } = paddings.into();
             let mut padding = c.padding.unwrap_or_default();
-            padding.top = Some(top).into();
-            padding.right = Some(right).into();
-            padding.bottom = Some(bottom).into();
-            padding.left = Some(left).into();
+            padding.top = Some(top);
+            padding.right = Some(right);
+            padding.bottom = Some(bottom);
+            padding.left = Some(left);
             c.padding = Some(padding);
             c
         })

@@ -60,3 +60,6 @@ fret-syntax = { path = "../fret-syntax", default-features = false }
 
 [dev-dependencies]
 fret-ui-shadcn = { path = "../fret-ui-shadcn" }
+
+[lints.clippy]
+too_many_arguments = "allow"

@@ -980,11 +980,10 @@ mod tests {
             return element.semantics_decoration.as_ref().and_then(|d| d.role);
         }
 
-        if let ElementKind::Semantics(props) = &element.kind {
-            if props.test_id.as_deref() == Some(expected) {
+        if let ElementKind::Semantics(props) = &element.kind
+            && props.test_id.as_deref() == Some(expected) {
                 return Some(props.role);
             }
-        }
 
         element
             .children

@@ -102,6 +102,12 @@ impl std::fmt::Debug for Collapsible {
     }
 }
 
+impl Default for Collapsible {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Collapsible {
     pub fn new() -> Self {
         Self {

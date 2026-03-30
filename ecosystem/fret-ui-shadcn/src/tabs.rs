@@ -625,7 +625,7 @@ fn tabs_shared_indicator<H: UiHost>(
             // - vertical: `-right-1` (4px)
             //
             // Extend the indicator canvas so we can paint into that extra area.
-            let outset = indicator_line_outset_override.unwrap_or_else(|| match orientation {
+            let outset = indicator_line_outset_override.unwrap_or(match orientation {
                 TabsOrientation::Horizontal => Px(5.0),
                 TabsOrientation::Vertical => Px(4.0),
             });
@@ -2691,13 +2691,11 @@ impl Tabs {
                     let (switched, exiting_values) =
                         cx.keyed_slot_state("content_presence", TabsContentPresenceRuntime::default, |st| {
                             let switched = st.active_value.is_some() && st.active_value != active_value;
-                            if switched {
-                                if let Some(prev) = st.active_value.take() {
-                                    if !st.exiting_values.iter().any(|v| v == &prev) {
+                            if switched
+                                && let Some(prev) = st.active_value.take()
+                                    && !st.exiting_values.iter().any(|v| v == &prev) {
                                         st.exiting_values.push(prev);
                                     }
-                                }
-                            }
 
                             st.active_value = active_value.clone();
                             if let Some(v) = active_value.as_ref() {
@@ -2755,8 +2753,8 @@ impl Tabs {
                         }
                     }
 
-                    if let Some(active_value) = active_value.as_ref() {
-                        if let Some(content) = content_by_value.remove(active_value.as_ref()) {
+                    if let Some(active_value) = active_value.as_ref()
+                        && let Some(content) = content_by_value.remove(active_value.as_ref()) {
                             let labelled_by_element = selected_tab_element.get();
                             let active_value = active_value.clone();
 
@@ -2782,7 +2780,6 @@ impl Tabs {
                             });
                             stacked_panels.push(panel);
                         }
-                    }
 
                     if !prune.is_empty() {
                         cx.keyed_slot_state("content_presence", TabsContentPresenceRuntime::default, |st| {
@@ -2930,13 +2927,10 @@ mod tests {
         el: &'a AnyElement,
         test_id: &str,
     ) -> Option<&'a AnyElement> {
-        match &el.kind {
-            fret_ui::element::ElementKind::Pressable(props) => {
-                if props.a11y.test_id.as_deref() == Some(test_id) {
-                    return Some(el);
-                }
+        if let fret_ui::element::ElementKind::Pressable(props) = &el.kind {
+            if props.a11y.test_id.as_deref() == Some(test_id) {
+                return Some(el);
             }
-            _ => {}
         }
         el.children
             .iter()
@@ -2995,9 +2989,9 @@ mod tests {
                 .into_element(cx)
         });
 
-        fn find_tab_panel_semantics<'a>(
-            el: &'a AnyElement,
-        ) -> Option<&'a fret_ui::element::SemanticsProps> {
+        fn find_tab_panel_semantics(
+            el: &AnyElement,
+        ) -> Option<&fret_ui::element::SemanticsProps> {
             match &el.kind {
                 fret_ui::element::ElementKind::Semantics(props)
                     if props.role == SemanticsRole::TabPanel =>
@@ -3073,7 +3067,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -3135,7 +3129,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -3227,7 +3221,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let mut render = || {
             let root = fret_ui::declarative::render_root(
@@ -3291,13 +3285,10 @@ mod tests {
             el: &'a AnyElement,
             test_id: &str,
         ) -> Option<&'a PressableProps> {
-            match &el.kind {
-                fret_ui::element::ElementKind::Pressable(props) => {
-                    if props.a11y.test_id.as_deref() == Some(test_id) {
-                        return Some(props);
-                    }
+            if let fret_ui::element::ElementKind::Pressable(props) = &el.kind {
+                if props.a11y.test_id.as_deref() == Some(test_id) {
+                    return Some(props);
                 }
-                _ => {}
             }
             el.children
                 .iter()
@@ -3356,7 +3347,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let model = app.models_mut().insert(Some(Arc::from("alpha")));
 
         let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
@@ -3366,13 +3357,10 @@ mod tests {
             el: &'a AnyElement,
             test_id: &str,
         ) -> Option<&'a PressableProps> {
-            match &el.kind {
-                fret_ui::element::ElementKind::Pressable(props) => {
-                    if props.a11y.test_id.as_deref() == Some(test_id) {
-                        return Some(props);
-                    }
+            if let fret_ui::element::ElementKind::Pressable(props) = &el.kind {
+                if props.a11y.test_id.as_deref() == Some(test_id) {
+                    return Some(props);
                 }
-                _ => {}
             }
             el.children
                 .iter()
@@ -3720,7 +3708,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(560.0), Px(520.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -3778,7 +3766,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let _root = render(
             &mut ui,
@@ -3832,7 +3820,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let _root = render_composable(
             &mut ui,
@@ -3886,7 +3874,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let _root = render(
             &mut ui,
@@ -3953,7 +3941,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let _root = render_uncontrolled(
             &mut ui,
@@ -4068,7 +4056,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -4151,7 +4139,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -4235,7 +4223,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -4309,7 +4297,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -4397,7 +4385,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -4479,7 +4467,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -4572,7 +4560,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -4660,7 +4648,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -4870,7 +4858,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render(
             &mut ui,
@@ -4952,11 +4940,11 @@ mod tests {
             .expect("tab panel");
         assert_eq!(panel.label.as_deref(), Some("Alpha"));
         assert!(
-            panel.labelled_by.iter().any(|id| *id == selected_tab.id),
+            panel.labelled_by.contains(&selected_tab.id),
             "tabpanel should be labelled by selected tab"
         );
         assert!(
-            selected_tab.controls.iter().any(|id| *id == panel.id),
+            selected_tab.controls.contains(&panel.id),
             "selected tab should control the active tabpanel"
         );
     }
@@ -4973,7 +4961,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let alpha_content_id: Cell<Option<GlobalElementId>> = Cell::new(None);
 
@@ -5027,7 +5015,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let alpha_content_id: Cell<Option<GlobalElementId>> = Cell::new(None);
 
@@ -5085,7 +5073,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let alpha_content_id: Cell<Option<GlobalElementId>> = Cell::new(None);
         let beta_content_id: Cell<Option<GlobalElementId>> = Cell::new(None);
@@ -5176,7 +5164,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -5279,7 +5267,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,

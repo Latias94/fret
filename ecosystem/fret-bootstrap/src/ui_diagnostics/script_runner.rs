@@ -532,10 +532,10 @@ impl UiDiagnosticsService {
         let step_index = active.next_step.min(u32::MAX as usize) as u32;
         let mut canceled_any = false;
 
-        if let Some(drag) = app.drag(pointer_id) {
-            if drag.cross_window_hover
+        if let Some(drag) = app.drag(pointer_id)
+            && (drag.cross_window_hover
                 || drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS
+                || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
             {
                 push_script_event_log(
                     active,
@@ -558,7 +558,6 @@ impl UiDiagnosticsService {
                 app.cancel_drag(pointer_id);
                 canceled_any = true;
             }
-        }
 
         if !canceled_any {
             // Keep cleared: if we reach the cancel window and still can't cancel anything,

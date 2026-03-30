@@ -1291,7 +1291,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_single(
             &mut ui,
@@ -1351,7 +1351,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_single(
             &mut ui,
@@ -1413,7 +1413,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_single_without_roving_focus(
             &mut ui,
@@ -1481,7 +1481,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_single_uncontrolled(
             &mut ui,
@@ -1560,7 +1560,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let default_value = vec![Arc::from("alpha"), Arc::from("gamma")];
         let root = render_multiple_uncontrolled(

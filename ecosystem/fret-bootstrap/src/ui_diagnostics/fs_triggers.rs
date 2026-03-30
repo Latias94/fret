@@ -191,7 +191,7 @@ impl UiDiagnosticsService {
                 label = parsed
                     .label
                     .as_deref()
-                    .map(|s| sanitize_label(s))
+                    .map(sanitize_label)
                     .filter(|s| !s.is_empty());
                 max_snapshots = parsed.max_snapshots.map(|v| v as usize);
                 request_id = parsed.request_id;
@@ -253,8 +253,8 @@ impl UiDiagnosticsService {
             return;
         }
 
-        if let Some(parent) = self.cfg.ready_path.parent() {
-            if let Err(err) = std::fs::create_dir_all(parent) {
+        if let Some(parent) = self.cfg.ready_path.parent()
+            && let Err(err) = std::fs::create_dir_all(parent) {
                 warn_fs_once(
                     &mut self.ready_write_warned,
                     &self.cfg.out_dir,
@@ -264,7 +264,6 @@ impl UiDiagnosticsService {
                 );
                 return;
             }
-        }
 
         self.ensure_capabilities_file();
 
@@ -369,8 +368,8 @@ impl UiDiagnosticsService {
         }
 
         let path = self.cfg.out_dir.join("capabilities.json");
-        if let Some(parent) = path.parent() {
-            if let Err(err) = std::fs::create_dir_all(parent) {
+        if let Some(parent) = path.parent()
+            && let Err(err) = std::fs::create_dir_all(parent) {
                 warn_fs_once(
                     &mut self.capabilities_write_warned,
                     &self.cfg.out_dir,
@@ -380,7 +379,6 @@ impl UiDiagnosticsService {
                 );
                 return;
             }
-        }
 
         let payload = FilesystemCapabilitiesV1 {
             schema_version: 1,

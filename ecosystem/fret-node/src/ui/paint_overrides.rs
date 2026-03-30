@@ -40,11 +40,10 @@ pub struct EdgePaintOverrideV1 {
 impl EdgePaintOverrideV1 {
     pub fn normalized(mut self) -> Self {
         self.stroke_paint = self.stroke_paint.map(|p| p.sanitize());
-        if let Some(w) = self.stroke_width_mul {
-            if !w.is_finite() || w <= 0.0 {
+        if let Some(w) = self.stroke_width_mul
+            && (!w.is_finite() || w <= 0.0) {
                 self.stroke_width_mul = None;
             }
-        }
         if let Some(p) = self.dash {
             let dash = p.dash.0;
             let gap = p.gap.0;

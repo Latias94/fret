@@ -96,15 +96,12 @@ fn field_select_inherits_label_and_description_association() {
         .expect("select trigger node");
 
     assert!(
-        trigger_node
-            .labelled_by
-            .iter()
-            .any(|id| *id == label_node.id),
+        trigger_node.labelled_by.contains(&label_node.id),
         "expected Select trigger to inherit FieldLabel association"
     );
     assert!(
         snap.nodes.iter().any(|node| {
-            trigger_node.described_by.iter().any(|id| *id == node.id)
+            trigger_node.described_by.contains(&node.id)
                 && node.label.as_deref() == Some("Select your department or area of work.")
         }),
         "expected Select trigger to inherit FieldDescription association"

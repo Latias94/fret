@@ -1254,7 +1254,7 @@ impl Button {
                                     + usize::from(trailing_icon.is_some()),
                             );
 
-                            let icon_px = leading_icon_size.unwrap_or_else(|| match size {
+                            let icon_px = leading_icon_size.unwrap_or(match size {
                                 // Upstream shadcn/ui v4:
                                 // - `xs` / `icon-xs` => `size-3` (12px)
                                 // - `sm` => `size-3.5` (14px)
@@ -2230,9 +2230,8 @@ mod tests {
             "expected initial ring alpha to be 0; got {:?}",
             ring_alpha_out.get()
         );
-        assert_eq!(
-            always_paint_out.get().expect("always paint"),
-            false,
+        assert!(
+            !always_paint_out.get().expect("always paint"),
             "expected initial focus_ring_always_paint=false"
         );
 

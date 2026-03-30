@@ -1030,9 +1030,7 @@ enum CarouselAutoplayCommand {
 }
 
 fn autoplay_time_until_next(now: Instant, runtime: CarouselRuntime) -> Option<Duration> {
-    if runtime.autoplay_token.is_none() {
-        return None;
-    }
+    runtime.autoplay_token?;
     let started_at = runtime.autoplay_timer_started_at?;
     let delay = runtime.autoplay_timer_delay?;
     let elapsed = now.saturating_duration_since(started_at);
@@ -3449,8 +3447,8 @@ impl Carousel {
             let mut slides_now: Vec<headless_carousel::CarouselSlide1D> = Vec::new();
             let mut snap_by_slide_now: Vec<usize> = Vec::new();
 
-            if view_size_now.0 > 0.0 {
-                if let Some(viewport_bounds) = viewport_bounds {
+            if view_size_now.0 > 0.0
+                && let Some(viewport_bounds) = viewport_bounds {
                     let mut slides = Vec::with_capacity(items_len);
                     for id in &item_ids {
                         let Some(bounds) = cx.last_bounds_for_element(*id) else {
@@ -3545,7 +3543,6 @@ impl Carousel {
                         }
                     }
                 };
-            }
 
             let pointer_down = runtime_snapshot.drag.armed || runtime_snapshot.drag.dragging;
             let focused_now = cx.focused_element();
@@ -3598,8 +3595,8 @@ impl Carousel {
                 cx.request_frame();
             }
 
-            if options.watch_focus && view_size_now.0 > 0.0 && !snap_by_slide_now.is_empty() {
-                if let Some((slide_index, center)) = maybe_focused_slide_index_and_center {
+            if options.watch_focus && view_size_now.0 > 0.0 && !snap_by_slide_now.is_empty()
+                && let Some((slide_index, center)) = maybe_focused_slide_index_and_center {
                     let tab_pending = runtime_snapshot.focus_tab_generation
                         != runtime_snapshot.focus_last_handled_tab_generation;
                     let focus_offscreen = viewport_bounds.is_some_and(|b| !b.contains(center));
@@ -3740,7 +3737,6 @@ impl Carousel {
                         });
                     }
                 }
-            }
 
             if focus_changed {
                 let _ = cx.app.models_mut().update(&runtime_model, |st| {
@@ -3748,8 +3744,8 @@ impl Carousel {
                 });
             }
 
-            if let Some(snapshot_model) = slides_in_view_snapshot_model.clone() {
-                if view_size_now.0 > 0.0 && !slides_now.is_empty() {
+            if let Some(snapshot_model) = slides_in_view_snapshot_model.clone()
+                && view_size_now.0 > 0.0 && !slides_now.is_empty() {
                     let tracker_model = carousel_slides_in_view_tracker_model(cx);
                     let threshold = options.in_view_threshold;
                     let margin_px = options.in_view_margin_px.0;
@@ -3807,7 +3803,6 @@ impl Carousel {
                         }
                     }
                 }
-            }
 
             let snaps_arc: Arc<[Px]> = Arc::from(snaps_now.clone().into_boxed_slice());
             let _ = cx
@@ -3969,7 +3964,7 @@ impl Carousel {
                 did_reinit
                     && runtime_snapshot
                         .api_last_reinit_emit_frame
-                        .map_or(true, |last| {
+                        .is_none_or(|last| {
                             now_frame.saturating_sub(last) >= REINIT_EMIT_MIN_FRAME_DELTA
                         })
             };

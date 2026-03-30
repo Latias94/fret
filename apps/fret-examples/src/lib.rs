@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused)]
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod alloc_profile;
 

@@ -95,9 +95,7 @@ fn try_read_script_result_json(bundle_path: &Path) -> Option<Value> {
         return None;
     }
     // Best-effort sanity check: a script result should have at least a stage.
-    if v.get("stage").is_none() {
-        return None;
-    }
+    v.get("stage")?;
     Some(v)
 }
 
@@ -170,8 +168,8 @@ fn resolve_snapshot_for_event(
     Option<u64>,
     Option<&'static str>,
 ) {
-    if let Some(frame_id) = frame_id {
-        if let Some(info) = by_window_frame.get(&(window, frame_id)) {
+    if let Some(frame_id) = frame_id
+        && let Some(info) = by_window_frame.get(&(window, frame_id)) {
             return (
                 info.window_snapshot_seq,
                 info.timestamp_unix_ms,
@@ -180,7 +178,6 @@ fn resolve_snapshot_for_event(
                 Some("frame_id"),
             );
         }
-    }
 
     let Some(unix_ms) = unix_ms else {
         return (None, None, None, None, None);
@@ -344,8 +341,8 @@ pub(crate) fn ensure_bundle_meta_json(
 ) -> Result<PathBuf, String> {
     let out = default_bundle_meta_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
-    if out.is_file() {
-        if let Some(existing) = read_json_value(&out) {
+    if out.is_file()
+        && let Some(existing) = read_json_value(&out) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("bundle_meta");
             let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
             let warmup_ok =
@@ -356,7 +353,6 @@ pub(crate) fn ensure_bundle_meta_json(
                 return Ok(out);
             }
         }
-    }
     let payload = build_bundle_meta_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
@@ -368,8 +364,8 @@ pub(crate) fn ensure_window_map_json(
 ) -> Result<PathBuf, String> {
     let out = default_window_map_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
-    if out.is_file() {
-        if let Some(existing) = read_json_value(&out) {
+    if out.is_file()
+        && let Some(existing) = read_json_value(&out) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("window_map");
             let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
             let warmup_ok =
@@ -380,7 +376,6 @@ pub(crate) fn ensure_window_map_json(
                 return Ok(out);
             }
         }
-    }
     let payload = build_window_map_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
@@ -392,8 +387,8 @@ pub(crate) fn ensure_dock_routing_json(
 ) -> Result<PathBuf, String> {
     let out = default_dock_routing_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
-    if out.is_file() {
-        if let Some(existing) = read_json_value(&out) {
+    if out.is_file()
+        && let Some(existing) = read_json_value(&out) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("dock_routing");
             let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
             let warmup_ok =
@@ -417,7 +412,6 @@ pub(crate) fn ensure_dock_routing_json(
                 return Ok(out);
             }
         }
-    }
     let payload = build_dock_routing_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
@@ -430,8 +424,8 @@ pub(crate) fn ensure_test_ids_json(
 ) -> Result<PathBuf, String> {
     let out = default_test_ids_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
-    if out.is_file() {
-        if let Some(existing) = read_json_value(&out) {
+    if out.is_file()
+        && let Some(existing) = read_json_value(&out) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("test_ids");
             let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
             let warmup_ok =
@@ -444,7 +438,6 @@ pub(crate) fn ensure_test_ids_json(
                 return Ok(out);
             }
         }
-    }
     let payload = build_test_ids_payload(bundle_path, warmup_frames, max_test_ids)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
@@ -456,8 +449,8 @@ pub(crate) fn ensure_test_ids_index_json(
 ) -> Result<PathBuf, String> {
     let out = default_test_ids_index_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
-    if out.is_file() {
-        if let Some(existing) = read_json_value(&out) {
+    if out.is_file()
+        && let Some(existing) = read_json_value(&out) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("test_ids_index");
             let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
             let warmup_ok =
@@ -468,7 +461,6 @@ pub(crate) fn ensure_test_ids_index_json(
                 return Ok(out);
             }
         }
-    }
     let payload = build_test_ids_index_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
@@ -731,12 +723,11 @@ fn build_dock_routing_payload_from_json(
                         r.get("outer").and_then(|v| v.as_bool()).unwrap_or(false) as u64,
                     );
                 }
-                if let Some(p) = d.get("preview").and_then(|v| v.as_object()) {
-                    if let Some(kind) = p.get("kind") {
+                if let Some(p) = d.get("preview").and_then(|v| v.as_object())
+                    && let Some(kind) = p.get("kind") {
                         let label = serde_json::to_string(kind).unwrap_or_default();
                         mix(&mut fp, hash_str_64(&label));
                     }
-                }
             }
 
             if last_fingerprint_by_window.get(&window).copied() == Some(fp) {
@@ -831,7 +822,7 @@ fn build_bundle_meta_payload_from_json(
     bundle_label: &str,
     warmup_frames: u64,
 ) -> Result<Value, String> {
-    let semantics = SemanticsResolver::new(&bundle);
+    let semantics = SemanticsResolver::new(bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -1440,7 +1431,7 @@ fn build_test_ids_index_payload_from_json(
     bundle_label: &str,
     warmup_frames: u64,
 ) -> Result<Value, String> {
-    let semantics = SemanticsResolver::new(&bundle);
+    let semantics = SemanticsResolver::new(bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())

@@ -1081,13 +1081,12 @@ fn select_trigger_element<H: UiHost>(
                 chrome.background = container_bg;
                 chrome.corner_radii = corner;
                 let mut outline_width_for_notch = Px(0.0);
-                if let Some((outline_width, outline_color)) = outline {
-                    if outline_width.0 > 0.0 {
+                if let Some((outline_width, outline_color)) = outline
+                    && outline_width.0 > 0.0 {
                         chrome.border = Edges::all(outline_width);
                         chrome.border_color = Some(outline_color);
                         outline_width_for_notch = outline_width;
                     }
-                }
 
                 let indicator_el = indicator.map(|(h, c)| {
                     cx.canvas(CanvasProps::default(), move |p| {

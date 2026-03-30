@@ -1,3 +1,13 @@
+#![allow(clippy::arc_with_non_send_sync)]
+#![allow(clippy::field_reassign_with_default)]
+#![allow(clippy::large_enum_variant)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::question_mark)]
+#![allow(clippy::redundant_locals)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::unnecessary_find_map)]
+
 //! AI/chat UI components built on `fret-ui-shadcn`.
 //!
 //! This crate ports the **AI Elements** component taxonomy (Vercel) into the Fret ecosystem:

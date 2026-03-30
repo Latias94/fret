@@ -170,7 +170,7 @@ impl MessageActionTemplate {
     pub fn matches_role(&self, role: MessageRole) -> bool {
         self.roles
             .as_ref()
-            .map(|roles| roles.iter().any(|r| *r == role))
+            .map(|roles| roles.contains(&role))
             .unwrap_or(true)
     }
 

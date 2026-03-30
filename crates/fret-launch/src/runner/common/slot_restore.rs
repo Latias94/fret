@@ -5,9 +5,7 @@ pub(crate) fn take_slot_pair<A, B>(
     first_slot: &mut Option<A>,
     second_slot: &mut Option<B>,
 ) -> Option<(A, B)> {
-    let Some(first) = first_slot.take() else {
-        return None;
-    };
+    let first = first_slot.take()?;
     let Some(second) = second_slot.take() else {
         *first_slot = Some(first);
         return None;

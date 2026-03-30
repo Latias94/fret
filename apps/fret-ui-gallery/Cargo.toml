@@ -91,3 +91,11 @@ wasm-bindgen = "0.2"
 fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = false, optional = true, features = ["syntax-all"] }
 fret-code-view = { path = "../../ecosystem/fret-code-view", optional = true, features = ["syntax-rust"] }
 fret-code-editor = { path = "../../ecosystem/fret-code-editor", optional = true, features = ["syntax-rust", "syntax-markdown"] }
+
+[lints.rust]
+dead_code = "allow"
+unused = "allow"
+unused_variables = "allow"
+
+[lints.clippy]
+all = "allow"

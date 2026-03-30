@@ -1732,7 +1732,7 @@ fn web_vs_fret_calendar_demo_day_grid_geometry_and_a11y_labels_match_web_targete
             n.role == SemanticsRole::Button
                 && n.label
                     .as_deref()
-                    .is_some_and(|label| is_calendar_day_label(label))
+                    .is_some_and(is_calendar_day_label)
         })
         .count();
     assert_eq!(
@@ -2820,8 +2820,7 @@ fn assert_calendar_selected_day_background_matches_web(
             || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
     });
 
-    let cell_size =
-        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_selected_button.rect.w));
+    let cell_size = parse_calendar_cell_size_px(theme).unwrap_or(Px(web_selected_button.rect.w));
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -2970,8 +2969,7 @@ fn assert_calendar_selected_day_foreground_matches_web(web_name: &str, fg_label:
             || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
     });
 
-    let cell_size =
-        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_selected_button.rect.w));
+    let cell_size = parse_calendar_cell_size_px(theme).unwrap_or(Px(web_selected_button.rect.w));
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -3462,8 +3460,7 @@ fn assert_calendar_selected_day_text_centered_in_button(
             || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
     });
 
-    let cell_size =
-        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_selected_button.rect.w));
+    let cell_size = parse_calendar_cell_size_px(theme).unwrap_or(Px(web_selected_button.rect.w));
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -3690,8 +3687,7 @@ fn assert_calendar_unselected_day_text_centered_in_button(
             || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
     });
 
-    let cell_size =
-        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_target_button.rect.w));
+    let cell_size = parse_calendar_cell_size_px(theme).unwrap_or(Px(web_target_button.rect.w));
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

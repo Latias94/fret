@@ -858,7 +858,9 @@ fn render_folder_row<H: UiHost>(
 
     let row_test_id = folder.test_id.clone();
 
-    let row = control_chrome_pressable_with_id_props(cx, |cx, st, _id| {
+    
+
+    control_chrome_pressable_with_id_props(cx, |cx, st, _id| {
         cx.pressable_on_activate({
             let path = folder.path.clone();
             let expanded_model = expanded_model.clone();
@@ -979,9 +981,7 @@ fn render_folder_row<H: UiHost>(
         .into_element(cx);
 
         (pressable, chrome, move |_cx| vec![row_contents])
-    });
-
-    row
+    })
 }
 
 fn render_file_row<H: UiHost>(

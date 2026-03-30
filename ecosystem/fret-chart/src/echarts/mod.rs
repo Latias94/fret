@@ -2210,9 +2210,9 @@ fn parse_raw_dataset_v1(
     })
 }
 
-fn as_object<'a>(
-    v: Option<&'a serde_json::Value>,
-) -> Result<Option<&'a serde_json::Map<String, serde_json::Value>>> {
+fn as_object(
+    v: Option<&serde_json::Value>,
+) -> Result<Option<&serde_json::Map<String, serde_json::Value>>> {
     match v {
         None => Ok(None),
         Some(serde_json::Value::Object(o)) => Ok(Some(o)),

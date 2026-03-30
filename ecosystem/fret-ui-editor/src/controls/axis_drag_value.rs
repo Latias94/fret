@@ -621,11 +621,10 @@ where
                         &focus_state_for_keys,
                         &draft_for_keys,
                         &error_for_keys,
-                    ) {
-                        if consumed {
+                    )
+                        && consumed {
                             return true;
                         }
-                    }
 
                     match down.key {
                         KeyCode::Enter | KeyCode::NumpadEnter => {
@@ -635,8 +634,8 @@ where
                                 .unwrap_or_default();
                             if let Some(v) = (parse)(&text) {
                                 let v = constrain_numeric_value(constraints, v);
-                                if let Some(validate) = validate.as_ref() {
-                                    if let Some(msg) = validate(v) {
+                                if let Some(validate) = validate.as_ref()
+                                    && let Some(msg) = validate(v) {
                                         let _ = host
                                             .models_mut()
                                             .update(&error_for_keys, |e| *e = Some(msg));
@@ -647,7 +646,6 @@ where
                                         host.request_redraw(action_cx.window);
                                         return true;
                                     }
-                                }
 
                                 let _ = host.models_mut().update(&model_for_commit, |m| *m = v);
                                 let formatted = (format)(v);
@@ -875,6 +873,16 @@ fn emit_axis_drag_value_outcome(
     }
 }
 
+#[track_caller]
+fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    cx.local_model(String::new)
+}
+
+#[track_caller]
+fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
+    cx.local_model(|| None::<Arc<str>>)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{AxisDragValue, axis_drag_value_input_text_style};
@@ -917,14 +925,4 @@ mod tests {
         assert_eq!(drag_value.options.prefix, Some(Arc::from("$")));
         assert_eq!(drag_value.options.suffix, Some(Arc::from("ms")));
     }
-}
-
-#[track_caller]
-fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    cx.local_model(String::new)
-}
-
-#[track_caller]
-fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
-    cx.local_model(|| None::<Arc<str>>)
 }

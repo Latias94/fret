@@ -1,3 +1,6 @@
+#![allow(clippy::default_constructed_unit_structs)]
+#![allow(clippy::needless_lifetimes)]
+
 use fret_app::App;
 use fret_core::{AppWindowId, NodeId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_runtime::Model;

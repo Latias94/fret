@@ -1,17 +1,17 @@
-/// Shared (policy-layer) helpers for editor-grade tab strip click arbitration.
-///
-/// This module intentionally does **not** define geometry/layout rules. Adapters (workspace,
-/// docking, etc.) are responsible for hit-testing and surfacing a `TabStripHitTarget`.
-///
-/// Rationale:
-/// - Pure mechanism helpers (surface classification, overflow membership, canonical insert index)
-///   live next to this module.
-/// - Click arbitration is small but easy to accidentally diverge across UIs, so we centralize it.
-/// - This module is headless and has no dependency on `fret-ui` runtime contracts.
-///
-/// Note:
-/// - The `index` fields are adapter-defined. For docking this is typically a numeric tab index; for
-///   workspace it may be an index into a canonical tab list.
+//! Shared (policy-layer) helpers for editor-grade tab strip click arbitration.
+//!
+//! This module intentionally does **not** define geometry/layout rules. Adapters (workspace,
+//! docking, etc.) are responsible for hit-testing and surfacing a `TabStripHitTarget`.
+//!
+//! Rationale:
+//! - Pure mechanism helpers (surface classification, overflow membership, canonical insert index)
+//!   live next to this module.
+//! - Click arbitration is small but easy to accidentally diverge across UIs, so we centralize it.
+//! - This module is headless and has no dependency on `fret-ui` runtime contracts.
+//!
+//! Note:
+//! - The `index` fields are adapter-defined. For docking this is typically a numeric tab index; for
+//!   workspace it may be an index into a canonical tab list.
 
 /// A coarse-grained hit-test result for a tab strip.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

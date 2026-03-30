@@ -46,18 +46,15 @@ impl AxisLabelFormat {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Default)]
 pub enum AxisTicks {
+    #[default]
     Nice,
     Linear,
     Log10,
     TimeSeconds(TimeAxisFormat),
 }
 
-impl Default for AxisTicks {
-    fn default() -> Self {
-        Self::Nice
-    }
-}
 
 impl AxisTicks {
     pub fn key(self) -> u64 {
@@ -234,7 +231,7 @@ impl AxisLabelFormatter {
         let key = 0x4355_5354_4d00_0000u64 ^ addr.wrapping_mul(0x9e3779b97f4a7c15);
         Self {
             key,
-            f: Arc::new(move |v, span| f(v, span)),
+            f: Arc::new(f),
         }
     }
 
@@ -313,7 +310,7 @@ impl TimeAxisFormat {
             TimeAxisPresentation::Relative => 0u64,
             TimeAxisPresentation::UnixUtc => 1u64,
         };
-        (u64::from(self.base_seconds.to_bits()) ^ (tag << 1)).wrapping_mul(0x9e3779b97f4a7c15)
+        (self.base_seconds.to_bits() ^ (tag << 1)).wrapping_mul(0x9e3779b97f4a7c15)
     }
 }
 

@@ -1946,7 +1946,6 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             true
         });
         if should_exit {
-            return;
         }
     }
 

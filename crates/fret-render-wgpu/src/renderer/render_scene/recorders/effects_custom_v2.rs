@@ -136,7 +136,7 @@ pub(in super::super) fn record_custom_effect_v2_pass(
 
     let mut input_incompatible = false;
     let input_view = resolve_custom_effect_filterable_user_image_view(
-        &exec.renderer,
+        exec.renderer,
         exec.device.features(),
         pass.input_image,
         &mut input_incompatible,

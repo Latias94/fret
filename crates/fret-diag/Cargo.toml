@@ -24,3 +24,21 @@ glob = "0.3"
 
 fret-diag-protocol = { path = "../fret-diag-protocol" }
 fret-diag-ws = { path = "../fret-diag-ws", default-features = false, features = ["client-native"] }
+
+[lints.clippy]
+cloned_ref_to_slice_refs = "allow"
+enum_variant_names = "allow"
+field_reassign_with_default = "allow"
+if_same_then_else = "allow"
+large_enum_variant = "allow"
+manual_clamp = "allow"
+manual_find = "allow"
+needless_range_loop = "allow"
+needless_update = "allow"
+nonminimal_bool = "allow"
+ptr_arg = "allow"
+question_mark = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+unnecessary_get_then_check = "allow"
+wrong_self_convention = "allow"

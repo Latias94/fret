@@ -1588,10 +1588,10 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            fn find_descendant_with_children<'a>(
-                root: &'a AnyElement,
+            fn find_descendant_with_children(
+                root: &AnyElement,
                 child_count: usize,
-            ) -> &'a AnyElement {
+            ) -> &AnyElement {
                 let mut stack = vec![root];
                 while let Some(node) = stack.pop() {
                     if node.children.len() >= child_count {
@@ -1726,8 +1726,8 @@ mod tests {
             fn has_header_padding(el: &AnyElement, pb: Px) -> bool {
                 let mut stack = vec![el];
                 while let Some(node) = stack.pop() {
-                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind {
-                        if padding.bottom == pb.into()
+                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind
+                        && padding.bottom == pb.into()
                             && padding.left == padding.right
                             && matches!(
                                 padding.left,
@@ -1736,7 +1736,6 @@ mod tests {
                         {
                             return true;
                         }
-                    }
                     for child in &node.children {
                         stack.push(child);
                     }
@@ -1773,8 +1772,8 @@ mod tests {
             fn has_header_padding(el: &AnyElement, pb: Px) -> bool {
                 let mut stack = vec![el];
                 while let Some(node) = stack.pop() {
-                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind {
-                        if padding.bottom == pb.into()
+                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind
+                        && padding.bottom == pb.into()
                             && padding.left == padding.right
                             && matches!(
                                 padding.left,
@@ -1783,7 +1782,6 @@ mod tests {
                         {
                             return true;
                         }
-                    }
                     for child in &node.children {
                         stack.push(child);
                     }
@@ -1820,8 +1818,8 @@ mod tests {
             fn has_footer_padding(el: &AnyElement, pt: Px) -> bool {
                 let mut stack = vec![el];
                 while let Some(node) = stack.pop() {
-                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind {
-                        if padding.top == pt.into()
+                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind
+                        && padding.top == pt.into()
                             && padding.left == padding.right
                             && matches!(
                                 padding.left,
@@ -1830,7 +1828,6 @@ mod tests {
                         {
                             return true;
                         }
-                    }
                     for child in &node.children {
                         stack.push(child);
                     }
@@ -1901,7 +1898,7 @@ mod tests {
                 panic!("expected CardFooter root to be a container element");
             };
 
-            fn find_flex<'a>(el: &'a AnyElement) -> &'a FlexProps {
+            fn find_flex(el: &AnyElement) -> &FlexProps {
                 let mut stack = vec![el];
                 while let Some(node) = stack.pop() {
                     if let ElementKind::Flex(props) = &node.kind {
@@ -1964,7 +1961,7 @@ mod tests {
                 .justify_end()
                 .into_element(cx);
 
-            fn find_flex<'a>(el: &'a AnyElement) -> &'a FlexProps {
+            fn find_flex(el: &AnyElement) -> &FlexProps {
                 let mut stack = vec![el];
                 while let Some(node) = stack.pop() {
                     if let ElementKind::Flex(props) = &node.kind {
@@ -2184,16 +2181,13 @@ pub struct CardFooter {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum CardFooterDirection {
+    #[default]
     Row,
     Column,
 }
 
-impl Default for CardFooterDirection {
-    fn default() -> Self {
-        Self::Row
-    }
-}
 
 impl CardFooter {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
@@ -2206,7 +2200,7 @@ impl CardFooter {
             border_top: false,
             direction: CardFooterDirection::Row,
             justify: Justify::Start,
-            gap: Space::N0.into(),
+            gap: Space::N0,
             wrap: false,
         }
     }
@@ -2224,7 +2218,7 @@ impl CardFooter {
             border_top: false,
             direction: CardFooterDirection::Row,
             justify: Justify::Start,
-            gap: Space::N0.into(),
+            gap: Space::N0,
             wrap: false,
             _phantom: PhantomData,
         }

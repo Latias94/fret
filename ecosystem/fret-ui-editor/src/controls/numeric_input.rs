@@ -347,90 +347,86 @@ where
                 let on_outcome_for_key = on_outcome.clone();
                 cx.key_add_on_key_down_capture_for(
                     input_id,
-                    Arc::new(move |host, action_cx: ActionCx, down| match down.key {
-                        _ => {
-                            if let Some(consumed) = handle_numeric_text_entry_replace_key(
-                                host,
-                                action_cx,
-                                down,
-                                &focus_state_for_key,
-                                &draft_for_key,
-                                &error_for_key,
-                            ) {
-                                if consumed {
-                                    return true;
-                                }
+                    Arc::new(move |host, action_cx: ActionCx, down| {
+                        if let Some(consumed) = handle_numeric_text_entry_replace_key(
+                            host,
+                            action_cx,
+                            down,
+                            &focus_state_for_key,
+                            &draft_for_key,
+                            &error_for_key,
+                        )
+                            && consumed {
+                                return true;
                             }
-                            match down.key {
-                                KeyCode::Enter | KeyCode::NumpadEnter => {
-                                    let text = host
-                                        .models_mut()
-                                        .read(&draft_for_key, |s| s.clone())
-                                        .unwrap_or_default();
-                                    if let Some(v) = (parse_for_key)(&text) {
-                                        if let Some(validate) = validate_for_key.as_ref() {
-                                            if let Some(msg) = validate(v) {
-                                                let _ = host
-                                                    .models_mut()
-                                                    .update(&error_for_key, |e| *e = Some(msg));
-                                                let mut last = last_draft_for_key
-                                                    .lock()
-                                                    .unwrap_or_else(|e| e.into_inner());
-                                                *last = text;
-                                                host.request_redraw(action_cx.window);
-                                                return true;
-                                            }
+                        match down.key {
+                            KeyCode::Enter | KeyCode::NumpadEnter => {
+                                let text = host
+                                    .models_mut()
+                                    .read(&draft_for_key, |s| s.clone())
+                                    .unwrap_or_default();
+                                if let Some(v) = (parse_for_key)(&text) {
+                                    if let Some(validate) = validate_for_key.as_ref()
+                                        && let Some(msg) = validate(v) {
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&error_for_key, |e| *e = Some(msg));
+                                            let mut last = last_draft_for_key
+                                                .lock()
+                                                .unwrap_or_else(|e| e.into_inner());
+                                            *last = text;
+                                            host.request_redraw(action_cx.window);
+                                            return true;
                                         }
 
-                                        let _ =
-                                            host.models_mut().update(&model_for_key, |m| *m = v);
-                                        let formatted = (format_for_key)(v);
-                                        let _ = host.models_mut().update(&draft_for_key, |s| {
-                                            *s = formatted.as_ref().to_string()
-                                        });
-                                        let _ =
-                                            host.models_mut().update(&error_for_key, |e| *e = None);
-                                        let mut last = last_draft_for_key
-                                            .lock()
-                                            .unwrap_or_else(|e| e.into_inner());
-                                        *last = formatted.as_ref().to_string();
-                                        if let Some(cb) = on_outcome_for_key.as_ref() {
-                                            cb(host, action_cx, NumericInputOutcome::Committed);
-                                        }
-                                    } else {
-                                        let _ = host.models_mut().update(&error_for_key, |e| {
-                                            *e = Some(Arc::from("Invalid number"))
-                                        });
-                                        let mut last = last_draft_for_key
-                                            .lock()
-                                            .unwrap_or_else(|e| e.into_inner());
-                                        *last = text;
-                                    }
-                                    host.request_redraw(action_cx.window);
-                                    true
-                                }
-                                KeyCode::Escape => {
-                                    let current = host
-                                        .models_mut()
-                                        .get_copied(&model_for_key)
-                                        .unwrap_or_default();
-                                    let formatted = (format_for_key)(current);
+                                    let _ =
+                                        host.models_mut().update(&model_for_key, |m| *m = v);
+                                    let formatted = (format_for_key)(v);
                                     let _ = host.models_mut().update(&draft_for_key, |s| {
                                         *s = formatted.as_ref().to_string()
                                     });
-                                    let _ = host.models_mut().update(&error_for_key, |e| *e = None);
+                                    let _ =
+                                        host.models_mut().update(&error_for_key, |e| *e = None);
                                     let mut last = last_draft_for_key
                                         .lock()
                                         .unwrap_or_else(|e| e.into_inner());
                                     *last = formatted.as_ref().to_string();
                                     if let Some(cb) = on_outcome_for_key.as_ref() {
-                                        cb(host, action_cx, NumericInputOutcome::Canceled);
+                                        cb(host, action_cx, NumericInputOutcome::Committed);
                                     }
-                                    host.request_redraw(action_cx.window);
-                                    true
+                                } else {
+                                    let _ = host.models_mut().update(&error_for_key, |e| {
+                                        *e = Some(Arc::from("Invalid number"))
+                                    });
+                                    let mut last = last_draft_for_key
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner());
+                                    *last = text;
                                 }
-                                _ => false,
+                                host.request_redraw(action_cx.window);
+                                true
                             }
+                            KeyCode::Escape => {
+                                let current = host
+                                    .models_mut()
+                                    .get_copied(&model_for_key)
+                                    .unwrap_or_default();
+                                let formatted = (format_for_key)(current);
+                                let _ = host.models_mut().update(&draft_for_key, |s| {
+                                    *s = formatted.as_ref().to_string()
+                                });
+                                let _ = host.models_mut().update(&error_for_key, |e| *e = None);
+                                let mut last = last_draft_for_key
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                *last = formatted.as_ref().to_string();
+                                if let Some(cb) = on_outcome_for_key.as_ref() {
+                                    cb(host, action_cx, NumericInputOutcome::Canceled);
+                                }
+                                host.request_redraw(action_cx.window);
+                                true
+                            }
+                            _ => false,
                         }
                     }),
                 );
@@ -572,6 +568,16 @@ where
     }
 }
 
+#[track_caller]
+fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    cx.local_model(String::new)
+}
+
+#[track_caller]
+fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
+    cx.local_model(|| None::<Arc<str>>)
+}
+
 #[cfg(test)]
 mod tests {
     use super::editor_numeric_input_text_style;
@@ -615,14 +621,4 @@ mod tests {
         assert_eq!(input.options.prefix, Some(Arc::from("$")));
         assert_eq!(input.options.suffix, Some(Arc::from("ms")));
     }
-}
-
-#[track_caller]
-fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    cx.local_model(String::new)
-}
-
-#[track_caller]
-fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
-    cx.local_model(|| None::<Arc<str>>)
 }

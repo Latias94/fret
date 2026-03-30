@@ -303,11 +303,11 @@ impl ApplicationHandler for WgpuHelloWorldControlApp {
 
     fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
         self.request_continuous_redraw_if_due();
-        if let Some(exit_after) = self.exit_after {
-            if self.launch_at.elapsed() >= exit_after {
-                event_loop.exit();
-                return;
-            }
+        if let Some(exit_after) = self.exit_after
+            && self.launch_at.elapsed() >= exit_after
+        {
+            event_loop.exit();
+            return;
         }
         if let Some(deadline) = self.next_redraw_at {
             event_loop.set_control_flow(ControlFlow::WaitUntil(deadline));

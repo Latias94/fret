@@ -217,7 +217,7 @@ impl NodeGraphLookups {
     fn add_connection(&mut self, key: ConnectionLookupKey, conn: HandleConnection) {
         self.connection_lookup
             .entry(key)
-            .or_insert_with(HashMap::new)
+            .or_default()
             .insert(conn.edge, conn);
     }
 
@@ -599,11 +599,10 @@ impl NodeGraphLookups {
                 port: conn.target_port,
             },
         ] {
-            if let Some(map) = self.connection_lookup.get_mut(&key) {
-                if let Some(entry) = map.get_mut(&conn.edge) {
+            if let Some(map) = self.connection_lookup.get_mut(&key)
+                && let Some(entry) = map.get_mut(&conn.edge) {
                     entry.kind = kind;
                 }
-            }
         }
     }
 

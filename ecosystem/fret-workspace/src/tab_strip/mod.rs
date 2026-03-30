@@ -1550,8 +1550,8 @@ impl WorkspaceTabStrip {
                                                                     },
                                                                     |cx| {
                                                                         let mut out = Vec::new();
-                                                                if tab_preview {
-                                                                    if let Some(test_id) =
+                                                                if tab_preview
+                                                                    && let Some(test_id) =
                                                                         tab_preview_test_id.clone()
                                                                     {
                                                                         let mut layout =
@@ -1587,9 +1587,8 @@ impl WorkspaceTabStrip {
                                                                             },
                                                                         ));
                                                                     }
-                                                                }
-                                                                if tab_pinned {
-                                                                    if let Some(test_id) =
+                                                                if tab_pinned
+                                                                    && let Some(test_id) =
                                                                         tab_pinned_test_id.clone()
                                                                     {
                                                                         let mut layout =
@@ -1625,9 +1624,8 @@ impl WorkspaceTabStrip {
                                                                             },
                                                                         ));
                                                                     }
-                                                                }
-                                                                if tab_dirty {
-                                                                    if let Some(test_id) =
+                                                                if tab_dirty
+                                                                    && let Some(test_id) =
                                                                         tab_dirty_test_id.clone()
                                                                     {
                                                                         let mut layout =
@@ -1663,7 +1661,6 @@ impl WorkspaceTabStrip {
                                                                             },
                                                                         ));
                                                                     }
-                                                                }
 
                                                                 out.push(cx.flex(
                                                                     FlexProps {
@@ -2309,8 +2306,7 @@ impl WorkspaceTabStrip {
                             if drag_snapshot.dragging
                                 && let Some(pointer_id) = drag_snapshot.pointer
                                 && let Some(dragged) = drag_snapshot.dragged_tab.as_deref()
-                            {
-                                if let Some(session) = cx.app.drag(pointer_id) {
+                                && let Some(session) = cx.app.drag(pointer_id) {
                                     let session_kind = session.kind;
                                     let session_dragging = session.dragging;
                                     let session_current_window = session.current_window;
@@ -2376,7 +2372,6 @@ impl WorkspaceTabStrip {
                                     }
                                     }
                                 }
-                            }
 
                             if let (Some(tab_drag_model), Some(pane_id)) =
                                 (tab_drag_model.clone(), pane_id.clone())
@@ -2617,11 +2612,10 @@ impl WorkspaceTabStrip {
 
                     let active_changed = last_active.as_deref() != active.as_deref();
                     let mut reveal_pending = reveal_pending || active_changed;
-                    if reveal_pending {
-                        if let (Some(scroll_id), Some(tab_id)) =
+                    if reveal_pending
+                        && let (Some(scroll_id), Some(tab_id)) =
                             (scroll_element.get(), active_tab_element.get())
-                        {
-                            if let (Some(viewport), Some(tab_rect)) = (
+                            && let (Some(viewport), Some(tab_rect)) = (
                                 cx.last_bounds_for_element(scroll_id),
                                 cx.last_bounds_for_element(tab_id),
                             ) {
@@ -2669,19 +2663,16 @@ impl WorkspaceTabStrip {
                                     );
                                 }
                             }
-                        }
-                    }
 
                     // Keep the active tab fully visible when the scroll viewport or tab width
                     // changes (e.g. overflow controls, close affordances, chrome shifts).
                     //
                     // We intentionally do this outside `reveal_pending`: the active tab can become
                     // partially clipped even if the active id did not change.
-                    if !dragging && drag_snapshot.pointer.is_none() {
-                        if let (Some(scroll_id), Some(tab_id)) =
+                    if !dragging && drag_snapshot.pointer.is_none()
+                        && let (Some(scroll_id), Some(tab_id)) =
                             (scroll_element.get(), active_tab_element.get())
-                        {
-                            if let (Some(viewport), Some(tab_rect)) = (
+                            && let (Some(viewport), Some(tab_rect)) = (
                                 cx.last_bounds_for_element(scroll_id),
                                 cx.last_bounds_for_element(tab_id),
                             ) {
@@ -2702,8 +2693,6 @@ impl WorkspaceTabStrip {
                                     );
                                 }
                             }
-                        }
-                    }
 
                     cx.root_state(WorkspaceTabStripState::default, |state| {
                         state.last_active = active.clone();

@@ -20,38 +20,34 @@ pub fn default_series_palette() -> [Color; 10] {
     ]
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum MouseReadoutMode {
     /// Show mouse coordinates as a tooltip near the cursor.
     Tooltip,
     /// Show mouse coordinates as a small overlay inside the plot (ImPlot-style).
+    #[default]
     Overlay,
     /// Do not show mouse coordinate readout.
     Disabled,
 }
 
-impl Default for MouseReadoutMode {
-    fn default() -> Self {
-        Self::Overlay
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum OverlayAnchor {
+    #[default]
     TopLeft,
     TopRight,
     BottomLeft,
     BottomRight,
 }
 
-impl Default for OverlayAnchor {
-    fn default() -> Self {
-        Self::TopLeft
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ReadoutSeriesPolicy {
     /// If a series is pinned, show only that series; otherwise show all visible series.
+    #[default]
     PinnedOrAll,
     /// Show only the pinned series. If no series is pinned, show no per-series rows.
     PinnedOnly,
@@ -59,16 +55,13 @@ pub enum ReadoutSeriesPolicy {
     PinnedOrLegendHoverOrAll,
 }
 
-impl Default for ReadoutSeriesPolicy {
-    fn default() -> Self {
-        Self::PinnedOrAll
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum SeriesTooltipMode {
     /// Match ImPlot-style hover tooltips: show a series tooltip only when the pointer is close to
     /// a series item (hit-tested within `LinePlotStyle::hover_threshold`).
+    #[default]
     HoverOnly,
     /// When the pointer is inside the plot region, show a tooltip for the nearest series at the
     /// cursor X (based on the smallest `|cursor_y - series_y_at_x|` distance).
@@ -77,11 +70,6 @@ pub enum SeriesTooltipMode {
     NearestAtCursor,
 }
 
-impl Default for SeriesTooltipMode {
-    fn default() -> Self {
-        Self::HoverOnly
-    }
-}
 
 #[derive(Debug, Clone, Copy)]
 pub struct LinePlotStyle {

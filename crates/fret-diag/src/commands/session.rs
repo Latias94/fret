@@ -229,13 +229,12 @@ pub(crate) fn cmd_latest(
         .or_else(|_| resolve_latest_bundle_dir_path(out_dir))?;
     println!("{}", path.display());
 
-    if let Ok((_p, session_id, source)) = resolved {
-        if let Some(session_id) = session_id {
+    if let Ok((_p, session_id, source)) = resolved
+        && let Some(session_id) = session_id {
             eprintln!(
                 "diag latest: resolved via sessions (session_id={} source={})",
                 session_id, source
             );
         }
-    }
     Ok(())
 }

@@ -247,18 +247,15 @@ pub struct PlotOverlays {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Default)]
 pub enum PlotImageLayer {
     /// Draw below grid lines and series (grid stays visible).
+    #[default]
     BelowGrid,
     /// Draw above grid lines but below series.
     AboveGrid,
 }
 
-impl Default for PlotImageLayer {
-    fn default() -> Self {
-        Self::BelowGrid
-    }
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlotImage {

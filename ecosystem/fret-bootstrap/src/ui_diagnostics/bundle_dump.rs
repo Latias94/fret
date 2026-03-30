@@ -22,11 +22,10 @@ pub(super) fn dump_bundle_with_options(
 
     let ts = unix_ms_now();
     let mut dir_name = ts.to_string();
-    if let Some(label) = label {
-        if !label.is_empty() {
+    if let Some(label) = label
+        && !label.is_empty() {
             dir_name = format!("{dir_name}-{label}");
         }
-    }
 
     let dir = service.cfg.out_dir.join(dir_name);
 

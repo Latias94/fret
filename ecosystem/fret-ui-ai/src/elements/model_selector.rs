@@ -66,6 +66,12 @@ impl std::fmt::Debug for ModelSelector {
     }
 }
 
+impl Default for ModelSelector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ModelSelector {
     pub fn new() -> Self {
         Self {
@@ -1150,6 +1156,12 @@ impl std::fmt::Debug for ModelSelectorList {
             )
             .field("scroll", &self.scroll)
             .finish()
+    }
+}
+
+impl Default for ModelSelectorList {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

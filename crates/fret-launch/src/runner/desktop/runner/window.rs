@@ -427,7 +427,7 @@ pub(super) fn set_window_hit_test(
                 {
                     let _ = regions;
                     // Until region passthrough is stabilized on macOS, fall back to passthrough-all.
-                    return set_window_hit_test_passthrough_all(window, true);
+                    set_window_hit_test_passthrough_all(window, true)
                 }
 
                 #[cfg(feature = "macos-hit-test-regions")]

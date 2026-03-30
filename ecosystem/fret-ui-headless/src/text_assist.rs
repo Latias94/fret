@@ -163,16 +163,13 @@ pub fn build_visible_matches(
     let mut out: Vec<TextAssistMatch> = items
         .iter()
         .enumerate()
-        .filter_map(|(source_index, item)| match score_item(item, query, mode) {
-            Some(score) => Some(TextAssistMatch {
+        .filter_map(|(source_index, item)| score_item(item, query, mode).map(|score| TextAssistMatch {
                 item_id: item.id.clone(),
                 label: item.label.clone(),
                 score,
                 source_index,
                 disabled: item.disabled,
-            }),
-            None => None,
-        })
+            }))
         .collect();
 
     if matches!(mode, TextAssistMatchMode::CmdkFuzzy) && !query.is_empty() {

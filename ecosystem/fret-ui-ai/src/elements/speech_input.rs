@@ -64,6 +64,12 @@ impl std::fmt::Debug for SpeechInput {
     }
 }
 
+impl Default for SpeechInput {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SpeechInput {
     pub fn new() -> Self {
         Self {

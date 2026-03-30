@@ -38,7 +38,7 @@ pub(super) fn handle_scroll_into_view_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     _text_font_stack_key_stable_frames: u32,
     _font_catalog_populated: bool,
     _system_font_rescan_idle: bool,
@@ -387,7 +387,7 @@ pub(super) fn handle_scroll_into_view_step(
                 candidates[0]
             };
 
-            if let Some(ui) = ui.as_deref_mut() {
+            if let Some(ui) = ui {
                 let note = format!(
                     "scroll_into_view.wheel dx={delta_x} dy={delta_y} -> dx={effective_dx} dy={effective_dy}"
                 );

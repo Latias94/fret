@@ -10,6 +10,7 @@ use fret_render::{
     ClearColor, ImageColorSpace, ImageDescriptor, RenderSceneParams, Renderer, SvgAlphaMask,
     WgpuContext, upload_alpha_mask,
 };
+use std::f32::consts::TAU;
 use std::time::Instant;
 
 fn stops_2_alpha(a: f32, b: f32) -> ([GradientStop; MAX_STOPS], u8) {
@@ -163,9 +164,9 @@ fn record_scene(
 
         let hue = (i as f32 * 0.11).rem_euclid(1.0);
         let bg = Color {
-            r: (0.5 + 0.5 * (hue * 6.2831853).sin()).clamp(0.0, 1.0),
-            g: (0.5 + 0.5 * ((hue + 0.33) * 6.2831853).sin()).clamp(0.0, 1.0),
-            b: (0.5 + 0.5 * ((hue + 0.66) * 6.2831853).sin()).clamp(0.0, 1.0),
+            r: (0.5 + 0.5 * (hue * TAU).sin()).clamp(0.0, 1.0),
+            g: (0.5 + 0.5 * ((hue + 0.33) * TAU).sin()).clamp(0.0, 1.0),
+            b: (0.5 + 0.5 * ((hue + 0.66) * TAU).sin()).clamp(0.0, 1.0),
             a: 1.0,
         };
         scene.push(SceneOp::Quad {

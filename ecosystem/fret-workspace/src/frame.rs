@@ -273,6 +273,12 @@ pub struct WorkspaceTopBar {
     right: Vec<AnyElement>,
 }
 
+impl Default for WorkspaceTopBar {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WorkspaceTopBar {
     pub fn new() -> Self {
         Self {
@@ -392,6 +398,12 @@ pub struct WorkspaceStatusBar {
     padding: Edges,
     left: Vec<AnyElement>,
     right: Vec<AnyElement>,
+}
+
+impl Default for WorkspaceStatusBar {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WorkspaceStatusBar {

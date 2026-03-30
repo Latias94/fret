@@ -57,8 +57,8 @@ pub fn compute_overflow_menu_item_indices(
     };
 
     let mut out = Vec::new();
-    for ix in 0..tab_count {
-        if overflowed_set[ix] || active_ix.is_some_and(|a| a == ix) {
+    for (ix, is_overflowed) in overflowed_set.iter().copied().enumerate() {
+        if is_overflowed || active_ix.is_some_and(|a| a == ix) {
             out.push(ix);
         }
     }

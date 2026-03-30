@@ -1937,7 +1937,7 @@ fn web_vs_fret_button_group_dropdown_geometry_and_chrome_match() {
     })
     .expect("web Follow button");
     let web_trigger = find_first(web_group, &|n| {
-        n.tag == "button" && n.attrs.get("aria-expanded").is_some()
+        n.tag == "button" && n.attrs.contains_key("aria-expanded")
     })
     .expect("web dropdown trigger button");
 
@@ -2054,7 +2054,7 @@ fn web_vs_fret_button_group_popover_geometry_and_chrome_match() {
     .expect("web button-group node");
 
     let web_lead = find_first(web_group, &|n| {
-        n.tag == "button" && n.attrs.get("aria-label").is_none()
+        n.tag == "button" && !n.attrs.contains_key("aria-label")
     })
     .expect("web lead button");
     let web_trigger = find_first(web_group, &|n| {

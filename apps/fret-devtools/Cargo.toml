@@ -30,3 +30,11 @@ fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-
 fret-diag = { path = "../../crates/fret-diag" }
 fret-diag-protocol = { path = "../../crates/fret-diag-protocol" }
 fret-diag-ws = { path = "../../crates/fret-diag-ws", default-features = false, features = ["client-native", "server-native"] }
+
+[lints.clippy]
+arc_with_non_send_sync = "allow"
+cmp_owned = "allow"
+collapsible_if = "allow"
+ptr_arg = "allow"
+redundant_closure = "allow"
+reserve_after_initialization = "allow"

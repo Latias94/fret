@@ -185,12 +185,10 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             "{}",
             serde_json::to_string_pretty(&report.to_json()).unwrap_or_else(|_| "{}".to_string())
         );
+    } else if stats_verbose {
+        report.print_human(&bundle_path);
     } else {
-        if stats_verbose {
-            report.print_human(&bundle_path);
-        } else {
-            report.print_human_brief(&bundle_path);
-        }
+        report.print_human_brief(&bundle_path);
     }
 
     let derived_from_frames_index = report.derived_from_frames_index();

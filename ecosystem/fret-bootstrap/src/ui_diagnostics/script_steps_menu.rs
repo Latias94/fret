@@ -167,7 +167,7 @@ pub(super) fn handle_menu_select_step(
                 &mut active.selector_resolution_trace,
             ) {
                 let pos = center_of_rect(node.bounds);
-                if let Some(ui) = ui.as_deref_mut() {
+                if let Some(ui) = ui {
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,
                         ui,
@@ -214,7 +214,7 @@ pub(super) fn handle_menu_select_path_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -310,7 +310,7 @@ pub(super) fn handle_menu_select_path_step(
                         &mut active.selector_resolution_trace,
                     ) {
                         let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                        if let Some(ui) = ui.as_deref_mut() {
+                        if let Some(ui) = ui {
                             let note = format!("menu_select_path.click index={}", state.next_index);
                             record_hit_test_trace_for_selector(
                                 &mut active.hit_test_trace,

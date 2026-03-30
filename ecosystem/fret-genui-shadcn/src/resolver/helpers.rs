@@ -150,13 +150,12 @@ impl ShadcnResolver {
 
         // Preferred path: emit into the queue (app decides when/how to apply).
         if let Some(queue) = scope.action_queue.as_ref() {
-            if scope.auto_apply_standard_actions {
-                if let Some(state_model) = scope.state.as_ref() {
+            if scope.auto_apply_standard_actions
+                && let Some(state_model) = scope.state.as_ref() {
                     let _ = cx.app.models_mut().update(state_model, |state| {
                         actions::apply_standard_action(state, "setState", &params)
                     });
                 }
-            }
 
             let inv = GenUiActionInvocation {
                 window: cx.window,
@@ -215,13 +214,12 @@ impl ShadcnResolver {
 
         // Preferred path: emit into the queue (app decides when/how to apply).
         if let Some(queue) = queue {
-            if auto_apply_standard_actions {
-                if let Some(state_model) = state_model {
+            if auto_apply_standard_actions
+                && let Some(state_model) = state_model {
                     let _ = host.update_model(state_model, |state| {
                         actions::apply_standard_action(state, "setState", &params)
                     });
                 }
-            }
 
             let inv = GenUiActionInvocation {
                 window: cx.window,
@@ -264,13 +262,12 @@ impl ShadcnResolver {
         params: Value,
     ) {
         if let Some(queue) = queue {
-            if auto_apply_standard_actions {
-                if let Some(state_model) = state_model {
+            if auto_apply_standard_actions
+                && let Some(state_model) = state_model {
                     let _ = host.update_model(state_model, |state| {
                         actions::apply_standard_action(state, action.as_ref(), &params)
                     });
                 }
-            }
 
             let inv = GenUiActionInvocation {
                 window: cx.window,
@@ -290,13 +287,12 @@ impl ShadcnResolver {
             return;
         }
 
-        if auto_apply_standard_actions {
-            if let Some(state_model) = state_model {
+        if auto_apply_standard_actions
+            && let Some(state_model) = state_model {
                 let _ = host.update_model(state_model, |state| {
                     actions::apply_standard_action(state, action.as_ref(), &params)
                 });
             }
-        }
 
         host.request_redraw(cx.window);
     }

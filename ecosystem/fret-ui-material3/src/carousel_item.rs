@@ -101,6 +101,12 @@ impl std::fmt::Debug for CarouselItem {
     }
 }
 
+impl Default for CarouselItem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CarouselItem {
     pub fn new() -> Self {
         Self {

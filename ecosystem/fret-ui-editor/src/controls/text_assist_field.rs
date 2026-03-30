@@ -590,7 +590,7 @@ fn render_text_assist_panel<H: UiHost>(
                         border: Edges::all(Px(1.0)),
                         border_color: Some(popup_chrome.border),
                         corner_radii: Corners::all(popup_chrome.radius),
-                        shadow: popup_chrome.shadow.clone(),
+                        shadow: popup_chrome.shadow,
                         ..Default::default()
                     },
                     move |_cx| vec![body],

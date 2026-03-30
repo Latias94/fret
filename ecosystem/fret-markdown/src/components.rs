@@ -97,7 +97,7 @@ pub type CodeBlockUiResolver<H> = dyn for<'a> Fn(
     &mut ElementContext<'a, H>,
     &CodeBlockInfo,
     &mut fret_code_view::CodeBlockUiOptions,
-) -> ();
+);
 pub type RawBlockRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, RawBlockInfo) -> AnyElement;
 pub type ListRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, ListInfo) -> AnyElement;

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::time::Duration;
 
 pub(crate) fn ticks_for_duration(duration: Duration) -> u64 {

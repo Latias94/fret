@@ -59,11 +59,10 @@ fn compat_summary_for_packet_dir(dir: &Path) -> serde_json::Value {
     }
 
     let script_result_path = dir.join("script.result.json");
-    if script_result_path.is_file() {
-        if let Ok(bytes) = std::fs::read(&script_result_path) {
-            if let Ok(res) = serde_json::from_slice::<fret_diag_protocol::UiScriptResultV1>(&bytes)
-            {
-                if let Some(evidence) = res.evidence {
+    if script_result_path.is_file()
+        && let Ok(bytes) = std::fs::read(&script_result_path)
+            && let Ok(res) = serde_json::from_slice::<fret_diag_protocol::UiScriptResultV1>(&bytes)
+                && let Some(evidence) = res.evidence {
                     for ev in evidence.event_log {
                         if ev.kind.starts_with("compat.") {
                             script_compat_events_total =
@@ -74,9 +73,6 @@ fn compat_summary_for_packet_dir(dir: &Path) -> serde_json::Value {
                         }
                     }
                 }
-            }
-        }
-    }
     for k in &script_compat_event_kinds {
         markers.insert(k.clone());
     }
@@ -139,8 +135,8 @@ pub(super) fn write_packet_budget_report(
         "clipped_files": report.clipped_files,
     });
 
-    if let Some(v) = report.failed_step_slices.as_ref() {
-        if let Some(obj) = payload.as_object_mut() {
+    if let Some(v) = report.failed_step_slices.as_ref()
+        && let Some(obj) = payload.as_object_mut() {
             let written = v
                 .written
                 .iter()
@@ -170,7 +166,6 @@ pub(super) fn write_packet_budget_report(
                 }),
             );
         }
-    }
 
     if let Some(obj) = payload.as_object_mut() {
         obj.insert("compat".to_string(), compat_summary_for_packet_dir(dir));
@@ -382,8 +377,8 @@ fn clip_bundle_index_if_needed(
 
             for w in windows.iter_mut() {
                 let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-                if let Some(snaps) = w.get_mut("snapshots").and_then(|v| v.as_array_mut()) {
-                    if snaps.len() > max_keep {
+                if let Some(snaps) = w.get_mut("snapshots").and_then(|v| v.as_array_mut())
+                    && snaps.len() > max_keep {
                         let mut required_seq: Option<&HashSet<u64>> = None;
                         let mut required_frame: Option<&HashSet<u64>> = None;
                         if let Some((seq, frame)) = required_by_window.get(&window_id) {
@@ -422,7 +417,6 @@ fn clip_bundle_index_if_needed(
                             .filter_map(|(i, v)| keep.get(i).copied().unwrap_or(false).then_some(v))
                             .collect();
                     }
-                }
 
                 let (first_frame_id, first_ts, last_frame_id, last_ts) = w
                     .get("snapshots")

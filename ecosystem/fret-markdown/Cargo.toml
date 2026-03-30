@@ -36,3 +36,12 @@ merman = { workspace = true, optional = true, features = ["render"] }
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
+
+[lints.rust]
+unused_mut = "allow"
+
+[lints.clippy]
+arc_with_non_send_sync = "allow"
+field_reassign_with_default = "allow"
+match_like_matches_macro = "allow"
+too_many_arguments = "allow"

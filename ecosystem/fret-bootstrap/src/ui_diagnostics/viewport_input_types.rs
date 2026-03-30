@@ -13,7 +13,7 @@ impl UiViewportInputEventV1 {
     fn from_event(event: fret_core::ViewportInputEvent) -> Self {
         Self {
             target: event.target.data().as_ffi(),
-            pointer_id: event.pointer_id.0 as u64,
+            pointer_id: event.pointer_id.0,
             pointer_type: viewport_pointer_type_label(event.pointer_type).to_string(),
             cursor_px: PointV1::from(event.cursor_px),
             uv: event.uv,

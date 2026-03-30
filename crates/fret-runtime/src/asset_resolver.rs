@@ -276,6 +276,7 @@ fn debug_asset_locator(locator: &AssetLocator) -> String {
     }
 }
 
+#[derive(Default)]
 struct AssetResolverServiceState {
     layers: RwLock<Vec<AssetResolverLayer>>,
     diagnostics: AssetLoadDiagnosticsStore,
@@ -295,14 +296,6 @@ impl AssetResolverLayer {
     }
 }
 
-impl Default for AssetResolverServiceState {
-    fn default() -> Self {
-        Self {
-            layers: RwLock::default(),
-            diagnostics: AssetLoadDiagnosticsStore::default(),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct AssetResolverService {

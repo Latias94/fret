@@ -1,3 +1,5 @@
+#![allow(clippy::single_match)]
+
 use std::sync::Arc;
 
 use fret_app::App;

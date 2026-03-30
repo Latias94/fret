@@ -69,7 +69,7 @@ impl Tags {
         Self {
             items,
             variant: BadgeVariant::Secondary,
-            gap: Space::N2.into(),
+            gap: Space::N2,
             wrap: true,
             test_id: None,
             layout: LayoutRefinement::default(),

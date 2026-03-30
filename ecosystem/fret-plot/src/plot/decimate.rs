@@ -252,10 +252,8 @@ pub(crate) fn decimate_shaded_band(
                 self.max_upper,
                 self.min_lower,
                 self.max_lower,
-            ] {
-                if let Some(p) = p {
-                    candidates.push(p);
-                }
+            ].into_iter().flatten() {
+                candidates.push(p);
             }
 
             candidates.sort_by_key(|p| p.index);

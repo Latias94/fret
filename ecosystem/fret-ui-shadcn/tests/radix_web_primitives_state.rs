@@ -2427,8 +2427,8 @@ fn radix_web_dropdown_menu_submenu_hover_select_matches_fret() {
     let team = find_semantics(&snap, SemanticsRole::MenuItem, "Team");
     let invite = find_semantics(&snap, SemanticsRole::MenuItem, "Invite users");
     assert_eq!(
-        group_ancestor_id(&team),
-        group_ancestor_id(&invite),
+        group_ancestor_id(team),
+        group_ancestor_id(invite),
         "dropdown menu group should contain its menu items"
     );
 
@@ -3967,7 +3967,7 @@ fn radix_web_context_menu_submenu_keyboard_open_close_matches_fret() {
         .steps
         .iter()
         .find(|s| {
-            matches!(&s.action, Action::Press { key } if key.split(',').last() == Some("ArrowRight"))
+            matches!(&s.action, Action::Press { key } if key.split(',').next_back() == Some("ArrowRight"))
         })
         .expect("submenu open step");
     assert!(
@@ -4232,7 +4232,7 @@ fn radix_web_menubar_submenu_keyboard_open_close_matches_fret() {
         .steps
         .iter()
         .find(|s| {
-            matches!(&s.action, Action::Press { key } if key.split(',').last() == Some("ArrowRight"))
+            matches!(&s.action, Action::Press { key } if key.split(',').next_back() == Some("ArrowRight"))
         })
         .expect("submenu open step");
     assert!(
@@ -5332,8 +5332,8 @@ fn radix_web_tabs_click_second_tab_state_matches_fret() {
         .expect("semantics snapshot");
     let tab0 = find_semantics(&snap, SemanticsRole::Tab, labels[0]);
     let tab1 = find_semantics(&snap, SemanticsRole::Tab, labels[1]);
-    assert_eq!(tab0.flags.selected, false);
-    assert_eq!(tab1.flags.selected, true);
+    assert!(!tab0.flags.selected);
+    assert!(tab1.flags.selected);
 }
 
 #[test]
@@ -6068,7 +6068,7 @@ fn radix_web_dropdown_menu_submenu_arrowleft_escape_close_matches_fret() {
         .steps
         .iter()
         .find(|s| {
-            matches!(&s.action, Action::Press { key } if key.split(',').last() == Some("ArrowRight"))
+            matches!(&s.action, Action::Press { key } if key.split(',').next_back() == Some("ArrowRight"))
         })
         .expect("submenu open step");
     assert!(
@@ -6403,7 +6403,7 @@ fn radix_web_context_menu_submenu_arrowleft_escape_close_matches_fret() {
         .steps
         .iter()
         .find(|s| {
-            matches!(&s.action, Action::Press { key } if key.split(',').last() == Some("ArrowRight"))
+            matches!(&s.action, Action::Press { key } if key.split(',').next_back() == Some("ArrowRight"))
         })
         .expect("submenu open step");
     assert!(

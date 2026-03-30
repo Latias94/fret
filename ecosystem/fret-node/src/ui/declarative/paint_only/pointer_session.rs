@@ -56,7 +56,7 @@ pub(super) fn complete_node_drag_release_action_host(
 ) -> NodeDragReleaseOutcome {
     let view = host
         .models_mut()
-        .read(view_state, |state| view_from_state(state))
+        .read(view_state, view_from_state)
         .ok()
         .unwrap_or_default();
     let drag_commit_delta = node_drag_commit_delta(view, node_drag);

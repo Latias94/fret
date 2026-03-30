@@ -1678,13 +1678,10 @@ mod tests {
         el: &'a AnyElement,
         test_id: &str,
     ) -> Option<&'a PressableProps> {
-        match &el.kind {
-            ElementKind::Pressable(props) => {
-                if props.a11y.test_id.as_deref() == Some(test_id) {
-                    return Some(props);
-                }
+        if let ElementKind::Pressable(props) = &el.kind {
+            if props.a11y.test_id.as_deref() == Some(test_id) {
+                return Some(props);
             }
-            _ => {}
         }
 
         for child in &el.children {

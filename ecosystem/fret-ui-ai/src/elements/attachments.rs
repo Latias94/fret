@@ -64,17 +64,14 @@ fn resolve_accent_hover(theme: &Theme) -> Color {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum AttachmentVariant {
+    #[default]
     Grid,
     Inline,
     List,
 }
 
-impl Default for AttachmentVariant {
-    fn default() -> Self {
-        Self::Grid
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AttachmentMediaCategory {

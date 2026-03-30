@@ -41,10 +41,10 @@ struct EdgesOpt<T> {
 impl<T> Default for EdgesOpt<T> {
     fn default() -> Self {
         Self {
-            top: None.into(),
-            right: None.into(),
-            bottom: None.into(),
-            left: None.into(),
+            top: None,
+            right: None,
+            bottom: None,
+            left: None,
         }
     }
 }
@@ -131,10 +131,10 @@ fn radius_to_str(radius: Radius) -> &'static str {
 }
 
 fn apply_edges_all(edges: &mut EdgesOpt<Space>, v: Space) {
-    edges.top = Some(v).into();
-    edges.right = Some(v).into();
-    edges.bottom = Some(v).into();
-    edges.left = Some(v).into();
+    edges.top = Some(v);
+    edges.right = Some(v);
+    edges.bottom = Some(v);
+    edges.left = Some(v);
 }
 
 fn parse_layout_tokens(classes: &[String]) -> LayoutTokens {
@@ -146,29 +146,29 @@ fn parse_layout_tokens(classes: &[String]) -> LayoutTokens {
             continue;
         }
         if let Some(v) = class.strip_prefix("px-").and_then(parse_space) {
-            out.padding.left = Some(v).into();
-            out.padding.right = Some(v).into();
+            out.padding.left = Some(v);
+            out.padding.right = Some(v);
             continue;
         }
         if let Some(v) = class.strip_prefix("py-").and_then(parse_space) {
-            out.padding.top = Some(v).into();
-            out.padding.bottom = Some(v).into();
+            out.padding.top = Some(v);
+            out.padding.bottom = Some(v);
             continue;
         }
         if let Some(v) = class.strip_prefix("pt-").and_then(parse_space) {
-            out.padding.top = Some(v).into();
+            out.padding.top = Some(v);
             continue;
         }
         if let Some(v) = class.strip_prefix("pr-").and_then(parse_space) {
-            out.padding.right = Some(v).into();
+            out.padding.right = Some(v);
             continue;
         }
         if let Some(v) = class.strip_prefix("pb-").and_then(parse_space) {
-            out.padding.bottom = Some(v).into();
+            out.padding.bottom = Some(v);
             continue;
         }
         if let Some(v) = class.strip_prefix("pl-").and_then(parse_space) {
-            out.padding.left = Some(v).into();
+            out.padding.left = Some(v);
             continue;
         }
 
@@ -177,29 +177,29 @@ fn parse_layout_tokens(classes: &[String]) -> LayoutTokens {
             continue;
         }
         if let Some(v) = class.strip_prefix("mx-").and_then(parse_space) {
-            out.margin.left = Some(v).into();
-            out.margin.right = Some(v).into();
+            out.margin.left = Some(v);
+            out.margin.right = Some(v);
             continue;
         }
         if let Some(v) = class.strip_prefix("my-").and_then(parse_space) {
-            out.margin.top = Some(v).into();
-            out.margin.bottom = Some(v).into();
+            out.margin.top = Some(v);
+            out.margin.bottom = Some(v);
             continue;
         }
         if let Some(v) = class.strip_prefix("mt-").and_then(parse_space) {
-            out.margin.top = Some(v).into();
+            out.margin.top = Some(v);
             continue;
         }
         if let Some(v) = class.strip_prefix("mr-").and_then(parse_space) {
-            out.margin.right = Some(v).into();
+            out.margin.right = Some(v);
             continue;
         }
         if let Some(v) = class.strip_prefix("mb-").and_then(parse_space) {
-            out.margin.bottom = Some(v).into();
+            out.margin.bottom = Some(v);
             continue;
         }
         if let Some(v) = class.strip_prefix("ml-").and_then(parse_space) {
-            out.margin.left = Some(v).into();
+            out.margin.left = Some(v);
             continue;
         }
 

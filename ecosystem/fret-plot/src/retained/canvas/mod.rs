@@ -3277,8 +3277,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                             self.lock_x.zoom,
                                             self.lock_y.zoom,
                                         );
-                                        if let Some(vb_y2) = view_bounds_y2 {
-                                            if let Some(candidate) = next_y2.as_mut() {
+                                        if let Some(vb_y2) = view_bounds_y2
+                                            && let Some(candidate) = next_y2.as_mut() {
                                                 *candidate = apply_axis_locks(
                                                     vb_y2,
                                                     *candidate,
@@ -3286,9 +3286,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                                     self.lock_y2.zoom,
                                                 );
                                             }
-                                        }
-                                        if let Some(vb_y3) = view_bounds_y3 {
-                                            if let Some(candidate) = next_y3.as_mut() {
+                                        if let Some(vb_y3) = view_bounds_y3
+                                            && let Some(candidate) = next_y3.as_mut() {
                                                 *candidate = apply_axis_locks(
                                                     vb_y3,
                                                     *candidate,
@@ -3296,9 +3295,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                                     self.lock_y3.zoom,
                                                 );
                                             }
-                                        }
-                                        if let Some(vb_y4) = view_bounds_y4 {
-                                            if let Some(candidate) = next_y4.as_mut() {
+                                        if let Some(vb_y4) = view_bounds_y4
+                                            && let Some(candidate) = next_y4.as_mut() {
                                                 *candidate = apply_axis_locks(
                                                     vb_y4,
                                                     *candidate,
@@ -3306,7 +3304,6 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                                     self.lock_y4.zoom,
                                                 );
                                             }
-                                        }
 
                                         next = constrain_view_bounds_scaled(
                                             next,
@@ -5265,7 +5262,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             text_constraints,
                         ));
 
-                    let max_text = self.heatmap_colorbar_text.get(0).copied();
+                    let max_text = self.heatmap_colorbar_text.first().copied();
                     let min_text = self.heatmap_colorbar_text.get(1).copied();
 
                     let label_gap = 6.0_f32;
@@ -5878,10 +5875,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         };
                         let x = Px((layout.plot.origin.x.0 + x_px.0).round());
 
-                        let value = line
-                            .show_value
-                            .then(|| self.tooltip_x_labels.format(x_value, x_span))
-                            .unwrap_or_default();
+                        let value = if line
+                            .show_value { self.tooltip_x_labels.format(x_value, x_span) } else { Default::default() };
                         let text = match (&line.label, line.show_value) {
                             (Some(label), true) => format!("{label}: {value}"),
                             (Some(label), false) => label.clone(),
@@ -5944,10 +5939,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             _ => (y_span, &self.tooltip_y_labels),
                         };
 
-                        let value = line
-                            .show_value
-                            .then(|| labels.format(y_value, span))
-                            .unwrap_or_default();
+                        let value = if line
+                            .show_value { labels.format(y_value, span) } else { Default::default() };
                         let text = match (&line.label, line.show_value) {
                             (Some(label), true) => format!("{label}: {value}"),
                             (Some(label), false) => label.clone(),
@@ -6068,10 +6061,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             };
                             let x = Px((layout.plot.origin.x.0 + x_px.0).round());
 
-                            let value = tag
-                                .show_value
-                                .then(|| self.tooltip_x_labels.format(tag.x, x_span))
-                                .unwrap_or_default();
+                            let value = if tag
+                                .show_value { self.tooltip_x_labels.format(tag.x, x_span) } else { Default::default() };
                             let text = match (&tag.label, tag.show_value) {
                                 (Some(label), true) => format!("{label}: {value}"),
                                 (Some(label), false) => label.clone(),
@@ -6126,10 +6117,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             _ => (y_span, &self.tooltip_y_labels),
                         };
 
-                        let value = tag
-                            .show_value
-                            .then(|| labels.format(tag.y, span))
-                            .unwrap_or_default();
+                        let value = if tag
+                            .show_value { labels.format(tag.y, span) } else { Default::default() };
                         let text = match (&tag.label, tag.show_value) {
                             (Some(label), true) => format!("{label}: {value}"),
                             (Some(label), false) => label.clone(),
@@ -6599,11 +6588,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             if row.series_id != pinned {
                                 continue;
                             }
-                        } else if let Some(hovered) = legend_hover {
-                            if row.series_id != hovered {
+                        } else if let Some(hovered) = legend_hover
+                            && row.series_id != hovered {
                                 continue;
                             }
-                        }
 
                         let Some(y) = row.y.filter(|y| y.is_finite()) else {
                             continue;
@@ -6848,7 +6836,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         if let Some(series) = model.series.first() {
                             if let Some(slice) = series.data.as_slice() {
                                 let stride =
-                                    ((slice.len() + 15) / 16).max(1).min(slice.len().max(1));
+                                    slice.len().div_ceil(16).max(1).min(slice.len().max(1));
                                 for p in slice.iter().copied().step_by(stride).take(24) {
                                     points.push(p);
                                 }
@@ -6867,7 +6855,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         if let Some(series) = model.series.first() {
                             if let Some(slice) = series.data.as_slice() {
                                 let stride =
-                                    ((slice.len() + 15) / 16).max(1).min(slice.len().max(1));
+                                    slice.len().div_ceil(16).max(1).min(slice.len().max(1));
                                 for p in slice.iter().copied().step_by(stride).take(24) {
                                     points.push(p);
                                 }
@@ -7290,8 +7278,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             }
         }
 
-        if self.show_y2_axis {
-            if let Some(transform_y2) = transform_y2 {
+        if self.show_y2_axis
+            && let Some(transform_y2) = transform_y2 {
                 for (i, label) in self.axis_labels_y2.iter().enumerate() {
                     if label.metrics.size.width.0 <= 0.0 {
                         continue;
@@ -7318,10 +7306,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     });
                 }
             }
-        }
 
-        if self.show_y3_axis {
-            if let Some(transform_y3) = transform_y3 {
+        if self.show_y3_axis
+            && let Some(transform_y3) = transform_y3 {
                 for (i, label) in self.axis_labels_y3.iter().enumerate() {
                     if label.metrics.size.width.0 <= 0.0 {
                         continue;
@@ -7348,10 +7335,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     });
                 }
             }
-        }
 
-        if self.show_y4_axis {
-            if let Some(transform_y4) = transform_y4 {
+        if self.show_y4_axis
+            && let Some(transform_y4) = transform_y4 {
                 for (i, label) in self.axis_labels_y4.iter().enumerate() {
                     if label.metrics.size.width.0 <= 0.0 {
                         continue;
@@ -7378,7 +7364,6 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     });
                 }
             }
-        }
 
         // Axis lock indicators (P0: lightweight discoverability).
         let lock_indicator = |lock: PlotAxisLock| match (lock.pan, lock.zoom) {
@@ -7509,8 +7494,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             }
         }
 
-        if self.show_y2_axis {
-            if let Some(t) = self.axis_lock_indicator_y2 {
+        if self.show_y2_axis
+            && let Some(t) = self.axis_lock_indicator_y2 {
                 let rect = layout.y_axis_right;
                 if rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0 {
                     let top = rect.origin.y.0 + indicator_margin.0;
@@ -7531,10 +7516,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     });
                 }
             }
-        }
 
-        if self.show_y3_axis {
-            if let Some(t) = self.axis_lock_indicator_y3 {
+        if self.show_y3_axis
+            && let Some(t) = self.axis_lock_indicator_y3 {
                 let rect = layout.y_axis_right2;
                 if rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0 {
                     let top = rect.origin.y.0 + indicator_margin.0;
@@ -7555,10 +7539,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     });
                 }
             }
-        }
 
-        if self.show_y4_axis {
-            if let Some(t) = self.axis_lock_indicator_y4 {
+        if self.show_y4_axis
+            && let Some(t) = self.axis_lock_indicator_y4 {
                 let rect = layout.y_axis_right3;
                 if rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0 {
                     let top = rect.origin.y.0 + indicator_margin.0;
@@ -7579,7 +7562,6 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     });
                 }
             }
-        }
 
         // Tooltip (P0: drawn in the same scene; can be moved to overlays later).
         //
@@ -7775,8 +7757,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             }
         }
 
-        if self.style.mouse_readout == MouseReadoutMode::Overlay && !linked_overlay_active {
-            if let Some(cursor_data) = cursor_data {
+        if self.style.mouse_readout == MouseReadoutMode::Overlay && !linked_overlay_active
+            && let Some(cursor_data) = cursor_data {
                 let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
                 let y_text = self.tooltip_y_labels.format(cursor_data.y, y_span);
                 let text = format!("x={x_text}  y={y_text}");
@@ -7852,7 +7834,6 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     });
                 }
             }
-        }
 
         let tooltip = selection_tooltip
             .map(|(anchor, text)| (anchor, text, None))
@@ -7995,11 +7976,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 if row.series_id != pinned {
                                     continue;
                                 }
-                            } else if let Some(hovered) = legend_hover {
-                                if row.series_id != hovered {
+                            } else if let Some(hovered) = legend_hover
+                                && row.series_id != hovered {
                                     continue;
                                 }
-                            }
 
                             let Some(y) = row.y.filter(|y| y.is_finite()) else {
                                 continue;

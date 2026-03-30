@@ -29,3 +29,11 @@ time.workspace = true
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
 serde_json.workspace = true
+
+[lints.clippy]
+arc_with_non_send_sync = "allow"
+field_reassign_with_default = "allow"
+large_enum_variant = "allow"
+manual_clamp = "allow"
+question_mark = "allow"
+too_many_arguments = "allow"

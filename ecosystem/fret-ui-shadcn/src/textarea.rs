@@ -869,7 +869,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let model = app.models_mut().insert(String::new());
 
         let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));

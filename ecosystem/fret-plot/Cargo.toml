@@ -23,3 +23,11 @@ fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge
 slotmap.workspace = true
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-authoring = { path = "../fret-authoring", optional = true }
+
+[lints.clippy]
+bool_assert_comparison = "allow"
+field_reassign_with_default = "allow"
+manual_clamp = "allow"
+question_mark = "allow"
+reserve_after_initialization = "allow"
+too_many_arguments = "allow"

@@ -1,6 +1,7 @@
 use super::*;
 
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub(super) struct DerivedGeometryCacheState {
     pub(super) key: Option<CanvasKey>,
     pub(super) rebuilds: u64,
@@ -8,16 +9,6 @@ pub(super) struct DerivedGeometryCacheState {
     pub(super) index: Option<Arc<CanvasSpatialDerived>>,
 }
 
-impl Default for DerivedGeometryCacheState {
-    fn default() -> Self {
-        Self {
-            key: None,
-            rebuilds: 0,
-            geom: None,
-            index: None,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct DerivedGeometryCacheKeyV2 {
@@ -37,21 +28,13 @@ struct DerivedGeometryCacheKeyV2 {
 }
 
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub(super) struct EdgePaintCacheState {
     pub(super) key: Option<CanvasKey>,
     pub(super) rebuilds: u64,
     pub(super) draws: Option<Arc<Vec<EdgePathDraw>>>,
 }
 
-impl Default for EdgePaintCacheState {
-    fn default() -> Self {
-        Self {
-            key: None,
-            rebuilds: 0,
-            draws: None,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct EdgePaintCacheKeyV3 {
@@ -75,21 +58,13 @@ pub(super) struct EdgePathDraw {
 }
 
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub(super) struct NodePaintCacheState {
     pub(super) key: Option<CanvasKey>,
     pub(super) rebuilds: u64,
     pub(super) draws: Option<Arc<Vec<NodeRectDraw>>>,
 }
 
-impl Default for NodePaintCacheState {
-    fn default() -> Self {
-        Self {
-            key: None,
-            rebuilds: 0,
-            draws: None,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct NodePaintCacheKeyV3 {
@@ -570,11 +545,10 @@ pub(super) fn paint_edges_cached(
                 .and_then(|p| p.edge_paint_override(d.edge))
                 .map(|o| o.normalized())
             {
-                if let Some(m) = o.stroke_width_mul {
-                    if m.is_finite() && m > 0.0 {
+                if let Some(m) = o.stroke_width_mul
+                    && m.is_finite() && m > 0.0 {
                         stroke_width_mul = m;
                     }
-                }
                 dash = o
                     .dash
                     .and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
@@ -610,16 +584,14 @@ pub(super) fn paint_edges_cached(
                 let Some(mut p1) = geom.port_center(d.to) else {
                     continue;
                 };
-                if let Some(from) = geom.ports.get(&d.from) {
-                    if node_drag.is_some_and(|drag| node_drag_contains(drag, from.node)) {
+                if let Some(from) = geom.ports.get(&d.from)
+                    && node_drag.is_some_and(|drag| node_drag_contains(drag, from.node)) {
                         p0 = Point::new(Px(p0.x.0 + ddx), Px(p0.y.0 + ddy));
                     }
-                }
-                if let Some(to) = geom.ports.get(&d.to) {
-                    if node_drag.is_some_and(|drag| node_drag_contains(drag, to.node)) {
+                if let Some(to) = geom.ports.get(&d.to)
+                    && node_drag.is_some_and(|drag| node_drag_contains(drag, to.node)) {
                         p1 = Point::new(Px(p1.x.0 + ddx), Px(p1.y.0 + ddy));
                     }
-                }
 
                 let (ctrl1, ctrl2) = canvas_wires::wire_ctrl_points(p0, p1, zoom);
                 let commands: Box<[PathCommand]> = vec![
@@ -789,7 +761,7 @@ pub(super) fn paint_nodes_cached(
             if !rects_intersect(cull, rect) {
                 continue;
             }
-            let selected = selected_nodes.iter().any(|id| *id == d.id);
+            let selected = selected_nodes.contains(&d.id);
             let hovered = hovered_node.is_some_and(|id| id == d.id);
             let border_color = if selected {
                 border_selected

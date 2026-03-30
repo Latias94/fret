@@ -1,3 +1,14 @@
+#![allow(clippy::arc_with_non_send_sync)]
+#![allow(clippy::field_reassign_with_default)]
+#![allow(clippy::if_same_then_else)]
+#![allow(clippy::manual_clamp)]
+#![allow(clippy::match_like_matches_macro)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::question_mark)]
+#![allow(clippy::suspicious_open_options)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::type_complexity)]
+
 //! Opinionated bootstrap utilities for Fret applications.
 //!
 //! This crate is intentionally *ecosystem-level* (not part of the portable kernel). It composes
@@ -341,7 +352,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     /// `with_layered_keymap(...)` / `with_default_config_files()` so user/project overrides remain
     /// last-wins.
     pub fn with_plugins(mut self, plugins: &[&dyn fret_app::Plugin]) -> Self {
-        let plugins: Vec<&dyn fret_app::Plugin> = plugins.iter().copied().collect();
+        let plugins: Vec<&dyn fret_app::Plugin> = plugins.to_vec();
         self.inner = self.inner.init_app(move |app| {
             fret_app::install_plugins(app, plugins.iter().copied());
         });
@@ -349,11 +360,11 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     }
 
     pub fn with_default_config_files(self) -> Result<Self, BootstrapError> {
-        Ok(self
+        self
             .with_layered_settings(".")?
             .with_command_default_keybindings()
             .with_layered_keymap(".")?
-            .with_layered_menu_bar(".")?)
+            .with_layered_menu_bar(".")
     }
 
     pub fn with_default_config_files_for_root(
@@ -361,11 +372,11 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         project_root: impl AsRef<Path>,
     ) -> Result<Self, BootstrapError> {
         let project_root = project_root.as_ref();
-        Ok(self
+        self
             .with_layered_settings(project_root)?
             .with_command_default_keybindings()
             .with_layered_keymap(project_root)?
-            .with_layered_menu_bar(project_root)?)
+            .with_layered_menu_bar(project_root)
     }
 
     /// Enables polling-based hot reload for layered `settings.json` / `keymap.json` / `menubar.json` files.

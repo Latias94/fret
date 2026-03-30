@@ -52,7 +52,7 @@ fn fixed_line_box_keeps_metrics_height_and_baseline_stable_across_fallback_runs(
             prepared.metrics()
         );
         assert_eq!(
-            prepared.lines()[0].layout().height,
+            prepared.lines()[0].layout().height(),
             line_height,
             "expected first line height to match fixed line box: text={text:?}, line={:?}",
             prepared.lines()[0].layout()

@@ -85,6 +85,12 @@ impl std::fmt::Debug for ResizableHandle {
     }
 }
 
+impl Default for ResizableHandle {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ResizableHandle {
     pub fn new() -> Self {
         Self {

@@ -217,8 +217,8 @@ impl ElementHostWidget {
                 let focus_visible = crate::focus_visible::is_focus_visible(cx.app, cx.window);
                 let paint_focus_chrome = focused && focus_visible;
 
-                if paint_focus_chrome {
-                    if let Some(border_color) = props.focus_border_color {
+                if paint_focus_chrome
+                    && let Some(border_color) = props.focus_border_color {
                         if let Some(dash) = props.border_dash
                             && props.border != Edges::all(Px(0.0))
                         {
@@ -241,7 +241,6 @@ impl ElementHostWidget {
                             });
                         }
                     }
-                }
 
                 if let Some(ring) = props.focus_ring
                     && (paint_focus_chrome || props.focus_ring_always_paint)

@@ -441,13 +441,12 @@ pub(crate) fn cmd_doctor_scripts(
                 continue;
             }
 
-            if let Some(tv) = read_json_value(&target) {
-                if is_script_redirect(&tv) {
+            if let Some(tv) = read_json_value(&target)
+                && is_script_redirect(&tv) {
                     counts.suites_redirect_target_is_redirect_total = counts
                         .suites_redirect_target_is_redirect_total
                         .saturating_add(1);
                 }
-            }
             match redirect_chain_depth(workspace_root, &path, MAX_REDIRECT_DEPTH) {
                 Ok(depth) => {
                     counts.suites_redirect_chain_depth_max =

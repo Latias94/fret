@@ -4420,7 +4420,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4705,7 +4705,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4827,7 +4827,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -5367,7 +5367,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let checked = app.models_mut().insert(false);
         let change_count = app.models_mut().insert(0_u32);
@@ -5490,7 +5490,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let selected = app.models_mut().insert(Some(Arc::<str>::from("bottom")));
         let change_count = app.models_mut().insert(0_u32);
@@ -5623,7 +5623,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -5719,7 +5719,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -5768,7 +5768,7 @@ mod tests {
         render_frame_with_disabled(&mut ui, &mut app, &mut services, window, bounds, true);
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(
-            !menu_trigger_expanded(&snap, "File") && !menu_trigger_expanded(&snap, "Edit"),
+            !menu_trigger_expanded(snap, "File") && !menu_trigger_expanded(snap, "Edit"),
             "disabled menubar should not expose expanded trigger semantics"
         );
 
@@ -5793,7 +5793,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -5848,7 +5848,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -5898,7 +5898,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -5948,7 +5948,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6011,7 +6011,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6081,7 +6081,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         ui.set_debug_enabled(true);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6252,7 +6252,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6358,7 +6358,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6475,7 +6475,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6587,7 +6587,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6693,7 +6693,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6855,7 +6855,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6923,7 +6923,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -7050,7 +7050,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -7149,7 +7149,7 @@ mod tests {
             window,
             bounds,
             &overlay_root_name,
-            |cx| menu::sub::ensure_models(cx),
+            menu::sub::ensure_models,
         );
         let geometry = app
             .models_mut()
@@ -7284,7 +7284,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),

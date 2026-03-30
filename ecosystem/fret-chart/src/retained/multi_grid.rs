@@ -146,7 +146,7 @@ pub fn create_multi_grid_chart_canvas_nodes<H: UiHost>(
         ui.add_child(root, node);
         return Ok(MultiGridChartCanvasNodes {
             root,
-            canvases: vec![(grids.get(0).copied().unwrap_or(GridId::new(1)), node)],
+            canvases: vec![(grids.first().copied().unwrap_or(GridId::new(1)), node)],
         });
     }
 

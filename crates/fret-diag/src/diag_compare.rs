@@ -208,30 +208,27 @@ fn resolve_session_root_for_resource_footprint(src: &Path) -> PathBuf {
         return src.to_path_buf();
     }
 
-    if src.is_file() {
-        if let Some(parent) = src.parent() {
+    if src.is_file()
+        && let Some(parent) = src.parent() {
             if parent.join("resource.footprint.json").is_file() {
                 return parent.to_path_buf();
             }
             // If the user pointed at a bundle artifact, it lives under a bundle export dir, which
             // lives under the session root.
-            if let Some(grand) = parent.parent() {
-                if grand.join("resource.footprint.json").is_file() {
+            if let Some(grand) = parent.parent()
+                && grand.join("resource.footprint.json").is_file() {
                     return grand.to_path_buf();
                 }
-            }
         }
-    }
 
     if src.is_dir() {
         // Common case: user provided a base out dir or session out dir; resolve to the latest bundle
         // dir and then climb back to the session root (which holds `resource.footprint.json`).
         let bundle_dir = resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_self(src);
-        if let Some(session_root) = bundle_dir.parent() {
-            if session_root.join("resource.footprint.json").is_file() {
+        if let Some(session_root) = bundle_dir.parent()
+            && session_root.join("resource.footprint.json").is_file() {
                 return session_root.to_path_buf();
             }
-        }
     }
 
     // Fallback: return the input directory so the error message can reference a useful path.

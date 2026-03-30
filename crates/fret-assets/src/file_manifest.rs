@@ -421,13 +421,13 @@ fn resolve_manifest_path(base_dir: &Path, bundle_root: &Path, entry_path: &Path)
 
 #[cfg(not(target_arch = "wasm32"))]
 fn collect_bundle_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AssetManifestLoadError> {
-    let mut entries =
+    let entries =
         std::fs::read_dir(dir).map_err(|source| AssetManifestLoadError::ReadBundleRoot {
             path: dir.to_path_buf(),
             source,
         })?;
     let mut paths = Vec::new();
-    while let Some(entry) = entries.next() {
+    for entry in entries {
         let entry = entry.map_err(|source| AssetManifestLoadError::ReadBundleRoot {
             path: dir.to_path_buf(),
             source,

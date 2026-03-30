@@ -73,7 +73,9 @@ pub(crate) fn calendar_day_grid_row_edge_target_for_key(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Default)]
 pub enum CalendarLocale {
+    #[default]
     En,
     Es,
 }
@@ -192,11 +194,6 @@ impl CalendarDayButton {
     }
 }
 
-impl Default for CalendarLocale {
-    fn default() -> Self {
-        Self::En
-    }
-}
 
 impl CalendarLocale {
     pub(crate) fn month_name(self, month: Month) -> &'static str {
@@ -732,7 +729,7 @@ impl Calendar {
         let today = self
             .today
             .unwrap_or_else(|| OffsetDateTime::now_utc().date());
-        let in_bounds = |d: Date| month_bounds.map_or(true, |b| date_in_month_bounds(d, b));
+        let in_bounds = |d: Date| month_bounds.is_none_or(|b| date_in_month_bounds(d, b));
 
         let mut hidden = Vec::with_capacity(grid.len());
         let mut disabled = Vec::with_capacity(grid.len());
@@ -1462,7 +1459,7 @@ fn calendar_month_view<H: UiHost>(
     } else {
         month_grid_compact(month, week_start)
     };
-    let in_bounds = |d: Date| month_bounds.map_or(true, |b| date_in_month_bounds(d, b));
+    let in_bounds = |d: Date| month_bounds.is_none_or(|b| date_in_month_bounds(d, b));
 
     let mut hidden = Vec::with_capacity(grid.len());
     let mut disabled = Vec::with_capacity(grid.len());
@@ -1851,9 +1848,9 @@ pub(crate) fn calendar_single_month_header<H: UiHost>(
 
     cx.keyed(header_key, move |cx| {
         let nav_enabled = !disable_navigation;
-        let prev_enabled = nav_enabled && month_bounds.map_or(true, |b| month_lt(b.0, month));
+        let prev_enabled = nav_enabled && month_bounds.is_none_or(|b| month_lt(b.0, month));
         let next_enabled =
-            nav_enabled && month_bounds.map_or(true, |b| month_lt(month, max_start_month(b, 1)));
+            nav_enabled && month_bounds.is_none_or(|b| month_lt(month, max_start_month(b, 1)));
 
         let direction = crate::direction::use_direction(cx, None);
         let (prev_icon, next_icon) = if direction == LayoutDirection::Rtl {
@@ -2183,8 +2180,8 @@ pub(crate) fn calendar_multi_month_nav_overlay<H: UiHost>(
     let nav_enabled = !disable_navigation;
     let min_start = month_bounds.map(|b| b.0);
     let max_start = month_bounds.map(|b| max_start_month(b, number_of_months));
-    let prev_enabled = nav_enabled && min_start.map_or(true, |min| month_lt(min, start_month));
-    let next_enabled = nav_enabled && max_start.map_or(true, |max| month_lt(start_month, max));
+    let prev_enabled = nav_enabled && min_start.is_none_or(|min| month_lt(min, start_month));
+    let next_enabled = nav_enabled && max_start.is_none_or(|max| month_lt(start_month, max));
     let direction = crate::direction::use_direction(cx, None);
     let prev_icon = rtl::chevron_inline_start(direction);
     let next_icon = rtl::chevron_inline_end(direction);
@@ -2396,7 +2393,7 @@ pub(crate) fn clamp_start_month(
 
 fn ordinal_suffix(day: u8) -> &'static str {
     let mod_100 = day % 100;
-    if mod_100 >= 11 && mod_100 <= 13 {
+    if (11..=13).contains(&mod_100) {
         return "th";
     }
     match day % 10 {

@@ -259,7 +259,7 @@ pub(super) fn handle_drag_pointer_step(
         if done {
             active.pending_cancel_cross_window_drag =
                 Some(PendingCancelCrossWindowDrag::new(PointerId(0)));
-            if let Some(ui) = ui.as_deref_mut() {
+            if let Some(ui) = ui {
                 record_hit_test_trace_for_selector(
                     &mut active.hit_test_trace,
                     ui,
@@ -764,8 +764,8 @@ pub(super) fn handle_drag_pointer_until_step(
                 active.v2_step_state = None;
             } else {
                 // Initialize start/end positions on the first frame.
-                if state.playback.frame == 0 && state.playback.start == Point::default() {
-                    if let Some(snapshot) = semantics_snapshot {
+                if state.playback.frame == 0 && state.playback.start == Point::default()
+                    && let Some(snapshot) = semantics_snapshot {
                         if let Some(node) = select_semantics_node_with_trace(
                             snapshot,
                             window,
@@ -802,7 +802,6 @@ pub(super) fn handle_drag_pointer_until_step(
                             output.request_redraw = true;
                         }
                     }
-                }
 
                 // Wait for semantics to become available before selecting coordinates.
                 if !*stop_script
@@ -838,14 +837,12 @@ pub(super) fn handle_drag_pointer_until_step(
                                 pointer_type,
                             );
                         }
-                    } else {
-                        if !suppress_pointer_events_for_cross_window_hover {
-                            output.events.extend(pointer_move_with_internal_over_events(
-                                state.playback.button,
-                                state.playback.end,
-                                pointer_type,
-                            ));
-                        }
+                    } else if !suppress_pointer_events_for_cross_window_hover {
+                        output.events.extend(pointer_move_with_internal_over_events(
+                            state.playback.button,
+                            state.playback.end,
+                            pointer_type,
+                        ));
                     }
 
                     // For cross-window hover, the runner's "true cursor" must remain over the
@@ -915,7 +912,7 @@ pub(super) fn handle_drag_to_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -1030,7 +1027,7 @@ pub(super) fn handle_drag_to_step(
                     .unwrap_or_else(|| {
                         center_of_rect_clamped_to_rect(to_node.bounds, window_bounds)
                     });
-                if let Some(ui) = ui.as_deref_mut() {
+                if let Some(ui) = ui {
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,
                         ui,

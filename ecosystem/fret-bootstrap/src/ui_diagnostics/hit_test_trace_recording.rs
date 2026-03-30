@@ -73,11 +73,10 @@ fn build_hit_test_trace_entry_for_selector(
         .unwrap_or_default();
 
     let includes_intended = intended.map(|target| {
-        if let Some(hit_id) = hit_semantics_node_id {
-            if hit_id == target.id.data().as_ffi() {
+        if let Some(hit_id) = hit_semantics_node_id
+            && hit_id == target.id.data().as_ffi() {
                 return true;
             }
-        }
         if let (Some(want), Some(got)) =
             (target.test_id.as_deref(), hit_semantics_test_id.as_deref())
         {
@@ -113,8 +112,8 @@ fn build_hit_test_trace_entry_for_selector(
             let mut test_id: Option<String> = None;
             let mut role: Option<String> = None;
             let mut bounds: Option<UiRectV1> = None;
-            if let Some(snapshot) = semantics_snapshot {
-                if let Some(n) = snapshot.nodes.iter().find(|n| n.id == node) {
+            if let Some(snapshot) = semantics_snapshot
+                && let Some(n) = snapshot.nodes.iter().find(|n| n.id == node) {
                     test_id = n.test_id.clone();
                     role = Some(semantics_role_label(n.role).to_string());
                     bounds = Some(UiRectV1 {
@@ -124,7 +123,6 @@ fn build_hit_test_trace_entry_for_selector(
                         h_px: n.bounds.size.height.0,
                     });
                 }
-            }
             if bounds.is_none() {
                 bounds = ui.debug_node_bounds(node).map(|r| UiRectV1 {
                     x_px: r.origin.x.0,
@@ -203,8 +201,8 @@ fn build_hit_test_trace_entry_for_selector(
                         s
                     });
             }
-            if let Some(snapshot) = semantics_snapshot {
-                if let Some(n) = snapshot.nodes.iter().find(|n| n.id == captured) {
+            if let Some(snapshot) = semantics_snapshot
+                && let Some(n) = snapshot.nodes.iter().find(|n| n.id == captured) {
                     test_id = n.test_id.clone();
                     role = Some(semantics_role_label(n.role).to_string());
                     bounds = Some(UiRectV1 {
@@ -214,7 +212,6 @@ fn build_hit_test_trace_entry_for_selector(
                         h_px: n.bounds.size.height.0,
                     });
                 }
-            }
             (
                 Some(captured_id),
                 test_id,

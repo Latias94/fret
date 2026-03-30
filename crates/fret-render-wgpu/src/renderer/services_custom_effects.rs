@@ -113,16 +113,15 @@ fn custom_effect_sampled_user_image_supported(adapter: &wgpu::Adapter) -> bool {
             .contains(wgpu::TextureFormatFeatureFlags::FILTERABLE)
 }
 
+type BuildAndValidateFn = fn(
+    &str,
+) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError>;
+
 fn register_custom_effect_wgsl(
     renderer: &mut Renderer,
     abi: CustomEffectAbi,
     user_source: String,
-    build_and_validate: fn(
-        &str,
-    ) -> Result<
-        (String, String, String),
-        fret_core::CustomEffectRegistrationError,
-    >,
+    build_and_validate: BuildAndValidateFn,
 ) -> Result<fret_core::EffectId, fret_core::CustomEffectRegistrationError> {
     if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
         return Err(fret_core::CustomEffectRegistrationError::InvalidSource);

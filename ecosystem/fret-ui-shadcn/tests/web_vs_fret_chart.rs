@@ -1,3 +1,5 @@
+#![allow(clippy::needless_lifetimes)]
+
 #[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 use web_golden_shadcn::*;

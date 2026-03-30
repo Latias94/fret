@@ -627,11 +627,10 @@ impl ConfirmationActions {
             .justify(Justify::End)
             .items(Items::Center)
             .into_element(cx);
-        if let fret_ui::element::ElementKind::Container(props) = &mut el.kind {
-            if matches!(props.layout.size.width, fret_ui::element::Length::Auto) {
+        if let fret_ui::element::ElementKind::Container(props) = &mut el.kind
+            && matches!(props.layout.size.width, fret_ui::element::Length::Auto) {
                 props.layout.flex.align_self = Some(fret_ui::element::CrossAlign::End);
             }
-        }
         let Some(test_id) = self.test_id else {
             return el;
         };

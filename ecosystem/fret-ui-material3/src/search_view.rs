@@ -161,8 +161,8 @@ impl SearchView {
             let bar = bar.into_element(cx);
 
             // Policy: open on focus gained (Compose-like), while keeping focus on the text input.
-            if !self.disabled {
-                if let Some(input_id) = input_id_out.get() {
+            if !self.disabled
+                && let Some(input_id) = input_id_out.get() {
                     let focused_input = cx.is_focused_element(input_id);
 
                     #[derive(Default)]
@@ -181,7 +181,6 @@ impl SearchView {
                         cx.app.request_redraw(cx.window);
                     }
                 }
-            }
 
             let is_open = cx
                 .get_model_copied(&self.open, fret_ui::Invalidation::Layout)

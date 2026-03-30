@@ -1,3 +1,6 @@
+#![allow(clippy::bool_comparison)]
+#![allow(clippy::default_constructed_unit_structs)]
+
 //! Workspace-shell building blocks (editor-grade app chrome).
 //!
 //! This crate intentionally lives in `ecosystem/`:

@@ -314,7 +314,7 @@ fn tooltip_policy_root<H: UiHost>(
         let trigger_focused = focused && !suppress_focus_open;
 
         let anchor_bounds = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
-        let floating_bounds = anchor_bounds.and_then(|anchor| {
+        let floating_bounds = anchor_bounds.map(|anchor| {
             let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
             let estimated_size = Size::new(Px(240.0), Px(32.0));
             let content_size = last_content_size.unwrap_or(estimated_size);
@@ -346,7 +346,7 @@ fn tooltip_policy_root<H: UiHost>(
                     .with_shift_cross_axis(true),
             );
 
-            Some(layout.rect)
+            layout.rect
         });
 
         let update = tooltip_prim::tooltip_update_interaction(
@@ -866,7 +866,7 @@ impl PlainTooltip {
             let trigger_focused = focused && !suppress_focus_open;
 
             let anchor_bounds = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
-            let floating_bounds = anchor_bounds.and_then(|anchor| {
+            let floating_bounds = anchor_bounds.map(|anchor| {
                 let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
                 let estimated_size = Size::new(Px(240.0), Px(32.0));
                 let content_size = last_content_size.unwrap_or(estimated_size);
@@ -898,7 +898,7 @@ impl PlainTooltip {
                         .with_shift_cross_axis(true),
                 );
 
-                Some(layout.rect)
+                layout.rect
             });
 
             let update = tooltip_prim::tooltip_update_interaction(

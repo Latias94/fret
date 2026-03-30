@@ -1519,7 +1519,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1606,7 +1606,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1757,7 +1757,7 @@ mod tests {
         let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
@@ -1959,7 +1959,7 @@ mod tests {
         let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
@@ -2074,7 +2074,7 @@ mod tests {
         let after_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
@@ -2191,7 +2191,7 @@ mod tests {
         let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
@@ -2441,7 +2441,7 @@ mod tests {
         let selectable_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
@@ -2691,7 +2691,7 @@ mod tests {
         let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
@@ -2976,7 +2976,7 @@ mod tests {
         let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),

@@ -106,11 +106,9 @@ fn resolve_layout_sidecar_path(bundle_dir: &Path) -> Option<PathBuf> {
         .file_name()
         .and_then(|s| s.to_str())
         .is_some_and(|s| s == "_root")
-    {
-        if let Some(parent) = bundle_dir.parent() {
+        && let Some(parent) = bundle_dir.parent() {
             candidates.push(parent.join(LAYOUT_SIDECAR_TAFFY_V1_FILENAME));
         }
-    }
 
     for c in candidates {
         if c.is_file() {

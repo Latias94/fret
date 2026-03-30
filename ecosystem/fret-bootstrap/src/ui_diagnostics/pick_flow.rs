@@ -92,11 +92,10 @@ impl UiDiagnosticsService {
             result.reason = Some("no semantics snapshot".to_string());
         }
 
-        if self.cfg.pick_auto_dump {
-            if let Some(dir) = self.dump_bundle(Some("pick")) {
+        if self.cfg.pick_auto_dump
+            && let Some(dir) = self.dump_bundle(Some("pick")) {
                 result.last_bundle_dir = Some(display_path(&self.cfg.out_dir, &dir));
             }
-        }
 
         self.write_pick_result(result);
     }

@@ -464,8 +464,8 @@ impl LinkedChartGroup {
             }
         }
 
-        if self.policy.brush {
-            if let Some(selection) = source_events.iter().rev().find_map(|e| match e {
+        if self.policy.brush
+            && let Some(selection) = source_events.iter().rev().find_map(|e| match e {
                 LinkEvent::BrushSelectionChanged { selection } => Some(*selection),
                 _ => None,
             }) {
@@ -490,7 +490,6 @@ impl LinkedChartGroup {
                     changed = true;
                 }
             }
-        }
 
         if !changed {
             return false;

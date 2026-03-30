@@ -467,7 +467,7 @@ mod tests {
 
         for key in keys {
             assert!(
-                token_resolves(&theme, key),
+                token_resolves(theme, key),
                 "md token not found in v30 theme config: {key}"
             );
         }

@@ -3491,10 +3491,9 @@ mod tests {
                         cx,
                         |_cx| trigger,
                         move |cx| {
-                            let content =
-                                DialogContent::new(vec![ui::raw_text("Content").into_element(cx)])
-                                    .into_element(cx);
-                            content
+                            
+                            DialogContent::new(vec![ui::raw_text("Content").into_element(cx)])
+                                    .into_element(cx)
                         },
                     );
 
@@ -4139,10 +4138,9 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let trigger = trigger_id_for_handler
+            let trigger = *trigger_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(trigger) = trigger {
                 host.request_focus(trigger);
             }
@@ -4971,10 +4969,9 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = redirect_focus_id_for_handler
+            let id = *redirect_focus_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
@@ -5073,10 +5070,9 @@ mod tests {
         let target_id_for_handler = target_id_cell.clone();
         let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = target_id_for_handler
+            let id = *target_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
@@ -5177,10 +5173,9 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = underlay_id_for_handler
+            let id = *underlay_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
@@ -6436,11 +6431,11 @@ mod tests {
             .expect("description semantics node");
 
         assert!(
-            dialog.labelled_by.iter().any(|id| *id == title.id),
+            dialog.labelled_by.contains(&title.id),
             "dialog should be labelled by its title"
         );
         assert!(
-            dialog.described_by.iter().any(|id| *id == description.id),
+            dialog.described_by.contains(&description.id),
             "dialog should be described by its description"
         );
     }

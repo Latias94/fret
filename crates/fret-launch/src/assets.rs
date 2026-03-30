@@ -144,9 +144,9 @@ impl AssetReloadPolicy {
     pub fn development_default() -> Self {
         #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
         {
-            return Self::NativeWatcher {
+            Self::NativeWatcher {
                 fallback_poll_interval: Duration::from_millis(250),
-            };
+            }
         }
 
         #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
@@ -244,7 +244,7 @@ impl AssetStartupPlan {
     ) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
-            return self.development_bundle_dir(bundle, dir);
+            self.development_bundle_dir(bundle, dir)
         }
 
         #[cfg(target_arch = "wasm32")]

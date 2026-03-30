@@ -1390,7 +1390,7 @@ impl CommandList {
                         .read_ref(|s| s.trim().to_ascii_lowercase())
                         .ok()
                 })
-                .map(|trimmed| Arc::<str>::from(trimmed))
+                .map(Arc::<str>::from)
                 .unwrap_or_else(|| Arc::from(""));
 
             let should_filter = query_model.is_some();
@@ -3954,9 +3954,9 @@ impl CommandDialog {
             false
         };
 
-        if should_dispatch {
-            if let Ok(mut slot) = pending_dispatch_cell.lock() {
-                if let Some(pending) = slot.take() {
+        if should_dispatch
+            && let Ok(mut slot) = pending_dispatch_cell.lock()
+                && let Some(pending) = slot.take() {
                     let kind = match pending.reason {
                         ActivateReason::Pointer => {
                             fret_runtime::CommandDispatchSourceKindV1::Pointer
@@ -3985,8 +3985,6 @@ impl CommandDialog {
                         command: pending.command,
                     });
                 }
-            }
-        }
 
         let dialog_on_open_change: Option<OnOpenChange> = if on_open_change_for_dialog.is_none()
             && on_open_change_with_reason_for_dialog.is_none()
@@ -3999,11 +3997,10 @@ impl CommandDialog {
                 }
                 if let Some(handler) = on_open_change_with_reason_for_dialog.as_ref() {
                     let mut reason = CommandDialogOpenChangeReason::None;
-                    if let Ok(mut slot) = open_change_reason_cell_for_open_change.lock() {
-                        if let Some(stored) = slot.take() {
+                    if let Ok(mut slot) = open_change_reason_cell_for_open_change.lock()
+                        && let Some(stored) = slot.take() {
                             reason = stored;
                         }
-                    }
                     if is_open && reason == CommandDialogOpenChangeReason::None {
                         reason = CommandDialogOpenChangeReason::TriggerPress;
                     }
@@ -4516,7 +4513,7 @@ mod tests {
             Arc::new(std::sync::Mutex::new(Vec::new()));
 
         let bounds = bounds();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
             let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
@@ -4692,7 +4689,7 @@ mod tests {
         };
 
         let bounds = bounds();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let _root = render_dialog_frame(
             &mut ui,
@@ -4746,7 +4743,7 @@ mod tests {
 
         let query = app.models_mut().insert(String::new());
         let bounds = bounds();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -4798,7 +4795,7 @@ mod tests {
             "expected custom-children command item to preserve the option semantics label"
         );
         assert!(
-            snapshot_contains_text(&snap, "Custom row content"),
+            snapshot_contains_text(snap, "Custom row content"),
             "expected custom-children command item to render the supplied row content"
         );
 
@@ -4827,7 +4824,7 @@ mod tests {
         let build_items = || vec![CommandItem::new("Alpha").on_select_action(on_select.clone())];
 
         let bounds = bounds();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let _root = render_dialog_frame(
             &mut ui,
@@ -4890,7 +4887,7 @@ mod tests {
         let build_items = || vec![CommandItem::new("Alpha").on_select_action(on_select.clone())];
 
         let bounds = bounds();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let _root = render_dialog_frame(
             &mut ui,
@@ -4948,7 +4945,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(360.0), Px(140.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_items = || {
             (0..80)
@@ -5025,7 +5022,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_items = || {
             vec![
@@ -5266,7 +5263,7 @@ mod tests {
         ui.set_window(window);
 
         let query = app.models_mut().insert(String::new());
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = bounds();
 
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
@@ -5321,7 +5318,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_items = || {
             vec![
@@ -5390,11 +5387,11 @@ mod tests {
             .find(|n| n.role == SemanticsRole::ListBox)
             .expect("listbox node");
         assert!(
-            list.labelled_by.iter().any(|id| *id == input.id),
+            list.labelled_by.contains(&input.id),
             "listbox should be labelled by the focused input"
         );
         assert!(
-            input.controls.iter().any(|id| *id == list.id),
+            input.controls.contains(&list.id),
             "focused input should control the listbox"
         );
 
@@ -5421,7 +5418,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -5474,7 +5471,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -5527,7 +5524,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -5583,7 +5580,7 @@ mod tests {
         let open = app.models_mut().insert(true);
         let query = app.models_mut().insert(String::new());
         let bounds = bounds();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -5653,7 +5650,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let _root = render_frame(
             &mut ui,
@@ -5677,7 +5674,7 @@ mod tests {
             "expected cmdk empty state to render without listbox options"
         );
         assert!(
-            snapshot_contains_text(&snap, "No results."),
+            snapshot_contains_text(snap, "No results."),
             "expected cmdk empty state to render the default empty text"
         );
     }
@@ -5696,7 +5693,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let seen: Arc<Mutex<Vec<Option<Arc<str>>>>> = Arc::new(Mutex::new(Vec::new()));
         let on_value_change: OnValueChange = Arc::new({
@@ -5787,7 +5784,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_items = || {
             vec![
@@ -5865,7 +5862,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_items = || {
             vec![
@@ -6019,7 +6016,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_items = || {
             (0..12)
@@ -6109,7 +6106,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_items = || {
             vec![
@@ -6294,7 +6291,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_items = || {
             vec![
@@ -6389,7 +6386,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_items = || {
             vec![
@@ -6488,7 +6485,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             CommandItem::new("Open")
@@ -6753,7 +6750,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             CommandItem::new("Open")

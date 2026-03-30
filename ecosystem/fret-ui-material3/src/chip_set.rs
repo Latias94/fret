@@ -94,7 +94,7 @@ impl Default for ChipSet {
         Self {
             items: Vec::new(),
             disabled: false,
-            gap: Px(8.0).into(),
+            gap: Px(8.0),
             wrap_layout: false,
             loop_navigation: true,
             a11y_label: None,
@@ -158,7 +158,7 @@ impl ChipSet {
             test_id,
         } = self;
 
-        let default_layout_direction = cx.with_theme(|theme| theme_default_layout_direction(theme));
+        let default_layout_direction = cx.with_theme(theme_default_layout_direction);
         let layout_direction = resolved_layout_direction(cx, default_layout_direction);
 
         let disabled_items: Arc<[bool]> = Arc::from(

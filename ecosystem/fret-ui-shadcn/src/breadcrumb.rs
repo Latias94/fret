@@ -56,17 +56,14 @@ enum BreadcrumbItemKind {
 /// primitives surface supports composable children when parity work needs the documented custom
 /// separator slot.
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub enum BreadcrumbSeparator {
+    #[default]
     ChevronRight,
     Icon { icon: IconId, size: Px },
     Text(Arc<str>),
 }
 
-impl Default for BreadcrumbSeparator {
-    fn default() -> Self {
-        Self::ChevronRight
-    }
-}
 
 /// A shadcn/ui v4-aligned breadcrumb builder.
 ///
@@ -1264,6 +1261,7 @@ pub mod primitives {
     }
 
     #[derive(Debug)]
+    #[derive(Default)]
     pub struct BreadcrumbSeparator {
         kind: BreadcrumbSeparatorKind,
         children: Vec<AnyElement>,
@@ -1271,16 +1269,7 @@ pub mod primitives {
         layout: LayoutRefinement,
     }
 
-    impl Default for BreadcrumbSeparator {
-        fn default() -> Self {
-            Self {
-                kind: BreadcrumbSeparatorKind::default(),
-                children: Vec::new(),
-                chrome: ChromeRefinement::default(),
-                layout: LayoutRefinement::default(),
-            }
-        }
-    }
+    
 
     pub struct BreadcrumbSeparatorBuild<H, Children> {
         separator: BreadcrumbSeparator,
@@ -1572,7 +1561,7 @@ mod tests {
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1623,7 +1612,7 @@ mod tests {
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1690,7 +1679,7 @@ mod tests {
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -1768,7 +1757,7 @@ mod tests {
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1880,7 +1869,7 @@ mod tests {
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -2008,7 +1997,7 @@ mod tests {
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),

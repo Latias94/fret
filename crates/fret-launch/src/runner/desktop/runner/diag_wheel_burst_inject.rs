@@ -156,9 +156,7 @@ impl<D: super::WinitAppDriver> super::WinitRunner<D> {
         &mut self,
         window: fret_core::AppWindowId,
     ) -> Option<WheelBurstInjectRequestV1> {
-        let Some(mut svc) = self.diag_wheel_burst_inject.take() else {
-            return None;
-        };
+        let mut svc = self.diag_wheel_burst_inject.take()?;
         let req = svc.take_for_window(window);
         self.diag_wheel_burst_inject = Some(svc);
         req

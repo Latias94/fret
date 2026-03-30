@@ -251,7 +251,7 @@ impl Marquee {
                             Transform2D::translation(Point::new(Px(translate_x), Px(0.0)));
                         cx.visual_transform_props(
                             VisualTransformProps {
-                                layout: inner_layout.clone(),
+                                layout: inner_layout,
                                 transform,
                             },
                             move |_cx| vec![track_row],
@@ -301,29 +301,6 @@ fn marquee_default_cycle_width_px(
         .unwrap_or(viewport_width)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn marquee_default_cycle_width_prefers_override() {
-        let width = marquee_default_cycle_width_px(Some(Px(123.0)), Some(Px(456.0)), Px(789.0));
-        assert_eq!(width.0, 123.0);
-    }
-
-    #[test]
-    fn marquee_default_cycle_width_prefers_region_over_viewport() {
-        let width = marquee_default_cycle_width_px(None, Some(Px(456.0)), Px(789.0));
-        assert_eq!(width.0, 456.0);
-    }
-
-    #[test]
-    fn marquee_default_cycle_width_falls_back_to_viewport() {
-        let width = marquee_default_cycle_width_px(None, None, Px(789.0));
-        assert_eq!(width.0, 789.0);
-    }
-}
-
 fn build_track<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     items: &[Arc<str>],
@@ -347,4 +324,27 @@ fn build_track<H: UiHost>(
     .gap(gap)
     .layout(LayoutRefinement::default().flex_shrink_0())
     .into_element(cx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn marquee_default_cycle_width_prefers_override() {
+        let width = marquee_default_cycle_width_px(Some(Px(123.0)), Some(Px(456.0)), Px(789.0));
+        assert_eq!(width.0, 123.0);
+    }
+
+    #[test]
+    fn marquee_default_cycle_width_prefers_region_over_viewport() {
+        let width = marquee_default_cycle_width_px(None, Some(Px(456.0)), Px(789.0));
+        assert_eq!(width.0, 456.0);
+    }
+
+    #[test]
+    fn marquee_default_cycle_width_falls_back_to_viewport() {
+        let width = marquee_default_cycle_width_px(None, None, Px(789.0));
+        assert_eq!(width.0, 789.0);
+    }
 }

@@ -1,3 +1,5 @@
+#![allow(clippy::clone_on_copy)]
+
 use fret_app::App;
 use fret_core::{
     AppWindowId, Event, Modifiers, MouseButton, Paint, Point, PointerEvent, PointerType, Px, Rect,

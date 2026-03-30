@@ -267,13 +267,12 @@ impl InputChip {
                         let _ = host.update_model(&selected_model_for_toggle, |v| *v = !*v);
                         host.request_redraw(action_cx.window);
                     }
-                    if enabled_for_toggle && action_enabled {
-                        if let Some(action) = action.as_ref() {
+                    if enabled_for_toggle && action_enabled
+                        && let Some(action) = action.as_ref() {
                             crate::foundation::action::dispatch_action(
                                 host, action_cx, reason, action,
                             );
                         }
-                    }
                     if let Some(h) = user_activate.as_ref() {
                         h(host, action_cx, reason);
                     }

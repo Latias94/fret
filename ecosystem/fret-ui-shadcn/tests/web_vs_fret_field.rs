@@ -104,7 +104,7 @@ fn shadcn_field_goldens_are_targeted_gates() {
                 || n.tag == "select"
                 || n.tag == "button"
                 || n.tag == "fieldset"
-                || n.attrs.get("role").is_some()
+                || n.attrs.contains_key("role")
         });
         assert!(
             found.is_some(),

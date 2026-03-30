@@ -112,7 +112,7 @@ pub(super) fn collect_portal_label_infos_for_visible_subset(
             label,
             ports_in,
             ports_out,
-            selected: selected_nodes.iter().any(|id| *id == draw.id),
+            selected: selected_nodes.contains(&draw.id),
             hovered: hovered_node.is_some_and(|id| id == draw.id),
         });
     }

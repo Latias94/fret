@@ -263,7 +263,7 @@ fn nearest_point_y_by_x_budgeted(series: &dyn SeriesData, x: f64, budget: usize)
     }
 
     let budget = budget.max(1).min(len);
-    let stride = ((len + budget - 1) / budget).max(1);
+    let stride = len.div_ceil(budget).max(1);
 
     let mut best_dx = f64::INFINITY;
     let mut best_y: Option<f64> = None;
@@ -414,24 +414,22 @@ fn nearest_valid_in_range(
 
     for step in 0..=max_steps {
         let left = center.saturating_sub(step);
-        if left >= lo {
-            if let Some(p) = series.get(left)
+        if left >= lo
+            && let Some(p) = series.get(left)
                 && p.x.is_finite()
                 && p.y.is_finite()
             {
                 return Some((left, p));
             }
-        }
 
         let right = center.saturating_add(step);
-        if step > 0 && right < hi {
-            if let Some(p) = series.get(right)
+        if step > 0 && right < hi
+            && let Some(p) = series.get(right)
                 && p.x.is_finite()
                 && p.y.is_finite()
             {
                 return Some((right, p));
             }
-        }
     }
 
     None
@@ -657,8 +655,8 @@ fn error_bars_commands(
             }
         }
 
-        if let Some(x_err) = series.x_errors.as_ref().and_then(|e| e.get(idx).copied()) {
-            if let Some(y_px) = transform.data_y_to_px(p.y) {
+        if let Some(x_err) = series.x_errors.as_ref().and_then(|e| e.get(idx).copied())
+            && let Some(y_px) = transform.data_y_to_px(p.y) {
                 let x0 = p.x - x_err.neg.abs();
                 let x1 = p.x + x_err.pos.abs();
 
@@ -678,7 +676,6 @@ fn error_bars_commands(
                     }
                 }
             }
-        }
 
         if marker > 0.0 {
             let Some(y_px) = transform.data_y_to_px(p.y) else {
@@ -791,7 +788,7 @@ fn candlestick_paths(
             push(p);
         }
     } else {
-        let stride = ((points.len() + max_count - 1) / max_count).max(1);
+        let stride = points.len().div_ceil(max_count).max(1);
         for p in points.iter().copied().step_by(stride) {
             push(p);
         }
@@ -1168,7 +1165,7 @@ fn ceil_div_usize(a: usize, b: usize) -> usize {
     if b == 0 {
         return a;
     }
-    a / b + usize::from(a % b != 0)
+    a / b + usize::from(!a.is_multiple_of(b))
 }
 
 fn select_grid_mip_level(

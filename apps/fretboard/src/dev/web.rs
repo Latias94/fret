@@ -267,7 +267,7 @@ fn open_url(url: &str) -> Result<(), String> {
         if !status.success() {
             return Err(format!("open exited with status: {status}"));
         }
-        return Ok(());
+        Ok(())
     }
 
     #[cfg(all(not(windows), not(target_os = "macos")))]

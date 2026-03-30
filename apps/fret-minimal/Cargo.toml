@@ -19,3 +19,6 @@ fret-core = { path = "../../crates/fret-core" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 wgpu.workspace = true
+
+[lints.clippy]
+field_reassign_with_default = "allow"

@@ -18,17 +18,14 @@ impl UiVirtualListMeasureModeV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum UiVirtualListWindowShiftKindV1 {
+    #[default]
     None,
     Prefetch,
     Escape,
 }
 
-impl Default for UiVirtualListWindowShiftKindV1 {
-    fn default() -> Self {
-        Self::None
-    }
-}
 
 impl UiVirtualListWindowShiftKindV1 {
     fn from_kind(kind: fret_ui::tree::UiDebugVirtualListWindowShiftKind) -> Self {
@@ -325,17 +322,14 @@ impl UiRetainedVirtualListReconcileV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum UiVirtualListWindowSourceV1 {
     Prepaint,
     #[serde(other)]
+    #[default]
     Layout,
 }
 
-impl Default for UiVirtualListWindowSourceV1 {
-    fn default() -> Self {
-        Self::Layout
-    }
-}
 
 impl UiVirtualListWindowSourceV1 {
     fn from_source(source: fret_ui::tree::UiDebugVirtualListWindowSource) -> Self {

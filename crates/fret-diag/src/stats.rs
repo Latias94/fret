@@ -530,54 +530,6 @@ pub(super) fn bundle_stats_diff_from_paths(
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn stats_diff_sorts_by_abs_delta_then_key() {
-        let mut deltas = vec![
-            BundleStatsDiffDelta {
-                key: "b",
-                a: 10,
-                b: 20,
-            }, // +10
-            BundleStatsDiffDelta {
-                key: "a",
-                a: 30,
-                b: 20,
-            }, // -10
-            BundleStatsDiffDelta {
-                key: "z",
-                a: 0,
-                b: 25,
-            }, // +25
-        ];
-        sort_diff_deltas_in_place(&mut deltas);
-        assert_eq!(deltas[0].key, "z");
-        assert_eq!(deltas[1].key, "a");
-        assert_eq!(deltas[2].key, "b");
-    }
-
-    #[test]
-    fn stats_json_includes_avg_and_budget() {
-        let report = BundleStatsReport {
-            sort: BundleStatsSort::Time,
-            snapshots_considered: 2,
-            sum_total_time_us: 100,
-            sum_layout_time_us: 40,
-            sum_prepaint_time_us: 10,
-            sum_paint_time_us: 50,
-            sum_layout_observation_record_time_us: 6,
-            ..Default::default()
-        };
-
-        let json = report.to_json();
-        assert!(json.get("avg").is_some());
-        assert!(json.get("budget_pct").is_some());
-    }
-}
-
 pub(super) fn bundle_stats_from_path(
     bundle_path: &Path,
     top: usize,
@@ -817,4 +769,52 @@ fn parse_redacted_len_bytes(value: &str) -> Option<u64> {
         return None;
     }
     digits.parse::<u64>().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stats_diff_sorts_by_abs_delta_then_key() {
+        let mut deltas = vec![
+            BundleStatsDiffDelta {
+                key: "b",
+                a: 10,
+                b: 20,
+            }, // +10
+            BundleStatsDiffDelta {
+                key: "a",
+                a: 30,
+                b: 20,
+            }, // -10
+            BundleStatsDiffDelta {
+                key: "z",
+                a: 0,
+                b: 25,
+            }, // +25
+        ];
+        sort_diff_deltas_in_place(&mut deltas);
+        assert_eq!(deltas[0].key, "z");
+        assert_eq!(deltas[1].key, "a");
+        assert_eq!(deltas[2].key, "b");
+    }
+
+    #[test]
+    fn stats_json_includes_avg_and_budget() {
+        let report = BundleStatsReport {
+            sort: BundleStatsSort::Time,
+            snapshots_considered: 2,
+            sum_total_time_us: 100,
+            sum_layout_time_us: 40,
+            sum_prepaint_time_us: 10,
+            sum_paint_time_us: 50,
+            sum_layout_observation_record_time_us: 6,
+            ..Default::default()
+        };
+
+        let json = report.to_json();
+        assert!(json.get("avg").is_some());
+        assert!(json.get("budget_pct").is_some());
+    }
 }

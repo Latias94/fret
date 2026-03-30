@@ -131,7 +131,7 @@ mod tests {
         let theme = Theme::global(&app);
 
         let spatial = sys_spring_for_scheme(
-            &theme,
+            theme,
             MaterialMotionScheme::Standard,
             MotionSchemeKey::DefaultSpatial,
         );
@@ -139,7 +139,7 @@ mod tests {
         assert!(spatial.stiffness > 0.0);
 
         let effects = sys_spring_for_scheme(
-            &theme,
+            theme,
             MaterialMotionScheme::Standard,
             MotionSchemeKey::FastEffects,
         );
@@ -157,7 +157,7 @@ mod tests {
         let theme = Theme::global(&app);
 
         let default_spatial = sys_spring_for_scheme(
-            &theme,
+            theme,
             MaterialMotionScheme::Expressive,
             MotionSchemeKey::DefaultSpatial,
         );

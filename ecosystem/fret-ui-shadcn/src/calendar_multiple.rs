@@ -438,8 +438,8 @@ fn calendar_multi_month_view<H: UiHost>(
         let nav_enabled = !disable_navigation;
         let min_start = month_bounds.map(|b| b.0);
         let max_start = month_bounds.map(|b| max_start_month(b, number_of_months));
-        let prev_enabled = nav_enabled && min_start.map_or(true, |min| month_lt(min, start_month));
-        let next_enabled = nav_enabled && max_start.map_or(true, |max| month_lt(start_month, max));
+        let prev_enabled = nav_enabled && min_start.is_none_or(|min| month_lt(min, start_month));
+        let next_enabled = nav_enabled && max_start.is_none_or(|max| month_lt(start_month, max));
         let direction = crate::direction::use_direction(cx, None);
         let prev_icon = crate::rtl::chevron_inline_start(direction);
         let next_icon = crate::rtl::chevron_inline_end(direction);
@@ -623,7 +623,7 @@ fn calendar_month_view<H: UiHost>(
     } else {
         month_grid_compact(month, week_start)
     };
-    let in_bounds = |d: Date| month_bounds.map_or(true, |b| date_in_month_bounds(d, b));
+    let in_bounds = |d: Date| month_bounds.is_none_or(|b| date_in_month_bounds(d, b));
 
     let mut hidden = Vec::with_capacity(grid.len());
     let mut disabled = Vec::with_capacity(grid.len());
@@ -807,7 +807,7 @@ fn calendar_month_view<H: UiHost>(
                     );
                 }
 
-                let is_selected = selected.iter().any(|d| *d == day.date);
+                let is_selected = selected.contains(&day.date);
                 let is_today = today == day.date;
                 let is_disabled = disabled.get(idx).copied().unwrap_or(false);
 
@@ -945,68 +945,6 @@ fn calendar_hidden_day_cell<H: UiHost>(
         let children = move |_cx: &mut ElementContext<'_, H>| Vec::<AnyElement>::new();
         (pressable, chrome_props, children)
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use fret_app::App;
-    use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::{AnyElement, ElementKind};
-    use time::Month;
-
-    fn count_svg_icons(node: &AnyElement) -> usize {
-        let mut out = usize::from(matches!(node.kind, ElementKind::SvgIcon(_)));
-        for child in &node.children {
-            out += count_svg_icons(child);
-        }
-        out
-    }
-
-    fn find_pressable_by_label<'a>(node: &'a AnyElement, label: &str) -> Option<&'a AnyElement> {
-        if let ElementKind::Pressable(props) = &node.kind
-            && props.a11y.label.as_deref() == Some(label)
-        {
-            return Some(node);
-        }
-
-        for child in &node.children {
-            if let Some(found) = find_pressable_by_label(child, label) {
-                return Some(found);
-            }
-        }
-
-        None
-    }
-
-    #[test]
-    fn calendar_multiple_nav_buttons_render_svg_icons() {
-        let window = AppWindowId::default();
-        let mut app = App::new();
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(800.0), Px(600.0)),
-        );
-
-        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let month = cx
-                .app
-                .models_mut()
-                .insert(CalendarMonth::new(2026, Month::March));
-            let selected = cx.app.models_mut().insert(Vec::<Date>::new());
-
-            CalendarMultiple::new(month, selected).into_element(cx)
-        });
-
-        let prev = find_pressable_by_label(&element, "Go to the Previous Month")
-            .expect("expected previous-month nav button");
-        let next = find_pressable_by_label(&element, "Go to the Next Month")
-            .expect("expected next-month nav button");
-
-        assert_eq!(count_svg_icons(prev), 1);
-        assert_eq!(count_svg_icons(next), 1);
-    }
 }
 
 fn calendar_multi_day_cell<H: UiHost>(
@@ -1187,4 +1125,66 @@ fn calendar_multi_day_cell<H: UiHost>(
 
         (pressable, chrome_props, children)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{AnyElement, ElementKind};
+    use time::Month;
+
+    fn count_svg_icons(node: &AnyElement) -> usize {
+        let mut out = usize::from(matches!(node.kind, ElementKind::SvgIcon(_)));
+        for child in &node.children {
+            out += count_svg_icons(child);
+        }
+        out
+    }
+
+    fn find_pressable_by_label<'a>(node: &'a AnyElement, label: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Pressable(props) = &node.kind
+            && props.a11y.label.as_deref() == Some(label)
+        {
+            return Some(node);
+        }
+
+        for child in &node.children {
+            if let Some(found) = find_pressable_by_label(child, label) {
+                return Some(found);
+            }
+        }
+
+        None
+    }
+
+    #[test]
+    fn calendar_multiple_nav_buttons_render_svg_icons() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let month = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::March));
+            let selected = cx.app.models_mut().insert(Vec::<Date>::new());
+
+            CalendarMultiple::new(month, selected).into_element(cx)
+        });
+
+        let prev = find_pressable_by_label(&element, "Go to the Previous Month")
+            .expect("expected previous-month nav button");
+        let next = find_pressable_by_label(&element, "Go to the Next Month")
+            .expect("expected next-month nav button");
+
+        assert_eq!(count_svg_icons(prev), 1);
+        assert_eq!(count_svg_icons(next), 1);
+    }
 }

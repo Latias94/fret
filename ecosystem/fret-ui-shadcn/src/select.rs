@@ -340,7 +340,7 @@ where
                                     .unwrap_or_else(|e| e.into_inner());
                                 st.hovered = true;
 
-                                let did_move = st.last_pos.map_or(true, |p| p != mv.position);
+                                let did_move = st.last_pos != Some(mv.position);
                                 st.last_pos = Some(mv.position);
                                 if !did_move || st.token.is_some() {
                                     return false;
@@ -601,8 +601,8 @@ where
             }
 
             let mut out = Vec::with_capacity(3);
-            if has_scroll && allow_hover_scroll_arrows {
-                if let Some(btn) = scroll_button(
+            if has_scroll && allow_hover_scroll_arrows
+                && let Some(btn) = scroll_button(
                     cx,
                     scroll_up_icon,
                     "scroll-up-button",
@@ -611,10 +611,9 @@ where
                 ) {
                     out.push(btn);
                 }
-            }
             out.push(scroll);
-            if has_scroll && allow_hover_scroll_arrows {
-                if let Some(btn) = scroll_button(
+            if has_scroll && allow_hover_scroll_arrows
+                && let Some(btn) = scroll_button(
                     cx,
                     scroll_down_icon,
                     "scroll-down-button",
@@ -623,7 +622,6 @@ where
                 ) {
                     out.push(btn);
                 }
-            }
             out
         },
     )
@@ -1017,6 +1015,7 @@ impl SelectValue {
 
 /// shadcn/ui v4 `SelectTrigger` (configuration wrapper for Fret's `Select` recipe).
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct SelectTrigger {
     size: SelectTriggerSize,
     chrome: ChromeRefinement,
@@ -1030,22 +1029,6 @@ pub struct SelectTrigger {
     label_policy: SelectTriggerLabelPolicy,
 }
 
-impl Default for SelectTrigger {
-    fn default() -> Self {
-        Self {
-            size: SelectTriggerSize::default(),
-            chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default(),
-            chevron_icon_override: None,
-            chevron_size_override: None,
-            chevron_opacity_override: None,
-            gap_override: None,
-            font_weight_override: None,
-            font_override: None,
-            label_policy: SelectTriggerLabelPolicy::default(),
-        }
-    }
-}
 
 impl SelectTrigger {
     pub fn new() -> Self {
@@ -2122,7 +2105,9 @@ fn select_impl<H: UiHost>(
         let described_by_element_for_trigger = described_by_element;
         let has_a11y_label_for_trigger = a11y_label.is_some();
 
-        let trigger = decl_chrome::control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
+        
+
+        decl_chrome::control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
             if let (Some(control_id), Some(control_registry)) = (
                 control_id_for_register.clone(),
                 control_registry_for_register.clone(),
@@ -2165,7 +2150,7 @@ fn select_impl<H: UiHost>(
             );
             let mouse_open_guard: radix_select::SelectMouseOpenGuard = cx.state_for(
                 trigger_id,
-                || radix_select::select_mouse_open_guard(),
+                radix_select::select_mouse_open_guard,
                 |g| g.clone(),
             );
             let mouse_up_selection_gate: Arc<Mutex<radix_select::SelectMouseUpSelectionGateState>> =
@@ -2905,16 +2890,14 @@ fn select_impl<H: UiHost>(
                     //
                     // Model that behavior by computing the available main-axis height for the
                     // current placement.
-                    let available_h = (position == SelectPosition::Popper)
-                        .then(|| {
+                    let available_h = if position == SelectPosition::Popper { {
                             radix_select::select_popper_available_height(
                                 outer,
                                 anchor,
                                 min_width,
                                 popper_placement,
                             )
-                        })
-                        .unwrap_or(outer.size.height);
+                        } } else { outer.size.height };
                     let max_h = theme
                         .metric_by_key("component.select.max_list_height")
                         .map(|h| Px(h.0.min(available_h.0)))
@@ -2972,8 +2955,8 @@ fn select_impl<H: UiHost>(
                     );
                     let mut item_aligned_layout_is_cached_fallback = false;
                     let mut item_aligned_layout_locked_this_frame = false;
-                    if position == SelectPosition::ItemAligned && is_open {
-                        if let Some(layout) = last_item_aligned_layout {
+                    if position == SelectPosition::ItemAligned && is_open
+                        && let Some(layout) = last_item_aligned_layout {
                             // Lock placement for the duration of the open session (Base UI's
                             // `alignItemWithTrigger` disables anchor tracking; model the outcome
                             // by reusing the first stable solved layout).
@@ -2985,7 +2968,6 @@ fn select_impl<H: UiHost>(
                                 item_aligned_layout: Some(layout),
                             };
                         }
-                    }
                     if let Some(layout) = resolved.item_aligned_layout
                         && let Some(scroll_to) = layout.outputs.scroll_to_y
                         && !item_aligned_layout_is_cached_fallback
@@ -2994,8 +2976,8 @@ fn select_impl<H: UiHost>(
                         // viewport down in the normal flow). Model this as an initial scroll plus
                         // a single follow-up scroll if the viewport became scrollable at the top.
                         let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
-                        if !state.item_aligned_user_scrolled {
-                            if let Some(last) = state.last_item_aligned_scroll_to_y
+                        if !state.item_aligned_user_scrolled
+                            && let Some(last) = state.last_item_aligned_scroll_to_y
                                 && state.did_item_aligned_scroll_initial
                             {
                                 let offset = state.scroll_handle.offset();
@@ -3005,7 +2987,6 @@ fn select_impl<H: UiHost>(
                                     state.item_aligned_user_scrolled = true;
                                 }
                             }
-                        }
 
                         let should_scroll_initial =
                             !state.did_item_aligned_scroll_initial && !state.item_aligned_user_scrolled;
@@ -4738,9 +4719,7 @@ fn select_impl<H: UiHost>(
 	            };
 
             (props, chrome, content)
-        });
-
-        trigger
+        })
     })
 }
 
@@ -4846,7 +4825,7 @@ mod tests {
         assert_eq!(chrome.padding.top, SpacingLength::Px(expected_py));
         assert_eq!(chrome.padding.bottom, SpacingLength::Px(expected_py));
 
-        fn find_first_flex<'a>(el: &'a AnyElement) -> Option<&'a FlexProps> {
+        fn find_first_flex(el: &AnyElement) -> Option<&FlexProps> {
             match &el.kind {
                 ElementKind::Flex(props) => Some(props),
                 _ => el.children.iter().find_map(|c| find_first_flex(c)),
@@ -4928,13 +4907,10 @@ mod tests {
             el: &'a AnyElement,
             test_id: &str,
         ) -> Option<&'a PressableProps> {
-            match &el.kind {
-                ElementKind::Pressable(props) => {
-                    if props.a11y.test_id.as_deref() == Some(test_id) {
-                        return Some(props);
-                    }
+            if let ElementKind::Pressable(props) = &el.kind {
+                if props.a11y.test_id.as_deref() == Some(test_id) {
+                    return Some(props);
                 }
-                _ => {}
             }
 
             for child in &el.children {
@@ -4964,7 +4940,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
         let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
@@ -5228,7 +5204,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         fn render_frame(
             ui: &mut UiTree<App>,
@@ -5334,7 +5310,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         for _ in 0..3 {
             let next_frame = FrameId(app.frame_id().0.saturating_add(1));
@@ -5404,7 +5380,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let items: Vec<SelectItem> = (0..50)
             .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
             .collect();
@@ -5883,7 +5859,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -5946,7 +5922,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -6005,7 +5981,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -6063,7 +6039,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -6123,7 +6099,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -6226,7 +6202,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(220.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let mut items: Vec<SelectItem> = vec![
             SelectItem::new("apple", "Apple"),
@@ -6368,7 +6344,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(220.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("apple", "Apple"),
@@ -6514,7 +6490,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(220.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("apple", "Apple"),
@@ -6651,7 +6627,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(220.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("apple", "Apple"),
@@ -6853,7 +6829,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -6929,7 +6905,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -6978,8 +6954,7 @@ mod tests {
         assert_eq!(
             last.lock()
                 .unwrap_or_else(|e| e.into_inner())
-                .as_deref()
-                .map(|s| s.as_ref()),
+                .as_deref(),
             Some("beta")
         );
 
@@ -7038,7 +7013,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let entries = vec![
             SelectEntry::Label(SelectLabel::new("Fruits")),
@@ -7097,11 +7072,11 @@ mod tests {
             .find(|n| n.role == SemanticsRole::ComboBox && n.flags.expanded)
             .expect("select trigger node");
         assert!(
-            focused_node.labelled_by.iter().any(|id| *id == trigger.id),
+            focused_node.labelled_by.contains(&trigger.id),
             "listbox should be labelled by the trigger"
         );
         assert!(
-            trigger.controls.iter().any(|id| *id == focused_node.id),
+            trigger.controls.contains(&focused_node.id),
             "trigger should control the listbox"
         );
 
@@ -7134,7 +7109,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let entries = vec![SelectEntry::Group(SelectGroup::new(vec![
             SelectLabel::new("Fruits").into(),
@@ -7202,7 +7177,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -7283,7 +7258,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -7389,7 +7364,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -7555,7 +7530,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -7689,7 +7664,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("apple", "Apple"),
@@ -7816,7 +7791,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(220.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("apple", "Apple"),
@@ -7898,7 +7873,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(220.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = (1..=40)
             .map(|i| {
@@ -8010,7 +7985,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(220.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("apple", "Apple"),
@@ -8107,7 +8082,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(220.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let mut items: Vec<SelectItem> = vec![
             SelectItem::new("apple", "Apple"),
@@ -8191,7 +8166,7 @@ mod tests {
                 .expect("select viewport node");
             let viewport_bounds = ui
                 .debug_node_bounds(viewport.id)
-                .unwrap_or_else(|| viewport.bounds);
+                .unwrap_or(viewport.bounds);
             let viewport_center = Point::new(
                 Px(viewport_bounds.origin.x.0 + viewport_bounds.size.width.0 * 0.5),
                 Px(viewport_bounds.origin.y.0 + viewport_bounds.size.height.0 * 0.5),
@@ -8360,7 +8335,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("apple", "Apple"),
@@ -8477,7 +8452,7 @@ mod tests {
             .expect("listbox node");
         let listbox_before = ui
             .debug_node_bounds(listbox.id)
-            .unwrap_or_else(|| listbox.bounds);
+            .unwrap_or(listbox.bounds);
 
         let banana = snap
             .nodes
@@ -8542,7 +8517,7 @@ mod tests {
             .expect("listbox node during exit transition");
         let listbox_after = ui
             .debug_node_bounds(listbox.id)
-            .unwrap_or_else(|| listbox.bounds);
+            .unwrap_or(listbox.bounds);
 
         let dy = (listbox_after.origin.y.0 - listbox_before.origin.y.0).abs();
         assert!(
@@ -8565,7 +8540,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("apple", "Apple"),
@@ -8673,7 +8648,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -8770,7 +8745,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -8850,7 +8825,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -8942,7 +8917,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -9019,7 +8994,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![SelectItem::new("alpha", "Alpha")];
 
@@ -9075,7 +9050,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -9164,7 +9139,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = vec![
             SelectItem::new("alpha", "Alpha"),
@@ -9249,7 +9224,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items: Vec<SelectItem> = (0..50)
             .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
@@ -9419,7 +9394,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items: Vec<SelectItem> = (0..50)
             .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
@@ -9567,7 +9542,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items: Vec<SelectItem> = (0..50)
             .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
@@ -9739,7 +9714,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items: Vec<SelectItem> = (0..80)
             .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
@@ -9857,7 +9832,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items: Vec<SelectItem> = (0..60)
             .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
@@ -9984,7 +9959,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items: Vec<SelectItem> = (0..60)
             .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
@@ -10122,7 +10097,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(520.0), Px(280.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items: Vec<SelectItem> = (0..60)
             .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))

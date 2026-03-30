@@ -26,11 +26,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if let Some(resizable) = style.resizable {
             attrs = attrs.with_resizable(resizable);
         }
-        if let Some(decorations) = style.decorations {
-            if matches!(decorations, fret_runtime::WindowDecorationsRequest::None) {
+        if let Some(decorations) = style.decorations
+            && matches!(decorations, fret_runtime::WindowDecorationsRequest::None) {
                 attrs = attrs.with_decorations(false);
             }
-        }
         let effective_background_material = style.background_material.map(|m| {
             fret_runtime::runner_window_style_diagnostics::clamp_background_material_request(
                 m, caps,

@@ -1463,9 +1463,7 @@ mod tests {
         let DiagCommandContract::Resolve(args) = cli.command else {
             panic!("expected resolve command");
         };
-        let latest = match args.command {
-            ResolveSubcommandArgs::Latest(latest) => latest,
-        };
+        let ResolveSubcommandArgs::Latest(latest) = args.command;
 
         assert_eq!(latest.dir, Some(PathBuf::from("target/fret-diag")));
         assert_eq!(latest.within_session.as_deref(), Some("latest"));

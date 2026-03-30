@@ -158,8 +158,8 @@ pub(crate) fn build_test_id_slice_payload_from_bundle_path(
     };
 
     let mut allow_streaming = explicit_selector || index_default.is_some();
-    if allow_streaming && explicit_selector {
-        if let Some(idx) = bundle_index.as_ref() {
+    if allow_streaming && explicit_selector
+        && let Some(idx) = bundle_index.as_ref() {
             let m = find_snapshot_in_bundle_index(idx, window_id, frame_id, window_snapshot_seq)
                 .ok_or_else(|| {
                     let mut hint = String::new();
@@ -191,22 +191,19 @@ pub(crate) fn build_test_id_slice_payload_from_bundle_path(
                 stream_semantics_fingerprint = m.semantics_fingerprint;
             }
         }
-    }
 
-    if allow_streaming && !explicit_selector {
-        if let Some(source) = stream_semantics_source.as_deref() {
-            if source != "inline" && source != "table" {
+    if allow_streaming && !explicit_selector
+        && let Some(source) = stream_semantics_source.as_deref()
+            && source != "inline" && source != "table" {
                 allow_streaming = false;
             }
-        }
-    }
 
     let build_from_bundle = || -> Result<serde_json::Value, String> {
         let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
         let bundle: serde_json::Value =
             serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
         let semantics = SemanticsResolver::new(&bundle);
-        Ok(build_test_id_slice_payload_from_bundle(
+        build_test_id_slice_payload_from_bundle(
             bundle_path,
             &bundle,
             &semantics,
@@ -217,7 +214,7 @@ pub(crate) fn build_test_id_slice_payload_from_bundle_path(
             window_id,
             max_matches,
             max_ancestors,
-        )?)
+        )
     };
 
     if allow_streaming {
@@ -473,8 +470,8 @@ fn pick_default_snapshot_in_bundle_index(
                 if let Some(hex) = s.get("test_id_bloom_hex").and_then(|v| v.as_str()) {
                     might_contain = TestIdBloomV1::from_hex(hex).map(|b| b.might_contain(&target));
                 }
-                if might_contain.is_none() {
-                    if let (Some(fp), Some(src)) =
+                if might_contain.is_none()
+                    && let (Some(fp), Some(src)) =
                         (semantics_fingerprint, sel.semantics_source.as_deref())
                     {
                         let source_tag = if src == "inline" { 0u8 } else { 1u8 };
@@ -482,7 +479,6 @@ fn pick_default_snapshot_in_bundle_index(
                             might_contain = Some(b.might_contain(&target));
                         }
                     }
-                }
                 if might_contain == Some(true) {
                     return Some(sel);
                 }
@@ -643,12 +639,11 @@ fn try_find_hit_payload_by_streaming_candidates(
     let candidates = slice_candidates_from_bundle_index(idx, window_id, test_id, max_candidates);
 
     for c in candidates {
-        if let Some((w, fid, seq)) = skip {
-            if c.window == w && c.selector_frame_id == fid && c.selector_window_snapshot_seq == seq
+        if let Some((w, fid, seq)) = skip
+            && c.window == w && c.selector_frame_id == fid && c.selector_window_snapshot_seq == seq
             {
                 continue;
             }
-        }
 
         let selector_frame_id = if c.selector_window_snapshot_seq.is_some() {
             None
@@ -841,21 +836,19 @@ pub(crate) fn cmd_slice(
 
     fn try_read_bundle_index_from_dir(dir: &Path, warmup_frames: u64) -> Option<serde_json::Value> {
         let direct = dir.join("bundle.index.json");
-        if direct.is_file() {
-            if let Some(v) =
+        if direct.is_file()
+            && let Some(v) =
                 sidecars::try_read_sidecar_json_v1(&direct, "bundle_index", warmup_frames)
             {
                 return Some(v);
             }
-        }
         let root = dir.join("_root").join("bundle.index.json");
-        if root.is_file() {
-            if let Some(v) =
+        if root.is_file()
+            && let Some(v) =
                 sidecars::try_read_sidecar_json_v1(&root, "bundle_index", warmup_frames)
             {
                 return Some(v);
             }
-        }
         None
     }
 

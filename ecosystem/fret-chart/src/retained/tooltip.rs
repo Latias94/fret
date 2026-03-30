@@ -206,10 +206,10 @@ impl DefaultTooltipFormatter {
         }
     }
 
-    fn series_override<'a>(
-        spec: &'a delinea::TooltipSpecV1,
+    fn series_override(
+        spec: &delinea::TooltipSpecV1,
         series: SeriesId,
-    ) -> Option<&'a delinea::TooltipSeriesOverrideV1> {
+    ) -> Option<&delinea::TooltipSeriesOverrideV1> {
         spec.series_overrides.iter().find(|o| o.series == series)
     }
 
@@ -658,7 +658,7 @@ mod tests {
         table.push_column(delinea::data::Column::F64(vec![0.0, 2.0]));
         engine.datasets_mut().insert(dataset_id, table);
 
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
         let step = engine
             .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
             .unwrap();
@@ -673,7 +673,7 @@ mod tests {
         assert!(!step.unfinished);
 
         let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
-        let formatter = DefaultTooltipFormatter::default();
+        let formatter = DefaultTooltipFormatter;
         let lines =
             formatter.format_axis_pointer(&engine, &engine.output().axis_windows, axis_pointer);
         assert_eq!(lines.len(), 3);
@@ -834,7 +834,7 @@ mod tests {
         table.push_column(delinea::data::Column::F64(vec![0.0, f64::NAN]));
         engine.datasets_mut().insert(dataset_id, table);
 
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
         let step = engine
             .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
             .unwrap();
@@ -849,7 +849,7 @@ mod tests {
         assert!(!step.unfinished);
 
         let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
-        let formatter = DefaultTooltipFormatter::default();
+        let formatter = DefaultTooltipFormatter;
         let lines =
             formatter.format_axis_pointer(&engine, &engine.output().axis_windows, axis_pointer);
 
@@ -998,7 +998,7 @@ mod tests {
         table.push_column(delinea::data::Column::F64(vec![0.0, 2.0]));
         engine.datasets_mut().insert(dataset_id, table);
 
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
         let step = engine
             .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
             .unwrap();
@@ -1013,7 +1013,7 @@ mod tests {
         assert!(!step.unfinished);
 
         let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
-        let formatter = DefaultTooltipFormatter::default();
+        let formatter = DefaultTooltipFormatter;
         let lines =
             formatter.format_axis_pointer(&engine, &engine.output().axis_windows, axis_pointer);
         assert_eq!(lines.len(), 3);
@@ -1126,7 +1126,7 @@ mod tests {
         table.push_column(delinea::data::Column::F64(vec![0.0, 1.0]));
         engine.datasets_mut().insert(dataset_id, table);
 
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
         let step = engine
             .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
             .unwrap();
@@ -1150,7 +1150,7 @@ mod tests {
             }),
         };
 
-        let formatter = DefaultTooltipFormatter::default();
+        let formatter = DefaultTooltipFormatter;
         let lines =
             formatter.format_axis_pointer(&engine, &engine.output().axis_windows, &axis_pointer);
 
@@ -1260,7 +1260,7 @@ mod tests {
         table.push_column(delinea::data::Column::F64(vec![0.0, 1.0]));
         engine.datasets_mut().insert(dataset_id, table);
 
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
         let step = engine
             .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
             .unwrap();
@@ -1284,7 +1284,7 @@ mod tests {
             }),
         };
 
-        let formatter = DefaultTooltipFormatter::default();
+        let formatter = DefaultTooltipFormatter;
         let lines =
             formatter.format_axis_pointer(&engine, &engine.output().axis_windows, &axis_pointer);
 
@@ -1396,7 +1396,7 @@ mod tests {
         table.push_column(delinea::data::Column::F64(vec![0.0, 1.0]));
         engine.datasets_mut().insert(dataset_id, table);
 
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
         let step = engine
             .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
             .unwrap();
@@ -1420,7 +1420,7 @@ mod tests {
             }),
         };
 
-        let formatter = DefaultTooltipFormatter::default();
+        let formatter = DefaultTooltipFormatter;
         let lines =
             formatter.format_axis_pointer(&engine, &engine.output().axis_windows, &axis_pointer);
 
@@ -1530,7 +1530,7 @@ mod tests {
         table.push_column(delinea::data::Column::F64(vec![0.0, 1.0]));
         engine.datasets_mut().insert(dataset_id, table);
 
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
         let step = engine
             .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
             .unwrap();
@@ -1554,7 +1554,7 @@ mod tests {
             }),
         };
 
-        let formatter = DefaultTooltipFormatter::default();
+        let formatter = DefaultTooltipFormatter;
         let lines =
             formatter.format_axis_pointer(&engine, &engine.output().axis_windows, &axis_pointer);
 
@@ -1700,7 +1700,7 @@ mod tests {
         table.push_column(delinea::data::Column::F64(vec![0.0, 2.0]));
         engine.datasets_mut().insert(dataset_id, table);
 
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
         let step = engine
             .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
             .unwrap();
@@ -1715,7 +1715,7 @@ mod tests {
         assert!(!step.unfinished);
 
         let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
-        let formatter = DefaultTooltipFormatter::default();
+        let formatter = DefaultTooltipFormatter;
         let lines =
             formatter.format_axis_pointer(&engine, &engine.output().axis_windows, axis_pointer);
         assert_eq!(lines.len(), 3);
@@ -1838,7 +1838,7 @@ mod tests {
             point: Point::new(Px(50.0), Px(50.0)),
         });
 
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
         let step = engine
             .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
             .unwrap();

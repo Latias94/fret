@@ -959,9 +959,9 @@ mod tests {
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
         let theme = Theme::global(&app);
-        let track_bg = fret_core::Paint::Solid(switch_bg_off(theme)).into();
+        let track_bg = fret_core::Paint::Solid(switch_bg_off(theme));
         let thumb_size = switch_thumb(theme, SwitchSize::Default);
-        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg_off(theme)).into();
+        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg_off(theme));
 
         let mut track_rect: Option<Rect> = None;
         let mut thumb_rect: Option<Rect> = None;
@@ -1495,14 +1495,12 @@ mod tests {
                     if props.layout.position == PositionStyle::Absolute
                         && props
                             .background
-                            .is_some_and(|bg| thumb_bgs.iter().any(|c| *c == bg))
+                            .is_some_and(|bg| thumb_bgs.contains(&bg))
                         && props.layout.size.width == Length::Px(thumb_size)
                         && props.layout.size.height == Length::Px(thumb_size)
-                    {
-                        if let fret_ui::element::InsetEdge::Px(left) = props.layout.inset.left {
+                        && let fret_ui::element::InsetEdge::Px(left) = props.layout.inset.left {
                             return Some(left);
                         }
-                    }
                     el.children
                         .iter()
                         .find_map(|c| find_thumb_left(c, thumb_bgs, thumb_size))
@@ -1610,7 +1608,7 @@ mod tests {
                         && props.background.is_some()
                         && !props
                             .background
-                            .is_some_and(|bg| thumb_bgs.iter().any(|c| *c == bg))
+                            .is_some_and(|bg| thumb_bgs.contains(&bg))
                         && (props.layout.size.width == Length::Px(w)
                             || props.layout.size.width == Length::Fill)
                         && (props.layout.size.height == Length::Px(h)
@@ -1950,9 +1948,9 @@ mod tests {
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
         let theme = Theme::global(&app);
-        let track_bg = fret_core::Paint::Solid(switch_bg_off(theme)).into();
+        let track_bg = fret_core::Paint::Solid(switch_bg_off(theme));
         let thumb_size = switch_thumb(theme, SwitchSize::Sm);
-        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg_off(theme)).into();
+        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg_off(theme));
 
         let mut track_rect: Option<Rect> = None;
         let mut thumb_rect: Option<Rect> = None;

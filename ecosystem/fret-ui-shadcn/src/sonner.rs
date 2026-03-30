@@ -67,7 +67,7 @@ impl Default for Toaster {
             margin: Some(Px(24.0)),
             offset: None,
             mobile_offset: Some(ToastOffset::all(Px(16.0))),
-            gap: Some(Px(14.0)).into(),
+            gap: Some(Px(14.0)),
             toast_min_width: Some(Px(356.0)),
             toast_max_width: Some(Px(356.0)),
             // Sonner does not enforce a max toast count; it only collapses the viewport via
@@ -1625,7 +1625,7 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = fret_app::App::new();
         let spawner: FutureSpawnerHandle = Arc::new(InlineSpawner);
-        let dispatcher: DispatcherHandle = Arc::new(NoopDispatcher::default());
+        let dispatcher: DispatcherHandle = Arc::new(NoopDispatcher);
         app.set_global::<FutureSpawnerHandle>(spawner);
         app.set_global::<DispatcherHandle>(dispatcher);
 
@@ -1677,7 +1677,7 @@ mod tests {
         let mut app = fret_app::App::new();
         let mut ui: UiTree<fret_app::App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         render_frame(&mut ui, &mut app, &mut services, window, 1, |cx| {
             vec![Toaster::new().into_element(cx)]

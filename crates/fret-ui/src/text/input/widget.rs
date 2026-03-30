@@ -497,7 +497,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     crate::text_edit::utf8::clamp_to_char_boundary(self.preedit.as_str(), rel(be));
                 (start_rel, end_rel)
             })
-            .or_else(|| Some((preedit_len, preedit_len)));
+            .or(Some((preedit_len, preedit_len)));
         self.mark_text_blobs_dirty();
         true
     }

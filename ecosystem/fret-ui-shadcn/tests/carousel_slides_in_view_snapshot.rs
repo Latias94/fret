@@ -109,7 +109,7 @@ fn carousel_slides_in_view_snapshot_emits_enter_and_leave() {
         .get_cloned(&slides_in_view)
         .expect("slides in view snapshot");
     assert!(
-        before.slides_in_view.iter().any(|&idx| idx == 0),
+        before.slides_in_view.contains(&0),
         "expected initial slide to be in view; snapshot={before:?}"
     );
 
@@ -146,10 +146,10 @@ fn carousel_slides_in_view_snapshot_emits_enter_and_leave() {
             .expect("slides in view snapshot");
         final_snapshot = cur.clone();
         if cur.generation != last_generation {
-            if cur.slides_enter_view.iter().any(|&idx| idx == 1) {
+            if cur.slides_enter_view.contains(&1) {
                 seen_enter_1 = true;
             }
-            if cur.slides_left_view.iter().any(|&idx| idx == 0) {
+            if cur.slides_left_view.contains(&0) {
                 seen_left_0 = true;
             }
             last_generation = cur.generation;

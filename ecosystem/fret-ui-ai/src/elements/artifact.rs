@@ -497,6 +497,12 @@ impl std::fmt::Debug for ArtifactAction {
     }
 }
 
+impl Default for ArtifactAction {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ArtifactAction {
     pub fn new() -> Self {
         Self {
@@ -656,6 +662,12 @@ impl std::fmt::Debug for ArtifactClose {
             .field("variant", &self.variant)
             .field("size", &self.size)
             .finish()
+    }
+}
+
+impl Default for ArtifactClose {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

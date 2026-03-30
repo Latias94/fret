@@ -114,7 +114,7 @@ fn marquee_pauses_on_hover() {
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices::default();
+    let mut services = FakeServices;
 
     let (ops1, effects1) =
         render_frame(&mut ui, &mut app, &mut services, window, bounds, FrameId(1));

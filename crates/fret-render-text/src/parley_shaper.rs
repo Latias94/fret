@@ -320,6 +320,7 @@ pub struct ShapedLineLayout {
 }
 
 impl ShapedLineLayout {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         width: f32,
         ascent: f32,
@@ -397,6 +398,7 @@ impl ShapedLineLayout {
     }
 }
 
+#[derive(Default)]
 pub struct ParleyShaper {
     fcx: FontContext,
     lcx: LayoutContext<[u8; 4]>,
@@ -406,18 +408,6 @@ pub struct ParleyShaper {
     font_db: ParleyFontDbState,
 }
 
-impl Default for ParleyShaper {
-    fn default() -> Self {
-        Self {
-            fcx: FontContext::default(),
-            lcx: LayoutContext::default(),
-            layout: Layout::default(),
-            default_locale: None,
-            common_fallback_stack_suffix: String::new(),
-            font_db: ParleyFontDbState::default(),
-        }
-    }
-}
 
 impl ParleyShaper {
     pub fn font_db_diagnostics_snapshot(&self) -> ParleyShaperFontDbDiagnosticsSnapshot {

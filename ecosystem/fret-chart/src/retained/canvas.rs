@@ -275,7 +275,7 @@ impl ChartA11yIndex {
             }
         }
 
-        for ((series, data_index), _) in &self.point_by_series_and_index {
+        for (series, data_index) in self.point_by_series_and_index.keys() {
             self.indices_by_series
                 .entry(*series)
                 .or_default()
@@ -512,7 +512,7 @@ impl ChartCanvas {
             force_uncached_paint: true,
             last_sampling_window_key: 0,
             text_cache_prune: ChartTextCachePruneTuning::default(),
-            tooltip_formatter: Box::new(DefaultTooltipFormatter::default()),
+            tooltip_formatter: Box::new(DefaultTooltipFormatter),
             input_map: ChartInputMap::default(),
             last_bounds: Rect::default(),
             last_layout: ChartLayout::default(),
@@ -569,7 +569,7 @@ impl ChartCanvas {
 
             key.mix_u64(output.axis_windows.len() as u64);
             for (axis, window) in &output.axis_windows {
-                key.mix_u64(axis.0 as u64);
+                key.mix_u64(axis.0);
                 key.mix_f64_bits(window.min);
                 key.mix_f64_bits(window.max);
             }
@@ -1487,8 +1487,8 @@ impl ChartCanvas {
                 };
             }
 
-            if !shadow {
-                if let Some(hit) = axis_pointer.hit {
+            if !shadow
+                && let Some(hit) = axis_pointer.hit {
                     let r = self.style.hover_point_size.0.max(1.0);
                     cx.scene.push(SceneOp::Quad {
                         order: point_order,
@@ -1502,7 +1502,6 @@ impl ChartCanvas {
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }
-            }
         }
 
         if self.mode.renders_legend() {
@@ -1904,8 +1903,8 @@ impl ChartCanvas {
             }
 
             let model = engine.model();
-            if let Some(axis_model) = model.axes.get(&axis) {
-                if let delinea::AxisScale::Category(scale) = &axis_model.scale
+            if let Some(axis_model) = model.axes.get(&axis)
+                && let delinea::AxisScale::Category(scale) = &axis_model.scale
                     && !scale.categories.is_empty()
                 {
                     return DataWindow {
@@ -1913,7 +1912,6 @@ impl ChartCanvas {
                         max: scale.categories.len() as f64 - 0.5,
                     };
                 }
-            }
 
             let mut series_cols: Vec<(delinea::DatasetId, usize)> = Vec::new();
             for series in model.series.values() {
@@ -2502,8 +2500,8 @@ impl ChartCanvas {
 
         let series_cols = self.with_engine(|engine| {
             let model = engine.model();
-            if let Some(axis_model) = model.axes.get(&axis) {
-                if let delinea::AxisScale::Category(scale) = &axis_model.scale
+            if let Some(axis_model) = model.axes.get(&axis)
+                && let delinea::AxisScale::Category(scale) = &axis_model.scale
                     && !scale.categories.is_empty()
                 {
                     return Err(DataWindow {
@@ -2511,7 +2509,6 @@ impl ChartCanvas {
                         max: scale.categories.len() as f64 - 0.5,
                     });
                 }
-            }
 
             let mut series_cols: Vec<(delinea::DatasetId, usize)> = Vec::new();
             for series_id in &model.series_order {
@@ -3231,7 +3228,7 @@ impl ChartCanvas {
         key.mix_u64(u64::from(cx.scale_factor.to_bits()));
         key.mix_u64(u64::from(series.len() as u32));
         for s in &series {
-            key.mix_u64(u64::from(s.id.0));
+            key.mix_u64(s.id.0);
             key.mix_bool(s.visible);
             if let Some(name) = s.name.as_deref() {
                 key.mix_str(name);
@@ -3583,7 +3580,7 @@ impl ChartCanvas {
                         let y0 = (y1 - segment_h).max(ramp_rect.origin.y.0);
                         let h = (y1 - y0).max(1.0);
 
-                        let selected = ((mask >> (bucket as u32)) & 1) == 1;
+                        let selected = ((mask >> bucket) & 1) == 1;
                         let alpha = if selected {
                             ramp_alpha_selected
                         } else {
@@ -3637,7 +3634,7 @@ impl ChartCanvas {
         key.mix_f32_bits(plot.size.height.0);
         key.mix_u64(u64::from(x_bands.len() as u32));
         for (band, window) in &x_bands {
-            key.mix_u64(u64::from(band.axis.0));
+            key.mix_u64(band.axis.0);
             key.mix_f32_bits(band.rect.origin.x.0);
             key.mix_f32_bits(band.rect.origin.y.0);
             key.mix_f32_bits(band.rect.size.width.0);
@@ -3647,7 +3644,7 @@ impl ChartCanvas {
         }
         key.mix_u64(u64::from(y_bands.len() as u32));
         for (band, window) in &y_bands {
-            key.mix_u64(u64::from(band.axis.0));
+            key.mix_u64(band.axis.0);
             key.mix_f32_bits(band.rect.origin.x.0);
             key.mix_f32_bits(band.rect.origin.y.0);
             key.mix_f32_bits(band.rect.size.width.0);
@@ -4523,7 +4520,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
-                    return;
                 }
             }
             Event::Pointer(PointerEvent::Move {
@@ -4805,27 +4801,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 {
                     if *click_count >= 2 {
                         self.apply_legend_double_click(series);
+                    } else if modifiers.shift
+                        && let Some(anchor) = self.legend_anchor
+                    {
+                        self.apply_legend_shift_range_toggle(anchor, series);
                     } else {
-                        if modifiers.shift
-                            && let Some(anchor) = self.legend_anchor
-                        {
-                            self.apply_legend_shift_range_toggle(anchor, series);
-                        } else {
-                            let visible = self.with_engine(|engine| {
-                                engine
-                                    .model()
-                                    .series
-                                    .get(&series)
-                                    .map(|s| s.visible)
-                                    .unwrap_or(true)
+                        let visible = self.with_engine(|engine| {
+                            engine
+                                .model()
+                                .series
+                                .get(&series)
+                                .map(|s| s.visible)
+                                .unwrap_or(true)
+                        });
+                        self.with_engine_mut(|engine| {
+                            engine.apply_action(Action::SetSeriesVisible {
+                                series,
+                                visible: !visible,
                             });
-                            self.with_engine_mut(|engine| {
-                                engine.apply_action(Action::SetSeriesVisible {
-                                    series,
-                                    visible: !visible,
-                                });
-                            });
-                        }
+                        });
                     }
                     self.legend_anchor = Some(series);
                     self.legend_hover = Some(series);
@@ -5704,7 +5698,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             return;
         }
 
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
 
         // P0: run the engine synchronously, but allow multiple internal steps per frame so that
         // medium-sized datasets can produce the first set of marks without relying on external
@@ -6045,8 +6039,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
             }
 
-            if let Some(fill_alpha) = cached.fill_alpha {
-                if let Some((fill, _metrics)) = self
+            if let Some(fill_alpha) = cached.fill_alpha
+                && let Some((fill, _metrics)) = self
                     .path_cache
                     .get(mark_path_cache_key(*mark_id, 1), path_constraints)
                 {
@@ -6059,7 +6053,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         paint: fill_color.into(),
                     });
                 }
-            }
 
             let suppress_stroke = cached.source_series.is_some_and(|series_id| {
                 series_by_id
@@ -6067,8 +6060,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     .is_some_and(|s| s.kind == delinea::SeriesKind::Area && s.stack.is_some())
                     && delinea::ids::mark_variant(*mark_id) == 1
             });
-            if !suppress_stroke {
-                if let Some((stroke, _metrics)) = self
+            if !suppress_stroke
+                && let Some((stroke, _metrics)) = self
                     .path_cache
                     .get(mark_path_cache_key(*mark_id, 0), path_constraints)
                 {
@@ -6079,7 +6072,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         paint: stroke_color.into(),
                     });
                 }
-            }
         }
 
         let mut point_key = KeyBuilder::new();
@@ -6271,8 +6263,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     stroke_color.a *= 0.25;
                 }
 
-                if let Some(fill_alpha) = cached.fill_alpha {
-                    if let Some((fill, _metrics)) = self
+                if let Some(fill_alpha) = cached.fill_alpha
+                    && let Some((fill, _metrics)) = self
                         .path_cache
                         .get(mark_path_cache_key(*mark_id, 1), path_constraints)
                     {
@@ -6285,7 +6277,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             paint: fill_color.into(),
                         });
                     }
-                }
 
                 let suppress_stroke = cached.source_series.is_some_and(|series_id| {
                     series_by_id
@@ -6293,8 +6284,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         .is_some_and(|s| s.kind == delinea::SeriesKind::Area && s.stack.is_some())
                         && delinea::ids::mark_variant(*mark_id) == 1
                 });
-                if !suppress_stroke {
-                    if let Some((stroke, _metrics)) = self
+                if !suppress_stroke
+                    && let Some((stroke, _metrics)) = self
                         .path_cache
                         .get(mark_path_cache_key(*mark_id, 0), path_constraints)
                     {
@@ -6305,7 +6296,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             paint: stroke_color.into(),
                         });
                     }
-                }
             }
 
             let base_point_r = self.style.scatter_point_radius.0.max(1.0);
@@ -6695,8 +6685,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
             }
 
-            if !shadow {
-                if let Some(hit) = axis_pointer.hit {
+            if !shadow
+                && let Some(hit) = axis_pointer.hit {
                     let r = self.style.hover_point_size.0.max(1.0);
                     cx.scene.push(SceneOp::Quad {
                         order: point_order,
@@ -6712,7 +6702,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }
-            }
         }
 
         self.draw_legend(cx);
@@ -7405,7 +7394,7 @@ mod tests {
     }
 
     fn step_chart_engine(canvas: &mut ChartCanvas) {
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
         for _ in 0..8 {
             let step = canvas
                 .with_engine_mut(|engine| {

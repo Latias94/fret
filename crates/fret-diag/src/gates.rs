@@ -223,18 +223,17 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
                     let bytes_value = stats
                         .and_then(|o| o.get("wgpu_metal_current_allocated_size_bytes"))
                         .and_then(|v| v.as_u64());
-                    if present_flag == Some(true) {
-                        if let Some(bytes_value) = bytes_value {
+                    if present_flag == Some(true)
+                        && let Some(bytes_value) = bytes_value {
                             bytes_min =
                                 Some(bytes_min.map_or(bytes_value, |cur| cur.min(bytes_value)));
-                            if bytes_max.map_or(true, |cur| bytes_value > cur) {
+                            if bytes_max.is_none_or(|cur| bytes_value > cur) {
                                 bytes_max = Some(bytes_value);
                                 if let (Some(t), Some(f)) = (snap_tick_id, snap_frame_id) {
                                     bytes_max_tick_frame = Some((t, f));
                                 }
                             }
                         }
-                    }
                 }
             }
 
@@ -575,11 +574,10 @@ pub(super) fn check_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_g
             let bytes_value = stats
                 .and_then(|o| o.get("wgpu_metal_current_allocated_size_bytes"))
                 .and_then(|v| v.as_u64());
-            if present_flag == Some(true) {
-                if let Some(bytes_value) = bytes_value {
+            if present_flag == Some(true)
+                && let Some(bytes_value) = bytes_value {
                     bytes_max = Some(bytes_max.map_or(bytes_value, |cur| cur.max(bytes_value)));
                 }
-            }
 
             let img_value = stats
                 .and_then(|o| o.get("renderer_gpu_images_bytes_estimate"))
@@ -789,7 +787,7 @@ pub(super) fn check_wgpu_hub_counts_thresholds(
                     let Some(v) = v else {
                         return;
                     };
-                    if cur.map_or(true, |c| v > c) {
+                    if cur.is_none_or(|c| v > c) {
                         *cur = Some(v);
                         *cur_tick_frame = observed_tick_frame;
                     }

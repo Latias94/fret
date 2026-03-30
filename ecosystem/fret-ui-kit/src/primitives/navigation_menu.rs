@@ -766,7 +766,7 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
                     let entry = states
                         .states
                         .entry(value)
-                        .or_insert_with(NavigationMenuTriggerState::default);
+                        .or_default();
                     entry.was_escape_close = true;
                     entry.was_click_close = false;
                     entry.has_pointer_move_opened = false;
@@ -1091,7 +1091,7 @@ impl NavigationMenuTrigger {
                             let entry = states
                                 .states
                                 .entry(selected)
-                                .or_insert_with(NavigationMenuTriggerState::default);
+                                .or_default();
                             entry.was_escape_close = true;
                             entry.was_click_close = false;
                             entry.has_pointer_move_opened = false;
@@ -1212,7 +1212,7 @@ impl NavigationMenuTrigger {
                             let entry = states
                                 .states
                                 .entry(item_value_for_activate.clone())
-                                .or_insert_with(NavigationMenuTriggerState::default);
+                                .or_default();
                             entry.was_click_close = !now_open;
                             if now_open {
                                 entry.was_escape_close = false;

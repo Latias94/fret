@@ -370,129 +370,6 @@ fn apply_content_patch_to_chips(chips: &mut ComboboxChips, content: ComboboxCont
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use fret_app::App;
-
-    #[test]
-    fn combobox_chips_parts_patch_maps_search_placeholder_and_chip_remove() {
-        let mut app = App::new();
-        let values = app.models_mut().insert(Vec::<Arc<str>>::new());
-        let open = app.models_mut().insert(false);
-        let mut chips = ComboboxChips::new(values, open);
-
-        let content = ComboboxContent::new([
-            ComboboxContentPart::empty(crate::combobox::ComboboxEmpty::new("Nothing found."))
-                .into(),
-            ComboboxContentPart::list(
-                crate::combobox::ComboboxList::new()
-                    .items([crate::combobox::ComboboxItem::new("a", "Alpha")])
-                    .groups([crate::combobox::ComboboxGroup::new()
-                        .label(crate::combobox::ComboboxLabel::new("Group 1"))
-                        .items([crate::combobox::ComboboxItem::new("b", "Beta")])]),
-            )
-            .into(),
-        ]);
-
-        apply_parts_patch_to_chips(
-            &mut chips,
-            vec![
-                ComboboxValue::new([crate::combobox::ComboboxChip::new("a").show_remove(false)])
-                    .into(),
-                ComboboxChipsInput::new()
-                    .placeholder("Add framework")
-                    .into(),
-                content.into(),
-            ],
-        );
-
-        assert_eq!(chips.placeholder.as_ref(), "Add framework");
-        assert_eq!(chips.search_placeholder.as_ref(), "Add framework");
-        assert_eq!(chips.empty_text.as_ref(), "Nothing found.");
-        assert!(!chips.chip_show_remove);
-        assert_eq!(chips.items.len(), 1);
-        assert_eq!(chips.items[0].value.as_ref(), "a");
-        assert_eq!(chips.items[0].label.as_ref(), "Alpha");
-        assert_eq!(chips.groups.len(), 1);
-        assert_eq!(
-            chips.groups[0]
-                .label
-                .as_ref()
-                .expect("group label")
-                .text
-                .as_ref(),
-            "Group 1"
-        );
-        assert_eq!(chips.groups[0].items.len(), 1);
-        assert_eq!(chips.groups[0].items[0].value.as_ref(), "b");
-    }
-
-    #[test]
-    fn combobox_chips_parts_patch_maps_trigger_width() {
-        let mut app = App::new();
-        let values = app.models_mut().insert(Vec::<Arc<str>>::new());
-        let open = app.models_mut().insert(false);
-        let mut chips = ComboboxChips::new(values, open);
-
-        apply_parts_patch_to_chips(
-            &mut chips,
-            vec![ComboboxTrigger::new().width_px(Px(320.0)).into()],
-        );
-
-        assert_eq!(chips.width, Some(Px(320.0)));
-    }
-
-    #[test]
-    fn combobox_chips_builder_steps_apply_the_same_patch_surface() {
-        let mut app = App::new();
-        let values = app.models_mut().insert(Vec::<Arc<str>>::new());
-        let open = app.models_mut().insert(false);
-
-        let chips = ComboboxChips::new(values, open)
-            .value(ComboboxValue::new([crate::combobox::ComboboxChip::new(
-                "a",
-            )
-            .show_remove(false)]))
-            .input(ComboboxChipsInput::new().placeholder("Select frameworks"))
-            .trigger(ComboboxTrigger::new().width_px(Px(260.0)))
-            .content(ComboboxContent::new([
-                ComboboxContentPart::empty(crate::combobox::ComboboxEmpty::new("Nothing found."))
-                    .into(),
-                ComboboxContentPart::list(
-                    crate::combobox::ComboboxList::new()
-                        .items([crate::combobox::ComboboxItem::new("a", "Alpha")])
-                        .groups([crate::combobox::ComboboxGroup::new()
-                            .label(crate::combobox::ComboboxLabel::new("Group 1"))
-                            .items([crate::combobox::ComboboxItem::new("b", "Beta")])]),
-                )
-                .into(),
-            ]));
-
-        assert_eq!(chips.width, Some(Px(260.0)));
-        assert_eq!(chips.placeholder.as_ref(), "Select frameworks");
-        assert_eq!(chips.search_placeholder.as_ref(), "Select frameworks");
-        assert_eq!(chips.empty_text.as_ref(), "Nothing found.");
-        assert!(!chips.chip_show_remove);
-        assert_eq!(chips.items.len(), 1);
-        assert_eq!(chips.items[0].value.as_ref(), "a");
-        assert_eq!(chips.items[0].label.as_ref(), "Alpha");
-        assert_eq!(chips.groups.len(), 1);
-        assert_eq!(
-            chips.groups[0]
-                .label
-                .as_ref()
-                .expect("group label")
-                .text
-                .as_ref(),
-            "Group 1"
-        );
-        assert_eq!(chips.groups[0].items.len(), 1);
-        assert_eq!(chips.groups[0].items[0].value.as_ref(), "b");
-    }
-}
-
 #[allow(clippy::too_many_arguments)]
 fn combobox_chips_with_patch<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -813,7 +690,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                                         .color_by_key("foreground")
                                         .unwrap_or_else(|| theme.color_token("foreground"));
 
-                                    for value in selected_values_for_trigger.iter().cloned() {
+                                    for value in selected_values_for_trigger.iter() {
                                         let slug = test_id_slug(value.as_ref());
                                         let chip_test_id =
                                             format!("{chip_prefix}-chip-{slug}");
@@ -1136,7 +1013,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                     for (idx, (heading, group_items)) in non_empty_groups.into_iter().enumerate()
                     {
                         let group_items: Vec<CommandItem> =
-                            group_items.into_iter().map(|item| make_item(item)).collect();
+                            group_items.into_iter().map(&mut make_item).collect();
                         entries.push(CommandEntry::Group(
                             CommandGroup::new(group_items).heading(heading),
                         ));
@@ -1177,4 +1054,123 @@ fn combobox_chips_with_patch<H: UiHost>(
             },
         )
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+
+    #[test]
+    fn combobox_chips_parts_patch_maps_search_placeholder_and_chip_remove() {
+        let mut app = App::new();
+        let values = app.models_mut().insert(Vec::<Arc<str>>::new());
+        let open = app.models_mut().insert(false);
+        let mut chips = ComboboxChips::new(values, open);
+
+        let content = ComboboxContent::new([
+            ComboboxContentPart::empty(crate::combobox::ComboboxEmpty::new("Nothing found.")),
+            ComboboxContentPart::list(
+                crate::combobox::ComboboxList::new()
+                    .items([crate::combobox::ComboboxItem::new("a", "Alpha")])
+                    .groups([crate::combobox::ComboboxGroup::new()
+                        .label(crate::combobox::ComboboxLabel::new("Group 1"))
+                        .items([crate::combobox::ComboboxItem::new("b", "Beta")])]),
+            ),
+        ]);
+
+        apply_parts_patch_to_chips(
+            &mut chips,
+            vec![
+                ComboboxValue::new([crate::combobox::ComboboxChip::new("a").show_remove(false)])
+                    .into(),
+                ComboboxChipsInput::new()
+                    .placeholder("Add framework")
+                    .into(),
+                content.into(),
+            ],
+        );
+
+        assert_eq!(chips.placeholder.as_ref(), "Add framework");
+        assert_eq!(chips.search_placeholder.as_ref(), "Add framework");
+        assert_eq!(chips.empty_text.as_ref(), "Nothing found.");
+        assert!(!chips.chip_show_remove);
+        assert_eq!(chips.items.len(), 1);
+        assert_eq!(chips.items[0].value.as_ref(), "a");
+        assert_eq!(chips.items[0].label.as_ref(), "Alpha");
+        assert_eq!(chips.groups.len(), 1);
+        assert_eq!(
+            chips.groups[0]
+                .label
+                .as_ref()
+                .expect("group label")
+                .text
+                .as_ref(),
+            "Group 1"
+        );
+        assert_eq!(chips.groups[0].items.len(), 1);
+        assert_eq!(chips.groups[0].items[0].value.as_ref(), "b");
+    }
+
+    #[test]
+    fn combobox_chips_parts_patch_maps_trigger_width() {
+        let mut app = App::new();
+        let values = app.models_mut().insert(Vec::<Arc<str>>::new());
+        let open = app.models_mut().insert(false);
+        let mut chips = ComboboxChips::new(values, open);
+
+        apply_parts_patch_to_chips(
+            &mut chips,
+            vec![ComboboxTrigger::new().width_px(Px(320.0)).into()],
+        );
+
+        assert_eq!(chips.width, Some(Px(320.0)));
+    }
+
+    #[test]
+    fn combobox_chips_builder_steps_apply_the_same_patch_surface() {
+        let mut app = App::new();
+        let values = app.models_mut().insert(Vec::<Arc<str>>::new());
+        let open = app.models_mut().insert(false);
+
+        let chips = ComboboxChips::new(values, open)
+            .value(ComboboxValue::new([crate::combobox::ComboboxChip::new(
+                "a",
+            )
+            .show_remove(false)]))
+            .input(ComboboxChipsInput::new().placeholder("Select frameworks"))
+            .trigger(ComboboxTrigger::new().width_px(Px(260.0)))
+            .content(ComboboxContent::new([
+                ComboboxContentPart::empty(crate::combobox::ComboboxEmpty::new("Nothing found.")),
+                ComboboxContentPart::list(
+                    crate::combobox::ComboboxList::new()
+                        .items([crate::combobox::ComboboxItem::new("a", "Alpha")])
+                        .groups([crate::combobox::ComboboxGroup::new()
+                            .label(crate::combobox::ComboboxLabel::new("Group 1"))
+                            .items([crate::combobox::ComboboxItem::new("b", "Beta")])]),
+                ),
+            ]));
+
+        assert_eq!(chips.width, Some(Px(260.0)));
+        assert_eq!(chips.placeholder.as_ref(), "Select frameworks");
+        assert_eq!(chips.search_placeholder.as_ref(), "Select frameworks");
+        assert_eq!(chips.empty_text.as_ref(), "Nothing found.");
+        assert!(!chips.chip_show_remove);
+        assert_eq!(chips.items.len(), 1);
+        assert_eq!(chips.items[0].value.as_ref(), "a");
+        assert_eq!(chips.items[0].label.as_ref(), "Alpha");
+        assert_eq!(chips.groups.len(), 1);
+        assert_eq!(
+            chips.groups[0]
+                .label
+                .as_ref()
+                .expect("group label")
+                .text
+                .as_ref(),
+            "Group 1"
+        );
+        assert_eq!(chips.groups[0].items.len(), 1);
+        assert_eq!(chips.groups[0].items[0].value.as_ref(), "b");
+    }
 }

@@ -41,7 +41,7 @@ pub(super) fn handle_click_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -177,7 +177,7 @@ pub(super) fn handle_click_step(
         };
 
         let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-        if let Some(ui) = ui.as_deref_mut() {
+        if let Some(ui) = ui {
             record_hit_test_trace_for_selector(
                 &mut active.hit_test_trace,
                 ui,
@@ -239,7 +239,7 @@ pub(super) fn handle_tap_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -371,7 +371,7 @@ pub(super) fn handle_tap_step(
         };
 
         let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-        if let Some(ui) = ui.as_deref_mut() {
+        if let Some(ui) = ui {
             record_hit_test_trace_for_selector(
                 &mut active.hit_test_trace,
                 ui,
@@ -433,7 +433,7 @@ pub(super) fn handle_long_press_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -637,7 +637,7 @@ pub(super) fn handle_long_press_step(
     };
 
     let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-    if let Some(ui) = ui.as_deref_mut() {
+    if let Some(ui) = ui {
         record_hit_test_trace_for_selector(
             &mut active.hit_test_trace,
             ui,
@@ -691,7 +691,7 @@ pub(super) fn handle_swipe_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -841,7 +841,7 @@ pub(super) fn handle_swipe_step(
         window_bounds,
     );
 
-    if let Some(ui) = ui.as_deref_mut() {
+    if let Some(ui) = ui {
         record_hit_test_trace_for_selector(
             &mut active.hit_test_trace,
             ui,
@@ -928,7 +928,7 @@ pub(super) fn handle_pinch_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -1064,7 +1064,7 @@ pub(super) fn handle_pinch_step(
         };
 
         let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-        if let Some(ui) = ui.as_deref_mut() {
+        if let Some(ui) = ui {
             record_hit_test_trace_for_selector(
                 &mut active.hit_test_trace,
                 ui,
@@ -1282,7 +1282,7 @@ pub(super) fn handle_click_stable_step(
                 state.last_center = Some(center);
 
                 if state.stable_count >= stable_required {
-                    if let Some(ui) = ui.as_deref_mut() {
+                    if let Some(ui) = ui {
                         let mut hit = build_hit_test_trace_entry_for_selector(
                             ui,
                             element_runtime,
@@ -1776,7 +1776,7 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                 active.v2_step_state = Some(V2StepState::ClickSelectableTextSpanStable(state));
                 output.request_redraw = true;
             } else if cached_test_id_bounds.is_some() && state.remaining_frames == 0 {
-                if let Some(ui) = ui.as_deref_mut() {
+                if let Some(ui) = ui {
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,
                         ui,
@@ -1836,7 +1836,7 @@ pub(super) fn handle_wheel_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -1941,7 +1941,7 @@ pub(super) fn handle_wheel_step(
     };
 
     let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-    if let Some(ui) = ui.as_deref_mut() {
+    if let Some(ui) = ui {
         let note = format!("wheel dx={delta_x} dy={delta_y}");
         record_hit_test_trace_for_selector(
             &mut active.hit_test_trace,
@@ -1982,7 +1982,7 @@ pub(super) fn handle_wheel_burst_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -2088,7 +2088,7 @@ pub(super) fn handle_wheel_burst_step(
     };
 
     let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-    if let Some(ui) = ui.as_deref_mut() {
+    if let Some(ui) = ui {
         let note = format!("wheel_burst dx={delta_x} dy={delta_y} count={count}");
         record_hit_test_trace_for_selector(
             &mut active.hit_test_trace,
@@ -2185,7 +2185,7 @@ pub(super) fn handle_move_pointer_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -2233,8 +2233,8 @@ pub(super) fn handle_move_pointer_step(
             //
             // This is intentionally narrow: only `test_id` selectors are supported in this
             // fallback path.
-            if pointer_session_active || dock_drag_active {
-                if let UiSelectorV1::TestId { id, .. } = &target {
+            if (pointer_session_active || dock_drag_active)
+                && let UiSelectorV1::TestId { id, .. } = &target {
                     let cached = svc.per_window.get(&target_window).and_then(|ring| {
                         let bounds = ring.test_id_bounds.get(id)?;
                         let window_bounds = ring.snapshots.back().map(|s| s.window_bounds);
@@ -2334,7 +2334,6 @@ pub(super) fn handle_move_pointer_step(
                         return false;
                     }
                 }
-            }
 
             append_diag_script_migration_trace(
                 &svc.cfg.out_dir,
@@ -2466,7 +2465,7 @@ pub(super) fn handle_move_pointer_step(
     };
 
     let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-    if let Some(ui) = ui.as_deref_mut() {
+    if let Some(ui) = ui {
         record_hit_test_trace_for_selector(
             &mut active.hit_test_trace,
             ui,

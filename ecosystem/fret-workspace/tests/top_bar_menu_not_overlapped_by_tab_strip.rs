@@ -2,7 +2,6 @@ use fret_app::App;
 use fret_core::{
     AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
 };
-use fret_core::{MaterialDescriptor, MaterialId, MaterialRegistrationError, MaterialService};
 use fret_core::{Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService};
 use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
 use fret_runtime::CommandId;
@@ -74,7 +73,7 @@ fn top_bar_tab_strip_does_not_overlap_left_menu() {
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices::default();
+    let mut services = FakeServices;
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

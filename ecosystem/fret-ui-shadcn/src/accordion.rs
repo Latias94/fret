@@ -360,7 +360,7 @@ pub mod composable {
                         let children = vec![cx.container(
                             ContainerProps {
                                 layout: props.layout,
-                                padding: props.padding.into(),
+                                padding: props.padding,
                                 background: props.background,
                                 shadow: props.shadow,
                                 border: props.border,
@@ -635,7 +635,7 @@ pub mod composable {
 
             let gap = self
                 .gap
-                .unwrap_or_else(|| MetricRef::Px(Px(0.0)))
+                .unwrap_or(MetricRef::Px(Px(0.0)))
                 .resolve(&theme);
             let children = self.children;
 
@@ -1344,7 +1344,7 @@ impl AccordionTrigger {
                     let children = vec![cx.container(
                         ContainerProps {
                             layout: props.layout,
-                            padding: props.padding.into(),
+                            padding: props.padding,
                             background: props.background,
                             shadow: props.shadow,
                             border: props.border,
@@ -1613,7 +1613,7 @@ impl AccordionContent {
 
         let gap = self
             .gap
-            .unwrap_or_else(|| MetricRef::Px(Px(0.0)))
+            .unwrap_or(MetricRef::Px(Px(0.0)))
             .resolve(&theme);
         let children = self.children;
 
@@ -2382,9 +2382,8 @@ mod tests {
             "expected initial ring alpha to be 0; got {:?}",
             ring_alpha_out.get()
         );
-        assert_eq!(
-            always_paint_out.get().expect("always paint"),
-            false,
+        assert!(
+            !always_paint_out.get().expect("always paint"),
             "expected initial focus_ring_always_paint=false"
         );
 
@@ -3246,7 +3245,7 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert::<Option<Arc<str>>>(None);
-        let mut services = MeasuredServices::default();
+        let mut services = MeasuredServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -3321,7 +3320,7 @@ mod tests {
         let open = app
             .models_mut()
             .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
-        let mut services = MeasuredServices::default();
+        let mut services = MeasuredServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),

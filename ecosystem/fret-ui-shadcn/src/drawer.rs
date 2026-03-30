@@ -915,7 +915,7 @@ impl DrawerHeader {
             .0
             >= fret_ui_kit::declarative::viewport_tailwind::MD.0;
         let centered = matches!(side, DrawerSide::Top | DrawerSide::Bottom) && !md_breakpoint;
-        let text_align = self.text_align.unwrap_or_else(|| {
+        let text_align = self.text_align.unwrap_or({
             if centered {
                 TextAlign::Center
             } else {
@@ -1732,8 +1732,8 @@ impl Drawer {
                 });
             }
 
-            if !is_open && was_open {
-                if let (Some(points), Some(model)) =
+            if !is_open && was_open
+                && let (Some(points), Some(model)) =
                     (snap_points.as_ref(), snap_point_model.as_ref())
                 {
                     let default_index =
@@ -1745,7 +1745,6 @@ impl Drawer {
                         default_index,
                     );
                 }
-            }
 
             if is_open && !was_open {
                 let _ = cx.app.models_mut().update(&offset_model, |v| *v = Px(0.0));
@@ -1813,8 +1812,7 @@ impl Drawer {
                     let runtime_snapshot = cx.app.models().get_copied(&runtime).unwrap_or_default();
                     if !runtime_snapshot.dragging
                         && resolved_snap_point_index != runtime_snapshot.applied_snap_point_index
-                    {
-                        if let Some(target) = resolved_snap_point_index.and_then(|index| {
+                        && let Some(target) = resolved_snap_point_index.and_then(|index| {
                             drawer_resolved_snap_target_for_index(&targets, index)
                         }) {
                             let current_offset =
@@ -1838,7 +1836,6 @@ impl Drawer {
                                 });
                             }
                         }
-                    }
                 }
             }
 
@@ -2114,9 +2111,9 @@ impl Drawer {
                                     0
                                 };
 
-                            if drag_direction != 0 && drag_direction == velocity_direction {
-                                if let Some(current_target) = current_target {
-                                    if let Some(current_sorted_index) = ordered_targets
+                            if drag_direction != 0 && drag_direction == velocity_direction
+                                && let Some(current_target) = current_target
+                                    && let Some(current_sorted_index) = ordered_targets
                                         .iter()
                                         .position(|candidate| *candidate == current_target)
                                     {
@@ -2153,8 +2150,6 @@ impl Drawer {
                                             return true;
                                         }
                                     }
-                                }
-                            }
                             target
                         } else {
                             drawer_resolved_snap_target_closest_by_offset(
@@ -2866,7 +2861,7 @@ mod tests {
                 op,
                 fret_core::SceneOp::Quad {
                     rect, background, ..
-                } if *rect == bounds && background.paint == fret_core::Paint::Solid(color).into()
+                } if *rect == bounds && background.paint == fret_core::Paint::Solid(color)
             )
         })
     }
@@ -3716,7 +3711,7 @@ mod tests {
                 vec![Drawer::new(open.clone()).into_element_parts(
                     cx,
                     |cx| DrawerTrigger::new(crate::button::Button::new("Open").into_element(cx)),
-                    DrawerPortal::default(),
+                    DrawerPortal,
                     DrawerOverlay::new(),
                     |cx| DrawerContent::new([cx.text("Content")]).into_element(cx),
                 )]
@@ -4170,7 +4165,7 @@ mod tests {
             req.prevent_default();
         });
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -4320,7 +4315,7 @@ mod tests {
         let open = app.models_mut().insert(true);
         let underlay_activated = app.models_mut().insert(false);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -4737,7 +4732,7 @@ mod tests {
         let open = app.models_mut().insert(true);
         let drawer_content_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
@@ -4862,7 +4857,7 @@ mod tests {
         let open = app.models_mut().insert(true);
         let drawer_content_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
@@ -4988,7 +4983,7 @@ mod tests {
         let child_open = app.models_mut().insert(true);
         let state = NestedDrawerHarnessState::default();
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(600.0)),
@@ -5020,10 +5015,9 @@ mod tests {
             .borrow()
             .clone()
             .expect("parent offset model captured");
-        let parent_content_id = state
+        let parent_content_id = (*state
             .parent_content_id
-            .borrow()
-            .clone()
+            .borrow())
             .expect("parent content id captured");
         let parent_runtime = app
             .models()
@@ -5090,7 +5084,7 @@ mod tests {
         let child_open = app.models_mut().insert(true);
         let state = NestedDrawerHarnessState::default();
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(600.0)),
@@ -5138,10 +5132,9 @@ mod tests {
             .borrow()
             .clone()
             .expect("parent offset model captured");
-        let parent_content_id = state
+        let parent_content_id = (*state
             .parent_content_id
-            .borrow()
-            .clone()
+            .borrow())
             .expect("parent content id captured");
         let parent_runtime = app
             .models()
@@ -5208,7 +5201,7 @@ mod tests {
         let child_open = app.models_mut().insert(true);
         let state = NestedDrawerHarnessState::default();
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(600.0)),
@@ -5264,7 +5257,7 @@ mod tests {
         let child_open = app.models_mut().insert(true);
         let state = NestedDrawerHarnessState::default();
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(600.0)),
@@ -5296,10 +5289,9 @@ mod tests {
             .borrow()
             .clone()
             .expect("child offset model captured");
-        let child_content_id = state
+        let child_content_id = (*state
             .child_content_id
-            .borrow()
-            .clone()
+            .borrow())
             .expect("child content id captured");
 
         let child_dialog =
@@ -5377,7 +5369,7 @@ mod tests {
         let snap_point = app.models_mut().insert(Some(2usize));
         let state = DrawerSnapHarnessState::default();
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(600.0)),
@@ -5406,10 +5398,9 @@ mod tests {
             );
         }
 
-        let drawer_content_id = state
+        let drawer_content_id = (*state
             .drawer_content_id
-            .borrow()
-            .clone()
+            .borrow())
             .expect("drawer content id captured");
 
         let offset_model = state
@@ -5531,7 +5522,7 @@ mod tests {
         let snap_point = app.models_mut().insert(Some(1usize));
         let state = DrawerSnapHarnessState::default();
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(600.0)),
@@ -5605,7 +5596,7 @@ mod tests {
             })
         };
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(600.0)),
@@ -5673,7 +5664,7 @@ mod tests {
         let snap_point = app.models_mut().insert(Some(0usize));
         let state = DrawerSnapHarnessState::default();
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(600.0)),
@@ -5702,10 +5693,9 @@ mod tests {
             );
         }
 
-        let drawer_content_id = state
+        let drawer_content_id = (*state
             .drawer_content_id
-            .borrow()
-            .clone()
+            .borrow())
             .expect("drawer content id captured");
         let offset_model = state
             .offset_model
@@ -5810,7 +5800,7 @@ mod tests {
         let close_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -5951,7 +5941,7 @@ mod tests {
         let close_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -6093,7 +6083,7 @@ mod tests {
         let open = app.models_mut().insert(false);
         let underlay_activated = app.models_mut().insert(false);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -6263,7 +6253,7 @@ mod tests {
             req.prevent_default();
         });
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -6348,17 +6338,16 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = redirect_focus_id_for_handler
+            let id = *redirect_focus_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
             req.prevent_default();
         });
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -6449,17 +6438,16 @@ mod tests {
         let underlay_id_for_handler = underlay_id_cell.clone();
         let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = underlay_id_for_handler
+            let id = *underlay_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
             req.prevent_default();
         });
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -6548,17 +6536,16 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = underlay_id_for_handler
+            let id = *underlay_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
             req.prevent_default();
         });
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),

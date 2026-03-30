@@ -305,8 +305,8 @@ fn invert_op(op: &GraphOp) -> Vec<GraphOp> {
         }],
         GraphOp::SetEdgeReconnectable { id, from, to } => vec![GraphOp::SetEdgeReconnectable {
             id: *id,
-            from: to.clone(),
-            to: from.clone(),
+            from: *to,
+            to: *from,
         }],
         GraphOp::SetEdgeEndpoints { id, from, to } => vec![GraphOp::SetEdgeEndpoints {
             id: *id,

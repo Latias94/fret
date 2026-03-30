@@ -316,90 +316,6 @@ pub(super) fn compile_for_scene(
     )
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn backdrop_source_group_pyramid_choice_does_not_double_count_raw_bytes() {
-        let viewport_size = (64u32, 64u32);
-        let format = wgpu::TextureFormat::Rgba8Unorm;
-
-        let req = fret_core::scene::CustomEffectPyramidRequestV1 {
-            max_levels: 7,
-            max_radius_px: fret_core::geometry::Px(16.0),
-        };
-
-        let raw_bytes = estimate_texture_bytes(viewport_size, format, 1);
-        let pyramid_bytes = effects::estimate_custom_v3_pyramid_bytes(viewport_size, format, 2);
-        let intermediate_budget_bytes = raw_bytes.saturating_add(pyramid_bytes);
-
-        let choice = choose_backdrop_source_group_pyramid_choice(
-            req,
-            viewport_size,
-            format,
-            intermediate_budget_bytes,
-            0,
-            0,
-            0,
-            raw_bytes,
-        );
-
-        assert_eq!(
-            choice.levels, 2,
-            "expected enough headroom for a 2-level pyramid after reserving raw bytes"
-        );
-        assert_eq!(
-            choice.degraded_to_one, None,
-            "expected no degradation when budget exactly fits the requested 2-level pyramid"
-        );
-    }
-
-    #[test]
-    fn effective_intermediate_budget_excludes_srcdst_bytes() {
-        let format = wgpu::TextureFormat::Rgba8Unorm;
-        let intermediate_budget_bytes = 1000u64;
-
-        let draw_scopes = [
-            DrawScope {
-                target: super::super::PlanTarget::Intermediate0,
-                origin: (0, 0),
-                size: (4, 4),
-                needs_clear: false,
-                clear_color: wgpu::Color::TRANSPARENT,
-            },
-            DrawScope {
-                target: super::super::PlanTarget::Intermediate1,
-                origin: (0, 0),
-                size: (2, 2),
-                needs_clear: false,
-                clear_color: wgpu::Color::TRANSPARENT,
-            },
-        ];
-
-        let srcdst_bytes = estimate_texture_bytes((4, 4), format, 1);
-        let in_use_bytes = estimate_texture_bytes((4, 4), format, 1)
-            .saturating_add(estimate_texture_bytes((2, 2), format, 1));
-        let extra_in_use_bytes = 7u64;
-
-        let expected = intermediate_budget_bytes.saturating_sub(
-            in_use_bytes
-                .saturating_sub(srcdst_bytes)
-                .saturating_add(extra_in_use_bytes),
-        );
-
-        let got = intermediate_budget_breakdown_for_chain(
-            intermediate_budget_bytes,
-            &draw_scopes,
-            super::super::PlanTarget::Intermediate0,
-            format,
-            extra_in_use_bytes,
-        )
-        .effective_budget_bytes;
-        assert_eq!(got, expected);
-    }
-}
-
 fn compile_for_scene_inner(
     encoding: &SceneEncoding,
     scale_factor: f32,
@@ -1583,4 +1499,88 @@ fn compile_for_scene_inner(
     }
 
     plan
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backdrop_source_group_pyramid_choice_does_not_double_count_raw_bytes() {
+        let viewport_size = (64u32, 64u32);
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+
+        let req = fret_core::scene::CustomEffectPyramidRequestV1 {
+            max_levels: 7,
+            max_radius_px: fret_core::geometry::Px(16.0),
+        };
+
+        let raw_bytes = estimate_texture_bytes(viewport_size, format, 1);
+        let pyramid_bytes = effects::estimate_custom_v3_pyramid_bytes(viewport_size, format, 2);
+        let intermediate_budget_bytes = raw_bytes.saturating_add(pyramid_bytes);
+
+        let choice = choose_backdrop_source_group_pyramid_choice(
+            req,
+            viewport_size,
+            format,
+            intermediate_budget_bytes,
+            0,
+            0,
+            0,
+            raw_bytes,
+        );
+
+        assert_eq!(
+            choice.levels, 2,
+            "expected enough headroom for a 2-level pyramid after reserving raw bytes"
+        );
+        assert_eq!(
+            choice.degraded_to_one, None,
+            "expected no degradation when budget exactly fits the requested 2-level pyramid"
+        );
+    }
+
+    #[test]
+    fn effective_intermediate_budget_excludes_srcdst_bytes() {
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let intermediate_budget_bytes = 1000u64;
+
+        let draw_scopes = [
+            DrawScope {
+                target: super::super::PlanTarget::Intermediate0,
+                origin: (0, 0),
+                size: (4, 4),
+                needs_clear: false,
+                clear_color: wgpu::Color::TRANSPARENT,
+            },
+            DrawScope {
+                target: super::super::PlanTarget::Intermediate1,
+                origin: (0, 0),
+                size: (2, 2),
+                needs_clear: false,
+                clear_color: wgpu::Color::TRANSPARENT,
+            },
+        ];
+
+        let srcdst_bytes = estimate_texture_bytes((4, 4), format, 1);
+        let in_use_bytes = estimate_texture_bytes((4, 4), format, 1)
+            .saturating_add(estimate_texture_bytes((2, 2), format, 1));
+        let extra_in_use_bytes = 7u64;
+
+        let expected = intermediate_budget_bytes.saturating_sub(
+            in_use_bytes
+                .saturating_sub(srcdst_bytes)
+                .saturating_add(extra_in_use_bytes),
+        );
+
+        let got = intermediate_budget_breakdown_for_chain(
+            intermediate_budget_bytes,
+            &draw_scopes,
+            super::super::PlanTarget::Intermediate0,
+            format,
+            extra_in_use_bytes,
+        )
+        .effective_budget_bytes;
+        assert_eq!(got, expected);
+    }
 }

@@ -50,7 +50,7 @@ impl UiDiagnosticsService {
         #[cfg(not(feature = "diagnostics-ws"))]
         {
             let _ = (app, window, scale_factor, ui);
-            return false;
+            false
         }
     }
 

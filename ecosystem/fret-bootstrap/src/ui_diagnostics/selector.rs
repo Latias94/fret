@@ -508,8 +508,8 @@ pub(super) fn suggest_selectors(
     }
 
     let role = semantics_role_label(raw_node.role).to_string();
-    if let Some(name) = exported_node.label.as_deref() {
-        if !(cfg.redact_text && is_redacted_string(name)) {
+    if let Some(name) = exported_node.label.as_deref()
+        && !(cfg.redact_text && is_redacted_string(name)) {
             let ancestors = selector_ancestors_for(snapshot, raw_node);
             if !ancestors.is_empty() {
                 out.push(UiSelectorV1::RoleAndPath {
@@ -525,7 +525,6 @@ pub(super) fn suggest_selectors(
                 root_z_index: None,
             });
         }
-    }
 
     if let Some(element) = element {
         out.push(UiSelectorV1::GlobalElementId {

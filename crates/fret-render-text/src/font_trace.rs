@@ -59,6 +59,7 @@ impl FontTraceState {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn maybe_record(
         &mut self,
         text: &str,

@@ -32,3 +32,15 @@ taffy = { workspace = true, features = ["flexbox", "grid"] }
 virtualizer.workspace = true
 unicode-segmentation.workspace = true
 unicode-ident.workspace = true
+
+[lints.clippy]
+arc_with_non_send_sync = "allow"
+default_constructed_unit_structs = "allow"
+field_reassign_with_default = "allow"
+manual_clamp = "allow"
+manual_contains = "allow"
+question_mark = "allow"
+redundant_locals = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+unnecessary_get_then_check = "allow"

@@ -369,7 +369,7 @@ fn search_bar_text_input_chrome(
     }
 
     let mut style = fret_ui::TextInputStyle::default();
-    style.padding = Edges::all(Px(0.0)).into();
+    style.padding = Edges::all(Px(0.0));
     style.border = Edges::all(Px(0.0));
     style.border_color = Color {
         r: 0.0,

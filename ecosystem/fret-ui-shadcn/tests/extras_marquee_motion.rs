@@ -1,3 +1,5 @@
+#![allow(clippy::default_constructed_unit_structs)]
+
 use fret_app::App;
 use fret_core::{
     AppWindowId, FrameId, PathCommand, PathConstraints, PathId, PathMetrics, PathService,

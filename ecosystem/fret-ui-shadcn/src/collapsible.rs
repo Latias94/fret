@@ -734,7 +734,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render(
             &mut ui,
@@ -806,7 +806,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let _ = render(
             &mut ui,
@@ -887,7 +887,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // First render: default_open=true should mount the content subtree.
         let root = render(
@@ -955,7 +955,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // Render enough frames for measurement/presence to settle.
         for _ in 0..4 {
@@ -997,7 +997,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render(
             &mut ui,
@@ -1076,7 +1076,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render_custom =
             |ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices| {

@@ -27,9 +27,9 @@ pub fn window_insets_padding_refinement_or_zero<H: UiHost>(
     let left = base + safe_area.left.0.max(0.0) + occlusion.left.0.max(0.0);
 
     PaddingRefinement {
-        top: Some(MetricRef::Px(Px(top))).into(),
-        right: Some(MetricRef::Px(Px(right))).into(),
-        bottom: Some(MetricRef::Px(Px(bottom))).into(),
-        left: Some(MetricRef::Px(Px(left))).into(),
+        top: Some(MetricRef::Px(Px(top))),
+        right: Some(MetricRef::Px(Px(right))),
+        bottom: Some(MetricRef::Px(Px(bottom))),
+        left: Some(MetricRef::Px(Px(left))),
     }
 }

@@ -43,7 +43,7 @@ fn base_duration(drag_free: bool) -> f32 {
 }
 
 fn next_index(current: usize, direction_sign: f32, max: usize, loop_enabled: bool) -> usize {
-    let delta = (math_sign(direction_sign) as i32) * -1;
+    let delta = -(math_sign(direction_sign) as i32);
     if delta == 0 {
         return current;
     }

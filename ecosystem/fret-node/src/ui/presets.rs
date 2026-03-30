@@ -208,11 +208,10 @@ impl NodeGraphPresetSkinV1 {
         if let Some(v) = node_tokens.header_by_kind.get(kind) {
             return (*v).into();
         }
-        if let Some((_a, b)) = kind.rsplit_once('.') {
-            if let Some(v) = node_tokens.header_by_kind.get(b) {
+        if let Some((_a, b)) = kind.rsplit_once('.')
+            && let Some(v) = node_tokens.header_by_kind.get(b) {
                 return (*v).into();
             }
-        }
         node_tokens.header_background_default.into()
     }
 

@@ -275,10 +275,10 @@ impl ChromeRefinement {
     pub fn p(mut self, space: Space) -> Self {
         let m = MetricRef::space(space);
         self.padding = Some(PaddingRefinement {
-            top: Some(m.clone()).into(),
-            right: Some(m.clone()).into(),
-            bottom: Some(m.clone()).into(),
-            left: Some(m).into(),
+            top: Some(m.clone()),
+            right: Some(m.clone()),
+            bottom: Some(m.clone()),
+            left: Some(m),
         });
         self
     }

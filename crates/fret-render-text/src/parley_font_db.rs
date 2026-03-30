@@ -509,12 +509,13 @@ impl ParleyFontDbState {
 pub(crate) fn run_system_font_rescan(
     seed: crate::SystemFontRescanSeed,
 ) -> crate::SystemFontRescanResult {
-    let mut fcx = FontContext::default();
-    fcx.collection = parley::fontique::Collection::new(parley::fontique::CollectionOptions {
-        shared: false,
-        system_fonts: true,
-    });
-    fcx.source_cache = parley::fontique::SourceCache::default();
+    let mut fcx = FontContext {
+        collection: parley::fontique::Collection::new(parley::fontique::CollectionOptions {
+            shared: false,
+            system_fonts: true,
+        }),
+        source_cache: parley::fontique::SourceCache::default(),
+    };
 
     for blob in seed.registered_font_blobs {
         let _ = fcx.collection.register_fonts(blob, None);

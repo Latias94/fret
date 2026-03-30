@@ -188,15 +188,14 @@ pub(crate) fn pack_bundle_dir_to_zip(
         ));
     }
 
-    if schema2_only {
-        if crate::resolve_bundle_schema2_artifact_path_no_materialize(bundle_dir).is_none() {
+    if schema2_only
+        && crate::resolve_bundle_schema2_artifact_path_no_materialize(bundle_dir).is_none() {
             return Err(format!(
                 "--pack-schema2-only requires bundle.schema2.json (tip: fretboard diag doctor --fix-schema2 {} --warmup-frames {})",
                 bundle_dir.display(),
                 warmup_frames
             ));
         }
-    }
 
     if let Some(parent) = out_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -462,15 +461,14 @@ pub(crate) fn pack_repro_zip_multi(
 
     for item in bundles {
         let bundle_dir = crate::resolve_bundle_root_dir(&item.bundle_artifact)?;
-        if schema2_only {
-            if crate::resolve_bundle_schema2_artifact_path_no_materialize(&bundle_dir).is_none() {
+        if schema2_only
+            && crate::resolve_bundle_schema2_artifact_path_no_materialize(&bundle_dir).is_none() {
                 return Err(format!(
                     "--pack-schema2-only requires bundle.schema2.json (tip: fretboard diag doctor --fix-schema2 {} --warmup-frames {})",
                     bundle_dir.display(),
                     warmup_frames
                 ));
             }
-        }
         zip_add_dir_pack_bundle(
             &mut zip,
             &bundle_dir,
