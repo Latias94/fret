@@ -175,8 +175,8 @@ mod tests {
     use std::sync::Arc;
 
     use fret_assets::{
-        AssetCapabilities, AssetLocator, AssetRequest, AssetResolver, AssetRevision,
-        InMemoryAssetResolver, ResolvedAssetBytes, ResolvedAssetReference,
+        AssetCapabilities, AssetExternalReference, AssetLocator, AssetRequest, AssetResolver,
+        AssetRevision, InMemoryAssetResolver, ResolvedAssetBytes, ResolvedAssetReference,
     };
 
     use super::*;
@@ -434,6 +434,112 @@ mod tests {
             err,
             AssetLoadError::UnsupportedLocatorKind {
                 kind: fret_assets::AssetLocatorKind::File,
+            }
+        );
+    }
+
+    #[test]
+    fn resolve_image_source_from_host_supports_byte_backed_url_resolvers() {
+        struct ByteUrlResolver;
+
+        impl AssetResolver for ByteUrlResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    url: true,
+                    ..Default::default()
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Ok(ResolvedAssetBytes::new(
+                    request.locator.clone(),
+                    AssetRevision(5),
+                    &b"url-bytes"[..],
+                ))
+            }
+
+            fn resolve_reference(
+                &self,
+                _request: &AssetRequest,
+            ) -> Result<ResolvedAssetReference, AssetLoadError> {
+                Err(AssetLoadError::ExternalReferenceUnavailable {
+                    kind: fret_assets::AssetLocatorKind::Url,
+                })
+            }
+        }
+
+        let mut host = TestHost::default();
+        fret_runtime::set_asset_resolver(&mut host, Arc::new(ByteUrlResolver));
+
+        let source = resolve_image_source_from_host_locator(
+            &host,
+            AssetLocator::url("https://example.com/logo.png"),
+        )
+        .expect("byte-backed url resolver should stay consumable by the image bridge");
+        let resolved = fret_runtime::resolve_asset_locator_bytes(
+            &host,
+            AssetLocator::url("https://example.com/logo.png"),
+        )
+        .expect("url bytes should resolve through the shared asset contract");
+
+        assert_eq!(
+            source.id(),
+            ImageSource::from_resolved_asset_bytes(&resolved).id()
+        );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn resolve_image_source_from_host_rejects_reference_only_native_url_resolvers() {
+        struct ReferenceOnlyUrlResolver;
+
+        impl AssetResolver for ReferenceOnlyUrlResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    url: true,
+                    ..Default::default()
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                _request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Err(AssetLoadError::ReferenceOnlyLocator {
+                    kind: fret_assets::AssetLocatorKind::Url,
+                })
+            }
+
+            fn resolve_reference(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetReference, AssetLoadError> {
+                Ok(ResolvedAssetReference::new(
+                    request.locator.clone(),
+                    AssetRevision(9),
+                    AssetExternalReference::url("https://example.com/logo.png"),
+                ))
+            }
+        }
+
+        let mut host = TestHost::default();
+        fret_runtime::set_asset_resolver(&mut host, Arc::new(ReferenceOnlyUrlResolver));
+
+        let err = resolve_image_source_from_host_locator(
+            &host,
+            AssetLocator::url("https://example.com/logo.png"),
+        )
+        .expect_err(
+            "native image bridge should reject reference-only url resolvers until it has a native url lane",
+        );
+
+        assert_eq!(
+            err,
+            AssetLoadError::ReferenceOnlyLocator {
+                kind: fret_assets::AssetLocatorKind::Url,
             }
         );
     }

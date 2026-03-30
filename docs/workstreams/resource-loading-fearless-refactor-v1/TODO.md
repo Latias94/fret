@@ -662,6 +662,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `ecosystem/fret-ui-assets/src/asset_resolver.rs` now locks the UI bridge contract for:
       - image helpers propagating unsupported file-locator capability errors instead of swallowing
         them,
+      - byte-backed URL resolvers remaining consumable through the shared image bridge,
+      - native reference-only URL resolvers failing truthfully instead of pretending they are
+        image-ready,
       - `SvgFileSource` staying truthful about requiring an external file reference instead of
         silently treating byte-only bundle assets as native files.
   - Remaining:
