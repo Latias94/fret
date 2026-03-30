@@ -30,6 +30,7 @@ pub(crate) struct StatsCmdContext {
     pub check_asset_load_unsupported_file_max: Option<u64>,
     pub check_asset_load_unsupported_url_max: Option<u64>,
     pub check_asset_load_external_reference_unavailable_max: Option<u64>,
+    pub check_asset_load_io_max: Option<u64>,
     pub check_asset_load_revision_changes_max: Option<u64>,
     pub check_bundled_font_baseline_source: Option<String>,
     pub check_asset_reload_epoch_min: Option<u64>,
@@ -78,6 +79,7 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         check_asset_load_unsupported_file_max,
         check_asset_load_unsupported_url_max,
         check_asset_load_external_reference_unavailable_max,
+        check_asset_load_io_max,
         check_asset_load_revision_changes_max,
         check_bundled_font_baseline_source,
         check_asset_reload_epoch_min,
@@ -350,6 +352,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             warmup_frames,
         )?;
         stats::check_bundle_for_asset_load_external_reference_unavailable_max(
+            bundle_path.as_path(),
+            max_allowed,
+            warmup_frames,
+        )?;
+    }
+    if let Some(max_allowed) = check_asset_load_io_max {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-asset-load-io-max",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_asset_load_io_max(
             bundle_path.as_path(),
             max_allowed,
             warmup_frames,

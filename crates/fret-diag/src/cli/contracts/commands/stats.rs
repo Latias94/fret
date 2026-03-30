@@ -31,6 +31,9 @@ pub(crate) struct StatsChecksArgs {
     )]
     pub check_asset_load_external_reference_unavailable_max: Option<u64>,
 
+    #[arg(long = "check-asset-load-io-max", value_name = "N")]
+    pub check_asset_load_io_max: Option<u64>,
+
     #[arg(long = "check-asset-load-revision-changes-max", value_name = "N")]
     pub check_asset_load_revision_changes_max: Option<u64>,
 

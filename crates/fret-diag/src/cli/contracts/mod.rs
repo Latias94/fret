@@ -1338,6 +1338,8 @@ mod tests {
             "--check-notify-hotspot-file-max",
             "src/view.rs",
             "7",
+            "--check-asset-load-io-max",
+            "4",
             "--check-view-cache-reuse-min",
             "1",
             "--check-retained-vlist-attach-detach-max",
@@ -1375,6 +1377,7 @@ mod tests {
             args.checks.check_notify_hotspot_file_max,
             vec!["src/view.rs".to_string(), "7".to_string()]
         );
+        assert_eq!(args.checks.check_asset_load_io_max, Some(4));
         assert_eq!(args.checks.check_view_cache_reuse_min, Some(1));
         assert_eq!(args.checks.check_retained_vlist_attach_detach_max, Some(2));
     }

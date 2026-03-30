@@ -55,6 +55,13 @@ const ASSET_LOAD_EXTERNAL_REFERENCE_UNAVAILABLE_MAX: ResourceLoadingCounterGateS
         counter_pointer: "debug.resource_loading.asset_load.external_reference_unavailable_requests",
     };
 
+const ASSET_LOAD_IO_MAX: ResourceLoadingCounterGateSpec = ResourceLoadingCounterGateSpec {
+    kind: "asset_load_io_max",
+    counter_field: "io_requests",
+    evidence_file: "check.asset_load_io_max.json",
+    counter_pointer: "debug.resource_loading.asset_load.io_requests",
+};
+
 const ASSET_LOAD_REVISION_CHANGES_MAX: ResourceLoadingCounterGateSpec =
     ResourceLoadingCounterGateSpec {
         kind: "asset_load_revision_changes_max",
@@ -160,6 +167,22 @@ pub(crate) fn check_bundle_for_asset_load_external_reference_unavailable_max(
         &bundle,
         bundle_path,
         &ASSET_LOAD_EXTERNAL_REFERENCE_UNAVAILABLE_MAX,
+        max_allowed,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_asset_load_io_max(
+    bundle_path: &Path,
+    max_allowed: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_resource_loading_counter_max_json(
+        &bundle,
+        bundle_path,
+        &ASSET_LOAD_IO_MAX,
         max_allowed,
         warmup_frames,
     )
@@ -983,6 +1006,22 @@ pub(crate) fn check_bundle_for_asset_load_external_reference_unavailable_max_jso
         bundle,
         bundle_path,
         &ASSET_LOAD_EXTERNAL_REFERENCE_UNAVAILABLE_MAX,
+        max_allowed,
+        warmup_frames,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn check_bundle_for_asset_load_io_max_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    max_allowed: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_resource_loading_counter_max_json(
+        bundle,
+        bundle_path,
+        &ASSET_LOAD_IO_MAX,
         max_allowed,
         warmup_frames,
     )

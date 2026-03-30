@@ -106,6 +106,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - shared URL image bridging on every platform when the winning resolver returns
         `AssetExternalReference::Url`,
       - native bundle-locator -> `SvgFileSource` bridging for reloadable file-backed SVGs
+    - runtime file-read failures now stay typed as `AssetLoadError::Io { operation, path, message }`
+      instead of collapsing into free-form strings, and `fret-diag` now exposes the corresponding
+      `debug.resource_loading.asset_load.io_requests` counter through both stats and post-run gates
+      (`--check-asset-load-io-max`, `asset_load_io_max`)
     - app-facing facade reference helpers via `ecosystem/fret/src/lib.rs`
       (`resolve_reference`, `resolve_locator_reference`)
   - Remaining:

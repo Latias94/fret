@@ -114,6 +114,9 @@ Tracking format:
     - `CAPABILITY_MATRIX.md` and this release-readiness tracker now also distinguish
       “web-only first-party default URL resolver” from “cross-platform shared image bridge that can
       consume custom resolver URL references,”
+    - typed runtime I/O asset-load failures now also stay visible in the diagnostics/gate surface
+      as `debug.resource_loading.asset_load.io_requests`, so release verification can fail on
+      unexpected file-read regressions without scraping free-form strings,
     - this release-readiness README now records the post-closure state for wasm fonts, URL
       truthfulness, font baseline ownership, web serif limits, and the partial-cache-setup naming
       cleanup,

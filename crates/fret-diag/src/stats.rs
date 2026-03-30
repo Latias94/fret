@@ -71,7 +71,7 @@ pub(super) use pixels_changed::{
 };
 pub(super) use resource_loading::{
     check_bundle_for_asset_load_external_reference_unavailable_max,
-    check_bundle_for_asset_load_missing_bundle_assets_max,
+    check_bundle_for_asset_load_io_max, check_bundle_for_asset_load_missing_bundle_assets_max,
     check_bundle_for_asset_load_revision_changes_max,
     check_bundle_for_asset_load_stale_manifest_max,
     check_bundle_for_asset_load_unsupported_file_max,
@@ -144,6 +144,7 @@ pub(super) use overlay_gates::check_bundle_for_overlay_synthesis_min_json;
 #[allow(unused_imports)]
 pub(super) use resource_loading::{
     check_bundle_for_asset_load_external_reference_unavailable_max_json,
+    check_bundle_for_asset_load_io_max_json,
     check_bundle_for_asset_load_missing_bundle_assets_max_json,
     check_bundle_for_asset_load_revision_changes_max_json,
     check_bundle_for_asset_load_stale_manifest_max_json,

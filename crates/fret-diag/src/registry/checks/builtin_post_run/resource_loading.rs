@@ -38,6 +38,13 @@ pub(super) const ENTRIES: &[PostRunCheckEntry] = &[
         run: run_asset_load_external_reference_unavailable_max,
     },
     PostRunCheckEntry {
+        id: "asset_load_io_max",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_asset_load_io_max,
+        run: run_asset_load_io_max,
+    },
+    PostRunCheckEntry {
         id: "asset_load_revision_changes_max",
         requires_bundle_artifact: true,
         requires_screenshots: false,
@@ -167,6 +174,21 @@ fn run_asset_load_external_reference_unavailable_max(
         return Ok(());
     };
     crate::stats::check_bundle_for_asset_load_external_reference_unavailable_max(
+        ctx.bundle_path,
+        max_allowed,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_asset_load_io_max(checks: &RunChecks) -> bool {
+    checks.check_asset_load_io_max.is_some()
+}
+
+fn run_asset_load_io_max(ctx: PostRunCheckContext<'_>, checks: &RunChecks) -> Result<(), String> {
+    let Some(max_allowed) = checks.check_asset_load_io_max else {
+        return Ok(());
+    };
+    crate::stats::check_bundle_for_asset_load_io_max(
         ctx.bundle_path,
         max_allowed,
         ctx.warmup_frames,

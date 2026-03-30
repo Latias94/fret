@@ -1069,6 +1069,7 @@ fn parse_stats_command(
             check_asset_load_unsupported_url_max: checks.check_asset_load_unsupported_url_max,
             check_asset_load_external_reference_unavailable_max: checks
                 .check_asset_load_external_reference_unavailable_max,
+            check_asset_load_io_max: checks.check_asset_load_io_max,
             check_asset_load_revision_changes_max: checks.check_asset_load_revision_changes_max,
             check_bundled_font_baseline_source: checks.check_bundled_font_baseline_source,
             check_asset_reload_epoch_min: checks.check_asset_reload_epoch_min,
