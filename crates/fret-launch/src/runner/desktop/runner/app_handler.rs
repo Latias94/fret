@@ -2297,19 +2297,20 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     }
 
                     if let Some(pending) = pending
-                        && let Some(state) = self.windows.get_mut(app_window) {
-                            state.pending_wheel = Some(match state.pending_wheel.take() {
-                                Some(mut prev) => {
-                                    prev.delta = wheel_coalesce_delta(prev.delta, pending.delta);
-                                    prev.position = pending.position;
-                                    prev.modifiers = pending.modifiers;
-                                    prev.pointer_type = pending.pointer_type;
-                                    prev.pointer_id = pending.pointer_id;
-                                    prev
-                                }
-                                None => pending,
-                            });
-                        }
+                        && let Some(state) = self.windows.get_mut(app_window)
+                    {
+                        state.pending_wheel = Some(match state.pending_wheel.take() {
+                            Some(mut prev) => {
+                                prev.delta = wheel_coalesce_delta(prev.delta, pending.delta);
+                                prev.position = pending.position;
+                                prev.modifiers = pending.modifiers;
+                                prev.pointer_type = pending.pointer_type;
+                                prev.pointer_id = pending.pointer_id;
+                                prev
+                            }
+                            None => pending,
+                        });
+                    }
 
                     passthrough
                 } else {

@@ -267,8 +267,6 @@ impl WebPreview {
         let test_id_root = self.test_id_root.clone();
         let eager_children = self.children;
 
-        
-
         cx.container(
             decl_style::container_props(&theme, chrome, layout),
             move |cx| {
@@ -1526,8 +1524,6 @@ impl WebPreviewConsole {
         } else {
             content
         };
-
-        
 
         Collapsible::new(console_open)
             .refine_layout(self.layout)

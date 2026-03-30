@@ -2989,9 +2989,7 @@ mod tests {
                 .into_element(cx)
         });
 
-        fn find_tab_panel_semantics(
-            el: &AnyElement,
-        ) -> Option<&fret_ui::element::SemanticsProps> {
+        fn find_tab_panel_semantics(el: &AnyElement) -> Option<&fret_ui::element::SemanticsProps> {
             match &el.kind {
                 fret_ui::element::ElementKind::Semantics(props)
                     if props.role == SemanticsRole::TabPanel =>

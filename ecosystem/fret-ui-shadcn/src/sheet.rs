@@ -404,9 +404,10 @@ impl Sheet {
         let max_size = Px(max_size.0.max(0.0));
         self.max_size_override = Some(max_size);
         if let Some(SheetSizeOverride::Px(size_px)) = self.size_override
-            && size_px.0 > max_size.0 {
-                self.size_override = Some(SheetSizeOverride::Px(max_size));
-            }
+            && size_px.0 > max_size.0
+        {
+            self.size_override = Some(SheetSizeOverride::Px(max_size));
+        }
         self
     }
 
@@ -3454,9 +3455,8 @@ mod tests {
                         cx,
                         |_cx| trigger,
                         move |cx| {
-                            
                             SheetContent::new(vec![ui::raw_text("sheet").into_element(cx)])
-                                    .into_element(cx)
+                                .into_element(cx)
                         },
                     );
 

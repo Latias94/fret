@@ -162,25 +162,26 @@ impl SearchView {
 
             // Policy: open on focus gained (Compose-like), while keeping focus on the text input.
             if !self.disabled
-                && let Some(input_id) = input_id_out.get() {
-                    let focused_input = cx.is_focused_element(input_id);
+                && let Some(input_id) = input_id_out.get()
+            {
+                let focused_input = cx.is_focused_element(input_id);
 
-                    #[derive(Default)]
-                    struct FrameState {
-                        was_focused_input: bool,
-                    }
-
-                    let focus_gained = cx.slot_state(FrameState::default, |st| {
-                        let focus_gained = focused_input && !st.was_focused_input;
-                        st.was_focused_input = focused_input;
-                        focus_gained
-                    });
-
-                    if focus_gained {
-                        let _ = cx.app.models_mut().update(&self.open, |v| *v = true);
-                        cx.app.request_redraw(cx.window);
-                    }
+                #[derive(Default)]
+                struct FrameState {
+                    was_focused_input: bool,
                 }
+
+                let focus_gained = cx.slot_state(FrameState::default, |st| {
+                    let focus_gained = focused_input && !st.was_focused_input;
+                    st.was_focused_input = focused_input;
+                    focus_gained
+                });
+
+                if focus_gained {
+                    let _ = cx.app.models_mut().update(&self.open, |v| *v = true);
+                    cx.app.request_redraw(cx.window);
+                }
+            }
 
             let is_open = cx
                 .get_model_copied(&self.open, fret_ui::Invalidation::Layout)

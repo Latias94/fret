@@ -141,12 +141,14 @@ pub(super) fn build_inspect_tree_model(
 
             push_node_line(&mut out, &mut ids, &line_prefix, node, index, redact_text);
 
-            if has_children && is_expanded
-                && let Some(kids) = children.get(&id) {
-                    for child in kids.iter().rev().copied() {
-                        stack.push((child, depth.saturating_add(1), false));
-                    }
+            if has_children
+                && is_expanded
+                && let Some(kids) = children.get(&id)
+            {
+                for child in kids.iter().rev().copied() {
+                    stack.push((child, depth.saturating_add(1), false));
                 }
+            }
         }
     }
 

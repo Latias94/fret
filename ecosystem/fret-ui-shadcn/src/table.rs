@@ -700,13 +700,13 @@ where
 fn clear_table_row_border_bottom(el: &mut AnyElement) -> bool {
     if let ElementKind::Container(props) = &mut el.kind
         && props.border.top.0 == 0.0
-            && props.border.right.0 == 0.0
-            && props.border.left.0 == 0.0
-            && props.border.bottom.0 > 0.0
-        {
-            props.border.bottom = fret_core::Px(0.0);
-            return true;
-        }
+        && props.border.right.0 == 0.0
+        && props.border.left.0 == 0.0
+        && props.border.bottom.0 > 0.0
+    {
+        props.border.bottom = fret_core::Px(0.0);
+        return true;
+    }
 
     for child in &mut el.children {
         if clear_table_row_border_bottom(child) {

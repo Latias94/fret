@@ -1945,8 +1945,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             }
             true
         });
-        if should_exit {
-        }
+        if should_exit {}
     }
 
     pub(super) fn propagate_model_changes(&mut self) -> bool {

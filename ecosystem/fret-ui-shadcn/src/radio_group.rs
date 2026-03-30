@@ -1977,10 +1977,9 @@ mod tests {
                 && border.right.0 > 0.0
                 && border.bottom.0 > 0.0
                 && matches!(border_paint.paint, fret_core::Paint::Solid(c) if c.a > 0.0);
-            if is_icon
-                && let fret_core::Paint::Solid(border_color) = border_paint.paint {
-                    icon_border_colors.push(border_color);
-                }
+            if is_icon && let fret_core::Paint::Solid(border_color) = border_paint.paint {
+                icon_border_colors.push(border_color);
+            }
         }
 
         assert!(

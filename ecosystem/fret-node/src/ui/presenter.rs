@@ -143,9 +143,10 @@ impl NodeResizeConstraintsPx {
     pub fn normalized(mut self) -> Self {
         let normalize = |v: &mut Option<(f32, f32)>| {
             if let Some((w, h)) = *v
-                && (!w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0) {
-                    *v = None;
-                }
+                && (!w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0)
+            {
+                *v = None;
+            }
         };
         normalize(&mut self.min_size_px);
         normalize(&mut self.max_size_px);
@@ -159,8 +160,7 @@ impl NodeResizeConstraintsPx {
 }
 
 /// Edge routing kind for the canvas renderer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum EdgeRouteKind {
     /// Smooth cubic Bezier.
     #[default]
@@ -170,7 +170,6 @@ pub enum EdgeRouteKind {
     /// Orthogonal "step" routing with right-angle segments.
     Step,
 }
-
 
 /// Marker kind for edge endpoints.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -235,13 +234,15 @@ impl EdgeRenderHint {
             }
         }
         if let Some(m) = self.start_marker.as_mut()
-            && (!m.size.is_finite() || m.size <= 0.0) {
-                self.start_marker = None;
-            }
+            && (!m.size.is_finite() || m.size <= 0.0)
+        {
+            self.start_marker = None;
+        }
         if let Some(m) = self.end_marker.as_mut()
-            && (!m.size.is_finite() || m.size <= 0.0) {
-                self.end_marker = None;
-            }
+            && (!m.size.is_finite() || m.size <= 0.0)
+        {
+            self.end_marker = None;
+        }
         self
     }
 }

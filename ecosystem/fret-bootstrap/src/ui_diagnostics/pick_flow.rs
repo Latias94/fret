@@ -93,9 +93,10 @@ impl UiDiagnosticsService {
         }
 
         if self.cfg.pick_auto_dump
-            && let Some(dir) = self.dump_bundle(Some("pick")) {
-                result.last_bundle_dir = Some(display_path(&self.cfg.out_dir, &dir));
-            }
+            && let Some(dir) = self.dump_bundle(Some("pick"))
+        {
+            result.last_bundle_dir = Some(display_path(&self.cfg.out_dir, &dir));
+        }
 
         self.write_pick_result(result);
     }

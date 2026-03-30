@@ -563,11 +563,13 @@ pub(crate) fn stream_read_semantics_table_nodes(
                 }
             }
 
-            if window == Some(self.window_id) && fp == Some(self.semantics_fingerprint)
-                && let Some(nodes) = nodes {
-                    self.out.borrow_mut().replace(nodes);
-                    return Err(serde::de::Error::custom(FOUND_TABLE_MARKER));
-                }
+            if window == Some(self.window_id)
+                && fp == Some(self.semantics_fingerprint)
+                && let Some(nodes) = nodes
+            {
+                self.out.borrow_mut().replace(nodes);
+                return Err(serde::de::Error::custom(FOUND_TABLE_MARKER));
+            }
             Ok(())
         }
     }

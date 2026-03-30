@@ -728,18 +728,19 @@ fn highlighted_path_attributed_text(
     while i < bytes.len() {
         let start = i;
         if bytes[i] == b'{'
-            && let Some(end_rel) = path[i..].find('}') {
-                let end = i + end_rel + 1;
-                let seg = &path[i..end];
-                text.push_str(seg);
-                spans.push(TextSpan {
-                    len: seg.len(),
-                    shaping: TextShapingStyle::default(),
-                    paint: TextPaintStyle::default().with_fg(highlight),
-                });
-                i = end;
-                continue;
-            }
+            && let Some(end_rel) = path[i..].find('}')
+        {
+            let end = i + end_rel + 1;
+            let seg = &path[i..end];
+            text.push_str(seg);
+            spans.push(TextSpan {
+                len: seg.len(),
+                shaping: TextShapingStyle::default(),
+                paint: TextPaintStyle::default().with_fg(highlight),
+            });
+            i = end;
+            continue;
+        }
 
         while i < bytes.len() && bytes[i] != b'{' {
             i += 1;

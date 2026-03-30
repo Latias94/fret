@@ -80,9 +80,10 @@ pub(crate) fn parse_list_info(text: &str) -> ListInfo {
     for line in text.lines() {
         if let Some((o, num, content)) = parse_list_item_start(line) {
             if let Some(prev) = cur.take()
-                && !prev.trim().is_empty() {
-                    items.push(prev.trim_end().to_string());
-                }
+                && !prev.trim().is_empty()
+            {
+                items.push(prev.trim_end().to_string());
+            }
             if ordered.is_none() {
                 ordered = Some(o);
                 if o {
@@ -106,9 +107,10 @@ pub(crate) fn parse_list_info(text: &str) -> ListInfo {
     }
 
     if let Some(prev) = cur.take()
-        && !prev.trim().is_empty() {
-            items.push(prev.trim_end().to_string());
-        }
+        && !prev.trim().is_empty()
+    {
+        items.push(prev.trim_end().to_string());
+    }
 
     ListInfo {
         ordered: ordered.unwrap_or(false),
@@ -181,11 +183,7 @@ pub(crate) fn split_trailing_heading_id(text: &str) -> (Arc<str>, Option<Arc<str
         return (Arc::<str>::from(trimmed.to_string()), None);
     };
 
-    let id = rest
-        .split_whitespace()
-        .next()
-        .unwrap_or("")
-        .trim();
+    let id = rest.split_whitespace().next().unwrap_or("").trim();
     if id.is_empty() {
         return (Arc::<str>::from(trimmed.to_string()), None);
     }
@@ -265,10 +263,10 @@ pub(crate) fn parse_code_fence_body(raw: &str) -> (Option<Arc<str>>, Arc<str>) {
 
     if let Some(h) = header
         && let Some(last) = body_lines.last().copied()
-            && mdstream::syntax::is_code_fence_closing_line(last, h.fence_char, h.fence_len)
-        {
-            body_lines.pop();
-        }
+        && mdstream::syntax::is_code_fence_closing_line(last, h.fence_char, h.fence_len)
+    {
+        body_lines.pop();
+    }
 
     let body = body_lines.join("\n");
     (language, Arc::<str>::from(body))

@@ -60,17 +60,18 @@ fn find_inspect_help_matches(
 
         if !redact_text
             && let Some(label) = node.label.as_deref()
-                && let Some(match_rank) = match_rank(label, needle) {
-                    let label_key = MatchKey {
-                        surface_rank: 1,
-                        match_rank,
-                        value: label,
-                        node_id,
-                    };
-                    if best_key.is_none_or(|k| label_key < k) {
-                        best_key = Some(label_key);
-                    }
-                }
+            && let Some(match_rank) = match_rank(label, needle)
+        {
+            let label_key = MatchKey {
+                surface_rank: 1,
+                match_rank,
+                value: label,
+                node_id,
+            };
+            if best_key.is_none_or(|k| label_key < k) {
+                best_key = Some(label_key);
+            }
+        }
 
         let Some(key) = best_key else {
             continue;

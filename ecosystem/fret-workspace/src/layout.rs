@@ -206,9 +206,10 @@ impl WorkspaceWindowLayout {
 
         if mode == SplitMode::CloneActiveTab
             && let Some(tab) = active_tab
-                && let Some(pane) = self.pane_tree.find_pane_mut(new_pane_id.as_ref()) {
-                    pane.tabs.open_and_activate(tab);
-                }
+            && let Some(pane) = self.pane_tree.find_pane_mut(new_pane_id.as_ref())
+        {
+            pane.tabs.open_and_activate(tab);
+        }
 
         true
     }
@@ -282,7 +283,7 @@ impl WorkspaceWindowLayout {
                     .iter()
                     .position(|id| id.as_ref() == active.as_ref())
                     .unwrap_or(0);
-                
+
                 if forward {
                     ids[(index + 1) % ids.len()].clone()
                 } else {

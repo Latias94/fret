@@ -1508,10 +1508,10 @@ fn coalesce_link_runs(pieces: Vec<InlinePiece>) -> Vec<InlinePiece> {
             && last.style.link.is_some()
             && let (InlinePieceKind::Text(last_text), InlinePieceKind::Text(cur_text)) =
                 (&mut last.kind, &piece.kind)
-            {
-                last_text.push_str(cur_text);
-                merged = true;
-            }
+        {
+            last_text.push_str(cur_text);
+            merged = true;
+        }
         if merged {
             continue;
         }

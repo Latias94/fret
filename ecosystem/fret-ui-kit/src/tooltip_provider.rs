@@ -17,9 +17,10 @@ fn effective_frame_delta_for_cx<H: UiHost>(cx: &ElementContext<'_, H>) -> Durati
     };
 
     if let Some(fixed) = svc.effective_fixed_delta(cx.window)
-        && fixed > Duration::ZERO {
-            return fixed;
-        }
+        && fixed > Duration::ZERO
+    {
+        return fixed;
+    }
 
     let has_window_metrics = cx.app.global::<WindowMetricsService>().is_some();
     if !has_window_metrics {

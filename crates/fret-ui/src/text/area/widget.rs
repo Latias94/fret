@@ -1749,12 +1749,13 @@ impl<H: UiHost> Widget<H> for TextArea {
             });
         } else if (!focused_self || caret_blink_interval.is_none())
             && self.caret_blink_timer.is_some()
-            && let Some(window) = cx.window {
-                let token = self.caret_blink_timer.take().expect("checked is_some");
-                crate::elements::clear_timer_target(cx.app, window, token);
-                cx.app.push_effect(Effect::CancelTimer { token });
-                self.caret_blink_visible = true;
-            }
+            && let Some(window) = cx.window
+        {
+            let token = self.caret_blink_timer.take().expect("checked is_some");
+            crate::elements::clear_timer_target(cx.app, window, token);
+            cx.app.push_effect(Effect::CancelTimer { token });
+            self.caret_blink_visible = true;
+        }
 
         if focused_self {
             let caret_index = self.caret_display_index();

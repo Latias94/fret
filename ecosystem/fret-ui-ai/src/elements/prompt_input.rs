@@ -295,10 +295,9 @@ fn prompt_input_send_activate(
         if clear_on_send {
             let _ = host.models_mut().update(&text, |v| v.clear());
         }
-        if clear_attachments_on_send
-            && let Some(attachments) = attachments.as_ref() {
-                let _ = host.models_mut().update(attachments, |v| v.clear());
-            }
+        if clear_attachments_on_send && let Some(attachments) = attachments.as_ref() {
+            let _ = host.models_mut().update(attachments, |v| v.clear());
+        }
     })
 }
 
@@ -403,9 +402,10 @@ fn prompt_input_accept_matches(accept: &str, file_name: &str, media_type: Option
     for pattern in patterns {
         if pattern.starts_with('.') {
             if let Some(ext_lower) = ext_lower.as_deref()
-                && pattern[1..].eq_ignore_ascii_case(ext_lower) {
-                    return true;
-                }
+                && pattern[1..].eq_ignore_ascii_case(ext_lower)
+            {
+                return true;
+            }
             continue;
         }
 
@@ -423,12 +423,13 @@ fn prompt_input_accept_matches(accept: &str, file_name: &str, media_type: Option
 
         if pattern.eq_ignore_ascii_case("image/*")
             && let Some(ext_lower) = ext_lower.as_deref()
-                && matches!(
-                    ext_lower,
-                    "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "tif" | "tiff" | "svg"
-                ) {
-                    return true;
-                }
+            && matches!(
+                ext_lower,
+                "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "tif" | "tiff" | "svg"
+            )
+        {
+            return true;
+        }
     }
 
     false
@@ -2479,15 +2480,13 @@ impl From<PromptInputHoverCardContent> for PromptInputHoverCardChild {
     }
 }
 
-#[derive(Debug)]
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct PromptInputHoverCard {
     children: Vec<PromptInputHoverCardChild>,
     open_delay_frames: u32,
     close_delay_frames: u32,
     open_model: Option<Model<bool>>,
 }
-
 
 impl PromptInputHoverCard {
     pub fn new() -> Self {
@@ -4935,7 +4934,8 @@ impl PromptInputSubmit {
             let activate = if send_disabled {
                 None
             } else {
-                text_model.map(|text_model| prompt_input_send_activate(
+                text_model.map(|text_model| {
+                    prompt_input_send_activate(
                         text_model,
                         attachments_model,
                         cfg.as_ref().map(|c| c.clear_on_send).unwrap_or(true),
@@ -4944,7 +4944,8 @@ impl PromptInputSubmit {
                             .unwrap_or(true),
                         on_submit,
                         on_send,
-                    ))
+                    )
+                })
             };
             (
                 Arc::<str>::from("Submit"),

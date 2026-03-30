@@ -675,8 +675,6 @@ impl DataTable {
         let mut root_props = decl_style::container_props(&theme, root_chrome, layout.w_full());
         root_props.layout.overflow = Overflow::Clip;
 
-        
-
         cx.container(root_props, move |cx| {
             let theme = Theme::global(&*cx.app).snapshot();
             let body_text_style = table_text_style(&theme);

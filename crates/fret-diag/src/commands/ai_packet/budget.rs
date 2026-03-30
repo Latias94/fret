@@ -61,18 +61,18 @@ fn compat_summary_for_packet_dir(dir: &Path) -> serde_json::Value {
     let script_result_path = dir.join("script.result.json");
     if script_result_path.is_file()
         && let Ok(bytes) = std::fs::read(&script_result_path)
-            && let Ok(res) = serde_json::from_slice::<fret_diag_protocol::UiScriptResultV1>(&bytes)
-                && let Some(evidence) = res.evidence {
-                    for ev in evidence.event_log {
-                        if ev.kind.starts_with("compat.") {
-                            script_compat_events_total =
-                                script_compat_events_total.saturating_add(1);
-                            if script_compat_event_kinds.len() < 20 {
-                                script_compat_event_kinds.insert(ev.kind);
-                            }
-                        }
-                    }
+        && let Ok(res) = serde_json::from_slice::<fret_diag_protocol::UiScriptResultV1>(&bytes)
+        && let Some(evidence) = res.evidence
+    {
+        for ev in evidence.event_log {
+            if ev.kind.starts_with("compat.") {
+                script_compat_events_total = script_compat_events_total.saturating_add(1);
+                if script_compat_event_kinds.len() < 20 {
+                    script_compat_event_kinds.insert(ev.kind);
                 }
+            }
+        }
+    }
     for k in &script_compat_event_kinds {
         markers.insert(k.clone());
     }
@@ -136,36 +136,37 @@ pub(super) fn write_packet_budget_report(
     });
 
     if let Some(v) = report.failed_step_slices.as_ref()
-        && let Some(obj) = payload.as_object_mut() {
-            let written = v
-                .written
-                .iter()
-                .map(|w| {
-                    serde_json::json!({
-                        "file": &w.file,
-                        "test_id": &w.test_id,
-                        "matches": w.matches,
-                    })
-                })
-                .collect::<Vec<_>>();
-            obj.insert(
-                "failed_step_slices".to_string(),
+        && let Some(obj) = payload.as_object_mut()
+    {
+        let written = v
+            .written
+            .iter()
+            .map(|w| {
                 serde_json::json!({
-                    "schema_version": v.schema_version,
-                    "status": &v.status,
-                    "reason_code": &v.reason_code,
-                    "failed_step_index": v.failed_step_index,
-                    "failed_snapshot": {
-                        "window": v.window,
-                        "frame_id": v.frame_id,
-                        "window_snapshot_seq": v.window_snapshot_seq,
-                    },
-                    "candidate_test_ids": &v.candidate_test_ids,
-                    "attempted_test_ids": &v.attempted_test_ids,
-                    "written": written,
-                }),
-            );
-        }
+                    "file": &w.file,
+                    "test_id": &w.test_id,
+                    "matches": w.matches,
+                })
+            })
+            .collect::<Vec<_>>();
+        obj.insert(
+            "failed_step_slices".to_string(),
+            serde_json::json!({
+                "schema_version": v.schema_version,
+                "status": &v.status,
+                "reason_code": &v.reason_code,
+                "failed_step_index": v.failed_step_index,
+                "failed_snapshot": {
+                    "window": v.window,
+                    "frame_id": v.frame_id,
+                    "window_snapshot_seq": v.window_snapshot_seq,
+                },
+                "candidate_test_ids": &v.candidate_test_ids,
+                "attempted_test_ids": &v.attempted_test_ids,
+                "written": written,
+            }),
+        );
+    }
 
     if let Some(obj) = payload.as_object_mut() {
         obj.insert("compat".to_string(), compat_summary_for_packet_dir(dir));
@@ -378,45 +379,46 @@ fn clip_bundle_index_if_needed(
             for w in windows.iter_mut() {
                 let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
                 if let Some(snaps) = w.get_mut("snapshots").and_then(|v| v.as_array_mut())
-                    && snaps.len() > max_keep {
-                        let mut required_seq: Option<&HashSet<u64>> = None;
-                        let mut required_frame: Option<&HashSet<u64>> = None;
-                        if let Some((seq, frame)) = required_by_window.get(&window_id) {
-                            required_seq = Some(seq);
-                            required_frame = Some(frame);
-                        }
+                    && snaps.len() > max_keep
+                {
+                    let mut required_seq: Option<&HashSet<u64>> = None;
+                    let mut required_frame: Option<&HashSet<u64>> = None;
+                    if let Some((seq, frame)) = required_by_window.get(&window_id) {
+                        required_seq = Some(seq);
+                        required_frame = Some(frame);
+                    }
 
-                        let mut old: Vec<serde_json::Value> = Vec::new();
-                        std::mem::swap(snaps, &mut old);
+                    let mut old: Vec<serde_json::Value> = Vec::new();
+                    std::mem::swap(snaps, &mut old);
 
-                        let len = old.len();
-                        let start = len.saturating_sub(max_keep);
-                        let mut keep: Vec<bool> = vec![false; len];
-                        for i in start..len {
-                            keep[i] = true;
-                        }
+                    let len = old.len();
+                    let start = len.saturating_sub(max_keep);
+                    let mut keep: Vec<bool> = vec![false; len];
+                    for i in start..len {
+                        keep[i] = true;
+                    }
 
-                        if required_seq.is_some() || required_frame.is_some() {
-                            for (i, s) in old.iter().enumerate() {
-                                let seq = s.get("window_snapshot_seq").and_then(|v| v.as_u64());
-                                let frame_id = s.get("frame_id").and_then(|v| v.as_u64());
-                                let required = seq.is_some_and(|v| {
-                                    required_seq.is_some_and(|set| set.contains(&v))
-                                }) || frame_id.is_some_and(|v| {
+                    if required_seq.is_some() || required_frame.is_some() {
+                        for (i, s) in old.iter().enumerate() {
+                            let seq = s.get("window_snapshot_seq").and_then(|v| v.as_u64());
+                            let frame_id = s.get("frame_id").and_then(|v| v.as_u64());
+                            let required = seq
+                                .is_some_and(|v| required_seq.is_some_and(|set| set.contains(&v)))
+                                || frame_id.is_some_and(|v| {
                                     required_frame.is_some_and(|set| set.contains(&v))
                                 });
-                                if required {
-                                    keep[i] = true;
-                                }
+                            if required {
+                                keep[i] = true;
                             }
                         }
-
-                        *snaps = old
-                            .into_iter()
-                            .enumerate()
-                            .filter_map(|(i, v)| keep.get(i).copied().unwrap_or(false).then_some(v))
-                            .collect();
                     }
+
+                    *snaps = old
+                        .into_iter()
+                        .enumerate()
+                        .filter_map(|(i, v)| keep.get(i).copied().unwrap_or(false).then_some(v))
+                        .collect();
+                }
 
                 let (first_frame_id, first_ts, last_frame_id, last_ts) = w
                     .get("snapshots")

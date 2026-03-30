@@ -651,12 +651,10 @@ impl From<AnyElement> for AudioPlayerControlBarChild {
 }
 
 /// Outline icon button aligned with AI Elements `AudioPlayerPlayButton`.
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct AudioPlayerPlayButton {
     test_id: Option<Arc<str>>,
 }
-
 
 impl AudioPlayerPlayButton {
     pub fn new() -> Self {
@@ -900,12 +898,10 @@ impl AudioPlayerSeekForwardButton {
 }
 
 /// Text label aligned with AI Elements `AudioPlayerTimeDisplay`.
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct AudioPlayerTimeDisplay {
     test_id: Option<Arc<str>>,
 }
-
 
 impl AudioPlayerTimeDisplay {
     pub fn new() -> Self {
@@ -1048,12 +1044,10 @@ impl AudioPlayerTimeRange {
 }
 
 /// Text label aligned with AI Elements `AudioPlayerDurationDisplay`.
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct AudioPlayerDurationDisplay {
     test_id: Option<Arc<str>>,
 }
-
 
 impl AudioPlayerDurationDisplay {
     pub fn new() -> Self {
@@ -1098,12 +1092,10 @@ impl AudioPlayerDurationDisplay {
 }
 
 /// Outline icon button aligned with AI Elements `AudioPlayerMuteButton`.
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct AudioPlayerMuteButton {
     test_id: Option<Arc<str>>,
 }
-
 
 impl AudioPlayerMuteButton {
     pub fn new() -> Self {
@@ -1292,13 +1284,11 @@ enum AudioPlayerElementSource {
 /// Note: `fret-ui-ai` does not embed an audio backend. Apps are expected to own actual playback
 /// and drive the `AudioPlayerController` models. The source builders exist so the public
 /// authoring surface can stay aligned with the official AI Elements docs/examples.
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct AudioPlayerElement {
     source: Option<AudioPlayerElementSource>,
     test_id: Option<Arc<str>>,
 }
-
 
 impl AudioPlayerElement {
     pub fn new() -> Self {
@@ -1472,10 +1462,13 @@ mod tests {
     fn audio_player_defaults_to_intrinsic_width_layout() {
         let root = AudioPlayer::new();
 
-        assert!(root.layout
+        assert!(
+            root.layout
                 .size
                 .as_ref()
-                .and_then(|size| size.width.as_ref()).is_none());
+                .and_then(|size| size.width.as_ref())
+                .is_none()
+        );
         assert!(matches!(
             root.layout
                 .size
@@ -1489,11 +1482,14 @@ mod tests {
     fn audio_player_control_bar_defaults_to_intrinsic_width_layout() {
         let control_bar = AudioPlayerControlBar::empty();
 
-        assert!(control_bar
+        assert!(
+            control_bar
                 .layout
                 .size
                 .as_ref()
-                .and_then(|size| size.width.as_ref()).is_none());
+                .and_then(|size| size.width.as_ref())
+                .is_none()
+        );
         assert!(matches!(
             control_bar
                 .layout
@@ -1516,10 +1512,13 @@ mod tests {
                 .and_then(|size| size.width.as_ref()),
             Some(LengthRefinement::Px(MetricRef::Px(px))) if *px == Px(240.0)
         ));
-        assert!(time_range
+        assert!(
+            time_range
                 .layout
                 .flex_item
                 .as_ref()
-                .and_then(|item| item.grow).is_none());
+                .and_then(|item| item.grow)
+                .is_none()
+        );
     }
 }

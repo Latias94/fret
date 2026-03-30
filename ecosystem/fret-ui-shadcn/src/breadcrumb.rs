@@ -55,15 +55,16 @@ enum BreadcrumbItemKind {
 /// The compact builder keeps a small typed surface for the common cases. The upstream-shaped
 /// primitives surface supports composable children when parity work needs the documented custom
 /// separator slot.
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub enum BreadcrumbSeparator {
     #[default]
     ChevronRight,
-    Icon { icon: IconId, size: Px },
+    Icon {
+        icon: IconId,
+        size: Px,
+    },
     Text(Arc<str>),
 }
-
 
 /// A shadcn/ui v4-aligned breadcrumb builder.
 ///
@@ -1260,16 +1261,13 @@ pub mod primitives {
         },
     }
 
-    #[derive(Debug)]
-    #[derive(Default)]
+    #[derive(Debug, Default)]
     pub struct BreadcrumbSeparator {
         kind: BreadcrumbSeparatorKind,
         children: Vec<AnyElement>,
         chrome: ChromeRefinement,
         layout: LayoutRefinement,
     }
-
-    
 
     pub struct BreadcrumbSeparatorBuild<H, Children> {
         separator: BreadcrumbSeparator,

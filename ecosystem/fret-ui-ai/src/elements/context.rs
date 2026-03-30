@@ -87,8 +87,7 @@ fn context_icon_svg_bytes(used_tokens: u64, max_tokens: u64) -> Arc<[u8]> {
     Arc::<[u8]>::from(svg.into_bytes())
 }
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ContextUsage {
     pub input_tokens: Option<u64>,
     pub output_tokens: Option<u64>,
@@ -102,7 +101,6 @@ pub struct ContextUsage {
     pub cached_cost_usd: Option<f64>,
     pub total_cost_usd: Option<f64>,
 }
-
 
 #[derive(Debug, Clone)]
 struct ContextSchema {
@@ -606,8 +604,6 @@ impl Context {
         let trigger_override = self.trigger;
         let content_override = self.content;
         let test_id_root = self.test_id_root;
-
-        
 
         cx.container(
             decl_style::container_props(

@@ -1455,10 +1455,11 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     &bundle_path,
                     bundle_doctor_mode,
                     warmup_frames,
-                ) {
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                    return Err(err);
-                }
+                )
+            {
+                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                return Err(err);
+            }
 
             let mut report =
                 bundle_stats_from_path(&bundle_path, stats_top.max(1), sort, stats_opts)?;

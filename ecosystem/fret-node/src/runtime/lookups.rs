@@ -600,9 +600,10 @@ impl NodeGraphLookups {
             },
         ] {
             if let Some(map) = self.connection_lookup.get_mut(&key)
-                && let Some(entry) = map.get_mut(&conn.edge) {
-                    entry.kind = kind;
-                }
+                && let Some(entry) = map.get_mut(&conn.edge)
+            {
+                entry.kind = kind;
+            }
         }
     }
 

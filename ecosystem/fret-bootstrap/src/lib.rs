@@ -360,8 +360,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     }
 
     pub fn with_default_config_files(self) -> Result<Self, BootstrapError> {
-        self
-            .with_layered_settings(".")?
+        self.with_layered_settings(".")?
             .with_command_default_keybindings()
             .with_layered_keymap(".")?
             .with_layered_menu_bar(".")
@@ -372,8 +371,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         project_root: impl AsRef<Path>,
     ) -> Result<Self, BootstrapError> {
         let project_root = project_root.as_ref();
-        self
-            .with_layered_settings(project_root)?
+        self.with_layered_settings(project_root)?
             .with_command_default_keybindings()
             .with_layered_keymap(project_root)?
             .with_layered_menu_bar(project_root)

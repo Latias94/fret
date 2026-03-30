@@ -434,7 +434,6 @@ fn gradient_preview_canvas<H: UiHost>(
     let state_for_move = preview_state.clone();
     let state_for_paint = preview_state.clone();
 
-    
     cx.pressable(
         PressableProps {
             enabled,

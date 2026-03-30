@@ -63,15 +63,13 @@ fn resolve_accent_hover(theme: &Theme) -> Color {
     theme.color_token("color.menu.item.hover")
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AttachmentVariant {
     #[default]
     Grid,
     Inline,
     List,
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AttachmentMediaCategory {

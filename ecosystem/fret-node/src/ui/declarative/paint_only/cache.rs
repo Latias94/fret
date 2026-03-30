@@ -1,14 +1,12 @@
 use super::*;
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub(super) struct DerivedGeometryCacheState {
     pub(super) key: Option<CanvasKey>,
     pub(super) rebuilds: u64,
     pub(super) geom: Option<Arc<CanvasGeometry>>,
     pub(super) index: Option<Arc<CanvasSpatialDerived>>,
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct DerivedGeometryCacheKeyV2 {
@@ -27,14 +25,12 @@ struct DerivedGeometryCacheKeyV2 {
     wire_width_bits: u32,
 }
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub(super) struct EdgePaintCacheState {
     pub(super) key: Option<CanvasKey>,
     pub(super) rebuilds: u64,
     pub(super) draws: Option<Arc<Vec<EdgePathDraw>>>,
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct EdgePaintCacheKeyV3 {
@@ -57,14 +53,12 @@ pub(super) struct EdgePathDraw {
     pub(super) color: Color,
 }
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub(super) struct NodePaintCacheState {
     pub(super) key: Option<CanvasKey>,
     pub(super) rebuilds: u64,
     pub(super) draws: Option<Arc<Vec<NodeRectDraw>>>,
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct NodePaintCacheKeyV3 {
@@ -546,9 +540,11 @@ pub(super) fn paint_edges_cached(
                 .map(|o| o.normalized())
             {
                 if let Some(m) = o.stroke_width_mul
-                    && m.is_finite() && m > 0.0 {
-                        stroke_width_mul = m;
-                    }
+                    && m.is_finite()
+                    && m > 0.0
+                {
+                    stroke_width_mul = m;
+                }
                 dash = o
                     .dash
                     .and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
@@ -585,13 +581,15 @@ pub(super) fn paint_edges_cached(
                     continue;
                 };
                 if let Some(from) = geom.ports.get(&d.from)
-                    && node_drag.is_some_and(|drag| node_drag_contains(drag, from.node)) {
-                        p0 = Point::new(Px(p0.x.0 + ddx), Px(p0.y.0 + ddy));
-                    }
+                    && node_drag.is_some_and(|drag| node_drag_contains(drag, from.node))
+                {
+                    p0 = Point::new(Px(p0.x.0 + ddx), Px(p0.y.0 + ddy));
+                }
                 if let Some(to) = geom.ports.get(&d.to)
-                    && node_drag.is_some_and(|drag| node_drag_contains(drag, to.node)) {
-                        p1 = Point::new(Px(p1.x.0 + ddx), Px(p1.y.0 + ddy));
-                    }
+                    && node_drag.is_some_and(|drag| node_drag_contains(drag, to.node))
+                {
+                    p1 = Point::new(Px(p1.x.0 + ddx), Px(p1.y.0 + ddy));
+                }
 
                 let (ctrl1, ctrl2) = canvas_wires::wire_ctrl_points(p0, p1, zoom);
                 let commands: Box<[PathCommand]> = vec![

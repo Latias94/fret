@@ -1084,11 +1084,7 @@ fn build_report(
         "render_text_blob_decorations_bytes_estimate_total": stats_u64(rows.iter().filter_map(|r| r.render_text_blob_decorations_bytes_estimate_total).collect()),
     });
 
-    let top_rows = sorted
-        .iter()
-        .take(top)
-        .map(row_to_json)
-        .collect::<Vec<_>>();
+    let top_rows = sorted.iter().take(top).map(row_to_json).collect::<Vec<_>>();
 
     let mut out = serde_json::json!({
         "schema_version": 1,
@@ -1102,37 +1098,35 @@ fn build_report(
     });
 
     if !fits_linear.is_empty()
-        && let Some(obj) = out.as_object_mut() {
-            let fits = fits_linear
-                .iter()
-                .map(|(y_key, x_key)| linear_fit_u64(rows, y_key, x_key))
-                .collect::<Vec<_>>();
-            obj.insert("fits_linear".to_string(), serde_json::Value::Array(fits));
-        }
+        && let Some(obj) = out.as_object_mut()
+    {
+        let fits = fits_linear
+            .iter()
+            .map(|(y_key, x_key)| linear_fit_u64(rows, y_key, x_key))
+            .collect::<Vec<_>>();
+        obj.insert("fits_linear".to_string(), serde_json::Value::Array(fits));
+    }
 
-    if include_regions_sorted_agg
-        && let Some(obj) = out.as_object_mut() {
-            obj.insert(
-                "vmmap_regions_sorted_agg".to_string(),
-                vmmap_regions_sorted_agg(rows, regions_sorted_agg_top.max(1)),
-            );
-        }
+    if include_regions_sorted_agg && let Some(obj) = out.as_object_mut() {
+        obj.insert(
+            "vmmap_regions_sorted_agg".to_string(),
+            vmmap_regions_sorted_agg(rows, regions_sorted_agg_top.max(1)),
+        );
+    }
 
-    if include_regions_sorted_detail_agg
-        && let Some(obj) = out.as_object_mut() {
-            obj.insert(
-                "vmmap_regions_sorted_detail_agg".to_string(),
-                vmmap_regions_sorted_detail_agg(rows, regions_sorted_detail_agg_top.max(1)),
-            );
-        }
+    if include_regions_sorted_detail_agg && let Some(obj) = out.as_object_mut() {
+        obj.insert(
+            "vmmap_regions_sorted_detail_agg".to_string(),
+            vmmap_regions_sorted_detail_agg(rows, regions_sorted_detail_agg_top.max(1)),
+        );
+    }
 
-    if include_footprint_categories_agg
-        && let Some(obj) = out.as_object_mut() {
-            obj.insert(
-                "footprint_categories_agg".to_string(),
-                footprint_categories_agg(rows, footprint_categories_agg_top.max(1)),
-            );
-        }
+    if include_footprint_categories_agg && let Some(obj) = out.as_object_mut() {
+        obj.insert(
+            "footprint_categories_agg".to_string(),
+            footprint_categories_agg(rows, footprint_categories_agg_top.max(1)),
+        );
+    }
 
     out
 }

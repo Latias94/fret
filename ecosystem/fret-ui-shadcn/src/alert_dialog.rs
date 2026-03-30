@@ -5876,8 +5876,7 @@ mod tests {
             "alert dialog should be labelled by its title"
         );
         assert!(
-            alert_dialog
-                .described_by.contains(&description.id),
+            alert_dialog.described_by.contains(&description.id),
             "alert dialog should be described by its description"
         );
     }

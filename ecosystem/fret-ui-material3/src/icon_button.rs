@@ -526,12 +526,12 @@ impl IconToggleButton {
                         let _ = host.update_model(&checked_model_for_toggle, |v| *v = !*v);
                         host.request_redraw(action_cx.window);
                     }
-                    if enabled && action_enabled
-                        && let Some(action) = action.as_ref() {
-                            crate::foundation::action::dispatch_action(
-                                host, action_cx, reason, action,
-                            );
-                        }
+                    if enabled
+                        && action_enabled
+                        && let Some(action) = action.as_ref()
+                    {
+                        crate::foundation::action::dispatch_action(host, action_cx, reason, action);
+                    }
                     if let Some(h) = user_activate.as_ref() {
                         h(host, action_cx, reason);
                     }

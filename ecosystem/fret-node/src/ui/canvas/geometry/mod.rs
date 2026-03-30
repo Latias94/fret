@@ -9,10 +9,10 @@ mod order;
 mod origin;
 
 pub(crate) use layout::{node_size_default_px, port_center};
-pub(crate) use order::{node_order, node_ports};
-pub(crate) use origin::node_origin_offset_canvas;
 #[cfg(test)]
 pub(crate) use order::group_order;
+pub(crate) use order::{node_order, node_ports};
+pub(crate) use origin::node_origin_offset_canvas;
 #[cfg(test)]
 pub(crate) use origin::{node_anchor_from_rect_origin, node_rect_origin_from_anchor};
 

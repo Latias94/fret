@@ -3956,35 +3956,32 @@ impl CommandDialog {
 
         if should_dispatch
             && let Ok(mut slot) = pending_dispatch_cell.lock()
-                && let Some(pending) = slot.take() {
-                    let kind = match pending.reason {
-                        ActivateReason::Pointer => {
-                            fret_runtime::CommandDispatchSourceKindV1::Pointer
-                        }
-                        ActivateReason::Keyboard => {
-                            fret_runtime::CommandDispatchSourceKindV1::Keyboard
-                        }
-                    };
-                    cx.app.with_global_mut(
-                        fret_runtime::WindowPendingCommandDispatchSourceService::default,
-                        |svc, app| {
-                            svc.record(
-                                cx.window,
-                                app.tick_id(),
-                                pending.command.clone(),
-                                fret_runtime::CommandDispatchSourceV1 {
-                                    kind,
-                                    element: None,
-                                    test_id: None,
-                                },
-                            );
+            && let Some(pending) = slot.take()
+        {
+            let kind = match pending.reason {
+                ActivateReason::Pointer => fret_runtime::CommandDispatchSourceKindV1::Pointer,
+                ActivateReason::Keyboard => fret_runtime::CommandDispatchSourceKindV1::Keyboard,
+            };
+            cx.app.with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |svc, app| {
+                    svc.record(
+                        cx.window,
+                        app.tick_id(),
+                        pending.command.clone(),
+                        fret_runtime::CommandDispatchSourceV1 {
+                            kind,
+                            element: None,
+                            test_id: None,
                         },
                     );
-                    cx.app.push_effect(fret_runtime::Effect::Command {
-                        window: Some(cx.window),
-                        command: pending.command,
-                    });
-                }
+                },
+            );
+            cx.app.push_effect(fret_runtime::Effect::Command {
+                window: Some(cx.window),
+                command: pending.command,
+            });
+        }
 
         let dialog_on_open_change: Option<OnOpenChange> = if on_open_change_for_dialog.is_none()
             && on_open_change_with_reason_for_dialog.is_none()
@@ -3998,9 +3995,10 @@ impl CommandDialog {
                 if let Some(handler) = on_open_change_with_reason_for_dialog.as_ref() {
                     let mut reason = CommandDialogOpenChangeReason::None;
                     if let Ok(mut slot) = open_change_reason_cell_for_open_change.lock()
-                        && let Some(stored) = slot.take() {
-                            reason = stored;
-                        }
+                        && let Some(stored) = slot.take()
+                    {
+                        reason = stored;
+                    }
                     if is_open && reason == CommandDialogOpenChangeReason::None {
                         reason = CommandDialogOpenChangeReason::TriggerPress;
                     }

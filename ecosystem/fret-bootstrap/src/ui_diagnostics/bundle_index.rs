@@ -495,9 +495,10 @@ pub(super) fn build_dock_routing_json(
                     mix(&mut fp, r.outer as u64);
                 }
                 if let Some(p) = d.preview.as_ref()
-                    && let Ok(label) = serde_json::to_string(&p.kind) {
-                        mix(&mut fp, hash_str_64(&label));
-                    }
+                    && let Ok(label) = serde_json::to_string(&p.kind)
+                {
+                    mix(&mut fp, hash_str_64(&label));
+                }
             }
 
             if last_fingerprint_by_window.get(&w.window).copied() == Some(fp) {

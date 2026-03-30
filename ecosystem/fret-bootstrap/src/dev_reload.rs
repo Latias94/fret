@@ -211,39 +211,37 @@ impl DevReloadWatcher {
         let theme_changed = next_theme_stamp != self.theme_stamp;
         self.theme_stamp = next_theme_stamp;
 
-        if theme_changed
-            && let Some(_stamp) = self.theme_stamp {
-                match std::fs::read(&self.theme_path) {
-                    Ok(bytes) => match ThemeConfig::from_slice(&bytes) {
-                        Ok(cfg) => {
-                            Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
-                            app.request_redraw(window);
-                            tick.reloaded_theme = true;
-                        }
-                        Err(e) => tick.theme_error = Some(format!("theme parse failed: {e}")),
-                    },
-                    Err(e) => tick.theme_error = Some(format!("theme read failed: {e}")),
-                }
+        if theme_changed && let Some(_stamp) = self.theme_stamp {
+            match std::fs::read(&self.theme_path) {
+                Ok(bytes) => match ThemeConfig::from_slice(&bytes) {
+                    Ok(cfg) => {
+                        Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
+                        app.request_redraw(window);
+                        tick.reloaded_theme = true;
+                    }
+                    Err(e) => tick.theme_error = Some(format!("theme parse failed: {e}")),
+                },
+                Err(e) => tick.theme_error = Some(format!("theme read failed: {e}")),
             }
+        }
 
         let next_literals_stamp = file_stamp(&self.literals_path);
         let literals_changed = next_literals_stamp != self.literals_stamp;
         self.literals_stamp = next_literals_stamp;
 
-        if literals_changed
-            && let Some(_stamp) = self.literals_stamp {
-                match std::fs::read(&self.literals_path) {
-                    Ok(bytes) => match HotLiterals::from_json_slice(&bytes) {
-                        Ok(lits) => {
-                            app.set_global(lits);
-                            app.request_redraw(window);
-                            tick.reloaded_literals = true;
-                        }
-                        Err(e) => tick.literals_error = Some(e),
-                    },
-                    Err(e) => tick.literals_error = Some(format!("literals read failed: {e}")),
-                }
+        if literals_changed && let Some(_stamp) = self.literals_stamp {
+            match std::fs::read(&self.literals_path) {
+                Ok(bytes) => match HotLiterals::from_json_slice(&bytes) {
+                    Ok(lits) => {
+                        app.set_global(lits);
+                        app.request_redraw(window);
+                        tick.reloaded_literals = true;
+                    }
+                    Err(e) => tick.literals_error = Some(e),
+                },
+                Err(e) => tick.literals_error = Some(format!("literals read failed: {e}")),
             }
+        }
 
         let next_assets_stamp = file_stamp(&self.asset_reload_trigger_path);
         let assets_changed = next_assets_stamp != self.asset_reload_trigger_stamp;
@@ -263,41 +261,40 @@ impl DevReloadWatcher {
         }
 
         let should_reload_fonts = fonts_manifest_changed || tick.bumped_asset_reload_epoch;
-        if should_reload_fonts
-            && let Some(_stamp) = self.fonts_manifest_stamp {
-                match std::fs::read(&self.fonts_manifest_path) {
-                    Ok(bytes) => match parse_fonts_manifest(&bytes) {
-                        Ok(manifest) => {
-                            let mut fonts: Vec<Vec<u8>> = Vec::new();
-                            let mut errors: Vec<String> = Vec::new();
-                            for p in manifest.fonts {
-                                let abs = if p.is_absolute() {
-                                    p
-                                } else {
-                                    self.root.join(p)
-                                };
-                                match std::fs::read(&abs) {
-                                    Ok(bytes) => fonts.push(bytes),
-                                    Err(e) => {
-                                        errors.push(format!("read failed: {}: {e}", abs.display()))
-                                    }
+        if should_reload_fonts && let Some(_stamp) = self.fonts_manifest_stamp {
+            match std::fs::read(&self.fonts_manifest_path) {
+                Ok(bytes) => match parse_fonts_manifest(&bytes) {
+                    Ok(manifest) => {
+                        let mut fonts: Vec<Vec<u8>> = Vec::new();
+                        let mut errors: Vec<String> = Vec::new();
+                        for p in manifest.fonts {
+                            let abs = if p.is_absolute() {
+                                p
+                            } else {
+                                self.root.join(p)
+                            };
+                            match std::fs::read(&abs) {
+                                Ok(bytes) => fonts.push(bytes),
+                                Err(e) => {
+                                    errors.push(format!("read failed: {}: {e}", abs.display()))
                                 }
                             }
-
-                            if !errors.is_empty() {
-                                tick.fonts_error = Some(errors.join("; "));
-                            }
-
-                            if !fonts.is_empty() {
-                                app.push_effect(Effect::TextAddFonts { fonts });
-                                tick.reloaded_fonts = true;
-                            }
                         }
-                        Err(e) => tick.fonts_error = Some(e),
-                    },
-                    Err(e) => tick.fonts_error = Some(format!("fonts manifest read failed: {e}")),
-                }
+
+                        if !errors.is_empty() {
+                            tick.fonts_error = Some(errors.join("; "));
+                        }
+
+                        if !fonts.is_empty() {
+                            app.push_effect(Effect::TextAddFonts { fonts });
+                            tick.reloaded_fonts = true;
+                        }
+                    }
+                    Err(e) => tick.fonts_error = Some(e),
+                },
+                Err(e) => tick.fonts_error = Some(format!("fonts manifest read failed: {e}")),
             }
+        }
 
         tick
     }

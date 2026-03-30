@@ -141,9 +141,9 @@ pub(crate) fn icon_color(
         && let Some(c) = theme
             .color_by_key(interaction_icon_color_key(variant, interaction))
             .or_else(|| theme.color_by_key(interaction_icon_color_key_any(interaction)))
-        {
-            return c;
-        }
+    {
+        return c;
+    }
 
     theme
         .color_by_key(icon_color_key(variant))

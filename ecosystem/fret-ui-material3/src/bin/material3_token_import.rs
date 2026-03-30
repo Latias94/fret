@@ -1727,19 +1727,22 @@ fn parse_expr(rhs: String) -> Expr {
     }
 
     if let Some(rest) = rhs.strip_suffix("ms")
-        && let Ok(ms) = rest.trim().parse::<u32>() {
-            return Expr::Ms(ms);
-        }
+        && let Ok(ms) = rest.trim().parse::<u32>()
+    {
+        return Expr::Ms(ms);
+    }
 
     if let Some(rest) = rhs.strip_suffix("px")
-        && let Ok(px) = rest.trim().parse::<f32>() {
-            return Expr::Px(px);
-        }
+        && let Ok(px) = rest.trim().parse::<f32>()
+    {
+        return Expr::Px(px);
+    }
 
     if let Some(rest) = rhs.strip_suffix("rem")
-        && let Ok(rem) = rest.trim().parse::<f32>() {
-            return Expr::Rem(rem);
-        }
+        && let Ok(rem) = rest.trim().parse::<f32>()
+    {
+        return Expr::Rem(rem);
+    }
 
     if let Some(cb) = rhs
         .strip_prefix("cubic-bezier(")
@@ -1752,9 +1755,10 @@ fn parse_expr(rhs: String) -> Expr {
                 parts[1].parse::<f32>(),
                 parts[2].parse::<f32>(),
                 parts[3].parse::<f32>(),
-            ) {
-                return Expr::CubicBezier { x1, y1, x2, y2 };
-            }
+            )
+        {
+            return Expr::CubicBezier { x1, y1, x2, y2 };
+        }
     }
 
     if let Ok(n) = rhs.parse::<f32>() {

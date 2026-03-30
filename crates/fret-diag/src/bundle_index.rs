@@ -169,15 +169,16 @@ fn resolve_snapshot_for_event(
     Option<&'static str>,
 ) {
     if let Some(frame_id) = frame_id
-        && let Some(info) = by_window_frame.get(&(window, frame_id)) {
-            return (
-                info.window_snapshot_seq,
-                info.timestamp_unix_ms,
-                info.semantics_source.clone(),
-                info.semantics_fingerprint,
-                Some("frame_id"),
-            );
-        }
+        && let Some(info) = by_window_frame.get(&(window, frame_id))
+    {
+        return (
+            info.window_snapshot_seq,
+            info.timestamp_unix_ms,
+            info.semantics_source.clone(),
+            info.semantics_fingerprint,
+            Some("frame_id"),
+        );
+    }
 
     let Some(unix_ms) = unix_ms else {
         return (None, None, None, None, None);
@@ -342,17 +343,17 @@ pub(crate) fn ensure_bundle_meta_json(
     let out = default_bundle_meta_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
     if out.is_file()
-        && let Some(existing) = read_json_value(&out) {
-            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("bundle_meta");
-            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
-            let warmup_ok =
-                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
-            let bundle_ok =
-                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
-            if kind_ok && schema_ok && warmup_ok && bundle_ok {
-                return Ok(out);
-            }
+        && let Some(existing) = read_json_value(&out)
+    {
+        let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("bundle_meta");
+        let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
+        let warmup_ok =
+            existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+        let bundle_ok = existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+        if kind_ok && schema_ok && warmup_ok && bundle_ok {
+            return Ok(out);
         }
+    }
     let payload = build_bundle_meta_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
@@ -365,17 +366,17 @@ pub(crate) fn ensure_window_map_json(
     let out = default_window_map_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
     if out.is_file()
-        && let Some(existing) = read_json_value(&out) {
-            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("window_map");
-            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
-            let warmup_ok =
-                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
-            let bundle_ok =
-                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
-            if kind_ok && schema_ok && warmup_ok && bundle_ok {
-                return Ok(out);
-            }
+        && let Some(existing) = read_json_value(&out)
+    {
+        let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("window_map");
+        let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
+        let warmup_ok =
+            existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+        let bundle_ok = existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+        if kind_ok && schema_ok && warmup_ok && bundle_ok {
+            return Ok(out);
         }
+    }
     let payload = build_window_map_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
@@ -388,30 +389,30 @@ pub(crate) fn ensure_dock_routing_json(
     let out = default_dock_routing_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
     if out.is_file()
-        && let Some(existing) = read_json_value(&out) {
-            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("dock_routing");
-            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
-            let warmup_ok =
-                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
-            let bundle_ok =
-                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
-            // `dock_routing` is an evolving, "bounded evidence" sidecar. Prefer regenerating when
-            // it appears to be missing newer key fields, even if the schema version matches.
-            let content_ok = existing
-                .get("entries")
-                .and_then(|v| v.as_array())
-                .is_some_and(|entries| {
-                    for e in entries {
-                        if let Some(drag) = e.get("dock_drag").and_then(|v| v.as_object()) {
-                            return drag.contains_key("kind");
-                        }
+        && let Some(existing) = read_json_value(&out)
+    {
+        let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("dock_routing");
+        let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
+        let warmup_ok =
+            existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+        let bundle_ok = existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+        // `dock_routing` is an evolving, "bounded evidence" sidecar. Prefer regenerating when
+        // it appears to be missing newer key fields, even if the schema version matches.
+        let content_ok = existing
+            .get("entries")
+            .and_then(|v| v.as_array())
+            .is_some_and(|entries| {
+                for e in entries {
+                    if let Some(drag) = e.get("dock_drag").and_then(|v| v.as_object()) {
+                        return drag.contains_key("kind");
                     }
-                    true
-                });
-            if kind_ok && schema_ok && warmup_ok && bundle_ok && content_ok {
-                return Ok(out);
-            }
+                }
+                true
+            });
+        if kind_ok && schema_ok && warmup_ok && bundle_ok && content_ok {
+            return Ok(out);
         }
+    }
     let payload = build_dock_routing_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
@@ -425,19 +426,19 @@ pub(crate) fn ensure_test_ids_json(
     let out = default_test_ids_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
     if out.is_file()
-        && let Some(existing) = read_json_value(&out) {
-            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("test_ids");
-            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
-            let warmup_ok =
-                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
-            let max_ok = existing.get("max_test_ids").and_then(|v| v.as_u64())
-                == Some(max_test_ids.min(u64::MAX as usize) as u64);
-            let bundle_ok =
-                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
-            if kind_ok && schema_ok && warmup_ok && max_ok && bundle_ok {
-                return Ok(out);
-            }
+        && let Some(existing) = read_json_value(&out)
+    {
+        let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("test_ids");
+        let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
+        let warmup_ok =
+            existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+        let max_ok = existing.get("max_test_ids").and_then(|v| v.as_u64())
+            == Some(max_test_ids.min(u64::MAX as usize) as u64);
+        let bundle_ok = existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+        if kind_ok && schema_ok && warmup_ok && max_ok && bundle_ok {
+            return Ok(out);
         }
+    }
     let payload = build_test_ids_payload(bundle_path, warmup_frames, max_test_ids)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
@@ -450,17 +451,17 @@ pub(crate) fn ensure_test_ids_index_json(
     let out = default_test_ids_index_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
     if out.is_file()
-        && let Some(existing) = read_json_value(&out) {
-            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("test_ids_index");
-            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
-            let warmup_ok =
-                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
-            let bundle_ok =
-                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
-            if kind_ok && schema_ok && warmup_ok && bundle_ok {
-                return Ok(out);
-            }
+        && let Some(existing) = read_json_value(&out)
+    {
+        let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("test_ids_index");
+        let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
+        let warmup_ok =
+            existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+        let bundle_ok = existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+        if kind_ok && schema_ok && warmup_ok && bundle_ok {
+            return Ok(out);
         }
+    }
     let payload = build_test_ids_index_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
@@ -724,10 +725,11 @@ fn build_dock_routing_payload_from_json(
                     );
                 }
                 if let Some(p) = d.get("preview").and_then(|v| v.as_object())
-                    && let Some(kind) = p.get("kind") {
-                        let label = serde_json::to_string(kind).unwrap_or_default();
-                        mix(&mut fp, hash_str_64(&label));
-                    }
+                    && let Some(kind) = p.get("kind")
+                {
+                    let label = serde_json::to_string(kind).unwrap_or_default();
+                    mix(&mut fp, hash_str_64(&label));
+                }
             }
 
             if last_fingerprint_by_window.get(&window).copied() == Some(fp) {

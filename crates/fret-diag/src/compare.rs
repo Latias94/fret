@@ -1721,24 +1721,28 @@ pub(crate) fn stop_launched_demo(
 
             #[cfg(target_os = "macos")]
             if let Some(v) = macos_vmmap.as_ref()
-                && let Some(obj) = footprint.as_object_mut() {
-                    obj.insert("macos_vmmap".to_string(), v.clone());
-                }
+                && let Some(obj) = footprint.as_object_mut()
+            {
+                obj.insert("macos_vmmap".to_string(), v.clone());
+            }
             #[cfg(target_os = "macos")]
             if let Some(v) = macos_vmmap_steady.as_ref()
-                && let Some(obj) = footprint.as_object_mut() {
-                    obj.insert("macos_vmmap_steady".to_string(), v.clone());
-                }
+                && let Some(obj) = footprint.as_object_mut()
+            {
+                obj.insert("macos_vmmap_steady".to_string(), v.clone());
+            }
             #[cfg(target_os = "macos")]
             if let Some(v) = macos_footprint_tool_steady.as_ref()
-                && let Some(obj) = footprint.as_object_mut() {
-                    obj.insert("macos_footprint_tool_steady".to_string(), v.clone());
-                }
+                && let Some(obj) = footprint.as_object_mut()
+            {
+                obj.insert("macos_footprint_tool_steady".to_string(), v.clone());
+            }
             #[cfg(target_os = "macos")]
             if let Some(v) = macos_vmmap_regions_sorted_steady.as_ref()
-                && let Some(obj) = footprint.as_object_mut() {
-                    obj.insert("macos_vmmap_regions_sorted_steady".to_string(), v.clone());
-                }
+                && let Some(obj) = footprint.as_object_mut()
+            {
+                obj.insert("macos_vmmap_regions_sorted_steady".to_string(), v.clone());
+            }
 
             let footprint = Some(footprint);
             if let Some(footprint) = &footprint {
@@ -1770,24 +1774,28 @@ pub(crate) fn stop_launched_demo(
 
     #[cfg(target_os = "macos")]
     if let Some(v) = macos_vmmap.as_ref()
-        && let Some(obj) = footprint.as_object_mut() {
-            obj.insert("macos_vmmap".to_string(), v.clone());
-        }
+        && let Some(obj) = footprint.as_object_mut()
+    {
+        obj.insert("macos_vmmap".to_string(), v.clone());
+    }
     #[cfg(target_os = "macos")]
     if let Some(v) = macos_vmmap_steady.as_ref()
-        && let Some(obj) = footprint.as_object_mut() {
-            obj.insert("macos_vmmap_steady".to_string(), v.clone());
-        }
+        && let Some(obj) = footprint.as_object_mut()
+    {
+        obj.insert("macos_vmmap_steady".to_string(), v.clone());
+    }
     #[cfg(target_os = "macos")]
     if let Some(v) = macos_footprint_tool_steady.as_ref()
-        && let Some(obj) = footprint.as_object_mut() {
-            obj.insert("macos_footprint_tool_steady".to_string(), v.clone());
-        }
+        && let Some(obj) = footprint.as_object_mut()
+    {
+        obj.insert("macos_footprint_tool_steady".to_string(), v.clone());
+    }
     #[cfg(target_os = "macos")]
     if let Some(v) = macos_vmmap_regions_sorted_steady.as_ref()
-        && let Some(obj) = footprint.as_object_mut() {
-            obj.insert("macos_vmmap_regions_sorted_steady".to_string(), v.clone());
-        }
+        && let Some(obj) = footprint.as_object_mut()
+    {
+        obj.insert("macos_vmmap_regions_sorted_steady".to_string(), v.clone());
+    }
 
     let footprint = Some(footprint);
     if let Some(footprint) = &footprint {

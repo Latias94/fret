@@ -127,14 +127,12 @@ impl ScrollAreaViewport {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ScrollAreaScrollbarOrientation {
     #[default]
     Vertical,
     Horizontal,
 }
-
 
 /// shadcn/ui `ScrollBar` / Radix `ScrollAreaScrollbar` (v4).
 #[derive(Debug, Clone)]
@@ -463,143 +461,139 @@ impl ScrollAreaRoot {
                     && let Some(spec) = scrollbars
                         .iter()
                         .find(|s| s.orientation == ScrollAreaScrollbarOrientation::Vertical)
-                    {
-                        let gate_layout = if overflow_y {
-                            LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    top: Some(Px(0.0)).into(),
-                                    right: Some(Px(0.0)).into(),
-                                    bottom: Some(if overflow_x {
-                                        scrollbar_width
-                                    } else {
-                                        Px(0.0)
-                                    })
+                {
+                    let gate_layout = if overflow_y {
+                        LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                top: Some(Px(0.0)).into(),
+                                right: Some(Px(0.0)).into(),
+                                bottom: Some(if overflow_x { scrollbar_width } else { Px(0.0) })
                                     .into(),
-                                    left: None.into(),
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(scrollbar_width),
-                                    ..Default::default()
-                                },
+                                left: None.into(),
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(scrollbar_width),
                                 ..Default::default()
-                            }
-                        } else {
-                            LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    top: Some(Px(0.0)).into(),
-                                    right: Some(Px(0.0)).into(),
-                                    ..Default::default()
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(Px(0.0)),
-                                    height: Length::Px(Px(0.0)),
-                                    ..Default::default()
-                                },
+                            },
+                            ..Default::default()
+                        }
+                    } else {
+                        LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                top: Some(Px(0.0)).into(),
+                                right: Some(Px(0.0)).into(),
                                 ..Default::default()
-                            }
-                        };
-
-                        let mut scrollbar_layout = LayoutStyle::default();
-                        scrollbar_layout.size.width = Length::Fill;
-                        scrollbar_layout.size.height = Length::Fill;
-
-                        let scrollbar = cx.scrollbar(ScrollbarProps {
-                            layout: scrollbar_layout,
-                            axis: ScrollbarAxis::Vertical,
-                            scroll_target: Some(scroll_id),
-                            scroll_handle: handle.clone(),
-                            style: ScrollbarStyle {
-                                thumb,
-                                thumb_hover,
-                                thumb_idle_alpha: spec.thumb_idle_alpha,
-                                track_padding: spec.track_padding,
                             },
-                        });
+                            size: SizeStyle {
+                                width: Length::Px(Px(0.0)),
+                                height: Length::Px(Px(0.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }
+                    };
 
-                        children.push(cx.interactivity_gate_props(
-                            fret_ui::element::InteractivityGateProps {
-                                layout: gate_layout,
-                                present: overflow_y,
-                                interactive: show_scrollbar_y,
-                            },
-                            move |cx| {
-                                vec![cx.opacity(if show_scrollbar_y { 1.0 } else { 0.0 }, |_cx| {
-                                    vec![scrollbar]
-                                })]
-                            },
-                        ));
-                    }
+                    let mut scrollbar_layout = LayoutStyle::default();
+                    scrollbar_layout.size.width = Length::Fill;
+                    scrollbar_layout.size.height = Length::Fill;
+
+                    let scrollbar = cx.scrollbar(ScrollbarProps {
+                        layout: scrollbar_layout,
+                        axis: ScrollbarAxis::Vertical,
+                        scroll_target: Some(scroll_id),
+                        scroll_handle: handle.clone(),
+                        style: ScrollbarStyle {
+                            thumb,
+                            thumb_hover,
+                            thumb_idle_alpha: spec.thumb_idle_alpha,
+                            track_padding: spec.track_padding,
+                        },
+                    });
+
+                    children.push(cx.interactivity_gate_props(
+                        fret_ui::element::InteractivityGateProps {
+                            layout: gate_layout,
+                            present: overflow_y,
+                            interactive: show_scrollbar_y,
+                        },
+                        move |cx| {
+                            vec![cx.opacity(if show_scrollbar_y { 1.0 } else { 0.0 }, |_cx| {
+                                vec![scrollbar]
+                            })]
+                        },
+                    ));
+                }
 
                 if wants_x
                     && let Some(spec) = scrollbars
                         .iter()
                         .find(|s| s.orientation == ScrollAreaScrollbarOrientation::Horizontal)
-                    {
-                        let gate_layout = if overflow_x {
-                            LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    top: None.into(),
-                                    right: Some(if overflow_y { scrollbar_width } else { Px(0.0) })
-                                        .into(),
-                                    bottom: Some(Px(0.0)).into(),
-                                    left: Some(Px(0.0)).into(),
-                                },
-                                size: SizeStyle {
-                                    height: Length::Px(scrollbar_width),
-                                    ..Default::default()
-                                },
+                {
+                    let gate_layout = if overflow_x {
+                        LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                top: None.into(),
+                                right: Some(if overflow_y { scrollbar_width } else { Px(0.0) })
+                                    .into(),
+                                bottom: Some(Px(0.0)).into(),
+                                left: Some(Px(0.0)).into(),
+                            },
+                            size: SizeStyle {
+                                height: Length::Px(scrollbar_width),
                                 ..Default::default()
-                            }
-                        } else {
-                            LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    left: Some(Px(0.0)).into(),
-                                    bottom: Some(Px(0.0)).into(),
-                                    ..Default::default()
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(Px(0.0)),
-                                    height: Length::Px(Px(0.0)),
-                                    ..Default::default()
-                                },
+                            },
+                            ..Default::default()
+                        }
+                    } else {
+                        LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                left: Some(Px(0.0)).into(),
+                                bottom: Some(Px(0.0)).into(),
                                 ..Default::default()
-                            }
-                        };
-
-                        let mut scrollbar_layout = LayoutStyle::default();
-                        scrollbar_layout.size.width = Length::Fill;
-                        scrollbar_layout.size.height = Length::Fill;
-
-                        let scrollbar = cx.scrollbar(ScrollbarProps {
-                            layout: scrollbar_layout,
-                            axis: ScrollbarAxis::Horizontal,
-                            scroll_target: Some(scroll_id),
-                            scroll_handle: handle.clone(),
-                            style: ScrollbarStyle {
-                                thumb,
-                                thumb_hover,
-                                thumb_idle_alpha: spec.thumb_idle_alpha,
-                                track_padding: spec.track_padding,
                             },
-                        });
+                            size: SizeStyle {
+                                width: Length::Px(Px(0.0)),
+                                height: Length::Px(Px(0.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }
+                    };
 
-                        children.push(cx.interactivity_gate_props(
-                            fret_ui::element::InteractivityGateProps {
-                                layout: gate_layout,
-                                present: overflow_x,
-                                interactive: show_scrollbar_x,
-                            },
-                            move |cx| {
-                                vec![cx.opacity(if show_scrollbar_x { 1.0 } else { 0.0 }, |_cx| {
-                                    vec![scrollbar]
-                                })]
-                            },
-                        ));
-                    }
+                    let mut scrollbar_layout = LayoutStyle::default();
+                    scrollbar_layout.size.width = Length::Fill;
+                    scrollbar_layout.size.height = Length::Fill;
+
+                    let scrollbar = cx.scrollbar(ScrollbarProps {
+                        layout: scrollbar_layout,
+                        axis: ScrollbarAxis::Horizontal,
+                        scroll_target: Some(scroll_id),
+                        scroll_handle: handle.clone(),
+                        style: ScrollbarStyle {
+                            thumb,
+                            thumb_hover,
+                            thumb_idle_alpha: spec.thumb_idle_alpha,
+                            track_padding: spec.track_padding,
+                        },
+                    });
+
+                    children.push(cx.interactivity_gate_props(
+                        fret_ui::element::InteractivityGateProps {
+                            layout: gate_layout,
+                            present: overflow_x,
+                            interactive: show_scrollbar_x,
+                        },
+                        move |cx| {
+                            vec![cx.opacity(if show_scrollbar_x { 1.0 } else { 0.0 }, |_cx| {
+                                vec![scrollbar]
+                            })]
+                        },
+                    ));
+                }
 
                 if corner && wants_x && wants_y {
                     let gate_layout = if overflow_x && overflow_y {

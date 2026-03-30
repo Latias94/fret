@@ -12,9 +12,10 @@ pub struct NodeGeometryOverrideV1 {
 impl NodeGeometryOverrideV1 {
     pub fn normalized(mut self) -> Self {
         if let Some((w, h)) = self.size_px
-            && (!w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0) {
-                self.size_px = None;
-            }
+            && (!w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0)
+        {
+            self.size_px = None;
+        }
         self
     }
 }
@@ -28,9 +29,10 @@ pub struct EdgeGeometryOverrideV1 {
 impl EdgeGeometryOverrideV1 {
     pub fn normalized(mut self) -> Self {
         if let Some(w) = self.interaction_width_px
-            && (!w.is_finite() || w < 0.0) {
-                self.interaction_width_px = None;
-            }
+            && (!w.is_finite() || w < 0.0)
+        {
+            self.interaction_width_px = None;
+        }
         self
     }
 }
@@ -144,9 +146,11 @@ impl NodeGraphGeometryOverridesMap {
         let mut max_w = 0.0_f32;
         for o in edges.values() {
             if let Some(w) = o.interaction_width_px
-                && w.is_finite() && w >= 0.0 {
-                    max_w = max_w.max(w);
-                }
+                && w.is_finite()
+                && w >= 0.0
+            {
+                max_w = max_w.max(w);
+            }
         }
         self.max_edge_interaction_width_bits
             .store(max_w.to_bits(), Ordering::Relaxed);

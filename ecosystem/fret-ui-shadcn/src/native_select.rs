@@ -767,7 +767,9 @@ fn render_native_select<H: UiHost>(
                 }
 
                 let non_empty_groups: Vec<NativeSelectOptGroup> = optgroups
-                    .iter().filter(|&g| !g.options.is_empty()).cloned()
+                    .iter()
+                    .filter(|&g| !g.options.is_empty())
+                    .cloned()
                     .collect();
                 if !options.is_empty() && !non_empty_groups.is_empty() {
                     entries.push(CommandEntry::Separator(CommandSeparator::new()));

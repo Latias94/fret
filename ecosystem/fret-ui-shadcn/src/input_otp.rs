@@ -1021,9 +1021,10 @@ fn parse_input_otp_parts(parts: Vec<InputOtpPart>) -> ParsedInputOtpParts {
                 }
 
                 if let Some(idx) = groups.len().checked_sub(1)
-                    && !separators_after_groups.contains(&idx) {
-                        separators_after_groups.push(idx);
-                    }
+                    && !separators_after_groups.contains(&idx)
+                {
+                    separators_after_groups.push(idx);
+                }
             }
         }
     }

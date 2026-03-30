@@ -217,13 +217,15 @@ impl RunnerWindowStyleDiagnosticsStore {
             .insert(window, false);
 
         if caps.ui.window_decorations
-            && let Some(decorations) = requested.decorations {
-                next.decorations = decorations;
-            }
+            && let Some(decorations) = requested.decorations
+        {
+            next.decorations = decorations;
+        }
         if caps.ui.window_resizable
-            && let Some(resizable) = requested.resizable {
-                next.resizable = resizable;
-            }
+            && let Some(resizable) = requested.resizable
+        {
+            next.resizable = resizable;
+        }
         if let Some(material) = requested.background_material {
             let clamped = clamp_background_material_request(material, caps);
             next.background_material = clamped;

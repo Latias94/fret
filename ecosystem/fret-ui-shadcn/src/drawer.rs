@@ -1732,19 +1732,20 @@ impl Drawer {
                 });
             }
 
-            if !is_open && was_open
+            if !is_open
+                && was_open
                 && let (Some(points), Some(model)) =
                     (snap_points.as_ref(), snap_point_model.as_ref())
-                {
-                    let default_index =
-                        drawer_default_snap_point_index(points, default_snap_point_index);
-                    let _ = drawer_set_snap_point_with_callback(
-                        cx.app.models_mut(),
-                        model,
-                        on_snap_point_change.as_ref(),
-                        default_index,
-                    );
-                }
+            {
+                let default_index =
+                    drawer_default_snap_point_index(points, default_snap_point_index);
+                let _ = drawer_set_snap_point_with_callback(
+                    cx.app.models_mut(),
+                    model,
+                    on_snap_point_change.as_ref(),
+                    default_index,
+                );
+            }
 
             if is_open && !was_open {
                 let _ = cx.app.models_mut().update(&offset_model, |v| *v = Px(0.0));
@@ -1814,28 +1815,29 @@ impl Drawer {
                         && resolved_snap_point_index != runtime_snapshot.applied_snap_point_index
                         && let Some(target) = resolved_snap_point_index.and_then(|index| {
                             drawer_resolved_snap_target_for_index(&targets, index)
-                        }) {
-                            let current_offset =
-                                cx.app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
-                            if (current_offset.0 - target.offset.0).abs() > 0.5 {
-                                let _ = cx.app.models_mut().update(&runtime, |st| {
-                                    st.settling = true;
-                                    st.settle_to = target.offset;
-                                    st.settle_seq = st.settle_seq.saturating_add(1).max(1);
-                                    st.settle_velocity = 0.0;
-                                    st.applied_snap_point_index = Some(target.model_index);
-                                });
-                            } else {
-                                let _ = cx.app.models_mut().update(&offset_model, |v| {
-                                    *v = target.offset;
-                                });
-                                let _ = cx.app.models_mut().update(&runtime, |st| {
-                                    st.settling = false;
-                                    st.settle_velocity = 0.0;
-                                    st.applied_snap_point_index = Some(target.model_index);
-                                });
-                            }
+                        })
+                    {
+                        let current_offset =
+                            cx.app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+                        if (current_offset.0 - target.offset.0).abs() > 0.5 {
+                            let _ = cx.app.models_mut().update(&runtime, |st| {
+                                st.settling = true;
+                                st.settle_to = target.offset;
+                                st.settle_seq = st.settle_seq.saturating_add(1).max(1);
+                                st.settle_velocity = 0.0;
+                                st.applied_snap_point_index = Some(target.model_index);
+                            });
+                        } else {
+                            let _ = cx.app.models_mut().update(&offset_model, |v| {
+                                *v = target.offset;
+                            });
+                            let _ = cx.app.models_mut().update(&runtime, |st| {
+                                st.settling = false;
+                                st.settle_velocity = 0.0;
+                                st.applied_snap_point_index = Some(target.model_index);
+                            });
                         }
+                    }
                 }
             }
 
@@ -2111,45 +2113,42 @@ impl Drawer {
                                     0
                                 };
 
-                            if drag_direction != 0 && drag_direction == velocity_direction
+                            if drag_direction != 0
+                                && drag_direction == velocity_direction
                                 && let Some(current_target) = current_target
-                                    && let Some(current_sorted_index) = ordered_targets
-                                        .iter()
-                                        .position(|candidate| *candidate == current_target)
-                                    {
-                                        let adjacent_index = if drag_direction > 0 {
-                                            current_sorted_index
-                                                .saturating_add(1)
-                                                .min(ordered_targets.len().saturating_sub(1))
-                                        } else {
-                                            current_sorted_index.saturating_sub(1)
-                                        };
-                                        if adjacent_index != current_sorted_index {
-                                            let adjacent_target = ordered_targets[adjacent_index];
-                                            let should_force_adjacent = if drag_direction > 0 {
-                                                offset.0 < adjacent_target.offset.0
-                                            } else {
-                                                offset.0 > adjacent_target.offset.0
-                                            };
-                                            if should_force_adjacent {
-                                                target = adjacent_target;
-                                            }
-                                        } else if drag_direction > 0 {
-                                            let _ = host
-                                                .models_mut()
-                                                .update(&offset_for_up, |v| *v = Px(0.0));
-                                            let _ = host
-                                                .models_mut()
-                                                .update(&open_for_up, |v| *v = false);
-                                            let _ =
-                                                host.models_mut().update(&runtime_for_up, |st| {
-                                                    st.dragging = false;
-                                                });
-                                            host.release_pointer_capture();
-                                            host.request_redraw(_cx.window);
-                                            return true;
-                                        }
+                                && let Some(current_sorted_index) = ordered_targets
+                                    .iter()
+                                    .position(|candidate| *candidate == current_target)
+                            {
+                                let adjacent_index = if drag_direction > 0 {
+                                    current_sorted_index
+                                        .saturating_add(1)
+                                        .min(ordered_targets.len().saturating_sub(1))
+                                } else {
+                                    current_sorted_index.saturating_sub(1)
+                                };
+                                if adjacent_index != current_sorted_index {
+                                    let adjacent_target = ordered_targets[adjacent_index];
+                                    let should_force_adjacent = if drag_direction > 0 {
+                                        offset.0 < adjacent_target.offset.0
+                                    } else {
+                                        offset.0 > adjacent_target.offset.0
+                                    };
+                                    if should_force_adjacent {
+                                        target = adjacent_target;
                                     }
+                                } else if drag_direction > 0 {
+                                    let _ =
+                                        host.models_mut().update(&offset_for_up, |v| *v = Px(0.0));
+                                    let _ = host.models_mut().update(&open_for_up, |v| *v = false);
+                                    let _ = host.models_mut().update(&runtime_for_up, |st| {
+                                        st.dragging = false;
+                                    });
+                                    host.release_pointer_capture();
+                                    host.request_redraw(_cx.window);
+                                    return true;
+                                }
+                            }
                             target
                         } else {
                             drawer_resolved_snap_target_closest_by_offset(
@@ -5015,10 +5014,8 @@ mod tests {
             .borrow()
             .clone()
             .expect("parent offset model captured");
-        let parent_content_id = (*state
-            .parent_content_id
-            .borrow())
-            .expect("parent content id captured");
+        let parent_content_id =
+            (*state.parent_content_id.borrow()).expect("parent content id captured");
         let parent_runtime = app
             .models()
             .get_copied(&parent_runtime_model)
@@ -5132,10 +5129,8 @@ mod tests {
             .borrow()
             .clone()
             .expect("parent offset model captured");
-        let parent_content_id = (*state
-            .parent_content_id
-            .borrow())
-            .expect("parent content id captured");
+        let parent_content_id =
+            (*state.parent_content_id.borrow()).expect("parent content id captured");
         let parent_runtime = app
             .models()
             .get_copied(&parent_runtime_model)
@@ -5289,10 +5284,8 @@ mod tests {
             .borrow()
             .clone()
             .expect("child offset model captured");
-        let child_content_id = (*state
-            .child_content_id
-            .borrow())
-            .expect("child content id captured");
+        let child_content_id =
+            (*state.child_content_id.borrow()).expect("child content id captured");
 
         let child_dialog =
             visual_bounds_for_element(&mut app, window, child_content_id).expect("child visual");
@@ -5398,10 +5391,8 @@ mod tests {
             );
         }
 
-        let drawer_content_id = (*state
-            .drawer_content_id
-            .borrow())
-            .expect("drawer content id captured");
+        let drawer_content_id =
+            (*state.drawer_content_id.borrow()).expect("drawer content id captured");
 
         let offset_model = state
             .offset_model
@@ -5693,10 +5684,8 @@ mod tests {
             );
         }
 
-        let drawer_content_id = (*state
-            .drawer_content_id
-            .borrow())
-            .expect("drawer content id captured");
+        let drawer_content_id =
+            (*state.drawer_content_id.borrow()).expect("drawer content id captured");
         let offset_model = state
             .offset_model
             .borrow()

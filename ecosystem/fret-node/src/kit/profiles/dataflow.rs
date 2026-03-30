@@ -185,11 +185,14 @@ fn concretize_symbol_ref_node(graph: &Graph, node_id: NodeId) -> Vec<crate::ops:
             continue;
         }
 
-        if port.dir == PortDirection::Out && port.kind == PortKind::Data && port.key.0 == out_key.0
-            && out.is_none() {
-                out = Some(*port_id);
-                continue;
-            }
+        if port.dir == PortDirection::Out
+            && port.kind == PortKind::Data
+            && port.key.0 == out_key.0
+            && out.is_none()
+        {
+            out = Some(*port_id);
+            continue;
+        }
 
         unmanaged.push(*port_id);
     }
@@ -269,11 +272,13 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
             continue;
         }
 
-        if port.dir == PortDirection::In && port.kind == PortKind::Data
-            && let Some(ix) = parse_variadic_input_index(&port.key) {
-                inputs.push((ix, *port_id));
-                continue;
-            }
+        if port.dir == PortDirection::In
+            && port.kind == PortKind::Data
+            && let Some(ix) = parse_variadic_input_index(&port.key)
+        {
+            inputs.push((ix, *port_id));
+            continue;
+        }
 
         unmanaged.push(*port_id);
     }
@@ -333,27 +338,28 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
 
     // Ensure the last input is always an empty "add new input" slot.
     if let Some((last_ix, last_port)) = inputs.last().copied()
-        && port_has_incoming_edge(graph, last_port) {
-            let next_ix = last_ix.saturating_add(1);
-            let key = PortKey::new(format!("in{next_ix}"));
-            let id = alloc_port_id(graph, node_id, &key);
-            ops.push(crate::ops::GraphOp::AddPort {
-                id,
-                port: Port {
-                    node: node_id,
-                    key,
-                    dir: PortDirection::In,
-                    kind: PortKind::Data,
-                    capacity: PortCapacity::Single,
-                    connectable: None,
-                    connectable_start: None,
-                    connectable_end: None,
-                    ty: seed_ty.clone(),
-                    data: serde_json::Value::Null,
-                },
-            });
-            inputs.push((next_ix, id));
-        }
+        && port_has_incoming_edge(graph, last_port)
+    {
+        let next_ix = last_ix.saturating_add(1);
+        let key = PortKey::new(format!("in{next_ix}"));
+        let id = alloc_port_id(graph, node_id, &key);
+        ops.push(crate::ops::GraphOp::AddPort {
+            id,
+            port: Port {
+                node: node_id,
+                key,
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: seed_ty.clone(),
+                data: serde_json::Value::Null,
+            },
+        });
+        inputs.push((next_ix, id));
+    }
 
     // Trim extra trailing empty inputs (keep exactly one trailing empty).
     while inputs.len() > 1 {

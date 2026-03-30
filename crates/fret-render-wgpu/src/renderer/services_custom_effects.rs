@@ -113,9 +113,8 @@ fn custom_effect_sampled_user_image_supported(adapter: &wgpu::Adapter) -> bool {
             .contains(wgpu::TextureFormatFeatureFlags::FILTERABLE)
 }
 
-type BuildAndValidateFn = fn(
-    &str,
-) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError>;
+type BuildAndValidateFn =
+    fn(&str) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError>;
 
 fn register_custom_effect_wgsl(
     renderer: &mut Renderer,

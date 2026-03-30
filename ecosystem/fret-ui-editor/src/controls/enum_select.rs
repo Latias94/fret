@@ -1030,10 +1030,7 @@ mod tests {
     fn rect_visible_within_viewport_y_matches_nearest_visibility_contract() {
         let viewport = Rect::new(Point::new(Px(0.0), Px(10.0)), Size::new(Px(40.0), Px(40.0)));
 
-        let fully_visible = Rect::new(
-            Point::new(Px(0.0), Px(20.0)),
-            Size::new(Px(40.0), Px(12.0)),
-        );
+        let fully_visible = Rect::new(Point::new(Px(0.0), Px(20.0)), Size::new(Px(40.0), Px(12.0)));
         assert!(rect_visible_within_viewport_y(viewport, fully_visible));
 
         let clipped_bottom =

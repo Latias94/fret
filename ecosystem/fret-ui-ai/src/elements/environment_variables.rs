@@ -860,15 +860,13 @@ impl EnvironmentVariableValue {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum EnvironmentVariableCopyFormat {
     Name,
     #[default]
     Value,
     Export,
 }
-
 
 pub type OnEnvironmentVariableCopy =
     Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static>;

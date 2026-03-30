@@ -3491,9 +3491,8 @@ mod tests {
                         cx,
                         |_cx| trigger,
                         move |cx| {
-                            
                             DialogContent::new(vec![ui::raw_text("Content").into_element(cx)])
-                                    .into_element(cx)
+                                .into_element(cx)
                         },
                     );
 

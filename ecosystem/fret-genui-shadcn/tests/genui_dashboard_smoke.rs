@@ -1,5 +1,4 @@
 #![recursion_limit = "256"]
-
 #![allow(clippy::single_match)]
 
 use std::sync::Arc;

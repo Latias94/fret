@@ -1729,10 +1729,7 @@ fn web_vs_fret_calendar_demo_day_grid_geometry_and_a11y_labels_match_web_targete
         .nodes
         .iter()
         .filter(|n| {
-            n.role == SemanticsRole::Button
-                && n.label
-                    .as_deref()
-                    .is_some_and(is_calendar_day_label)
+            n.role == SemanticsRole::Button && n.label.as_deref().is_some_and(is_calendar_day_label)
         })
         .count();
     assert_eq!(

@@ -141,17 +141,18 @@ pub(super) fn build_inspect_neighborhood_model(
 
             if !redact_text
                 && let Some(label) = node.label.as_deref()
-                    && let Some(match_rank) = match_rank(label, q) {
-                        let label_key = MatchKey {
-                            surface_rank: 1,
-                            match_rank,
-                            value: label,
-                            node_id: id,
-                        };
-                        if best_key.is_none_or(|k| label_key < k) {
-                            best_key = Some(label_key);
-                        }
-                    }
+                && let Some(match_rank) = match_rank(label, q)
+            {
+                let label_key = MatchKey {
+                    surface_rank: 1,
+                    match_rank,
+                    value: label,
+                    node_id: id,
+                };
+                if best_key.is_none_or(|k| label_key < k) {
+                    best_key = Some(label_key);
+                }
+            }
 
             if let Some(key) = best_key {
                 matches_total = matches_total.saturating_add(1);
@@ -226,8 +227,11 @@ pub(super) fn build_inspect_neighborhood_model(
         }
     }
 
-    let match_node_ids = if query
-        .is_some() { matches.iter().map(|(_, n)| n.id.data().as_ffi()).collect() } else { Default::default() };
+    let match_node_ids = if query.is_some() {
+        matches.iter().map(|(_, n)| n.id.data().as_ffi()).collect()
+    } else {
+        Default::default()
+    };
 
     InspectNeighborhoodModel {
         lines: out,

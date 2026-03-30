@@ -330,7 +330,6 @@ pub enum UiTextCommonFallbackInjectionV1 {
     CommonFallback,
 }
 
-
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiRendererTextFallbackPolicySnapshotV1 {
     pub frame_id: u64,
@@ -545,7 +544,6 @@ pub enum UiRendererTextFontTraceFamilyClassV1 {
     #[default]
     Unknown,
 }
-
 
 impl UiRendererTextFontTraceSnapshotV1 {
     pub(super) fn from_core(

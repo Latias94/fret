@@ -73,8 +73,11 @@ pub(crate) fn render_diag_inspect_overlay(
         svc.inspect_overlay_model(window)
     });
 
-    let explainability_lines: Vec<String> = if model
-        .help_open { build_inspect_explainability_lines(ui, window, model.pointer_pos) } else { Default::default() };
+    let explainability_lines: Vec<String> = if model.help_open {
+        build_inspect_explainability_lines(ui, window, model.pointer_pos)
+    } else {
+        Default::default()
+    };
 
     struct InspectNodeInfo {
         bounds: fret_core::Rect,

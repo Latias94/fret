@@ -160,19 +160,19 @@ pub(crate) fn ensure_frames_index_json(
     let out = default_frames_index_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
     if out.is_file()
-        && let Some(existing) = read_frames_index_json_v1(&out, warmup_frames) {
-            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some(FRAMES_INDEX_KIND);
-            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64())
-                == Some(FRAMES_INDEX_SCHEMA_VERSION);
-            let warmup_ok =
-                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
-            let bundle_ok =
-                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
-            let features_ok = has_required_features(&existing, FRAMES_INDEX_REQUIRED_FEATURES);
-            if kind_ok && schema_ok && warmup_ok && bundle_ok && features_ok {
-                return Ok(out);
-            }
+        && let Some(existing) = read_frames_index_json_v1(&out, warmup_frames)
+    {
+        let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some(FRAMES_INDEX_KIND);
+        let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64())
+            == Some(FRAMES_INDEX_SCHEMA_VERSION);
+        let warmup_ok =
+            existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+        let bundle_ok = existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+        let features_ok = has_required_features(&existing, FRAMES_INDEX_REQUIRED_FEATURES);
+        if kind_ok && schema_ok && warmup_ok && bundle_ok && features_ok {
+            return Ok(out);
         }
+    }
 
     let payload = build_frames_index_payload_streaming(bundle_path, warmup_frames)?;
     write_compact_json(&out, &payload)?;
@@ -429,11 +429,13 @@ fn build_frames_index_payload_streaming(
 
             let mut out_rows: Vec<FrameRow> = rows.into_iter().collect();
             let mut warmup_fallback: bool = false;
-            if out_rows.is_empty() && snapshots_total > 0
-                && let Some(last) = last_seen {
-                    out_rows.push(last);
-                    warmup_fallback = true;
-                }
+            if out_rows.is_empty()
+                && snapshots_total > 0
+                && let Some(last) = last_seen
+            {
+                out_rows.push(last);
+                warmup_fallback = true;
+            }
 
             let rows_total = out_rows.len() as u64;
             self.out.borrow_mut().windows.push(WindowOut {

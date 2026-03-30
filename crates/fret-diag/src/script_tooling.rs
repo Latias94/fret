@@ -340,9 +340,7 @@ fn interaction_step_type_for_ui_gallery_scroll_guard(
     }
 }
 
-fn lint_ui_gallery_scroll_into_view_interaction_guards_v2(
-    script: &UiActionScriptV2,
-) -> Vec<Value> {
+fn lint_ui_gallery_scroll_into_view_interaction_guards_v2(script: &UiActionScriptV2) -> Vec<Value> {
     let mut findings = Vec::new();
 
     for (step_index, step) in script.steps.iter().enumerate() {
@@ -1316,8 +1314,8 @@ mod tests {
     }
 
     #[test]
-    fn lint_warns_when_ui_gallery_scroll_into_view_is_followed_by_interaction_without_container_guard(
-    ) {
+    fn lint_warns_when_ui_gallery_scroll_into_view_is_followed_by_interaction_without_container_guard()
+     {
         let trigger = UiSelectorV1::TestId {
             id: "ui-gallery-avatar-dropdown-trigger-avatar".to_string(),
             root_z_index: None,

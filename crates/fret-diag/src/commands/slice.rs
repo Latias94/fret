@@ -158,9 +158,11 @@ pub(crate) fn build_test_id_slice_payload_from_bundle_path(
     };
 
     let mut allow_streaming = explicit_selector || index_default.is_some();
-    if allow_streaming && explicit_selector
-        && let Some(idx) = bundle_index.as_ref() {
-            let m = find_snapshot_in_bundle_index(idx, window_id, frame_id, window_snapshot_seq)
+    if allow_streaming
+        && explicit_selector
+        && let Some(idx) = bundle_index.as_ref()
+    {
+        let m = find_snapshot_in_bundle_index(idx, window_id, frame_id, window_snapshot_seq)
                 .ok_or_else(|| {
                     let mut hint = String::new();
                     if let Some(w) = window_id {
@@ -174,29 +176,32 @@ pub(crate) fn build_test_id_slice_payload_from_bundle_path(
                     }
                     format!("no matching snapshot found in bundle.index.json (try regenerating it via `fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json>`), args:{hint}")
                 })?;
-            if !m.has_semantics {
-                let source = m.semantics_source.unwrap_or_else(|| "none".to_string());
-                return Err(format!(
-                    "selected snapshot has no exported semantics (bundle.index.json semantics_source={source}; try a different --frame-id/--snapshot-seq, or ensure semantics export is enabled)"
-                ));
-            }
-            let source = m.semantics_source.as_deref().unwrap_or("none");
-            if source != "inline" && source != "table" {
-                allow_streaming = false;
-            }
-            if stream_semantics_source.is_none() {
-                stream_semantics_source = m.semantics_source;
-            }
-            if stream_semantics_fingerprint.is_none() {
-                stream_semantics_fingerprint = m.semantics_fingerprint;
-            }
+        if !m.has_semantics {
+            let source = m.semantics_source.unwrap_or_else(|| "none".to_string());
+            return Err(format!(
+                "selected snapshot has no exported semantics (bundle.index.json semantics_source={source}; try a different --frame-id/--snapshot-seq, or ensure semantics export is enabled)"
+            ));
         }
+        let source = m.semantics_source.as_deref().unwrap_or("none");
+        if source != "inline" && source != "table" {
+            allow_streaming = false;
+        }
+        if stream_semantics_source.is_none() {
+            stream_semantics_source = m.semantics_source;
+        }
+        if stream_semantics_fingerprint.is_none() {
+            stream_semantics_fingerprint = m.semantics_fingerprint;
+        }
+    }
 
-    if allow_streaming && !explicit_selector
+    if allow_streaming
+        && !explicit_selector
         && let Some(source) = stream_semantics_source.as_deref()
-            && source != "inline" && source != "table" {
-                allow_streaming = false;
-            }
+        && source != "inline"
+        && source != "table"
+    {
+        allow_streaming = false;
+    }
 
     let build_from_bundle = || -> Result<serde_json::Value, String> {
         let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
@@ -473,12 +478,12 @@ fn pick_default_snapshot_in_bundle_index(
                 if might_contain.is_none()
                     && let (Some(fp), Some(src)) =
                         (semantics_fingerprint, sel.semantics_source.as_deref())
-                    {
-                        let source_tag = if src == "inline" { 0u8 } else { 1u8 };
-                        if let Some(b) = semantics_blooms.get(&(w_id, fp, source_tag)) {
-                            might_contain = Some(b.might_contain(&target));
-                        }
+                {
+                    let source_tag = if src == "inline" { 0u8 } else { 1u8 };
+                    if let Some(b) = semantics_blooms.get(&(w_id, fp, source_tag)) {
+                        might_contain = Some(b.might_contain(&target));
                     }
+                }
                 if might_contain == Some(true) {
                     return Some(sel);
                 }
@@ -640,10 +645,12 @@ fn try_find_hit_payload_by_streaming_candidates(
 
     for c in candidates {
         if let Some((w, fid, seq)) = skip
-            && c.window == w && c.selector_frame_id == fid && c.selector_window_snapshot_seq == seq
-            {
-                continue;
-            }
+            && c.window == w
+            && c.selector_frame_id == fid
+            && c.selector_window_snapshot_seq == seq
+        {
+            continue;
+        }
 
         let selector_frame_id = if c.selector_window_snapshot_seq.is_some() {
             None
@@ -839,16 +846,16 @@ pub(crate) fn cmd_slice(
         if direct.is_file()
             && let Some(v) =
                 sidecars::try_read_sidecar_json_v1(&direct, "bundle_index", warmup_frames)
-            {
-                return Some(v);
-            }
+        {
+            return Some(v);
+        }
         let root = dir.join("_root").join("bundle.index.json");
         if root.is_file()
             && let Some(v) =
                 sidecars::try_read_sidecar_json_v1(&root, "bundle_index", warmup_frames)
-            {
-                return Some(v);
-            }
+        {
+            return Some(v);
+        }
         None
     }
 

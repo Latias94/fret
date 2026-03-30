@@ -80,10 +80,11 @@ fn diag_args_override() -> (bool, Option<PathBuf>) {
             }
             "--fret-diag-dir" => {
                 if let Some(dir) = args.next()
-                    && !dir.to_string_lossy().trim().is_empty() {
-                        enabled = true;
-                        out_dir = Some(PathBuf::from(dir));
-                    }
+                    && !dir.to_string_lossy().trim().is_empty()
+                {
+                    enabled = true;
+                    out_dir = Some(PathBuf::from(dir));
+                }
             }
             _ => {}
         }

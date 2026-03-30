@@ -621,10 +621,10 @@ where
                         &focus_state_for_keys,
                         &draft_for_keys,
                         &error_for_keys,
-                    )
-                        && consumed {
-                            return true;
-                        }
+                    ) && consumed
+                    {
+                        return true;
+                    }
 
                     match down.key {
                         KeyCode::Enter | KeyCode::NumpadEnter => {
@@ -635,17 +635,18 @@ where
                             if let Some(v) = (parse)(&text) {
                                 let v = constrain_numeric_value(constraints, v);
                                 if let Some(validate) = validate.as_ref()
-                                    && let Some(msg) = validate(v) {
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&error_for_keys, |e| *e = Some(msg));
-                                        let mut last = last_draft_text_for_keys
-                                            .lock()
-                                            .unwrap_or_else(|e| e.into_inner());
-                                        *last = text;
-                                        host.request_redraw(action_cx.window);
-                                        return true;
-                                    }
+                                    && let Some(msg) = validate(v)
+                                {
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&error_for_keys, |e| *e = Some(msg));
+                                    let mut last = last_draft_text_for_keys
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner());
+                                    *last = text;
+                                    host.request_redraw(action_cx.window);
+                                    return true;
+                                }
 
                                 let _ = host.models_mut().update(&model_for_commit, |m| *m = v);
                                 let formatted = (format)(v);

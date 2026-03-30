@@ -355,10 +355,10 @@ where
                             &focus_state_for_key,
                             &draft_for_key,
                             &error_for_key,
-                        )
-                            && consumed {
-                                return true;
-                            }
+                        ) && consumed
+                        {
+                            return true;
+                        }
                         match down.key {
                             KeyCode::Enter | KeyCode::NumpadEnter => {
                                 let text = host
@@ -367,26 +367,25 @@ where
                                     .unwrap_or_default();
                                 if let Some(v) = (parse_for_key)(&text) {
                                     if let Some(validate) = validate_for_key.as_ref()
-                                        && let Some(msg) = validate(v) {
-                                            let _ = host
-                                                .models_mut()
-                                                .update(&error_for_key, |e| *e = Some(msg));
-                                            let mut last = last_draft_for_key
-                                                .lock()
-                                                .unwrap_or_else(|e| e.into_inner());
-                                            *last = text;
-                                            host.request_redraw(action_cx.window);
-                                            return true;
-                                        }
+                                        && let Some(msg) = validate(v)
+                                    {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&error_for_key, |e| *e = Some(msg));
+                                        let mut last = last_draft_for_key
+                                            .lock()
+                                            .unwrap_or_else(|e| e.into_inner());
+                                        *last = text;
+                                        host.request_redraw(action_cx.window);
+                                        return true;
+                                    }
 
-                                    let _ =
-                                        host.models_mut().update(&model_for_key, |m| *m = v);
+                                    let _ = host.models_mut().update(&model_for_key, |m| *m = v);
                                     let formatted = (format_for_key)(v);
                                     let _ = host.models_mut().update(&draft_for_key, |s| {
                                         *s = formatted.as_ref().to_string()
                                     });
-                                    let _ =
-                                        host.models_mut().update(&error_for_key, |e| *e = None);
+                                    let _ = host.models_mut().update(&error_for_key, |e| *e = None);
                                     let mut last = last_draft_for_key
                                         .lock()
                                         .unwrap_or_else(|e| e.into_inner());
@@ -416,9 +415,8 @@ where
                                     *s = formatted.as_ref().to_string()
                                 });
                                 let _ = host.models_mut().update(&error_for_key, |e| *e = None);
-                                let mut last = last_draft_for_key
-                                    .lock()
-                                    .unwrap_or_else(|e| e.into_inner());
+                                let mut last =
+                                    last_draft_for_key.lock().unwrap_or_else(|e| e.into_inner());
                                 *last = formatted.as_ref().to_string();
                                 if let Some(cb) = on_outcome_for_key.as_ref() {
                                     cb(host, action_cx, NumericInputOutcome::Canceled);

@@ -293,8 +293,7 @@ pub struct DataTableToolbar<TData> {
 ///
 /// Upstream shadcn/Tailwind `lg:*` variants are viewport-driven. In editor-grade layouts, some
 /// toolbar behaviors may instead want to follow the width of the hosting panel/container.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DataTableToolbarResponsiveQuery {
     /// Match upstream Tailwind viewport breakpoint behavior.
     #[default]
@@ -302,7 +301,6 @@ pub enum DataTableToolbarResponsiveQuery {
     /// Drive responsive variants from the toolbar's container-query region (ADR 0231).
     Container,
 }
-
 
 impl<TData> std::fmt::Debug for DataTableToolbar<TData> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -616,10 +614,9 @@ impl<TData> DataTableToolbar<TData> {
                         st.faceted_column = Some(cfg.column_id.clone());
                     });
 
-                    if column_changed
-                        && let Some(model) = faceted_query.as_ref() {
-                            let _ = cx.app.models_mut().update(model, |s| s.clear());
-                        }
+                    if column_changed && let Some(model) = faceted_query.as_ref() {
+                        let _ = cx.app.models_mut().update(model, |s| s.clear());
+                    }
                 } else {
                     cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
                         st.faceted_column = None;
@@ -786,10 +783,8 @@ impl<TData> DataTableToolbar<TData> {
                 if let Some(cfg) = self.faceted_filter.as_ref() {
                     let selected: Vec<Arc<str>> = faceted_items
                         .iter()
-                        .filter(|&it| cx.watch_model(&it.model)
-                                .layout()
-                                .copied()
-                                .unwrap_or(false)).map(|it| it.value.clone())
+                        .filter(|&it| cx.watch_model(&it.model).layout().copied().unwrap_or(false))
+                        .map(|it| it.value.clone())
                         .collect();
 
                     let next = if selected.is_empty() {
@@ -1754,7 +1749,6 @@ impl DataTablePagination {
             .gap(Space::N6)
             .into_element(cx);
 
-            
             rtl::reverse_in_rtl(dir, vec![selected_text, spacer, controls])
         })
         .layout(LayoutRefinement::default().w_full())

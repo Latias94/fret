@@ -639,10 +639,11 @@ fn enrich_semantics_changed_repainted_findings(
 
         let summary = semantics_diff_summary_nodes(prev_nodes.as_slice(), now_nodes.as_slice());
         if !summary.is_empty()
-            && let Some(line) = scan.suspicious_lines.get_mut(idx) {
-                line.push(' ');
-                line.push_str(&summary);
-            }
+            && let Some(line) = scan.suspicious_lines.get_mut(idx)
+        {
+            line.push(' ');
+            line.push_str(&summary);
+        }
     }
 
     Ok(())

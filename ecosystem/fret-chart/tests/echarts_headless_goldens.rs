@@ -195,16 +195,14 @@ fn snapshot_from_engine(
         let Some(series) = node.source_series else {
             continue;
         };
-        let entry = by_series
-            .entry(series.0)
-            .or_insert(SeriesMarksSnapshot {
-                series: series.0,
-                nodes: 0,
-                points: 0,
-                polylines: 0,
-                rects: 0,
-                texts: 0,
-            });
+        let entry = by_series.entry(series.0).or_insert(SeriesMarksSnapshot {
+            series: series.0,
+            nodes: 0,
+            points: 0,
+            polylines: 0,
+            rects: 0,
+            texts: 0,
+        });
         entry.nodes += 1;
         match &node.payload {
             delinea::marks::MarkPayloadRef::Group(_) => {}

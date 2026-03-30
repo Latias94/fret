@@ -121,26 +121,28 @@ pub fn sanitize_data_rect_scaled(
             let (mut y0, mut y1) = (y0, y1);
 
             if let (Some(ax0), Some(ax1)) = (x_scale.to_axis(x0), x_scale.to_axis(x1))
-                && (ax1 - ax0).abs() < min_span_axis {
-                    if x_scale == AxisScale::Log10 {
-                        x1 = x0 * 10.0;
-                    } else {
-                        let cx = (x0 + x1) * 0.5;
-                        x0 = cx - 0.5;
-                        x1 = cx + 0.5;
-                    }
+                && (ax1 - ax0).abs() < min_span_axis
+            {
+                if x_scale == AxisScale::Log10 {
+                    x1 = x0 * 10.0;
+                } else {
+                    let cx = (x0 + x1) * 0.5;
+                    x0 = cx - 0.5;
+                    x1 = cx + 0.5;
                 }
+            }
 
             if let (Some(ay0), Some(ay1)) = (y_scale.to_axis(y0), y_scale.to_axis(y1))
-                && (ay1 - ay0).abs() < min_span_axis {
-                    if y_scale == AxisScale::Log10 {
-                        y1 = y0 * 10.0;
-                    } else {
-                        let cy = (y0 + y1) * 0.5;
-                        y0 = cy - 0.5;
-                        y1 = cy + 0.5;
-                    }
+                && (ay1 - ay0).abs() < min_span_axis
+            {
+                if y_scale == AxisScale::Log10 {
+                    y1 = y0 * 10.0;
+                } else {
+                    let cy = (y0 + y1) * 0.5;
+                    y0 = cy - 0.5;
+                    y1 = cy + 0.5;
                 }
+            }
 
             DataRect {
                 x_min: x0,

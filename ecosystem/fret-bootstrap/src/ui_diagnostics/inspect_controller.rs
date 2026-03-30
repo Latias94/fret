@@ -269,9 +269,10 @@ impl InspectController {
         let anchor = selected.or(focus_node_id).or(picked_node_id);
 
         if selected.is_none()
-            && let Some(anchor) = anchor {
-                self.state.tree_selected_node_id.insert(window, anchor);
-            }
+            && let Some(anchor) = anchor
+        {
+            self.state.tree_selected_node_id.insert(window, anchor);
+        }
 
         if expanded.is_empty() {
             if let Some(anchor) = anchor {
@@ -425,9 +426,10 @@ impl InspectController {
             .min(items.len().saturating_sub(1));
 
         if let Some(want_id) = self.state.tree_selected_node_id.get(&window).copied()
-            && let Some(pos) = items.iter().position(|id| *id == want_id) {
-                idx = pos;
-            }
+            && let Some(pos) = items.iter().position(|id| *id == want_id)
+        {
+            idx = pos;
+        }
 
         let selected_id = items.get(idx).copied().unwrap_or_else(|| items[0]);
         self.state.tree_selected_index.insert(window, idx);
@@ -538,9 +540,10 @@ impl InspectController {
             let q = self.state.help_search_query.entry(window).or_default();
             let mut chars: Vec<char> = text.chars().collect();
             if let Some(expected) = self.state.help_suppress_next_text_input.remove(&window)
-                && chars.first().copied() == Some(expected) {
-                    chars.remove(0);
-                }
+                && chars.first().copied() == Some(expected)
+            {
+                chars.remove(0);
+            }
 
             for ch in chars {
                 if q.len() >= MAX_QUERY_BYTES {
@@ -677,20 +680,21 @@ impl InspectController {
                     return true;
                 }
             } else if self.tree_is_open(window)
-                && let Some(node_id) = self.tree_selected_node_id(window) {
-                    self.state.focus_down_stack.insert(window, Vec::new());
-                    self.state.locked_windows.insert(window);
-                    self.state
-                        .pending_nav
-                        .insert(window, InspectNavCommand::SelectNode(node_id));
-                    self.state.pending_copy_selector_windows.insert(window);
-                    self.push_toast(
-                        window,
-                        "inspect: locked node and copied selector".to_string(),
-                    );
-                    app.request_redraw(window);
-                    return true;
-                }
+                && let Some(node_id) = self.tree_selected_node_id(window)
+            {
+                self.state.focus_down_stack.insert(window, Vec::new());
+                self.state.locked_windows.insert(window);
+                self.state
+                    .pending_nav
+                    .insert(window, InspectNavCommand::SelectNode(node_id));
+                self.state.pending_copy_selector_windows.insert(window);
+                self.push_toast(
+                    window,
+                    "inspect: locked node and copied selector".to_string(),
+                );
+                app.request_redraw(window);
+                return true;
+            }
 
             if self.state.help_search_query.remove(&window).is_some() {
                 self.state.help_suppress_next_text_input.remove(&window);
@@ -734,9 +738,10 @@ impl InspectController {
 
         if self.help_is_open(window)
             && !(modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr)
-            && self.handle_help_mode_key(app, window, *key, wants_command) {
-                return true;
-            }
+            && self.handle_help_mode_key(app, window, *key, wants_command)
+        {
+            return true;
+        }
 
         match *key {
             KeyCode::Escape => {
@@ -1333,30 +1338,33 @@ impl InspectController {
                 }
             }
             KeyCode::ArrowRight => {
-                if self.help_search_query(window).is_none() && self.tree_is_open(window)
-                    && let Some(node_id) = self.tree_selected_node_id(window) {
-                        self.state
-                            .tree_expanded_node_ids
-                            .entry(window)
-                            .or_default()
-                            .insert(node_id);
-                        app.request_redraw(window);
-                        return true;
-                    }
+                if self.help_search_query(window).is_none()
+                    && self.tree_is_open(window)
+                    && let Some(node_id) = self.tree_selected_node_id(window)
+                {
+                    self.state
+                        .tree_expanded_node_ids
+                        .entry(window)
+                        .or_default()
+                        .insert(node_id);
+                    app.request_redraw(window);
+                    return true;
+                }
             }
             KeyCode::ArrowLeft => {
-                if self.help_search_query(window).is_none() && self.tree_is_open(window)
+                if self.help_search_query(window).is_none()
+                    && self.tree_is_open(window)
                     && let Some(node_id) = self.tree_selected_node_id(window)
-                        && self
-                            .state
-                            .tree_expanded_node_ids
-                            .entry(window)
-                            .or_default()
-                            .remove(&node_id)
-                        {
-                            app.request_redraw(window);
-                            return true;
-                        }
+                    && self
+                        .state
+                        .tree_expanded_node_ids
+                        .entry(window)
+                        .or_default()
+                        .remove(&node_id)
+                {
+                    app.request_redraw(window);
+                    return true;
+                }
             }
             KeyCode::PageUp => {
                 let offset = self.help_scroll_offset(window);
@@ -1417,20 +1425,21 @@ impl InspectController {
                         return true;
                     }
                 } else if self.tree_is_open(window)
-                    && let Some(node_id) = self.tree_selected_node_id(window) {
-                        self.state.focus_down_stack.insert(window, Vec::new());
-                        self.state.locked_windows.insert(window);
-                        self.state
-                            .pending_nav
-                            .insert(window, InspectNavCommand::SelectNode(node_id));
-                        self.push_toast(
-                            window,
-                            "inspect: locked node selection (press Ctrl/Cmd+C to copy selector)"
-                                .to_string(),
-                        );
-                        app.request_redraw(window);
-                        return true;
-                    }
+                    && let Some(node_id) = self.tree_selected_node_id(window)
+                {
+                    self.state.focus_down_stack.insert(window, Vec::new());
+                    self.state.locked_windows.insert(window);
+                    self.state
+                        .pending_nav
+                        .insert(window, InspectNavCommand::SelectNode(node_id));
+                    self.push_toast(
+                        window,
+                        "inspect: locked node selection (press Ctrl/Cmd+C to copy selector)"
+                            .to_string(),
+                    );
+                    app.request_redraw(window);
+                    return true;
+                }
 
                 if self.state.help_search_query.remove(&window).is_some() {
                     self.state.help_suppress_next_text_input.remove(&window);

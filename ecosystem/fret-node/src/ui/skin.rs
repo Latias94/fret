@@ -129,15 +129,13 @@ pub struct EdgeChromeHint {
 ///
 /// v1 only guarantees `Circle` rendering; other variants may fall back to circle until a vector
 /// path-based implementation is added.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum PortShapeHint {
     #[default]
     Circle,
     Diamond,
     Triangle,
 }
-
 
 /// Per-port chrome overrides (UI-only).
 ///

@@ -2234,106 +2234,106 @@ pub(super) fn handle_move_pointer_step(
             // This is intentionally narrow: only `test_id` selectors are supported in this
             // fallback path.
             if (pointer_session_active || dock_drag_active)
-                && let UiSelectorV1::TestId { id, .. } = &target {
-                    let cached = svc.per_window.get(&target_window).and_then(|ring| {
-                        let bounds = ring.test_id_bounds.get(id)?;
-                        let window_bounds = ring.snapshots.back().map(|s| s.window_bounds);
-                        Some((window_bounds, *bounds))
-                    });
+                && let UiSelectorV1::TestId { id, .. } = &target
+            {
+                let cached = svc.per_window.get(&target_window).and_then(|ring| {
+                    let bounds = ring.test_id_bounds.get(id)?;
+                    let window_bounds = ring.snapshots.back().map(|s| s.window_bounds);
+                    Some((window_bounds, *bounds))
+                });
 
-                    if cached.is_none() {
-                        append_diag_script_migration_trace(
-                            &svc.cfg.out_dir,
-                            &format!(
-                                "unix_ms={} kind=move_pointer_remote_miss step_index={} window={:?} target_window={:?} anchor_window={:?} test_id={id:?} pointer_session_active={} dock_drag_active={}",
-                                unix_ms_now(),
-                                step_index,
-                                window,
-                                target_window,
-                                anchor_window,
-                                pointer_session_active,
-                                dock_drag_active,
-                            ),
-                        );
-                    }
-
-                    if let Some((window_bounds_v1, node_bounds)) = cached {
-                        append_diag_script_migration_trace(
-                            &svc.cfg.out_dir,
-                            &format!(
-                                "unix_ms={} kind=move_pointer_remote_hit step_index={} window={:?} target_window={:?} anchor_window={:?} test_id={id:?} pointer_session_active={} dock_drag_active={} window_bounds_present={}",
-                                unix_ms_now(),
-                                step_index,
-                                window,
-                                target_window,
-                                anchor_window,
-                                pointer_session_active,
-                                dock_drag_active,
-                                window_bounds_v1.is_some(),
-                            ),
-                        );
-                        let mut x = node_bounds.origin.x.0 + (node_bounds.size.width.0 * 0.5);
-                        let mut y = node_bounds.origin.y.0 + (node_bounds.size.height.0 * 0.5);
-                        if let Some(window_bounds_v1) = window_bounds_v1 {
-                            let clamp_x_min = window_bounds_v1.x;
-                            let clamp_y_min = window_bounds_v1.y;
-                            let clamp_x_max = window_bounds_v1.x + window_bounds_v1.w;
-                            let clamp_y_max = window_bounds_v1.y + window_bounds_v1.h;
-                            if x.is_finite() {
-                                x = x.clamp(clamp_x_min, clamp_x_max);
-                            }
-                            if y.is_finite() {
-                                y = y.clamp(clamp_y_min, clamp_y_max);
-                            }
-                        }
-
-                        let _ = write_cursor_override_window_client_logical(
-                            &svc.cfg.out_dir,
+                if cached.is_none() {
+                    append_diag_script_migration_trace(
+                        &svc.cfg.out_dir,
+                        &format!(
+                            "unix_ms={} kind=move_pointer_remote_miss step_index={} window={:?} target_window={:?} anchor_window={:?} test_id={id:?} pointer_session_active={} dock_drag_active={}",
+                            unix_ms_now(),
+                            step_index,
+                            window,
                             target_window,
-                            x,
-                            y,
-                        );
-                        active.last_explicit_cursor_override =
-                            Some(CursorOverrideTarget::WindowClientLogical(target_window));
-                        active.last_explicit_cursor_override_pos =
-                            Some(ExplicitCursorOverridePos {
-                                target: CursorOverrideTarget::WindowClientLogical(target_window),
-                                x_px: x,
-                                y_px: y,
-                            });
-                        push_script_event_log(
-                            active,
-                            &svc.cfg,
-                            UiScriptEventLogEntryV1 {
-                                unix_ms: unix_ms_now(),
-                                kind: "move_pointer.remote_semantics".to_string(),
-                                step_index: Some(step_index as u32),
-                                note: Some(format!(
-                                    "from_window={} target_window={} test_id={id:?} pointer_session_active={} dock_drag_active={}",
-                                    window.data().as_ffi(),
-                                    target_window.data().as_ffi(),
-                                    pointer_session_active,
-                                    dock_drag_active,
-                                )),
-                                bundle_dir: None,
-                                window: Some(window.data().as_ffi()),
-                                tick_id: Some(app.tick_id().0),
-                                frame_id: Some(app.frame_id().0),
-                                window_snapshot_seq: None,
-                            },
-                        );
-
-                        active.wait_until = None;
-                        active.screenshot_wait = None;
-                        active.next_step = active.next_step.saturating_add(1);
-                        output.request_redraw = true;
-                        if svc.cfg.script_auto_dump {
-                            *force_dump_label =
-                                Some(format!("script-step-{step_index:04}-move_pointer-remote"));
-                        }
-                        return false;
-                    }
+                            anchor_window,
+                            pointer_session_active,
+                            dock_drag_active,
+                        ),
+                    );
                 }
+
+                if let Some((window_bounds_v1, node_bounds)) = cached {
+                    append_diag_script_migration_trace(
+                        &svc.cfg.out_dir,
+                        &format!(
+                            "unix_ms={} kind=move_pointer_remote_hit step_index={} window={:?} target_window={:?} anchor_window={:?} test_id={id:?} pointer_session_active={} dock_drag_active={} window_bounds_present={}",
+                            unix_ms_now(),
+                            step_index,
+                            window,
+                            target_window,
+                            anchor_window,
+                            pointer_session_active,
+                            dock_drag_active,
+                            window_bounds_v1.is_some(),
+                        ),
+                    );
+                    let mut x = node_bounds.origin.x.0 + (node_bounds.size.width.0 * 0.5);
+                    let mut y = node_bounds.origin.y.0 + (node_bounds.size.height.0 * 0.5);
+                    if let Some(window_bounds_v1) = window_bounds_v1 {
+                        let clamp_x_min = window_bounds_v1.x;
+                        let clamp_y_min = window_bounds_v1.y;
+                        let clamp_x_max = window_bounds_v1.x + window_bounds_v1.w;
+                        let clamp_y_max = window_bounds_v1.y + window_bounds_v1.h;
+                        if x.is_finite() {
+                            x = x.clamp(clamp_x_min, clamp_x_max);
+                        }
+                        if y.is_finite() {
+                            y = y.clamp(clamp_y_min, clamp_y_max);
+                        }
+                    }
+
+                    let _ = write_cursor_override_window_client_logical(
+                        &svc.cfg.out_dir,
+                        target_window,
+                        x,
+                        y,
+                    );
+                    active.last_explicit_cursor_override =
+                        Some(CursorOverrideTarget::WindowClientLogical(target_window));
+                    active.last_explicit_cursor_override_pos = Some(ExplicitCursorOverridePos {
+                        target: CursorOverrideTarget::WindowClientLogical(target_window),
+                        x_px: x,
+                        y_px: y,
+                    });
+                    push_script_event_log(
+                        active,
+                        &svc.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "move_pointer.remote_semantics".to_string(),
+                            step_index: Some(step_index as u32),
+                            note: Some(format!(
+                                "from_window={} target_window={} test_id={id:?} pointer_session_active={} dock_drag_active={}",
+                                window.data().as_ffi(),
+                                target_window.data().as_ffi(),
+                                pointer_session_active,
+                                dock_drag_active,
+                            )),
+                            bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: Some(app.tick_id().0),
+                            frame_id: Some(app.frame_id().0),
+                            window_snapshot_seq: None,
+                        },
+                    );
+
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if svc.cfg.script_auto_dump {
+                        *force_dump_label =
+                            Some(format!("script-step-{step_index:04}-move_pointer-remote"));
+                    }
+                    return false;
+                }
+            }
 
             append_diag_script_migration_trace(
                 &svc.cfg.out_dir,

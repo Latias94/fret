@@ -536,28 +536,28 @@ impl UiDiagnosticsService {
             && (drag.cross_window_hover
                 || drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
                 || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
-            {
-                push_script_event_log(
-                    active,
-                    &self.cfg,
-                    UiScriptEventLogEntryV1 {
-                        unix_ms: unix_ms_now(),
-                        kind: "diag.cancel_drag".to_string(),
-                        step_index: Some(step_index),
-                        note: Some(format!(
-                            "pointer_id={} kind={:?} cross_window_hover={}",
-                            pointer_id.0, drag.kind, drag.cross_window_hover
-                        )),
-                        bundle_dir: None,
-                        window: Some(window.data().as_ffi()),
-                        tick_id: Some(app.tick_id().0),
-                        frame_id: Some(app.frame_id().0),
-                        window_snapshot_seq: None,
-                    },
-                );
-                app.cancel_drag(pointer_id);
-                canceled_any = true;
-            }
+        {
+            push_script_event_log(
+                active,
+                &self.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "diag.cancel_drag".to_string(),
+                    step_index: Some(step_index),
+                    note: Some(format!(
+                        "pointer_id={} kind={:?} cross_window_hover={}",
+                        pointer_id.0, drag.kind, drag.cross_window_hover
+                    )),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+            app.cancel_drag(pointer_id);
+            canceled_any = true;
+        }
 
         if !canceled_any {
             // Keep cleared: if we reach the cancel window and still can't cancel anything,

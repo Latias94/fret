@@ -11,8 +11,7 @@ use fret_ui_kit::headless::form_state::{FormFieldId, FormState};
 
 use crate::form::{FormControl, FormDescription, FormItem, FormLabel, FormMessage};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FormErrorVisibility {
     Never,
     WhenSubmitted,
@@ -20,7 +19,6 @@ pub enum FormErrorVisibility {
     WhenTouchedOrSubmitted,
     Always,
 }
-
 
 /// shadcn/ui `FormField`-style helper (RHF-aligned taxonomy, Fret-native state).
 ///
@@ -143,10 +141,12 @@ impl FormField {
             children.push(FormDescription::new(desc).into_element(cx));
         }
 
-        if show_error && let Some(err) = error
-            && !err.trim().is_empty() {
-                children.push(FormMessage::new(err).into_element(cx));
-            }
+        if show_error
+            && let Some(err) = error
+            && !err.trim().is_empty()
+        {
+            children.push(FormMessage::new(err).into_element(cx));
+        }
 
         FormItem::new(children).into_element(cx)
     }

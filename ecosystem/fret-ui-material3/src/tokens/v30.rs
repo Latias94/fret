@@ -42,14 +42,12 @@ impl Default for TypographyOptions {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SchemeMode {
     Light,
     #[default]
     Dark,
 }
-
 
 /// Options for generating `md.sys.color.*` roles via Material dynamic color.
 #[derive(Debug, Clone, Copy)]
@@ -69,14 +67,12 @@ impl Default for ColorSchemeOptions {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DynamicVariant {
     #[default]
     TonalSpot,
     Expressive,
 }
-
 
 impl DynamicVariant {
     fn to_material(self) -> MaterialVariant {

@@ -1,14 +1,12 @@
 use fret_core::PathCommand;
 use fret_core::geometry::{Point, Px, Rect};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum AxisScale {
     #[default]
     Linear,
     Log10,
 }
-
 
 impl AxisScale {
     pub fn key(self) -> u64 {

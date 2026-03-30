@@ -981,9 +981,10 @@ mod tests {
         }
 
         if let ElementKind::Semantics(props) = &element.kind
-            && props.test_id.as_deref() == Some(expected) {
-                return Some(props.role);
-            }
+            && props.test_id.as_deref() == Some(expected)
+        {
+            return Some(props.role);
+        }
 
         element
             .children

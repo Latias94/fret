@@ -285,15 +285,13 @@ impl ChainOfThoughtWithChildren {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum ChainOfThoughtStepStatus {
     #[default]
     Complete,
     Active,
     Pending,
 }
-
 
 pub struct ChainOfThoughtHeader {
     children: Option<Vec<AnyElement>>,
@@ -512,8 +510,6 @@ impl ChainOfThoughtContent {
         let children = self.children;
         let layout = self.layout;
         let test_id = self.test_id;
-
-        
 
         Collapsible::new(open).into_element(
             cx,

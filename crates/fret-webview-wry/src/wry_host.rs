@@ -348,11 +348,12 @@ impl WryWebViewHost {
                         continue;
                     }
                     if let Some(inst) = self.instances.remove(&id)
-                        && let Ok(mut map) = self.events.lock() {
-                            map.entry(inst.window)
-                                .or_default()
-                                .push_back(WebViewEvent::Destroyed { id });
-                        }
+                        && let Ok(mut map) = self.events.lock()
+                    {
+                        map.entry(inst.window)
+                            .or_default()
+                            .push_back(WebViewEvent::Destroyed { id });
+                    }
                 }
                 WebViewRequest::SetPlacement { id, placement } => {
                     let Some(instance) = self.instances.get_mut(&id) else {

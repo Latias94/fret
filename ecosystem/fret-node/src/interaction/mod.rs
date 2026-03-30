@@ -18,7 +18,6 @@ pub enum NodeGraphConnectionMode {
     Loose,
 }
 
-
 /// Where node dragging can start from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -30,7 +29,6 @@ pub enum NodeGraphDragHandleMode {
     /// Start dragging only from the node header region.
     Header,
 }
-
 
 /// Modifier requirement for interaction activation (XyFlow mental model).
 ///
@@ -64,4 +62,3 @@ impl NodeGraphModifierKey {
         }
     }
 }
-

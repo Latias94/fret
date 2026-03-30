@@ -35,8 +35,7 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct SliderStyle {
     pub track_height: Option<Px>,
     pub track_background: OverrideSlot<ColorRef>,
@@ -47,7 +46,6 @@ pub struct SliderStyle {
     pub thumb_border_color: OverrideSlot<ColorRef>,
     pub thumb_ring_color: OverrideSlot<ColorRef>,
 }
-
 
 impl SliderStyle {
     pub fn track_height(mut self, track_height: Px) -> Self {
@@ -2626,10 +2624,9 @@ mod tests {
             .as_ref()
             .and_then(|d| d.test_id.as_deref())
             .is_some_and(|t| t == test_id);
-        if matches
-            && let ElementKind::Container(props) = &el.kind {
-                return Some(props.border_color.map(|c| c.a).unwrap_or(0.0));
-            }
+        if matches && let ElementKind::Container(props) = &el.kind {
+            return Some(props.border_color.map(|c| c.a).unwrap_or(0.0));
+        }
         for child in &el.children {
             if let Some(found) = container_border_alpha_by_test_id(child, test_id) {
                 return Some(found);
