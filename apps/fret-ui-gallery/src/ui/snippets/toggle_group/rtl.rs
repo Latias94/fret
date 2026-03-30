@@ -9,7 +9,7 @@ fn text_item<H: UiHost>(
     value: &'static str,
     label: &'static str,
 ) -> shadcn::ToggleGroupItem {
-    shadcn::ToggleGroupItem::new(value, [cx.text(label)]).a11y_label(format!("Toggle {label}"))
+    shadcn::ToggleGroupItem::new(value, [cx.text(label)]).a11y_label(label)
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -17,9 +17,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         shadcn::ToggleGroup::single_uncontrolled(Some("list"))
             .variant(shadcn::ToggleVariant::Outline)
             .items([
-                text_item(cx, "list", "List"),
-                text_item(cx, "grid", "Grid"),
-                text_item(cx, "cards", "Cards"),
+                text_item(cx, "list", "قائمة"),
+                text_item(cx, "grid", "شبكة"),
+                text_item(cx, "cards", "بطاقات"),
             ])
             .into_element(cx)
     })

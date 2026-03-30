@@ -5,7 +5,7 @@ use std::sync::Arc;
 use fret_core::{Color, Px};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::controllable_state;
@@ -41,6 +41,7 @@ pub struct DatePickerWithPresets {
     week_start: Weekday,
     placeholder: Arc<str>,
     today_override: Option<Date>,
+    required: bool,
     disabled: bool,
     show_outside_days: bool,
     disable_outside_days: bool,
@@ -60,6 +61,7 @@ impl std::fmt::Debug for DatePickerWithPresets {
             .field("week_start", &self.week_start)
             .field("placeholder", &self.placeholder)
             .field("today_override", &self.today_override)
+            .field("required", &self.required)
             .field("disabled", &self.disabled)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
@@ -84,6 +86,7 @@ impl DatePickerWithPresets {
             week_start: Weekday::Sunday,
             placeholder: Arc::from("Pick a date"),
             today_override: None,
+            required: false,
             disabled: false,
             show_outside_days: true,
             disable_outside_days: false,
@@ -135,6 +138,11 @@ impl DatePickerWithPresets {
 
     pub fn week_start(mut self, week_start: Weekday) -> Self {
         self.week_start = week_start;
+        self
+    }
+
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
         self
     }
 
@@ -193,6 +201,7 @@ impl DatePickerWithPresets {
             let layout = self.layout.clone();
             let open_trigger = open.clone();
             let close_on_select_open = self.close_on_select.then(|| open.clone());
+            let required = self.required;
             let initial_focus_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
             let trigger_test_id = test_id_prefix
@@ -284,7 +293,12 @@ impl DatePickerWithPresets {
                             button = button.test_id(test_id);
                         }
 
-                        button.into_element(cx)
+                        let mut trigger = button.into_element(cx);
+                        if required {
+                            trigger = trigger
+                                .attach_semantics(SemanticsDecoration::default().required(true));
+                        }
+                        trigger
                     },
                     move |cx| {
                         let preset_value = controllable_state::use_controllable_model(
@@ -338,6 +352,7 @@ impl DatePickerWithPresets {
                         let mut calendar = Calendar::new(month.clone(), selected.clone())
                             .week_start(week_start)
                             .today(today)
+                            .required(required)
                             .show_outside_days(show_outside_days)
                             .disable_outside_days(disable_outside_days)
                             .initial_focus_out(initial_focus_out.clone());
@@ -715,5 +730,62 @@ mod tests {
                 .copied()
                 .any(|id| id == "date-presets-calendar:2026-03-01")
         );
+    }
+
+    #[test]
+    fn date_picker_with_presets_required_exposes_required_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(480.0), Px(260.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(None::<Date>);
+
+        app.set_frame_id(FrameId(1));
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        OverlayController::begin_frame(&mut app, window);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "date-picker-with-presets-required-semantics",
+            |cx| {
+                vec![
+                    DatePickerWithPresets::new(open.clone(), month.clone(), selected.clone())
+                        .required(true)
+                        .test_id_prefix("required-date-picker-with-presets")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("required-date-picker-with-presets-trigger"))
+            .expect("date picker with presets trigger semantics");
+        assert!(node.flags.required);
     }
 }

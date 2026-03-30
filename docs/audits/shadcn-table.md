@@ -83,6 +83,9 @@ current registry implementation in `repo-ref/ui`.
 
 - Pass: the gallery now mirrors the shadcn docs flow after `Installation`: `Demo`, `Usage`,
   `Footer`, `Actions`, `Data Table`, `RTL`, and `API Reference`.
+- Pass: the page copy now records the exact docs/source axes (`table.mdx`, `ui/table.tsx`, and the
+  demo/footer/actions/rtl example files) plus the conclusion that this was not a missing
+  `fret-ui` mechanism or extra Radix/Base UI primitive port.
 - Pass: `Children (Fret)` is now an explicit follow-up section that documents the new composable
   `table_head_children(...)` / `table_caption_children(...)` lane without displacing the upstream
   docs path.
@@ -97,6 +100,11 @@ current registry implementation in `repo-ref/ui`.
   `fret-ui-shadcn` + UI Gallery, not a `fret-ui` mechanism defect.
 - Pass: the checkbox/table gallery snippet now uses a header cell surface for the select-all
   column instead of bypassing `TableHead` through `table_cell(...)`.
+- Pass: the former native diagnostics timeout was split into two concrete issues and resolved:
+  `diag windows` was misreporting `window_bounds` for older/logical-key sidecars, and the table docs
+  smoke script was letting `scroll_into_view` succeed on partial intersection before a stricter
+  `bounds_within_window` check. The diagnostics command now reads both bounds-key shapes, and the
+  `Actions` / `RTL` scroll steps now require the headings to land fully within the visible region.
 
 ## Validation
 
@@ -108,5 +116,6 @@ current registry implementation in `repo-ref/ui`.
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app table_page_uses_typed_doc_sections_for_app_facing_snippets`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app selected_table_snippets_prefer_table_wrapper_family`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app selected_table_snippet_helpers_prefer_into_ui_element_over_anyelement`
+- `cargo test -p fret-ui-gallery --test table_docs_surface`
 - `cargo test -p fret-ui-shadcn --test web_vs_fret_layout 'table::web_vs_fret_layout_data_table_demo_checkbox_column_padding_and_action_button_size' -- --exact`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-docs-smoke.json --dir /tmp/fret-diag-table-docs-2 --session-auto --timeout-ms 900000 --poll-ms 200 --launch -- env CARGO_TARGET_DIR=/tmp/fret-table-diag-target-2 CARGO_NET_OFFLINE=true cargo run -p fret-ui-gallery --release`

@@ -24,34 +24,37 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .test_id("ui-gallery-drawer-outside-press-trigger"),
                     )),
                     shadcn::DrawerPart::content_with(move |cx| {
-                        shadcn::DrawerContent::new([]).with_children(cx, |cx| {
-                            vec![
-                                shadcn::DrawerHeader::new([]).with_children(cx, |cx| {
-                                    vec![
-                                        shadcn::DrawerTitle::new("Dismiss on outside press")
-                                            .into_element(cx),
-                                        shadcn::DrawerDescription::new(
-                                            "Click the underlay probe outside the panel. The drawer should close and restore focus to the trigger.",
-                                        )
-                                        .into_element(cx),
-                                    ]
-                                }),
-                                ui::text(
-                                    "The probe below exists only to make modal outside-press routing deterministic in the gallery and diag scripts.",
-                                )
-                                .text_sm()
-                                .into_element(cx),
-                                shadcn::DrawerFooter::new([]).with_children(cx, |cx| {
-                                    vec![shadcn::DrawerClose::from_scope().build(
-                                        cx,
-                                        shadcn::Button::new("Close")
-                                            .variant(shadcn::ButtonVariant::Outline)
-                                            .test_id("ui-gallery-drawer-outside-press-close"),
-                                    )]
-                                }),
-                            ]
-                        })
-                        .test_id("ui-gallery-drawer-outside-press-content")
+                        shadcn::DrawerContent::new([])
+                            .children(|cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::DrawerHeader::new([]).children(|cx| {
+                                        ui::children![
+                                            cx;
+                                            shadcn::DrawerTitle::new("Dismiss on outside press"),
+                                            shadcn::DrawerDescription::new(
+                                                "Click the underlay probe outside the panel. The drawer should close and restore focus to the trigger.",
+                                            )
+                                        ]
+                                    }),
+                                    ui::text(
+                                        "The probe below exists only to make modal outside-press routing deterministic in the gallery and diag scripts.",
+                                    )
+                                    .text_sm(),
+                                    shadcn::DrawerFooter::new([]).children(|cx| {
+                                        ui::children![
+                                            cx;
+                                            shadcn::DrawerClose::from_scope().child(
+                                                shadcn::Button::new("Close")
+                                                    .variant(shadcn::ButtonVariant::Outline)
+                                                    .test_id("ui-gallery-drawer-outside-press-close"),
+                                            )
+                                        ]
+                                    })
+                                ]
+                            })
+                            .test_id("ui-gallery-drawer-outside-press-content")
+                            .into_element(cx)
                     }),
                 ])
                 .into_element(cx),

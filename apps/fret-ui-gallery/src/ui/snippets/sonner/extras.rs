@@ -3,24 +3,12 @@ pub const DOCS_SOURCE: &str = include_str!("extras.docs.rs.txt");
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
-use super::{last_action_model, message_request, request};
+use super::{last_action_model, message_request, preview_controls_row, preview_frame, request};
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-fn wrap_controls_row<H: UiHost>(
-    gap: Space,
-    children: Vec<AnyElement>,
-) -> impl IntoUiElement<H> + use<H> {
-    ui::h_flex(move |_cx| children)
-        .gap(gap)
-        .items_center()
-        .wrap()
-        .layout(LayoutRefinement::default().w_full())
-}
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let sonner = shadcn::Sonner::global(&mut *cx.app);
@@ -95,12 +83,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .test_id("ui-gallery-sonner-demo-show-swipe")
         .into_element(cx);
 
-    wrap_controls_row::<fret_app::App>(Space::N2, vec![action, cancel, swipe])
-        .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Group)
-                .test_id("ui-gallery-sonner-extras"),
-        )
+    preview_frame::<fret_app::App, _>(preview_controls_row::<fret_app::App>(
+        Space::N2,
+        vec![action, cancel, swipe],
+    ))
+    .into_element(cx)
+    .attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-sonner-extras"),
+    )
 }
 // endregion: example

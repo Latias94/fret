@@ -67,7 +67,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 vec![
                                 shadcn::DialogTitle::new("Sticky Footer").into_element(cx),
                                 shadcn::DialogDescription::new(
-                                    "The footer remains visible while the content area scrolls.",
+                                    "This dialog has a sticky footer that stays visible while the content scrolls.",
                                 )
                                 .into_element(cx),
                             ]
@@ -80,7 +80,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                         shadcn::Button::new("Close")
                                             .variant(shadcn::ButtonVariant::Outline),
                                     ),
-                                    shadcn::Button::new("Save changes").into_element(cx),
                                 ]
                             }),
                         ]

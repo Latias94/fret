@@ -5,6 +5,7 @@ pub mod h2;
 pub mod h3;
 pub mod h4;
 pub mod inline_code;
+pub mod interactive_links;
 pub mod large;
 pub mod lead;
 pub mod list;

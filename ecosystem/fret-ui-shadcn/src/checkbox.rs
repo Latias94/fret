@@ -110,6 +110,7 @@ impl CheckboxStyle {
 pub struct Checkbox {
     checked: CheckboxCheckedModel,
     aria_invalid: bool,
+    required: bool,
     disabled: bool,
     control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
@@ -134,6 +135,7 @@ impl Checkbox {
         Self {
             checked: CheckboxCheckedModel::Bool(model.into_bool_model()),
             aria_invalid: false,
+            required: false,
             disabled: false,
             control_id: None,
             a11y_label: None,
@@ -150,6 +152,7 @@ impl Checkbox {
         Self {
             checked: CheckboxCheckedModel::TriState(model.into_checked_state_model()),
             aria_invalid: false,
+            required: false,
             disabled: false,
             control_id: None,
             a11y_label: None,
@@ -177,6 +180,7 @@ impl Checkbox {
         Self {
             checked: CheckboxCheckedModel::Value(checked),
             aria_invalid: false,
+            required: false,
             disabled: false,
             control_id: None,
             a11y_label: None,
@@ -196,6 +200,7 @@ impl Checkbox {
         Self {
             checked: CheckboxCheckedModel::OptionalBool(model.into_optional_bool_model()),
             aria_invalid: false,
+            required: false,
             disabled: false,
             control_id: None,
             a11y_label: None,
@@ -258,6 +263,11 @@ impl Checkbox {
     /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
     pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
         self.aria_invalid = aria_invalid;
+        self
+    }
+
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
         self
     }
 
@@ -331,6 +341,7 @@ impl Checkbox {
         cx.scope(|cx| {
             let checked = self.checked;
             let aria_invalid = self.aria_invalid;
+            let required = self.required;
 
             let theme = Theme::global(&*cx.app).snapshot();
 
@@ -559,6 +570,7 @@ impl Checkbox {
                 };
 
                 let mut a11y = checkbox_a11y(a11y_label, state);
+                a11y.required = required;
                 if let Some(label) = labelled_by_element {
                     a11y.labelled_by_element = Some(label.0);
                 }
@@ -853,6 +865,50 @@ mod tests {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
         assert!(!scene.ops().is_empty());
+    }
+
+    #[test]
+    fn checkbox_required_exposes_required_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-checkbox-required-semantics",
+            |cx| {
+                vec![
+                    Checkbox::from_checked(true)
+                        .required(true)
+                        .a11y_label("Terms")
+                        .test_id("required-checkbox")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("required-checkbox"))
+            .expect("checkbox semantics node");
+        assert_eq!(node.role, fret_core::SemanticsRole::Checkbox);
+        assert!(node.flags.required);
     }
 
     #[test]

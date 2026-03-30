@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("snap_points.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
+use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -20,28 +21,32 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::DrawerPart::content_with(move |cx| {
                 shadcn::DrawerContent::new([])
                     .drag_handle_test_id("ui-gallery-drawer-snap-points-handle")
-                    .with_children(cx, |cx| {
-                        vec![
-                            shadcn::DrawerHeader::new([]).with_children(cx, |cx| {
-                                vec![
-                                    shadcn::DrawerTitle::new("Snap Points").into_element(cx),
+                    .children(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::DrawerHeader::new([]).children(|cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::DrawerTitle::new("Snap Points"),
                                     shadcn::DrawerDescription::new(
                                         "Releasing a drag settles to the nearest snap point (Vaul-style).",
                                     )
-                                    .into_element(cx),
                                 ]
                             }),
-                            shadcn::DrawerFooter::new([]).with_children(cx, |cx| {
-                                vec![shadcn::DrawerClose::from_scope().build(
-                                    cx,
-                                    shadcn::Button::new("Close")
-                                        .variant(shadcn::ButtonVariant::Outline)
-                                        .test_id("ui-gallery-drawer-snap-points-close"),
-                                )]
-                            }),
+                            shadcn::DrawerFooter::new([]).children(|cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::DrawerClose::from_scope().child(
+                                        shadcn::Button::new("Close")
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .test_id("ui-gallery-drawer-snap-points-close"),
+                                    )
+                                ]
+                            })
                         ]
                     })
                     .test_id("ui-gallery-drawer-snap-points-content")
+                    .into_element(cx)
             }),
         ])
         .into_element(cx)

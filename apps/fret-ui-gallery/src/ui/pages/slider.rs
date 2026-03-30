@@ -17,7 +17,9 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let extras = snippets::extras::render(cx);
     let api_reference = doc_layout::notes_block([
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/radix/slider.mdx`. Base UI reference: `repo-ref/ui/apps/v4/content/docs/components/base/slider.mdx`.",
+        "Docs example axis: `repo-ref/ui/apps/v4/examples/radix/slider-demo.tsx`, `repo-ref/ui/apps/v4/examples/radix/slider-range.tsx`, `repo-ref/ui/apps/v4/examples/radix/slider-multiple.tsx`, `repo-ref/ui/apps/v4/examples/radix/slider-vertical.tsx`, `repo-ref/ui/apps/v4/examples/radix/slider-controlled.tsx`, `repo-ref/ui/apps/v4/examples/radix/slider-disabled.tsx`, and `repo-ref/ui/apps/v4/examples/radix/slider-rtl.tsx`.",
         "Registry source axis: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/slider.tsx`, `repo-ref/ui/apps/v4/registry/bases/radix/ui/slider.tsx`, and `repo-ref/ui/apps/v4/registry/bases/base/ui/slider.tsx`.",
+        "The upstream docs surface intentionally splits the top-of-page preview (`[75]`) from the `Usage` code block (`[33]`), so this page mirrors those two lanes instead of normalizing them to one demo value.",
         "Slider already exposes the important authoring surface (`new`, `new_controllable`, range/step/orientation/on_value_commit), so the main parity gap here is usage clarity rather than missing composition APIs.",
         "`slider(model)` is the default controlled helper for first-party teaching surfaces, while `new_controllable(...)` stays available when the example needs a default-value bridge or element-owned state.",
         "Slider remains a leaf recipe on the shadcn lane: labels, value readouts, and field layout are composed outside the control, so no extra generic composable children / `compose()` API is needed here.",
@@ -28,7 +30,7 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "API reference: `ecosystem/fret-ui-shadcn/src/slider.rs` (Slider).",
         "Uncontrolled sliders store their values in element state; controlled sliders store values in a shared model.",
         "Prefer `on_value_commit` for expensive reactions (e.g. save, fetch) and use live updates for lightweight UI.",
-        "Vertical sliders should have an explicit height to avoid zero-size layouts.",
+        "Vertical sliders keep the upstream `min-h-44` floor; examples can still pass an explicit height to bound the docs lane, but values below the floor clamp upward unless the caller asks for something taller.",
         "`test_id_prefix(...)` derives stable automation anchors for `track`, `range`, and `thumb-*` sub-parts.",
     ]);
     let demo = DocSection::build(cx, "Demo", demo)
@@ -49,7 +51,7 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::multiple::SOURCE, "example");
     let vertical = DocSection::build(cx, "Vertical", vertical)
         .description(
-            "Mirrors the upstream two-slider vertical example and keeps height caller-owned.",
+            "Mirrors the upstream two-slider vertical example; the example still passes `h-40` in the call site, while the recipe-owned `min-h-44` floor remains the effective minimum unless the caller requests something taller.",
         )
         .test_id_prefix("ui-gallery-slider-vertical-section")
         .code_rust_from_file_region(snippets::vertical::SOURCE, "example");

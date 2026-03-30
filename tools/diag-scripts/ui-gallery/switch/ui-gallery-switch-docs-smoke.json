@@ -40,8 +40,12 @@
       "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-nav-switch" },
       "delta_y": -240.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
       "timeout_frames": 600
     },
+    { "type": "wait_frames", "n": 2 },
     { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-switch" } },
     {
       "type": "wait_until",
@@ -88,4 +92,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-switch-docs-zinc-dark" }
   ]
 }
-

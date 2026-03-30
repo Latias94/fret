@@ -2853,14 +2853,14 @@ fn drawer_page_marks_usage_as_default_and_snap_points_as_follow_up() {
     let drawer_page = read("src/ui/pages/drawer.rs");
     assert!(
         drawer_page.contains(
-            "`Usage` is the default copyable `children([...])` path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane."
+            "`Usage` is the default copyable `children([...])` root plus `children(|cx| ...)` section path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane."
         ),
         "src/ui/pages/drawer.rs should distinguish the default children() lane from the Vaul/Fret follow-up lane"
     );
     assert!(
         drawer_page
-            .contains("Default copyable `children([...])` root lane with composable `with_children(...)` content sections."),
-        "src/ui/pages/drawer.rs should label Usage as the default copyable children() + with_children() path"
+            .contains("Default copyable `children([...])` root lane with composable `children(|cx| ...)` content sections."),
+        "src/ui/pages/drawer.rs should label Usage as the default copyable children() + children(|cx| ...) path"
     );
     assert!(
         drawer_page.contains(
@@ -2903,7 +2903,7 @@ fn drawer_snap_points_snippet_prefers_children_root_path() {
             ".children([",
             "shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(",
             "shadcn::DrawerPart::content_with(",
-            "shadcn::DrawerClose::from_scope().build(",
+            "shadcn::DrawerClose::from_scope().child(",
         ],
         &[
             "let open = cx.local_model(|| false);",
@@ -2927,13 +2927,13 @@ fn curated_drawer_snippets_prefer_drawer_close_scope_for_footer_close_actions() 
     ] {
         assert_normalized_markers_present(
             relative_path,
-            &["shadcn::DrawerClose::from_scope().build("],
+            &["shadcn::DrawerClose::from_scope().child("],
         );
     }
 }
 
 #[test]
-fn curated_drawer_snippets_prefer_composable_content_with_children_lane() {
+fn curated_drawer_snippets_prefer_composable_content_children_lane() {
     for relative_path in [
         "src/ui/snippets/drawer/demo.rs",
         "src/ui/snippets/drawer/usage.rs",
@@ -2956,34 +2956,34 @@ fn curated_drawer_snippets_prefer_composable_content_with_children_lane() {
             relative_path,
             &normalized,
             "shadcn::DrawerContent::new([])",
-            ".with_children(",
+            ".children(",
         );
         assert_normalized_chain_reaches(
             relative_path,
             &normalized,
             "shadcn::DrawerHeader::new([])",
-            ".with_children(",
+            ".children(",
         );
         assert_normalized_chain_reaches(
             relative_path,
             &normalized,
             "shadcn::DrawerFooter::new([])",
-            ".with_children(",
+            ".children(",
         );
 
         assert!(
             !normalized.contains("shadcn::DrawerContent::build("),
-            "{} should keep drawer content on the composable with_children lane",
+            "{} should keep drawer content on the composable children() lane",
             manifest_path(relative_path).display()
         );
         assert!(
             !normalized.contains("shadcn::DrawerHeader::build("),
-            "{} should keep drawer headers on the composable with_children lane",
+            "{} should keep drawer headers on the composable children() lane",
             manifest_path(relative_path).display()
         );
         assert!(
             !normalized.contains("shadcn::DrawerFooter::build("),
-            "{} should keep drawer footers on the composable with_children lane",
+            "{} should keep drawer footers on the composable children() lane",
             manifest_path(relative_path).display()
         );
     }
@@ -5350,6 +5350,62 @@ fn tabs_page_teaches_rtl_activation_direction_and_fuller_example_shape() {
             "The `RTL` section now uses a fuller upstream-style four-tab card example instead of a gallery-only two-tab keynav gate"
         ),
         "src/ui/pages/tabs.rs should record that the RTL snippet stays close to the upstream card shape"
+    );
+}
+
+#[test]
+fn tabs_docs_path_snippets_keep_upstream_shapes() {
+    assert_normalized_markers_present(
+        "src/ui/snippets/tabs/line.rs",
+        &[
+            "TabsItem::new(\"overview\", \"Overview\", Vec::<AnyElement>::new())",
+            "TabsItem::new(\"analytics\", \"Analytics\", Vec::<AnyElement>::new())",
+            "TabsItem::new(\"reports\", \"Reports\", Vec::<AnyElement>::new())",
+        ],
+    );
+    assert_normalized_markers_present(
+        "src/ui/snippets/tabs/vertical.rs",
+        &[
+            "TabsItem::new(\"account\", \"Account\", Vec::<AnyElement>::new())",
+            "TabsItem::new(\"password\", \"Password\", Vec::<AnyElement>::new())",
+            "TabsItem::new(\"notifications\", \"Notifications\", Vec::<AnyElement>::new())",
+        ],
+    );
+    assert_normalized_markers_present(
+        "src/ui/snippets/tabs/disabled.rs",
+        &["TabsItem::new(\"settings\", \"Disabled\", Vec::<AnyElement>::new()).disabled(true)"],
+    );
+}
+
+#[test]
+fn tabs_icons_snippet_uses_trigger_children_for_upstream_icon_composition() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/tabs/icons.rs",
+        &[
+            ".trigger_children([",
+            "icon::icon(cx, IconId::new_static(\"lucide.app-window\"))",
+            "cx.text(\"Preview\")",
+            "icon::icon(cx, IconId::new_static(\"lucide.code\"))",
+            "cx.text(\"Code\")",
+        ],
+    );
+
+    assert!(
+        !normalized.contains(".trigger_leading_icon("),
+        "{} should use `trigger_children(...)` to mirror the upstream icon + label authoring shape",
+        manifest_path("src/ui/snippets/tabs/icons.rs").display()
+    );
+}
+
+#[test]
+fn tabs_page_records_docs_shape_and_trigger_children_alignment() {
+    let tabs_page = read("src/ui/pages/tabs.rs");
+
+    assert!(
+        tabs_page.contains(
+            "`Line`, `Vertical`, and `Disabled` now keep the same text/value shape as the upstream docs examples, while `Icons` demonstrates icon + label trigger composition through `TabsItem::trigger_children(...)` without leaving the default builder lane."
+        ),
+        "src/ui/pages/tabs.rs should record the docs-path shape alignment and trigger-children lane"
     );
 }
 
@@ -8668,6 +8724,18 @@ fn switch_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn switch_page_api_reference_keeps_parts_api_off_the_docs_surface() {
+    assert_normalized_markers_present(
+        "src/ui/pages/switch.rs",
+        &[
+            "without widening `Switch` into a generic children API.",
+            "Radix/Base UI expose `Root` / `Thumb` parts for DOM composition, but the self-drawn shadcn recipe keeps thumb painting internal here;",
+            "that belongs in a lower-level primitive/raw surface rather than the copyable docs-path `Switch`.",
+        ],
+    );
+}
+
+#[test]
 fn switch_docs_path_snippets_keep_upstream_label_binding_and_size_layout() {
     let airplane = assert_normalized_markers_present(
         "src/ui/snippets/switch/airplane_mode.rs",
@@ -9470,6 +9538,7 @@ fn typography_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/typography/h3.rs",
             "src/ui/snippets/typography/h4.rs",
             "src/ui/snippets/typography/p.rs",
+            "src/ui/snippets/typography/interactive_links.rs",
             "src/ui/snippets/typography/blockquote.rs",
             "src/ui/snippets/typography/table.rs",
             "src/ui/snippets/typography/list.rs",
@@ -9491,6 +9560,29 @@ fn typography_snippets_prefer_ui_cx_on_the_default_app_surface() {
         "src/ui/snippets/typography",
         &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
     );
+
+    assert_normalized_markers_present(
+        "src/ui/snippets/typography/demo.rs",
+        &[
+            "shadcn::raw::typography::p_rich([",
+            "shadcn::raw::typography::inline_link(\"a brilliant plan\", \"#\")",
+        ],
+    );
+    assert_normalized_markers_present(
+        "src/ui/snippets/typography/rtl.rs",
+        &[
+            "shadcn::raw::typography::p_rich([",
+            "shadcn::raw::typography::inline_link(\"خطة عبقرية\", \"#\")",
+        ],
+    );
+    assert_normalized_markers_present(
+        "src/ui/snippets/typography/interactive_links.rs",
+        &[
+            "shadcn::raw::typography::p_rich([",
+            ".on_activate_link(Arc::new({",
+            "activation.tag.clone()",
+        ],
+    );
 }
 
 #[test]
@@ -9504,6 +9596,7 @@ fn typography_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"h3\", h3)",
             "DocSection::build(cx, \"h4\", h4)",
             "DocSection::build(cx, \"p\", p)",
+            "DocSection::build(cx, \"Interactive Links\", interactive_links)",
             "DocSection::build(cx, \"blockquote\", blockquote)",
             "DocSection::build(cx, \"table\", table)",
             "DocSection::build(cx, \"list\", list)",
@@ -9521,6 +9614,7 @@ fn typography_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"h3\", h3)",
             "DocSection::new(\"h4\", h4)",
             "DocSection::new(\"p\", p)",
+            "DocSection::new(\"Interactive Links\", interactive_links)",
             "DocSection::new(\"blockquote\", blockquote)",
             "DocSection::new(\"table\", table)",
             "DocSection::new(\"list\", list)",
@@ -9530,6 +9624,27 @@ fn typography_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Small\", small)",
             "DocSection::new(\"Muted\", muted)",
             "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+
+    assert_normalized_markers_present(
+        "src/ui/pages/typography.rs",
+        &[
+            "shadcn/ui does not ship typography styles by default;",
+            "For application-wide RTL, see the upstream shadcn RTL configuration guide.",
+            "caller-owned centering, matching the upstream docs sample",
+        ],
+    );
+}
+
+#[test]
+fn typography_h1_snippet_keeps_docs_page_centering_at_the_call_site() {
+    assert_normalized_markers_present(
+        "src/ui/snippets/typography/h1.rs",
+        &[
+            "ui::v_flex(|cx| {",
+            ".items_center()",
+            ".layout(LayoutRefinement::default().w_full())",
         ],
     );
 }

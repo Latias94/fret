@@ -16,17 +16,21 @@ const CoerceString = z.union([z.string(), z.number()]).transform((v) => String(v
 const BoundsSchema = z
   .object({
     x: z.number().optional(),
+    x_px: z.number().optional(),
     y: z.number().optional(),
+    y_px: z.number().optional(),
     w: z.number().optional(),
+    w_px: z.number().optional(),
     width: z.number().optional(),
     h: z.number().optional(),
+    h_px: z.number().optional(),
     height: z.number().optional(),
   })
   .transform((b) => ({
-    x: b.x ?? 0,
-    y: b.y ?? 0,
-    w: b.w ?? b.width ?? 0,
-    h: b.h ?? b.height ?? 0,
+    x: b.x ?? b.x_px ?? 0,
+    y: b.y ?? b.y_px ?? 0,
+    w: b.w ?? b.w_px ?? b.width ?? 0,
+    h: b.h ?? b.h_px ?? b.height ?? 0,
   }))
 
 const SemanticsNodeSchema = z.object({
@@ -330,11 +334,11 @@ function normalizeSnapshot(
   // Window size
   const size =
     obj.window_bounds ?? obj.window_size_logical ?? obj.windowSizeLogical ?? obj.window_size ?? obj.size
-  if (size && typeof size === 'object') {
-    const s = size as Record<string, unknown>
+  const parsedSize = BoundsSchema.safeParse(size)
+  if (parsedSize.success) {
     snapshot.windowSizeLogical = {
-      w: typeof s.w === 'number' ? s.w : typeof s.width === 'number' ? s.width : 0,
-      h: typeof s.h === 'number' ? s.h : typeof s.height === 'number' ? s.height : 0,
+      w: parsedSize.data.w,
+      h: parsedSize.data.h,
     }
   }
 

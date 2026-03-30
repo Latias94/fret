@@ -10,12 +10,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ui::children![
                 cx;
                 shadcn::raw::icon::icon(cx, IconId::new_static("lucide.bookmark")),
-                ui::text("Bookmark")
+                ui::text("إشارة مرجعية")
             ]
         })
         .variant(shadcn::ToggleVariant::Outline)
         .size(shadcn::ToggleSize::Sm)
-        .a11y_label("Toggle bookmark rtl")
+        .a11y_label("Toggle bookmark")
         .into_element(cx)
     })
     .test_id("ui-gallery-toggle-rtl")

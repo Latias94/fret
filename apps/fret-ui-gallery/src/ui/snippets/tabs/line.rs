@@ -6,14 +6,14 @@ use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    shadcn::tabs_uncontrolled(cx, Some("preview"), |_cx| {
+    shadcn::tabs_uncontrolled(cx, Some("overview"), |_cx| {
         [
-            shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
-                .trigger_leading_icon(IconId::new_static("lucide.app-window"))
-                .trigger_test_id("ui-gallery-tabs-line-trigger-preview"),
-            shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
-                .trigger_leading_icon(IconId::new_static("lucide.code"))
-                .trigger_test_id("ui-gallery-tabs-line-trigger-code"),
+            shadcn::TabsItem::new("overview", "Overview", Vec::<AnyElement>::new())
+                .trigger_test_id("ui-gallery-tabs-line-trigger-overview"),
+            shadcn::TabsItem::new("analytics", "Analytics", Vec::<AnyElement>::new())
+                .trigger_test_id("ui-gallery-tabs-line-trigger-analytics"),
+            shadcn::TabsItem::new("reports", "Reports", Vec::<AnyElement>::new())
+                .trigger_test_id("ui-gallery-tabs-line-trigger-reports"),
         ]
     })
     .list_variant(shadcn::TabsListVariant::Line)

@@ -2,37 +2,59 @@ pub const SOURCE: &str = include_str!("size.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn text_item<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    value: &'static str,
-    label: &'static str,
-) -> shadcn::ToggleGroupItem {
-    shadcn::ToggleGroupItem::new(value, [cx.text(label)]).a11y_label(format!("Toggle {label}"))
+fn icon_item(value: &'static str, label: &'static str) -> shadcn::ToggleGroupItem {
+    shadcn::ToggleGroupItem::icon(
+        value,
+        IconId::new_static(match value {
+            "bold" => "lucide.bold",
+            "italic" => "lucide.italic",
+            _ => "lucide.underline",
+        }),
+    )
+    .a11y_label(label)
 }
 
 fn group<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     size: shadcn::ToggleSize,
 ) -> impl IntoUiElement<H> + use<H> {
-    shadcn::ToggleGroup::single_uncontrolled(Some("top"))
-        .variant(shadcn::ToggleVariant::Outline)
-        .size(size)
-        .items([
-            text_item(cx, "top", "Top"),
-            text_item(cx, "bottom", "Bottom"),
-            text_item(cx, "left", "Left"),
-            text_item(cx, "right", "Right"),
-        ])
+    let _ = cx;
+    match size {
+        shadcn::ToggleSize::Sm => {
+            shadcn::ToggleGroup::single_uncontrolled(Option::<&'static str>::None)
+                .size(shadcn::ToggleSize::Sm)
+                .items([
+                    icon_item("bold", "Toggle bold"),
+                    icon_item("italic", "Toggle italic"),
+                    icon_item("strikethrough", "Toggle strikethrough"),
+                ])
+        }
+        shadcn::ToggleSize::Lg => {
+            shadcn::ToggleGroup::multiple_uncontrolled(std::iter::empty::<&'static str>())
+                .size(shadcn::ToggleSize::Lg)
+                .items([
+                    icon_item("bold", "Toggle bold"),
+                    icon_item("italic", "Toggle italic"),
+                    icon_item("strikethrough", "Toggle strikethrough"),
+                ])
+        }
+        _ => shadcn::ToggleGroup::single_uncontrolled(Option::<&'static str>::None)
+            .size(size)
+            .items([
+                icon_item("bold", "Toggle bold"),
+                icon_item("italic", "Toggle italic"),
+                icon_item("strikethrough", "Toggle strikethrough"),
+            ]),
+    }
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let sm = group(cx, shadcn::ToggleSize::Sm).into_element(cx);
-    let default = group(cx, shadcn::ToggleSize::Default).into_element(cx);
+    let small = group(cx, shadcn::ToggleSize::Sm).into_element(cx);
+    let large = group(cx, shadcn::ToggleSize::Lg).into_element(cx);
 
-    ui::v_stack(move |_cx| vec![sm, default])
+    ui::v_stack(move |_cx| vec![small, large])
         .gap(Space::N4)
         .items_start()
         .into_element(cx)

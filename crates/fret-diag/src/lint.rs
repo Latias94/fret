@@ -53,11 +53,17 @@ impl RectF64 {
 }
 
 fn rect_from_bounds(v: &Value) -> Option<RectF64> {
+    fn component(v: &Value, logical_key: &str, physical_key: &str) -> Option<f64> {
+        v.get(logical_key)
+            .and_then(|v| v.as_f64())
+            .or_else(|| v.get(physical_key).and_then(|v| v.as_f64()))
+    }
+
     Some(RectF64 {
-        x: v.get("x")?.as_f64()?,
-        y: v.get("y")?.as_f64()?,
-        w: v.get("w")?.as_f64()?,
-        h: v.get("h")?.as_f64()?,
+        x: component(v, "x", "x_px")?,
+        y: component(v, "y", "y_px")?,
+        w: component(v, "w", "w_px").or_else(|| v.get("width").and_then(|v| v.as_f64()))?,
+        h: component(v, "h", "h_px").or_else(|| v.get("height").and_then(|v| v.as_f64()))?,
     })
 }
 
@@ -513,6 +519,91 @@ fn lint_bundle_from_json(
 mod tests {
     use super::*;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn lint_rect_from_bounds_accepts_physical_keys() {
+        let rect = rect_from_bounds(&serde_json::json!({
+            "x_px": 4.0,
+            "y_px": 5.0,
+            "w_px": 640.0,
+            "h_px": 480.0
+        }))
+        .expect("rect");
+
+        assert_eq!(rect.x, 4.0);
+        assert_eq!(rect.y, 5.0);
+        assert_eq!(rect.w, 640.0);
+        assert_eq!(rect.h, 480.0);
+    }
+
+    #[test]
+    fn lint_accepts_physical_bounds_keys_in_bundle_payloads() {
+        let bundle = serde_json::json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 10,
+                            "window_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 100.0, "h_px": 100.0 },
+                            "debug": {
+                                "semantics": {
+                                    "window": 1,
+                                    "focus": 1,
+                                    "captured": null,
+                                    "nodes": [
+                                        {
+                                            "id": 1,
+                                            "parent": null,
+                                            "role": "button",
+                                            "bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 20.0, "h_px": 20.0 },
+                                            "flags": { "focused": true },
+                                            "test_id": "dup",
+                                            "label": "One"
+                                        },
+                                        {
+                                            "id": 2,
+                                            "parent": null,
+                                            "role": "button",
+                                            "bounds": { "x_px": 24.0, "y_px": 0.0, "w_px": 20.0, "h_px": 20.0 },
+                                            "flags": { "focused": false },
+                                            "test_id": "dup",
+                                            "label": "Two"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let report = lint_bundle_from_json(
+            &bundle,
+            Path::new("bundle.json"),
+            0,
+            LintOptions {
+                all_test_ids_bounds: false,
+                eps_px: 0.5,
+            },
+        )
+        .expect("lint should succeed");
+
+        let findings = report
+            .payload
+            .get("findings")
+            .and_then(|v| v.as_array())
+            .expect("expected findings");
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.get("code").and_then(|v| v.as_str())
+                    == Some("semantics.duplicate_test_id")),
+            "expected duplicate test_id finding for physical-key bounds payload",
+        );
+    }
 
     #[test]
     fn lint_detects_duplicate_test_id_and_missing_active_descendant() {

@@ -24,7 +24,7 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`Input::new(model)` is the Fret equivalent of the upstream `<Input />`; `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `aria_required(...)`, and `password()` cover the current documented core surface.",
+        "`Input::new(model)` is the Fret equivalent of the upstream `<Input />`; `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `required(...)`, and `password()` cover the current documented core surface.",
         "`Input` root width/height defaults remain recipe-owned (`w-full min-w-0` plus the control height) because the upstream recipe defines those constraints on the component itself.",
         "Field-backed examples on this page default to `FieldLabel::for_control(...)` + `Input::control_id(...)` to mirror upstream `htmlFor` / `id`; keep `a11y_label(...)` for unlabeled controls such as `Demo`, `Usage`, and `Inline`.",
         "The dedicated `Label Association` section remains the focused regression-friendly follow-up that proves label clicks, `labelled-by`, and `described-by` survive on the gallery page.",
@@ -96,7 +96,7 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let required = DocSection::build(cx, "Required", required)
         .test_id_prefix("ui-gallery-input-required")
         .description(
-            "Use `aria_required` on the input and compose the required marker in the label.",
+            "Use `required(...)` on the input and compose the required marker in the label.",
         )
         .code_rust_from_file_region(snippets::required::SOURCE, "example");
     let badge = DocSection::build(cx, "Badge", badge)

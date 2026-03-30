@@ -16,6 +16,21 @@ fn append_diag_script_migration_trace(out_dir: &std::path::Path, line: &str) {
     }
 }
 
+fn selectable_text_interactive_span_bounds_for_semantics_node(
+    element_runtime: Option<&ElementRuntime>,
+    ui: Option<&UiTree<App>>,
+    window: AppWindowId,
+    node: NodeId,
+) -> Option<Vec<fret_ui::element::SelectableTextInteractiveSpanBounds>> {
+    let runtime = element_runtime?;
+    runtime
+        .selectable_text_interactive_span_bounds_for_node(window, node)
+        .or_else(|| {
+            let element = ui.and_then(|ui| ui.debug_node_element(node))?;
+            runtime.selectable_text_interactive_span_bounds_for_element(window, element)
+        })
+}
+
 pub(super) fn handle_click_step(
     svc: &mut UiDiagnosticsService,
     app: &App,
@@ -1563,9 +1578,12 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                 active.v2_step_state = None;
                 output.request_redraw = true;
             } else {
-                let bounds_local: Option<Rect> = match element_runtime.and_then(|rt| {
-                    rt.selectable_text_interactive_span_bounds_for_node(window, node.id)
-                }) {
+                let bounds_local: Option<Rect> = match selectable_text_interactive_span_bounds_for_semantics_node(
+                    element_runtime,
+                    ui.as_deref(),
+                    window,
+                    node.id,
+                ) {
                     None => {
                         state.last_lookup_state = Some("no_runtime_state");
                         state.remaining_frames = state.remaining_frames.saturating_sub(1);

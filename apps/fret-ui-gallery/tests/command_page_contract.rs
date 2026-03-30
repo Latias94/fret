@@ -35,6 +35,18 @@ fn command_page_records_shell_vs_cmdk_split_children_contract() {
     );
     assert!(
         source.contains(
+            "`CommandDialog::new(open, query, items)` wraps that palette with dialog lifecycle, input placeholder forwarding, the default new-york close affordance, and open-change reason hooks for global command menus."
+        ),
+        "src/ui/pages/command.rs should keep CommandDialog's default close-affordance surface explicit"
+    );
+    assert!(
+        source.contains(
+            "`CommandDialog` keeps the upstream new-york-v4 close button visible by default; opt out with `.show_close_button(false)` when a caller explicitly wants the leaner radix/base dialog surface."
+        ),
+        "src/ui/pages/command.rs should record the close-button default and explicit opt-out for CommandDialog"
+    );
+    assert!(
+        source.contains(
             "`Composable Shell (Fret)` shows the current explicit manual lane: share a query model between `CommandInput` and `CommandList` when you need a custom shell, but keep cmdk-style active-descendant, committed selection, and dialog lifecycle on `CommandPalette` / `CommandDialog`."
         ),
         "src/ui/pages/command.rs should explain the current explicit manual shell lane for Command"
@@ -51,4 +63,20 @@ fn command_page_records_shell_vs_cmdk_split_children_contract() {
         ),
         "src/ui/pages/command.rs should keep the item-level vs root-level composability distinction explicit in Notes"
     );
+}
+
+#[test]
+fn command_docs_aligned_dialog_snippets_keep_upstream_placeholder_copy() {
+    for relative in [
+        "src/ui/snippets/command/basic.rs",
+        "src/ui/snippets/command/shortcuts.rs",
+        "src/ui/snippets/command/groups.rs",
+        "src/ui/snippets/command/scrollable.rs",
+    ] {
+        let source = read(relative);
+        assert!(
+            source.contains(".placeholder(\"Type a command or search...\")"),
+            "{relative} should keep the upstream Command dialog placeholder copy for docs-aligned examples"
+        );
+    }
 }

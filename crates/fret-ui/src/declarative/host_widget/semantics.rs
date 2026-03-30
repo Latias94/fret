@@ -99,6 +99,9 @@ impl ElementHostWidget {
                 if props.read_only {
                     cx.set_read_only(true);
                 }
+                if props.required {
+                    cx.set_required(true);
+                }
                 if props.hidden {
                     cx.set_hidden(true);
                 }
@@ -268,6 +271,9 @@ impl ElementHostWidget {
                     }
                     if props.a11y.multiselectable {
                         cx.set_multiselectable(true);
+                    }
+                    if props.a11y.required {
+                        cx.set_required(true);
                     }
                     if let Some(expanded) = props.a11y.expanded {
                         cx.set_expanded(expanded);
@@ -468,6 +474,9 @@ impl ElementHostWidget {
             }
             if let Some(read_only) = decoration.read_only {
                 cx.set_read_only(read_only);
+            }
+            if let Some(required) = decoration.required {
+                cx.set_required(required);
             }
             if let Some(hidden) = decoration.hidden {
                 cx.set_hidden(hidden);

@@ -26,7 +26,7 @@ pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`InputOTP::new(model)` owns the shared OTP value model; `length(...)` mirrors upstream `maxLength`.",
         "`pattern(...)` and `InputOtpPattern::{Digits, DigitsAndChars}` cover the documented filtering lane.",
-        "`InputOTPSlot::aria_invalid(true)` mirrors the upstream slot-level invalid lane, while root `control_id(...)`, `labelled_by_element(...)`, `a11y_label(...)`, and `aria_required(...)` cover form association and accessibility.",
+        "`InputOTPSlot::aria_invalid(true)` mirrors the upstream slot-level invalid lane, while root `control_id(...)`, `labelled_by_element(...)`, `a11y_label(...)`, and `required(...)` cover form association and accessibility.",
         "`InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` already cover the docs-shaped composition bridge, so a separate generic children API is not needed here.",
     ]);
     let notes = doc_layout::notes_block([

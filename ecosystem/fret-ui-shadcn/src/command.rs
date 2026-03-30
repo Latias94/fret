@@ -195,6 +195,7 @@ fn command_text_input<H: UiHost>(
     a11y_label: Arc<str>,
     placeholder: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
+    a11y_required: bool,
     test_id: Option<Arc<str>>,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
@@ -231,6 +232,7 @@ fn command_text_input<H: UiHost>(
     let mut props = TextInputProps::new(model);
     props.a11y_label = Some(a11y_label);
     props.a11y_role = a11y_role;
+    props.a11y_required = a11y_required;
     props.test_id = test_id;
     props.placeholder = placeholder;
     props.active_descendant = active_descendant;
@@ -748,6 +750,7 @@ impl CommandInput {
                     a11y_label,
                     placeholder,
                     Some(SemanticsRole::ComboBox),
+                    false,
                     input_test_id,
                     None,
                     None,
@@ -1836,6 +1839,7 @@ pub struct CommandPalette {
     a11y_label: Arc<str>,
     placeholder: Option<Arc<str>>,
     input_role: Option<SemanticsRole>,
+    input_required: bool,
     input_expanded: Option<bool>,
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
@@ -2156,6 +2160,7 @@ impl std::fmt::Debug for CommandPalette {
             .field("empty_text", &self.empty_text.as_ref())
             .field("a11y_label", &self.a11y_label.as_ref())
             .field("input_role", &self.input_role)
+            .field("input_required", &self.input_required)
             .field("input_expanded", &self.input_expanded)
             .field("on_value_change", &self.on_value_change.is_some())
             .field("chrome", &self.chrome)
@@ -2209,6 +2214,7 @@ impl CommandPalette {
             a11y_label: Arc::from("Command input"),
             placeholder: None,
             input_role: Some(SemanticsRole::ComboBox),
+            input_required: false,
             input_expanded: None,
             input_test_id: None,
             list_test_id: None,
@@ -2382,6 +2388,11 @@ impl CommandPalette {
 
     pub fn input_role(mut self, role: SemanticsRole) -> Self {
         self.input_role = Some(role);
+        self
+    }
+
+    pub fn input_required(mut self, required: bool) -> Self {
+        self.input_required = required;
         self
     }
 
@@ -3176,6 +3187,7 @@ impl CommandPalette {
                 a11y_label,
                 self.placeholder.clone(),
                 self.input_role,
+                self.input_required,
                 effective_input_test_id.clone(),
                 active_descendant,
                 self.input_expanded,
@@ -3548,6 +3560,8 @@ pub struct CommandDialog {
     query: Model<String>,
     entries: Vec<CommandEntry>,
     a11y_label: Option<Arc<str>>,
+    placeholder: Option<Arc<str>>,
+    show_close_button: bool,
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
     list_viewport_test_id: Option<Arc<str>>,
@@ -3576,6 +3590,11 @@ impl std::fmt::Debug for CommandDialog {
             .field("query", &"<model>")
             .field("entries_len", &self.entries.len())
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field(
+                "placeholder",
+                &self.placeholder.as_ref().map(|s| s.as_ref()),
+            )
+            .field("show_close_button", &self.show_close_button)
             .field(
                 "input_test_id",
                 &self.input_test_id.as_ref().map(|s| s.as_ref()),
@@ -3633,6 +3652,8 @@ impl CommandDialog {
             query,
             entries: items.into_iter().map(CommandEntry::Item).collect(),
             a11y_label: None,
+            placeholder: None,
+            show_close_button: true,
             input_test_id: None,
             list_test_id: None,
             list_viewport_test_id: None,
@@ -3684,6 +3705,8 @@ impl CommandDialog {
             query,
             entries: command_entries_from_host_commands(cx),
             a11y_label: None,
+            placeholder: None,
+            show_close_button: true,
             input_test_id: None,
             list_test_id: None,
             list_viewport_test_id: None,
@@ -3713,6 +3736,16 @@ impl CommandDialog {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn show_close_button(mut self, show_close_button: bool) -> Self {
+        self.show_close_button = show_close_button;
         self
     }
 
@@ -3871,6 +3904,8 @@ impl CommandDialog {
         let a11y_label = self
             .a11y_label
             .unwrap_or_else(|| Arc::from("Command palette"));
+        let placeholder = self.placeholder;
+        let show_close_button = self.show_close_button;
         let input_test_id = self.input_test_id;
         let list_test_id = self.list_test_id;
         let list_viewport_test_id = self.list_viewport_test_id;
@@ -4068,6 +4103,10 @@ impl CommandDialog {
                     .empty_text(empty_text)
                     .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h));
 
+                if let Some(placeholder) = placeholder.as_ref() {
+                    palette = palette.placeholder(placeholder.clone());
+                }
+
                 if close_on_select {
                     palette = palette.pending_dispatch(pending_dispatch_cell.clone());
                 }
@@ -4105,7 +4144,7 @@ impl CommandDialog {
                 let palette = palette.into_element(cx);
 
                 DialogContent::new(vec![palette])
-                    .show_close_button(false)
+                    .show_close_button(show_close_button)
                     .refine_style(ChromeRefinement::default().p(Space::N0))
                     .a11y_label(a11y_label)
                     .into_element(cx)
@@ -4410,6 +4449,34 @@ mod tests {
         assert!(dialog.on_open_change.is_some());
         assert!(dialog.on_open_change_with_reason.is_some());
         assert!(dialog.on_open_change_complete.is_some());
+    }
+
+    #[test]
+    fn command_dialog_placeholder_builder_sets_placeholder() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let query = app.models_mut().insert(String::new());
+
+        let dialog =
+            CommandDialog::new(open, query, Vec::new()).placeholder("Type a command or search...");
+
+        assert_eq!(
+            dialog.placeholder.as_deref(),
+            Some("Type a command or search...")
+        );
+    }
+
+    #[test]
+    fn command_dialog_show_close_button_defaults_to_true_and_can_opt_out() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let query = app.models_mut().insert(String::new());
+
+        let default_dialog = CommandDialog::new(open.clone(), query.clone(), Vec::new());
+        assert!(default_dialog.show_close_button);
+
+        let opt_out_dialog = CommandDialog::new(open, query, Vec::new()).show_close_button(false);
+        assert!(!opt_out_dialog.show_close_button);
     }
 
     #[test]

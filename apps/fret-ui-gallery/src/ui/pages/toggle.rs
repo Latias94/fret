@@ -17,10 +17,12 @@ pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "`toggle_uncontrolled(cx, false, |cx| ..)` and `toggle(cx, model, |cx| ..)` are the default first-party entry points; `variant(...)`, `size(...)`, `disabled(...)`, and `a11y_label(...)` cover the documented control surface.",
+        "`toggle_uncontrolled(cx, ..)` and `toggle(cx, ..)` already provide the composable-children lane for source-shaped examples, so `Toggle::children([...])` stays the landed-content follow-up instead of widening the root API further.",
         "`Toggle::uncontrolled(...).children([...])` is the landed-element equivalent of upstream JSX child content when callers already own or want to reuse the inner content.",
         "`children([...])`, `leading_icon(...)`, and `label(...)` remain recipe-level content choices; the helper family simply keeps the common path builder-preserving.",
         "Toggle chrome, size presets, horizontal padding, and pressed-state colors remain recipe-owned because the upstream component source defines those defaults on the component itself.",
         "Surrounding toolbar layout, wrapping behavior, and label-to-control wiring remain caller-owned composition choices.",
+        "Pressed semantics, keyboard activation, and focus-visible treatment are already covered by the existing toggle semantics/chrome gates; the remaining parity work here is docs/public-surface alignment rather than a `fret-ui` mechanism gap.",
         "No extra generic `asChild` / `compose()` surface is needed here: `children([...])` already covers the composable content story without widening the primitive contract.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -73,7 +75,7 @@ pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Toggle docs path first: Demo, Usage, Outline, With Text, Size, Disabled, RTL, then keeps `Children (Fret)`, `Label Association`, and `API Reference` as focused Fret follow-ups.",
+            "Preview mirrors the shadcn Toggle docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Outline`, `With Text`, `Size`, `Disabled`, and `RTL`. `Children (Fret)`, `Label Association`, and `API Reference` stay as explicit Fret follow-ups.",
         ),
         vec![
             demo,

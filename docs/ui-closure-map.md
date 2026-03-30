@@ -227,23 +227,37 @@ Validation anchors:
 
 - `crates/fret-ui/src/scroll.rs` + `crates/fret-ui/src/virtual_list.rs` tests
 
-### 7) Text Input + IME + Geometry Queries
+### 7) Text Input + Read-only Selection + Geometry Queries
 
 **Contract**
 
 - Keyboard/IME boundary: `docs/adr/0012-keyboard-ime-and-text-input.md`
 - Text geometry queries (caret/selection/hit test): `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
 - Multiline composition: `docs/adr/0071-text-input-multiline-composition-contract.md`
+- Read-only selectable text baseline: `docs/adr/0137-readonly-text-selection-and-clipboard.md`
+- View-cache reuse must preserve interaction-visible retained text state: `docs/adr/0176-declarative-liveness-roots-and-gc-under-view-cache-reuse.md`
+  and `docs/adr/0224-view-cache-subtree-reuse-and-state-retention.md`
 
 **Code entry points**
 
 - `crates/fret-ui/src/text_input/mod.rs`
 - `crates/fret-ui/src/text_area/mod.rs`
 - `crates/fret-ui/src/text_input_style.rs`
+- `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs`
+- `crates/fret-ui/src/elements/runtime.rs`
 
 **Validation anchors**
 
 - `crates/fret-ui/src/text_input/tests.rs` and `crates/fret-ui/src/text_area/tests.rs` tests
+- `crates/fret-ui/src/elements/runtime.rs`
+  (`selectable_text_span_bounds_can_be_read_by_element`)
+- `crates/fret-ui/src/declarative/tests/view_cache.rs`
+  (`view_cache_preserves_selectable_text_interactive_span_bounds`)
+- `tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json`
+
+**Closure requirement**
+
+- Cache-hit frames must preserve `SelectableText` interactive-span geometry so gallery/docs surfaces remain activation-safe and diagnostics-explainable under `ViewCache` reuse.
 
 ### 8) A11y / Semantics (AT-Ready Infrastructure)
 

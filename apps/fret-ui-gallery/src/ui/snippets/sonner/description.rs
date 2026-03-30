@@ -3,7 +3,7 @@ pub const DOCS_SOURCE: &str = include_str!("description.docs.rs.txt");
 pub const SOURCE: &str = include_str!("description.rs");
 
 // region: example
-use super::{last_action_model, message_request};
+use super::{last_action_model, message_request, preview_controls_row, preview_frame};
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
@@ -34,10 +34,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .test_id("ui-gallery-sonner-description-show")
         .into_element(cx);
 
-    ui::h_flex(move |_cx| vec![show])
-        .gap(Space::N2)
-        .items_center()
-        .layout(LayoutRefinement::default().w_full().min_w_0())
+    preview_frame::<fret_app::App, _>(preview_controls_row::<fret_app::App>(Space::N2, vec![show]))
         .into_element(cx)
         .attach_semantics(
             SemanticsDecoration::default()

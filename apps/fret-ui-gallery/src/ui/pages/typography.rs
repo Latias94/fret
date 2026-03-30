@@ -11,6 +11,7 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let h3 = snippets::h3::render(cx);
     let h4 = snippets::h4::render(cx);
     let p = snippets::p::render(cx);
+    let interactive_links = snippets::interactive_links::render(cx);
     let blockquote = snippets::blockquote::render(cx);
     let table = snippets::table::render(cx);
     let list = snippets::list::render(cx);
@@ -24,7 +25,8 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/typography.rs` and `ecosystem/fret-ui-shadcn/src/table.rs`.",
         "Heading helpers attach `SemanticsRole::Heading` with levels 1-4; keep the document hierarchy intentional.",
-        "Typography remains a docs/helper surface. Do not widen it with a generic `children(...)` API until inline rich-text composition has a stable contract.",
+        "Typography remains a docs/helper surface. Use `p_rich(...)` with `inline_link(...)` for inline link spans instead of widening the surface to generic `children(...)`.",
+        "Use `Interactive Links` when you want a copyable app-facing example for `p_rich(...).on_activate_link(...)` without dropping to raw selectable-text hooks.",
         "Use `lead` for intros, `muted` for hints, and keep width/alignment decisions owned by the surrounding page.",
         "For long-form content, combine typography helpers with table/list blocks and validate RTL plus narrow-viewport wrapping before shipping.",
     ]);
@@ -32,10 +34,12 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-typography-notes")
         .description("API reference pointers and authoring notes.");
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("Full story sample following the upstream docs flow; the inline-link sentence stays plain text on the raw helper lane.")
+        .description("Full story sample following the upstream docs flow, including the inline-link sentence via the rich paragraph helper lane.")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let h1 = DocSection::build(cx, "h1", h1)
-        .description("Top-level heading example matching the upstream docs title.")
+        .description(
+            "Top-level heading example with caller-owned centering, matching the upstream docs sample without baking alignment into the helper.",
+        )
         .code_rust_from_file_region(snippets::h1::SOURCE, "example");
     let h2 = DocSection::build(cx, "h2", h2)
         .description("Second-level section heading.")
@@ -49,6 +53,11 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let p = DocSection::build(cx, "p", p)
         .description("Body paragraph text.")
         .code_rust_from_file_region(snippets::p::SOURCE, "example");
+    let interactive_links = DocSection::build(cx, "Interactive Links", interactive_links)
+        .description(
+            "Fret follow-up showing the copyable app-facing `p_rich(...).on_activate_link(...)` lane.",
+        )
+        .code_rust_from_file_region(snippets::interactive_links::SOURCE, "example");
     let blockquote = DocSection::build(cx, "blockquote", blockquote)
         .description("Quoted callout text.")
         .code_rust_from_file_region(snippets::blockquote::SOURCE, "example");
@@ -74,13 +83,16 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("De-emphasized hint/explanation text.")
         .code_rust_from_file_region(snippets::muted::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Direction-provider version of the full upstream typography story.")
+        .descriptions([
+            "Direction-provider version of the full upstream typography story.",
+            "For application-wide RTL, see the upstream shadcn RTL configuration guide.",
+        ])
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Typography page follows the shadcn docs order first; Notes remains the focused Fret follow-up after the upstream path.",
+            "shadcn/ui does not ship typography styles by default; this page maps the upstream docs example onto Fret's helper surface first, then appends `Interactive Links` and `Notes` as focused Fret follow-ups.",
         ),
         vec![
             demo,
@@ -98,6 +110,7 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             small,
             muted,
             rtl,
+            interactive_links,
             notes,
         ],
     );

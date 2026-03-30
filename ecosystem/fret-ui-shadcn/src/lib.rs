@@ -401,8 +401,8 @@ pub mod facade {
     pub use crate::date_range_selection_model::IntoDateRangeSelectionModel;
     pub use crate::date_vec_model::IntoDateVecModel;
     pub use crate::dialog::{
-        Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
-        DialogOverlay, DialogPart, DialogPortal, DialogTitle, DialogTrigger,
+        Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHandle,
+        DialogHeader, DialogOverlay, DialogPart, DialogPortal, DialogTitle, DialogTrigger,
     };
     pub use crate::direction::{
         DirectionProvider, LayoutDirection, use_direction, with_direction_provider,

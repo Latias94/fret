@@ -6,14 +6,14 @@ use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    shadcn::tabs_uncontrolled(cx, Some("preview"), |_cx| {
+    shadcn::tabs_uncontrolled(cx, Some("account"), |_cx| {
         [
-            shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
-                .trigger_leading_icon(IconId::new_static("lucide.app-window"))
-                .trigger_test_id("ui-gallery-tabs-vertical-trigger-preview"),
-            shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
-                .trigger_leading_icon(IconId::new_static("lucide.code"))
-                .trigger_test_id("ui-gallery-tabs-vertical-trigger-code"),
+            shadcn::TabsItem::new("account", "Account", Vec::<AnyElement>::new())
+                .trigger_test_id("ui-gallery-tabs-vertical-trigger-account"),
+            shadcn::TabsItem::new("password", "Password", Vec::<AnyElement>::new())
+                .trigger_test_id("ui-gallery-tabs-vertical-trigger-password"),
+            shadcn::TabsItem::new("notifications", "Notifications", Vec::<AnyElement>::new())
+                .trigger_test_id("ui-gallery-tabs-vertical-trigger-notifications"),
         ]
     })
     .orientation(shadcn::raw::tabs::TabsOrientation::Vertical)

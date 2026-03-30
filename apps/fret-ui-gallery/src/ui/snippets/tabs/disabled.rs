@@ -9,7 +9,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::tabs_uncontrolled(cx, Some("home"), |_cx| {
         [
             shadcn::TabsItem::new("home", "Home", Vec::<AnyElement>::new()),
-            shadcn::TabsItem::new("settings", "Settings", Vec::<AnyElement>::new()).disabled(true),
+            shadcn::TabsItem::new("settings", "Disabled", Vec::<AnyElement>::new()).disabled(true),
         ]
     })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))

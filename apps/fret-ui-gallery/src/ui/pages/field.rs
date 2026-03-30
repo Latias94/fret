@@ -44,22 +44,25 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
     let api_reference = doc_layout::notes_block([
         "`Field::new([...])` is the core wrapper for a single field; `orientation(...)` covers the documented `vertical`, `horizontal`, and `responsive` layouts.",
-        "`Field::build(...)` is the composable children lane when parts should share field-local association state without manually threading ids.",
+        "`Field::build(...)` is the focused field-local association lane when parts should share labeling/description context without manually threading ids.",
         "`field_set(...)` and `field_group(...)` are the default first-party grouped authoring entrypoints; `FieldSet` / `FieldGroup` remain the underlying typed recipe surface when direct builder access is useful.",
         "`FieldLegend` and `FieldSeparator` cover semantic grouping labels and section separation.",
         "`FieldContent`, `FieldLabel`, `FieldTitle`, `FieldDescription`, and `FieldError` cover the default typed slot path; when a richer wrapper is needed, keep using `FieldLabel::wrap(...)` and the typed `Field::build(...)` / `field_group(...)` builders instead of dropping to raw `AnyElement` seams too early.",
+        "Upstream docs/source axes: `repo-ref/ui/apps/v4/content/docs/components/base/field.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/field.mdx`, `repo-ref/ui/apps/v4/registry/bases/base/ui/field.tsx`, `repo-ref/ui/apps/v4/registry/bases/radix/ui/field.tsx`, `repo-ref/ui/apps/v4/examples/base/field-{demo,input,textarea,select,slider,fieldset,checkbox,radio,switch,choice-card,group,rtl,responsive}.tsx`, and `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-{demo,input,textarea,select,slider,fieldset,checkbox,radio,switch,choice-card,group,rtl,responsive}.tsx`.",
+        "Headless mechanism cross-check: `repo-ref/base-ui/packages/react/src/field/index.parts.ts` and `repo-ref/base-ui/packages/react/src/field/root/FieldRoot.tsx` define a dedicated field/label/control/description/error split, while `repo-ref/primitives` does not ship a standalone generic `Field` primitive.",
+        "No extra generic root `compose()` / `asChild` / `children(...)` API is needed here: `Field::new([...])`, `Field::build(...)`, and `FieldLabel::wrap(...)` already cover the upstream docs path, the Base UI-inspired headless split, and the wrapped choice-card/composable-label lane without widening the default recipe surface.",
         "Width ownership stays deliberate: `FieldDescription` keeps recipe-owned full-width wrapping, while plain `FieldLabel` / `FieldTitle` keep intrinsic-width defaults unless the surrounding `Field` orientation or call site requests full width.",
     ]);
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
-        "Field page now mirrors the upstream docs path first, then adds one explicit Fret teaching seam: Composable Children via `FieldLabel::wrap(...)`.",
+        "Field page now keeps the upstream docs path intact through `API Reference`; `Composable Children` is the one explicit Fret follow-up and stays after the docs path so the shadcn page order remains reviewable.",
         "The Select example now uses `Field::build(...)` so Fret can preserve the upstream label + control + description order without forcing explicit ids into the snippet.",
         "`Field::build(...)` now also supports `Input` / `Textarea` auto association, but this page keeps explicit-id text-field examples so the default teaching surface stays closer to the upstream docs.",
         "Choice Card keeps the recipe shorthand (`RadioGroupItemVariant::ChoiceCard`) on purpose, while the next composable-children section shows the explicit wrapper lane.",
         "The responsive section keeps one gallery-only width toggle so the docs-aligned responsive layout can be exercised across the container breakpoint.",
         "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
-        "The current audit points to docs/public-surface drift rather than a `fret-ui` mechanism bug: the upstream layout semantics are already covered by the existing field web-parity tests.",
+        "The current audit still points to docs/public-surface drift rather than a `fret-ui` mechanism bug: the upstream layout semantics are already covered by the existing field web-parity tests.",
         "`FieldTitle` and plain `FieldLabel` keep upstream-like intrinsic width defaults; full-width behavior belongs to `Field` orientation rules, `RadioGroupItemVariant::ChoiceCard`, or wrapped card-style labels via `FieldLabel::wrap(...)`.",
     ]);
     let form = DocSection::build(cx, "Form", form)
@@ -150,7 +153,7 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Field docs order first, then adds one Fret-specific authoring seam: Demo, Usage, Anatomy, Form, Input, Textarea, Select, Slider, Fieldset, Checkbox, Radio, Switch, Choice Card, Composable Children, Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
+            "Preview mirrors the upstream shadcn Field docs path first after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Anatomy`, `Form`, `Input`, `Textarea`, `Select`, `Slider`, `Fieldset`, `Checkbox`, `Radio`, `Switch`, `Choice Card`, `Field Group`, `RTL`, `Responsive Layout`, `Validation and Errors`, `Accessibility`, and `API Reference`. `Composable Children` stays as one focused Fret follow-up.",
         ),
         vec![
             demo,
@@ -166,13 +169,13 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             radio,
             switch,
             choice_card,
-            composable_label,
             field_group,
             rtl,
             responsive,
             validation_and_errors,
             accessibility,
             api_reference,
+            composable_label,
             notes,
         ],
     );

@@ -30,7 +30,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     shadcn::CommandDialog::new(open.clone(), query.clone(), Vec::new())
         .entries(entries)
+        .placeholder("Type a command or search...")
         .empty_text("No results found.")
+        .test_id_input("ui-gallery-command-basic-input")
+        .list_test_id("ui-gallery-command-basic-listbox")
+        .test_id_item_prefix("ui-gallery-command-basic-item-")
         .into_element(cx, |cx| {
             shadcn::Button::new("Open Menu")
                 .variant(shadcn::ButtonVariant::Outline)

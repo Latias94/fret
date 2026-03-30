@@ -3,7 +3,7 @@ fn normalize_ws(source: &str) -> String {
 }
 
 #[test]
-fn sonner_page_documents_docs_path_and_children_api_decision() {
+fn sonner_page_keeps_docs_path_and_scope_decisions() {
     let source = include_str!("../src/ui/pages/sonner.rs");
 
     for needle in [
@@ -13,9 +13,9 @@ fn sonner_page_documents_docs_path_and_children_api_decision() {
         "repo-ref/ui/apps/v4/registry/new-york-v4/examples/sonner-types.tsx",
         "repo-ref/primitives/packages/react/toast/src/toast.tsx",
         "repo-ref/base-ui/packages/react/src/toast/",
-        "A generic composable `children([...])` API is not warranted on the shadcn Sonner surface today",
-        "This pass did not identify a missing `fret-ui` mechanism bug",
-        "The code tabs now point at standalone docs sources instead of page-local gallery helpers",
+        "Docs path stays `Demo`, `About`, `Usage`, `Examples`, `Types`, `Description`, `Position`, and `API Reference`",
+        "generic composable `children([...])` API is not warranted here",
+        "this pass did not identify a missing `fret-ui` mechanism bug",
         "DocSection::build(cx, \"About\", about)",
         "DocSection::build(cx, \"Examples\", examples)",
         "DocSection::build(cx, \"API Reference\", api_reference)",
@@ -23,7 +23,7 @@ fn sonner_page_documents_docs_path_and_children_api_decision() {
     ] {
         assert!(
             source.contains(needle),
-            "sonner page should document the docs-path source axes and children-api decision; missing `{needle}`"
+            "sonner page should keep the docs-path source axes and scope decisions stable; missing `{needle}`"
         );
     }
 

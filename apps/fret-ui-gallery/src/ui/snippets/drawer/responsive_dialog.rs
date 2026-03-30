@@ -128,33 +128,38 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .into_element(cx);
 
-                shadcn::DrawerContent::new([]).with_children(cx, |cx| {
-                    vec![
-                        shadcn::DrawerHeader::new([])
-                            .text_align(TextAlign::Start)
-                            .with_children(cx, |cx| {
-                                vec![
-                                    shadcn::DrawerTitle::new("Edit profile").into_element(cx),
-                                    shadcn::DrawerDescription::new(
-                                        "Make changes to your profile here. Click save when you're done.",
-                                    )
-                                    .into_element(cx),
-                                ]
-                            }),
-                        form,
-                        shadcn::DrawerFooter::new([])
-                            .refine_style(ChromeRefinement::default().pt(Space::N2))
-                            .with_children(cx, |cx| {
-                                vec![shadcn::DrawerClose::from_scope().build(
-                                    cx,
-                                    shadcn::Button::new("Cancel")
-                                        .variant(shadcn::ButtonVariant::Outline)
-                                        .test_id("ui-gallery-drawer-responsive-mobile-cancel"),
-                                )]
-                            }),
-                    ]
-                })
-                .test_id("ui-gallery-drawer-responsive-mobile-content")
+                shadcn::DrawerContent::new([])
+                    .children(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::DrawerHeader::new([])
+                                .text_align(TextAlign::Start)
+                                .children(|cx| {
+                                    ui::children![
+                                        cx;
+                                        shadcn::DrawerTitle::new("Edit profile"),
+                                        shadcn::DrawerDescription::new(
+                                            "Make changes to your profile here. Click save when you're done.",
+                                        )
+                                    ]
+                                }),
+                            form,
+                            shadcn::DrawerFooter::new([])
+                                .refine_style(ChromeRefinement::default().pt(Space::N2))
+                                .children(|cx| {
+                                    ui::children![
+                                        cx;
+                                        shadcn::DrawerClose::from_scope().child(
+                                            shadcn::Button::new("Cancel")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .test_id("ui-gallery-drawer-responsive-mobile-cancel"),
+                                        )
+                                    ]
+                                })
+                        ]
+                    })
+                    .test_id("ui-gallery-drawer-responsive-mobile-content")
+                    .into_element(cx)
             }),
         ])
         .into_element(cx);

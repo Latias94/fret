@@ -6,7 +6,7 @@ use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    shadcn::Slider::new_controllable(cx, None, || vec![50.0])
+    shadcn::Slider::new_controllable(cx, None, || vec![75.0])
         .range(0.0, 100.0)
         .step(1.0)
         .a11y_label("Slider")

@@ -17,6 +17,14 @@ used as an extra reference for compound-parts ownership.
 - Docs pages:
   - `repo-ref/ui/apps/v4/content/docs/components/radix/slider.mdx`
   - `repo-ref/ui/apps/v4/content/docs/components/base/slider.mdx`
+- Docs example files:
+  - `repo-ref/ui/apps/v4/examples/radix/slider-demo.tsx`
+  - `repo-ref/ui/apps/v4/examples/radix/slider-range.tsx`
+  - `repo-ref/ui/apps/v4/examples/radix/slider-multiple.tsx`
+  - `repo-ref/ui/apps/v4/examples/radix/slider-vertical.tsx`
+  - `repo-ref/ui/apps/v4/examples/radix/slider-controlled.tsx`
+  - `repo-ref/ui/apps/v4/examples/radix/slider-disabled.tsx`
+  - `repo-ref/ui/apps/v4/examples/radix/slider-rtl.tsx`
 - Registry implementations:
   - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/slider.tsx`
   - `repo-ref/ui/apps/v4/registry/bases/radix/ui/slider.tsx`
@@ -49,6 +57,9 @@ used as an extra reference for compound-parts ownership.
 
 - Pass: Track height defaults to `h-1.5` (6px) via `component.slider.track_height`.
 - Pass: Thumb defaults to `size-4` (16px) via `component.slider.thumb_size`.
+- Pass: Vertical roots now keep the upstream `min-h-44` floor via `component.slider.vertical_min_height`, while caller-provided heights still merge as authored and only clamp upward when they fall below that floor.
+- Pass: The upstream vertical source axes are intentionally split: the docs/example lane still shows caller-owned `h-40` (`repo-ref/ui/apps/v4/examples/radix/slider-vertical.tsx`, `repo-ref/ui/apps/v4/styles/radix-nova/ui/slider.tsx`), while the default new-york-v4 recipe keeps `min-h-44` in the component source.
+- Pass: A page-level gallery geometry gate now reads layout bounds for the two vertical docs examples and asserts both roots clamp to the same `176px` minimum without conflating thumb visual overflow with root layout height.
 - Pass: Layout height follows the track; the thumb is allowed to overflow without being clipped
   (overflow-visible semantics), matching the DOM implementation.
 - Pass: Thumb stays visually in-bounds at the edges (Radix `getThumbInBoundsOffset` outcome), so the
@@ -63,6 +74,7 @@ used as an extra reference for compound-parts ownership.
 ### Gallery / docs parity
 
 - Pass: The UI Gallery page now mirrors the upstream docs path first: `Demo`, `Usage`, `Range`, `Multiple Thumbs`, `Vertical`, `Controlled`, `Disabled`, `RTL`, and `API Reference`.
+- Pass: `Demo` now mirrors the upstream docs preview lane (`[75]`), while `Usage` keeps the docs code-block lane (`[33]`) instead of flattening both sections to one shared default value.
 - Pass: The docs-path snippets now mirror the upstream example shapes more closely: `Range` uses `[25, 50]` with `step(5)`, `Multiple Thumbs` uses `[10, 20, 70]` with `step(10)`, `Vertical` shows the two-slider `h-40` layout, and `Controlled` keeps the upstream label/readout association via `ControlId` + `Label::for_control(...)`.
 - Pass: `Label Association`, `Extras`, and `Notes` stay after the docs path because they are Fret-specific follow-ups rather than upstream shadcn sections.
 - Pass: Stable `ui-gallery-slider-*` root/test-id anchors are restored so the existing diag scripts target the real preview controls again.
@@ -72,7 +84,10 @@ used as an extra reference for compound-parts ownership.
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib slider`
+- `cargo test -p fret-ui-shadcn --lib slider_vertical_layout_uses_upstream_floor_as_minimum_not_fixed_height`
 - `cargo check -p fret-ui-gallery --message-format short`
+- `cargo nextest run -p fret-ui-gallery --lib gallery_slider_vertical_examples_keep_upstream_recipe_min_height_floor`
+- `cargo nextest run -p fret-ui-gallery --test slider_docs_surface`
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_slider_demo_geometry`).
 - Web layout gate (thumb insets): `cargo nextest run -p fret-ui-shadcn -E "test(web_vs_fret_layout_field_slider_thumb_insets_match_web)"`
@@ -85,6 +100,7 @@ used as an extra reference for compound-parts ownership.
 
 ## Follow-ups (recommended)
 
+- Upstream limitation: `repo-ref/ui/apps/v4/app/(view)/view/[style]/[name]/page.tsx` only statically enumerates `sidebar-*` examples for `base-*` / `radix-*` styles, so `slider-vertical` is not currently extractable as a shadcn web golden. Keep the vertical split covered by source-axis tests plus the local layout/unit gates until upstream exports that route.
 - If a Base UI-style compound slider API becomes necessary, land it as a headless/ui-kit surface first instead of widening the shadcn recipe lane.
 - Add a Radix-web gate for keyboard step behavior (e.g. ArrowRight) once we have a stable event
   harness for non-overlay primitives.

@@ -67,8 +67,9 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: `DrawerClose` is available and delegates to `DialogClose` (modal-overlay backed close).
 - Pass: `DrawerClose::from_scope()` is available as recipe-layer sugar for content-local close
   buttons while preserving `DrawerClose::new(open)` as the explicit constructor.
-- Pass: `DrawerClose::from_scope().build(cx, child)` supports composable child-close authoring,
-  which is the Fret-side approximation of upstream `DrawerClose asChild`.
+- Pass: `DrawerClose::from_scope().child(child)` supports composable child-close authoring, while
+  `build(cx, child)` remains the immediate-landing escape hatch. This is the Fret-side
+  approximation of upstream `DrawerClose asChild`.
 - Pass: `Drawer::children([DrawerPart::trigger(...), DrawerPart::content(...)])` is available as
   the closest recipe-level equivalent to upstream nested children composition while still lowering
   into the existing trigger/content slots.
@@ -79,15 +80,16 @@ Upstream exports a thin wrapper around `vaul`:
   while managed-open ownership remains explicit on `Drawer::new(open)` / `new_controllable(...)`.
 - Pass: `DrawerContent` / `DrawerHeader` / `DrawerFooter` provide Drawer-specific layout while
   reusing shared dialog substrate building blocks (`Title` / `Description`).
-- Pass: `DrawerContent::new([]).with_children(cx, ...)` plus
-  `DrawerHeader::new([]).with_children(cx, ...)` / `DrawerFooter::new([]).with_children(cx, ...)`
-  now cover the default nested content side of the copyable recipe lane, so first-party snippets
-  can stay closer to the upstream nested mental model without dropping into sink mutation.
+- Pass: `DrawerContent::new([]).children(|cx| ...)` plus
+  `DrawerHeader::new([]).children(|cx| ...)` / `DrawerFooter::new([]).children(|cx| ...)`
+  now cover the default nested content side of the copyable recipe lane, while `children_raw(...)`
+  remains the explicit pre-landed seam. This lets first-party snippets stay closer to the upstream
+  nested mental model without dropping into sink mutation.
 - Pass: `DrawerContent::build(...)` remains available as the typed builder-first companion when
   a snippet genuinely wants `push_ui(...)` assembly.
 - Note: Root authoring still lowers through recipe-layer deferred parts rather than true JSX-style
   nesting, but the default curated surface now matches the upstream mental model more closely via
-  `children([...])`.
+  `children([...])` at the root plus `children(|cx| ...)` on content sections.
 
 ### Placement & sizing
 
@@ -155,6 +157,8 @@ Upstream exports a thin wrapper around `vaul`:
 - `cargo nextest run -p fret-ui-shadcn drawer::tests`
 - `cargo test -p fret-ui-shadcn --lib drawer::tests::drawer_content_build_accepts_builder_first_sections -- --exact`
 - `cargo test -p fret-ui-shadcn --lib drawer::tests::drawer_content_with_children_accepts_composable_sections_surface -- --exact`
+- `cargo test -p fret-ui-shadcn --lib drawer::tests::drawer_content_children_builder_accepts_composable_sections_surface -- --exact`
+- `cargo test -p fret-ui-shadcn --lib drawer::tests::drawer_close_child_builder_accepts_late_landed_child -- --exact`
 - `cargo nextest run -p fret-ui-shadcn drawer_open_change_handlers_forward_to_sheet`
 - `cargo nextest run -p fret-ui-shadcn drawer_snap_point_model_initializes_to_controlled_index_on_open drawer_snap_points_settle_to_nearest_point_on_release drawer_close_resets_snap_point_model_to_default_index drawer_snap_to_sequential_points_advances_one_step_per_drag`
 - `cargo nextest run -p fret-ui-shadcn drawer_nested_open_blocks_parent_drag_start drawer_nested_open_updates_parent_frontmost_height drawer_nested_close_restores_parent_drag_start`
@@ -169,8 +173,8 @@ equivalent to upstream nested parts without widening the mechanism contract.
 - Default teaching path: first-party examples now prefer
   `Drawer::new_controllable(cx, None, false).children([DrawerPart::trigger(...), DrawerPart::content_with(...)])`.
 - Default nested content path: first-party examples now prefer
-  `DrawerContent::new([]).with_children(cx, ...)` plus
-  `DrawerHeader::new([]).with_children(cx, ...)` / `DrawerFooter::new([]).with_children(cx, ...)`.
+  `DrawerContent::new([]).children(|cx| ...)` plus
+  `DrawerHeader::new([]).children(|cx| ...)` / `DrawerFooter::new([]).children(|cx| ...)`.
 - `Drawer::compose()` remains the builder-first alternative when explicit trigger/content chaining
   reads better at the call site.
 - `DrawerContent::build(...)` remains the builder-first content companion when callers already have

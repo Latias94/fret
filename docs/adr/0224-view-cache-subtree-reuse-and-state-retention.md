@@ -27,7 +27,7 @@ the declarative runtime may reuse the previously-mounted subtree and skip re-run
 To preserve correctness and developer experience:
 
 1. Cache-hit decisions are based on `UiTree` invalidation state of the existing cache-root `NodeId`.
-2. Cache hits must keep per-element state alive by touching the recorded state keys for the cache root.
+2. Cache hits must keep per-element state alive by touching the recorded state keys for the cache root, including interaction-critical retained state such as `SelectableTextState`.
 3. Mount must reuse the existing retained subtree and re-collect per-frame scroll handle bindings for the reused subtree.
 4. Cache hits must keep dependency tracking alive by inheriting previously recorded per-element model/global observations for the reused subtree.
 
@@ -50,6 +50,7 @@ To preserve correctness and developer experience:
 - on cache hit:
   - records the root in `WindowElementState.view_cache_reuse_roots`,
   - touches the previously-recorded `(GlobalElementId, TypeId)` state keys for that root,
+  - preserves interaction-visible retained state for reused subtrees (for example `SelectableTextState` used to expose interactive inline-span bounds),
   - returns a `ViewCache` element with an empty `children` list (mount will reuse the existing subtree).
 - on cache miss:
   - executes the child render closure,
@@ -85,6 +86,7 @@ This enables mount-time reuse to consult instance metadata (e.g. scroll handle b
   - keeping the mounted subtree stable,
   - keeping state alive via recorded state keys,
   - scroll-handle binding continuity.
+- Interactive read-only text surfaces must remain activation-safe and diagnostics-explainable on cache-hit frames; view-cache reuse must not drop inline-span geometry merely because declarative execution was skipped.
   Additional per-frame registries may need similar treatment as they are introduced.
 
 ## Implementation Notes
@@ -94,7 +96,17 @@ Evidence anchors:
 - Cache-hit predicate: `crates/fret-ui/src/tree/mod.rs` (`UiTree::should_reuse_view_cache_node`)
 - Render-time reuse + state touch: `crates/fret-ui/src/elements/cx.rs` (`ElementContext::view_cache`)
 - State key tracking + touch helpers: `crates/fret-ui/src/elements/runtime.rs` (`WindowElementState::*view_cache*`)
+- `SelectableText` interactive-span bounds access under reuse: `crates/fret-ui/src/elements/runtime.rs`
+  (`WindowElementState::selectable_text_interactive_span_bounds_for_element`)
 - Mount-time subtree reuse: `crates/fret-ui/src/declarative/mount.rs` (`mount_element`, subtree helpers)
 - Conformance test: `crates/fret-ui/src/declarative/tests/view_cache.rs`
   - Notes: cache-hit frames are asserted to preserve painted scene ops, semantics output, and hit targets.
   - Notes: includes modal overlay (barrier root) input-gating outcomes under view-cache reuse.
+- Focused retention regressions:
+  - `crates/fret-ui/src/elements/runtime.rs` (`selectable_text_span_bounds_can_be_read_by_element`)
+  - `crates/fret-ui/src/declarative/tests/view_cache.rs`
+    (`view_cache_preserves_selectable_text_interactive_span_bounds`)
+- Diagnostics/script evidence:
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
+    (`click_selectable_text_span_stable`)
+  - `tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json`

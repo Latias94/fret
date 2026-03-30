@@ -29,6 +29,7 @@ pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "No `fret-ui` runtime change was needed for Tabs semantics/layout; the only mechanism-adjacent parity fix stayed in `fret-ui-shadcn` and makes Base UI-style `activation_direction` metadata follow physical movement, so the physical Right Arrow in RTL maps to the logical previous tab instead of the logical next tab.",
         "The docs surface keeps the upstream width split explicit: `Demo` mirrors the `w-full max-w-sm` shell, while `Usage` keeps the `w-[400px]` call-site width from the docs block.",
+        "`Line`, `Vertical`, and `Disabled` now keep the same text/value shape as the upstream docs examples, while `Icons` demonstrates icon + label trigger composition through `TabsItem::trigger_children(...)` without leaving the default builder lane.",
         "Password fields use `Input::password()` to mirror `type=\"password\"` in shadcn/ui examples.",
         "The `RTL` section now uses a fuller upstream-style four-tab card example instead of a gallery-only two-tab keynav gate, making the mirrored content shell easier to compare against the shadcn docs surface.",
         "List-only, vertical-line, and flex-1 examples stay after the docs path because they are regression/follow-up surfaces rather than upstream section headings.",
@@ -61,7 +62,7 @@ pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-tabs-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let icons = DocSection::build(cx, "Icons", icons)
-        .description("Compose icons into triggers.")
+        .description("Compose icon + label trigger children while staying on the builder lane.")
         .test_id_prefix("ui-gallery-tabs-icons")
         .code_rust_from_file_region(snippets::icons::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)

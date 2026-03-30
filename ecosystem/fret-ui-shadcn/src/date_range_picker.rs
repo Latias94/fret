@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_runtime::Model;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon;
@@ -31,6 +31,7 @@ pub struct DateRangePicker {
     test_id_prefix: Option<Arc<str>>,
     pub placeholder: Arc<str>,
     pub week_start: Weekday,
+    required: bool,
     pub show_outside_days: bool,
     pub disable_outside_days: bool,
     pub disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
@@ -50,6 +51,7 @@ impl std::fmt::Debug for DateRangePicker {
             .field("test_id_prefix", &self.test_id_prefix.as_deref())
             .field("placeholder", &self.placeholder)
             .field("week_start", &self.week_start)
+            .field("required", &self.required)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
             .field("disabled_predicate", &self.disabled_predicate.is_some())
@@ -73,6 +75,7 @@ impl DateRangePicker {
             test_id_prefix: None,
             placeholder: Arc::from("Pick a date"),
             week_start: Weekday::Sunday,
+            required: false,
             show_outside_days: true,
             disable_outside_days: false,
             disabled_predicate: None,
@@ -118,6 +121,11 @@ impl DateRangePicker {
 
     pub fn format_selected_iso(mut self) -> Self {
         self.format_selected = Arc::new(format_selected_iso);
+        self
+    }
+
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
         self
     }
 
@@ -175,6 +183,7 @@ impl DateRangePicker {
             let disabled_predicate = self.disabled_predicate.clone();
             let open_trigger = open.clone();
             let close_on_select_open = self.close_on_select.then(|| open.clone());
+            let required = self.required;
             let initial_focus_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
             let trigger_chrome = self.chrome.clone();
@@ -267,11 +276,17 @@ impl DateRangePicker {
                             button = button.test_id(test_id);
                         }
 
-                        button.into_element(cx)
+                        let mut trigger = button.into_element(cx);
+                        if required {
+                            trigger = trigger
+                                .attach_semantics(SemanticsDecoration::default().required(true));
+                        }
+                        trigger
                     },
                     move |cx| {
                         let mut calendar = CalendarRange::new(month.clone(), selected.clone())
                             .week_start(self.week_start)
+                            .required(required)
                             .show_outside_days(self.show_outside_days)
                             .disable_outside_days(self.disable_outside_days)
                             // Upstream `date-picker-with-range` renders two months in the popover.
@@ -639,5 +654,62 @@ mod tests {
                 .copied()
                 .any(|id| id == "date-range-calendar:2026-03-01")
         );
+    }
+
+    #[test]
+    fn date_range_picker_required_exposes_required_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(480.0), Px(240.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(DateRangeSelection::default());
+
+        app.set_frame_id(FrameId(1));
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        OverlayController::begin_frame(&mut app, window);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "date-range-picker-required-semantics",
+            |cx| {
+                vec![
+                    DateRangePicker::new(open.clone(), month.clone(), selected.clone())
+                        .required(true)
+                        .test_id_prefix("required-date-range-picker")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("required-date-range-picker-trigger"))
+            .expect("date range picker trigger semantics");
+        assert!(node.flags.required);
     }
 }

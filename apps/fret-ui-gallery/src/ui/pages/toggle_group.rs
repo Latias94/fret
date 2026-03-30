@@ -23,16 +23,22 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let stretch = snippets::flex_1_items::render(cx);
 
     let api_reference = doc_layout::notes_block([
+        "Source axes for this page: `repo-ref/ui/apps/v4/content/docs/components/radix/toggle-group.mdx`, `repo-ref/ui/apps/v4/content/docs/components/base/toggle-group.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/toggle-group.tsx`, `repo-ref/primitives/packages/react/toggle-group/src/toggle-group.tsx`, and `repo-ref/base-ui/packages/react/src/toggle-group/ToggleGroup.tsx`.",
+        "The upstream docs-path examples come from `repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-group-demo.tsx`, `toggle-group-outline.tsx`, `toggle-group-sm.tsx`, `toggle-group-lg.tsx`, `toggle-group-spacing.tsx`, plus `repo-ref/ui/apps/v4/examples/radix/toggle-group-vertical.tsx`, `toggle-group-font-weight-selector.tsx`, and `toggle-group-rtl.tsx`.",
+        "`fret_ui_kit::primitives::toggle_group` already covers the mechanism lane (single/multiple state, roving focus, and control-id focus forwarding), so the remaining parity work here is docs/recipe alignment rather than a `fret-ui` contract gap.",
         "`ToggleGroup::single(...)`, `ToggleGroup::multiple(...)`, and their uncontrolled constructors plus `.items([...])` cover the documented docs-path root surface.",
         "`toggle_group_single(...)`, `toggle_group_single_uncontrolled(...)`, `toggle_group_multiple(...)`, and `toggle_group_multiple_uncontrolled(...)` are the builder-preserving composable-children lane when callers want to assemble items inside a closure without landing early.",
         "`ToggleGroupItem::new(..., children)`, `child(...)`, and `children(...)` remain the source-aligned item-content surface for text, icon, and mixed content.",
         "`ToggleGroupItem::refine_layout(...)` and `refine_style(...)` now cover upstream custom item-root sizing and rounding without moving caller-owned recipe tweaks into the default component chrome.",
         "Selection semantics, roving focus, segmented borders, and pressed-state chrome remain recipe-owned; item-root custom layout and surrounding width/flex negotiation remain caller-owned.",
         "No extra root `children([...])` or generic `compose()` API is warranted on the default lane because the helper family already covers composable item assembly without widening the recipe contract.",
-        "`Children (Fret)`, `Single`, `Small`, `Large`, `Label Association`, `Full Width Items`, and `Flex-1 Items` stay after the upstream docs path as focused Fret follow-ups and regression slices.",
+        "`Children (Fret)`, `Single (Fret)`, `Small (Fret)`, `Large (Fret)`, `Label Association (Fret)`, `Full Width Items (Fret)`, and `Flex-1 Items (Fret)` stay after the upstream docs path as focused Fret follow-ups and regression slices.",
     ]);
     let notes = doc_layout::notes_block([
-        "This page now keeps the upstream base Toggle Group docs path source-aligned on content, default values, and section order before adding focused Fret follow-ups.",
+        "This page now keeps the upstream shadcn/Base Toggle Group docs path source-aligned on content, default values, and section order before adding focused Fret follow-ups.",
+        "Preview now mirrors the upstream Toggle Group docs path first: `Demo`, `Usage`, `Outline`, `Size`, `Spacing`, `Vertical`, `Disabled`, `Custom`, `RTL`, and `API Reference`.",
+        "Focused Fret follow-ups stay afterward: `Children (Fret)`, `Single (Fret)`, `Small (Fret)`, `Large (Fret)`, `Label Association (Fret)`, `Full Width Items (Fret)`, `Flex-1 Items (Fret)`, and `Notes`.",
+        "The `Size` lane now follows the upstream `toggle-group-sm` + `toggle-group-lg` examples, and `Spacing` keeps the upstream icon-plus-label composition instead of a text-only substitute.",
         "Prefer the documented root constructors plus `.items([...])` for copyable docs-path snippets; reach for the `toggle_group_*` helper family when you want builder-preserving item composition inside a closure.",
         "Item-root refinements belong on the item call site instead of the default group chrome.",
         "The main parity risks here are roving focus, segmented borders, RTL order, and stretch/fill ownership, so stable `ui-gallery-toggle-group-*` ids remain part of the automation contract.",
@@ -59,11 +65,13 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-toggle-group-outline")
         .code_rust_from_file_region(snippets::outline::SOURCE, "example");
     let size = DocSection::build(cx, "Size", size)
-        .description("Small and default outline groups matching the upstream size example.")
+        .description("Small and large icon-only groups matching the upstream size examples.")
         .test_id_prefix("ui-gallery-toggle-group-size")
         .code_rust_from_file_region(snippets::size::SOURCE, "example");
     let spacing = DocSection::build(cx, "Spacing", spacing)
-        .description("Spacing between outline items matching the upstream docs example.")
+        .description(
+            "Outline spacing with icon-plus-label items matching the upstream docs example.",
+        )
         .test_id_prefix("ui-gallery-toggle-group-spacing")
         .code_rust_from_file_region(snippets::spacing::SOURCE, "example");
     let vertical = DocSection::build(cx, "Vertical", vertical)
@@ -79,7 +87,7 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-toggle-group-custom")
         .code_rust_from_file_region(snippets::custom::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Item ordering and pressed visuals under RTL.")
+        .description("Translated labels and item ordering under RTL.")
         .test_id_prefix("ui-gallery-toggle-group-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let children = DocSection::build(cx, "Children (Fret)", children)

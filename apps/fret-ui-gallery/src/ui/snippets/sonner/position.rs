@@ -3,11 +3,12 @@ pub const DOCS_SOURCE: &str = include_str!("position.docs.rs.txt");
 pub const SOURCE: &str = include_str!("position.rs");
 
 // region: example
-use super::{last_action_model, position_model, request};
+use super::{
+    last_action_model, position_model, preview_controls_row, preview_note, preview_stack, request,
+};
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -20,18 +21,6 @@ fn toast_position_key(position: shadcn::ToastPosition) -> &'static str {
         shadcn::ToastPosition::BottomCenter => "bottom-center",
         shadcn::ToastPosition::BottomRight => "bottom-right",
     }
-}
-
-fn wrap_controls_row<H: UiHost>(
-    gap: Space,
-    children: Vec<AnyElement>,
-) -> impl IntoUiElement<H> + use<H> {
-    ui::h_flex(move |_cx| children)
-        .gap(gap)
-        .items_center()
-        .justify_center()
-        .wrap()
-        .layout(LayoutRefinement::default().w_full())
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -92,7 +81,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::ToastPosition::TopRight,
         ),
     ];
-    let top_row = wrap_controls_row::<fret_app::App>(Space::N2, top_children).into_element(cx);
+    let top_row = preview_controls_row::<fret_app::App>(Space::N2, top_children).into_element(cx);
 
     let bottom_children = vec![
         action_button(
@@ -115,22 +104,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ),
     ];
     let bottom_row =
-        wrap_controls_row::<fret_app::App>(Space::N2, bottom_children).into_element(cx);
+        preview_controls_row::<fret_app::App>(Space::N2, bottom_children).into_element(cx);
 
-    ui::v_flex(move |cx| {
+    preview_stack::<fret_app::App>(
+        Space::N3,
         vec![
             top_row,
             bottom_row,
-            shadcn::raw::typography::muted(format!(
-                "Current toaster position: {}",
-                toast_position_key(current)
-            ))
-            .into_element(cx),
-        ]
-    })
-    .gap(Space::N2)
-    .items_start()
-    .layout(LayoutRefinement::default().w_full().min_w_0())
+            preview_note(
+                cx,
+                format!("Current toaster position: {}", toast_position_key(current)),
+            ),
+        ],
+    )
     .into_element(cx)
     .attach_semantics(
         SemanticsDecoration::default()

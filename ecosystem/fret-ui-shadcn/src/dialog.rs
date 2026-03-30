@@ -6,6 +6,7 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::{Model, ModelId};
+use fret_ui::GlobalElementId;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
@@ -163,6 +164,8 @@ impl DialogOverlay {
 #[derive(Debug)]
 pub struct DialogTrigger {
     child: AnyElement,
+    handle: Option<DialogHandle>,
+    open_model: Option<Model<bool>>,
 }
 
 pub struct DialogTriggerBuild<H, T> {
@@ -172,7 +175,21 @@ pub struct DialogTriggerBuild<H, T> {
 
 impl DialogTrigger {
     pub fn new(child: AnyElement) -> Self {
-        Self { child }
+        Self {
+            child,
+            handle: None,
+            open_model: None,
+        }
+    }
+
+    pub fn handle(mut self, handle: DialogHandle) -> Self {
+        self.handle = Some(handle);
+        self
+    }
+
+    fn with_open_model(mut self, open_model: Model<bool>) -> Self {
+        self.open_model = Some(open_model);
+        self
     }
 
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
@@ -187,8 +204,53 @@ impl DialogTrigger {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.child
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut child = self.child;
+        let child_id = child.id;
+
+        if let Some(handle) = self.handle {
+            let open = cx
+                .watch_model(&handle.open)
+                .paint()
+                .copied()
+                .unwrap_or(false);
+            let content_element = cx
+                .watch_model(&handle.content_element)
+                .paint()
+                .copied()
+                .unwrap_or(None);
+            let open_model = handle.open.clone();
+            let active_trigger = handle.active_trigger.clone();
+            cx.pressable_add_on_activate_for(
+                child_id,
+                Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiActionHost,
+                          acx: fret_ui::action::ActionCx,
+                          _reason: fret_ui::action::ActivateReason| {
+                        let _ = host.models_mut().update(&open_model, |value| *value = true);
+                        let _ = host
+                            .models_mut()
+                            .update(&active_trigger, |value| *value = Some(child_id));
+                        host.request_redraw(acx.window);
+                    },
+                ),
+            );
+            child = radix_dialog::apply_dialog_trigger_a11y(child, open, content_element);
+        } else if let Some(open_model) = self.open_model {
+            cx.pressable_add_on_activate_for(
+                child_id,
+                Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiActionHost,
+                          acx: fret_ui::action::ActionCx,
+                          _reason: fret_ui::action::ActivateReason| {
+                        let _ = host.models_mut().update(&open_model, |value| *value = true);
+                        host.request_redraw(acx.window);
+                    },
+                ),
+            );
+        }
+
+        child
     }
 }
 
@@ -264,6 +326,53 @@ impl Default for DialogGlassBackdropRefinement {
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
+#[derive(Clone)]
+pub struct DialogHandle {
+    open: Model<bool>,
+    active_trigger: Model<Option<GlobalElementId>>,
+    content_element: Model<Option<GlobalElementId>>,
+}
+
+impl std::fmt::Debug for DialogHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DialogHandle")
+            .field("open", &"<model>")
+            .field("active_trigger", &"<model>")
+            .field("content_element", &"<model>")
+            .finish()
+    }
+}
+
+impl DialogHandle {
+    pub fn new<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>) -> Self {
+        Self::new_controllable(cx, Some(open), false)
+    }
+
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        let open = radix_dialog::DialogRoot::new()
+            .open(open)
+            .default_open(default_open)
+            .open_model(cx);
+
+        let active_trigger = cx.local_model_keyed("active_trigger", || None::<GlobalElementId>);
+        let content_element = cx.local_model_keyed("content_element", || None::<GlobalElementId>);
+
+        Self {
+            open,
+            active_trigger,
+            content_element,
+        }
+    }
+
+    pub fn open_model(&self) -> Model<bool> {
+        self.open.clone()
+    }
+}
+
 #[derive(Default)]
 struct DialogOpenChangeCallbackState {
     initialized: bool,
@@ -309,6 +418,7 @@ fn dialog_open_change_events(
 #[derive(Clone)]
 pub struct Dialog {
     open: Model<bool>,
+    handle: Option<DialogHandle>,
     overlay_closable: bool,
     overlay_color: Option<Color>,
     overlay_backdrop: DialogOverlayBackdrop,
@@ -324,6 +434,7 @@ impl std::fmt::Debug for Dialog {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Dialog")
             .field("open", &"<model>")
+            .field("handle", &self.handle.is_some())
             .field("overlay_closable", &self.overlay_closable)
             .field("overlay_color", &self.overlay_color)
             .field("overlay_backdrop", &self.overlay_backdrop)
@@ -345,6 +456,7 @@ impl Dialog {
         let open = open.into_bool_model();
         Self {
             open,
+            handle: None,
             overlay_closable: true,
             overlay_color: None,
             overlay_backdrop: DialogOverlayBackdrop::Solid,
@@ -371,6 +483,22 @@ impl Dialog {
             .default_open(default_open)
             .open_model(cx);
         Self::new(open)
+    }
+
+    pub fn from_handle(handle: DialogHandle) -> Self {
+        Self {
+            open: handle.open_model(),
+            handle: Some(handle),
+            overlay_closable: true,
+            overlay_color: None,
+            overlay_backdrop: DialogOverlayBackdrop::Solid,
+            window_padding: Space::N4,
+            on_dismiss_request: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_open_change: None,
+            on_open_change_complete: None,
+        }
     }
 
     pub fn overlay_closable(mut self, overlay_closable: bool) -> Self {
@@ -560,6 +688,16 @@ impl Dialog {
                 st.restore_element
             });
             let restore_trigger = restore_element.unwrap_or(id);
+            let request_trigger = self
+                .handle
+                .as_ref()
+                .and_then(|handle| {
+                    cx.watch_model(&handle.active_trigger)
+                        .paint()
+                        .copied()
+                        .unwrap_or(None)
+                })
+                .unwrap_or(restore_trigger);
 
             let content_element_for_trigger: std::cell::Cell<
                 Option<fret_ui::elements::GlobalElementId>,
@@ -716,6 +854,14 @@ impl Dialog {
                 );
 
                 if let Some(content_element) = content_element_for_trigger.get() {
+                    if let Some(handle) = self.handle.as_ref() {
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(&handle.content_element, |value| {
+                                *value = Some(content_element)
+                            });
+                    }
                     cx.keyed_slot_state("a11y", DialogA11yState::default, |st| {
                         st.content_element = Some(content_element)
                     });
@@ -728,7 +874,7 @@ impl Dialog {
                     .on_close_auto_focus(on_close_auto_focus);
                 let request = radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(
                     id,
-                    restore_trigger,
+                    request_trigger,
                     self.open,
                     overlay_presence,
                     dialog_options,
@@ -762,23 +908,17 @@ impl Dialog {
     ) -> AnyElement {
         let dialog = overlay.apply_to(self);
         let open_for_trigger = dialog.open.clone();
+        let handle_for_trigger = dialog.handle.clone();
         dialog.into_element(
             cx,
             move |cx| {
-                let trigger_el = trigger(cx).into_element(cx);
-                let open = open_for_trigger.clone();
-                cx.pressable_add_on_activate_for(
-                    trigger_el.id,
-                    Arc::new(
-                        move |host: &mut dyn fret_ui::action::UiActionHost,
-                              acx: fret_ui::action::ActionCx,
-                              _reason: fret_ui::action::ActivateReason| {
-                            let _ = host.models_mut().update(&open, |v| *v = true);
-                            host.request_redraw(acx.window);
-                        },
-                    ),
-                );
-                trigger_el
+                let trigger = trigger(cx);
+                let trigger = if let Some(handle) = handle_for_trigger.clone() {
+                    trigger.handle(handle)
+                } else {
+                    trigger.with_open_model(open_for_trigger.clone())
+                };
+                trigger.into_element(cx)
             },
             content,
         )
@@ -792,6 +932,10 @@ impl Dialog {
 type DialogDeferredContent<H> = Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static>;
 type DialogDeferredTrigger<H> =
     Box<dyn FnOnce(&mut ElementContext<'_, H>) -> DialogTrigger + 'static>;
+
+fn dialog_fallback_trigger<H: UiHost>(cx: &mut ElementContext<'_, H>) -> DialogTrigger {
+    DialogTrigger::new(cx.container(ContainerProps::default(), |_cx| Vec::new()))
+}
 
 /// Root-level part adapter for shadcn-style `Dialog` children composition.
 ///
@@ -964,18 +1108,31 @@ impl<H: UiHost> DialogChildren<H> {
             }
         }
 
-        let trigger =
-            trigger.expect("Dialog::children(...) requires one DialogTrigger-compatible part");
         let content =
             content.expect("Dialog::children(...) requires one DialogContent-compatible part");
+        let allow_fallback_trigger = self.dialog.handle.is_some();
 
-        self.dialog.into_element_parts(
-            cx,
-            move |cx| trigger(cx),
-            portal,
-            overlay,
-            move |cx| content(cx),
-        )
+        match trigger {
+            Some(trigger) => self.dialog.into_element_parts(
+                cx,
+                move |cx| trigger(cx),
+                portal,
+                overlay,
+                move |cx| content(cx),
+            ),
+            None if allow_fallback_trigger => self.dialog.into_element_parts(
+                cx,
+                move |cx| dialog_fallback_trigger(cx),
+                portal,
+                overlay,
+                move |cx| content(cx),
+            ),
+            None => {
+                panic!(
+                    "Dialog::children(...) requires one DialogTrigger-compatible part unless Dialog::from_handle(...) is used"
+                )
+            }
+        }
     }
 }
 
@@ -1065,10 +1222,13 @@ impl<H: UiHost, TTrigger> DialogComposition<H, TTrigger> {
     where
         TTrigger: DialogCompositionTriggerArg<H>,
     {
-        let trigger = self
-            .trigger
-            .expect("Dialog::compose().trigger(...) must be provided before into_element()")
-            .into_dialog_trigger(cx);
+        let trigger = match self.trigger {
+            Some(trigger) => trigger.into_dialog_trigger(cx),
+            None if self.dialog.handle.is_some() => dialog_fallback_trigger(cx),
+            None => {
+                panic!("Dialog::compose().trigger(...) must be provided before into_element()")
+            }
+        };
         let content = self
             .content
             .expect("Dialog::compose().content(...) must be provided before into_element()");
@@ -5367,6 +5527,142 @@ mod tests {
         let trigger_node =
             fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
         assert_eq!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    fn dialog_handle_detached_trigger_restores_focus_to_activated_trigger() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let close_id = Rc::new(Cell::new(None::<fret_ui::elements::GlobalElementId>));
+        let handle_open = Rc::new(std::cell::RefCell::new(None::<Model<bool>>));
+
+        let render_frame = |ui: &mut UiTree<App>,
+                            app: &mut App,
+                            services: &mut dyn fret_core::UiServices,
+                            frame: u64| {
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(app, window);
+
+            let mut detached_trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "dialog-detached-trigger-handle",
+                |cx| {
+                    let handle = DialogHandle::new_controllable(cx, None, false);
+                    *handle_open.borrow_mut() = Some(handle.open_model());
+
+                    let detached_trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(140.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            detached_trigger_id = Some(id);
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let detached_trigger = DialogTrigger::new(detached_trigger)
+                        .handle(handle.clone())
+                        .into_element(cx);
+
+                    let close_id_out = close_id.clone();
+                    let dialog = Dialog::from_handle(handle)
+                        .compose()
+                        .content_with(move |cx| {
+                            let close = DialogClose::from_scope()
+                                .build(cx, crate::button::Button::new("Cancel"));
+                            close_id_out.set(Some(close.id));
+                            DialogContent::new(vec![close])
+                                .show_close_button(false)
+                                .into_element(cx)
+                        })
+                        .into_element(cx);
+
+                    vec![detached_trigger, dialog]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            detached_trigger_id.expect("detached trigger id")
+        };
+
+        let detached_trigger = render_frame(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let open_model = handle_open
+            .borrow()
+            .as_ref()
+            .cloned()
+            .expect("handle open model");
+        assert_eq!(app.models().get_copied(&open_model), Some(true));
+
+        let _ = render_frame(&mut ui, &mut app, &mut services, 2);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let close = close_id.get().expect("close id");
+        let close_node =
+            fret_ui::elements::node_for_element(&mut app, window, close).expect("close node");
+        assert_eq!(ui.focus(), Some(close_node));
+
+        let detached_trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, detached_trigger)
+                .expect("detached trigger node");
+        let _ = app.models_mut().update(&open_model, |value| *value = false);
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_200,
+        ) + 1;
+        for frame in 3..=(2 + settle_frames) {
+            let _ = render_frame(&mut ui, &mut app, &mut services, frame);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+        assert_eq!(ui.focus(), Some(detached_trigger_node));
     }
 
     #[test]

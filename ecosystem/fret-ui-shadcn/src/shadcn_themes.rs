@@ -617,12 +617,16 @@ pub fn shadcn_new_york_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) 
     // new-york-v4 `Slider` defaults:
     // - Track uses `h-1.5` (6px) via `data-[orientation=horizontal]:h-1.5`.
     // - Thumb uses `size-4` (16px).
+    // - Vertical roots keep `min-h-44` (176px).
     metrics
         .entry("component.slider.track_height".to_string())
         .or_insert(6.0);
     metrics
         .entry("component.slider.thumb_size".to_string())
         .or_insert(16.0);
+    metrics
+        .entry("component.slider.vertical_min_height".to_string())
+        .or_insert(176.0);
 
     // new-york-v4 `Badge` defaults:
     // - `text-xs` (12px) with Tailwind default leading (16px).

@@ -746,7 +746,7 @@ fn snapshot_input_required_invalid_semantics() {
         vec![
             shadcn::Input::new(model)
                 .a11y_label("Email")
-                .aria_required(true)
+                .required(true)
                 .aria_invalid(true)
                 .into_element(cx),
         ]

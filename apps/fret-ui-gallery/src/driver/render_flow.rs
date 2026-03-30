@@ -4,20 +4,20 @@ use fret_app::{App, Model};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
+use fret_ui::Invalidation;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
     SpacerProps,
 };
-use fret_ui::Invalidation;
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
 use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget};
 use std::sync::Arc;
 
 use super::{
-    chrome, debug_hud, debug_stats, inspector, menubar, settings_sheet, shell, status_bar, toaster,
-    ui_gallery_bisect_flags, UiGalleryDriver, UiGalleryWindowState,
+    UiGalleryDriver, UiGalleryWindowState, chrome, debug_hud, debug_stats, inspector, menubar,
+    settings_sheet, shell, status_bar, toaster, ui_gallery_bisect_flags,
 };
 
 pub(super) struct PreparedFrame {
@@ -673,6 +673,21 @@ mod tests {
             .or_else(|| rendered.state.ui.debug_node_bounds(node.id))
             .or(Some(node.bounds))
             .unwrap_or_else(|| panic!("missing visual/layout bounds for test_id={test_id}"))
+    }
+
+    fn layout_bounds_by_test_id(rendered: &RenderedGalleryPage, test_id: &str) -> Rect {
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after layout");
+        let node = node_by_test_id(snapshot, test_id);
+        rendered
+            .state
+            .ui
+            .debug_node_bounds(node.id)
+            .or(Some(node.bounds))
+            .unwrap_or_else(|| panic!("missing layout bounds for test_id={test_id}"))
     }
 
     fn visual_bounds_by_test_id_if_present(
@@ -2530,6 +2545,31 @@ mod tests {
     }
 
     #[test]
+    fn gallery_command_basic_keeps_upstream_default_close_button_visible() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_COMMAND);
+        scroll_test_id_into_gallery_viewport(
+            &mut rendered,
+            "ui-gallery-command-basic-trigger.chrome",
+        );
+        click_test_id_center(&mut rendered, "ui-gallery-command-basic-trigger.chrome");
+
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after opening command basic dialog");
+
+        let close_button = snapshot.nodes.iter().find(|node| {
+            node.role == SemanticsRole::Button && node.label.as_deref() == Some("Close")
+        });
+
+        assert!(
+            close_button.is_some(),
+            "expected Basic command example to keep the upstream default close button visible"
+        );
+    }
+
+    #[test]
     fn gallery_command_follow_up_sections_remain_explicit_after_docs_aligned_examples() {
         let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_COMMAND);
 
@@ -2595,6 +2635,34 @@ mod tests {
                 "expected Button Group page target to render with non-zero bounds: target={target} bounds={bounds:?}"
             );
         }
+    }
+
+    #[test]
+    fn gallery_slider_vertical_examples_keep_upstream_recipe_min_height_floor() {
+        let mut rendered = render_gallery_page(PAGE_SLIDER);
+        scroll_test_id_into_gallery_viewport(
+            &mut rendered,
+            "ui-gallery-slider-vertical-section-content",
+        );
+
+        let primary = layout_bounds_by_test_id(&rendered, "ui-gallery-slider-vertical");
+        let secondary = layout_bounds_by_test_id(&rendered, "ui-gallery-slider-vertical-secondary");
+        let expected_height = 176.0;
+        let epsilon = 1.0;
+
+        for (target, bounds) in [
+            ("ui-gallery-slider-vertical", primary),
+            ("ui-gallery-slider-vertical-secondary", secondary),
+        ] {
+            assert!(
+                (bounds.size.height.0 - expected_height).abs() <= epsilon,
+                "expected Slider vertical example root to keep the upstream `min-h-44` recipe floor even when the docs lane asks for `h-40`: target={target} bounds={bounds:?} expected_height={expected_height} epsilon={epsilon}"
+            );
+        }
+        assert!(
+            (primary.size.height.0 - secondary.size.height.0).abs() <= 0.01,
+            "expected both Slider vertical example roots to clamp to the same recipe floor: primary={primary:?} secondary={secondary:?}"
+        );
     }
 
     #[test]
@@ -3483,8 +3551,8 @@ mod tests {
     }
 
     #[test]
-    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
-    ) {
+    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page()
+     {
         assert_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
             PAGE_SCROLL_AREA,
             "ui-gallery-scroll-area-drag-baseline-y-scrollbar",

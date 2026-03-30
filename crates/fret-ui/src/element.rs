@@ -799,6 +799,7 @@ pub struct SemanticsDecoration {
     pub value: Option<Arc<str>>,
     pub disabled: Option<bool>,
     pub read_only: Option<bool>,
+    pub required: Option<bool>,
     pub hidden: Option<bool>,
     pub visited: Option<bool>,
     pub multiselectable: Option<bool>,
@@ -854,6 +855,7 @@ impl SemanticsDecoration {
             value: other.value.or(self.value),
             disabled: other.disabled.or(self.disabled),
             read_only: other.read_only.or(self.read_only),
+            required: other.required.or(self.required),
             hidden: other.hidden.or(self.hidden),
             visited: other.visited.or(self.visited),
             multiselectable: other.multiselectable.or(self.multiselectable),
@@ -920,6 +922,11 @@ impl SemanticsDecoration {
 
     pub fn read_only(mut self, read_only: bool) -> Self {
         self.read_only = Some(read_only);
+        self
+    }
+
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = Some(required);
         self
     }
 
@@ -1098,6 +1105,7 @@ pub struct SemanticsProps {
     pub value_editable: Option<bool>,
     pub disabled: bool,
     pub read_only: bool,
+    pub required: bool,
     pub hidden: bool,
     pub visited: bool,
     pub multiselectable: bool,
@@ -1155,6 +1163,7 @@ impl Default for SemanticsProps {
             value_editable: None,
             disabled: false,
             read_only: false,
+            required: false,
             hidden: false,
             visited: false,
             multiselectable: false,
@@ -1640,6 +1649,7 @@ pub struct PressableA11y {
     ///
     /// This is a portable approximation of ARIA `aria-multiselectable`.
     pub multiselectable: bool,
+    pub required: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,

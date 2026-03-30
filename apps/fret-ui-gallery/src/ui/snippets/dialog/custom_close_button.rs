@@ -8,7 +8,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
     let share_link = cx.local_model_keyed("share_link", || {
-        String::from("https://ui.shadcn.com/docs/components/dialog")
+        String::from("https://ui.shadcn.com/docs/installation")
     });
 
     let link_model = share_link.clone();
@@ -26,7 +26,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .into_element(cx);
                 shadcn::DialogContent::new([])
                     .show_close_button(false)
-                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
+                    .refine_layout(LayoutRefinement::default().max_w(Px(448.0)))
                     .with_children(cx, |cx| {
                         vec![
                             shadcn::DialogHeader::new([]).with_children(cx, |cx| {
