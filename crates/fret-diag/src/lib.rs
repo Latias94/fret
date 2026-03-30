@@ -421,7 +421,7 @@ fn script_required_capabilities_value(value: &serde_json::Value) -> Vec<String> 
             .is_some_and(|steps| {
                 steps.iter().any(|s| {
                     s.get("window")
-                        .is_some_and(|w| window_target_requires_multi_window(w))
+                        .is_some_and(window_target_requires_multi_window)
                 })
             })
         {

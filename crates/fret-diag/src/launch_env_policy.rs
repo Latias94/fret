@@ -33,7 +33,7 @@ pub(crate) const TOOL_LAUNCH_RESERVED_ENV_KEYS: &[&str] = &[
 ];
 
 pub(crate) fn tool_launch_env_key_is_reserved(key: &str) -> bool {
-    TOOL_LAUNCH_RESERVED_ENV_KEYS.iter().any(|k| *k == key)
+    TOOL_LAUNCH_RESERVED_ENV_KEYS.contains(&key)
 }
 
 pub(crate) fn scrub_inherited_env_for_tool_launch(

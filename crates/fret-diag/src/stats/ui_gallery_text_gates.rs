@@ -105,9 +105,9 @@ fn find_latest_labeled_bundle_dir(out_dir: &Path, label: &str) -> Option<PathBuf
     best.map(|(_, p)| p)
 }
 
-fn bundle_last_snapshot_by_frame_id<'a>(
-    bundle: &'a serde_json::Value,
-) -> Option<&'a serde_json::Value> {
+fn bundle_last_snapshot_by_frame_id(
+    bundle: &serde_json::Value,
+) -> Option<&serde_json::Value> {
     let windows = bundle.get("windows")?.as_array()?;
     let w = windows.first()?;
     let snaps = w.get("snapshots")?.as_array()?;
@@ -1045,6 +1045,295 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_co
     Ok(())
 }
 
+pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(
+    out_dir: &Path,
+) -> Result<(), String> {
+    const BEFORE_LABEL: &str = "ui-gallery-text-fallback-policy-locale-before";
+    const AFTER_LABEL: &str = "ui-gallery-text-fallback-policy-locale-after";
+
+    let before_dir = find_latest_labeled_bundle_dir(out_dir, BEFORE_LABEL).ok_or_else(|| {
+        format!(
+            "ui-gallery text fallback policy locale gate expected a capture_bundle label={BEFORE_LABEL} under out_dir, but none was found\n  out_dir: {}",
+            out_dir.display()
+        )
+    })?;
+    let after_dir = find_latest_labeled_bundle_dir(out_dir, AFTER_LABEL).ok_or_else(|| {
+        format!(
+            "ui-gallery text fallback policy locale gate expected a capture_bundle label={AFTER_LABEL} under out_dir, but none was found\n  out_dir: {}",
+            out_dir.display()
+        )
+    })?;
+
+    let before_path = crate::resolve_bundle_artifact_path(&before_dir);
+    let after_path = crate::resolve_bundle_artifact_path(&after_dir);
+
+    let before_bytes = std::fs::read(&before_path).map_err(|e| e.to_string())?;
+    let after_bytes = std::fs::read(&after_path).map_err(|e| e.to_string())?;
+    let before_bundle: serde_json::Value =
+        serde_json::from_slice(&before_bytes).map_err(|e| e.to_string())?;
+    let after_bundle: serde_json::Value =
+        serde_json::from_slice(&after_bytes).map_err(|e| e.to_string())?;
+
+    let before = bundle_last_text_locale_change_evidence(&before_bundle).ok_or_else(|| {
+        format!(
+            "ui-gallery text fallback policy locale gate expected renderer text fallback policy + trace + perf snapshots in bundle\n  bundle: {}",
+            before_path.display()
+        )
+    })?;
+    let after = bundle_last_text_locale_change_evidence(&after_bundle).ok_or_else(|| {
+        format!(
+            "ui-gallery text fallback policy locale gate expected renderer text fallback policy + trace + perf snapshots in bundle\n  bundle: {}",
+            after_path.display()
+        )
+    })?;
+
+    let evidence_path =
+        out_dir.join("check.ui_gallery_text_fallback_policy_key_bumps_on_locale_change.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "before_dir": before_dir.display().to_string(),
+        "after_dir": after_dir.display().to_string(),
+        "before_bundle": before_path.display().to_string(),
+        "after_bundle": after_path.display().to_string(),
+        "before": {
+            "fallback_policy_key": before.fallback_policy_key,
+            "locale_bcp47": before.locale_bcp47,
+            "system_fonts_enabled": before.system_fonts_enabled,
+            "prefer_common_fallback": before.prefer_common_fallback,
+            "common_fallback_injection": before.common_fallback_injection,
+            "common_fallback_candidates": before.common_fallback_candidates,
+            "frame_missing_glyphs": before.missing_glyphs,
+            "font_trace_entry_count": before.font_trace_entry_count,
+            "font_trace_locales": before.font_trace_locales,
+            "sample_trace_frame_id": before.sample_trace_frame_id,
+            "sample_trace_locales": before.sample_trace_locales,
+            "latin_families": before.latin_families,
+            "latin_classes": before.latin_classes,
+            "cjk_families": before.cjk_families,
+            "cjk_classes": before.cjk_classes,
+            "emoji_families": before.emoji_families,
+            "emoji_classes": before.emoji_classes,
+            "mixed_families": before.mixed_families,
+            "mixed_classes": before.mixed_classes,
+        },
+        "after": {
+            "fallback_policy_key": after.fallback_policy_key,
+            "locale_bcp47": after.locale_bcp47,
+            "system_fonts_enabled": after.system_fonts_enabled,
+            "prefer_common_fallback": after.prefer_common_fallback,
+            "common_fallback_injection": after.common_fallback_injection,
+            "common_fallback_candidates": after.common_fallback_candidates,
+            "frame_missing_glyphs": after.missing_glyphs,
+            "font_trace_entry_count": after.font_trace_entry_count,
+            "font_trace_locales": after.font_trace_locales,
+            "sample_trace_frame_id": after.sample_trace_frame_id,
+            "sample_trace_locales": after.sample_trace_locales,
+            "latin_families": after.latin_families,
+            "latin_classes": after.latin_classes,
+            "cjk_families": after.cjk_families,
+            "cjk_classes": after.cjk_classes,
+            "emoji_families": after.emoji_families,
+            "emoji_classes": after.emoji_classes,
+            "mixed_families": after.mixed_families,
+            "mixed_classes": after.mixed_classes,
+        },
+    });
+    let _ = write_json_value(&evidence_path, &payload);
+
+    if !before.system_fonts_enabled || !after.system_fonts_enabled {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected system_fonts_enabled=true in both captures for the native system-font baseline\n  before: {}\n  after: {}\n  evidence: {}",
+            before.system_fonts_enabled,
+            after.system_fonts_enabled,
+            evidence_path.display()
+        ));
+    }
+    if before.common_fallback_injection.as_deref() != Some("platform_default")
+        || after.common_fallback_injection.as_deref() != Some("platform_default")
+    {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected common_fallback_injection=platform_default in both captures so the script exercises the native system-fallback lane\n  before: {:?}\n  after: {:?}\n  evidence: {}",
+            before.common_fallback_injection,
+            after.common_fallback_injection,
+            evidence_path.display()
+        ));
+    }
+    if before.prefer_common_fallback || after.prefer_common_fallback {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected prefer_common_fallback=false in both captures for the native platform-default/system-fallback baseline\n  before: {}\n  after: {}\n  evidence: {}",
+            before.prefer_common_fallback,
+            after.prefer_common_fallback,
+            evidence_path.display()
+        ));
+    }
+    if !before.common_fallback_candidates.is_empty() || !after.common_fallback_candidates.is_empty()
+    {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected common_fallback_candidates=[] in both captures so the mixed-script sample stays outside the curated common-fallback lane\n  before: {:?}\n  after: {:?}\n  evidence: {}",
+            before.common_fallback_candidates,
+            after.common_fallback_candidates,
+            evidence_path.display()
+        ));
+    }
+    if before.locale_bcp47.as_deref() != Some("en-US") {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected locale_bcp47 to be en-US in the BEFORE capture\n  observed: {:?}\n  evidence: {}",
+            before.locale_bcp47,
+            evidence_path.display()
+        ));
+    }
+    if after.locale_bcp47.as_deref() != Some("zh-CN") {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected locale_bcp47 to be zh-CN in the AFTER capture\n  observed: {:?}\n  evidence: {}",
+            after.locale_bcp47,
+            evidence_path.display()
+        ));
+    }
+    if before.font_trace_entry_count == 0 || after.font_trace_entry_count == 0 {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected bundle-scoped font trace entries in both captures after enabling FRET_TEXT_FONT_TRACE_ALL\n  before: {}\n  after: {}\n  evidence: {}",
+            before.font_trace_entry_count,
+            after.font_trace_entry_count,
+            evidence_path.display()
+        ));
+    }
+    if before.sample_trace_frame_id.is_none() || after.sample_trace_frame_id.is_none() {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected the mixed-script sample traces (`m`, `你`, `😀`, `m你😀`) to appear in both captures\n  before_frame: {:?}\n  after_frame: {:?}\n  evidence: {}",
+            before.sample_trace_frame_id,
+            after.sample_trace_frame_id,
+            evidence_path.display()
+        ));
+    }
+    if before.sample_trace_locales != vec!["en-US".to_string()] {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected BEFORE mixed-script sample trace locales to settle to [\"en-US\"]\n  observed: {:?}\n  evidence: {}",
+            before.sample_trace_locales,
+            evidence_path.display()
+        ));
+    }
+    if after.sample_trace_locales != vec!["zh-CN".to_string()] {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected AFTER mixed-script sample trace locales to settle to [\"zh-CN\"]\n  observed: {:?}\n  evidence: {}",
+            after.sample_trace_locales,
+            evidence_path.display()
+        ));
+    }
+    let validate_sample_families = |label: &str,
+                                    evidence: &LocaleChangeConformanceEvidence|
+     -> Result<(), String> {
+        let latin = evidence.latin_families.first().ok_or_else(|| {
+            format!(
+                "ui-gallery text fallback policy locale gate failed: expected a latin sample family in the {label} capture\n  evidence: {}",
+                evidence_path.display()
+            )
+        })?;
+        let cjk = evidence.cjk_families.first().ok_or_else(|| {
+            format!(
+                "ui-gallery text fallback policy locale gate failed: expected a cjk sample family in the {label} capture\n  evidence: {}",
+                evidence_path.display()
+            )
+        })?;
+        let emoji = evidence.emoji_families.first().ok_or_else(|| {
+            format!(
+                "ui-gallery text fallback policy locale gate failed: expected an emoji sample family in the {label} capture\n  evidence: {}",
+                evidence_path.display()
+            )
+        })?;
+
+        if contains_case_insensitive(&evidence.common_fallback_candidates, cjk)
+            || contains_case_insensitive(&evidence.common_fallback_candidates, emoji)
+        {
+            return Err(format!(
+                "ui-gallery text fallback policy locale gate failed: expected cjk/emoji sample families in the {label} capture to resolve outside common_fallback_candidates on the system-fallback lane\n  cjk: {:?}\n  emoji: {:?}\n  candidates: {:?}\n  evidence: {}",
+                evidence.cjk_families,
+                evidence.emoji_families,
+                evidence.common_fallback_candidates,
+                evidence_path.display()
+            ));
+        }
+
+        let latin_class = evidence.latin_classes.first().map(String::as_str);
+        let cjk_class = evidence.cjk_classes.first().map(String::as_str);
+        let emoji_class = evidence.emoji_classes.first().map(String::as_str);
+        if latin_class != Some("requested")
+            || cjk_class != Some("system_fallback")
+            || emoji_class != Some("system_fallback")
+        {
+            return Err(format!(
+                "ui-gallery text fallback policy locale gate failed: expected cjk/emoji sample trace classes in the {label} capture to stay on the system-fallback lane while the latin sample remains requested\n  latin_classes: {:?}\n  cjk_classes: {:?}\n  emoji_classes: {:?}\n  evidence: {}",
+                evidence.latin_classes,
+                evidence.cjk_classes,
+                evidence.emoji_classes,
+                evidence_path.display()
+            ));
+        }
+
+        let latin_ix = evidence
+            .mixed_families
+            .iter()
+            .position(|family| family.eq_ignore_ascii_case(latin));
+        let cjk_ix = evidence
+            .mixed_families
+            .iter()
+            .position(|family| family.eq_ignore_ascii_case(cjk));
+        let emoji_ix = evidence
+            .mixed_families
+            .iter()
+            .position(|family| family.eq_ignore_ascii_case(emoji));
+
+        match (latin_ix, cjk_ix, emoji_ix) {
+            (Some(latin_ix), Some(cjk_ix), Some(emoji_ix))
+                if latin_ix < cjk_ix && cjk_ix < emoji_ix =>
+            {
+                let mixed_latin_class = evidence.mixed_classes.get(latin_ix).map(String::as_str);
+                let mixed_cjk_class = evidence.mixed_classes.get(cjk_ix).map(String::as_str);
+                let mixed_emoji_class = evidence.mixed_classes.get(emoji_ix).map(String::as_str);
+                if mixed_latin_class == Some("requested")
+                    && mixed_cjk_class == Some("system_fallback")
+                    && mixed_emoji_class == Some("system_fallback")
+                {
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "ui-gallery text fallback policy locale gate failed: expected the mixed-script trace classes to stay requested -> system_fallback -> system_fallback in the {label} capture\n  mixed_classes: {:?}\n  evidence: {}",
+                        evidence.mixed_classes,
+                        evidence_path.display()
+                    ))
+                }
+            }
+            _ => Err(format!(
+                "ui-gallery text fallback policy locale gate failed: expected the mixed-script trace to preserve latin -> cjk -> emoji family order in the {label} capture\n  latin: {:?}\n  cjk: {:?}\n  emoji: {:?}\n  mixed: {:?}\n  evidence: {}",
+                evidence.latin_families,
+                evidence.cjk_families,
+                evidence.emoji_families,
+                evidence.mixed_families,
+                evidence_path.display()
+            )),
+        }
+    };
+    validate_sample_families("BEFORE", &before)?;
+    validate_sample_families("AFTER", &after)?;
+    if before.missing_glyphs != 0 || after.missing_glyphs != 0 {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected frame_missing_glyphs=0 in both captures on the mixed-script page\n  before: {}\n  after: {}\n  evidence: {}",
+            before.missing_glyphs,
+            after.missing_glyphs,
+            evidence_path.display()
+        ));
+    }
+    if before.fallback_policy_key == after.fallback_policy_key {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected fallback_policy_key to change when locale changes\n  before: {}\n  after: {}\n  evidence: {}",
+            before.fallback_policy_key,
+            after.fallback_policy_key,
+            evidence_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1793,293 +2082,4 @@ mod tests {
             "{err}"
         );
     }
-}
-
-pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(
-    out_dir: &Path,
-) -> Result<(), String> {
-    const BEFORE_LABEL: &str = "ui-gallery-text-fallback-policy-locale-before";
-    const AFTER_LABEL: &str = "ui-gallery-text-fallback-policy-locale-after";
-
-    let before_dir = find_latest_labeled_bundle_dir(out_dir, BEFORE_LABEL).ok_or_else(|| {
-        format!(
-            "ui-gallery text fallback policy locale gate expected a capture_bundle label={BEFORE_LABEL} under out_dir, but none was found\n  out_dir: {}",
-            out_dir.display()
-        )
-    })?;
-    let after_dir = find_latest_labeled_bundle_dir(out_dir, AFTER_LABEL).ok_or_else(|| {
-        format!(
-            "ui-gallery text fallback policy locale gate expected a capture_bundle label={AFTER_LABEL} under out_dir, but none was found\n  out_dir: {}",
-            out_dir.display()
-        )
-    })?;
-
-    let before_path = crate::resolve_bundle_artifact_path(&before_dir);
-    let after_path = crate::resolve_bundle_artifact_path(&after_dir);
-
-    let before_bytes = std::fs::read(&before_path).map_err(|e| e.to_string())?;
-    let after_bytes = std::fs::read(&after_path).map_err(|e| e.to_string())?;
-    let before_bundle: serde_json::Value =
-        serde_json::from_slice(&before_bytes).map_err(|e| e.to_string())?;
-    let after_bundle: serde_json::Value =
-        serde_json::from_slice(&after_bytes).map_err(|e| e.to_string())?;
-
-    let before = bundle_last_text_locale_change_evidence(&before_bundle).ok_or_else(|| {
-        format!(
-            "ui-gallery text fallback policy locale gate expected renderer text fallback policy + trace + perf snapshots in bundle\n  bundle: {}",
-            before_path.display()
-        )
-    })?;
-    let after = bundle_last_text_locale_change_evidence(&after_bundle).ok_or_else(|| {
-        format!(
-            "ui-gallery text fallback policy locale gate expected renderer text fallback policy + trace + perf snapshots in bundle\n  bundle: {}",
-            after_path.display()
-        )
-    })?;
-
-    let evidence_path =
-        out_dir.join("check.ui_gallery_text_fallback_policy_key_bumps_on_locale_change.json");
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "before_dir": before_dir.display().to_string(),
-        "after_dir": after_dir.display().to_string(),
-        "before_bundle": before_path.display().to_string(),
-        "after_bundle": after_path.display().to_string(),
-        "before": {
-            "fallback_policy_key": before.fallback_policy_key,
-            "locale_bcp47": before.locale_bcp47,
-            "system_fonts_enabled": before.system_fonts_enabled,
-            "prefer_common_fallback": before.prefer_common_fallback,
-            "common_fallback_injection": before.common_fallback_injection,
-            "common_fallback_candidates": before.common_fallback_candidates,
-            "frame_missing_glyphs": before.missing_glyphs,
-            "font_trace_entry_count": before.font_trace_entry_count,
-            "font_trace_locales": before.font_trace_locales,
-            "sample_trace_frame_id": before.sample_trace_frame_id,
-            "sample_trace_locales": before.sample_trace_locales,
-            "latin_families": before.latin_families,
-            "latin_classes": before.latin_classes,
-            "cjk_families": before.cjk_families,
-            "cjk_classes": before.cjk_classes,
-            "emoji_families": before.emoji_families,
-            "emoji_classes": before.emoji_classes,
-            "mixed_families": before.mixed_families,
-            "mixed_classes": before.mixed_classes,
-        },
-        "after": {
-            "fallback_policy_key": after.fallback_policy_key,
-            "locale_bcp47": after.locale_bcp47,
-            "system_fonts_enabled": after.system_fonts_enabled,
-            "prefer_common_fallback": after.prefer_common_fallback,
-            "common_fallback_injection": after.common_fallback_injection,
-            "common_fallback_candidates": after.common_fallback_candidates,
-            "frame_missing_glyphs": after.missing_glyphs,
-            "font_trace_entry_count": after.font_trace_entry_count,
-            "font_trace_locales": after.font_trace_locales,
-            "sample_trace_frame_id": after.sample_trace_frame_id,
-            "sample_trace_locales": after.sample_trace_locales,
-            "latin_families": after.latin_families,
-            "latin_classes": after.latin_classes,
-            "cjk_families": after.cjk_families,
-            "cjk_classes": after.cjk_classes,
-            "emoji_families": after.emoji_families,
-            "emoji_classes": after.emoji_classes,
-            "mixed_families": after.mixed_families,
-            "mixed_classes": after.mixed_classes,
-        },
-    });
-    let _ = write_json_value(&evidence_path, &payload);
-
-    if !before.system_fonts_enabled || !after.system_fonts_enabled {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected system_fonts_enabled=true in both captures for the native system-font baseline\n  before: {}\n  after: {}\n  evidence: {}",
-            before.system_fonts_enabled,
-            after.system_fonts_enabled,
-            evidence_path.display()
-        ));
-    }
-    if before.common_fallback_injection.as_deref() != Some("platform_default")
-        || after.common_fallback_injection.as_deref() != Some("platform_default")
-    {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected common_fallback_injection=platform_default in both captures so the script exercises the native system-fallback lane\n  before: {:?}\n  after: {:?}\n  evidence: {}",
-            before.common_fallback_injection,
-            after.common_fallback_injection,
-            evidence_path.display()
-        ));
-    }
-    if before.prefer_common_fallback || after.prefer_common_fallback {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected prefer_common_fallback=false in both captures for the native platform-default/system-fallback baseline\n  before: {}\n  after: {}\n  evidence: {}",
-            before.prefer_common_fallback,
-            after.prefer_common_fallback,
-            evidence_path.display()
-        ));
-    }
-    if !before.common_fallback_candidates.is_empty() || !after.common_fallback_candidates.is_empty()
-    {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected common_fallback_candidates=[] in both captures so the mixed-script sample stays outside the curated common-fallback lane\n  before: {:?}\n  after: {:?}\n  evidence: {}",
-            before.common_fallback_candidates,
-            after.common_fallback_candidates,
-            evidence_path.display()
-        ));
-    }
-    if before.locale_bcp47.as_deref() != Some("en-US") {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected locale_bcp47 to be en-US in the BEFORE capture\n  observed: {:?}\n  evidence: {}",
-            before.locale_bcp47,
-            evidence_path.display()
-        ));
-    }
-    if after.locale_bcp47.as_deref() != Some("zh-CN") {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected locale_bcp47 to be zh-CN in the AFTER capture\n  observed: {:?}\n  evidence: {}",
-            after.locale_bcp47,
-            evidence_path.display()
-        ));
-    }
-    if before.font_trace_entry_count == 0 || after.font_trace_entry_count == 0 {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected bundle-scoped font trace entries in both captures after enabling FRET_TEXT_FONT_TRACE_ALL\n  before: {}\n  after: {}\n  evidence: {}",
-            before.font_trace_entry_count,
-            after.font_trace_entry_count,
-            evidence_path.display()
-        ));
-    }
-    if before.sample_trace_frame_id.is_none() || after.sample_trace_frame_id.is_none() {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected the mixed-script sample traces (`m`, `你`, `😀`, `m你😀`) to appear in both captures\n  before_frame: {:?}\n  after_frame: {:?}\n  evidence: {}",
-            before.sample_trace_frame_id,
-            after.sample_trace_frame_id,
-            evidence_path.display()
-        ));
-    }
-    if before.sample_trace_locales != vec!["en-US".to_string()] {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected BEFORE mixed-script sample trace locales to settle to [\"en-US\"]\n  observed: {:?}\n  evidence: {}",
-            before.sample_trace_locales,
-            evidence_path.display()
-        ));
-    }
-    if after.sample_trace_locales != vec!["zh-CN".to_string()] {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected AFTER mixed-script sample trace locales to settle to [\"zh-CN\"]\n  observed: {:?}\n  evidence: {}",
-            after.sample_trace_locales,
-            evidence_path.display()
-        ));
-    }
-    let validate_sample_families = |label: &str,
-                                    evidence: &LocaleChangeConformanceEvidence|
-     -> Result<(), String> {
-        let latin = evidence.latin_families.first().ok_or_else(|| {
-            format!(
-                "ui-gallery text fallback policy locale gate failed: expected a latin sample family in the {label} capture\n  evidence: {}",
-                evidence_path.display()
-            )
-        })?;
-        let cjk = evidence.cjk_families.first().ok_or_else(|| {
-            format!(
-                "ui-gallery text fallback policy locale gate failed: expected a cjk sample family in the {label} capture\n  evidence: {}",
-                evidence_path.display()
-            )
-        })?;
-        let emoji = evidence.emoji_families.first().ok_or_else(|| {
-            format!(
-                "ui-gallery text fallback policy locale gate failed: expected an emoji sample family in the {label} capture\n  evidence: {}",
-                evidence_path.display()
-            )
-        })?;
-
-        if contains_case_insensitive(&evidence.common_fallback_candidates, cjk)
-            || contains_case_insensitive(&evidence.common_fallback_candidates, emoji)
-        {
-            return Err(format!(
-                "ui-gallery text fallback policy locale gate failed: expected cjk/emoji sample families in the {label} capture to resolve outside common_fallback_candidates on the system-fallback lane\n  cjk: {:?}\n  emoji: {:?}\n  candidates: {:?}\n  evidence: {}",
-                evidence.cjk_families,
-                evidence.emoji_families,
-                evidence.common_fallback_candidates,
-                evidence_path.display()
-            ));
-        }
-
-        let latin_class = evidence.latin_classes.first().map(String::as_str);
-        let cjk_class = evidence.cjk_classes.first().map(String::as_str);
-        let emoji_class = evidence.emoji_classes.first().map(String::as_str);
-        if latin_class != Some("requested")
-            || cjk_class != Some("system_fallback")
-            || emoji_class != Some("system_fallback")
-        {
-            return Err(format!(
-                "ui-gallery text fallback policy locale gate failed: expected cjk/emoji sample trace classes in the {label} capture to stay on the system-fallback lane while the latin sample remains requested\n  latin_classes: {:?}\n  cjk_classes: {:?}\n  emoji_classes: {:?}\n  evidence: {}",
-                evidence.latin_classes,
-                evidence.cjk_classes,
-                evidence.emoji_classes,
-                evidence_path.display()
-            ));
-        }
-
-        let latin_ix = evidence
-            .mixed_families
-            .iter()
-            .position(|family| family.eq_ignore_ascii_case(latin));
-        let cjk_ix = evidence
-            .mixed_families
-            .iter()
-            .position(|family| family.eq_ignore_ascii_case(cjk));
-        let emoji_ix = evidence
-            .mixed_families
-            .iter()
-            .position(|family| family.eq_ignore_ascii_case(emoji));
-
-        match (latin_ix, cjk_ix, emoji_ix) {
-            (Some(latin_ix), Some(cjk_ix), Some(emoji_ix))
-                if latin_ix < cjk_ix && cjk_ix < emoji_ix =>
-            {
-                let mixed_latin_class = evidence.mixed_classes.get(latin_ix).map(String::as_str);
-                let mixed_cjk_class = evidence.mixed_classes.get(cjk_ix).map(String::as_str);
-                let mixed_emoji_class = evidence.mixed_classes.get(emoji_ix).map(String::as_str);
-                if mixed_latin_class == Some("requested")
-                    && mixed_cjk_class == Some("system_fallback")
-                    && mixed_emoji_class == Some("system_fallback")
-                {
-                    Ok(())
-                } else {
-                    Err(format!(
-                        "ui-gallery text fallback policy locale gate failed: expected the mixed-script trace classes to stay requested -> system_fallback -> system_fallback in the {label} capture\n  mixed_classes: {:?}\n  evidence: {}",
-                        evidence.mixed_classes,
-                        evidence_path.display()
-                    ))
-                }
-            }
-            _ => Err(format!(
-                "ui-gallery text fallback policy locale gate failed: expected the mixed-script trace to preserve latin -> cjk -> emoji family order in the {label} capture\n  latin: {:?}\n  cjk: {:?}\n  emoji: {:?}\n  mixed: {:?}\n  evidence: {}",
-                evidence.latin_families,
-                evidence.cjk_families,
-                evidence.emoji_families,
-                evidence.mixed_families,
-                evidence_path.display()
-            )),
-        }
-    };
-    validate_sample_families("BEFORE", &before)?;
-    validate_sample_families("AFTER", &after)?;
-    if before.missing_glyphs != 0 || after.missing_glyphs != 0 {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected frame_missing_glyphs=0 in both captures on the mixed-script page\n  before: {}\n  after: {}\n  evidence: {}",
-            before.missing_glyphs,
-            after.missing_glyphs,
-            evidence_path.display()
-        ));
-    }
-    if before.fallback_policy_key == after.fallback_policy_key {
-        return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected fallback_policy_key to change when locale changes\n  before: {}\n  after: {}\n  evidence: {}",
-            before.fallback_policy_key,
-            after.fallback_policy_key,
-            evidence_path.display()
-        ));
-    }
-
-    Ok(())
 }

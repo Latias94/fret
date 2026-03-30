@@ -403,11 +403,10 @@ impl Sheet {
     pub fn max_size(mut self, max_size: Px) -> Self {
         let max_size = Px(max_size.0.max(0.0));
         self.max_size_override = Some(max_size);
-        if let Some(SheetSizeOverride::Px(size_px)) = self.size_override {
-            if size_px.0 > max_size.0 {
+        if let Some(SheetSizeOverride::Px(size_px)) = self.size_override
+            && size_px.0 > max_size.0 {
                 self.size_override = Some(SheetSizeOverride::Px(max_size));
             }
-        }
         self
     }
 
@@ -2002,7 +2001,7 @@ mod tests {
                 op,
                 fret_core::SceneOp::Quad {
                     rect, background, ..
-                } if *rect == bounds && background.paint == fret_core::Paint::Solid(color).into()
+                } if *rect == bounds && background.paint == fret_core::Paint::Solid(color)
             )
         })
     }
@@ -2344,7 +2343,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let open = app.models_mut().insert(false);
 
@@ -2416,7 +2415,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let open = app.models_mut().insert(false);
 
@@ -2495,7 +2494,7 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -2653,7 +2652,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let open = app.models_mut().insert(true);
 
         OverlayController::begin_frame(&mut app, window);
@@ -2700,7 +2699,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let open = app.models_mut().insert(true);
 
         OverlayController::begin_frame(&mut app, window);
@@ -2741,7 +2740,7 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui = UiTree::new();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -2819,7 +2818,7 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui = UiTree::new();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -2974,7 +2973,7 @@ mod tests {
         let cancel_id = Rc::new(Cell::new(None));
         let action_id = Rc::new(Cell::new(None));
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(600.0)),
@@ -3455,10 +3454,9 @@ mod tests {
                         cx,
                         |_cx| trigger,
                         move |cx| {
-                            let content =
-                                SheetContent::new(vec![ui::raw_text("sheet").into_element(cx)])
-                                    .into_element(cx);
-                            content
+                            
+                            SheetContent::new(vec![ui::raw_text("sheet").into_element(cx)])
+                                    .into_element(cx)
                         },
                     );
 
@@ -4732,10 +4730,9 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = redirect_focus_id_for_handler
+            let id = *redirect_focus_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
@@ -4842,10 +4839,9 @@ mod tests {
         let underlay_id_for_handler = underlay_id_cell.clone();
         let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = underlay_id_for_handler
+            let id = *underlay_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
@@ -4950,10 +4946,9 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = underlay_id_for_handler
+            let id = *underlay_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }

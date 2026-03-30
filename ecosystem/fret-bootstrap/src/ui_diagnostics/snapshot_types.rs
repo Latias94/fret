@@ -322,17 +322,14 @@ impl UiRendererTextPerfSnapshotV1 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum UiTextCommonFallbackInjectionV1 {
+    #[default]
     PlatformDefault,
     None,
     CommonFallback,
 }
 
-impl Default for UiTextCommonFallbackInjectionV1 {
-    fn default() -> Self {
-        Self::PlatformDefault
-    }
-}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiRendererTextFallbackPolicySnapshotV1 {
@@ -540,18 +537,15 @@ pub struct UiRendererTextFontTraceFamilyUsageV1 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum UiRendererTextFontTraceFamilyClassV1 {
     Requested,
     CommonFallback,
     SystemFallback,
+    #[default]
     Unknown,
 }
 
-impl Default for UiRendererTextFontTraceFamilyClassV1 {
-    fn default() -> Self {
-        Self::Unknown
-    }
-}
 
 impl UiRendererTextFontTraceSnapshotV1 {
     pub(super) fn from_core(

@@ -660,14 +660,14 @@ mod tests {
 
         assert_eq!(host.dispatch_sources.len(), 1);
         assert_eq!(host.dispatch_sources[0].0, cx);
-        assert_eq!(host.dispatch_sources[0].1, CommandId::from(action.clone()));
+        assert_eq!(host.dispatch_sources[0].1, action.clone());
         assert_eq!(host.dispatch_sources[0].2, ActivateReason::Pointer);
         assert_eq!(host.effects.len(), 1);
         assert_eq!(
             host.effects[0],
             Effect::Command {
                 window: Some(cx.window),
-                command: CommandId::from(action.clone()),
+                command: action.clone(),
             }
         );
         assert_eq!(host.payloads.len(), 1);

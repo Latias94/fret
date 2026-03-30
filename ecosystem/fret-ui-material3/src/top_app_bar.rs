@@ -632,6 +632,308 @@ impl TopAppBar {
     }
 }
 
+fn top_app_bar_icon_button<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    action: &TopAppBarAction,
+    icon_color: fret_core::Color,
+) -> AnyElement {
+    // Keep the IconButton interaction policy (state layer + ripple) but force the base icon color
+    // to match top-app-bar tokens.
+    let resolved_icon_color = if action.disabled {
+        let mut c = icon_color;
+        c.a *= 0.38;
+        c
+    } else {
+        icon_color
+    };
+
+    let mut style = IconButtonStyle::default();
+    style = style.icon_color(WidgetStateProperty::new(Some(ColorRef::Color(
+        resolved_icon_color,
+    ))));
+
+    let mut btn = IconButton::new(action.icon.clone())
+        .variant(IconButtonVariant::Standard)
+        .style(style)
+        .disabled(action.disabled);
+
+    if let Some(action_id) = action.action.clone() {
+        btn = btn.action(action_id);
+    }
+    if let Some(handler) = action.on_activate.clone() {
+        btn = btn.on_activate(handler);
+    }
+    if let Some(label) = action.a11y_label.clone() {
+        btn = btn.a11y_label(label);
+    }
+    if let Some(id) = action.test_id.clone() {
+        btn = btn.test_id(id);
+    }
+
+    btn.into_element(cx)
+}
+
+fn slot_container<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    min_width: Px,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.layout.size.min_width = Some(Length::Px(min_width));
+    props.layout.size.min_height = Some(Length::Px(Px(48.0)));
+    cx.container(props, move |_cx| children)
+}
+
+fn top_app_bar_title_element_for_variant<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    title: Arc<str>,
+    style: fret_core::TextStyle,
+    color: Color,
+) -> AnyElement {
+    let mut props = fret_ui::element::TextProps::new(title);
+    props.layout.size.width = Length::Fill;
+    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+    props.style = Some(style);
+    props.color = Some(color);
+    props.wrap = TextWrap::None;
+    props.overflow = TextOverflow::Ellipsis;
+    cx.text_props(props)
+}
+
+fn top_app_bar_single_row<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    bar: &TopAppBar,
+    leading_color: Color,
+    trailing_color: Color,
+    title_style: fret_core::TextStyle,
+    title_color: Color,
+) -> AnyElement {
+    let leading = bar
+        .navigation_icon
+        .as_ref()
+        .map(|action| top_app_bar_icon_button(cx, action, leading_color));
+
+    let trailing_buttons: Vec<AnyElement> = bar
+        .actions
+        .iter()
+        .map(|action| top_app_bar_icon_button(cx, action, trailing_color))
+        .collect();
+
+    match bar.variant {
+        TopAppBarVariant::SmallCentered => {
+            let title = top_app_bar_title_element_for_variant(
+                cx,
+                bar.title.clone(),
+                title_style,
+                title_color,
+            );
+            let leading_reserved = if leading.is_some() { Px(48.0) } else { Px(0.0) };
+            let trailing_reserved = Px((trailing_buttons.len() as f32) * 48.0);
+            let side_reserved = Px(leading_reserved.0.max(trailing_reserved.0));
+
+            let leading_slot = match leading {
+                Some(btn) => slot_container(cx, Px(48.0), vec![btn]),
+                None => slot_container(cx, Px(0.0), Vec::new()),
+            };
+            let trailing_slot = match trailing_buttons.is_empty() {
+                true => slot_container(cx, Px(0.0), Vec::new()),
+                false => slot_container(cx, Px(0.0), trailing_buttons),
+            };
+
+            let mut icons_row = FlexProps::default();
+            icons_row.direction = Axis::Horizontal;
+            icons_row.align = CrossAlign::Center;
+            icons_row.justify = MainAlign::Start;
+            icons_row.wrap = false;
+            icons_row.layout.size.width = Length::Fill;
+            icons_row.layout.size.height = Length::Fill;
+
+            let icons = cx.flex(icons_row, move |cx| {
+                let spacer = cx.spacer(SpacerProps::default());
+                vec![leading_slot, spacer, trailing_slot]
+            });
+
+            let mut title_layer = ContainerProps::default();
+            title_layer.layout.size.width = Length::Fill;
+            title_layer.layout.size.height = Length::Fill;
+            title_layer.layout.position = PositionStyle::Absolute;
+            title_layer.layout.inset.left = Some(side_reserved).into();
+            title_layer.layout.inset.right = Some(side_reserved).into();
+            title_layer.layout.inset.top = Some(Px(0.0)).into();
+            title_layer.layout.inset.bottom = Some(Px(0.0)).into();
+
+            let mut title_row = FlexProps::default();
+            title_row.direction = Axis::Horizontal;
+            title_row.align = CrossAlign::Center;
+            title_row.justify = MainAlign::Center;
+            title_row.wrap = false;
+            title_row.layout.size.width = Length::Fill;
+            title_row.layout.size.height = Length::Fill;
+
+            let title_overlay = cx.container(title_layer, move |cx| {
+                vec![cx.flex(title_row, move |_cx| vec![title])]
+            });
+
+            let mut stack_props = StackProps::default();
+            stack_props.layout.size.width = Length::Fill;
+            stack_props.layout.size.height = Length::Fill;
+
+            cx.stack_props(stack_props, move |_cx| vec![icons, title_overlay])
+        }
+        _ => {
+            let title = top_app_bar_title_element_for_variant(
+                cx,
+                bar.title.clone(),
+                title_style,
+                title_color,
+            );
+            let mut row = FlexProps::default();
+            row.direction = Axis::Horizontal;
+            row.align = CrossAlign::Center;
+            row.justify = MainAlign::Start;
+            row.wrap = false;
+            row.layout.size.width = Length::Fill;
+            row.layout.size.height = Length::Fill;
+
+            let mut title_layout = LayoutStyle::default();
+            title_layout.flex.grow = 1.0;
+            title_layout.flex.basis = Length::Px(Px(0.0));
+            title_layout.size.min_width = Some(Length::Px(Px(0.0)));
+
+            let mut title_container_props = FlexProps::default();
+            title_container_props.direction = Axis::Horizontal;
+            title_container_props.align = CrossAlign::Center;
+            title_container_props.justify = MainAlign::Start;
+            title_container_props.wrap = false;
+            title_container_props.layout = title_layout;
+            let title_container = cx.flex(title_container_props, move |_cx| vec![title]);
+
+            let leading_slot = match leading {
+                Some(btn) => slot_container(cx, Px(48.0), vec![btn]),
+                None => slot_container(cx, Px(12.0), Vec::new()),
+            };
+            let trailing_slot = slot_container(cx, Px(0.0), trailing_buttons);
+
+            cx.flex(row, move |_cx| {
+                vec![leading_slot, title_container, trailing_slot]
+            })
+        }
+    }
+}
+
+fn top_app_bar_two_rows<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    bar: &TopAppBar,
+    leading_color: Color,
+    trailing_color: Color,
+    expanded_title_style: fret_core::TextStyle,
+    expanded_title_color: Color,
+    collapsed_title_style: fret_core::TextStyle,
+    collapsed_title_color: Color,
+    top_row_height: Px,
+    collapsed_fraction: f32,
+) -> AnyElement {
+    let leading = bar
+        .navigation_icon
+        .as_ref()
+        .map(|action| top_app_bar_icon_button(cx, action, leading_color));
+
+    let trailing_buttons: Vec<AnyElement> = bar
+        .actions
+        .iter()
+        .map(|action| top_app_bar_icon_button(cx, action, trailing_color))
+        .collect();
+
+    let mut column = FlexProps::default();
+    column.direction = Axis::Vertical;
+    column.align = CrossAlign::Stretch;
+    column.justify = MainAlign::Start;
+    column.wrap = false;
+    column.layout.size.width = Length::Fill;
+    column.layout.size.height = Length::Fill;
+
+    let top_row = {
+        let mut row = FlexProps::default();
+        row.direction = Axis::Horizontal;
+        row.align = CrossAlign::Center;
+        row.justify = MainAlign::Start;
+        row.wrap = false;
+        row.layout.size.width = Length::Fill;
+        row.layout.size.height = Length::Px(top_row_height);
+
+        let leading_slot = match leading {
+            Some(btn) => slot_container(cx, Px(48.0), vec![btn]),
+            None => slot_container(cx, Px(48.0), Vec::new()),
+        };
+
+        let mut title_layout = LayoutStyle::default();
+        title_layout.flex.grow = 1.0;
+        title_layout.flex.basis = Length::Px(Px(0.0));
+        title_layout.size.min_width = Some(Length::Px(Px(0.0)));
+        let mut title_container = FlexProps::default();
+        title_container.direction = Axis::Horizontal;
+        title_container.align = CrossAlign::Center;
+        title_container.justify = MainAlign::Start;
+        title_container.wrap = false;
+        title_container.layout = title_layout;
+        let collapsed_title = top_app_bar_title_element_for_variant(
+            cx,
+            bar.title.clone(),
+            collapsed_title_style,
+            collapsed_title_color,
+        );
+        let middle = cx.flex(title_container, move |cx| {
+            vec![cx.opacity(collapsed_fraction, move |_cx| vec![collapsed_title])]
+        });
+
+        let trailing_slot = slot_container(cx, Px(0.0), trailing_buttons);
+        cx.flex(row, move |_cx| vec![leading_slot, middle, trailing_slot])
+    };
+
+    let base_bottom_padding = match bar.variant {
+        TopAppBarVariant::Large => Px(28.0),
+        _ => Px(24.0),
+    };
+    let bottom_padding = Px(base_bottom_padding.0 * (1.0 - collapsed_fraction).clamp(0.0, 1.0));
+
+    let bottom_row = {
+        let mut wrapper = ContainerProps::default();
+        wrapper.layout.size.width = Length::Fill;
+        wrapper.layout.size.height = Length::Fill;
+        wrapper.layout.flex.grow = 1.0;
+        wrapper.layout.flex.basis = Length::Px(Px(0.0));
+        wrapper.layout.size.min_width = Some(Length::Px(Px(0.0)));
+        wrapper.padding = Edges {
+            left: Px(12.0),
+            right: Px(12.0),
+            top: Px(0.0),
+            bottom: bottom_padding,
+        }
+        .into();
+
+        let expanded_title = top_app_bar_title_element_for_variant(
+            cx,
+            bar.title.clone(),
+            expanded_title_style,
+            expanded_title_color,
+        );
+        cx.container(wrapper, move |cx| {
+            let mut row = FlexProps::default();
+            row.direction = Axis::Horizontal;
+            row.align = CrossAlign::End;
+            row.justify = MainAlign::Start;
+            row.wrap = false;
+            row.layout.size.width = Length::Fill;
+            row.layout.size.height = Length::Fill;
+            vec![cx.flex(row, move |cx| {
+                vec![cx.opacity(1.0 - collapsed_fraction, move |_cx| vec![expanded_title])]
+            })]
+        })
+    };
+
+    cx.flex(column, move |_cx| vec![top_row, bottom_row])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -949,306 +1251,4 @@ mod tests {
         assert_eq!(title.layout.size.width, Length::Fill);
         assert_eq!(title.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
-}
-
-fn top_app_bar_icon_button<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    action: &TopAppBarAction,
-    icon_color: fret_core::Color,
-) -> AnyElement {
-    // Keep the IconButton interaction policy (state layer + ripple) but force the base icon color
-    // to match top-app-bar tokens.
-    let resolved_icon_color = if action.disabled {
-        let mut c = icon_color;
-        c.a *= 0.38;
-        c
-    } else {
-        icon_color
-    };
-
-    let mut style = IconButtonStyle::default();
-    style = style.icon_color(WidgetStateProperty::new(Some(ColorRef::Color(
-        resolved_icon_color,
-    ))));
-
-    let mut btn = IconButton::new(action.icon.clone())
-        .variant(IconButtonVariant::Standard)
-        .style(style)
-        .disabled(action.disabled);
-
-    if let Some(action_id) = action.action.clone() {
-        btn = btn.action(action_id);
-    }
-    if let Some(handler) = action.on_activate.clone() {
-        btn = btn.on_activate(handler);
-    }
-    if let Some(label) = action.a11y_label.clone() {
-        btn = btn.a11y_label(label);
-    }
-    if let Some(id) = action.test_id.clone() {
-        btn = btn.test_id(id);
-    }
-
-    btn.into_element(cx)
-}
-
-fn slot_container<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    min_width: Px,
-    children: Vec<AnyElement>,
-) -> AnyElement {
-    let mut props = ContainerProps::default();
-    props.layout.size.min_width = Some(Length::Px(min_width));
-    props.layout.size.min_height = Some(Length::Px(Px(48.0)));
-    cx.container(props, move |_cx| children)
-}
-
-fn top_app_bar_title_element_for_variant<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    title: Arc<str>,
-    style: fret_core::TextStyle,
-    color: Color,
-) -> AnyElement {
-    let mut props = fret_ui::element::TextProps::new(title);
-    props.layout.size.width = Length::Fill;
-    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-    props.style = Some(style);
-    props.color = Some(color);
-    props.wrap = TextWrap::None;
-    props.overflow = TextOverflow::Ellipsis;
-    cx.text_props(props)
-}
-
-fn top_app_bar_single_row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    bar: &TopAppBar,
-    leading_color: Color,
-    trailing_color: Color,
-    title_style: fret_core::TextStyle,
-    title_color: Color,
-) -> AnyElement {
-    let leading = bar
-        .navigation_icon
-        .as_ref()
-        .map(|action| top_app_bar_icon_button(cx, action, leading_color));
-
-    let trailing_buttons: Vec<AnyElement> = bar
-        .actions
-        .iter()
-        .map(|action| top_app_bar_icon_button(cx, action, trailing_color))
-        .collect();
-
-    match bar.variant {
-        TopAppBarVariant::SmallCentered => {
-            let title = top_app_bar_title_element_for_variant(
-                cx,
-                bar.title.clone(),
-                title_style,
-                title_color,
-            );
-            let leading_reserved = if leading.is_some() { Px(48.0) } else { Px(0.0) };
-            let trailing_reserved = Px((trailing_buttons.len() as f32) * 48.0);
-            let side_reserved = Px(leading_reserved.0.max(trailing_reserved.0));
-
-            let leading_slot = match leading {
-                Some(btn) => slot_container(cx, Px(48.0), vec![btn]),
-                None => slot_container(cx, Px(0.0), Vec::new()),
-            };
-            let trailing_slot = match trailing_buttons.is_empty() {
-                true => slot_container(cx, Px(0.0), Vec::new()),
-                false => slot_container(cx, Px(0.0), trailing_buttons),
-            };
-
-            let mut icons_row = FlexProps::default();
-            icons_row.direction = Axis::Horizontal;
-            icons_row.align = CrossAlign::Center;
-            icons_row.justify = MainAlign::Start;
-            icons_row.wrap = false;
-            icons_row.layout.size.width = Length::Fill;
-            icons_row.layout.size.height = Length::Fill;
-
-            let icons = cx.flex(icons_row, move |cx| {
-                let spacer = cx.spacer(SpacerProps::default());
-                vec![leading_slot, spacer, trailing_slot]
-            });
-
-            let mut title_layer = ContainerProps::default();
-            title_layer.layout.size.width = Length::Fill;
-            title_layer.layout.size.height = Length::Fill;
-            title_layer.layout.position = PositionStyle::Absolute;
-            title_layer.layout.inset.left = Some(side_reserved).into();
-            title_layer.layout.inset.right = Some(side_reserved).into();
-            title_layer.layout.inset.top = Some(Px(0.0)).into();
-            title_layer.layout.inset.bottom = Some(Px(0.0)).into();
-
-            let mut title_row = FlexProps::default();
-            title_row.direction = Axis::Horizontal;
-            title_row.align = CrossAlign::Center;
-            title_row.justify = MainAlign::Center;
-            title_row.wrap = false;
-            title_row.layout.size.width = Length::Fill;
-            title_row.layout.size.height = Length::Fill;
-
-            let title_overlay = cx.container(title_layer, move |cx| {
-                vec![cx.flex(title_row, move |_cx| vec![title])]
-            });
-
-            let mut stack_props = StackProps::default();
-            stack_props.layout.size.width = Length::Fill;
-            stack_props.layout.size.height = Length::Fill;
-
-            cx.stack_props(stack_props, move |_cx| vec![icons, title_overlay])
-        }
-        _ => {
-            let title = top_app_bar_title_element_for_variant(
-                cx,
-                bar.title.clone(),
-                title_style,
-                title_color,
-            );
-            let mut row = FlexProps::default();
-            row.direction = Axis::Horizontal;
-            row.align = CrossAlign::Center;
-            row.justify = MainAlign::Start;
-            row.wrap = false;
-            row.layout.size.width = Length::Fill;
-            row.layout.size.height = Length::Fill;
-
-            let mut title_layout = LayoutStyle::default();
-            title_layout.flex.grow = 1.0;
-            title_layout.flex.basis = Length::Px(Px(0.0));
-            title_layout.size.min_width = Some(Length::Px(Px(0.0)));
-
-            let mut title_container_props = FlexProps::default();
-            title_container_props.direction = Axis::Horizontal;
-            title_container_props.align = CrossAlign::Center;
-            title_container_props.justify = MainAlign::Start;
-            title_container_props.wrap = false;
-            title_container_props.layout = title_layout;
-            let title_container = cx.flex(title_container_props, move |_cx| vec![title]);
-
-            let leading_slot = match leading {
-                Some(btn) => slot_container(cx, Px(48.0), vec![btn]),
-                None => slot_container(cx, Px(12.0), Vec::new()),
-            };
-            let trailing_slot = slot_container(cx, Px(0.0), trailing_buttons);
-
-            cx.flex(row, move |_cx| {
-                vec![leading_slot, title_container, trailing_slot]
-            })
-        }
-    }
-}
-
-fn top_app_bar_two_rows<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    bar: &TopAppBar,
-    leading_color: Color,
-    trailing_color: Color,
-    expanded_title_style: fret_core::TextStyle,
-    expanded_title_color: Color,
-    collapsed_title_style: fret_core::TextStyle,
-    collapsed_title_color: Color,
-    top_row_height: Px,
-    collapsed_fraction: f32,
-) -> AnyElement {
-    let leading = bar
-        .navigation_icon
-        .as_ref()
-        .map(|action| top_app_bar_icon_button(cx, action, leading_color));
-
-    let trailing_buttons: Vec<AnyElement> = bar
-        .actions
-        .iter()
-        .map(|action| top_app_bar_icon_button(cx, action, trailing_color))
-        .collect();
-
-    let mut column = FlexProps::default();
-    column.direction = Axis::Vertical;
-    column.align = CrossAlign::Stretch;
-    column.justify = MainAlign::Start;
-    column.wrap = false;
-    column.layout.size.width = Length::Fill;
-    column.layout.size.height = Length::Fill;
-
-    let top_row = {
-        let mut row = FlexProps::default();
-        row.direction = Axis::Horizontal;
-        row.align = CrossAlign::Center;
-        row.justify = MainAlign::Start;
-        row.wrap = false;
-        row.layout.size.width = Length::Fill;
-        row.layout.size.height = Length::Px(top_row_height);
-
-        let leading_slot = match leading {
-            Some(btn) => slot_container(cx, Px(48.0), vec![btn]),
-            None => slot_container(cx, Px(48.0), Vec::new()),
-        };
-
-        let mut title_layout = LayoutStyle::default();
-        title_layout.flex.grow = 1.0;
-        title_layout.flex.basis = Length::Px(Px(0.0));
-        title_layout.size.min_width = Some(Length::Px(Px(0.0)));
-        let mut title_container = FlexProps::default();
-        title_container.direction = Axis::Horizontal;
-        title_container.align = CrossAlign::Center;
-        title_container.justify = MainAlign::Start;
-        title_container.wrap = false;
-        title_container.layout = title_layout;
-        let collapsed_title = top_app_bar_title_element_for_variant(
-            cx,
-            bar.title.clone(),
-            collapsed_title_style,
-            collapsed_title_color,
-        );
-        let middle = cx.flex(title_container, move |cx| {
-            vec![cx.opacity(collapsed_fraction, move |_cx| vec![collapsed_title])]
-        });
-
-        let trailing_slot = slot_container(cx, Px(0.0), trailing_buttons);
-        cx.flex(row, move |_cx| vec![leading_slot, middle, trailing_slot])
-    };
-
-    let base_bottom_padding = match bar.variant {
-        TopAppBarVariant::Large => Px(28.0),
-        _ => Px(24.0),
-    };
-    let bottom_padding = Px(base_bottom_padding.0 * (1.0 - collapsed_fraction).clamp(0.0, 1.0));
-
-    let bottom_row = {
-        let mut wrapper = ContainerProps::default();
-        wrapper.layout.size.width = Length::Fill;
-        wrapper.layout.size.height = Length::Fill;
-        wrapper.layout.flex.grow = 1.0;
-        wrapper.layout.flex.basis = Length::Px(Px(0.0));
-        wrapper.layout.size.min_width = Some(Length::Px(Px(0.0)));
-        wrapper.padding = Edges {
-            left: Px(12.0),
-            right: Px(12.0),
-            top: Px(0.0),
-            bottom: bottom_padding,
-        }
-        .into();
-
-        let expanded_title = top_app_bar_title_element_for_variant(
-            cx,
-            bar.title.clone(),
-            expanded_title_style,
-            expanded_title_color,
-        );
-        cx.container(wrapper, move |cx| {
-            let mut row = FlexProps::default();
-            row.direction = Axis::Horizontal;
-            row.align = CrossAlign::End;
-            row.justify = MainAlign::Start;
-            row.wrap = false;
-            row.layout.size.width = Length::Fill;
-            row.layout.size.height = Length::Fill;
-            vec![cx.flex(row, move |cx| {
-                vec![cx.opacity(1.0 - collapsed_fraction, move |_cx| vec![expanded_title])]
-            })]
-        })
-    };
-
-    cx.flex(column, move |_cx| vec![top_row, bottom_row])
 }

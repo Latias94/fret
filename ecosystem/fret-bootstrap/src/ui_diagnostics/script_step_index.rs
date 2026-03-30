@@ -77,8 +77,8 @@ fn resolve_snapshot_for_event(
     Option<u64>,
     Option<&'static str>,
 ) {
-    if let Some(frame_id) = frame_id {
-        if let Some(info) = by_window_frame.get(&(window, frame_id)) {
+    if let Some(frame_id) = frame_id
+        && let Some(info) = by_window_frame.get(&(window, frame_id)) {
             return (
                 info.window_snapshot_seq,
                 info.timestamp_unix_ms,
@@ -87,7 +87,6 @@ fn resolve_snapshot_for_event(
                 Some("frame_id"),
             );
         }
-    }
 
     let Some(unix_ms) = unix_ms else {
         return (None, None, None, None, None);

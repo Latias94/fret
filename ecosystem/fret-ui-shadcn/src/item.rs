@@ -217,7 +217,7 @@ impl ItemGroup {
             kind: ItemGroupKind::Column,
             size: None,
             layout: LayoutRefinement::default().w_full(),
-            gap: None.into(),
+            gap: None,
             children,
         }
     }
@@ -479,7 +479,7 @@ impl ItemContent {
                 .min_w_0()
                 .overflow_hidden(),
             children,
-            gap: None.into(),
+            gap: None,
             item_size: None,
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
@@ -1293,13 +1293,10 @@ mod tests {
         {
             return Some(el);
         }
-        match &el.kind {
-            ElementKind::Semantics(props) => {
-                if props.test_id.as_deref() == Some(test_id) {
-                    return Some(el);
-                }
+        if let ElementKind::Semantics(props) = &el.kind {
+            if props.test_id.as_deref() == Some(test_id) {
+                return Some(el);
             }
-            _ => {}
         }
         for child in &el.children {
             if let Some(found) = find_element_by_test_id(child, test_id) {
@@ -1815,7 +1812,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let item_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let bg_out: Rc<Cell<Option<Color>>> = Rc::new(Cell::new(None));

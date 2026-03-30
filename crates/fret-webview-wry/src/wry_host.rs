@@ -143,6 +143,12 @@ fn page_load_events(
     ]
 }
 
+impl Default for WryWebViewHost {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WryWebViewHost {
     pub fn new() -> Self {
         Self {
@@ -341,13 +347,12 @@ impl WryWebViewHost {
                         unhandled.push(WebViewRequest::Destroy { id });
                         continue;
                     }
-                    if let Some(inst) = self.instances.remove(&id) {
-                        if let Ok(mut map) = self.events.lock() {
+                    if let Some(inst) = self.instances.remove(&id)
+                        && let Ok(mut map) = self.events.lock() {
                             map.entry(inst.window)
                                 .or_default()
                                 .push_back(WebViewEvent::Destroyed { id });
                         }
-                    }
                 }
                 WebViewRequest::SetPlacement { id, placement } => {
                     let Some(instance) = self.instances.get_mut(&id) else {

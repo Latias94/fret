@@ -642,6 +642,12 @@ impl std::fmt::Debug for VoiceSelectorInput {
     }
 }
 
+impl Default for VoiceSelectorInput {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VoiceSelectorInput {
     pub fn new() -> Self {
         Self {
@@ -731,6 +737,12 @@ impl std::fmt::Debug for VoiceSelectorList {
             .field("empty_text", &self.empty_text.as_ref())
             .field("test_id_prefix", &self.test_id_prefix.as_deref())
             .finish()
+    }
+}
+
+impl Default for VoiceSelectorList {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1949,6 +1961,12 @@ impl std::fmt::Debug for VoiceSelectorValue {
     }
 }
 
+impl Default for VoiceSelectorValue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VoiceSelectorValue {
     pub fn new() -> Self {
         Self {
@@ -2019,15 +2037,11 @@ impl VoiceSelectorValue {
 
 /// Default trigger button used in demos/recipes.
 #[derive(Clone)]
+#[derive(Default)]
 pub struct VoiceSelectorButton {
     test_id: Option<Arc<str>>,
 }
 
-impl Default for VoiceSelectorButton {
-    fn default() -> Self {
-        Self { test_id: None }
-    }
-}
 
 impl VoiceSelectorButton {
     pub fn new() -> Self {

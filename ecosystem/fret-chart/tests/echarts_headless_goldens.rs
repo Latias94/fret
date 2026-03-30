@@ -153,7 +153,7 @@ fn snapshot_from_engine(
     let mut axis_windows = Vec::with_capacity(output.axis_windows.len());
     for (axis, w) in &output.axis_windows {
         axis_windows.push(AxisWindowSnapshot {
-            axis: axis.0 as u64,
+            axis: axis.0,
             min: w.min,
             max: w.max,
         });
@@ -166,18 +166,18 @@ fn snapshot_from_engine(
         let mut extents = Vec::with_capacity(g.y_percent_extents.len());
         for (axis, (min, max)) in &g.y_percent_extents {
             extents.push(AxisExtentSnapshot {
-                axis: axis.0 as u64,
+                axis: axis.0,
                 min: *min,
                 max: *max,
             });
         }
         extents.sort_by_key(|e| e.axis);
 
-        let mut series: Vec<u64> = g.series.iter().map(|s| s.0 as u64).collect();
+        let mut series: Vec<u64> = g.series.iter().map(|s| s.0).collect();
         series.sort_unstable();
 
         grids.push(GridFilterSnapshot {
-            grid: g.grid.0 as u64,
+            grid: g.grid.0,
             series,
             y_percent_extents: extents,
         });
@@ -185,7 +185,7 @@ fn snapshot_from_engine(
     grids.sort_by_key(|g| g.grid);
 
     let filter_plan = FilterPlanSnapshot {
-        revision: filter_plan_output.revision.0 as u64,
+        revision: filter_plan_output.revision.0,
         grids,
     };
 
@@ -196,9 +196,9 @@ fn snapshot_from_engine(
             continue;
         };
         let entry = by_series
-            .entry(series.0 as u64)
+            .entry(series.0)
             .or_insert(SeriesMarksSnapshot {
-                series: series.0 as u64,
+                series: series.0,
                 nodes: 0,
                 points: 0,
                 polylines: 0,
@@ -227,7 +227,7 @@ fn snapshot_from_engine(
     let data_indices = snapshot_indices(&marks.arena.data_indices);
     let rect_data_indices = snapshot_indices(&marks.arena.rect_data_indices);
     let marks = MarksSnapshot {
-        revision: marks.revision.0 as u64,
+        revision: marks.revision.0,
         total_nodes: marks.nodes.len(),
         arena_points: marks.arena.points.len(),
         arena_rects: marks.arena.rects.len(),
@@ -240,7 +240,7 @@ fn snapshot_from_engine(
     let mut series = Vec::with_capacity(participation.series.len());
     for s in &participation.series {
         let row_count = row_count_by_dataset
-            .get(&(s.dataset.0 as u64))
+            .get(&{ s.dataset.0 })
             .copied()
             .unwrap_or(0);
         let view_len = s.selection.view_len(row_count);
@@ -269,10 +269,10 @@ fn snapshot_from_engine(
         };
 
         series.push(SeriesParticipationSnapshot {
-            series: s.series.0 as u64,
-            dataset: s.dataset.0 as u64,
-            revision: s.revision.0 as u64,
-            data_revision: s.data_revision.0 as u64,
+            series: s.series.0,
+            dataset: s.dataset.0,
+            revision: s.revision.0,
+            data_revision: s.data_revision.0,
             selection,
             x_filter_mode: format!("{:?}", s.x_filter_mode),
             y_filter_mode: format!("{:?}", s.y_filter_mode),
@@ -283,7 +283,7 @@ fn snapshot_from_engine(
     series.sort_by_key(|s| s.series);
 
     let participation = ParticipationSnapshot {
-        revision: participation.revision.0 as u64,
+        revision: participation.revision.0,
         series,
     };
 
@@ -322,7 +322,7 @@ fn run_option_snapshot_with_viewport(option_json: &str, viewport: Rect) -> Headl
 
     let mut row_count_by_dataset: BTreeMap<u64, usize> = BTreeMap::new();
     for (id, table) in &translated.datasets {
-        row_count_by_dataset.insert(id.0 as u64, table.row_count());
+        row_count_by_dataset.insert(id.0, table.row_count());
     }
 
     let mut engine = ChartEngine::new(spec).expect("engine");
@@ -333,7 +333,7 @@ fn run_option_snapshot_with_viewport(option_json: &str, viewport: Rect) -> Headl
         engine.apply_action(action);
     }
 
-    let mut measurer = NullTextMeasurer::default();
+    let mut measurer = NullTextMeasurer;
     for _ in 0..64 {
         let result = engine
             .step(

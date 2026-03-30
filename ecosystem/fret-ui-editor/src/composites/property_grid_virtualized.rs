@@ -149,7 +149,7 @@ impl PropertyGridVirtualized {
             len,
             list_options,
             &scroll,
-            move |i| key_at(i),
+            key_at,
             move |cx, i| row_at(cx, i, row_cx.clone()),
         );
 

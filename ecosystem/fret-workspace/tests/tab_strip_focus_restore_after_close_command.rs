@@ -117,7 +117,7 @@ fn close_active_tab_prefocuses_predicted_next_tab_when_strip_is_focused() {
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices::default();
+    let mut services = FakeServices;
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

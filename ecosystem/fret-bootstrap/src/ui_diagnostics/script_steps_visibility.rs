@@ -65,8 +65,8 @@ pub(super) fn handle_ensure_visible_step(
         UiPredicateV1::VisibleInWindow { target }
     };
 
-    if within_window {
-        if let Some(node) = select_semantics_node_with_trace(
+    if within_window
+        && let Some(node) = select_semantics_node_with_trace(
             snapshot,
             window,
             element_runtime,
@@ -99,7 +99,6 @@ pub(super) fn handle_ensure_visible_step(
                 return true;
             }
         }
-    }
 
     let docking_diag = app
         .global::<fret_runtime::WindowInteractionDiagnosticsStore>()

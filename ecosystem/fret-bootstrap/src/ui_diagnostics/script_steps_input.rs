@@ -428,7 +428,7 @@ pub(super) fn handle_set_text_value_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -524,7 +524,7 @@ pub(super) fn handle_set_text_value_step(
         return true;
     }
 
-    let Some(ui) = ui.as_deref_mut() else {
+    let Some(ui) = ui else {
         *force_dump_label = Some(format!("script-step-{step_index:04}-set_text_value-no-ui"));
         *stop_script = true;
         *failure_reason = Some("set_text_value_no_ui".to_string());

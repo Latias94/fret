@@ -1,7 +1,7 @@
-/// Canonical-order helpers for editor-style tab strips.
-///
-/// These helpers are intentionally "headless": they operate on caller-provided slices and pure
-/// closures so different tab models (workspace, docking, etc.) can share the same invariants.
+//! Canonical-order helpers for editor-style tab strips.
+//!
+//! These helpers are intentionally "headless": they operate on caller-provided slices and pure
+//! closures so different tab models (workspace, docking, etc.) can share the same invariants.
 
 /// Resolves the canonical insert index for an "end-drop" within the dragged tab's group.
 ///

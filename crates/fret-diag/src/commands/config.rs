@@ -575,17 +575,12 @@ fn compute_effective_runtime_config(
                 v,
                 ValueSource::Env("env:FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS"),
             ))
-        } else if let Some(v) = config_file
+        } else { config_file
             .and_then(|c| c.script_dump_max_snapshots)
-            .map(|v| v as usize)
-        {
-            Some((
+            .map(|v| v as usize).map(|v| (
                 v,
                 ValueSource::ConfigFile("config:script_dump_max_snapshots"),
-            ))
-        } else {
-            None
-        };
+            )) };
 
     let (script_dump_max_snapshots, script_dump_source) =
         if let Some((v, src)) = raw_script_dump_max {
@@ -610,44 +605,35 @@ fn compute_effective_runtime_config(
             .get("FRET_DIAG_FIXED_FRAME_DELTA_MS")
             .map(|v| v.trim())
             .filter(|v| !v.is_empty())
-        {
-            if let Ok(parsed) = v.parse::<u64>() {
-                if parsed > 0 {
+            && let Ok(parsed) = v.parse::<u64>()
+                && parsed > 0 {
                     out = Some((
                         parsed,
                         ValueSource::Env("env:FRET_DIAG_FIXED_FRAME_DELTA_MS"),
                     ));
                 }
-            }
-        }
 
-        if out.is_none() {
-            if let Some(v) = env
+        if out.is_none()
+            && let Some(v) = env
                 .get("FRET_FRAME_CLOCK_FIXED_DELTA_MS")
                 .map(|v| v.trim())
                 .filter(|v| !v.is_empty())
-            {
-                if let Ok(parsed) = v.parse::<u64>() {
-                    if parsed > 0 {
+                && let Ok(parsed) = v.parse::<u64>()
+                    && parsed > 0 {
                         out = Some((
                             parsed,
                             ValueSource::Env("env:FRET_FRAME_CLOCK_FIXED_DELTA_MS"),
                         ));
                     }
-                }
-            }
-        }
 
-        if out.is_none() {
-            if let Some(v) = config_file.and_then(|c| c.frame_clock_fixed_delta_ms) {
-                if v > 0 {
+        if out.is_none()
+            && let Some(v) = config_file.and_then(|c| c.frame_clock_fixed_delta_ms)
+                && v > 0 {
                     out = Some((
                         v,
                         ValueSource::ConfigFile("config:frame_clock_fixed_delta_ms"),
                     ));
                 }
-            }
-        }
 
         out
     };
@@ -1043,11 +1029,10 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
         }));
     }
 
-    if mode == DoctorMode::Launch {
-        if let Some(w) = launch_dir_sessions_concurrency_warning(&ctx.fs_transport_cfg.out_dir) {
+    if mode == DoctorMode::Launch
+        && let Some(w) = launch_dir_sessions_concurrency_warning(&ctx.fs_transport_cfg.out_dir) {
             warnings.push(w);
         }
-    }
 
     let mut config_value: Option<serde_json::Value> = None;
     let mut config_file: Option<UiDiagnosticsConfigFileV1> = None;

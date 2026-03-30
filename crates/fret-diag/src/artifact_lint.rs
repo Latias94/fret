@@ -357,8 +357,8 @@ pub(crate) fn lint_run_artifact_dir(
     if let (Some(a), Some(b)) = (
         manifest_script_updated,
         script_result.as_ref().map(|r| r.updated_unix_ms),
-    ) {
-        if a != 0 && b != 0 && a != b {
+    )
+        && a != 0 && b != 0 && a != b {
             push_finding(
                 &mut findings,
                 ArtifactLintLevel::Warning,
@@ -372,10 +372,9 @@ pub(crate) fn lint_run_artifact_dir(
                 }),
             );
         }
-    }
 
-    if let (Some(a), Some(b)) = (manifest_run_id, script_run_id) {
-        if a != b {
+    if let (Some(a), Some(b)) = (manifest_run_id, script_run_id)
+        && a != b {
             push_finding(
                 &mut findings,
                 ArtifactLintLevel::Error,
@@ -389,9 +388,8 @@ pub(crate) fn lint_run_artifact_dir(
                 }),
             );
         }
-    }
-    if let (Some(a), Some(b)) = (dir_run_id, manifest_run_id) {
-        if a != b {
+    if let (Some(a), Some(b)) = (dir_run_id, manifest_run_id)
+        && a != b {
             push_finding(
                 &mut findings,
                 ArtifactLintLevel::Error,
@@ -405,7 +403,6 @@ pub(crate) fn lint_run_artifact_dir(
                 }),
             );
         }
-    }
 
     if let Some(files) = manifest.get("files").and_then(|v| v.as_array()) {
         for f in files {

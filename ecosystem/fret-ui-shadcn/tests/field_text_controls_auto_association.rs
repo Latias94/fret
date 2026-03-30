@@ -1,3 +1,5 @@
+#![allow(clippy::manual_contains)]
+
 use fret_app::App;
 use fret_core::{AppWindowId, Modifiers, MouseButton, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::Model;

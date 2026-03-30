@@ -81,7 +81,7 @@ struct CachedTestIdPredicateEval {
 }
 
 thread_local! {
-    static SCRIPT_INJECTION_SCOPE: std::cell::Cell<bool> = std::cell::Cell::new(false);
+    static SCRIPT_INJECTION_SCOPE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 const DIAG_CLIPBOARD_TOKEN_NAMESPACE: u64 = 1u64 << 63;
@@ -297,16 +297,12 @@ impl UiDiagnosticsService {
             UiWindowTargetV1::FirstSeenOther => self
                 .known_windows
                 .iter()
-                .copied()
-                .filter(|w| *w != current_window)
-                .next(),
+                .copied().find(|w| *w != current_window),
             UiWindowTargetV1::LastSeen => last_seen,
             UiWindowTargetV1::LastSeenOther => self
                 .known_windows
                 .iter()
-                .copied()
-                .filter(|w| *w != current_window)
-                .last(),
+                .copied().rfind(|w| *w != current_window),
             UiWindowTargetV1::WindowFfi { window } => {
                 let want = AppWindowId::from(KeyData::from_ffi(window));
                 self.known_windows.contains(&want).then_some(want)
@@ -967,9 +963,7 @@ impl UiDiagnosticsService {
             // silently dropping it and letting tooling time out.
             let fallback = if active.anchor_window != window
                 && self
-                    .known_windows
-                    .iter()
-                    .any(|w| *w == active.anchor_window)
+                    .known_windows.contains(&active.anchor_window)
             {
                 Some(active.anchor_window)
             } else {
@@ -1205,7 +1199,7 @@ impl UiDiagnosticsService {
                     // Keep this bounded; scripted diagnostics primarily use `test_id` selectors.
                     // Rebuilding this map on every frame is wasteful, so we key it off of the
                     // semantics fingerprint.
-                    let cap = self.cfg.max_semantics_nodes.max(1) as usize;
+                    let cap = self.cfg.max_semantics_nodes.max(1);
                     for node in &snapshot.nodes {
                         if ring.test_id_bounds.len() >= cap {
                             break;

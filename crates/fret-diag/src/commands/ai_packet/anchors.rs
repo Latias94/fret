@@ -153,13 +153,12 @@ pub(super) fn write_packet_anchors_if_possible(dir: &Path) -> Result<(), String>
         failed_window_snapshot_seq: None,
     };
 
-    if let Some(step_index) = failed_step_index {
-        if let Some(steps) = idx
+    if let Some(step_index) = failed_step_index
+        && let Some(steps) = idx
             .get("script")
             .and_then(|v| v.get("steps"))
             .and_then(|v| v.as_array())
-        {
-            if let Some(step) = steps.iter().find(|s| {
+            && let Some(step) = steps.iter().find(|s| {
                 s.get("step_index")
                     .and_then(|v| v.as_u64())
                     .is_some_and(|v| v == step_index as u64)
@@ -169,8 +168,6 @@ pub(super) fn write_packet_anchors_if_possible(dir: &Path) -> Result<(), String>
                 anchors.failed_window_snapshot_seq =
                     step.get("window_snapshot_seq").and_then(|v| v.as_u64());
             }
-        }
-    }
 
     let payload = serde_json::json!({
         "kind": "ai_packet_anchors",
@@ -235,7 +232,7 @@ mod tests {
 
         let script: UiScriptResultV1 = serde_json::from_value(v).expect("parse script.result");
         let ids = pick_candidate_test_ids_for_failed_step(&script);
-        assert_eq!(ids.get(0).map(String::as_str), Some("primary"));
+        assert_eq!(ids.first().map(String::as_str), Some("primary"));
         assert_eq!(ids.get(1).map(String::as_str), Some("secondary"));
         assert_eq!(ids.get(2).map(String::as_str), Some("focus"));
     }

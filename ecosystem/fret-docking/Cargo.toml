@@ -27,3 +27,6 @@ imui = ["ui", "dep:fret-authoring"]
 
 [dev-dependencies]
 slotmap.workspace = true
+
+[lints.clippy]
+too_many_arguments = "allow"

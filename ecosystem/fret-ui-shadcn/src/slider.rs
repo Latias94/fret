@@ -36,6 +36,7 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 }
 
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct SliderStyle {
     pub track_height: Option<Px>,
     pub track_background: OverrideSlot<ColorRef>,
@@ -47,20 +48,6 @@ pub struct SliderStyle {
     pub thumb_ring_color: OverrideSlot<ColorRef>,
 }
 
-impl Default for SliderStyle {
-    fn default() -> Self {
-        Self {
-            track_height: None,
-            track_background: None,
-            track_border_color: None,
-            range_background: None,
-            thumb_size: None,
-            thumb_background: None,
-            thumb_border_color: None,
-            thumb_ring_color: None,
-        }
-    }
-}
 
 impl SliderStyle {
     pub fn track_height(mut self, track_height: Px) -> Self {
@@ -1378,7 +1365,7 @@ fn slider_element<H: UiHost>(
             ) {
                 let focus_target = active_thumb_focus_target
                     .get()
-                    .or_else(|| thumb_focus_targets.get(0).and_then(|t| t.get()));
+                    .or_else(|| thumb_focus_targets.first().and_then(|t| t.get()));
                 if let Some(focus_target) = focus_target {
                     let entry = ControlEntry {
                         element: focus_target,
@@ -2639,11 +2626,10 @@ mod tests {
             .as_ref()
             .and_then(|d| d.test_id.as_deref())
             .is_some_and(|t| t == test_id);
-        if matches {
-            if let ElementKind::Container(props) = &el.kind {
+        if matches
+            && let ElementKind::Container(props) = &el.kind {
                 return Some(props.border_color.map(|c| c.a).unwrap_or(0.0));
             }
-        }
         for child in &el.children {
             if let Some(found) = container_border_alpha_by_test_id(child, test_id) {
                 return Some(found);

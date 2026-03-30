@@ -422,7 +422,7 @@ fn format_selected_ppp_en(date: Date) -> Arc<str> {
 
     fn ordinal_suffix(day: u8) -> &'static str {
         let mod_100 = day % 100;
-        if mod_100 >= 11 && mod_100 <= 13 {
+        if (11..=13).contains(&mod_100) {
             return "th";
         }
         match day % 10 {
@@ -684,7 +684,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(800.0), Px(600.0)),
@@ -739,7 +739,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(480.0), Px(260.0)),

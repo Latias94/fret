@@ -241,7 +241,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// Like [`Self::provided`], but allows filtering values while continuing the ancestor search.
     pub fn provided_where<S: Any>(&self, predicate: impl Fn(&S) -> bool) -> Option<&S> {
         self.inherited_state_where::<ProvidedState<S>>(|slot| {
-            slot.value.as_ref().is_some_and(|value| predicate(value))
+            slot.value.as_ref().is_some_and(&predicate)
         })
         .and_then(|slot| slot.value.as_ref())
     }

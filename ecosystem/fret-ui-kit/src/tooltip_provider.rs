@@ -16,11 +16,10 @@ fn effective_frame_delta_for_cx<H: UiHost>(cx: &ElementContext<'_, H>) -> Durati
         return REFERENCE_FRAME_DELTA_60HZ;
     };
 
-    if let Some(fixed) = svc.effective_fixed_delta(cx.window) {
-        if fixed > Duration::ZERO {
+    if let Some(fixed) = svc.effective_fixed_delta(cx.window)
+        && fixed > Duration::ZERO {
             return fixed;
         }
-    }
 
     let has_window_metrics = cx.app.global::<WindowMetricsService>().is_some();
     if !has_window_metrics {
@@ -50,7 +49,7 @@ fn duration_to_ticks_ceil(duration: Duration, frame_delta: Duration) -> u64 {
 
     let duration_ns = duration.as_nanos();
     let frame_delta_ns = frame_delta.as_nanos().max(1);
-    let ticks = (duration_ns + frame_delta_ns - 1) / frame_delta_ns;
+    let ticks = duration_ns.div_ceil(frame_delta_ns);
     ticks.clamp(1, MAX_DURATION_TICKS as u128) as u64
 }
 

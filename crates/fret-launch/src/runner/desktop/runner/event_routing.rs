@@ -347,13 +347,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let mut screen_pos_for_pos = screen_pos;
         let mut screen_pos_was_clamped = false;
-        if diag_override_active && current != drag_source_window {
-            if let Some(clamped) = self.clamp_screen_pos_to_window_client(current, screen_pos) {
+        if diag_override_active && current != drag_source_window
+            && let Some(clamped) = self.clamp_screen_pos_to_window_client(current, screen_pos) {
                 screen_pos_was_clamped = (clamped.x - screen_pos.x).abs() >= 0.01
                     || (clamped.y - screen_pos.y).abs() >= 0.01;
                 screen_pos_for_pos = clamped;
             }
-        }
         let Some(pos) = self.local_pos_for_window(current, screen_pos_for_pos) else {
             return false;
         };
@@ -737,13 +736,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let mut screen_pos_for_pos = screen_pos;
         let mut screen_pos_was_clamped = false;
-        if diag_override_active && target != drag_source_window {
-            if let Some(clamped) = self.clamp_screen_pos_to_window_client(target, screen_pos) {
+        if diag_override_active && target != drag_source_window
+            && let Some(clamped) = self.clamp_screen_pos_to_window_client(target, screen_pos) {
                 screen_pos_was_clamped = (clamped.x - screen_pos.x).abs() >= 0.01
                     || (clamped.y - screen_pos.y).abs() >= 0.01;
                 screen_pos_for_pos = clamped;
             }
-        }
 
         let pos = self
             .local_pos_for_window(target, screen_pos_for_pos)

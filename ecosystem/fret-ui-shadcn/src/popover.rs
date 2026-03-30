@@ -2619,10 +2619,9 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = redirect_focus_id_for_handler
+            let id = *redirect_focus_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
@@ -2725,10 +2724,9 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = underlay_id_for_handler
+            let id = *underlay_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
@@ -3143,7 +3141,7 @@ mod tests {
             .iter()
             .find(|n| n.id == trigger_node)
             .expect("trigger semantics node");
-        assert_eq!(trigger_sem.flags.expanded, false);
+        assert!(!trigger_sem.flags.expanded);
         assert!(
             trigger_sem.controls.is_empty(),
             "closed popover should not expose controls to an unmounted content node"
@@ -5069,10 +5067,9 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let trigger = trigger_id_for_handler
+            let trigger = *trigger_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(trigger) = trigger {
                 host.request_focus(trigger);
             }
@@ -6564,8 +6561,8 @@ mod tests {
         let open = app.models_mut().insert(false);
         let a = Popover::from_open(open.clone());
         let b = Popover::from_open(open).shift_cross_axis(false);
-        assert_eq!(a.shift_cross_axis.unwrap_or(true), true);
-        assert_eq!(b.shift_cross_axis.unwrap_or(true), false);
+        assert!(a.shift_cross_axis.unwrap_or(true));
+        assert!(!b.shift_cross_axis.unwrap_or(true));
     }
 
     #[test]

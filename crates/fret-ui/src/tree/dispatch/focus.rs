@@ -10,9 +10,7 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<NodeId> {
         let window = window?;
         let mut node = self.focus?;
-        if snapshot.pre.get(node).is_none() {
-            return None;
-        }
+        snapshot.pre.get(node)?;
 
         loop {
             if let Some(record) = declarative::element_record_for_node(app, window, node)

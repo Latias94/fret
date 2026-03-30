@@ -126,8 +126,8 @@ fn select_semantics_node_with_trace<'a>(
                     && matches_root_z(node_id)
                     && n.test_id.as_deref() == Some(id)
             }));
-            if matches.is_empty() {
-                if selector::extend_test_id_chrome_fallback(
+            if matches.is_empty()
+                && selector::extend_test_id_chrome_fallback(
                     snapshot,
                     &index,
                     id,
@@ -137,7 +137,6 @@ fn select_semantics_node_with_trace<'a>(
                 ) {
                     note = Some("fallback_chrome_suffix".to_string());
                 }
-            }
             if matches.is_empty() {
                 // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
                 note = Some("fallback_hidden_nodes".to_string());

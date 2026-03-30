@@ -257,9 +257,7 @@ impl Tabs {
                 .as_ref()
                 .map(|id| Arc::<str>::from(format!("{id}-active-indicator")));
 
-            let container_states = disabled
-                .then_some(WidgetStates::DISABLED)
-                .unwrap_or_default();
+            let container_states = if disabled { WidgetStates::DISABLED } else { Default::default() };
             let (container_height, container_bg) = {
                 let theme = Theme::global(&*cx.app);
                 let container_height = tabs_tokens::container_height(theme);

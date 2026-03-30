@@ -97,7 +97,7 @@ pub fn resolve_import_closure<'a>(
             &graph.imports
         };
 
-        for (dep, _meta) in map {
+        for dep in map.keys() {
             closure.reachable.insert(*dep);
             visit(
                 *dep, node, root, root_graph, resolver, marks, stack, closure,

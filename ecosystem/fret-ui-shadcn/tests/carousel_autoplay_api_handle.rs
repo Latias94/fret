@@ -84,11 +84,14 @@ fn take_last_timer_after(app: &mut App, window: AppWindowId) -> Option<(TimerTok
 }
 
 fn flush_contains_set_timer(app: &mut App, window: AppWindowId) -> bool {
-    app.flush_effects().into_iter().any(|e| match e {
-        Effect::SetTimer {
-            window: Some(w), ..
-        } if w == window => true,
-        _ => false,
+    app.flush_effects().into_iter().any(|e| {
+        matches!(
+            e,
+            Effect::SetTimer {
+                window: Some(w),
+                ..
+            } if w == window
+        )
     })
 }
 

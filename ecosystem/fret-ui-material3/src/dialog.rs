@@ -617,7 +617,7 @@ impl Dialog {
 
                     let action_cfg = DialogActionConfig {
                         height: dialog_tokens::action_height(theme),
-                        padding: dialog_tokens::action_padding(theme).into(),
+                        padding: dialog_tokens::action_padding(theme),
                         corner_radii: dialog_tokens::action_corner_radii(theme),
                     };
                     let panel_padding = dialog_tokens::panel_padding(theme);

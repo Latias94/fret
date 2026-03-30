@@ -202,8 +202,8 @@ impl DragHost for TestHost {
         self.drags.remove(&pointer_id);
     }
 
-    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
-        self.drags.values().any(|session| predicate(session))
+    fn any_drag_session(&self, predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        self.drags.values().any(predicate)
     }
 
     fn find_drag_pointer_id(
@@ -839,7 +839,7 @@ fn text_input_text_input_event_updates_model() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -904,7 +904,7 @@ fn top_app_bar_exposes_toolbar_semantics_role() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -959,7 +959,7 @@ fn snackbar_action_emits_command_and_dismisses() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -1137,7 +1137,7 @@ fn snackbar_dismiss_button_dismisses_without_emitting_command() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -1307,7 +1307,7 @@ fn navigation_bar_roving_skips_disabled_and_updates_model() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -1447,7 +1447,7 @@ fn navigation_bar_roving_wraps_and_skips_disabled_on_reverse() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -1625,7 +1625,7 @@ fn navigation_rail_roving_skips_disabled_and_updates_model() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -1765,7 +1765,7 @@ fn navigation_rail_roving_wraps_and_skips_disabled_on_reverse() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -1891,7 +1891,7 @@ fn navigation_rail_roving_does_not_wrap_when_loop_navigation_false() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -1985,7 +1985,7 @@ fn navigation_rail_roving_single_enabled_item_does_not_move_under_no_loop() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -2089,7 +2089,7 @@ fn navigation_drawer_roving_skips_disabled_and_updates_model() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -2231,7 +2231,7 @@ fn navigation_drawer_roving_wraps_and_skips_disabled_on_reverse() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -2359,7 +2359,7 @@ fn navigation_drawer_roving_does_not_wrap_when_loop_navigation_false() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -2453,7 +2453,7 @@ fn navigation_drawer_roving_single_enabled_item_does_not_move_under_no_loop() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -2557,7 +2557,7 @@ fn time_picker_clock_dial_drag_updates_time() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -2627,7 +2627,7 @@ fn time_picker_clock_dial_drag_updates_time() {
     let after = app
         .models()
         .get_cloned(&time)
-        .unwrap_or_else(|| selected_time);
+        .unwrap_or(selected_time);
     assert_ne!(
         after, selected_time,
         "expected dial drag to update the time model"
@@ -2644,7 +2644,7 @@ fn time_picker_selector_keyboard_arrows_step_time() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -2737,7 +2737,7 @@ fn time_picker_time_input_replaces_and_auto_advances_hour() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -2839,7 +2839,7 @@ fn radio_selected_dot_is_centered_in_outline() {
         Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -2896,11 +2896,9 @@ fn radio_selected_dot_is_centered_in_outline() {
                     && paint_alpha(&background.paint) > 0.5
                     && rect.size.width.0 <= 12.0
                     && rect.size.height.0 <= 12.0
-                {
-                    if dot.is_none_or(|r| rect.size.width.0 > r.size.width.0 + 1e-3) {
+                    && dot.is_none_or(|r| rect.size.width.0 > r.size.width.0 + 1e-3) {
                         dot = Some(*rect);
                     }
-                }
             }
 
             if let (Some(outline), Some(dot)) = (outline, dot) {
@@ -2942,7 +2940,7 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
         Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -3082,7 +3080,7 @@ fn switch_ripple_origin_tracks_pointer_down_position() {
             .unwrap_or(Px(40.0));
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -3224,7 +3222,7 @@ fn switch_keyboard_ripple_origin_ignores_stale_pointer_down() {
         .unwrap_or(Px(40.0));
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -3434,7 +3432,7 @@ fn switch_ripple_holds_for_minimum_press_duration_before_fade() {
         .unwrap_or(Px(32.0));
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -3577,7 +3575,7 @@ fn tabs_pressed_scene_structure_is_stable() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -3648,7 +3646,7 @@ fn tabs_pressed_scene_structure_is_stable() {
             let mut scene = Scene::default();
             ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-            if frame >= 2 && frame < 7 {
+            if (2..7).contains(&frame) {
                 let sig = scene_signature(&scene);
                 if let Some(prev) = baseline_structure.as_ref() {
                     assert_eq!(
@@ -3712,7 +3710,7 @@ fn icon_button_pressed_scene_structure_is_stable() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -3774,7 +3772,7 @@ fn icon_button_pressed_scene_structure_is_stable() {
             let mut scene = Scene::default();
             ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-            if frame >= 2 && frame < 7 {
+            if (2..7).contains(&frame) {
                 let sig = scene_signature(&scene);
                 if let Some(prev) = baseline_structure.as_ref() {
                     assert_eq!(
@@ -3813,7 +3811,7 @@ fn icon_toggle_button_semantics_role_and_checked_state_are_stable() {
     apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::Expressive);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -3853,8 +3851,8 @@ fn icon_toggle_button_semantics_role_and_checked_state_are_stable() {
             fret_core::SemanticsRole::Checkbox,
             "expected IconToggleButton semantics role=Checkbox"
         );
-        assert_eq!(
-            node.flags.selected, false,
+        assert!(
+            !node.flags.selected,
             "expected IconToggleButton not to set `selected`"
         );
         assert_eq!(
@@ -3899,8 +3897,8 @@ fn icon_toggle_button_semantics_role_and_checked_state_are_stable() {
         fret_core::SemanticsRole::Checkbox,
         "expected IconToggleButton semantics role=Checkbox after toggle"
     );
-    assert_eq!(
-        node.flags.selected, false,
+    assert!(
+        !node.flags.selected,
         "expected IconToggleButton not to set `selected` after toggle"
     );
     assert_eq!(
@@ -3931,7 +3929,7 @@ fn icon_toggle_button_checked_transition_scene_structure_is_stable() {
     apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -4003,7 +4001,7 @@ fn icon_toggle_button_checked_transition_scene_structure_is_stable() {
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
         // Ignore the first couple frames: focus + modality may settle after the click.
-        if frame >= 2 && frame < 7 {
+        if (2..7).contains(&frame) {
             let sig = scene_signature(&scene);
             if let Some(prev) = baseline_structure.as_ref() {
                 assert_eq!(
@@ -4081,7 +4079,7 @@ fn switch_pressed_scene_structure_is_stable() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -4144,7 +4142,7 @@ fn switch_pressed_scene_structure_is_stable() {
             let mut scene = Scene::default();
             ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-            if frame >= 2 && frame < 7 {
+            if (2..7).contains(&frame) {
                 let sig = scene_signature(&scene);
                 if let Some(prev) = baseline_structure.as_ref() {
                     assert_eq!(
@@ -4206,7 +4204,7 @@ fn switch_icons_pressed_scene_structure_is_stable() {
             apply_material_theme(&mut app, mode, variant);
 
             let window = AppWindowId::default();
-            let mut services = FakeUiServices::default();
+            let mut services = FakeUiServices;
             let mut ui: UiTree<TestHost> = UiTree::new();
             ui.set_window(window);
 
@@ -4277,7 +4275,7 @@ fn switch_icons_pressed_scene_structure_is_stable() {
                 let mut scene = Scene::default();
                 ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-                if frame >= 2 && frame < 7 {
+                if (2..7).contains(&frame) {
                     let sig = scene_signature(&scene);
                     if let Some(prev) = baseline_structure.as_ref() {
                         assert_eq!(
@@ -4341,7 +4339,7 @@ fn switch_selected_only_icon_persists_during_toggle_animation() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -4458,7 +4456,7 @@ fn checkbox_pressed_scene_structure_is_stable() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -4521,7 +4519,7 @@ fn checkbox_pressed_scene_structure_is_stable() {
             let mut scene = Scene::default();
             ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-            if frame >= 2 && frame < 7 {
+            if (2..7).contains(&frame) {
                 let sig = scene_signature(&scene);
                 if let Some(prev) = baseline_structure.as_ref() {
                     assert_eq!(
@@ -4559,7 +4557,7 @@ fn checkbox_tristate_semantics_and_toggle_outcomes() {
     apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::Expressive);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -4667,7 +4665,7 @@ fn menu_pressed_scene_structure_is_stable() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -4736,7 +4734,7 @@ fn menu_pressed_scene_structure_is_stable() {
             let mut scene = Scene::default();
             ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-            if frame >= 2 && frame < 7 {
+            if (2..7).contains(&frame) {
                 let sig = scene_signature(&scene);
                 if let Some(prev) = baseline_structure.as_ref() {
                     assert_eq!(
@@ -4776,7 +4774,7 @@ fn menu_style_overrides_apply_to_container_and_label() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -4880,7 +4878,7 @@ fn dialog_focus_is_contained_and_restored_across_schemes() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -5040,7 +5038,7 @@ fn dialog_style_overrides_apply_to_container_and_text() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -5177,7 +5175,7 @@ fn dialog_scrim_dismisses_without_activating_underlay() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -5361,7 +5359,7 @@ fn modal_navigation_drawer_focus_is_contained_and_restored_across_schemes() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -5561,7 +5559,7 @@ fn tooltip_opens_and_closes_on_hover_across_schemes() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -5671,7 +5669,7 @@ fn rich_tooltip_opens_and_closes_on_hover_smoke() {
     apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -5800,7 +5798,7 @@ fn tooltip_does_not_open_on_touch_move() {
     apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -5910,7 +5908,7 @@ fn tooltip_is_click_through_and_does_not_block_underlay_activation_across_scheme
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -6142,7 +6140,7 @@ fn material3_headless_controls_suite_goldens_v1() {
             apply_material_theme(&mut app, mode, variant);
 
             let window = AppWindowId::default();
-            let mut services = FakeUiServices::default();
+            let mut services = FakeUiServices;
             let mut ui: UiTree<TestHost> = UiTree::new();
             ui.set_window(window);
 
@@ -6181,7 +6179,7 @@ fn material3_headless_controls_suite_goldens_v1() {
                         let theme = Theme::global(&*cx.app).clone();
                         let body_style = theme
                             .text_style_by_key("md.sys.typescale.body-medium")
-                            .unwrap_or_else(|| fret_core::TextStyle::default());
+                            .unwrap_or_default();
                         let body_color = theme.color_token("md.sys.color.on-surface");
 
                         let card_content =
@@ -6602,7 +6600,7 @@ fn material3_headless_fab_suite_goldens_v1() {
             apply_material_theme(&mut app, mode, variant);
 
             let window = AppWindowId::default();
-            let mut services = FakeUiServices::default();
+            let mut services = FakeUiServices;
             let mut ui: UiTree<TestHost> = UiTree::new();
             ui.set_window(window);
 
@@ -6819,7 +6817,7 @@ fn material3_headless_segmented_button_suite_goldens_v1() {
             apply_material_theme(&mut app, mode, variant);
 
             let window = AppWindowId::default();
-            let mut services = FakeUiServices::default();
+            let mut services = FakeUiServices;
             let mut ui: UiTree<TestHost> = UiTree::new();
             ui.set_window(window);
 
@@ -7025,7 +7023,7 @@ fn segmented_button_semantics_roles_match_compose_baseline() {
     apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::Expressive);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -7158,7 +7156,7 @@ fn material3_headless_badge_suite_goldens_v1() {
             apply_material_theme(&mut app, mode, variant);
 
             let window = AppWindowId::default();
-            let mut services = FakeUiServices::default();
+            let mut services = FakeUiServices;
             let mut ui: UiTree<TestHost> = UiTree::new();
             ui.set_window(window);
 
@@ -7287,7 +7285,7 @@ fn material3_headless_top_app_bar_suite_goldens_v1() {
             apply_material_theme(&mut app, mode, variant);
 
             let window = AppWindowId::default();
-            let mut services = FakeUiServices::default();
+            let mut services = FakeUiServices;
             let mut ui: UiTree<TestHost> = UiTree::new();
             ui.set_window(window);
 
@@ -7500,7 +7498,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -7579,7 +7577,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -7658,7 +7656,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -7741,7 +7739,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -7895,7 +7893,7 @@ fn material3_headless_snackbar_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -8023,7 +8021,7 @@ fn material3_headless_divider_suite_goldens_v1() {
             apply_material_theme(&mut app, mode, variant);
 
             let window = AppWindowId::default();
-            let mut services = FakeUiServices::default();
+            let mut services = FakeUiServices;
             let mut ui: UiTree<TestHost> = UiTree::new();
             ui.set_window(window);
 
@@ -8138,7 +8136,7 @@ fn material3_headless_list_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -8318,7 +8316,7 @@ fn material3_headless_progress_indicator_suite_goldens_v1() {
             apply_material_theme(&mut app, mode, variant);
 
             let window = AppWindowId::default();
-            let mut services = FakeUiServices::default();
+            let mut services = FakeUiServices;
             let mut ui: UiTree<TestHost> = UiTree::new();
             ui.set_window(window);
 
@@ -8575,7 +8573,7 @@ fn material3_headless_slider_suite_goldens_v1() {
                     apply_material_theme(&mut app, mode, variant);
                 }
 
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -9060,7 +9058,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
             apply_material_theme(&mut app, mode, variant);
 
             let window = AppWindowId::default();
-            let mut services = FakeUiServices::default();
+            let mut services = FakeUiServices;
             let mut ui: UiTree<TestHost> = UiTree::new();
             ui.set_window(window);
 
@@ -9229,7 +9227,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -9418,7 +9416,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -9685,7 +9683,7 @@ fn material3_autocomplete_semantics_v1() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -9804,11 +9802,11 @@ fn material3_autocomplete_semantics_v1() {
         .find(|n| n.test_id.as_deref() == Some("material3-autocomplete-listbox"))
         .expect("listbox node");
     assert!(
-        input.controls.iter().any(|id| *id == list.id),
+        input.controls.contains(&list.id),
         "combobox input should control the listbox"
     );
     assert!(
-        list.labelled_by.iter().any(|id| *id == input.id),
+        list.labelled_by.contains(&input.id),
         "listbox should be labelled by the combobox input"
     );
 
@@ -9865,7 +9863,7 @@ fn material3_autocomplete_filters_items_by_query_v1() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -9975,7 +9973,7 @@ fn material3_autocomplete_enter_commits_and_does_not_reopen_v1() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -10116,7 +10114,7 @@ fn material3_exposed_dropdown_reverts_query_to_committed_selection_on_blur_v1() 
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -10270,7 +10268,7 @@ fn material3_exposed_dropdown_trailing_icon_toggles_overlay_v1() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -10439,7 +10437,7 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -10536,7 +10534,7 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -10740,7 +10738,7 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -10848,7 +10846,7 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -10913,7 +10911,7 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -11055,7 +11053,7 @@ fn material3_headless_bottom_sheet_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -11123,7 +11121,7 @@ fn material3_headless_bottom_sheet_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -11249,7 +11247,7 @@ fn material3_headless_date_picker_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -11310,7 +11308,7 @@ fn material3_headless_date_picker_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -11430,7 +11428,7 @@ fn material3_headless_time_picker_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -11486,7 +11484,7 @@ fn material3_headless_time_picker_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -11543,7 +11541,7 @@ fn material3_headless_time_picker_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -11608,7 +11606,7 @@ fn material3_headless_time_picker_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -11722,7 +11720,7 @@ fn material3_headless_text_field_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -11965,7 +11963,7 @@ fn material3_headless_search_bar_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -12113,7 +12111,7 @@ fn material3_headless_search_view_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -12247,7 +12245,7 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
                 apply_material_theme(&mut app, mode, variant);
 
                 let window = AppWindowId::default();
-                let mut services = FakeUiServices::default();
+                let mut services = FakeUiServices;
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
@@ -12456,7 +12454,7 @@ fn dropdown_menu_dismisses_and_restores_focus_across_schemes() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -12720,7 +12718,7 @@ fn select_dismisses_and_restores_focus_across_schemes() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -12886,7 +12884,7 @@ fn select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_ac
             apply_material_theme(&mut app, mode, variant);
 
             let window = AppWindowId::default();
-            let mut services = FakeUiServices::default();
+            let mut services = FakeUiServices;
             let mut ui: UiTree<TestHost> = UiTree::new();
             ui.set_window(window);
 
@@ -13270,7 +13268,7 @@ fn select_roving_scrolls_focused_option_into_view() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -13425,7 +13423,7 @@ fn chip_set_roving_treats_trailing_action_focus_as_active_chip() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -13541,7 +13539,7 @@ fn select_open_scrolls_selected_option_into_view() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -13678,7 +13676,7 @@ fn select_menu_matches_anchor_width_and_clamps_height_to_available_space() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -13858,7 +13856,7 @@ fn select_exposes_combobox_controls_and_listbox_labelled_by_relations() {
     apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -13988,11 +13986,11 @@ fn select_exposes_combobox_controls_and_listbox_labelled_by_relations() {
         .expect("select listbox semantics node");
 
     assert!(
-        trigger.controls.iter().any(|id| *id == listbox.id),
+        trigger.controls.contains(&listbox.id),
         "select trigger should control the listbox"
     );
     assert!(
-        listbox.labelled_by.iter().any(|id| *id == trigger.id),
+        listbox.labelled_by.contains(&trigger.id),
         "select listbox should be labelled by the trigger"
     );
 }
@@ -14007,7 +14005,7 @@ fn select_listbox_typeahead_moves_focus_skipping_disabled_options() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -14181,7 +14179,7 @@ fn select_typeahead_delay_controls_buffer_expiration() {
     apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -14424,7 +14422,7 @@ fn radio_pressed_scene_structure_is_stable() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -14487,7 +14485,7 @@ fn radio_pressed_scene_structure_is_stable() {
             let mut scene = Scene::default();
             ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-            if frame >= 2 && frame < 7 {
+            if (2..7).contains(&frame) {
                 let sig = scene_signature(&scene);
                 if let Some(prev) = baseline_structure.as_ref() {
                     assert_eq!(

@@ -557,7 +557,7 @@ impl DropdownMenuItem {
             leading_icon: None,
             shortcut: None,
             content: None,
-            padding: None.into(),
+            padding: None,
             estimated_height: None,
             disabled: false,
             close_on_select: true,
@@ -1689,7 +1689,7 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                             },
                             enabled: !disabled,
                             focusable: !disabled,
-                            focus_ring: Some(item_style.ring.clone()),
+                            focus_ring: Some(item_style.ring),
                             a11y: {
                                 let mut a11y =
                                     menu::item::menu_item_checkbox_a11y(a11y_label, checked_now);
@@ -1884,7 +1884,7 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                             },
                             enabled: !disabled,
                             focusable: !disabled,
-                            focus_ring: Some(item_style.ring.clone()),
+                            focus_ring: Some(item_style.ring),
                             a11y: {
                                 let mut a11y =
                                     menu::item::menu_item_radio_a11y(a11y_label, is_selected);
@@ -2158,7 +2158,7 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                             },
                             enabled: !disabled,
                             focusable: !disabled,
-                            focus_ring: Some(item_style.ring.clone()),
+                            focus_ring: Some(item_style.ring),
                             a11y: a11y.with_collection_position(
                                 collection_index,
                                 item_count,
@@ -2215,8 +2215,8 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                             row_padding_logical.right,
                         );
 
-                        if !has_submenu && !disabled {
-                            if let Some(trailing_cmd) = trailing_command.clone() {
+                        if !has_submenu && !disabled
+                            && let Some(trailing_cmd) = trailing_command.clone() {
                                 let open = open.clone();
                                 let close_menu = trailing_close_on_select;
                                 let hit_width =
@@ -2263,7 +2263,6 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                                     },
                                 ));
                             }
-                        }
 
                         let child = cx.container(
                             ContainerProps {
@@ -3635,7 +3634,7 @@ impl DropdownMenu {
                       let cached_anchor = cx.state_for(
                           overlay_id,
                          TriggerAnchorStableState::default,
-                         |st| st.last_anchor.clone(),
+                         |st| st.last_anchor,
                      );
                      let anchor = anchor_now.or(anchor_prev).or(cached_anchor);
 
@@ -4002,7 +4001,7 @@ impl DropdownMenu {
                                                         let scroll_id = env.scroll_id;
                                                         let scroll_handle = env.scroll_handle.clone();
                                                         let item_count = env.item_count;
-                                                        let ring = env.ring.clone();
+                                                        let ring = env.ring;
                                                         let border = env.border;
                                                         let radius_sm = env.radius_sm;
                                                         let pad_x = env.pad_x;
@@ -4028,7 +4027,7 @@ impl DropdownMenu {
                                                         let open_for_menu = env.open.clone();
                                                         let submenu_for_content =
                                                             env.submenu_for_content.clone();
-                                                        let submenu_cfg = env.submenu_cfg.clone();
+                                                        let submenu_cfg = env.submenu_cfg;
                                                         let overlay_root_name_for_controls =
                                                             env.overlay_root_name_for_controls.clone();
                                                         let first_item_focus_id_for_items =
@@ -4558,8 +4557,7 @@ impl DropdownMenu {
                                                              && (is_open_submenu
                                                                  || st.hovered_raw
                                                                  || st.focused)
-                                                         {
-                                                              if let (Some(item_bounds), Some(scroll_bounds)) = (
+                                                              && let (Some(item_bounds), Some(scroll_bounds)) = (
                                                                   cx.last_bounds_for_element(item_id),
                                                                   cx.last_bounds_for_element(scroll_id),
                                                               ) {
@@ -4579,7 +4577,6 @@ impl DropdownMenu {
                                                                       ScrollStrategy::Center,
                                                                   );
                                                               }
-                                                          }
 
                                                          if !disabled {
                                                              if first_item_focus_id_for_items.get().is_none() {
@@ -4701,8 +4698,8 @@ impl DropdownMenu {
                                                                     row_padding_logical.right,
                                                                 );
 
-                                                                if !has_submenu && !disabled {
-                                                                    if let Some(trailing_cmd) =
+                                                                if !has_submenu && !disabled
+                                                                    && let Some(trailing_cmd) =
                                                                         trailing_command.clone()
                                                                     {
                                                                         let open = open.clone();
@@ -4756,7 +4753,6 @@ impl DropdownMenu {
                                                                             ),
                                                                         );
                                                                     }
-                                                                }
 
                                                                  let child = cx.container(
                                                                              ContainerProps {
@@ -5109,7 +5105,7 @@ impl DropdownMenu {
                                 theme: theme.clone(),
                                 chrome: submenu_chrome.clone(),
                                 align_leading_icons,
-                                ring: ring.clone(),
+                                ring,
                                 border,
                                 radius_sm,
                                 pad_x,
@@ -5489,7 +5485,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let open = app.models_mut().insert(false);
         let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
@@ -6000,7 +5996,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let cmd = CommandId::new("dropdown_menu.tests.item_payload.v1");
 
         let build_entries = || {
@@ -6104,7 +6100,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(360.0), Px(260.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let cmd = CommandId::new("dropdown_menu.tests.submenu_item_payload.v1");
 
         let build_entries = || {
@@ -6242,7 +6238,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = |app: &App| {
             let checked_now = app.models().get_copied(&checked).unwrap_or(false);
@@ -6364,7 +6360,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = |app: &App| {
             let selected_now = app
@@ -6495,7 +6491,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render = |ui: &mut UiTree<App>,
                       app: &mut App,
@@ -6965,7 +6961,7 @@ mod tests {
                 Point::new(Px(0.0), Px(0.0)),
                 fret_core::Size::new(Px(1200.0), Px(700.0)),
             );
-            let mut services = FakeServices::default();
+            let mut services = FakeServices;
 
             let open = app.models_mut().insert(true);
             let trigger_id_out = app.models_mut().insert(None);
@@ -7372,7 +7368,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // First frame: establish stable trigger bounds.
         let _ = render_frame(
@@ -7430,7 +7426,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // First frame: closed, establish trigger bounds for placement.
         let _ = render_frame_clipped_surface(
@@ -7500,7 +7496,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
@@ -7562,7 +7558,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
@@ -7645,7 +7641,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
@@ -7714,7 +7710,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
@@ -7759,7 +7755,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_items = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
@@ -7839,7 +7835,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
@@ -7985,7 +7981,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -8087,7 +8083,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
@@ -8171,7 +8167,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
@@ -8248,7 +8244,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // Frame 1: closed, capture trigger id.
         let _root = render_frame_with_underlay(
@@ -8344,7 +8340,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let _ = render_frame_with_underlay(
             &mut ui,
@@ -8418,7 +8414,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(420.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             vec![
@@ -8502,7 +8498,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // Frame 1: closed, capture trigger id.
         let _root = render_frame_with_underlay(
@@ -8618,7 +8614,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             vec![
@@ -8798,7 +8794,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // Frame 1: closed, establish stable trigger bounds.
         let _root = render_frame_with_underlay(
@@ -8921,7 +8917,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
@@ -9008,7 +9004,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
@@ -9131,7 +9127,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(700.0), Px(400.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
         let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
@@ -9284,7 +9280,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             vec![
@@ -9586,7 +9582,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             let submenu_entries: Vec<DropdownMenuEntry> = (0..40)
@@ -9818,7 +9814,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(500.0), Px(260.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             let many_sub_items = (0..16)
@@ -9916,7 +9912,7 @@ mod tests {
             window,
             bounds,
             &overlay_root_name,
-            |cx| menu::sub::ensure_models(cx),
+            menu::sub::ensure_models,
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -10160,7 +10156,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             vec![DropdownMenuEntry::Item(
@@ -10243,7 +10239,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             vec![DropdownMenuEntry::Item(
@@ -10331,7 +10327,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             vec![DropdownMenuEntry::Item(
@@ -10453,7 +10449,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             vec![DropdownMenuEntry::Item(

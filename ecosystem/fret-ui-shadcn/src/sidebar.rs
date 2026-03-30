@@ -649,6 +649,12 @@ impl std::fmt::Debug for SidebarProvider {
     }
 }
 
+impl Default for SidebarProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SidebarProvider {
     pub fn new() -> Self {
         Self {
@@ -935,8 +941,8 @@ impl Sidebar {
             variant,
         };
 
-        if is_mobile && !matches!(collapsible, SidebarCollapsible::None) {
-            if let Some(sidebar_ctx) = sidebar_ctx.clone() {
+        if is_mobile && !matches!(collapsible, SidebarCollapsible::None)
+            && let Some(sidebar_ctx) = sidebar_ctx.clone() {
                 let open_model = sidebar_ctx.open.clone();
                 let open_mobile_model = sidebar_ctx.open_mobile.clone();
                 let is_mobile_for_toggle = sidebar_ctx.is_mobile;
@@ -1022,7 +1028,9 @@ impl Sidebar {
                                 vec![content_root],
                             );
 
-                            let content = SheetContent::new([surface])
+                            
+
+                            SheetContent::new([surface])
                                 .refine_style(
                                     ChromeRefinement::default()
                                         .bg(ColorRef::Color(sheet_bg))
@@ -1035,13 +1043,10 @@ impl Sidebar {
                                         .h_full()
                                         .overflow_hidden(),
                                 )
-                                .into_element(cx);
-
-                            content
+                                .into_element(cx)
                         },
                     );
             }
-        }
 
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if collapsed_override { true } else { collapsed };
@@ -1166,8 +1171,8 @@ impl Sidebar {
             variant,
         };
 
-        if is_mobile && !matches!(collapsible, SidebarCollapsible::None) {
-            if let Some(sidebar_ctx) = sidebar_ctx.clone() {
+        if is_mobile && !matches!(collapsible, SidebarCollapsible::None)
+            && let Some(sidebar_ctx) = sidebar_ctx.clone() {
                 let sheet_side = sidebar_sheet_side(side);
                 let (surface_props, sheet_size, sheet_bg, sheet_border) = {
                     let theme = Theme::global(&*cx.app);
@@ -1225,7 +1230,6 @@ impl Sidebar {
                         },
                     );
             }
-        }
 
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if collapsed_override { true } else { collapsed };
@@ -1349,6 +1353,12 @@ impl std::fmt::Debug for SidebarTrigger {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .finish()
+    }
+}
+
+impl Default for SidebarTrigger {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1507,6 +1517,12 @@ impl std::fmt::Debug for SidebarRail {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .finish()
+    }
+}
+
+impl Default for SidebarRail {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1888,6 +1904,12 @@ impl SidebarInput {
 pub struct SidebarSeparator {
     orientation: SeparatorOrientation,
     layout: LayoutRefinement,
+}
+
+impl Default for SidebarSeparator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SidebarSeparator {
@@ -3110,6 +3132,12 @@ pub struct SidebarMenuSkeleton {
     layout: LayoutRefinement,
 }
 
+impl Default for SidebarMenuSkeleton {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SidebarMenuSkeleton {
     pub fn new() -> Self {
         Self {
@@ -3622,11 +3650,10 @@ impl SidebarMenuSubButton {
 
                 let slot_children = slot_children;
                 vec![cx.flex(row, move |cx| {
-                    if as_child {
-                        if let Some(children) = slot_children {
+                    if as_child
+                        && let Some(children) = slot_children {
                             return children;
                         }
-                    }
                     let mut out = Vec::new();
                     if let Some(icon) = icon {
                         out.push(decl_icon::icon(cx, icon));
@@ -4022,11 +4049,10 @@ impl SidebarMenuButton {
                 let label_opacity = expanded_progress;
                 let slot_children = slot_children;
                 vec![cx.flex(row, move |cx| {
-                    if as_child {
-                        if let Some(children) = slot_children {
+                    if as_child
+                        && let Some(children) = slot_children {
                             return children;
                         }
-                    }
                     let mut out = Vec::new();
                     if let Some(icon) = icon.clone() {
                         out.push(decl_icon::icon(cx, icon));
@@ -5211,7 +5237,7 @@ mod tests {
             .expect("expected collapsed sidebar menu button tooltip semantics node");
 
         assert!(
-            trigger.described_by.iter().any(|id| *id == tooltip.id),
+            trigger.described_by.contains(&tooltip.id),
             "expected sidebar menu button to be described by tooltip content when collapsed"
         );
     }
@@ -6136,28 +6162,28 @@ mod tests {
         );
 
         assert_eq!(
-            sidebar_rail_surface_bg(&theme, false, false, SidebarCollapsible::Icon),
+            sidebar_rail_surface_bg(theme, false, false, SidebarCollapsible::Icon),
             Color::TRANSPARENT,
             "expected default rail idle background to stay transparent"
         );
         assert_eq!(
-            sidebar_rail_surface_bg(&theme, true, false, SidebarCollapsible::Icon),
+            sidebar_rail_surface_bg(theme, true, false, SidebarCollapsible::Icon),
             Color::TRANSPARENT,
             "expected default rail hover to avoid painting a full-width background"
         );
         assert_eq!(
-            sidebar_rail_surface_bg(&theme, true, false, SidebarCollapsible::Offcanvas),
-            sidebar_bg(&theme),
+            sidebar_rail_surface_bg(theme, true, false, SidebarCollapsible::Offcanvas),
+            sidebar_bg(theme),
             "expected offcanvas rail hover to paint the sidebar background"
         );
         assert_eq!(
-            sidebar_rail_line_bg(&theme, false, false),
+            sidebar_rail_line_bg(theme, false, false),
             Color::TRANSPARENT,
             "expected rail hairline to stay hidden until hover/press"
         );
         assert_eq!(
-            sidebar_rail_line_bg(&theme, true, false),
-            sidebar_border(&theme),
+            sidebar_rail_line_bg(theme, true, false),
+            sidebar_border(theme),
             "expected rail hover to reveal the sidebar border hairline"
         );
     }
@@ -6518,10 +6544,9 @@ mod tests {
             "expected show_on_hover action to be hidden before focus"
         );
 
-        let button_element_id = button_element_id
+        let button_element_id = (*button_element_id
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone()
+            .unwrap_or_else(|e| e.into_inner()))
             .expect("sidebar menu button element id");
         let button_node = elements::node_for_element(&mut app, window, button_element_id)
             .expect("sidebar menu button node id");

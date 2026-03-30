@@ -835,6 +835,43 @@ fn outlined_supporting_text_color(
     c
 }
 
+fn filled_supporting_text_color(
+    theme: &Theme,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> Color {
+    let key = if error && focused {
+        "md.comp.filled-text-field.error.focus.supporting-text.color"
+    } else if error && hovered {
+        "md.comp.filled-text-field.error.hover.supporting-text.color"
+    } else if error {
+        "md.comp.filled-text-field.error.supporting-text.color"
+    } else if focused {
+        "md.comp.filled-text-field.focus.supporting-text.color"
+    } else if hovered {
+        "md.comp.filled-text-field.hover.supporting-text.color"
+    } else if disabled {
+        "md.comp.filled-text-field.disabled.supporting-text.color"
+    } else {
+        "md.comp.filled-text-field.supporting-text.color"
+    };
+
+    let mut c = theme
+        .color_by_key(key)
+        .unwrap_or(MaterialContentDefaults::on_surface_variant(theme).content_color);
+
+    if disabled {
+        let opacity = theme
+            .number_by_key("md.comp.filled-text-field.disabled.supporting-text.opacity")
+            .unwrap_or(0.38);
+        c = alpha_mul(c, opacity);
+    }
+
+    c
+}
+
 #[cfg(test)]
 mod tests {
     use super::{outlined_label_color, outlined_supporting_text_color};
@@ -877,8 +914,8 @@ mod tests {
 
         let theme = Theme::global(&app);
 
-        let base_label = outlined_label_color(&theme, false, false, false, false);
-        let hover_label = outlined_label_color(&theme, true, false, false, false);
+        let base_label = outlined_label_color(theme, false, false, false, false);
+        let hover_label = outlined_label_color(theme, true, false, false, false);
         assert_ne!(base_label, hover_label);
         assert_eq!(
             base_label,
@@ -893,8 +930,8 @@ mod tests {
                 .expect("expected patched hover label color"),
         );
 
-        let base_supporting = outlined_supporting_text_color(&theme, false, false, false, false);
-        let hover_supporting = outlined_supporting_text_color(&theme, true, false, false, false);
+        let base_supporting = outlined_supporting_text_color(theme, false, false, false, false);
+        let hover_supporting = outlined_supporting_text_color(theme, true, false, false, false);
         assert_ne!(base_supporting, hover_supporting);
         assert_eq!(
             base_supporting,
@@ -925,7 +962,7 @@ mod tests {
         Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
 
         let theme = Theme::global(&app);
-        let c = outlined_label_color(&theme, true, false, true, false);
+        let c = outlined_label_color(theme, true, false, true, false);
         assert_eq!(
             c,
             theme
@@ -933,41 +970,4 @@ mod tests {
                 .expect("expected patched error hover label color"),
         );
     }
-}
-
-fn filled_supporting_text_color(
-    theme: &Theme,
-    hovered: bool,
-    disabled: bool,
-    error: bool,
-    focused: bool,
-) -> Color {
-    let key = if error && focused {
-        "md.comp.filled-text-field.error.focus.supporting-text.color"
-    } else if error && hovered {
-        "md.comp.filled-text-field.error.hover.supporting-text.color"
-    } else if error {
-        "md.comp.filled-text-field.error.supporting-text.color"
-    } else if focused {
-        "md.comp.filled-text-field.focus.supporting-text.color"
-    } else if hovered {
-        "md.comp.filled-text-field.hover.supporting-text.color"
-    } else if disabled {
-        "md.comp.filled-text-field.disabled.supporting-text.color"
-    } else {
-        "md.comp.filled-text-field.supporting-text.color"
-    };
-
-    let mut c = theme
-        .color_by_key(key)
-        .unwrap_or(MaterialContentDefaults::on_surface_variant(theme).content_color);
-
-    if disabled {
-        let opacity = theme
-            .number_by_key("md.comp.filled-text-field.disabled.supporting-text.opacity")
-            .unwrap_or(0.38);
-        c = alpha_mul(c, opacity);
-    }
-
-    c
 }

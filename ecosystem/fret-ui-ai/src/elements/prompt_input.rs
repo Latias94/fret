@@ -188,6 +188,12 @@ pub struct PromptInputProvider {
     initial_input: Arc<str>,
 }
 
+impl Default for PromptInputProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PromptInputProvider {
     pub fn new() -> Self {
         Self {
@@ -289,11 +295,10 @@ fn prompt_input_send_activate(
         if clear_on_send {
             let _ = host.models_mut().update(&text, |v| v.clear());
         }
-        if clear_attachments_on_send {
-            if let Some(attachments) = attachments.as_ref() {
+        if clear_attachments_on_send
+            && let Some(attachments) = attachments.as_ref() {
                 let _ = host.models_mut().update(attachments, |v| v.clear());
             }
-        }
     })
 }
 
@@ -397,11 +402,10 @@ fn prompt_input_accept_matches(accept: &str, file_name: &str, media_type: Option
 
     for pattern in patterns {
         if pattern.starts_with('.') {
-            if let Some(ext_lower) = ext_lower.as_deref() {
-                if pattern[1..].eq_ignore_ascii_case(ext_lower) {
+            if let Some(ext_lower) = ext_lower.as_deref()
+                && pattern[1..].eq_ignore_ascii_case(ext_lower) {
                     return true;
                 }
-            }
             continue;
         }
 
@@ -417,16 +421,14 @@ fn prompt_input_accept_matches(accept: &str, file_name: &str, media_type: Option
             continue;
         }
 
-        if pattern.eq_ignore_ascii_case("image/*") {
-            if let Some(ext_lower) = ext_lower.as_deref() {
-                if matches!(
+        if pattern.eq_ignore_ascii_case("image/*")
+            && let Some(ext_lower) = ext_lower.as_deref()
+                && matches!(
                     ext_lower,
                     "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "tif" | "tiff" | "svg"
                 ) {
                     return true;
                 }
-            }
-        }
     }
 
     false
@@ -2478,6 +2480,7 @@ impl From<PromptInputHoverCardContent> for PromptInputHoverCardChild {
 }
 
 #[derive(Debug)]
+#[derive(Default)]
 pub struct PromptInputHoverCard {
     children: Vec<PromptInputHoverCardChild>,
     open_delay_frames: u32,
@@ -2485,16 +2488,6 @@ pub struct PromptInputHoverCard {
     open_model: Option<Model<bool>>,
 }
 
-impl Default for PromptInputHoverCard {
-    fn default() -> Self {
-        Self {
-            children: Vec::new(),
-            open_delay_frames: 0,
-            close_delay_frames: 0,
-            open_model: None,
-        }
-    }
-}
 
 impl PromptInputHoverCard {
     pub fn new() -> Self {
@@ -2709,6 +2702,12 @@ impl std::fmt::Debug for PromptInputTabsList {
     }
 }
 
+impl Default for PromptInputTabsList {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PromptInputTabsList {
     pub fn new() -> Self {
         Self {
@@ -2794,6 +2793,12 @@ impl std::fmt::Debug for PromptInputTab {
             .field("children_len", &self.children.len())
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .finish()
+    }
+}
+
+impl Default for PromptInputTab {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -2957,6 +2962,12 @@ impl std::fmt::Debug for PromptInputTabBody {
     }
 }
 
+impl Default for PromptInputTabBody {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PromptInputTabBody {
     pub fn new() -> Self {
         Self {
@@ -3082,6 +3093,12 @@ impl std::fmt::Debug for PromptInputCommand {
             .field("children_len", &self.children.len())
             .field("disabled", &self.disabled)
             .finish()
+    }
+}
+
+impl Default for PromptInputCommand {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -3487,6 +3504,12 @@ impl From<PromptInputCommandItem> for ShadcnCommandItem {
 #[derive(Debug)]
 pub struct PromptInputCommandGroup {
     inner: ShadcnCommandGroup,
+}
+
+impl Default for PromptInputCommandGroup {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PromptInputCommandGroup {
@@ -3988,7 +4011,7 @@ impl PromptInputButton {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let icon_only = self.icon.is_some() && self.children.is_empty();
-        let size = self.size.unwrap_or_else(|| {
+        let size = self.size.unwrap_or({
             if icon_only {
                 ButtonSize::IconSm
             } else if self.children.len() > 1 {
@@ -4174,6 +4197,12 @@ impl PromptInputButtonTooltip {
 pub struct PromptInputActionMenuTrigger {
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
+}
+
+impl Default for PromptInputActionMenuTrigger {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PromptInputActionMenuTrigger {
@@ -4437,6 +4466,12 @@ pub struct PromptInputActionAddAttachments {
     on_activate: Option<OnActivate>,
 }
 
+impl Default for PromptInputActionAddAttachments {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PromptInputActionAddAttachments {
     pub fn new() -> Self {
         Self {
@@ -4498,6 +4533,12 @@ pub struct PromptInputActionAddScreenshot {
     on_activate: Option<OnActivate>,
 }
 
+impl Default for PromptInputActionAddScreenshot {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PromptInputActionAddScreenshot {
     pub fn new() -> Self {
         Self {
@@ -4554,6 +4595,12 @@ pub struct PromptInputAttachmentsRow {
     variant: AttachmentVariant,
     attachments: Option<Model<Vec<AttachmentData>>>,
     test_id_root: Option<Arc<str>>,
+}
+
+impl Default for PromptInputAttachmentsRow {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PromptInputAttachmentsRow {
@@ -4668,6 +4715,12 @@ pub struct PromptInputReferencedSourcesRow {
     variant: AttachmentVariant,
 }
 
+impl Default for PromptInputReferencedSourcesRow {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PromptInputReferencedSourcesRow {
     pub fn new() -> Self {
         Self {
@@ -4756,6 +4809,12 @@ pub struct PromptInputActionAddAttachmentsButton {
     layout: LayoutRefinement,
 }
 
+impl Default for PromptInputActionAddAttachmentsButton {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PromptInputActionAddAttachmentsButton {
     pub fn new() -> Self {
         Self {
@@ -4804,6 +4863,12 @@ impl PromptInputActionAddAttachmentsButton {
 /// Send/stop button aligned with AI Elements `PromptInputSubmit` outcomes.
 pub struct PromptInputSubmit {
     layout: LayoutRefinement,
+}
+
+impl Default for PromptInputSubmit {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PromptInputSubmit {
@@ -4870,8 +4935,7 @@ impl PromptInputSubmit {
             let activate = if send_disabled {
                 None
             } else {
-                match text_model {
-                    Some(text_model) => Some(prompt_input_send_activate(
+                text_model.map(|text_model| prompt_input_send_activate(
                         text_model,
                         attachments_model,
                         cfg.as_ref().map(|c| c.clear_on_send).unwrap_or(true),
@@ -4880,9 +4944,7 @@ impl PromptInputSubmit {
                             .unwrap_or(true),
                         on_submit,
                         on_send,
-                    )),
-                    None => None,
-                }
+                    ))
             };
             (
                 Arc::<str>::from("Submit"),
@@ -5023,7 +5085,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(180.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_root(
             &mut ui,
@@ -5331,7 +5393,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(180.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_root(
             &mut ui,
@@ -5506,7 +5568,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(180.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_root(
             &mut ui,
@@ -5585,7 +5647,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(180.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_root(
             &mut ui,

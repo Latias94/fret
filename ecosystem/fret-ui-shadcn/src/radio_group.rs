@@ -294,7 +294,7 @@ fn build_radio_item_element<H: UiHost>(
                 },
                 enabled: item_enabled,
                 focusable: tab_stop,
-                focus_ring: Some(ring_style.clone()),
+                focus_ring: Some(ring_style),
                 focus_ring_bounds: match render_mode {
                     RadioGroupRenderMode::ControlOnly => Some(Rect::new(
                         Point::new(Px(0.0), Px(0.0)),
@@ -381,7 +381,7 @@ fn build_radio_item_element<H: UiHost>(
                 props.focus_ring_always_paint = ring_alpha.animating;
 
                 let ring_style = if ring_alpha.animating {
-                    let mut ring_style = ring_style.clone();
+                    let mut ring_style = ring_style;
                     ring_style.color.a = (ring_style.color.a * ring_alpha.value).clamp(0.0, 1.0);
                     if let Some(offset_color) = ring_style.offset_color {
                         ring_style.offset_color = Some(Color {
@@ -391,7 +391,7 @@ fn build_radio_item_element<H: UiHost>(
                     }
                     ring_style
                 } else {
-                    ring_style.clone()
+                    ring_style
                 };
                 props.focus_ring = Some(ring_style);
 
@@ -1067,7 +1067,7 @@ impl RadioGroup {
                         let model_for_control = model.clone();
                         out.push(cx.keyed(key, move |cx| {
                             let base_ring_style = ring_style;
-                            let focus_ring_for_props = base_ring_style.clone();
+                            let focus_ring_for_props = base_ring_style;
                             radio_group_prim::RadioGroupItem::new(radio_value)
                                 .label(a11y_label.clone())
                                 .disabled(!item_enabled)
@@ -1181,7 +1181,7 @@ impl RadioGroup {
                                         // enable `focus_ring_always_paint` so the ring can fade out
                                         // after blur.
                                         let ring_style = if ring_alpha.animating {
-                                            let mut ring_style = base_ring_style.clone();
+                                            let mut ring_style = base_ring_style;
                                             ring_style.color.a = (ring_style.color.a
                                                 * ring_alpha.value)
                                                 .clamp(0.0, 1.0);
@@ -1194,7 +1194,7 @@ impl RadioGroup {
                                             }
                                             ring_style
                                         } else {
-                                            base_ring_style.clone()
+                                            base_ring_style
                                         };
                                         props.focus_ring = Some(ring_style);
 
@@ -1429,11 +1429,10 @@ impl RadioGroup {
             );
             let list_element = if labelled_by_element.is_some() || described_by_element.is_some() {
                 let mut decoration = SemanticsDecoration::default();
-                if a11y_label.is_none() {
-                    if let Some(labelled_by) = labelled_by_element {
+                if a11y_label.is_none()
+                    && let Some(labelled_by) = labelled_by_element {
                         decoration.labelled_by_element = Some(labelled_by.0);
                     }
-                }
                 if let Some(desc) = described_by_element {
                     decoration.described_by_element = Some(desc.0);
                 }
@@ -1677,11 +1676,10 @@ impl RadioGroup {
             );
             let list_element = if labelled_by_element.is_some() || described_by_element.is_some() {
                 let mut decoration = SemanticsDecoration::default();
-                if a11y_label.is_none() {
-                    if let Some(labelled_by) = labelled_by_element {
+                if a11y_label.is_none()
+                    && let Some(labelled_by) = labelled_by_element {
                         decoration.labelled_by_element = Some(labelled_by.0);
                     }
-                }
                 if let Some(desc) = described_by_element {
                     decoration.described_by_element = Some(desc.0);
                 }
@@ -1979,11 +1977,10 @@ mod tests {
                 && border.right.0 > 0.0
                 && border.bottom.0 > 0.0
                 && matches!(border_paint.paint, fret_core::Paint::Solid(c) if c.a > 0.0);
-            if is_icon {
-                if let fret_core::Paint::Solid(border_color) = border_paint.paint {
+            if is_icon
+                && let fret_core::Paint::Solid(border_color) = border_paint.paint {
                     icon_border_colors.push(border_color);
                 }
-            }
         }
 
         assert!(
@@ -1992,7 +1989,7 @@ mod tests {
             icon_border_colors.len()
         );
         assert!(
-            icon_border_colors.iter().any(|c| *c == destructive),
+            icon_border_colors.contains(&destructive),
             "expected an aria-invalid icon border quad with destructive color"
         );
         assert!(
@@ -2773,13 +2770,10 @@ mod tests {
     }
 
     fn find_pressable_by_label<'a>(el: &'a AnyElement, label: &str) -> Option<&'a PressableProps> {
-        match &el.kind {
-            ElementKind::Pressable(props) => {
-                if props.a11y.label.as_deref() == Some(label) {
-                    return Some(props);
-                }
+        if let ElementKind::Pressable(props) = &el.kind {
+            if props.a11y.label.as_deref() == Some(label) {
+                return Some(props);
             }
-            _ => {}
         }
 
         for child in &el.children {

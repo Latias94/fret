@@ -1967,7 +1967,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                             let tick_id = self.tick_id.0;
                             let frame_id = self.frame_id.0;
-                            let should_sample = frame_id <= 2 || frame_id % every_n == 0;
+                            let should_sample = frame_id <= 2 || frame_id.is_multiple_of(every_n);
 
                             if should_sample
                                 && let Some(report) = context.instance.generate_report()
@@ -2042,7 +2042,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                             let tick_id = self.tick_id.0;
                             let frame_id = self.frame_id.0;
-                            let should_sample = frame_id <= 2 || frame_id % every_n == 0;
+                            let should_sample = frame_id <= 2 || frame_id.is_multiple_of(every_n);
 
                             if should_sample {
                                 let report = context.device.generate_allocator_report();
@@ -2296,8 +2296,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
                     }
 
-                    if let Some(pending) = pending {
-                        if let Some(state) = self.windows.get_mut(app_window) {
+                    if let Some(pending) = pending
+                        && let Some(state) = self.windows.get_mut(app_window) {
                             state.pending_wheel = Some(match state.pending_wheel.take() {
                                 Some(mut prev) => {
                                     prev.delta = wheel_coalesce_delta(prev.delta, pending.delta);
@@ -2310,7 +2310,6 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 None => pending,
                             });
                         }
-                    }
 
                     passthrough
                 } else {

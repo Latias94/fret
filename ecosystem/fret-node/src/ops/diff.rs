@@ -375,7 +375,7 @@ fn diff_ports(
         }
     }
 
-    for (id, _port_from) in &from.ports {
+    for id in from.ports.keys() {
         if !to.ports.contains_key(id) {
             if removed_ports_by_cascade.contains(id) {
                 continue;

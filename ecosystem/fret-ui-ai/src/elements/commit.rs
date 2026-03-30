@@ -1304,7 +1304,9 @@ impl CommitFilePath {
             color: Some(fg_primary),
             ..base_props
         };
-        let button = cx.pressable(pressable, move |cx, _st| {
+        
+
+        cx.pressable(pressable, move |cx, _st| {
             cx.pressable_on_activate({
                 let on_click = on_click.clone();
                 let payload = payload.clone();
@@ -1318,9 +1320,7 @@ impl CommitFilePath {
             } else {
                 vec![inline_children(cx, custom_children)]
             }
-        });
-
-        button
+        })
     }
 }
 

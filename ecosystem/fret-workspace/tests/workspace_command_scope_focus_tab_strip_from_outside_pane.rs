@@ -125,7 +125,7 @@ fn render_frame(
                  pane: &fret_workspace::layout::WorkspacePaneLayout,
                  _is_active: bool,
                  tab_drag| {
-                    let strip = WorkspaceTabStrip::from_workspace_tabs(&pane.tabs, |id| {
+                    WorkspaceTabStrip::from_workspace_tabs(&pane.tabs, |id| {
                         Arc::<str>::from(id)
                     })
                     .pane_id(pane.id.clone())
@@ -135,8 +135,7 @@ fn render_frame(
                     )))
                     .tab_test_id_prefix(Arc::<str>::from(format!("pane-{}-tab", pane.id.as_ref())))
                     .tab_drag_model(tab_drag)
-                    .into_element(cx);
-                    strip
+                    .into_element(cx)
                 };
 
             let panes = workspace_pane_tree_element_with_resize(
@@ -179,7 +178,7 @@ fn focus_tab_strip_command_works_from_outside_pane_subtree() {
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices::default();
+    let mut services = FakeServices;
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

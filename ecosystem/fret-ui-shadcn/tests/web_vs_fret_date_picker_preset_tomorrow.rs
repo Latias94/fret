@@ -1,3 +1,5 @@
+#![allow(clippy::default_constructed_unit_structs)]
+
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 

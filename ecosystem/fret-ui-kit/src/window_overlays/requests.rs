@@ -83,10 +83,10 @@ pub struct ToastOffset {
 impl ToastOffset {
     pub fn all(px: Px) -> Self {
         Self {
-            top: Some(px).into(),
-            right: Some(px).into(),
-            bottom: Some(px).into(),
-            left: Some(px).into(),
+            top: Some(px),
+            right: Some(px),
+            bottom: Some(px),
+            left: Some(px),
         }
     }
 

@@ -234,7 +234,7 @@ fn try_coalesce_setter(last: &mut GraphOp, next: &GraphOp) -> bool {
             },
             GraphOp::SetEdgeReconnectable { id: b, from, to },
         ) if a == b && last_to == from => {
-            *last_to = to.clone();
+            *last_to = *to;
             true
         }
         (

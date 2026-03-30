@@ -21,7 +21,7 @@ pub(crate) enum FabInteraction {
 
 pub(crate) fn container_size(theme: &Theme, size: FabSize) -> Px {
     let key = format!("{}.container.height", size_prefix(size));
-    theme.metric_by_key(&key).unwrap_or_else(|| match size {
+    theme.metric_by_key(&key).unwrap_or(match size {
         FabSize::Small => Px(40.0),
         FabSize::Medium => Px(56.0),
         FabSize::Large => Px(96.0),
@@ -30,7 +30,7 @@ pub(crate) fn container_size(theme: &Theme, size: FabSize) -> Px {
 
 pub(crate) fn icon_size(theme: &Theme, size: FabSize) -> Px {
     let key = format!("{}.icon.size", size_prefix(size));
-    theme.metric_by_key(&key).unwrap_or_else(|| match size {
+    theme.metric_by_key(&key).unwrap_or(match size {
         FabSize::Small => Px(24.0),
         FabSize::Medium => Px(24.0),
         FabSize::Large => Px(36.0),
@@ -46,7 +46,7 @@ pub(crate) fn container_shape(theme: &Theme, size: FabSize) -> Corners {
             FabSize::Medium => theme.metric_by_key("md.sys.shape.corner.large"),
             FabSize::Large => theme.metric_by_key("md.sys.shape.corner.extra-large"),
         })
-        .unwrap_or_else(|| match size {
+        .unwrap_or(match size {
             FabSize::Small => Px(12.0),
             FabSize::Medium => Px(16.0),
             FabSize::Large => Px(28.0),

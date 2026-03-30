@@ -5187,7 +5187,7 @@ mod tests {
         };
 
         assert_eq!(item.label.as_ref(), "More");
-        assert_eq!(item.close_on_select, false);
+        assert!(!item.close_on_select);
         assert!(
             item.submenu.is_some(),
             "expected submenu entries to be attached"
@@ -5516,7 +5516,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         menu::set_context_menu_anchor_for_open_model(
             &mut app,
@@ -6103,7 +6103,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6178,7 +6178,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6270,7 +6270,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -6373,7 +6373,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -7079,7 +7079,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let cmd = CommandId::new("context_menu.tests.item_payload.v1");
 
         let build_entries = || {
@@ -7214,7 +7214,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let _ = render_frame_pressable_ancestor_with_non_pressable_trigger_and_entries(
             &mut ui,
@@ -7270,7 +7270,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let cmd = CommandId::new("context_menu.tests.touch_item_inside_pressable_ancestor.v1");
 
         let build_entries = || {
@@ -7442,7 +7442,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(360.0), Px(260.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let cmd = CommandId::new("context_menu.tests.submenu_item_payload.v1");
 
         let build_entries = || {
@@ -7617,7 +7617,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = |app: &App| {
             let checked_now = app.models().get_copied(&checked).unwrap_or(false);
@@ -7739,7 +7739,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = |app: &App| {
             let selected_now = app
@@ -7868,7 +7868,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // First frame: build the tree and establish stable trigger bounds.
         let root = render_frame_focusable_trigger(
@@ -7931,7 +7931,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_frame_focusable_trigger(
             &mut ui,
@@ -7982,7 +7982,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_frame_focusable_trigger_with_disabled(
             &mut ui,
@@ -8083,7 +8083,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let reason_cell: Arc<Mutex<Option<fret_ui::action::DismissReason>>> =
             Arc::new(Mutex::new(None));
@@ -8214,7 +8214,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let calls = Arc::new(AtomicUsize::new(0));
         let calls_for_handler = calls.clone();
@@ -8301,7 +8301,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let calls = Arc::new(AtomicUsize::new(0));
         let calls_for_handler = calls.clone();
@@ -8415,7 +8415,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // First frame: build the tree and establish stable trigger bounds.
         let root = render_frame_focusable_trigger(
@@ -8500,7 +8500,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_frame_focusable_trigger(
             &mut ui,
@@ -8609,7 +8609,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let debug_state_out: Rc<Cell<Option<ContextMenuCancelOpenShared>>> =
             Rc::new(Cell::new(None));
@@ -8700,8 +8700,8 @@ mod tests {
             .replace(None)
             .expect("debug cancel-open shared state should be available");
         let state = context_menu_cancel_open_debug_state(&debug_shared);
-        assert_eq!(
-            state.moved_from_anchor, true,
+        assert!(
+            state.moved_from_anchor,
             "pointer move away from anchor should mark cancel-open state as moved"
         );
     }
@@ -8725,7 +8725,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render_frame_focusable_trigger(
             &mut ui,
@@ -8850,7 +8850,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // Frame 1: build the tree and establish stable trigger bounds.
         let _root = render_frame_focusable_trigger_with_underlay(
@@ -8983,7 +8983,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // Frame 1: build the tree and establish stable trigger bounds.
         let _root = render_frame_focusable_trigger_with_underlay_modal_and_dismiss_handler(
@@ -9140,7 +9140,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let dismiss_calls = Arc::new(AtomicUsize::new(0));
         let dismiss_calls_for_handler = dismiss_calls.clone();
@@ -9265,7 +9265,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // Frame 1: build the tree and establish stable trigger bounds.
         let _root = render_frame_focusable_trigger_with_underlay(
@@ -9468,7 +9468,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(500.0), Px(280.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             vec![
@@ -9669,7 +9669,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(500.0), Px(280.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             vec![
@@ -9958,7 +9958,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // First frame: establish stable trigger bounds.
         let _ = render_frame(
@@ -10005,7 +10005,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let build_entries = || {
             vec![ContextMenuEntry::Item(

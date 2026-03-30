@@ -1031,7 +1031,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -1077,7 +1077,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(260.0), Px(120.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let cmd = CommandId::from("test.toggle.label-action");
         app.commands_mut().register(
@@ -1195,7 +1195,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(260.0), Px(120.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -1262,7 +1262,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root =
             render_uncontrolled_frame(&mut ui, &mut app, &mut services, window, bounds, true);
@@ -1321,7 +1321,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -1380,7 +1380,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -1452,7 +1452,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -1516,7 +1516,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let toggle_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let bg_out: Rc<Cell<Option<Color>>> = Rc::new(Cell::new(None));
@@ -1670,7 +1670,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
         let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));

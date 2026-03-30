@@ -57,7 +57,9 @@ pub struct UiDockTabStripActiveVisibilityDiagnosticsV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum UiDockTabStripActiveVisibilityStatusV1 {
+    #[default]
     Ok,
     MissingWindowRoot,
     NoTabsFound,
@@ -65,11 +67,6 @@ pub enum UiDockTabStripActiveVisibilityStatusV1 {
     MissingTabsNode,
 }
 
-impl Default for UiDockTabStripActiveVisibilityStatusV1 {
-    fn default() -> Self {
-        Self::Ok
-    }
-}
 
 impl UiDockTabStripActiveVisibilityDiagnosticsV1 {
     fn from_snapshot(snapshot: fret_runtime::DockTabStripActiveVisibilityDiagnostics) -> Self {

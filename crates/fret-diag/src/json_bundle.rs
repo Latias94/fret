@@ -5,10 +5,10 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
 
-pub(crate) fn pick_last_snapshot_after_warmup<'a>(
-    snaps: &'a [Value],
+pub(crate) fn pick_last_snapshot_after_warmup(
+    snaps: &[Value],
     warmup_frames: u64,
-) -> Option<&'a Value> {
+) -> Option<&Value> {
     snaps
         .iter()
         .rev()
@@ -563,12 +563,11 @@ pub(crate) fn stream_read_semantics_table_nodes(
                 }
             }
 
-            if window == Some(self.window_id) && fp == Some(self.semantics_fingerprint) {
-                if let Some(nodes) = nodes {
+            if window == Some(self.window_id) && fp == Some(self.semantics_fingerprint)
+                && let Some(nodes) = nodes {
                     self.out.borrow_mut().replace(nodes);
                     return Err(serde::de::Error::custom(FOUND_TABLE_MARKER));
                 }
-            }
             Ok(())
         }
     }

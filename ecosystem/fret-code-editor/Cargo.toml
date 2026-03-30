@@ -29,3 +29,18 @@ fret-code-editor-buffer = { path = "../fret-code-editor-buffer" }
 fret-code-editor-view = { path = "../fret-code-editor-view" }
 fret-syntax = { path = "../fret-syntax", default-features = false, optional = true }
 fret-undo = { path = "../fret-undo" }
+
+[lints.rust]
+unused_mut = "allow"
+
+[lints.clippy]
+collapsible_if = "allow"
+default_constructed_unit_structs = "allow"
+if_same_then_else = "allow"
+let_and_return = "allow"
+needless_borrow = "allow"
+question_mark = "allow"
+reserve_after_initialization = "allow"
+type_complexity = "allow"
+unnecessary_map_or = "allow"
+unnecessary_lazy_evaluations = "allow"

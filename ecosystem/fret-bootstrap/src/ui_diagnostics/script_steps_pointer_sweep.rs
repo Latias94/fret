@@ -160,7 +160,7 @@ pub(super) fn handle_move_pointer_sweep_step(
         active.v2_step_state = Some(V2StepState::MovePointerSweep(state));
         output.request_redraw = true;
     } else if state.next_step > state.steps {
-        if let Some(ui) = ui.as_deref_mut() {
+        if let Some(ui) = ui {
             record_hit_test_trace_for_selector(
                 &mut active.hit_test_trace,
                 ui,

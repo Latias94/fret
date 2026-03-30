@@ -374,7 +374,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 app.find_drag_pointer_id(|d| {
                     d.kind == fret_runtime::DRAG_KIND_DOCK_TABS
                         && d.payload::<DockTabsDragPayload>().is_some_and(|p| {
-                            p.source_tabs == source_tabs && p.tabs.iter().any(|t| *t == panel)
+                            p.source_tabs == source_tabs && p.tabs.contains(&panel)
                         })
                 })
             });

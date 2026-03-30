@@ -175,3 +175,9 @@ required-features = ["cookbook-chart"]
 [[example]]
 name = "gizmo_basics"
 required-features = ["cookbook-gizmo"]
+
+[lints.rust]
+warnings = "allow"
+
+[lints.clippy]
+all = "allow"

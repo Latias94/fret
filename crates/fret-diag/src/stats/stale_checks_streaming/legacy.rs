@@ -1324,15 +1324,13 @@ fn scan_stale_paint(
             }
 
             // Fallback to table semantics only when there are no inline semantics nodes.
-            if !self.out.has_inline_nodes {
-                if let Some(fp) = self.out.semantics_fingerprint {
-                    if let Some(fields) =
+            if !self.out.has_inline_nodes
+                && let Some(fp) = self.out.semantics_fingerprint
+                    && let Some(fields) =
                         self.table.get(&(self.out.semantics_window_id, fp)).copied()
                     {
                         self.out.y = fields.y;
                     }
-                }
-            }
 
             Ok(self.out)
         }
@@ -2081,15 +2079,13 @@ fn scan_stale_scene(
                 }
             }
 
-            if !self.out.has_inline_nodes {
-                if let Some(fp) = self.out.semantics_fingerprint {
-                    if let Some(fields) =
+            if !self.out.has_inline_nodes
+                && let Some(fp) = self.out.semantics_fingerprint
+                    && let Some(fields) =
                         self.table.get(&(self.out.semantics_window_id, fp)).copied()
                     {
                         self.out.fields = fields;
                     }
-                }
-            }
 
             Ok(self.out)
         }

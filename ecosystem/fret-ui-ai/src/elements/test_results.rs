@@ -258,6 +258,12 @@ impl std::fmt::Debug for TestResults {
     }
 }
 
+impl Default for TestResults {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TestResults {
     pub fn new() -> Self {
         Self {

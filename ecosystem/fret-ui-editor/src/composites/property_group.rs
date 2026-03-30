@@ -141,7 +141,7 @@ impl PropertyGroup {
                 .get_model_copied(&collapsed_model, Invalidation::Layout)
                 .unwrap_or(self.options.default_collapsed);
 
-            let disclosure_icon = self.options.collapsible.then(|| {
+            let disclosure_icon = self.options.collapsible.then_some({
                 if collapsed {
                     fret_icons::ids::ui::CHEVRON_RIGHT
                 } else {
@@ -194,7 +194,7 @@ impl PropertyGroup {
                     cx.pressable_add_on_activate(on_activate);
 
                     let theme = Theme::global(&*cx.app);
-                    let header_bg = hover_overlay_bg(&theme, header_bg, st.hovered, st.pressed);
+                    let header_bg = hover_overlay_bg(theme, header_bg, st.hovered, st.pressed);
 
                     let actions = header_actions(cx);
                     vec![cx.container(

@@ -227,7 +227,7 @@ pub(super) fn handle_set_slider_value_step(
                             let end_x = clamp_x(start_x + dx);
                             let start = Point::new(fret_core::Px(start_x), start.y);
                             let end = Point::new(fret_core::Px(end_x), start.y);
-                            if let Some(ui) = ui.as_deref_mut() {
+                            if let Some(ui) = ui {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
                                     ui,

@@ -1,3 +1,11 @@
+#![allow(clippy::get_first)]
+#![allow(clippy::let_and_return)]
+#![allow(clippy::needless_borrow)]
+#![allow(clippy::needless_borrows_for_generic_args)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::unnecessary_lazy_evaluations)]
+
 pub(crate) use fret_app::App;
 pub(crate) use fret_core::{
     AppWindowId, Edges, Event, FrameId, ImageId, Modifiers, MouseButtons, NodeId, Paint, Point,

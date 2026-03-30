@@ -255,7 +255,7 @@ impl<'a> RenderSceneExecutor<'a> {
             self.format,
             levels,
         );
-        let mip_views = scratch.mip_views.iter().cloned().collect::<Vec<_>>();
+        let mip_views = scratch.mip_views.to_vec();
         let mip_sizes = (0..scratch.levels)
             .map(|level| scratch.mip_size(level))
             .collect::<Vec<_>>();
@@ -388,7 +388,7 @@ impl<'a> RenderSceneExecutor<'a> {
     ) -> CustomEffectV3PreparedUserImages {
         let mut user0_incompatible = false;
         let user0_view = resolve_custom_effect_filterable_user_image_view_owned(
-            &self.renderer,
+            self.renderer,
             self.device.features(),
             pass.user0_image,
             &mut user0_incompatible,
@@ -403,7 +403,7 @@ impl<'a> RenderSceneExecutor<'a> {
 
         let mut user1_incompatible = false;
         let user1_view = resolve_custom_effect_filterable_user_image_view_owned(
-            &self.renderer,
+            self.renderer,
             self.device.features(),
             pass.user1_image,
             &mut user1_incompatible,
@@ -419,11 +419,11 @@ impl<'a> RenderSceneExecutor<'a> {
         CustomEffectV3PreparedUserImages {
             user0: CustomEffectPreparedUserImage {
                 view: user0_view,
-                sampler: custom_effect_user_image_sampler(&self.renderer, pass.user0_sampling),
+                sampler: custom_effect_user_image_sampler(self.renderer, pass.user0_sampling),
             },
             user1: CustomEffectPreparedUserImage {
                 view: user1_view,
-                sampler: custom_effect_user_image_sampler(&self.renderer, pass.user1_sampling),
+                sampler: custom_effect_user_image_sampler(self.renderer, pass.user1_sampling),
             },
         }
     }

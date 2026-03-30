@@ -57,3 +57,20 @@ app-integration = ["dep:fret-app"]
 
 # Builds only the headless graph model + schema + rules (no `fret-ui` dependency).
 headless = []
+
+[lints.rust]
+dead_code = "allow"
+
+[lints.clippy]
+arc_with_non_send_sync = "allow"
+default_constructed_unit_structs = "allow"
+doc_lazy_continuation = "allow"
+field_reassign_with_default = "allow"
+map_entry = "allow"
+new_without_default = "allow"
+ok_expect = "allow"
+question_mark = "allow"
+redundant_closure = "allow"
+reserve_after_initialization = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"

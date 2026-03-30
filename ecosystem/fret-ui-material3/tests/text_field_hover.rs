@@ -192,8 +192,8 @@ impl DragHost for TestHost {
         self.drags.remove(&pointer_id);
     }
 
-    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
-        self.drags.values().any(|session| predicate(session))
+    fn any_drag_session(&self, predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        self.drags.values().any(predicate)
     }
 
     fn find_drag_pointer_id(
@@ -523,7 +523,7 @@ fn filled_text_field_hover_uses_state_layer_overlay() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -611,7 +611,7 @@ fn filled_text_field_hover_does_not_show_overlay_when_disabled() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -670,7 +670,7 @@ fn outlined_text_field_hover_does_not_show_overlay() {
     Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -742,7 +742,7 @@ fn filled_text_field_focus_uses_focus_indicator_thickness() {
         apply_material_theme(&mut app, mode, variant);
 
         let window = AppWindowId::default();
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
@@ -847,7 +847,7 @@ fn filled_text_field_error_hover_uses_state_layer_overlay() {
     Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 
@@ -915,7 +915,7 @@ fn filled_text_field_hover_overlay_survives_focus_transition() {
     Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
     let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
     let mut ui: UiTree<TestHost> = UiTree::new();
     ui.set_window(window);
 

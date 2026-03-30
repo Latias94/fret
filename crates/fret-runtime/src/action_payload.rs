@@ -127,7 +127,7 @@ mod tests {
         let payload = svc
             .consume(window, TickId(11), &action)
             .expect("payload must exist");
-        let payload = payload.downcast::<u32>().ok().expect("type must match");
+        let payload = payload.downcast::<u32>().expect("type must match");
         assert_eq!(*payload, 2);
     }
 }

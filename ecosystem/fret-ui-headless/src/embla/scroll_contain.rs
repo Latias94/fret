@@ -74,9 +74,7 @@ fn snaps_bounded(scroll_bounds: Limit, snaps_aligned: &[f32], pixel_tolerance: f
 
         let bounded = if is_first {
             scroll_bounds.max
-        } else if is_last {
-            scroll_bounds.min
-        } else if use_pixel_tolerance(scroll_bounds.min, snap) {
+        } else if is_last || use_pixel_tolerance(scroll_bounds.min, snap) {
             scroll_bounds.min
         } else if use_pixel_tolerance(scroll_bounds.max, snap) {
             scroll_bounds.max

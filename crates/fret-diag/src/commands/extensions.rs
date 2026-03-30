@@ -307,6 +307,6 @@ mod tests {
             }]
         });
         let (_keys, occ) = collect_debug_extensions_from_bundle_value(&bundle, 0);
-        assert_eq!(occ.get("big.v1").unwrap()[0].clipped, true);
+        assert!(occ.get("big.v1").unwrap()[0].clipped);
     }
 }

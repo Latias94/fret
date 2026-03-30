@@ -49,18 +49,15 @@ impl UiWorkspaceTabStripDragDiagnosticsV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum UiWorkspaceTabStripActiveVisibilityStatusV1 {
+    #[default]
     Ok,
     NoActiveTab,
     MissingScrollViewportRect,
     MissingActiveTabRect,
 }
 
-impl Default for UiWorkspaceTabStripActiveVisibilityStatusV1 {
-    fn default() -> Self {
-        Self::Ok
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiWorkspaceTabStripActiveVisibilityDiagnosticsV1 {

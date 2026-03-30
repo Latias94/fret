@@ -2306,14 +2306,14 @@ mod tests {
         }
     }
 
-    fn find_text_input<'a>(node: &'a AnyElement) -> Option<&'a TextInputProps> {
+    fn find_text_input(node: &AnyElement) -> Option<&TextInputProps> {
         match &node.kind {
             ElementKind::TextInput(props) => Some(props),
             _ => node.children.iter().find_map(find_text_input),
         }
     }
 
-    fn find_text_area<'a>(node: &'a AnyElement) -> Option<&'a TextAreaProps> {
+    fn find_text_area(node: &AnyElement) -> Option<&TextAreaProps> {
         match &node.kind {
             ElementKind::TextArea(props) => Some(props),
             _ => node.children.iter().find_map(find_text_area),

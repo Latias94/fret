@@ -232,7 +232,7 @@ fn suite_row_to_regression_item(
         .get("last_bundle_dir")
         .and_then(|v| v.as_str())
         .and_then(|v| (!v.trim().is_empty()).then_some(v.trim()))
-        .map(|v| PathBuf::from(v))
+        .map(PathBuf::from)
         .map(|bundle_dir| {
             if bundle_dir.is_absolute() {
                 bundle_dir

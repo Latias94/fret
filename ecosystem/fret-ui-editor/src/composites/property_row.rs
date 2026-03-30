@@ -104,18 +104,15 @@ impl Default for PropertyRowOptions {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum PropertyRowLayoutVariant {
+    #[default]
     Row,
     Column,
     /// Choose `Row` vs `Column` based on last frame bounds.
     Auto,
 }
 
-impl Default for PropertyRowLayoutVariant {
-    fn default() -> Self {
-        Self::Row
-    }
-}
 
 #[derive(Clone, Default)]
 pub struct PropertyRow {
@@ -236,10 +233,8 @@ impl PropertyRow {
         let variant = match self.options.variant {
             PropertyRowLayoutVariant::Row => PropertyRowLayoutVariant::Row,
             PropertyRowLayoutVariant::Column => PropertyRowLayoutVariant::Column,
-            PropertyRowLayoutVariant::Auto => bounds
-                .is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0)
-                .then_some(PropertyRowLayoutVariant::Column)
-                .unwrap_or(PropertyRowLayoutVariant::Row),
+            PropertyRowLayoutVariant::Auto => if bounds
+                .is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0) { PropertyRowLayoutVariant::Column } else { PropertyRowLayoutVariant::Row },
         };
 
         let mut layout = self.options.layout;

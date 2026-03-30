@@ -1726,31 +1726,28 @@ fn parse_expr(rhs: String) -> Expr {
         }
     }
 
-    if let Some(rest) = rhs.strip_suffix("ms") {
-        if let Ok(ms) = rest.trim().parse::<u32>() {
+    if let Some(rest) = rhs.strip_suffix("ms")
+        && let Ok(ms) = rest.trim().parse::<u32>() {
             return Expr::Ms(ms);
         }
-    }
 
-    if let Some(rest) = rhs.strip_suffix("px") {
-        if let Ok(px) = rest.trim().parse::<f32>() {
+    if let Some(rest) = rhs.strip_suffix("px")
+        && let Ok(px) = rest.trim().parse::<f32>() {
             return Expr::Px(px);
         }
-    }
 
-    if let Some(rest) = rhs.strip_suffix("rem") {
-        if let Ok(rem) = rest.trim().parse::<f32>() {
+    if let Some(rest) = rhs.strip_suffix("rem")
+        && let Ok(rem) = rest.trim().parse::<f32>() {
             return Expr::Rem(rem);
         }
-    }
 
     if let Some(cb) = rhs
         .strip_prefix("cubic-bezier(")
         .and_then(|s| s.strip_suffix(')'))
     {
         let parts: Vec<&str> = cb.split(',').map(|p| p.trim()).collect();
-        if parts.len() == 4 {
-            if let (Ok(x1), Ok(y1), Ok(x2), Ok(y2)) = (
+        if parts.len() == 4
+            && let (Ok(x1), Ok(y1), Ok(x2), Ok(y2)) = (
                 parts[0].parse::<f32>(),
                 parts[1].parse::<f32>(),
                 parts[2].parse::<f32>(),
@@ -1758,7 +1755,6 @@ fn parse_expr(rhs: String) -> Expr {
             ) {
                 return Expr::CubicBezier { x1, y1, x2, y2 };
             }
-        }
     }
 
     if let Ok(n) = rhs.parse::<f32>() {

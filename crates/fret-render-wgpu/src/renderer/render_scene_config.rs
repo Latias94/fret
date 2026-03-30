@@ -173,7 +173,7 @@ impl Default for RenderSceneConfigState {
 }
 
 fn normalize_path_msaa_samples(samples: u32) -> u32 {
-    let samples = samples.max(1).min(16);
+    let samples = samples.clamp(1, 16);
     if samples == 1 {
         1
     } else {

@@ -366,17 +366,14 @@ fn wrap_panel_semantics<H: UiHost>(
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ChartTooltipIndicator {
+    #[default]
     Dot,
     Line,
     Dashed,
 }
 
-impl Default for ChartTooltipIndicator {
-    fn default() -> Self {
-        Self::Dot
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -1357,17 +1354,14 @@ where
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ChartTooltipContentKind {
+    #[default]
     Default,
     FormatterKcal,
     AdvancedKcalTotal,
 }
 
-impl Default for ChartTooltipContentKind {
-    fn default() -> Self {
-        Self::Default
-    }
-}
 
 /// shadcn/ui v4 chart tooltip content.
 ///
@@ -2138,16 +2132,13 @@ impl ChartTooltipContent {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ChartLegendVerticalAlign {
     Top,
+    #[default]
     Bottom,
 }
 
-impl Default for ChartLegendVerticalAlign {
-    fn default() -> Self {
-        Self::Bottom
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct ChartLegendItem {
@@ -2221,7 +2212,7 @@ impl ChartLegendContent {
             vertical_align: ChartLegendVerticalAlign::Bottom,
             hide_icon: false,
             wrap: false,
-            gap: Space::N4.into(),
+            gap: Space::N4,
             item_width_px: None,
             item_justify_center: false,
             chrome: ChromeRefinement::default(),

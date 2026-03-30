@@ -128,7 +128,7 @@ fn layout_sidecar_includes_visible_overlay_roots_and_filtering_can_target_overla
             })]
         },
     );
-    let _overlay_layer = ui.push_overlay_root_ex(overlay_root, true, true);
+    let _overlay_layer = ui.push_overlay_root(overlay_root, true);
 
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
 

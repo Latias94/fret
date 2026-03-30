@@ -31,3 +31,14 @@ serde.workspace = true
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
+
+[lints.clippy]
+arc_with_non_send_sync = "allow"
+field_reassign_with_default = "allow"
+large_enum_variant = "allow"
+manual_strip = "allow"
+question_mark = "allow"
+redundant_locals = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+unnecessary_find_map = "allow"

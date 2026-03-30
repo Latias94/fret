@@ -894,7 +894,7 @@ impl InputOtp {
 
                 let active_slot_geom = (focused && wants_ring)
                     .then_some(())
-                    .and_then(|_| active_slot_idx)
+                    .and(active_slot_idx)
                     .and_then(|active_idx| {
                         let root_bounds = cx.last_bounds_for_element(cx.root_id())?;
                         let slot_bounds = slot_ids
@@ -1020,11 +1020,10 @@ fn parse_input_otp_parts(parts: Vec<InputOtpPart>) -> ParsedInputOtpParts {
                     groups.push(InputOtpGroup::new(std::mem::take(&mut current_group)));
                 }
 
-                if let Some(idx) = groups.len().checked_sub(1) {
-                    if !separators_after_groups.contains(&idx) {
+                if let Some(idx) = groups.len().checked_sub(1)
+                    && !separators_after_groups.contains(&idx) {
                         separators_after_groups.push(idx);
                     }
-                }
             }
         }
     }
@@ -1334,7 +1333,7 @@ mod tests {
     fn input_otp_sanitizes_and_clamps_value() {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let model = app.models_mut().insert("12a 34-5678".to_string());
         render(&mut ui, &mut app, &mut services, model.clone());
@@ -1346,7 +1345,7 @@ mod tests {
     fn input_otp_pattern_digits_and_chars_filters_punctuation() {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let model = app.models_mut().insert("12a 34-5678".to_string());
 
@@ -1384,7 +1383,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
             svc.set_fixed_delta(window, Some(Duration::from_millis(16)));
@@ -1397,7 +1396,7 @@ mod tests {
         ui.request_semantics_snapshot();
         render(&mut ui, &mut app, &mut services, model.clone());
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let input = node_id_by_test_id(&snap, "otp.input");
+        let input = node_id_by_test_id(snap, "otp.input");
         ui.set_focus(Some(input));
 
         // Focused: caret should be visible near t=0.
@@ -1406,7 +1405,7 @@ mod tests {
         ui.request_semantics_snapshot();
         render(&mut ui, &mut app, &mut services, model.clone());
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let slot0 = node_id_by_test_id(&snap, "otp.slot.0");
+        let slot0 = node_id_by_test_id(snap, "otp.slot.0");
         assert!(
             slot_descendant_has_caret_like_1px_bar(&ui, slot0),
             "expected focused input otp slot 0 to render the fake caret near the start of the blink cycle"
@@ -1415,12 +1414,12 @@ mod tests {
         // After ~640ms (40 frames @ 16ms), caret should be hidden (progress >= 0.5).
         for n in 3..=42 {
             app.set_tick_id(TickId(n));
-            app.set_frame_id(FrameId(n as u64));
+            app.set_frame_id(FrameId(n));
             ui.request_semantics_snapshot();
             render(&mut ui, &mut app, &mut services, model.clone());
         }
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let slot0 = node_id_by_test_id(&snap, "otp.slot.0");
+        let slot0 = node_id_by_test_id(snap, "otp.slot.0");
         assert!(
             !slot_descendant_has_caret_like_1px_bar(&ui, slot0),
             "expected caret to blink off mid-cycle under fixed delta"
@@ -1432,12 +1431,12 @@ mod tests {
         });
         for n in 43..=120 {
             app.set_tick_id(TickId(n));
-            app.set_frame_id(FrameId(n as u64));
+            app.set_frame_id(FrameId(n));
             ui.request_semantics_snapshot();
             render(&mut ui, &mut app, &mut services, model.clone());
         }
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let slot0 = node_id_by_test_id(&snap, "otp.slot.0");
+        let slot0 = node_id_by_test_id(snap, "otp.slot.0");
         assert!(
             slot_descendant_has_caret_like_1px_bar(&ui, slot0),
             "expected reduced motion to disable the blink (caret remains visible)"
@@ -1504,7 +1503,7 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
             svc.set_fixed_delta(window, Some(Duration::from_millis(16)));
@@ -1598,7 +1597,7 @@ mod tests {
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let input = node_id_by_test_id(&snap, "otp.input");
+        let input = node_id_by_test_id(snap, "otp.input");
         ui.set_focus(Some(input));
 
         // Frame 2: focused, border + ring should tween in (intermediate).
@@ -1631,7 +1630,7 @@ mod tests {
         ) + 2;
         for n in 0..settle {
             app.set_tick_id(TickId(3 + n));
-            app.set_frame_id(FrameId(3 + n as u64));
+            app.set_frame_id(FrameId(3 + n));
             render_capture(
                 &mut ui,
                 &mut app,
@@ -1706,7 +1705,7 @@ mod tests {
     fn input_otp_aria_invalid_sets_semantics_invalid() {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let model = app.models_mut().insert("000000".to_string());
 
@@ -1751,7 +1750,7 @@ mod tests {
     fn input_otp_slot_part_aria_invalid_sets_hidden_input_semantics_invalid() {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let model = app.models_mut().insert("000000".to_string());
 
@@ -1807,7 +1806,7 @@ mod tests {
     fn input_otp_required_builder_exposes_required_semantics() {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let model = app.models_mut().insert("000000".to_string());
 
@@ -1858,7 +1857,7 @@ mod tests {
         );
 
         let mut ui: UiTree<App> = UiTree::new();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let model = app.models_mut().insert(String::new());
 
         let window = AppWindowId::default();

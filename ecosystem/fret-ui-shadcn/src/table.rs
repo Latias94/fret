@@ -698,19 +698,15 @@ where
 }
 
 fn clear_table_row_border_bottom(el: &mut AnyElement) -> bool {
-    match &mut el.kind {
-        ElementKind::Container(props) => {
-            if props.border.top.0 == 0.0
-                && props.border.right.0 == 0.0
-                && props.border.left.0 == 0.0
-                && props.border.bottom.0 > 0.0
-            {
-                props.border.bottom = fret_core::Px(0.0);
-                return true;
-            }
+    if let ElementKind::Container(props) = &mut el.kind
+        && props.border.top.0 == 0.0
+            && props.border.right.0 == 0.0
+            && props.border.left.0 == 0.0
+            && props.border.bottom.0 > 0.0
+        {
+            props.border.bottom = fret_core::Px(0.0);
+            return true;
         }
-        _ => {}
-    }
 
     for child in &mut el.children {
         if clear_table_row_border_bottom(child) {
@@ -1731,13 +1727,10 @@ mod tests {
     use fret_ui::UiTree;
 
     fn find_container_with_background(el: &AnyElement, bg: Color) -> Option<&ContainerProps> {
-        match &el.kind {
-            ElementKind::Container(props) => {
-                if props.background == Some(bg) {
-                    return Some(props);
-                }
+        if let ElementKind::Container(props) = &el.kind {
+            if props.background == Some(bg) {
+                return Some(props);
             }
-            _ => {}
         }
         for child in &el.children {
             if let Some(found) = find_container_with_background(child, bg) {
@@ -2023,18 +2016,15 @@ mod tests {
             let body = TableBody::new([row1, row2]).into_element(cx);
 
             fn find_row_border_container(el: &AnyElement) -> Option<&ContainerProps> {
-                match &el.kind {
-                    ElementKind::Container(props) => {
-                        if props.border.top.0 == 0.0
-                            && props.border.right.0 == 0.0
-                            && props.border.left.0 == 0.0
-                            && props.border.bottom.0 >= 0.0
-                            && props.border_color.is_some()
-                        {
-                            return Some(props);
-                        }
+                if let ElementKind::Container(props) = &el.kind {
+                    if props.border.top.0 == 0.0
+                        && props.border.right.0 == 0.0
+                        && props.border.left.0 == 0.0
+                        && props.border.bottom.0 >= 0.0
+                        && props.border_color.is_some()
+                    {
+                        return Some(props);
                     }
-                    _ => {}
                 }
                 for child in &el.children {
                     if let Some(found) = find_row_border_container(child) {
@@ -2424,13 +2414,10 @@ mod tests {
         );
 
         fn find_text_weight(el: &AnyElement, needle: &str) -> Option<FontWeight> {
-            match &el.kind {
-                ElementKind::Text(props) => {
-                    if props.text.as_ref() == needle {
-                        return props.style.as_ref().map(|s| s.weight);
-                    }
+            if let ElementKind::Text(props) = &el.kind {
+                if props.text.as_ref() == needle {
+                    return props.style.as_ref().map(|s| s.weight);
                 }
-                _ => {}
             }
 
             for child in &el.children {
@@ -2476,18 +2463,15 @@ mod tests {
         }
 
         fn find_row_border_container(el: &AnyElement) -> Option<&ContainerProps> {
-            match &el.kind {
-                ElementKind::Container(props) => {
-                    if props.border.top.0 == 0.0
-                        && props.border.right.0 == 0.0
-                        && props.border.left.0 == 0.0
-                        && props.border.bottom.0 >= 0.0
-                        && props.border_color.is_some()
-                    {
-                        return Some(props);
-                    }
+            if let ElementKind::Container(props) = &el.kind {
+                if props.border.top.0 == 0.0
+                    && props.border.right.0 == 0.0
+                    && props.border.left.0 == 0.0
+                    && props.border.bottom.0 >= 0.0
+                    && props.border_color.is_some()
+                {
+                    return Some(props);
                 }
-                _ => {}
             }
             for child in &el.children {
                 if let Some(found) = find_row_border_container(child) {
@@ -2512,7 +2496,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let row_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let bg_out: Rc<Cell<Option<Color>>> = Rc::new(Cell::new(None));

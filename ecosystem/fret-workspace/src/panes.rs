@@ -538,7 +538,7 @@ where
                     .unwrap_or_else(|| vec![fraction, 1.0 - fraction]);
                 let sum = fractions_now.iter().sum::<f32>().max(0.0001);
                 let model_fraction =
-                    (fractions_now.get(0).copied().unwrap_or(0.5) / sum).clamp(0.0, 1.0);
+                    (fractions_now.first().copied().unwrap_or(0.5) / sum).clamp(0.0, 1.0);
 
                 let model_changed =
                     last_model_fraction.is_none_or(|last| (last - model_fraction).abs() > 0.0001);

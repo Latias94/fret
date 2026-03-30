@@ -2303,9 +2303,7 @@ mod tests {
         assert_eq!(tooltip_node.role, SemanticsRole::Tooltip);
         assert!(
             trigger_node
-                .described_by
-                .iter()
-                .any(|id| *id == tooltip_node.id),
+                .described_by.contains(&tooltip_node.id),
             "trigger should be described by the tooltip content"
         );
     }
@@ -3015,9 +3013,7 @@ mod tests {
         if let Some(content_node) = content_node {
             assert!(
                 !trigger_node
-                    .described_by
-                    .iter()
-                    .any(|id| *id == content_node),
+                    .described_by.contains(&content_node),
                 "expected aria-describedby to be cleared after pointerdown close"
             );
         } else {
@@ -3587,9 +3583,7 @@ mod tests {
         if let Some(content_1_node) = content_1_node {
             assert!(
                 !trigger_1
-                    .described_by
-                    .iter()
-                    .any(|id| *id == content_1_node),
+                    .described_by.contains(&content_1_node),
                 "expected tooltip 1 to close (aria-describedby cleared) after tooltip 2 opens"
             );
         } else {

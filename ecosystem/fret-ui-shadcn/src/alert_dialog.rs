@@ -528,7 +528,7 @@ impl AlertDialog {
                             },
                             ..Default::default()
                         };
-                        let content_layout = opacity_layout.clone();
+                        let content_layout = opacity_layout;
                         let barrier_children = [barrier_fill];
                         let open_for_children = self.open.clone();
 
@@ -5040,7 +5040,7 @@ mod tests {
             req.prevent_default();
         });
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -5127,17 +5127,16 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = redirect_focus_id_for_handler
+            let id = *redirect_focus_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
             req.prevent_default();
         });
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -5233,17 +5232,16 @@ mod tests {
         let underlay_id_for_handler = underlay_id_cell.clone();
         let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = underlay_id_for_handler
+            let id = *underlay_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
             req.prevent_default();
         });
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -5335,17 +5333,16 @@ mod tests {
         let calls_for_handler = calls.clone();
         let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
             calls_for_handler.fetch_add(1, Ordering::SeqCst);
-            let id = underlay_id_for_handler
+            let id = *underlay_id_for_handler
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone();
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(id) = id {
                 host.request_focus(id);
             }
             req.prevent_default();
         });
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -5875,14 +5872,12 @@ mod tests {
             .expect("description semantics node");
 
         assert!(
-            alert_dialog.labelled_by.iter().any(|id| *id == title.id),
+            alert_dialog.labelled_by.contains(&title.id),
             "alert dialog should be labelled by its title"
         );
         assert!(
             alert_dialog
-                .described_by
-                .iter()
-                .any(|id| *id == description.id),
+                .described_by.contains(&description.id),
             "alert dialog should be described by its description"
         );
     }

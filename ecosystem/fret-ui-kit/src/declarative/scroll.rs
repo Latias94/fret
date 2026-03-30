@@ -430,7 +430,7 @@ where
     })
 }
 
-/// Horizontal scrolling with a `vstack` content root.
+// Horizontal scrolling with a `vstack` content root.
 // Note: older versions of this module exposed `*_vstack` helpers that depended on the legacy stack
 // helpers. Those were removed when the repo converged on
 // `fret-ui-kit::ui::*` builders as the teaching surface. Prefer `overflow_scroll_content(...)`

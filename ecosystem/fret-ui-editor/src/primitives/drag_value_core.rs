@@ -215,7 +215,9 @@ where
             layout.size.min_height = Some(Length::Px(density.row_height));
         }
 
-        let pressable = cx.pressable(
+        
+
+        cx.pressable(
             PressableProps {
                 enabled,
                 layout,
@@ -416,9 +418,7 @@ where
                     },
                 )
             },
-        );
-
-        pressable
+        )
     }
 }
 

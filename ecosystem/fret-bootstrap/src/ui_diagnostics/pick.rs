@@ -46,10 +46,10 @@ pub(super) fn pick_semantics_node_at<'a>(
     pick_semantics_node_by_bounds(snapshot, position)
 }
 
-pub(crate) fn pick_semantics_node_by_bounds<'a>(
-    snapshot: &'a fret_core::SemanticsSnapshot,
+pub(crate) fn pick_semantics_node_by_bounds(
+    snapshot: &fret_core::SemanticsSnapshot,
     position: Point,
-) -> Option<&'a fret_core::SemanticsNode> {
+) -> Option<&fret_core::SemanticsNode> {
     let index = super::SemanticsIndex::new(snapshot);
     pick_best_match(
         snapshot.nodes.iter().filter(|n| {

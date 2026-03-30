@@ -297,7 +297,7 @@ impl RelativeTimeClock {
                     let _ = cx
                         .app
                         .models_mut()
-                        .update(&time_model, |v| *v = *v + tick.time_duration());
+                        .update(&time_model, |v| *v += tick.time_duration());
                 }
             } else {
                 cx.state_for(id, AutoUpdateState::default, |st| {

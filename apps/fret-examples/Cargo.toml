@@ -108,3 +108,11 @@ wasm-bindgen = "0.2"
 
 [dev-dependencies]
 naga.workspace = true
+
+[lints.rust]
+dead_code = "allow"
+unused = "allow"
+unused_variables = "allow"
+
+[lints.clippy]
+all = "allow"

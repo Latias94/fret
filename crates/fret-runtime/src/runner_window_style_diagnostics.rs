@@ -216,16 +216,14 @@ impl RunnerWindowStyleDiagnosticsStore {
         self.transparent_implied_by_material_create_time
             .insert(window, false);
 
-        if caps.ui.window_decorations {
-            if let Some(decorations) = requested.decorations {
+        if caps.ui.window_decorations
+            && let Some(decorations) = requested.decorations {
                 next.decorations = decorations;
             }
-        }
-        if caps.ui.window_resizable {
-            if let Some(resizable) = requested.resizable {
+        if caps.ui.window_resizable
+            && let Some(resizable) = requested.resizable {
                 next.resizable = resizable;
             }
-        }
         if let Some(material) = requested.background_material {
             let clamped = clamp_background_material_request(material, caps);
             next.background_material = clamped;

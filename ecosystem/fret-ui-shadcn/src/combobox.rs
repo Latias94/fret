@@ -120,7 +120,7 @@ fn combobox_input_inline_addon<H: UiHost>(
     .inherit_foreground(muted_foreground)
 }
 
-pub(crate) fn combobox_group_items<'a>(group: &'a ComboboxGroup) -> &'a [ComboboxItem] {
+pub(crate) fn combobox_group_items(group: &ComboboxGroup) -> &[ComboboxItem] {
     if !group.items.is_empty() {
         &group.items
     } else if let Some(collection) = group.collection.as_ref() {
@@ -2078,7 +2078,7 @@ fn combobox_with_patch<H: UiHost>(
                             {
                                 let group_items: Vec<CommandItem> = group_items
                                     .into_iter()
-                                    .map(|item| make_item(item))
+                                    .map(&mut make_item)
                                     .collect();
                                 entries.push(CommandEntry::Group(
                                     CommandGroup::new(group_items).heading(heading),
@@ -2278,7 +2278,7 @@ fn combobox_with_patch<H: UiHost>(
                             {
                                 let group_items: Vec<CommandItem> = group_items
                                     .into_iter()
-                                    .map(|item| make_item(item))
+                                    .map(&mut make_item)
                                     .collect();
                                 entries.push(CommandEntry::Group(
                                     CommandGroup::new(group_items).heading(heading),
@@ -2867,7 +2867,7 @@ fn combobox_with_patch<H: UiHost>(
                     for (idx, (heading, group_items)) in non_empty_groups.into_iter().enumerate()
                     {
                         let group_items: Vec<CommandItem> =
-                            group_items.into_iter().map(|item| make_item(item)).collect();
+                            group_items.into_iter().map(&mut make_item).collect();
                         entries.push(CommandEntry::Group(
                             CommandGroup::new(group_items).heading(heading),
                         ));
@@ -3056,7 +3056,7 @@ fn combobox_with_patch<H: UiHost>(
                     for (idx, (heading, group_items)) in non_empty_groups.into_iter().enumerate()
                     {
                         let group_items: Vec<CommandItem> =
-                            group_items.into_iter().map(|item| make_item(item)).collect();
+                            group_items.into_iter().map(&mut make_item).collect();
                         entries.push(CommandEntry::Group(
                             CommandGroup::new(group_items).heading(heading),
                         ));
@@ -3175,7 +3175,7 @@ mod tests {
         ) -> (Rect, Option<Rect>, Vec<fret_runtime::Effect>) {
             let next = app.frame_id().0.saturating_add(1);
             app.set_frame_id(FrameId(next));
-            app.set_tick_id(TickId(next as u64));
+            app.set_tick_id(TickId(next));
             app.with_global_mut(WindowFrameClockService::default, |svc, app| {
                 svc.record_frame(window, app.frame_id());
             });
@@ -3282,7 +3282,7 @@ mod tests {
             let mut app = App::new();
             let mut ui: UiTree<App> = UiTree::new();
             ui.set_window(window);
-            let mut services = FakeServices::default();
+            let mut services = FakeServices;
 
             app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
                 svc.set_fixed_delta(window, Some(std::time::Duration::from_millis(16)));
@@ -3527,7 +3527,7 @@ mod tests {
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].value.as_ref(), "a");
         assert_eq!(items[0].label.as_ref(), "Alpha");
-        assert_eq!(items[0].disabled, false);
+        assert!(!items[0].disabled);
         assert_eq!(items[0].keywords.len(), 1);
         assert_eq!(items[0].keywords[0].as_ref(), "alpha");
 
@@ -3679,7 +3679,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(360.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let model = app.models_mut().insert(None::<Arc<str>>);
         let open = app.models_mut().insert(false);
@@ -3754,7 +3754,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(360.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let model = app.models_mut().insert(None::<Arc<str>>);
         let open = app.models_mut().insert(false);
@@ -3954,7 +3954,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let model = app.models_mut().insert(None::<Arc<str>>);
         let open = app.models_mut().insert(false);
 
@@ -3982,7 +3982,7 @@ mod tests {
         ) -> fret_core::NodeId {
             let next = app.frame_id().0.saturating_add(1);
             app.set_frame_id(FrameId(next));
-            app.set_tick_id(TickId(next as u64));
+            app.set_tick_id(TickId(next));
             app.with_global_mut(WindowFrameClockService::default, |svc, app| {
                 svc.record_frame(window, app.frame_id());
             });
@@ -4208,7 +4208,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let model_id_out = Cell::new(None);
         let open_id_out = Cell::new(None);
@@ -4311,7 +4311,7 @@ mod tests {
         let value = app.models_mut().insert(Some(Arc::from("alpha")));
         let open = app.models_mut().insert(true);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
@@ -4406,7 +4406,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = || {
             vec![
@@ -4473,11 +4473,11 @@ mod tests {
             .find(|n| n.role == SemanticsRole::ListBox)
             .expect("listbox node");
         assert!(
-            list.labelled_by.iter().any(|id| *id == input.id),
+            list.labelled_by.contains(&input.id),
             "listbox should be labelled by the combobox input"
         );
         assert!(
-            input.controls.iter().any(|id| *id == list.id),
+            input.controls.contains(&list.id),
             "combobox input should control the listbox"
         );
 
@@ -4580,7 +4580,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = || {
             vec![
@@ -4661,7 +4661,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = || {
             vec![
@@ -4778,7 +4778,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = || {
             vec![
@@ -4876,7 +4876,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = || {
             vec![
@@ -5004,7 +5004,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = || {
             vec![
@@ -5154,7 +5154,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(320.0), Px(92.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let items = || {
             (0..40)

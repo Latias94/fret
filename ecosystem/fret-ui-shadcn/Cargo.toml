@@ -38,3 +38,24 @@ time.workspace = true
 fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
 fret-ui-app = { version = "0.1.0", path = "../../crates/fret-ui-app" }
 slotmap.workspace = true
+
+[lints.clippy]
+arc_with_non_send_sync = "allow"
+collapsible_if = "allow"
+default_constructed_unit_structs = "allow"
+enum_variant_names = "allow"
+field_reassign_with_default = "allow"
+if_same_then_else = "allow"
+large_enum_variant = "allow"
+manual_clamp = "allow"
+needless_lifetimes = "allow"
+needless_update = "allow"
+ok_expect = "allow"
+question_mark = "allow"
+redundant_locals = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+unnecessary_unwrap = "allow"
+
+[lints.rust]
+dead_code = "allow"

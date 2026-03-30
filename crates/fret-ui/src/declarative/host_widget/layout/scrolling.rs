@@ -527,7 +527,7 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
                 );
             }
 
-            if let Some(_) = observed_nodes.get(&observe_root) {
+            if observed_nodes.get(&observe_root).is_some() {
                 let mut memo: HashMap<NodeId, Size> = HashMap::new();
                 root_trusted = validate_scroll_overflow_observed_subtree(
                     &observed_nodes,
@@ -1932,7 +1932,7 @@ impl ElementHostWidget {
                 || cached_max_child.is_some()
                 || cached.is_some();
             let mut tree = UiTreeScrollOverflowTree {
-                tree: &cx.tree,
+                tree: cx.tree,
                 app: cx.app,
                 window,
             };

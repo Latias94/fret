@@ -24,7 +24,7 @@ use fret_ui_kit::typography::{
     scope_description_text_with_fallbacks,
 };
 
-fn peel_single_child_wrappers<'a>(mut element: &'a AnyElement) -> &'a AnyElement {
+fn peel_single_child_wrappers(mut element: &AnyElement) -> &AnyElement {
     loop {
         match &element.kind {
             ElementKind::Semantics(_) | ElementKind::Container(_) => {
@@ -39,7 +39,7 @@ fn peel_single_child_wrappers<'a>(mut element: &'a AnyElement) -> &'a AnyElement
     }
 }
 
-fn peel_semantics_wrappers<'a>(mut element: &'a AnyElement) -> &'a AnyElement {
+fn peel_semantics_wrappers(mut element: &AnyElement) -> &AnyElement {
     loop {
         match &element.kind {
             ElementKind::Semantics(_) if element.children.len() == 1 => {
@@ -563,9 +563,9 @@ impl FieldSet {
                                         && is_field_description(muted, desc_line_height, &child)
                                     {
                                         let layout = if legend_is_variant_legend && idx == 0 {
-                                            desc_mt_neg_n1p5.clone()
+                                            desc_mt_neg_n1p5
                                         } else {
-                                            desc_mt_neg_n1.clone()
+                                            desc_mt_neg_n1
                                         };
                                         cx.container(
                                             ContainerProps {
@@ -602,7 +602,7 @@ impl FieldSet {
                                 && idx == len - 2
                                 && is_field_description(muted, desc_line_height, &child)
                             {
-                                let layout = desc_mt_neg_n1.clone();
+                                let layout = desc_mt_neg_n1;
                                 cx.container(
                                     ContainerProps {
                                         layout,
@@ -746,7 +746,7 @@ impl FieldGroup {
         Self {
             children,
             slot: FieldGroupSlot::default(),
-            gap: None.into(),
+            gap: None,
             layout: LayoutRefinement::default(),
         }
     }
@@ -1864,7 +1864,7 @@ impl Field {
             };
 
             let region_props = LayoutQueryRegionProps {
-                layout: inner_layout.clone(),
+                layout: inner_layout,
                 name: None,
             };
 
@@ -1893,7 +1893,7 @@ impl Field {
                         let inner = match orientation {
                             FieldOrientation::Vertical => cx.column(
                                 ColumnProps {
-                                    layout: inner_layout.clone(),
+                                    layout: inner_layout,
                                     gap: gap.into(),
                                     ..Default::default()
                                 },
@@ -1914,7 +1914,7 @@ impl Field {
                                             {
                                                 cx.container(
                                                     ContainerProps {
-                                                        layout: desc_mt_neg.clone(),
+                                                        layout: desc_mt_neg,
                                                         ..Default::default()
                                                     },
                                                     move |_cx| vec![child],
@@ -1973,7 +1973,7 @@ impl Field {
                                 } else {
                                     cx.column(
                                         ColumnProps {
-                                            layout: inner_layout.clone(),
+                                            layout: inner_layout,
                                             gap: gap.into(),
                                             ..Default::default()
                                         },
@@ -1994,7 +1994,7 @@ impl Field {
                                                     {
                                                         cx.container(
                                                             ContainerProps {
-                                                                layout: desc_mt_neg.clone(),
+                                                                layout: desc_mt_neg,
                                                                 ..Default::default()
                                                             },
                                                             move |_cx| vec![child],
@@ -2585,7 +2585,7 @@ mod tests {
             window,
             bounds,
             "shadcn-field-label-nested-pressable-focus-suppression-registry",
-            |cx| control_registry_model(cx),
+            control_registry_model,
         );
         let control_focus_target = app
             .models()
@@ -2741,7 +2741,7 @@ mod tests {
             window,
             bounds,
             "shadcn-field-label-ancestor-pressable-focus-forwarding-registry",
-            |cx| control_registry_model(cx),
+            control_registry_model,
         );
         let control_focus_target = app
             .models()

@@ -1206,7 +1206,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
         let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
@@ -1392,7 +1392,7 @@ mod tests {
         );
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let badge_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let state_out: Rc<Cell<Option<BadgeVisualState>>> = Rc::new(Cell::new(None));
@@ -1553,7 +1553,7 @@ mod tests {
         );
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let badge_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let state_out: Rc<Cell<Option<BadgeVisualState>>> = Rc::new(Cell::new(None));

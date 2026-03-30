@@ -242,51 +242,45 @@ fn render_column_actions_menu<H: UiHost>(
                     wire_column_actions_command_handler(cx, state_for_items.clone());
 
                     let id = column_id_for_items.as_ref();
-                    let mut entries: Vec<DropdownMenuEntry> = Vec::new();
-
-                    entries.push(DropdownMenuEntry::Item(
-                        DropdownMenuItem::new("Sort Asc")
-                            .disabled(!can_sort)
-                            .on_select(column_action_command(ColumnAction::SortAsc, id)),
-                    ));
-                    entries.push(DropdownMenuEntry::Item(
-                        DropdownMenuItem::new("Sort Desc")
-                            .disabled(!can_sort)
-                            .on_select(column_action_command(ColumnAction::SortDesc, id)),
-                    ));
-                    entries.push(DropdownMenuEntry::Item(
-                        DropdownMenuItem::new("Clear sort")
-                            .disabled(!can_sort)
-                            .on_select(column_action_command(ColumnAction::SortClear, id)),
-                    ));
-
-                    entries.push(DropdownMenuEntry::Separator);
-
-                    entries.push(DropdownMenuEntry::Item(
-                        DropdownMenuItem::new("Hide")
-                            .disabled(!can_hide)
-                            .on_select(column_action_command(ColumnAction::Hide, id)),
-                    ));
-
-                    entries.push(DropdownMenuEntry::Separator);
-
-                    entries.push(DropdownMenuEntry::Item(
-                        DropdownMenuItem::new("Pin Left")
-                            .disabled(!can_pin)
-                            .on_select(column_action_command(ColumnAction::PinLeft, id)),
-                    ));
-                    entries.push(DropdownMenuEntry::Item(
-                        DropdownMenuItem::new("Pin Right")
-                            .disabled(!can_pin)
-                            .on_select(column_action_command(ColumnAction::PinRight, id)),
-                    ));
-                    entries.push(DropdownMenuEntry::Item(
-                        DropdownMenuItem::new("Unpin")
-                            .disabled(!can_pin)
-                            .on_select(column_action_command(ColumnAction::PinClear, id)),
-                    ));
-
-                    entries
+                    vec![
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Sort Asc")
+                                .disabled(!can_sort)
+                                .on_select(column_action_command(ColumnAction::SortAsc, id)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Sort Desc")
+                                .disabled(!can_sort)
+                                .on_select(column_action_command(ColumnAction::SortDesc, id)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Clear sort")
+                                .disabled(!can_sort)
+                                .on_select(column_action_command(ColumnAction::SortClear, id)),
+                        ),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Hide")
+                                .disabled(!can_hide)
+                                .on_select(column_action_command(ColumnAction::Hide, id)),
+                        ),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Pin Left")
+                                .disabled(!can_pin)
+                                .on_select(column_action_command(ColumnAction::PinLeft, id)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Pin Right")
+                                .disabled(!can_pin)
+                                .on_select(column_action_command(ColumnAction::PinRight, id)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Unpin")
+                                .disabled(!can_pin)
+                                .on_select(column_action_command(ColumnAction::PinClear, id)),
+                        ),
+                    ]
                 },
             )
     })
@@ -681,7 +675,9 @@ impl DataTable {
         let mut root_props = decl_style::container_props(&theme, root_chrome, layout.w_full());
         root_props.layout.overflow = Overflow::Clip;
 
-        let root = cx.container(root_props, move |cx| {
+        
+
+        cx.container(root_props, move |cx| {
             let theme = Theme::global(&*cx.app).snapshot();
             let body_text_style = table_text_style(&theme);
             let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
@@ -743,11 +739,10 @@ impl DataTable {
                 view_props,
                 |_row| None,
                 move |cx, col, sort_state| {
-                    if let Some(header_cell_at) = header_cell_at.as_ref() {
-                        if let Some(custom) = header_cell_at(cx, col, sort_state) {
+                    if let Some(header_cell_at) = header_cell_at.as_ref()
+                        && let Some(custom) = header_cell_at(cx, col, sort_state) {
                             return custom;
                         }
-                    }
 
                     if !column_actions_menu_enabled {
                         let theme = Theme::global(&*cx.app).snapshot();
@@ -1011,8 +1006,6 @@ impl DataTable {
             );
 
             vec![table]
-        });
-
-        root
+        })
     }
 }

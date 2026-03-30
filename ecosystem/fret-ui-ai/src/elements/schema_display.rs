@@ -727,8 +727,8 @@ fn highlighted_path_attributed_text(
     let mut i = 0;
     while i < bytes.len() {
         let start = i;
-        if bytes[i] == b'{' {
-            if let Some(end_rel) = path[i..].find('}') {
+        if bytes[i] == b'{'
+            && let Some(end_rel) = path[i..].find('}') {
                 let end = i + end_rel + 1;
                 let seg = &path[i..end];
                 text.push_str(seg);
@@ -740,7 +740,6 @@ fn highlighted_path_attributed_text(
                 i = end;
                 continue;
             }
-        }
 
         while i < bytes.len() && bytes[i] != b'{' {
             i += 1;

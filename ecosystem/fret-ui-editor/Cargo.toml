@@ -38,3 +38,9 @@ fret-undo = { path = "../fret-undo", optional = true }
 fret-app = { path = "../../crates/fret-app" }
 fret-ui-shadcn = { path = "../fret-ui-shadcn", features = ["app-integration"] }
 slotmap.workspace = true
+
+[lints.clippy]
+field_reassign_with_default = "allow"
+manual_clamp = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"

@@ -350,7 +350,7 @@ fn format_selected_ppp_en(date: Date) -> Arc<str> {
 
     fn ordinal_suffix(day: u8) -> &'static str {
         let mod_100 = day % 100;
-        if mod_100 >= 11 && mod_100 <= 13 {
+        if (11..=13).contains(&mod_100) {
             return "th";
         }
         match day % 10 {

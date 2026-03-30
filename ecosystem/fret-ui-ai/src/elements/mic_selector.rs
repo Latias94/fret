@@ -620,6 +620,12 @@ impl std::fmt::Debug for MicSelectorInput {
     }
 }
 
+impl Default for MicSelectorInput {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MicSelectorInput {
     pub fn new() -> Self {
         Self {
@@ -668,6 +674,12 @@ impl std::fmt::Debug for MicSelectorValue {
             .field("placeholder", &self.placeholder.as_ref())
             .field("test_id", &self.test_id.as_deref())
             .finish()
+    }
+}
+
+impl Default for MicSelectorValue {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -876,6 +888,12 @@ impl std::fmt::Debug for MicSelectorEmpty {
         f.debug_struct("MicSelectorEmpty")
             .field("text", &self.text.as_ref())
             .finish()
+    }
+}
+
+impl Default for MicSelectorEmpty {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1132,6 +1150,12 @@ impl std::fmt::Debug for MicSelectorList {
             .field("test_id_prefix", &self.test_id_prefix.as_deref())
             .field("scroll_layout", &self.scroll_layout)
             .finish()
+    }
+}
+
+impl Default for MicSelectorList {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

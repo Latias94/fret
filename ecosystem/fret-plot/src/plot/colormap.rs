@@ -1,10 +1,12 @@
 use fret_core::scene::Color;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Default)]
 pub enum ColorMapId {
     /// A simple blue -> cyan -> green -> yellow -> red ramp (portable and predictable).
     Spectrum,
     /// Google's "Turbo" colormap (smooth and high-contrast).
+    #[default]
     Turbo,
     /// A Viridis-like ramp (perceptually uniform-ish).
     Viridis,
@@ -12,11 +14,6 @@ pub enum ColorMapId {
     Gray,
 }
 
-impl Default for ColorMapId {
-    fn default() -> Self {
-        Self::Turbo
-    }
-}
 
 impl ColorMapId {
     pub fn key(self) -> u8 {
@@ -75,29 +72,29 @@ fn sample_turbo(t: f32) -> Color {
     let r = turbo_channel(
         t,
         0.135_721_38,
-        4.615_392_60,
-        -42.660_322_58,
-        132.131_082_34,
-        -152.942_393_96,
-        59.286_379_43,
+        4.615_392_7,
+        -42.660_324,
+        132.131_09,
+        -152.942_4,
+        59.286_38,
     );
     let g = turbo_channel(
         t,
         0.091_402_61,
-        2.194_188_39,
-        4.842_966_58,
-        -14.185_033_33,
-        4.277_298_57,
-        2.829_566_04,
+        2.194_188_4,
+        4.842_966_6,
+        -14.185_034,
+        4.277_298_5,
+        2.829_566,
     );
     let b = turbo_channel(
         t,
-        0.106_673_30,
-        12.641_946_08,
-        -60.582_048_36,
-        110.362_767_71,
-        -89.903_109_12,
-        27.348_249_73,
+        0.106_673_3,
+        12.641_946,
+        -60.582_047,
+        110.362_77,
+        -89.903_11,
+        27.348_25,
     );
 
     Color {

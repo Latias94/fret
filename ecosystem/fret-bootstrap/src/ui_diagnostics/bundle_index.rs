@@ -384,7 +384,7 @@ pub(super) fn build_window_map_json(
         let first = w.snapshots.first();
         let last = w.snapshots.last();
 
-        let last_bounds = last.map(|s| s.window_bounds.clone());
+        let last_bounds = last.map(|s| s.window_bounds);
         let last_scale_factor = last.map(|s| s.scale_factor);
         let last_primary_pointer_type = last.and_then(|s| s.primary_pointer_type.clone());
         let last_hover_detection = last
@@ -494,11 +494,10 @@ pub(super) fn build_dock_routing_json(
                     }
                     mix(&mut fp, r.outer as u64);
                 }
-                if let Some(p) = d.preview.as_ref() {
-                    if let Ok(label) = serde_json::to_string(&p.kind) {
+                if let Some(p) = d.preview.as_ref()
+                    && let Ok(label) = serde_json::to_string(&p.kind) {
                         mix(&mut fp, hash_str_64(&label));
                     }
-                }
             }
 
             if last_fingerprint_by_window.get(&w.window).copied() == Some(fp) {

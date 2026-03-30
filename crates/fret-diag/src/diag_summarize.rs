@@ -156,7 +156,7 @@ fn resolve_summary_inputs(
             }
             if path.is_dir() {
                 collect_regression_summaries_recursively(
-                    &path,
+                    path,
                     &skip_output_summary,
                     &mut summary_paths,
                 )?;

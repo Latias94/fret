@@ -750,7 +750,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     if let Some(thr) = max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images {
         let bundle_path = packed_bundle_artifact
             .as_deref()
-            .or_else(|| selected_bundle_path.as_deref());
+            .or(selected_bundle_path.as_deref());
         macos_owned_unmapped_linear_vs_images_gate =
             check_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images(
                 &resolved_out_dir,
@@ -763,7 +763,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     if renderer_gpu_budget_thresholds.any() {
         let bundle_path = packed_bundle_artifact
             .as_deref()
-            .or_else(|| selected_bundle_path.as_deref());
+            .or(selected_bundle_path.as_deref());
         renderer_gpu_budgets_gate = check_renderer_gpu_budget_thresholds(
             &resolved_out_dir,
             bundle_path,
@@ -774,7 +774,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     if code_editor_memory_thresholds.any() {
         let bundle_path = packed_bundle_artifact
             .as_deref()
-            .or_else(|| selected_bundle_path.as_deref());
+            .or(selected_bundle_path.as_deref());
         code_editor_memory_gate = check_code_editor_memory_thresholds(
             &resolved_out_dir,
             bundle_path,
@@ -785,7 +785,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     if wgpu_hub_counts_thresholds.any() {
         let bundle_path = packed_bundle_artifact
             .as_deref()
-            .or_else(|| selected_bundle_path.as_deref());
+            .or(selected_bundle_path.as_deref());
         wgpu_hub_counts_gate = check_wgpu_hub_counts_thresholds(
             &resolved_out_dir,
             bundle_path,
@@ -796,7 +796,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     if let Some(max_bytes) = max_wgpu_metal_current_allocated_size_bytes {
         let bundle_path = packed_bundle_artifact
             .as_deref()
-            .or_else(|| selected_bundle_path.as_deref());
+            .or(selected_bundle_path.as_deref());
         wgpu_metal_allocated_size_gate = check_wgpu_metal_current_allocated_size_threshold(
             &resolved_out_dir,
             bundle_path,
@@ -807,7 +807,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     if let Some(thr) = max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images {
         let bundle_path = packed_bundle_artifact
             .as_deref()
-            .or_else(|| selected_bundle_path.as_deref());
+            .or(selected_bundle_path.as_deref());
         wgpu_metal_allocated_size_linear_vs_images_gate =
             check_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images(
                 &resolved_out_dir,
@@ -819,7 +819,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     if let Some(max_bytes) = max_render_text_atlas_bytes_live_estimate_total {
         let bundle_path = packed_bundle_artifact
             .as_deref()
-            .or_else(|| selected_bundle_path.as_deref());
+            .or(selected_bundle_path.as_deref());
         render_text_atlas_bytes_gate = check_render_text_atlas_bytes_live_estimate_total_threshold(
             &resolved_out_dir,
             bundle_path,
@@ -830,7 +830,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     if render_text_font_db_thresholds.any() {
         let bundle_path = packed_bundle_artifact
             .as_deref()
-            .or_else(|| selected_bundle_path.as_deref());
+            .or(selected_bundle_path.as_deref());
         render_text_font_db_gate = check_render_text_font_db_thresholds(
             &resolved_out_dir,
             bundle_path,

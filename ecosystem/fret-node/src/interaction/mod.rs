@@ -11,32 +11,26 @@ use serde::{Deserialize, Serialize};
 /// Connection mode for selecting/validating target ports during connection gestures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum NodeGraphConnectionMode {
+    #[default]
     Strict,
     Loose,
 }
 
-impl Default for NodeGraphConnectionMode {
-    fn default() -> Self {
-        Self::Strict
-    }
-}
 
 /// Where node dragging can start from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum NodeGraphDragHandleMode {
     /// Start dragging from anywhere inside the node bounds.
+    #[default]
     Any,
     /// Start dragging only from the node header region.
     Header,
 }
 
-impl Default for NodeGraphDragHandleMode {
-    fn default() -> Self {
-        Self::Any
-    }
-}
 
 /// Modifier requirement for interaction activation (XyFlow mental model).
 ///
@@ -44,10 +38,12 @@ impl Default for NodeGraphDragHandleMode {
 /// and multi-selection (`multiSelectionKeyCode`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum NodeGraphModifierKey {
     /// Wheel zoom is always active (no activation modifier required).
     None,
     /// Wheel zoom is active only while Ctrl or Meta is held (recommended default).
+    #[default]
     CtrlOrMeta,
     /// Wheel zoom is active only while Shift is held.
     Shift,
@@ -69,8 +65,3 @@ impl NodeGraphModifierKey {
     }
 }
 
-impl Default for NodeGraphModifierKey {
-    fn default() -> Self {
-        Self::CtrlOrMeta
-    }
-}

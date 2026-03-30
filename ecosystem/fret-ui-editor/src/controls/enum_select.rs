@@ -551,7 +551,7 @@ fn request_overlay<H: UiHost>(
                     border: Edges::all(Px(1.0)),
                     border_color: Some(popup_chrome.border),
                     corner_radii: Corners::all(popup_chrome.radius),
-                    shadow: popup_chrome.shadow.clone(),
+                    shadow: popup_chrome.shadow,
                     ..Default::default()
                 },
                 move |cx| {
@@ -957,6 +957,11 @@ fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
     cx.local_model(|| false)
 }
 
+#[track_caller]
+fn filter_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    cx.local_model(String::new)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -1025,7 +1030,10 @@ mod tests {
     fn rect_visible_within_viewport_y_matches_nearest_visibility_contract() {
         let viewport = Rect::new(Point::new(Px(0.0), Px(10.0)), Size::new(Px(40.0), Px(40.0)));
 
-        let fully_visible = Rect::new(Point::new(Px(0.0), Px(20.0)), Size::new(Px(40.0), Px(12.0)));
+        let fully_visible = Rect::new(
+            Point::new(Px(0.0), Px(20.0)),
+            Size::new(Px(40.0), Px(12.0)),
+        );
         assert!(rect_visible_within_viewport_y(viewport, fully_visible));
 
         let clipped_bottom =
@@ -1042,9 +1050,4 @@ mod tests {
             tall_child_top_hidden
         ));
     }
-}
-
-#[track_caller]
-fn filter_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    cx.local_model(String::new)
 }

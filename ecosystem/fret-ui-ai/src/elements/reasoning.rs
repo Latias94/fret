@@ -198,7 +198,7 @@ impl Reasoning {
                             }
                         } else if let Some(started_at) = st.started_at.take() {
                             let elapsed_ms = started_at.elapsed().as_millis();
-                            let secs = (elapsed_ms + (MS_IN_S - 1)) / MS_IN_S;
+                            let secs = elapsed_ms.div_ceil(MS_IN_S);
                             st.computed_duration_secs = Some(u32::try_from(secs).unwrap_or(0));
                         }
 
@@ -341,7 +341,7 @@ impl ReasoningWithChildren {
             }
         }
 
-        let trigger = trigger.unwrap_or_else(ReasoningTrigger::new);
+        let trigger = trigger.unwrap_or_default();
         let content = content.unwrap_or_else(|| ReasoningContent::new(""));
 
         root.into_element(
@@ -370,6 +370,12 @@ impl std::fmt::Debug for ReasoningTrigger {
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .finish()
+    }
+}
+
+impl Default for ReasoningTrigger {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

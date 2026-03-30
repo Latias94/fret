@@ -434,7 +434,8 @@ fn gradient_preview_canvas<H: UiHost>(
     let state_for_move = preview_state.clone();
     let state_for_paint = preview_state.clone();
 
-    let el = cx.pressable(
+    
+    cx.pressable(
         PressableProps {
             enabled,
             layout,
@@ -457,8 +458,8 @@ fn gradient_preview_canvas<H: UiHost>(
                 }
 
                 let bounds = host.bounds();
-                let width = bounds.size.width.0.max(1.0) as f32;
-                let x = down.position_local.x.0 as f32;
+                let width = bounds.size.width.0.max(1.0);
+                let x = down.position_local.x.0;
                 let x = x.clamp(0.0, width);
 
                 let mut best: Option<(f32, fret_ui::ItemKey)> = None;
@@ -643,6 +644,5 @@ fn gradient_preview_canvas<H: UiHost>(
 
             vec![cx.canvas(props, move |p| on_paint(p))]
         },
-    );
-    el
+    )
 }

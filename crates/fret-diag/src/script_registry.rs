@@ -137,7 +137,7 @@ impl PromotedScriptRegistry {
 
 fn token_overlap_score(query: &str, id: &str) -> u32 {
     let q_tokens: Vec<&str> = query
-        .split(|c| c == '-' || c == '_' || c == ' ')
+        .split(['-', '_', ' '])
         .filter(|s| !s.is_empty())
         .collect();
     if q_tokens.is_empty() {

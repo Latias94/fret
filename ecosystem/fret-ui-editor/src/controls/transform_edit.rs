@@ -33,16 +33,13 @@ fn derived_id_source(base: Option<&Arc<str>>, suffix: &str) -> Option<Arc<str>> 
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum TransformEditLayoutVariant {
+    #[default]
     Column,
     Row,
 }
 
-impl Default for TransformEditLayoutVariant {
-    fn default() -> Self {
-        Self::Column
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransformEditSection {
@@ -620,8 +617,8 @@ fn section_row<H: UiHost>(
                 },
             ));
 
-            if show_link {
-                if let Some((linked, test_id)) = link {
+            if show_link
+                && let Some((linked, test_id)) = link {
                     let mut el = Checkbox::new(linked)
                         .options(CheckboxOptions {
                             a11y_label: Some(Arc::from(a11y)),
@@ -678,7 +675,6 @@ fn section_row<H: UiHost>(
                         },
                     ));
                 }
-            }
 
             out.push(content(cx));
             out

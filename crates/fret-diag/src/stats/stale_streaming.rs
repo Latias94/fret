@@ -585,9 +585,7 @@ fn scan_semantics_changed_repainted_streaming(
             .deserialize(de)
         },
     );
-    if let Err(msg) = res {
-        return Err(msg);
-    }
+    res?;
 
     Ok(state.borrow().scan.clone())
 }
@@ -640,12 +638,11 @@ fn enrich_semantics_changed_repainted_findings(
             .or_insert(serde_json::Value::Null) = detail;
 
         let summary = semantics_diff_summary_nodes(prev_nodes.as_slice(), now_nodes.as_slice());
-        if !summary.is_empty() {
-            if let Some(line) = scan.suspicious_lines.get_mut(idx) {
+        if !summary.is_empty()
+            && let Some(line) = scan.suspicious_lines.get_mut(idx) {
                 line.push(' ');
                 line.push_str(&summary);
             }
-        }
     }
 
     Ok(())

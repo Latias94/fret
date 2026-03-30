@@ -193,7 +193,7 @@ fn shadcn_toggle_goldens_are_targeted_gates() {
         let theme = web_theme(&web);
 
         let has_button_with_aria_label = find_first(&theme.root, &|n| {
-            n.tag == "button" && n.attrs.get("aria-label").is_some()
+            n.tag == "button" && n.attrs.contains_key("aria-label")
         })
         .is_some();
 

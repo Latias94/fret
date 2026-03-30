@@ -557,13 +557,11 @@ pub(crate) fn editor_joined_input_frame_with_overrides<H: UiHost>(
         //
         // Touch/stylus interactions often do not produce reliable hover signals, so we avoid
         // clearing `pressed` solely based on hover for non-mouse pointer types.
-        if !hovered {
-            if let Ok(mut st) = pointer_state.lock() {
-                if matches!(st.last_pointer_type, Some(fret_core::PointerType::Mouse)) {
+        if !hovered
+            && let Ok(mut st) = pointer_state.lock()
+                && matches!(st.last_pointer_type, Some(fret_core::PointerType::Mouse)) {
                     st.pressed = false;
                 }
-            }
-        }
 
         let pointer_state_down = pointer_state.clone();
         let on_down: OnPointerDown = Arc::new(move |host, action_cx: ActionCx, down| {

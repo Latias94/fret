@@ -195,7 +195,7 @@ fn focus_content_falls_back_to_registered_pane_content_when_no_return_target_rec
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices::default();
+    let mut services = FakeServices;
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -249,7 +249,7 @@ fn toggle_focus_exits_to_registered_pane_content_when_no_return_target_recorded(
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices::default();
+    let mut services = FakeServices;
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

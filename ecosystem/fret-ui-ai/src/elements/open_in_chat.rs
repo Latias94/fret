@@ -226,6 +226,12 @@ pub struct OpenInTrigger {
     layout: LayoutRefinement,
 }
 
+impl Default for OpenInTrigger {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OpenInTrigger {
     pub fn new() -> Self {
         Self {

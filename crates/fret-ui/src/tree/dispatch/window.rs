@@ -239,14 +239,13 @@ impl<H: UiHost> UiTree<H> {
         // Focus barriers (trap scopes / modal focus arbitration) must not rely on retained parent
         // pointers for correctness under retained/view-cache reuse. Enforce focus-barrier scope
         // using a snapshot forest built from child edges.
-        if dispatch_cx.focus_barrier_root.is_some() && self.focus.is_some() {
-            if self
+        if dispatch_cx.focus_barrier_root.is_some() && self.focus.is_some()
+            && self
                 .focus
                 .is_some_and(|n| !dispatch_cx.node_in_active_focus_layers(n))
             {
                 self.set_focus_unchecked(None, "dispatch/window: focus barrier scope");
             }
-        }
 
         let to_remove: Vec<fret_core::PointerId> = self
             .captured
@@ -869,7 +868,7 @@ impl<H: UiHost> UiTree<H> {
                 app.drag(e.pointer_id)
             {
                 let route = crate::internal_drag::route(app, window, drag.kind);
-                let route_in_active_layer = route.is_some_and(|node| node_in_active_layers(node));
+                let route_in_active_layer = route.is_some_and(&node_in_active_layers);
                 (
                     Some(drag.kind),
                     drag.cross_window_hover,
@@ -1798,11 +1797,11 @@ impl<H: UiHost> UiTree<H> {
                                     notify_requested_location: None,
                                     stop_propagation: false,
                                 };
-                                widget.event(&mut cx, &event_for_node);
+                                widget.event(&mut cx, event_for_node);
                                 if cx.requested_cursor.is_none()
                                     && matches!(event_for_node, Event::Pointer(_))
                                     && cx.input_ctx.caps.ui.cursor_icons
-                                    && let Some(position) = event_position(&event_for_node)
+                                    && let Some(position) = event_position(event_for_node)
                                 {
                                     cx.requested_cursor =
                                         widget.cursor_icon_at(bounds, position, &cx.input_ctx);

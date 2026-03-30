@@ -563,6 +563,12 @@ pub struct TerminalCopyButton {
     copied_marker_test_id: Option<Arc<str>>,
 }
 
+impl Default for TerminalCopyButton {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TerminalCopyButton {
     pub fn new() -> Self {
         Self {

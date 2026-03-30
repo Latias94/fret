@@ -192,7 +192,7 @@ fn relative_time_clock_auto_update_requests_animation_frames_and_is_controllable
     );
 
     let _ = app.models_mut().update(&controlled_time, |v| {
-        *v = *v + time::Duration::seconds(1);
+        *v += time::Duration::seconds(1);
     });
 
     render_frame(

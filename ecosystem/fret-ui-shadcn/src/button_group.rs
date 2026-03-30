@@ -236,6 +236,12 @@ pub struct ButtonGroupSeparator {
     test_id: Option<Arc<str>>,
 }
 
+impl Default for ButtonGroupSeparator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ButtonGroupSeparator {
     pub fn new() -> Self {
         Self {

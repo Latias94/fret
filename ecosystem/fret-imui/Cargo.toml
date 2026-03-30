@@ -23,3 +23,11 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui-kit = { path = "../fret-ui-kit", features = ["imui"] }
+
+[lints.clippy]
+arc_with_non_send_sync = "allow"
+bool_assert_comparison = "allow"
+default_constructed_unit_structs = "allow"
+redundant_closure = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"

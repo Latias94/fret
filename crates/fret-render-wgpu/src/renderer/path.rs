@@ -994,8 +994,10 @@ mod tests {
 
     #[test]
     fn path_state_deduplicates_and_evicts_unreferenced_entries() {
-        let mut state = PathState::default();
-        state.path_cache_capacity = 1;
+        let mut state = PathState {
+            path_cache_capacity: 1,
+            ..Default::default()
+        };
         let constraints = fret_core::PathConstraints { scale_factor: 1.0 };
         let style = fret_core::PathStyle::Fill(fret_core::FillStyle::default());
 

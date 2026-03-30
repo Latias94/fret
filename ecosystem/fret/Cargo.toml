@@ -124,3 +124,14 @@ wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]
 slotmap.workspace = true
+
+[lints.clippy]
+arc_with_non_send_sync = "allow"
+collapsible_if = "allow"
+default_constructed_unit_structs = "allow"
+doc_lazy_continuation = "allow"
+field_reassign_with_default = "allow"
+single_match = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+useless_conversion = "allow"

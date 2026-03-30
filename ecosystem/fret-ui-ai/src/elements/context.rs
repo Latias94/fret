@@ -88,6 +88,7 @@ fn context_icon_svg_bytes(used_tokens: u64, max_tokens: u64) -> Arc<[u8]> {
 }
 
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct ContextUsage {
     pub input_tokens: Option<u64>,
     pub output_tokens: Option<u64>,
@@ -102,21 +103,6 @@ pub struct ContextUsage {
     pub total_cost_usd: Option<f64>,
 }
 
-impl Default for ContextUsage {
-    fn default() -> Self {
-        Self {
-            input_tokens: None,
-            output_tokens: None,
-            reasoning_tokens: None,
-            cached_input_tokens: None,
-            input_cost_usd: None,
-            output_cost_usd: None,
-            reasoning_cost_usd: None,
-            cached_cost_usd: None,
-            total_cost_usd: None,
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 struct ContextSchema {
@@ -621,7 +607,9 @@ impl Context {
         let content_override = self.content;
         let test_id_root = self.test_id_root;
 
-        let root = cx.container(
+        
+
+        cx.container(
             decl_style::container_props(
                 &theme,
                 ChromeRefinement::default(),
@@ -651,9 +639,7 @@ impl Context {
                     vec![hover]
                 })
             },
-        );
-
-        root
+        )
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {

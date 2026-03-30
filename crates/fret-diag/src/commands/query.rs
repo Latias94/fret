@@ -67,8 +67,8 @@ fn resolve_test_ids_index_from_src(
 ) -> Result<(String, PathBuf, serde_json::Value), String> {
     if src.is_dir() {
         let direct = src.join("test_ids.index.json");
-        if direct.is_file() {
-            if let Some(v) = try_read_test_ids_index_json(&direct, warmup_frames) {
+        if direct.is_file()
+            && let Some(v) = try_read_test_ids_index_json(&direct, warmup_frames) {
                 let bundle = v
                     .get("bundle")
                     .and_then(|v| v.as_str())
@@ -76,11 +76,10 @@ fn resolve_test_ids_index_from_src(
                     .unwrap_or_else(|| direct.display().to_string());
                 return Ok((bundle, direct, v));
             }
-        }
 
         let root = src.join("_root").join("test_ids.index.json");
-        if root.is_file() {
-            if let Some(v) = try_read_test_ids_index_json(&root, warmup_frames) {
+        if root.is_file()
+            && let Some(v) = try_read_test_ids_index_json(&root, warmup_frames) {
                 let bundle = v
                     .get("bundle")
                     .and_then(|v| v.as_str())
@@ -88,7 +87,6 @@ fn resolve_test_ids_index_from_src(
                     .unwrap_or_else(|| root.display().to_string());
                 return Ok((bundle, root, v));
             }
-        }
 
         let bundle_path = crate::resolve_bundle_artifact_path(src);
         let index_path =
@@ -146,9 +144,9 @@ fn resolve_bundle_index_from_src(
 ) -> Result<(String, PathBuf, serde_json::Value), String> {
     if src.is_dir() {
         let direct = src.join("bundle.index.json");
-        if direct.is_file() {
-            if let Some(v) = try_read_bundle_index_json(&direct, warmup_frames) {
-                if bundle_index_matches_request(&v, warmup_frames, require_script_markers) {
+        if direct.is_file()
+            && let Some(v) = try_read_bundle_index_json(&direct, warmup_frames)
+                && bundle_index_matches_request(&v, warmup_frames, require_script_markers) {
                     let bundle = v
                         .get("bundle")
                         .and_then(|v| v.as_str())
@@ -156,13 +154,11 @@ fn resolve_bundle_index_from_src(
                         .unwrap_or_else(|| direct.display().to_string());
                     return Ok((bundle, direct, v));
                 }
-            }
-        }
 
         let root = src.join("_root").join("bundle.index.json");
-        if root.is_file() {
-            if let Some(v) = try_read_bundle_index_json(&root, warmup_frames) {
-                if bundle_index_matches_request(&v, warmup_frames, require_script_markers) {
+        if root.is_file()
+            && let Some(v) = try_read_bundle_index_json(&root, warmup_frames)
+                && bundle_index_matches_request(&v, warmup_frames, require_script_markers) {
                     let bundle = v
                         .get("bundle")
                         .and_then(|v| v.as_str())
@@ -170,8 +166,6 @@ fn resolve_bundle_index_from_src(
                         .unwrap_or_else(|| root.display().to_string());
                     return Ok((bundle, root, v));
                 }
-            }
-        }
 
         let bundle_path = crate::resolve_bundle_artifact_path(src);
         let index_path =
@@ -203,11 +197,10 @@ fn resolve_bundle_index_from_src(
         let mut candidates: Vec<PathBuf> = Vec::new();
         if let Some(parent) = src.parent() {
             candidates.push(parent.to_path_buf());
-            if parent.file_name().and_then(|s| s.to_str()) == Some("_root") {
-                if let Some(grandparent) = parent.parent() {
+            if parent.file_name().and_then(|s| s.to_str()) == Some("_root")
+                && let Some(grandparent) = parent.parent() {
                     candidates.push(grandparent.to_path_buf());
                 }
-            }
         }
         for candidate in candidates {
             let bundle_path = crate::resolve_bundle_artifact_path(&candidate);
@@ -1335,11 +1328,10 @@ fn cmd_query_snapshots(
                 .get("semantics_source")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
-            if let Some(req) = semantics_source.as_deref() {
-                if src.as_deref() != Some(req) {
+            if let Some(req) = semantics_source.as_deref()
+                && src.as_deref() != Some(req) {
                     continue;
                 }
-            }
 
             let bloom_might_contain = if !target.is_empty() {
                 if let Some(hex) = s.get("test_id_bloom_hex").and_then(|v| v.as_str()) {

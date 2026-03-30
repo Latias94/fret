@@ -138,6 +138,12 @@ impl std::fmt::Debug for EnvironmentVariables {
     }
 }
 
+impl Default for EnvironmentVariables {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnvironmentVariables {
     pub fn new() -> Self {
         Self {
@@ -326,6 +332,12 @@ enum EnvironmentVariablesTitleContent {
     Children(Vec<AnyElement>),
 }
 
+impl Default for EnvironmentVariablesTitle {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnvironmentVariablesTitle {
     pub fn new() -> Self {
         Self {
@@ -417,6 +429,12 @@ pub struct EnvironmentVariablesToggle {
     switch_test_id: Option<Arc<str>>,
     icon_test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
+}
+
+impl Default for EnvironmentVariablesToggle {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EnvironmentVariablesToggle {
@@ -668,6 +686,12 @@ enum EnvironmentVariableNameContent {
     Children(Vec<AnyElement>),
 }
 
+impl Default for EnvironmentVariableName {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnvironmentVariableName {
     pub fn new() -> Self {
         Self {
@@ -729,7 +753,7 @@ impl EnvironmentVariableName {
 fn masked_value(value: &str) -> Arc<str> {
     let len = value.chars().count();
     let n = len.min(20);
-    let s: String = std::iter::repeat('•').take(n).collect();
+    let s: String = std::iter::repeat_n('•', n).collect();
     Arc::<str>::from(s)
 }
 
@@ -744,6 +768,12 @@ enum EnvironmentVariableValueContent {
     Default,
     Text(Arc<str>),
     Children(Vec<AnyElement>),
+}
+
+impl Default for EnvironmentVariableValue {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EnvironmentVariableValue {
@@ -831,17 +861,14 @@ impl EnvironmentVariableValue {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Default)]
 pub enum EnvironmentVariableCopyFormat {
     Name,
+    #[default]
     Value,
     Export,
 }
 
-impl Default for EnvironmentVariableCopyFormat {
-    fn default() -> Self {
-        Self::Value
-    }
-}
 
 pub type OnEnvironmentVariableCopy =
     Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static>;
@@ -873,6 +900,12 @@ impl std::fmt::Debug for EnvironmentVariableCopyButton {
                 &self.copied_marker_test_id.as_deref(),
             )
             .finish()
+    }
+}
+
+impl Default for EnvironmentVariableCopyButton {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1135,6 +1168,12 @@ enum EnvironmentVariableRequiredContent {
     Default,
     Text(Arc<str>),
     Children(Vec<AnyElement>),
+}
+
+impl Default for EnvironmentVariableRequired {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EnvironmentVariableRequired {

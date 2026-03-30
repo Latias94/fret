@@ -88,6 +88,12 @@ impl std::fmt::Debug for ChainOfThought {
     }
 }
 
+impl Default for ChainOfThought {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChainOfThought {
     pub fn new() -> Self {
         Self {
@@ -280,17 +286,14 @@ impl ChainOfThoughtWithChildren {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ChainOfThoughtStepStatus {
+    #[default]
     Complete,
     Active,
     Pending,
 }
 
-impl Default for ChainOfThoughtStepStatus {
-    fn default() -> Self {
-        Self::Complete
-    }
-}
 
 pub struct ChainOfThoughtHeader {
     children: Option<Vec<AnyElement>>,
@@ -305,6 +308,12 @@ impl std::fmt::Debug for ChainOfThoughtHeader {
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .finish()
+    }
+}
+
+impl Default for ChainOfThoughtHeader {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -504,7 +513,9 @@ impl ChainOfThoughtContent {
         let layout = self.layout;
         let test_id = self.test_id;
 
-        let inner = Collapsible::new(open).into_element(
+        
+
+        Collapsible::new(open).into_element(
             cx,
             move |cx, _is_open| hidden(cx),
             move |cx| {
@@ -532,9 +543,7 @@ impl ChainOfThoughtContent {
 
                 content
             },
-        );
-
-        inner
+        )
     }
 }
 

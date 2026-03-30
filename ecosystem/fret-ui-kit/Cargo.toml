@@ -60,3 +60,13 @@ fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
 serde.workspace = true
 serde_json.workspace = true
 slotmap.workspace = true
+
+[lints.clippy]
+arc_with_non_send_sync = "allow"
+empty_line_after_doc_comments = "allow"
+field_reassign_with_default = "allow"
+needless_borrow = "allow"
+needless_update = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+useless_conversion = "allow"

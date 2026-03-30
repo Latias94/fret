@@ -145,7 +145,7 @@ pub(crate) const STATS_LITE_SUPPORTED_CHECKS: &[StatsLiteCheckSupport] = &[
 
 pub(crate) fn stats_lite_support_matrix_json_value() -> serde_json::Value {
     let mut rows: Vec<StatsLiteCheckSupport> =
-        STATS_LITE_SUPPORTED_CHECKS.iter().copied().collect();
+        STATS_LITE_SUPPORTED_CHECKS.to_vec();
     rows.sort_by(|a, b| a.check_name.cmp(b.check_name));
 
     let checks: Vec<serde_json::Value> = rows

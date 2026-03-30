@@ -1039,7 +1039,7 @@ mod tests {
 
         let image = app.models_mut().insert(None::<ImageId>);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(200.0), Px(120.0)),
@@ -1060,7 +1060,7 @@ mod tests {
             ui.request_semantics_snapshot();
             ui.layout_all(&mut app, &mut services, bounds, 1.0);
             let snap = ui.semantics_snapshot().expect("semantics snapshot");
-            let visible = snapshot_contains_label(&snap, "JD");
+            let visible = snapshot_contains_label(snap, "JD");
             assert_eq!(visible, frame >= 3);
         }
     }
@@ -1078,7 +1078,7 @@ mod tests {
 
         let image = app.models_mut().insert(None::<ImageId>);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(200.0), Px(120.0)),
@@ -1103,7 +1103,7 @@ mod tests {
 
         ui.request_semantics_snapshot();
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        assert!(snapshot_contains_label(&snap, "JD"));
+        assert!(snapshot_contains_label(snap, "JD"));
 
         // Image becomes available -> fallback hides immediately (Radix `status === loaded`).
         let _ = app
@@ -1124,7 +1124,7 @@ mod tests {
 
         ui.request_semantics_snapshot();
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        assert!(!snapshot_contains_label(&snap, "JD"));
+        assert!(!snapshot_contains_label(snap, "JD"));
     }
 
     #[test]
@@ -1351,7 +1351,7 @@ mod tests {
         ui.set_window(window);
 
         let image = app.models_mut().insert(Some(ImageId::default()));
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(200.0), Px(120.0)),
@@ -1425,7 +1425,7 @@ mod tests {
         ui.set_window(window);
 
         let image = app.models_mut().insert(Some(ImageId::default()));
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(200.0), Px(120.0)),
@@ -1464,7 +1464,7 @@ mod tests {
 
         let image = app.models_mut().insert(None::<ImageId>);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(200.0), Px(120.0)),

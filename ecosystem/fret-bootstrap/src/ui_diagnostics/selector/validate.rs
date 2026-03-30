@@ -27,8 +27,8 @@ fn candidate_selectors_for_node(
     }
 
     let role = semantics_role_label(raw_node.role).to_string();
-    if let Some(name) = exported_node.label.as_deref() {
-        if !(cfg.redact_text && is_redacted_string(name)) {
+    if let Some(name) = exported_node.label.as_deref()
+        && !(cfg.redact_text && is_redacted_string(name)) {
             // Prefer shorter paths when possible; the validated selection path will pick the
             // shortest unique candidate.
             let ancestors = selector_ancestors_for(snapshot, raw_node);
@@ -47,7 +47,6 @@ fn candidate_selectors_for_node(
                 root_z_index: None,
             });
         }
-    }
 
     if let Some(element) = element {
         out.push(UiSelectorV1::GlobalElementId {
@@ -171,8 +170,8 @@ fn eval_selector_scoped(
                     && matches_root_z(node_id)
                     && n.test_id.as_deref() == Some(id)
             }));
-            if matches.is_empty() {
-                if super::extend_test_id_chrome_fallback(
+            if matches.is_empty()
+                && super::extend_test_id_chrome_fallback(
                     snapshot,
                     &index,
                     id,
@@ -182,7 +181,6 @@ fn eval_selector_scoped(
                 ) {
                     note = Some("fallback_chrome_suffix");
                 }
-            }
             if matches.is_empty() {
                 // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
                 note = Some("fallback_hidden_nodes");

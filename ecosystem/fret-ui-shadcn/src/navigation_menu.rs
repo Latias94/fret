@@ -2046,8 +2046,8 @@ impl NavigationMenu {
                             let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
                             safe.trigger_anchor = Some(trigger_anchor);
                         }
-                        if viewport_enabled {
-                            if let (Some(selected_value), Some(size)) = (selected_local.clone(), measured) {
+                        if viewport_enabled
+                            && let (Some(selected_value), Some(size)) = (selected_local.clone(), measured) {
                                 radix_navigation_menu::navigation_menu_register_viewport_size(
                                     cx,
                                     root_id,
@@ -2055,7 +2055,6 @@ impl NavigationMenu {
                                     size,
                                 );
                             }
-                        }
 
                         let fallback = measured.unwrap_or(estimated);
                         let content_size = if viewport_enabled {
@@ -3073,7 +3072,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(1000.0), Px(320.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // Some widths depend on committed element bounds (observed across frames). Render a few
         // frames to let overlays open and measurements settle.
@@ -3133,7 +3132,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         bump_frame(&mut app);
         let root = fret_ui::declarative::render_root(
@@ -3216,7 +3215,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         bump_frame(&mut app);
         let root = fret_ui::declarative::render_root(
@@ -3300,7 +3299,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         bump_frame(&mut app);
         let root = fret_ui::declarative::render_root(
@@ -3416,7 +3415,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(520.0), Px(320.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         bump_frame(&mut app);
         let root = fret_ui::declarative::render_root(
@@ -3499,7 +3498,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(520.0), Px(320.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render_frame = |ui: &mut UiTree<App>,
                             app: &mut App,
@@ -3642,7 +3641,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         bump_frame(&mut app);
         let root = fret_ui::declarative::render_root(
@@ -3786,7 +3785,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         bump_frame(&mut app);
         let root = fret_ui::declarative::render_root(
@@ -3875,7 +3874,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render_frame =
             |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
@@ -4055,7 +4054,7 @@ mod tests {
                 Point::new(Px(0.0), Px(0.0)),
                 Size::new(Px(1200.0), Px(700.0)),
             );
-            let mut services = FakeServices::default();
+            let mut services = FakeServices;
 
             let render_frame = |ui: &mut UiTree<App>,
                                 app: &mut App,
@@ -4220,7 +4219,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         bump_frame(&mut app);
         let root = fret_ui::declarative::render_root(
@@ -4281,7 +4280,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         bump_frame(&mut app);
         let root = fret_ui::declarative::render_root(
@@ -4355,7 +4354,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         bump_frame(&mut app);
         let root = fret_ui::declarative::render_root(
@@ -4400,7 +4399,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         bump_frame(&mut app);
         let root = fret_ui::declarative::render_root(
@@ -4496,7 +4495,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         bump_frame(&mut app);
         let root = fret_ui::declarative::render_root(

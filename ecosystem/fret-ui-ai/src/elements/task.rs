@@ -390,13 +390,13 @@ impl TaskTrigger {
                             icon_size,
                         );
 
-                        let row = ui::h_row(move |_cx| vec![search, title, chevron])
+                        
+
+                        ui::h_row(move |_cx| vec![search, title, chevron])
                             .layout(LayoutRefinement::default().w_full().min_w_0())
                             .items(Items::Center)
                             .gap(Space::N2)
-                            .into_element(cx);
-
-                        row
+                            .into_element(cx)
                     };
                     vec![row.inherit_foreground(fg)]
                 },

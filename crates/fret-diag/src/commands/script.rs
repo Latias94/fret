@@ -107,12 +107,10 @@ pub(crate) fn cmd_script(
                                 write_path.display()
                             );
                         }
+                    } else if redirect_chain.is_empty() && write_path == src {
+                        println!("{}", src.display());
                     } else {
-                        if redirect_chain.is_empty() && write_path == src {
-                            println!("{}", src.display());
-                        } else {
-                            println!("{} (resolved: {})", src.display(), write_path.display());
-                        }
+                        println!("{} (resolved: {})", src.display(), write_path.display());
                     }
                     continue;
                 }
@@ -189,16 +187,14 @@ pub(crate) fn cmd_script(
                                 resolved.write_path.display()
                             );
                         }
+                    } else if resolved.redirect_chain.is_empty() && resolved.write_path == src {
+                        println!("{}", src.display());
                     } else {
-                        if resolved.redirect_chain.is_empty() && resolved.write_path == src {
-                            println!("{}", src.display());
-                        } else {
-                            println!(
-                                "{} (resolved: {})",
-                                src.display(),
-                                resolved.write_path.display()
-                            );
-                        }
+                        println!(
+                            "{} (resolved: {})",
+                            src.display(),
+                            resolved.write_path.display()
+                        );
                     }
                     continue;
                 }

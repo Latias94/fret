@@ -152,11 +152,11 @@ pub fn validate_graph_structural(graph: &Graph) -> GraphValidationReport {
                 });
         }
 
-        if let Some(size) = node.size {
-            if !size.width.is_finite()
+        if let Some(size) = node.size
+            && (!size.width.is_finite()
                 || !size.height.is_finite()
                 || size.width <= 0.0
-                || size.height <= 0.0
+                || size.height <= 0.0)
             {
                 report.errors.push(GraphValidationError::NodeInvalidSize {
                     node: *node_id,
@@ -164,7 +164,6 @@ pub fn validate_graph_structural(graph: &Graph) -> GraphValidationReport {
                     height: size.height,
                 });
             }
-        }
 
         let mut seen: BTreeSet<PortId> = BTreeSet::new();
         for port_id in &node.ports {

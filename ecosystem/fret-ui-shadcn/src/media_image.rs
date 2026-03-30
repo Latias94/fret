@@ -360,7 +360,7 @@ mod tests {
         );
 
         let img = ImageId::default();
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let root = fret_ui::declarative::render_root(
             &mut ui,
             &mut app,
@@ -448,7 +448,7 @@ mod tests {
             fret_core::Size::new(Px(200.0), Px(120.0)),
         );
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let root = fret_ui::declarative::render_root(
             &mut ui,
             &mut app,

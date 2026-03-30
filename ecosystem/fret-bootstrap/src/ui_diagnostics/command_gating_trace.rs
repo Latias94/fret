@@ -43,7 +43,7 @@ fn command_gating_trace_for_window(
     let mut candidates: Vec<UiCommandGatingTraceCandidate> = Vec::new();
 
     // 1) Explicit gating inputs (useful for verifying that snapshots are being published).
-    for (cmd, _) in gating.enabled_overrides() {
+    for cmd in gating.enabled_overrides().keys() {
         candidates.push(UiCommandGatingTraceCandidate {
             command: cmd.clone(),
             source: "enabled_overrides",
@@ -52,7 +52,7 @@ fn command_gating_trace_for_window(
         });
     }
     if let Some(map) = gating.action_availability() {
-        for (cmd, _) in map {
+        for cmd in map.keys() {
             candidates.push(UiCommandGatingTraceCandidate {
                 command: cmd.clone(),
                 source: "action_availability",

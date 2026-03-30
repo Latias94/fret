@@ -28,8 +28,8 @@ impl CanvasSpatialIndex {
             index.nodes.insert_rect(node_id, node_geom.rect);
         }
 
-        for node_id in geom.order.iter().copied() {
-            let Some(node) = graph.nodes.get(&node_id) else {
+        for node_id in geom.order.iter() {
+            let Some(node) = graph.nodes.get(node_id) else {
                 continue;
             };
             for port_id in node.ports.iter().copied() {

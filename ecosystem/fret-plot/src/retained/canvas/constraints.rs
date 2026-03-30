@@ -72,12 +72,11 @@ fn constrain_axis_range_scaled(
     let mut u_allowed_min = constraints.min.and_then(|v| axis_to_units(scale, v));
     let mut u_allowed_max = constraints.max.and_then(|v| axis_to_units(scale, v));
 
-    if let (Some(a), Some(b)) = (u_allowed_min, u_allowed_max) {
-        if !(a.is_finite() && b.is_finite()) || b <= a {
+    if let (Some(a), Some(b)) = (u_allowed_min, u_allowed_max)
+        && (!(a.is_finite() && b.is_finite()) || b <= a) {
             u_allowed_min = None;
             u_allowed_max = None;
         }
-    }
 
     if let Some(max_span) = constraints.max_span.filter(|s| s.is_finite() && *s > 0.0) {
         let span = u_max - u_min;

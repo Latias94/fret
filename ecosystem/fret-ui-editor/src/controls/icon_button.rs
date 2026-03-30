@@ -133,7 +133,7 @@ impl IconButton {
                 };
                 let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
 
-                let icon_color = icon_color.clone().unwrap_or_else(|| ColorRef::Color(fg));
+                let icon_color = icon_color.clone().unwrap_or(ColorRef::Color(fg));
 
                 vec![cx.container(
                     ContainerProps {

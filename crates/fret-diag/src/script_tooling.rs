@@ -184,8 +184,8 @@ pub(crate) fn preflight_strict_termination_issues(
                     );
                 }
 
-                if let Some(capture_idx) = last_capture_bundle_index {
-                    if let Some((i, _)) = script
+                if let Some(capture_idx) = last_capture_bundle_index
+                    && let Some((i, _)) = script
                         .steps
                         .iter()
                         .enumerate()
@@ -199,7 +199,6 @@ pub(crate) fn preflight_strict_termination_issues(
                             Some(i as u64),
                         );
                     }
-                }
             }
             2 => {
                 let script: UiActionScriptV2 =
@@ -536,11 +535,10 @@ pub(crate) fn resolve_script_json_redirects_from_value(
             || to.starts_with("docs/")
             || to.starts_with(".fret/");
 
-        if looks_repo_relative {
-            if let Some(root) = find_repo_root_for_path(from) {
+        if looks_repo_relative
+            && let Some(root) = find_repo_root_for_path(from) {
                 return root.join(to_path);
             }
-        }
 
         from.parent()
             .unwrap_or_else(|| Path::new("."))

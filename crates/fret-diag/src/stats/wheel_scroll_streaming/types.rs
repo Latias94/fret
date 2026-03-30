@@ -55,11 +55,10 @@ pub(super) fn resolve_semantics_lite(
     window_id: u64,
     test_id: &str,
 ) -> Result<Option<SemanticsLite>, String> {
-    if let Some(v) = inline.get(&(window_id, snapshot.frame_id)) {
-        if v.is_some() {
+    if let Some(v) = inline.get(&(window_id, snapshot.frame_id))
+        && v.is_some() {
             return Ok(v.clone());
         }
-    }
     let Some(fp) = snapshot.semantics_fingerprint else {
         return Ok(None);
     };

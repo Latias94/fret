@@ -22,18 +22,15 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default)]
 pub enum TabCycleMode {
     /// Cycle tabs in the current visible order.
     InOrder,
     /// Cycle tabs by most-recently-used order (editor default).
+    #[default]
     Mru,
 }
 
-impl Default for TabCycleMode {
-    fn default() -> Self {
-        Self::Mru
-    }
-}
 
 /// A small in-memory model for "editor tabs" (documents).
 ///
@@ -191,8 +188,8 @@ impl WorkspaceTabs {
         {
             let existing_is_dirty = self.is_dirty(existing_preview.as_ref());
             let existing_is_pinned = self.is_tab_pinned(existing_preview.as_ref());
-            if !existing_is_dirty && !existing_is_pinned {
-                if let Some(ix) = self
+            if !existing_is_dirty && !existing_is_pinned
+                && let Some(ix) = self
                     .tabs
                     .iter()
                     .position(|t| t.as_ref() == existing_preview.as_ref())
@@ -207,7 +204,6 @@ impl WorkspaceTabs {
                     self.preview_tab_id = Some(id.clone());
                     return self.activate(id);
                 }
-            }
             // If the existing preview cannot be safely replaced, treat it as committed.
             self.preview_tab_id = None;
         }
@@ -341,11 +337,10 @@ impl WorkspaceTabs {
             state.set_dirty(id, true);
         }
 
-        if let Some(preview) = snapshot.preview {
-            if state.tabs.iter().any(|t| t.as_ref() == preview.as_ref()) {
+        if let Some(preview) = snapshot.preview
+            && state.tabs.iter().any(|t| t.as_ref() == preview.as_ref()) {
                 state.preview_tab_id = Some(preview);
             }
-        }
 
         // Restore MRU order best-effort: filter to known tabs and ensure active is first.
         let mut mru: Vec<Arc<str>> = Vec::new();
@@ -580,11 +575,10 @@ impl WorkspaceTabs {
             return false;
         }
 
-        if self.active.is_none() {
-            if let Some(first) = self.tabs.first().cloned() {
+        if self.active.is_none()
+            && let Some(first) = self.tabs.first().cloned() {
                 return self.activate(first);
             }
-        }
 
         let Some(active) = self.active.clone() else {
             return false;
@@ -614,11 +608,10 @@ impl WorkspaceTabs {
             return false;
         }
 
-        if self.active.is_none() {
-            if let Some(first) = self.tabs.first().cloned() {
+        if self.active.is_none()
+            && let Some(first) = self.tabs.first().cloned() {
                 return self.activate(first);
             }
-        }
 
         let Some(active) = self.active.clone() else {
             return false;
@@ -776,7 +769,7 @@ impl WorkspaceTabs {
                 }
 
                 let target_tabs_in_order: Vec<Arc<str>> =
-                    self.tabs[keep_from..index].iter().cloned().collect();
+                    self.tabs[keep_from..index].to_vec();
                 if let Some(blocked) = maybe_block(
                     self,
                     WorkspaceCloseReason::CloseLeftOfActive,
@@ -810,7 +803,7 @@ impl WorkspaceTabs {
                 }
 
                 let target_tabs_in_order: Vec<Arc<str>> =
-                    self.tabs[keep_to..].iter().cloned().collect();
+                    self.tabs[keep_to..].to_vec();
                 if let Some(blocked) = maybe_block(
                     self,
                     WorkspaceCloseReason::CloseRightOfActive,
@@ -924,11 +917,10 @@ impl WorkspaceTabs {
             return false;
         }
 
-        if self.active.is_none() {
-            if let Some(first) = self.tabs.first().cloned() {
+        if self.active.is_none()
+            && let Some(first) = self.tabs.first().cloned() {
                 return self.activate(first);
             }
-        }
 
         let Some(active) = self.active.clone() else {
             return false;
@@ -977,11 +969,10 @@ impl WorkspaceTabs {
             return false;
         }
 
-        if self.active.is_none() {
-            if let Some(first) = self.tabs.first().cloned() {
+        if self.active.is_none()
+            && let Some(first) = self.tabs.first().cloned() {
                 return self.activate(first);
             }
-        }
 
         let Some(active) = self.active.clone() else {
             return false;

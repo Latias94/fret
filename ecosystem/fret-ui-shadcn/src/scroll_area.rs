@@ -128,16 +128,13 @@ impl ScrollAreaViewport {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ScrollAreaScrollbarOrientation {
+    #[default]
     Vertical,
     Horizontal,
 }
 
-impl Default for ScrollAreaScrollbarOrientation {
-    fn default() -> Self {
-        Self::Vertical
-    }
-}
 
 /// shadcn/ui `ScrollBar` / Radix `ScrollAreaScrollbar` (v4).
 #[derive(Debug, Clone)]
@@ -462,8 +459,8 @@ impl ScrollAreaRoot {
                 let thumb_hover = shadcn_scrollbar_thumb_hover(&theme);
                 let scrollbar_width = theme.metric_token("metric.scrollbar.width");
 
-                if wants_y {
-                    if let Some(spec) = scrollbars
+                if wants_y
+                    && let Some(spec) = scrollbars
                         .iter()
                         .find(|s| s.orientation == ScrollAreaScrollbarOrientation::Vertical)
                     {
@@ -534,10 +531,9 @@ impl ScrollAreaRoot {
                             },
                         ));
                     }
-                }
 
-                if wants_x {
-                    if let Some(spec) = scrollbars
+                if wants_x
+                    && let Some(spec) = scrollbars
                         .iter()
                         .find(|s| s.orientation == ScrollAreaScrollbarOrientation::Horizontal)
                     {
@@ -604,7 +600,6 @@ impl ScrollAreaRoot {
                             },
                         ));
                     }
-                }
 
                 if corner && wants_x && wants_y {
                     let gate_layout = if overflow_x && overflow_y {
@@ -1109,7 +1104,7 @@ mod tests {
             crate::shadcn_themes::ShadcnColorScheme::Light,
         );
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -1203,7 +1198,7 @@ mod tests {
         let expected_ring = decl_style::focus_ring(&theme, expected_radius);
         let expected_alpha = expected_ring.color.a;
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         fn render_capture(
             ui: &mut UiTree<App>,
@@ -1274,7 +1269,7 @@ mod tests {
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let viewport = node_id_by_test_id(&snap, "sa.viewport.focus");
+        let viewport = node_id_by_test_id(snap, "sa.viewport.focus");
         ui.set_focus(Some(viewport));
 
         // Frame 2: focused => alpha tweens in (intermediate) and always-paint should be active while animating.
@@ -1305,7 +1300,7 @@ mod tests {
         ) + 2;
         for n in 0..settle {
             app.set_tick_id(TickId(3 + n));
-            app.set_frame_id(FrameId(3 + n as u64));
+            app.set_frame_id(FrameId(3 + n));
             render_capture(
                 &mut ui,
                 &mut app,
@@ -1351,7 +1346,7 @@ mod tests {
 
         for n in 0..settle {
             app.set_tick_id(TickId(1100 + n));
-            app.set_frame_id(FrameId(1100 + n as u64));
+            app.set_frame_id(FrameId(1100 + n));
             render_capture(
                 &mut ui,
                 &mut app,
@@ -1477,7 +1472,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let root = render(
             &mut ui,
@@ -1542,7 +1537,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         // First render establishes the scroll handle's viewport/content sizes during layout.
         let _ = render(
@@ -1583,7 +1578,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let handle = ScrollHandle::default();
 
         let root = fret_ui::declarative::render_root(
@@ -1669,7 +1664,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let handle = ScrollHandle::default();
         let bounds = bounds();
 
@@ -1764,7 +1759,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let wide = |cx: &mut ElementContext<'_, App>| {
             let mut layout = LayoutStyle::default();
@@ -1821,7 +1816,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let large = |cx: &mut ElementContext<'_, App>| {
             let mut layout = LayoutStyle::default();
@@ -1884,7 +1879,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let handle = ScrollHandle::default();
 
         let root = fret_ui::declarative::render_root(
@@ -1971,7 +1966,7 @@ mod tests {
             crate::shadcn_themes::ShadcnColorScheme::Light,
         );
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let handle = ScrollHandle::default();
 
         fn fill_width_layout() -> LayoutStyle {
@@ -2110,8 +2105,8 @@ mod tests {
         ui.layout_all(&mut app, &mut services, bounds(), 1.0);
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let page_root = node_id_by_test_id(&snap, "page-root");
-        let docs_root = node_id_by_test_id(&snap, "docs-root");
+        let page_root = node_id_by_test_id(snap, "page-root");
+        let docs_root = node_id_by_test_id(snap, "docs-root");
         let page_bounds = ui.debug_node_bounds(page_root).expect("page root bounds");
         let docs_bounds = ui.debug_node_bounds(docs_root).expect("docs root bounds");
 

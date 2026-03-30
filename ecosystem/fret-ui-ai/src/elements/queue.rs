@@ -855,6 +855,12 @@ impl std::fmt::Debug for QueueItemIndicator {
     }
 }
 
+impl Default for QueueItemIndicator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl QueueItemIndicator {
     pub fn new() -> Self {
         Self {

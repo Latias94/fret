@@ -496,11 +496,10 @@ fn patch_inherited_foreground_recursive(el: &mut AnyElement, from: Color, to: Co
         el.inherited_foreground = Some(to);
     }
 
-    if let ElementKind::ForegroundScope(props) = &mut el.kind {
-        if props.foreground == Some(from) {
+    if let ElementKind::ForegroundScope(props) = &mut el.kind
+        && props.foreground == Some(from) {
             props.foreground = Some(to);
         }
-    }
 
     for child in &mut el.children {
         patch_inherited_foreground_recursive(child, from, to);
@@ -564,12 +563,11 @@ fn alert_with_patch<H: UiHost>(
     let mut action = action_idx.map(|idx| body_children.remove(idx));
     let action_anchor = alert_action_horizontal_anchor(action.as_ref(), dir);
 
-    if variant == AlertVariant::Destructive {
-        if let Some(description) = body_children.get_mut(1) {
+    if variant == AlertVariant::Destructive
+        && let Some(description) = body_children.get_mut(1) {
             patch_text_color_recursive(description, muted_fg, destructive_description);
             patch_inherited_foreground_recursive(description, muted_fg, destructive_description);
         }
-    }
 
     let (padding_left, padding_right) = if has_action {
         match action_anchor {

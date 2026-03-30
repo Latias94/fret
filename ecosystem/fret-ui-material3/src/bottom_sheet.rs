@@ -55,6 +55,12 @@ impl std::fmt::Debug for DockedBottomSheet {
     }
 }
 
+impl Default for DockedBottomSheet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DockedBottomSheet {
     pub fn new() -> Self {
         Self {

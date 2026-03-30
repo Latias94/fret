@@ -36,7 +36,7 @@ pub use widget::NodeGraphCanvas;
 pub use widget::NodeGraphCanvasWith;
 
 pub(crate) use geometry::CanvasGeometry;
-pub(crate) use geometry::{node_order, node_ports, node_size_default_px};
+pub(crate) use geometry::{node_ports, node_size_default_px};
 pub(crate) use spatial::CanvasSpatialDerived;
 
 #[cfg(feature = "compat-retained-canvas")]

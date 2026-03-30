@@ -320,7 +320,7 @@ impl CalendarRange {
             .today
             .unwrap_or_else(|| OffsetDateTime::now_utc().date());
         let in_bounds =
-            |d: Date| month_bounds.map_or(true, |b| crate::calendar::date_in_month_bounds(d, b));
+            |d: Date| month_bounds.is_none_or(|b| crate::calendar::date_in_month_bounds(d, b));
 
         let mut hidden = Vec::with_capacity(grid.len());
         let mut disabled = Vec::with_capacity(grid.len());
@@ -1045,7 +1045,7 @@ fn calendar_range_month_view<H: UiHost>(
         month_grid_compact(month, week_start)
     };
     let in_bounds =
-        |d: Date| month_bounds.map_or(true, |b| crate::calendar::date_in_month_bounds(d, b));
+        |d: Date| month_bounds.is_none_or(|b| crate::calendar::date_in_month_bounds(d, b));
 
     let mut hidden = Vec::with_capacity(grid.len());
     let mut disabled = Vec::with_capacity(grid.len());

@@ -346,12 +346,12 @@ pub(crate) fn collect_macos_vmmap_summary_best_effort(
     for line in stdout.lines() {
         let l = line.trim();
         if let Some(rest) = l.strip_prefix("Physical footprint:") {
-            let token = rest.trim().split_whitespace().next().unwrap_or("");
+            let token = rest.split_whitespace().next().unwrap_or("");
             physical_footprint_bytes = parse_vmmap_size_token_to_bytes(token);
             continue;
         }
         if let Some(rest) = l.strip_prefix("Physical footprint (peak):") {
-            let token = rest.trim().split_whitespace().next().unwrap_or("");
+            let token = rest.split_whitespace().next().unwrap_or("");
             physical_footprint_peak_bytes = parse_vmmap_size_token_to_bytes(token);
             continue;
         }

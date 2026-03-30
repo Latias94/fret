@@ -497,9 +497,9 @@ fn resolve_manifest_entry_path(base_dir: &Path, bundle_root: &Path, entry_path: 
 }
 
 fn collect_reload_dir_files(dir: &Path, out: &mut Vec<PathBuf>) -> std::io::Result<()> {
-    let mut entries = std::fs::read_dir(dir)?;
+    let entries = std::fs::read_dir(dir)?;
     let mut paths = Vec::new();
-    while let Some(entry) = entries.next() {
+    for entry in entries {
         paths.push(entry?.path());
     }
     paths.sort();

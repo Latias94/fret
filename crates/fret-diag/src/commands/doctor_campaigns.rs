@@ -103,8 +103,8 @@ fn build_doctor_campaigns_payload(
         for manifest_path in manifest_paths {
             counts.manifest_json_total = counts.manifest_json_total.saturating_add(1);
 
-            if let Some(raw) = read_json_value(&manifest_path) {
-                if manifest_uses_legacy_shape(&raw) {
+            if let Some(raw) = read_json_value(&manifest_path)
+                && manifest_uses_legacy_shape(&raw) {
                     counts.legacy_shape_total = counts.legacy_shape_total.saturating_add(1);
                     push_bounded(
                         &mut examples.legacy_shape_paths,
@@ -112,7 +112,6 @@ fn build_doctor_campaigns_payload(
                         manifest_path.display().to_string(),
                     );
                 }
-            }
 
             match load_manifest_campaign(&manifest_path) {
                 Ok(campaign) => {

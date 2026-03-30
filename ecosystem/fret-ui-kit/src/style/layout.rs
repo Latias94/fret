@@ -163,10 +163,10 @@ impl LayoutRefinement {
         self.ensure_position_for_inset();
         let m = InsetEdgeRefinement::Px(SignedMetricRef::pos(MetricRef::space(space)));
         self.inset = Some(InsetRefinement {
-            top: Some(m.clone()).into(),
-            right: Some(m.clone()).into(),
-            bottom: Some(m.clone()).into(),
-            left: Some(m).into(),
+            top: Some(m.clone()),
+            right: Some(m.clone()),
+            bottom: Some(m.clone()),
+            left: Some(m),
         });
         self
     }
@@ -175,10 +175,10 @@ impl LayoutRefinement {
         self.ensure_position_for_inset();
         let m = InsetEdgeRefinement::Px(SignedMetricRef::pos(px.into()));
         self.inset = Some(InsetRefinement {
-            top: Some(m.clone()).into(),
-            right: Some(m.clone()).into(),
-            bottom: Some(m.clone()).into(),
-            left: Some(m).into(),
+            top: Some(m.clone()),
+            right: Some(m.clone()),
+            bottom: Some(m.clone()),
+            left: Some(m),
         });
         self
     }
@@ -188,10 +188,10 @@ impl LayoutRefinement {
         self.ensure_position_for_inset();
         let m = InsetEdgeRefinement::Fill;
         self.inset = Some(InsetRefinement {
-            top: Some(m.clone()).into(),
-            right: Some(m.clone()).into(),
-            bottom: Some(m.clone()).into(),
-            left: Some(m).into(),
+            top: Some(m.clone()),
+            right: Some(m.clone()),
+            bottom: Some(m.clone()),
+            left: Some(m),
         });
         self
     }
@@ -203,10 +203,10 @@ impl LayoutRefinement {
         self.ensure_position_for_inset();
         let m = InsetEdgeRefinement::Fraction(fraction);
         self.inset = Some(InsetRefinement {
-            top: Some(m.clone()).into(),
-            right: Some(m.clone()).into(),
-            bottom: Some(m.clone()).into(),
-            left: Some(m).into(),
+            top: Some(m.clone()),
+            right: Some(m.clone()),
+            bottom: Some(m.clone()),
+            left: Some(m),
         });
         self
     }
@@ -455,10 +455,10 @@ impl LayoutRefinement {
     pub fn m(mut self, space: Space) -> Self {
         let m = MarginEdgeRefinement::Px(SignedMetricRef::pos(MetricRef::space(space)));
         self.margin = Some(MarginRefinement {
-            top: Some(m.clone()).into(),
-            right: Some(m.clone()).into(),
-            bottom: Some(m.clone()).into(),
-            left: Some(m).into(),
+            top: Some(m.clone()),
+            right: Some(m.clone()),
+            bottom: Some(m.clone()),
+            left: Some(m),
         });
         self
     }
@@ -466,10 +466,10 @@ impl LayoutRefinement {
     pub fn m_px(mut self, px: Px) -> Self {
         let m = MarginEdgeRefinement::Px(SignedMetricRef::pos(px.into()));
         self.margin = Some(MarginRefinement {
-            top: Some(m.clone()).into(),
-            right: Some(m.clone()).into(),
-            bottom: Some(m.clone()).into(),
-            left: Some(m).into(),
+            top: Some(m.clone()),
+            right: Some(m.clone()),
+            bottom: Some(m.clone()),
+            left: Some(m),
         });
         self
     }
@@ -477,10 +477,10 @@ impl LayoutRefinement {
     pub fn m_neg(mut self, space: Space) -> Self {
         let m = MarginEdgeRefinement::Px(SignedMetricRef::neg(MetricRef::space(space)));
         self.margin = Some(MarginRefinement {
-            top: Some(m.clone()).into(),
-            right: Some(m.clone()).into(),
-            bottom: Some(m.clone()).into(),
-            left: Some(m).into(),
+            top: Some(m.clone()),
+            right: Some(m.clone()),
+            bottom: Some(m.clone()),
+            left: Some(m),
         });
         self
     }
@@ -488,10 +488,10 @@ impl LayoutRefinement {
     pub fn m_auto(mut self) -> Self {
         let a = MarginEdgeRefinement::Auto;
         self.margin = Some(MarginRefinement {
-            top: Some(a.clone()).into(),
-            right: Some(a.clone()).into(),
-            bottom: Some(a.clone()).into(),
-            left: Some(a).into(),
+            top: Some(a.clone()),
+            right: Some(a.clone()),
+            bottom: Some(a.clone()),
+            left: Some(a),
         });
         self
     }

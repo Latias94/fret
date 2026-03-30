@@ -226,7 +226,7 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(capture) = requested_capture
-                    && capture.is_none_or(|n| node_in_active_layers(n))
+                    && capture.is_none_or(&node_in_active_layers)
                     && let Some(pointer_id) = pointer_id_for_capture
                 {
                     if let Some(new_capture) = capture
@@ -404,7 +404,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(capture) = requested_capture
-                && capture.is_none_or(|n| node_in_active_layers(n))
+                && capture.is_none_or(&node_in_active_layers)
                 && let Some(pointer_id) = pointer_id_for_capture
             {
                 if let Some(new_capture) = capture

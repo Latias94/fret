@@ -103,6 +103,12 @@ impl std::fmt::Debug for Card {
     }
 }
 
+impl Default for Card {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Card {
     pub fn new() -> Self {
         Self {

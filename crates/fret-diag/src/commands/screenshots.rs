@@ -281,11 +281,10 @@ pub(crate) fn resolve_screenshots_manifest_path(src: &Path) -> Option<(PathBuf, 
 
     if src.is_file() {
         let name = src.file_name().and_then(|s| s.to_str()).unwrap_or("");
-        if name == "manifest.json" {
-            if let Some(parent) = src.parent() {
+        if name == "manifest.json"
+            && let Some(parent) = src.parent() {
                 return Some((parent.to_path_buf(), src.to_path_buf()));
             }
-        }
 
         if name.ends_with(".png")
             && let Some(parent) = src.parent()

@@ -267,7 +267,9 @@ impl WebPreview {
         let test_id_root = self.test_id_root.clone();
         let eager_children = self.children;
 
-        let root = cx.container(
+        
+
+        cx.container(
             decl_style::container_props(&theme, chrome, layout),
             move |cx| {
                 let url_model =
@@ -479,9 +481,7 @@ impl WebPreview {
                     vec![body]
                 })
             },
-        );
-
-        root
+        )
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1527,7 +1527,9 @@ impl WebPreviewConsole {
             content
         };
 
-        let root = Collapsible::new(console_open)
+        
+
+        Collapsible::new(console_open)
             .refine_layout(self.layout)
             .refine_style(
                 ChromeRefinement::default()
@@ -1538,9 +1540,7 @@ impl WebPreviewConsole {
                     })
                     .merge(self.chrome),
             )
-            .into_element(cx, move |_cx, _is_open| header, move |_cx| content);
-
-        root
+            .into_element(cx, move |_cx, _is_open| header, move |_cx| content)
     }
 }
 

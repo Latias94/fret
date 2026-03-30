@@ -1280,11 +1280,9 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                             src_pointer_move_hit_test,
                             thr_pointer_move_global_changes,
                             src_pointer_move_global_changes,
-                            thr_paint_cache_hit_test_only_replay_allowed_max:
-                                thr_paint_cache_hit_test_only_replay_allowed_max,
+                            thr_paint_cache_hit_test_only_replay_allowed_max,
                             src_paint_cache_hit_test_only_replay_allowed_max,
-                            thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max:
-                                thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                             src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                         },
                     );
@@ -1452,8 +1450,8 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                 break;
             };
 
-            if bundle_doctor_mode != BundleDoctorMode::Off {
-                if let Err(err) = run_bundle_doctor_for_bundle_path(
+            if bundle_doctor_mode != BundleDoctorMode::Off
+                && let Err(err) = run_bundle_doctor_for_bundle_path(
                     &bundle_path,
                     bundle_doctor_mode,
                     warmup_frames,
@@ -1461,7 +1459,6 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                     return Err(err);
                 }
-            }
 
             let mut report =
                 bundle_stats_from_path(&bundle_path, stats_top.max(1), sort, stats_opts)?;
@@ -2183,11 +2180,9 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                         src_pointer_move_hit_test,
                         thr_pointer_move_global_changes,
                         src_pointer_move_global_changes,
-                        thr_paint_cache_hit_test_only_replay_allowed_max:
-                            thr_paint_cache_hit_test_only_replay_allowed_max,
+                        thr_paint_cache_hit_test_only_replay_allowed_max,
                         src_paint_cache_hit_test_only_replay_allowed_max,
-                        thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max:
-                            thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                        thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                         src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                     },
                 );
@@ -2351,6 +2346,47 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     std::process::exit(0);
 }
 
+fn ensure_perf_fs_transport_connected(
+    connected_fs: &mut Option<ConnectedToolingTransport>,
+    use_devtools_ws: bool,
+    fs_transport_cfg: &crate::transport::FsDiagTransportConfig,
+    ready_path: &Path,
+    require_ready: bool,
+    timeout_ms: u64,
+    poll_ms: u64,
+    script_result_path: &Path,
+) -> Result<(), String> {
+    if use_devtools_ws {
+        return Ok(());
+    }
+    if connected_fs.is_some() {
+        return Ok(());
+    }
+
+    match connect_filesystem_tooling(
+        fs_transport_cfg,
+        ready_path,
+        require_ready,
+        timeout_ms,
+        poll_ms,
+    ) {
+        Ok(v) => {
+            *connected_fs = Some(v);
+            Ok(())
+        }
+        Err(err) => {
+            write_tooling_failure_script_result(
+                script_result_path,
+                "tooling.connect.failed",
+                &err,
+                "tooling_error",
+                Some("connect_filesystem_tooling".to_string()),
+            );
+            Err(err)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2415,46 +2451,5 @@ mod tests {
             Some("no_last_bundle_dir")
         );
         assert_eq!(item.name, "apps/demo.perf.json");
-    }
-}
-
-fn ensure_perf_fs_transport_connected(
-    connected_fs: &mut Option<ConnectedToolingTransport>,
-    use_devtools_ws: bool,
-    fs_transport_cfg: &crate::transport::FsDiagTransportConfig,
-    ready_path: &Path,
-    require_ready: bool,
-    timeout_ms: u64,
-    poll_ms: u64,
-    script_result_path: &Path,
-) -> Result<(), String> {
-    if use_devtools_ws {
-        return Ok(());
-    }
-    if connected_fs.is_some() {
-        return Ok(());
-    }
-
-    match connect_filesystem_tooling(
-        fs_transport_cfg,
-        ready_path,
-        require_ready,
-        timeout_ms,
-        poll_ms,
-    ) {
-        Ok(v) => {
-            *connected_fs = Some(v);
-            Ok(())
-        }
-        Err(err) => {
-            write_tooling_failure_script_result(
-                script_result_path,
-                "tooling.connect.failed",
-                &err,
-                "tooling_error",
-                Some("connect_filesystem_tooling".to_string()),
-            );
-            Err(err)
-        }
     }
 }

@@ -24,22 +24,21 @@ pub struct NodeGraphBackgroundStyle {
 
 /// Background grid pattern variant (XyFlow `BackgroundVariant`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Default)]
 pub enum NodeGraphBackgroundPattern {
+    #[default]
     Lines,
     Dots,
     Cross,
 }
 
-impl Default for NodeGraphBackgroundPattern {
-    fn default() -> Self {
-        Self::Lines
-    }
-}
 
 /// Color mode override for the node graph canvas (XyFlow `colorMode`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Default)]
 pub enum NodeGraphColorMode {
     /// Use the host UI theme (default).
+    #[default]
     System,
     /// Force a light palette regardless of the host theme.
     Light,
@@ -47,11 +46,6 @@ pub enum NodeGraphColorMode {
     Dark,
 }
 
-impl Default for NodeGraphColorMode {
-    fn default() -> Self {
-        Self::System
-    }
-}
 
 /// Geometry-affecting style tokens for the node graph canvas.
 ///
@@ -375,19 +369,12 @@ impl Default for NodeGraphPaintTokensV1 {
 
 /// Visual tuning for the node graph canvas.
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct NodeGraphStyle {
     pub paint: NodeGraphPaintTokensV1,
     pub geometry: NodeGraphGeometryTokensV1,
 }
 
-impl Default for NodeGraphStyle {
-    fn default() -> Self {
-        Self {
-            paint: NodeGraphPaintTokensV1::default(),
-            geometry: NodeGraphGeometryTokensV1::default(),
-        }
-    }
-}
 
 impl NodeGraphStyle {
     pub fn from_color_mode(theme: &Theme, mode: NodeGraphColorMode) -> Self {

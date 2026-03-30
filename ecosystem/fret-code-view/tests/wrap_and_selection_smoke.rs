@@ -1,3 +1,7 @@
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::field_reassign_with_default)]
+#![allow(clippy::redundant_closure)]
+
 use std::{
     any::{Any, TypeId},
     collections::{HashMap, HashSet},

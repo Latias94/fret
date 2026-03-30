@@ -129,7 +129,7 @@ fn label_root<H: UiHost>(
     let resolved_fg_ref = chrome
         .text_color
         .clone()
-        .unwrap_or_else(|| ColorRef::Color(base_fg));
+        .unwrap_or(ColorRef::Color(base_fg));
     let props = decl_style::container_props(&theme, chrome, layout);
 
     let children = match wrapped_children {

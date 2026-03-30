@@ -543,7 +543,7 @@ impl NodeGraphStore {
             return Ok(None);
         }
 
-        let committed = committed.unwrap_or_else(GraphTransaction::new);
+        let committed = committed.unwrap_or_default();
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
         self.lookups.apply_transaction(&self.graph, &committed);
@@ -575,7 +575,7 @@ impl NodeGraphStore {
             return Ok(None);
         }
 
-        let committed = committed.unwrap_or_else(GraphTransaction::new);
+        let committed = committed.unwrap_or_default();
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
         self.lookups.apply_transaction(&self.graph, &committed);
@@ -605,7 +605,7 @@ impl NodeGraphStore {
             return Ok(None);
         }
 
-        let committed = committed.unwrap_or_else(GraphTransaction::new);
+        let committed = committed.unwrap_or_default();
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
         self.lookups.apply_transaction(&self.graph, &committed);
@@ -637,7 +637,7 @@ impl NodeGraphStore {
             return Ok(None);
         }
 
-        let committed = committed.unwrap_or_else(GraphTransaction::new);
+        let committed = committed.unwrap_or_default();
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
         self.lookups.apply_transaction(&self.graph, &committed);

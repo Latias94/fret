@@ -26,10 +26,7 @@ fn workspace_frame_center_row_does_not_fill_height() {
         let vertical = root
             .children
             .iter()
-            .find_map(|child| match &child.kind {
-                ElementKind::Flex(props) if props.direction == Axis::Vertical => Some(child),
-                _ => None,
-            })
+            .find(|child| matches!(&child.kind, ElementKind::Flex(props) if props.direction == Axis::Vertical))
             .expect("expected WorkspaceFrame root container to include a vertical flex");
 
         assert_eq!(

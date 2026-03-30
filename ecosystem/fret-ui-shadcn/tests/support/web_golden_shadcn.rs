@@ -175,7 +175,7 @@ pub(crate) fn read_web_golden_open_fallback(name: &str) -> WebGolden {
     })
 }
 
-pub(crate) fn web_theme<'a>(golden: &'a WebGolden) -> &'a WebGoldenTheme {
+pub(crate) fn web_theme(golden: &WebGolden) -> &WebGoldenTheme {
     golden
         .themes
         .get("light")

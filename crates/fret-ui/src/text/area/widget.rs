@@ -527,7 +527,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                     crate::text_edit::utf8::clamp_to_char_boundary(self.preedit.as_str(), rel(be));
                 (start_rel, end_rel)
             })
-            .or_else(|| Some((preedit_len, preedit_len)));
+            .or(Some((preedit_len, preedit_len)));
         self.affinity = fret_core::CaretAffinity::Downstream;
         self.text_dirty = true;
         self.ensure_caret_visible = true;
@@ -1749,14 +1749,12 @@ impl<H: UiHost> Widget<H> for TextArea {
             });
         } else if (!focused_self || caret_blink_interval.is_none())
             && self.caret_blink_timer.is_some()
-        {
-            if let Some(window) = cx.window {
+            && let Some(window) = cx.window {
                 let token = self.caret_blink_timer.take().expect("checked is_some");
                 crate::elements::clear_timer_target(cx.app, window, token);
                 cx.app.push_effect(Effect::CancelTimer { token });
                 self.caret_blink_visible = true;
             }
-        }
 
         if focused_self {
             let caret_index = self.caret_display_index();

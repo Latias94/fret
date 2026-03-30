@@ -205,7 +205,7 @@ pub fn chart_canvas_panel<H: UiHost>(
     );
 
     let default_tooltip_formatter: Arc<dyn TooltipFormatter> = cx.slot_state(
-        || Arc::new(DefaultTooltipFormatter::default()) as Arc<dyn TooltipFormatter>,
+        || Arc::new(DefaultTooltipFormatter) as Arc<dyn TooltipFormatter>,
         |st| st.clone(),
     );
     let tooltip_formatter: Arc<dyn TooltipFormatter> = props
@@ -248,7 +248,7 @@ pub fn chart_canvas_panel<H: UiHost>(
             );
         }
 
-        let mut measurer = NullTextMeasurer::default();
+        let mut measurer = NullTextMeasurer;
         let start = Instant::now();
         let mut steps_ran = 0u32;
         let mut still_unfinished = true;
@@ -393,12 +393,11 @@ pub fn chart_canvas_panel<H: UiHost>(
 
     let (cache, axis_pointer, hover_point_px) =
         cx.state_for(marks_cache_slot, MarksCache::default, |cache| {
-            if cache.marks_rev != marks_rev {
-                if let Some(marks) = output_marks.clone() {
+            if cache.marks_rev != marks_rev
+                && let Some(marks) = output_marks.clone() {
                     cache.marks_rev = marks_rev;
                     cache.marks = marks;
                 }
-            }
 
             if cache.output_rev != output_rev {
                 cache.output_rev = output_rev;
@@ -428,7 +427,7 @@ pub fn chart_canvas_panel<H: UiHost>(
 
         let Some((x_axis, y_axis)) = host
             .models_mut()
-            .read(&engine_c, |engine| primary_axes(engine))
+            .read(&engine_c, primary_axes)
             .ok()
             .flatten()
         else {
@@ -536,7 +535,7 @@ pub fn chart_canvas_panel<H: UiHost>(
 
         let Some((x_axis, y_axis)) = host
             .models_mut()
-            .read(&engine_c, |engine| primary_axes(engine))
+            .read(&engine_c, primary_axes)
             .ok()
             .flatten()
         else {
@@ -600,7 +599,7 @@ pub fn chart_canvas_panel<H: UiHost>(
 
         let Some((x_axis, y_axis)) = host
             .models_mut()
-            .read(&engine_c, |engine| primary_axes(engine))
+            .read(&engine_c, primary_axes)
             .ok()
             .flatten()
         else {

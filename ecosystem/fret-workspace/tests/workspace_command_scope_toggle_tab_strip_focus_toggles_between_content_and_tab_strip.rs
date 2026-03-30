@@ -175,7 +175,7 @@ fn toggle_tab_strip_focus_toggles_between_content_and_tab_strip() {
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices::default();
+    let mut services = FakeServices;
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
