@@ -397,42 +397,6 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self
     }
 
-    /// Register a native/package-dev asset manifest on the builder path.
-    ///
-    /// This loads the manifest eagerly so failures stay on the build/configure path instead of
-    /// surfacing later during `run()`.
-    pub fn with_asset_manifest(
-        self,
-        manifest_path: impl AsRef<Path>,
-    ) -> Result<Self, BootstrapError> {
-        Ok(Self {
-            inner: self
-                .inner
-                .with_asset_manifest(manifest_path)
-                .map_err(map_asset_runner_error)?,
-            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
-        })
-    }
-
-    /// Scan a native/package-dev directory and mount it as one logical bundle on the builder path.
-    ///
-    /// This eagerly validates the directory so failures stay on the build/configure path instead
-    /// of surfacing later during `run()`. Prefer [`with_asset_manifest`](Self::with_asset_manifest)
-    /// when you want an explicit manifest artifact that tooling can emit, review, or package.
-    pub fn with_asset_dir(
-        self,
-        bundle: impl Into<fret_assets::AssetBundleId>,
-        dir: impl AsRef<Path>,
-    ) -> Result<Self, BootstrapError> {
-        Ok(Self {
-            inner: self
-                .inner
-                .with_asset_dir(bundle, dir)
-                .map_err(map_asset_runner_error)?,
-            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
-        })
-    }
-
     /// Register static bundle-scoped entries on the builder path.
     pub fn with_bundle_asset_entries(
         self,
@@ -948,7 +912,7 @@ mod fn_driver_builder_tests {
     }
 
     #[test]
-    fn bootstrap_builder_asset_manifest_fails_early_for_missing_files() {
+    fn bootstrap_builder_asset_startup_fails_early_for_missing_manifest_files() {
         let missing =
             std::env::temp_dir().join("definitely-missing-fret-bootstrap-assets.manifest.json");
         let err = match BootstrapBuilder::new_fn(
@@ -958,16 +922,19 @@ mod fn_driver_builder_tests {
             handle_event,
             render,
         )
-        .with_asset_manifest(&missing)
-        {
-            Ok(_) => panic!("missing manifest should fail on bootstrap builder path"),
+        .with_asset_startup(
+            AssetBundleId::app("bootstrap-missing-asset-startup-manifest"),
+            AssetStartupMode::Development,
+            AssetStartupPlan::new().development_manifest(&missing),
+        ) {
+            Ok(_) => panic!("missing manifest should fail on bootstrap asset startup path"),
             Err(err) => err,
         };
         assert!(matches!(err, BootstrapError::AssetManifest(_)));
     }
 
     #[test]
-    fn bootstrap_builder_asset_dir_fails_early_for_missing_directories() {
+    fn bootstrap_builder_asset_startup_fails_early_for_missing_directories() {
         let missing = std::env::temp_dir().join("definitely-missing-fret-bootstrap-assets-dir");
         let err = match BootstrapBuilder::new_fn(
             App::new(),
@@ -976,9 +943,12 @@ mod fn_driver_builder_tests {
             handle_event,
             render,
         )
-        .with_asset_dir(AssetBundleId::app("bootstrap-missing-asset-dir"), &missing)
-        {
-            Ok(_) => panic!("missing asset dir should fail on bootstrap builder path"),
+        .with_asset_startup(
+            AssetBundleId::app("bootstrap-missing-asset-startup-dir"),
+            AssetStartupMode::Development,
+            AssetStartupPlan::new().development_dir(&missing),
+        ) {
+            Ok(_) => panic!("missing asset dir should fail on bootstrap asset startup path"),
             Err(err) => err,
         };
         assert!(matches!(err, BootstrapError::AssetManifest(_)));

@@ -191,9 +191,10 @@ remain the packaged lane because they already expose `ENTRIES`, `bundle_id()`, `
 you only need one lane or intentionally custom layering.
 When you are on `fret-bootstrap` directly instead of `fret`, use the same startup contract from
 `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
-`BootstrapBuilder::with_asset_startup(...)`; the bootstrap crate also exposes the matching
-lower-level builder helpers `with_asset_dir(...)`, `with_asset_manifest(...)`,
-`with_bundle_asset_entries(...)`, and `with_embedded_asset_entries(...)`.
+`BootstrapBuilder::with_asset_startup(...)`; keep file-backed native/package-dev inputs on
+`AssetStartupPlan::development_dir(...)` / `AssetStartupPlan::development_manifest(...)`, and use
+`with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)` only when you intentionally
+want direct packaged-byte registration on the builder path.
 On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is the first-party
 generated-manifest convenience path when you want one directory to become one logical bundle
 without teaching raw repo-relative paths in app/widget code.
@@ -555,9 +556,10 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   `fret_bootstrap::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`.
   For startup that needs one explicit development-vs-packaged switch, prefer
   `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
-  `BootstrapBuilder::with_asset_startup(...)`. Keep `with_asset_dir(...)` /
-  `with_asset_manifest(...)` for native/package-dev file-backed inputs and
-  `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)` for packaged bytes.
+  `BootstrapBuilder::with_asset_startup(...)`. Keep native/package-dev file-backed inputs on
+  `AssetStartupPlan::development_dir(...)` / `AssetStartupPlan::development_manifest(...)`, and
+  keep `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)` for direct packaged
+  bytes when you intentionally want builder-local registration instead of one named startup plan.
 - **Direct app wiring:** use `fret_ui_assets::app::configure_caches(...)` or
   `fret_ui_assets::app::configure_caches_with_budgets(...)`; keep
   `fret_ui_assets::advanced::{configure_caches_with_ui_services(...), configure_caches_with_ui_services_and_budgets(...)}`

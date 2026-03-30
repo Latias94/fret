@@ -770,8 +770,20 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - shadcn ecosystem recipes that ship icons/images,
     - ecosystem icon-pack install stories that currently rely on implicit global registry behavior.
 
-- [ ] RESLOAD-mig-710 Remove or archive superseded one-off resource helpers once the unified path is
+- [~] RESLOAD-mig-710 Remove or archive superseded one-off resource helpers once the unified path is
       verified.
+  - Current landed slice:
+    - `ecosystem/fret-bootstrap::BootstrapBuilder` now keeps file-backed startup on the canonical
+      `with_asset_startup(...) + AssetStartupPlan::{development_dir,development_manifest}(...)`
+      path instead of duplicating native/package-dev one-off helpers for
+      `with_asset_dir(...)` / `with_asset_manifest(...)`.
+    - first-party usage docs now teach that bootstrap lane as one named startup contract instead of
+      advertising duplicate builder helpers.
+  - Remaining:
+    - delete or archive any other one-off helper surfaces once they are proven redundant by the
+      unified locator/startup story.
+    - keep docs/examples from reintroducing helper-specific teaching for capabilities already
+      modeled by `AssetStartupPlan`.
   - Deprecated compatibility names should remain only during migration and be deleted after:
     - the unified asset contract lands,
     - first-party callers move over,
