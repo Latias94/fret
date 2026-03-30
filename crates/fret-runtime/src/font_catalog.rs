@@ -124,6 +124,113 @@ impl BundledFontBaselineSnapshot {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RendererFontSourceLane {
+    #[default]
+    BundledStartup,
+    AssetRequest,
+    RawRuntimeBytes,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RendererFontSourceRecord {
+    pub source_lane: RendererFontSourceLane,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_request: Option<fret_assets::AssetRequest>,
+    pub byte_hash: u64,
+    pub byte_len: u64,
+    pub added_face_count: u64,
+}
+
+impl RendererFontSourceRecord {
+    pub fn bundled_startup(
+        asset_request: fret_assets::AssetRequest,
+        byte_hash: u64,
+        byte_len: u64,
+        added_face_count: u64,
+    ) -> Self {
+        Self {
+            source_lane: RendererFontSourceLane::BundledStartup,
+            asset_request: Some(asset_request),
+            byte_hash,
+            byte_len,
+            added_face_count,
+        }
+    }
+
+    pub fn asset_request(
+        asset_request: fret_assets::AssetRequest,
+        byte_hash: u64,
+        byte_len: u64,
+        added_face_count: u64,
+    ) -> Self {
+        Self {
+            source_lane: RendererFontSourceLane::AssetRequest,
+            asset_request: Some(asset_request),
+            byte_hash,
+            byte_len,
+            added_face_count,
+        }
+    }
+
+    pub fn raw_runtime_bytes(byte_hash: u64, byte_len: u64, added_face_count: u64) -> Self {
+        Self {
+            source_lane: RendererFontSourceLane::RawRuntimeBytes,
+            asset_request: None,
+            byte_hash,
+            byte_len,
+            added_face_count,
+        }
+    }
+}
+
+/// Best-effort snapshot of font sources currently known to the runner-owned renderer environment.
+///
+/// This is intentionally source-oriented rather than family-oriented:
+/// - `FontCatalogMetadata` remains the best-effort family picker surface,
+/// - `TextFontStackKey` remains the cross-surface invalidation key,
+/// - and this snapshot records where the renderer's currently approved font bytes came from.
+///
+/// `revision` is monotonic and should advance whenever the effective renderer text environment
+/// changes in a way that can affect downstream consumers such as future SVG-text bridges.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RendererFontEnvironmentSnapshot {
+    pub revision: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_font_stack_key: Option<u64>,
+    #[serde(default)]
+    pub sources: Vec<RendererFontSourceRecord>,
+}
+
+impl RendererFontEnvironmentSnapshot {
+    pub fn note_text_font_stack_key(&mut self, text_font_stack_key: u64) -> bool {
+        if self.text_font_stack_key == Some(text_font_stack_key) {
+            return false;
+        }
+
+        self.text_font_stack_key = Some(text_font_stack_key);
+        self.revision = self.revision.saturating_add(1);
+        true
+    }
+
+    pub fn extend_sources_unique(
+        &mut self,
+        sources: impl IntoIterator<Item = RendererFontSourceRecord>,
+    ) -> bool {
+        let mut changed = false;
+        for source in sources {
+            if self.sources.iter().any(|existing| existing == &source) {
+                continue;
+            }
+            self.sources.push(source);
+            changed = true;
+        }
+        changed
+    }
+}
+
 /// Stable key representing the current effective text font stack / fallback configuration.
 ///
 /// Runners should update this whenever the renderer text backend changes in a way that can affect

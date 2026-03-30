@@ -47,6 +47,9 @@ Status note (2026-03-30):
 
 - web and the shared native winit startup path now both install the same framework-owned bundled
   baseline before startup font-environment publication,
+- the runtime now also publishes `RendererFontEnvironmentSnapshot` so bundled startup, runtime
+  asset-request injection, and raw runtime font bytes share one renderer-visible source inventory
+  with a monotonic revision and diagnostics-facing source records,
 - current local evidence includes `cargo check -p fret-launch --target aarch64-apple-ios`, so the
   same startup contract is at least compile-validated on iOS,
 - desktop system-font refresh now has a focused runner-level gate proving it augments the live
@@ -56,6 +59,8 @@ Exit criteria:
 
 - The same app can rely on one documented baseline text environment across desktop and web.
 - The remaining platform differences are explicit capability differences, not startup accidents.
+- Any remaining SVG-text gap is reduced to the still-open bridge/rehydration question, not to
+  missing runner-visible font provenance.
 
 ## M3 — Unified image and SVG loading
 

@@ -49,6 +49,20 @@ If Fret re-enables SVG text in the future, it must obey all of the following:
 
 ### Stage 1: publish a real renderer font inventory
 
+Status note (2026-03-30):
+
+- landed slice:
+  - `fret_runtime::RendererFontEnvironmentSnapshot` now publishes a monotonic `revision`,
+    `text_font_stack_key`, and accepted renderer source records for bundled startup,
+    asset-request-backed runtime injection, and raw runtime font bytes,
+  - `crates/fret-launch/src/runner/font_catalog.rs` now records those source records from
+    `install_default_bundled_font_baseline`, `TextAddFontAssets`, and `TextAddFonts`,
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_{impl,types}.rs` now exports the
+    same inventory under `debug.resource_loading.font_environment.renderer_font_*`.
+- remaining gap:
+  - the current snapshot intentionally publishes stable identity + byte fingerprints, but not yet
+    reproducible raw bytes or a renderer-owned rehydration handle for an SVG-text bridge.
+
 Add a runtime-visible snapshot that answers:
 
 - which font sources are currently installed in the renderer,
@@ -133,6 +147,11 @@ This plan does not aim to:
 3. Add an SVG font-bridge revision surface in `fret-render-wgpu`.
 4. Add diagnostics/tests before enabling any text-bearing SVG support.
 5. Keep `SvgRenderError::TextNodesUnsupported` as the shipped baseline until the above exists.
+
+Progress note:
+
+- items 1 and 2 now have a first landed slice,
+- items 3 through 5 remain open.
 
 ## Evidence anchors
 

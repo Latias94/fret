@@ -399,6 +399,10 @@ pub struct UiFontEnvironmentDiagnosticsSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_catalog_family_count: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub renderer_font_environment_revision: Option<u64>,
+    #[serde(default)]
+    pub renderer_font_sources: Vec<UiRendererFontSourceSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text_font_stack_key: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub system_font_rescan_in_flight: Option<bool>,
@@ -406,15 +410,83 @@ pub struct UiFontEnvironmentDiagnosticsSnapshotV1 {
     pub system_font_rescan_pending: Option<bool>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiRendererFontSourceSnapshotV1 {
+    pub source_lane: String,
+    pub byte_hash_hex: String,
+    pub byte_len: u64,
+    pub added_face_count: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_locator_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_bundle: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_kind_hint: Option<String>,
+}
+
+impl UiRendererFontSourceSnapshotV1 {
+    fn from_runtime(record: &fret_runtime::RendererFontSourceRecord) -> Self {
+        let (asset_locator_kind, asset_bundle, asset_key) = record
+            .asset_request
+            .as_ref()
+            .map(|request| match &request.locator {
+                fret_assets::AssetLocator::Memory(_) => (Some("memory"), None, None),
+                fret_assets::AssetLocator::Embedded(locator) => (
+                    Some("embedded"),
+                    Some(locator.owner.as_str().to_string()),
+                    Some(locator.key.as_str().to_string()),
+                ),
+                fret_assets::AssetLocator::BundleAsset(locator) => (
+                    Some("bundle_asset"),
+                    Some(locator.bundle.as_str().to_string()),
+                    Some(locator.key.as_str().to_string()),
+                ),
+                fret_assets::AssetLocator::File(_) => (Some("file"), None, None),
+                fret_assets::AssetLocator::Url(_) => (Some("url"), None, None),
+            })
+            .unwrap_or((None, None, None));
+
+        Self {
+            source_lane: match record.source_lane {
+                fret_runtime::RendererFontSourceLane::BundledStartup => "bundled_startup",
+                fret_runtime::RendererFontSourceLane::AssetRequest => "asset_request",
+                fret_runtime::RendererFontSourceLane::RawRuntimeBytes => "raw_runtime_bytes",
+            }
+            .to_string(),
+            byte_hash_hex: format!("{:016x}", record.byte_hash),
+            byte_len: record.byte_len,
+            added_face_count: record.added_face_count,
+            asset_locator_kind: asset_locator_kind.map(str::to_string),
+            asset_bundle,
+            asset_key,
+            asset_kind_hint: record
+                .asset_request
+                .as_ref()
+                .and_then(|request| request.kind_hint)
+                .map(|kind_hint| match kind_hint {
+                    fret_assets::AssetKindHint::Binary => "binary",
+                    fret_assets::AssetKindHint::Image => "image",
+                    fret_assets::AssetKindHint::Svg => "svg",
+                    fret_assets::AssetKindHint::Font => "font",
+                })
+                .map(str::to_string),
+        }
+    }
+}
+
 impl UiFontEnvironmentDiagnosticsSnapshotV1 {
     pub(super) fn from_runtime(
         baseline: Option<&fret_runtime::BundledFontBaselineSnapshot>,
         font_catalog: Option<&fret_runtime::FontCatalog>,
+        renderer_font_environment: Option<&fret_runtime::RendererFontEnvironmentSnapshot>,
         text_font_stack_key: Option<u64>,
         system_font_rescan: Option<fret_runtime::SystemFontRescanState>,
     ) -> Option<Self> {
         if baseline.is_none()
             && font_catalog.is_none()
+            && renderer_font_environment.is_none()
             && text_font_stack_key.is_none()
             && system_font_rescan.is_none()
         {
@@ -435,7 +507,20 @@ impl UiFontEnvironmentDiagnosticsSnapshotV1 {
             bundled_guaranteed_generic_families: baseline.guaranteed_generic_families,
             font_catalog_revision: font_catalog.map(|catalog| catalog.revision),
             font_catalog_family_count: font_catalog.map(|catalog| catalog.families.len() as u64),
-            text_font_stack_key,
+            renderer_font_environment_revision: renderer_font_environment
+                .map(|snapshot| snapshot.revision),
+            renderer_font_sources: renderer_font_environment
+                .map(|snapshot| {
+                    snapshot
+                        .sources
+                        .iter()
+                        .map(UiRendererFontSourceSnapshotV1::from_runtime)
+                        .collect()
+                })
+                .unwrap_or_default(),
+            text_font_stack_key: text_font_stack_key.or_else(|| {
+                renderer_font_environment.and_then(|snapshot| snapshot.text_font_stack_key)
+            }),
             system_font_rescan_in_flight: system_font_rescan.map(|state| state.in_flight),
             system_font_rescan_pending: system_font_rescan.map(|state| state.pending),
         })
@@ -444,7 +529,7 @@ impl UiFontEnvironmentDiagnosticsSnapshotV1 {
 
 #[cfg(test)]
 mod debug_snapshot_types_tests {
-    use super::UiAssetReloadDiagnosticsSnapshotV1;
+    use super::{UiAssetReloadDiagnosticsSnapshotV1, UiFontEnvironmentDiagnosticsSnapshotV1};
 
     #[test]
     fn asset_reload_snapshot_from_runtime_keeps_backend_and_fallback_details() {
@@ -477,6 +562,76 @@ mod debug_snapshot_types_tests {
             snapshot.fallback_message.as_deref(),
             Some("backend unavailable")
         );
+    }
+
+    #[test]
+    fn font_environment_snapshot_from_runtime_keeps_renderer_font_sources() {
+        let snapshot = UiFontEnvironmentDiagnosticsSnapshotV1::from_runtime(
+            Some(&fret_runtime::BundledFontBaselineSnapshot::bundled_profile(
+                "default-subset",
+                "pkg:fret-fonts",
+                vec!["fonts/Inter-roman-subset.ttf".to_string()],
+                vec!["UiSans".to_string()],
+                vec!["Sans".to_string()],
+            )),
+            Some(&fret_runtime::FontCatalog {
+                families: vec!["Inter".to_string()],
+                revision: 3,
+            }),
+            Some(&fret_runtime::RendererFontEnvironmentSnapshot {
+                revision: 2,
+                text_font_stack_key: Some(99),
+                sources: vec![
+                    fret_runtime::RendererFontSourceRecord::bundled_startup(
+                        fret_assets::AssetRequest::new(fret_assets::AssetLocator::bundle(
+                            fret_assets::AssetBundleId::package("fret-fonts"),
+                            "fonts/Inter-roman-subset.ttf",
+                        ))
+                        .with_kind_hint(fret_assets::AssetKindHint::Font),
+                        0x1234,
+                        4096,
+                        1,
+                    ),
+                    fret_runtime::RendererFontSourceRecord::raw_runtime_bytes(0x5678, 2048, 2),
+                ],
+            }),
+            Some(99),
+            Some(fret_runtime::SystemFontRescanState {
+                in_flight: false,
+                pending: true,
+            }),
+        )
+        .expect("font environment snapshot");
+
+        assert_eq!(snapshot.renderer_font_environment_revision, Some(2));
+        assert_eq!(snapshot.renderer_font_sources.len(), 2);
+        assert_eq!(
+            snapshot.renderer_font_sources[0].source_lane,
+            "bundled_startup"
+        );
+        assert_eq!(
+            snapshot.renderer_font_sources[0].asset_bundle.as_deref(),
+            Some("pkg:fret-fonts")
+        );
+        assert_eq!(
+            snapshot.renderer_font_sources[0].asset_key.as_deref(),
+            Some("fonts/Inter-roman-subset.ttf")
+        );
+        assert_eq!(
+            snapshot.renderer_font_sources[0].asset_kind_hint.as_deref(),
+            Some("font")
+        );
+        assert_eq!(
+            snapshot.renderer_font_sources[0].byte_hash_hex,
+            "0000000000001234"
+        );
+        assert_eq!(
+            snapshot.renderer_font_sources[1].source_lane,
+            "raw_runtime_bytes"
+        );
+        assert!(snapshot.renderer_font_sources[1].asset_bundle.is_none());
+        assert_eq!(snapshot.text_font_stack_key, Some(99));
+        assert_eq!(snapshot.system_font_rescan_pending, Some(true));
     }
 }
 

@@ -88,6 +88,9 @@ What exists today:
 - the framework now publishes `BundledFontBaselineSnapshot`.
 - web and the current native winit path install the same bundled default profile and publish the
   same baseline snapshot shape.
+- the runtime now also publishes `RendererFontEnvironmentSnapshot`, so startup bundled fonts,
+  runtime asset-backed font injection, and raw runtime font bytes share one diagnostics-visible
+  renderer source inventory instead of living on separate implicit lanes.
 - `FontFamilyDefaultsPolicy::None` keeps system-font augmentation additive instead of redefining
   the bundled baseline identity.
 
@@ -95,6 +98,8 @@ Why this is still not fully correct:
 
 - the work is only partially aligned across all targets.
 - mobile/package-specific startup evidence is still incomplete.
+- the current renderer inventory snapshot still publishes fingerprints/identity rather than
+  reproducible bytes or a renderer-owned rehydration handle for the future SVG-text bridge.
 - fonts, images, and SVG text are not yet fully closed under one end-to-end asset publication story.
 
 Correct direction:

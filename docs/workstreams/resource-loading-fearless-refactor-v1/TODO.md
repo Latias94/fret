@@ -284,18 +284,44 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - `fret_runtime::BundledFontBaselineSnapshot` now gives runners one explicit runtime global for
       the framework-owned bundled baseline contract.
+    - `fret_runtime::RendererFontEnvironmentSnapshot` now gives runners one shared runtime-visible
+      renderer font inventory:
+      - monotonic `revision`,
+      - `text_font_stack_key`,
+      - accepted renderer source records for `bundled_startup`, `asset_request`, and
+        `raw_runtime_bytes`,
+      - stable byte fingerprints and logical `AssetRequest` identity when available.
     - web and the current native winit startup path now both install bundled default fonts and
       publish the current `fret-fonts::default_profile()` identity (profile name, bundle id,
       logical asset keys, declared roles, guaranteed generics) before startup font-environment
       initialization.
+    - startup bundled baseline injection plus runtime `TextAddFontAssets` / `TextAddFonts` now all
+      feed that same shared source inventory instead of keeping startup-vs-runtime font provenance
+      on separate publication paths.
+    - `fret-bootstrap` diagnostics now export that renderer inventory through
+      `debug.resource_loading.font_environment.renderer_font_*`, so diagnostics bundles can see
+      the same revision/source records the future SVG-text bridge will depend on.
     - native intentionally keeps `FontFamilyDefaultsPolicy::None`, so system-font augmentation
       remains an additive capability instead of redefining the baseline identity.
     - local iOS target evidence now exists:
       - `cargo check -p fret-launch --target aarch64-apple-ios`
   - Remaining:
+    - decide whether Stage 2 needs raw font bytes or a renderer-owned rehydration handle to
+      rebuild a shared SVG-text font environment from the published inventory
     - add stable Android target evidence once the local/CI environment provides NDK clang
       toolchains
     - add mobile-specific diagnostics or startup gates beyond shared native runner wiring
+  - Evidence:
+    - `crates/fret-runtime/src/font_catalog.rs`
+    - `crates/fret-launch/src/runner/font_catalog.rs`
+      (`install_default_bundled_font_baseline_adds_fonts_and_publishes_snapshot`,
+      `inject_font_asset_batch_and_refresh_catalog_records_asset_sources`,
+      `inject_font_blobs_and_refresh_catalog_refreshes_only_when_fonts_were_added`,
+      `publish_renderer_font_environment_sets_key_after_locale_application`)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/{debug_snapshot_impl.rs,debug_snapshot_types.rs}`
+    - `cargo nextest run -p fret-launch`
+    - `cargo nextest run -p fret-bootstrap --features 'ui-app-driver diagnostics' debug_snapshot_types_tests::font_environment_snapshot_from_runtime_keeps_renderer_font_sources`
+    - `cargo check -p fret-bootstrap --features 'ui-app-driver diagnostics'`
 
 - [~] RESLOAD-font-320 Define bundled font profiles/manifests as a real product surface.
   - Minimum guarantees:

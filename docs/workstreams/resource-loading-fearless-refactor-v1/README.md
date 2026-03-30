@@ -207,6 +207,16 @@ This workstream takes a fearless posture:
     current mobile targets,
   - and desktop system-font refresh keeps `FontFamilyDefaultsPolicy::None`, so later system-font
     enumeration augments the live catalog without redefining that baseline identity.
+- runner-visible font publication now also records a shared renderer source inventory:
+  - `fret_runtime::RendererFontEnvironmentSnapshot` tracks a monotonic `revision`, the current
+    `text_font_stack_key`, and accepted renderer font sources across all three current lanes
+    (`bundled_startup`, `asset_request`, `raw_runtime_bytes`),
+  - startup bundled baseline injection plus runtime `TextAddFontAssets` / `TextAddFonts` now all
+    feed that same inventory instead of leaving font provenance split across startup-only and
+    runtime-only paths,
+  - and bootstrap diagnostics now expose that state under
+    `debug.resource_loading.font_environment.renderer_font_*` so future SVG-text work can depend on
+    one runtime-visible source of truth instead of reconstructing it from logs or family names.
 - Accepted ADR coverage now exists for both:
   - icon ownership/package composition (`docs/adr/0065-icon-system-and-asset-packaging.md`),
   - the general portable locator/resolver contract
@@ -304,6 +314,9 @@ soon as the renderer is ready:
 The remaining gap is now narrower:
 
 - native still keeps `FontFamilyDefaultsPolicy::None` and layers optional system scanning on top,
+- the runtime now publishes a real renderer font-source inventory and diagnostics-facing revision,
+  but it still does not expose reproducible bytes or a renderer-owned rehydration handle for the
+  future SVG-text bridge,
 - mobile shell/toolchain verification is still incomplete even though the current non-wasm runner
   path routes through the same startup helper,
 - and Android local verification currently depends on an external NDK clang toolchain that is not

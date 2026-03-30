@@ -1149,10 +1149,11 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         }
 
                         let added =
-                            crate::runner::font_catalog::inject_font_blobs_and_refresh_catalog(
+                            crate::runner::font_catalog::inject_font_asset_batch_and_refresh_catalog(
                                 &mut self.app,
                                 renderer,
-                                batch.font_blobs,
+                                batch,
+                                fret_runtime::RendererFontSourceLane::AssetRequest,
                                 fret_runtime::FontFamilyDefaultsPolicy::None,
                             );
                         if added == 0 {

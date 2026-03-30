@@ -290,10 +290,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         );
                     }
 
-                    let added = super::super::font_catalog::inject_font_blobs_and_refresh_catalog(
+                    let added =
+                        super::super::font_catalog::inject_font_asset_batch_and_refresh_catalog(
                         &mut self.app,
                         &mut gfx.renderer,
-                        batch.font_blobs,
+                        batch,
+                        fret_runtime::RendererFontSourceLane::AssetRequest,
                         fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
                     );
                     if added == 0 {

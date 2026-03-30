@@ -2857,6 +2857,8 @@ mod tests {
                     bundled_guaranteed_generic_families: vec!["sans-serif".to_string()],
                     font_catalog_revision: Some(3),
                     font_catalog_family_count: Some(12),
+                    renderer_font_environment_revision: Some(2),
+                    renderer_font_sources: vec![],
                     text_font_stack_key: Some(7),
                     system_font_rescan_in_flight: Some(false),
                     system_font_rescan_pending: Some(false),
