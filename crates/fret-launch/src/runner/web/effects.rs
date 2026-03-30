@@ -266,17 +266,40 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         for effect in effects {
             match effect {
                 Effect::TextAddFonts { fonts } => {
-                    let added = gfx.renderer.add_fonts(fonts);
+                    let added = super::super::font_catalog::inject_font_blobs_and_refresh_catalog(
+                        &mut self.app,
+                        &mut gfx.renderer,
+                        fonts,
+                        fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
+                    );
                     if added == 0 {
                         continue;
                     }
 
-                    // Font catalog refresh trigger (ADR 0258): `Effect::TextAddFonts`.
-                    let _update = super::super::font_catalog::apply_renderer_font_catalog_update(
+                    self.request_sink_redraw(window);
+                }
+                Effect::TextAddFontAssets { requests } => {
+                    let batch = super::super::font_catalog::resolve_font_asset_requests(
+                        &self.app, requests,
+                    );
+                    for failure in &batch.failures {
+                        tracing::warn!(
+                            locator = ?failure.request.locator,
+                            error = ?failure.error,
+                            "font asset request failed during runtime injection"
+                        );
+                    }
+
+                    let added = super::super::font_catalog::inject_font_blobs_and_refresh_catalog(
                         &mut self.app,
                         &mut gfx.renderer,
+                        batch.font_blobs,
                         fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
                     );
+                    if added == 0 {
+                        continue;
+                    }
+
                     self.request_sink_redraw(window);
                 }
                 Effect::TextRescanSystemFonts => {

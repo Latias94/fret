@@ -136,10 +136,11 @@ struct UiGalleryDefaultProfileFontInjectionState {
 }
 
 fn ui_gallery_font_catalog_signature(app: &App) -> Option<UiGalleryFontCatalogSignature> {
-    app.global::<fret_runtime::FontCatalog>().map(|catalog| UiGalleryFontCatalogSignature {
-        revision: catalog.revision,
-        family_count: catalog.families.len(),
-    })
+    app.global::<fret_runtime::FontCatalog>()
+        .map(|catalog| UiGalleryFontCatalogSignature {
+            revision: catalog.revision,
+            family_count: catalog.families.len(),
+        })
 }
 
 fn ui_gallery_default_profile_expected_families_present(app: &App) -> bool {
@@ -158,17 +159,26 @@ fn ui_gallery_default_profile_expected_families_present(app: &App) -> bool {
         })
 }
 
-pub(crate) fn ui_gallery_default_profile_font_blobs(app: &mut App) -> Vec<Vec<u8>> {
+pub(crate) fn ui_gallery_default_profile_font_requests(
+    app: &mut App,
+) -> Vec<fret::assets::AssetRequest> {
     let _ = ensure_ui_gallery_default_bundled_font_assets_registered(app);
     fret_fonts::default_profile()
         .faces
         .iter()
-        .map(|face| {
-            fret_runtime::resolve_asset_bytes(app, &face.asset_request())
+        .map(|face| face.asset_request())
+        .collect()
+}
+
+pub(crate) fn ui_gallery_default_profile_font_blobs(app: &mut App) -> Vec<Vec<u8>> {
+    ui_gallery_default_profile_font_requests(app)
+        .into_iter()
+        .map(|request| {
+            fret_runtime::resolve_asset_bytes(app, &request)
                 .unwrap_or_else(|err| {
                     panic!(
-                        "ui-gallery bundled font asset '{}' failed to resolve after registration: {:?}",
-                        face.asset_key, err
+                        "ui-gallery bundled font asset '{:?}' failed to resolve after registration: {:?}",
+                        request.locator, err
                     )
                 })
                 .bytes
@@ -198,8 +208,8 @@ pub(crate) fn ensure_ui_gallery_default_profile_fonts_present(
                 return false;
             }
 
-            let fonts = ui_gallery_default_profile_font_blobs(app);
-            app.push_effect(fret_runtime::Effect::TextAddFonts { fonts });
+            let requests = ui_gallery_default_profile_font_requests(app);
+            app.push_effect(fret_runtime::Effect::TextAddFontAssets { requests });
             app.request_redraw(window);
             state.pending = true;
             state.pending_catalog_signature = catalog_signature;
@@ -2281,12 +2291,14 @@ mod tests {
         let mut app = App::new();
         let window = AppWindowId::default();
 
-        assert!(ensure_ui_gallery_default_profile_fonts_present(&mut app, window));
+        assert!(ensure_ui_gallery_default_profile_fonts_present(
+            &mut app, window
+        ));
         let effects = app.flush_effects();
         assert_eq!(
             effects
                 .iter()
-                .filter(|effect| matches!(effect, Effect::TextAddFonts { .. }))
+                .filter(|effect| matches!(effect, Effect::TextAddFontAssets { .. }))
                 .count(),
             1
         );
@@ -2320,12 +2332,14 @@ mod tests {
             families: Vec::new(),
             revision: 2,
         });
-        assert!(ensure_ui_gallery_default_profile_fonts_present(&mut app, window));
+        assert!(ensure_ui_gallery_default_profile_fonts_present(
+            &mut app, window
+        ));
         let effects = app.flush_effects();
         assert_eq!(
             effects
                 .iter()
-                .filter(|effect| matches!(effect, Effect::TextAddFonts { .. }))
+                .filter(|effect| matches!(effect, Effect::TextAddFontAssets { .. }))
                 .count(),
             1
         );

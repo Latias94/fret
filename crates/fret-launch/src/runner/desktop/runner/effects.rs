@@ -1119,17 +1119,46 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                             continue;
                         };
 
-                        let added = renderer.add_fonts(fonts);
+                        let added =
+                            crate::runner::font_catalog::inject_font_blobs_and_refresh_catalog(
+                                &mut self.app,
+                                renderer,
+                                fonts,
+                                fret_runtime::FontFamilyDefaultsPolicy::None,
+                            );
                         if added == 0 {
                             continue;
                         }
 
-                        // Font catalog refresh trigger (ADR 0258): `Effect::TextAddFonts`.
-                        crate::runner::font_catalog::apply_renderer_font_catalog_update(
-                            &mut self.app,
-                            renderer,
-                            fret_runtime::FontFamilyDefaultsPolicy::None,
+                        self.request_redraw_all_windows();
+                    }
+                    Effect::TextAddFontAssets { requests } => {
+                        let Some(renderer) = self.renderer.as_mut() else {
+                            continue;
+                        };
+
+                        let batch = crate::runner::font_catalog::resolve_font_asset_requests(
+                            &self.app, requests,
                         );
+                        for failure in &batch.failures {
+                            tracing::warn!(
+                                locator = ?failure.request.locator,
+                                error = ?failure.error,
+                                "font asset request failed during runtime injection"
+                            );
+                        }
+
+                        let added =
+                            crate::runner::font_catalog::inject_font_blobs_and_refresh_catalog(
+                                &mut self.app,
+                                renderer,
+                                batch.font_blobs,
+                                fret_runtime::FontFamilyDefaultsPolicy::None,
+                            );
+                        if added == 0 {
+                            continue;
+                        }
+
                         self.request_redraw_all_windows();
                     }
                     Effect::TextRescanSystemFonts => {

@@ -91,6 +91,9 @@ Progress update (2026-03-30):
 - `RLRR-003` is landed as a stage-1 closure: startup bundled-font injection now re-resolves bytes
   from the shared runtime asset resolver with no silent fallback path, and the ADR/runtime wording
   now explicitly distinguishes that startup baseline from the runtime `Effect::TextAddFonts` lane.
+- the first-party runtime bundled-font top-up lane now also has an explicit asset-identity effect
+  (`Effect::TextAddFontAssets`), so framework-owned post-startup injections no longer need to
+  masquerade as user-provided raw bytes.
 - `RLRR-004` is landed as an explicit denial: the default bundled profiles now say plainly that
   `serif` is not guaranteed on Web/WASM unless the app bundles it.
 - `RLRR-005` is landed as an explicit limitation note: `fret-ui-assets` now documents that web
@@ -163,8 +166,9 @@ Status note (2026-03-30):
 
 - stage-1 closure is now landed: startup bundled baselines have one truthful owner story
   (`asset identity -> resolver lookup -> renderer byte injection`),
-- `Effect::TextAddFonts` is now documented as the runtime/user-provided raw-byte lane after
-  startup,
+- `Effect::TextAddFontAssets` is now the runtime asset-identity lane for framework-owned/runtime
+  callers after startup,
+- `Effect::TextAddFonts` remains the runtime/user-provided raw-byte lane,
 - full asset-pipeline unification is still future work rather than an implied current guarantee.
 
 ### 4) Web serif guarantees are still open

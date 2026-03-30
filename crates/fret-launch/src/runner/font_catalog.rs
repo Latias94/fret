@@ -1,3 +1,4 @@
+use fret_assets::{AssetLoadError, AssetRequest};
 use fret_core::TextFontFamilyConfig;
 use fret_runtime::fret_i18n::I18nService;
 use fret_runtime::{FontCatalogEntry, FontCatalogUpdate, FontFamilyDefaultsPolicy, GlobalsHost};
@@ -11,7 +12,7 @@ pub trait RendererFontEnvironmentHost {
 }
 
 #[doc(hidden)]
-pub trait BundledFontBaselineHost {
+pub trait FontBlobInjectionHost {
     fn add_font_blobs<I>(&mut self, fonts: I) -> usize
     where
         I: IntoIterator<Item = Vec<u8>>;
@@ -67,13 +68,46 @@ impl RendererFontEnvironmentHost for fret_render::Renderer {
     }
 }
 
-impl BundledFontBaselineHost for fret_render::Renderer {
+impl FontBlobInjectionHost for fret_render::Renderer {
     fn add_font_blobs<I>(&mut self, fonts: I) -> usize
     where
         I: IntoIterator<Item = Vec<u8>>,
     {
         self.add_fonts(fonts)
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[doc(hidden)]
+pub struct FontAssetResolveFailure {
+    pub request: AssetRequest,
+    pub error: AssetLoadError,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[doc(hidden)]
+pub struct ResolvedFontAssetBatch {
+    pub font_blobs: Vec<Vec<u8>>,
+    pub failures: Vec<FontAssetResolveFailure>,
+}
+
+#[doc(hidden)]
+pub fn resolve_font_asset_requests(
+    app: &impl GlobalsHost,
+    requests: impl IntoIterator<Item = AssetRequest>,
+) -> ResolvedFontAssetBatch {
+    let mut batch = ResolvedFontAssetBatch::default();
+
+    for request in requests {
+        match fret_runtime::resolve_asset_bytes(app, &request) {
+            Ok(resolved) => batch.font_blobs.push(resolved.bytes.as_ref().to_vec()),
+            Err(error) => batch
+                .failures
+                .push(FontAssetResolveFailure { request, error }),
+        }
+    }
+
+    batch
 }
 
 fn preferred_text_locale(app: &impl GlobalsHost) -> Option<String> {
@@ -146,28 +180,37 @@ fn bundled_profile_font_blobs_from_runtime_assets(
     app: &impl GlobalsHost,
     profile: &fret_fonts::BundledFontProfile,
 ) -> Vec<Vec<u8>> {
-    profile
-        .faces
-        .iter()
-        .map(|face| {
-            fret_runtime::resolve_asset_bytes(app, &face.asset_request())
-                .unwrap_or_else(|err| {
-                    panic!(
-                        "bundled startup font asset '{}' failed to resolve after registration: {:?}",
-                        face.asset_key, err
-                    )
-                })
-                .bytes
-                .as_ref()
-                .to_vec()
-        })
-        .collect()
+    let batch =
+        resolve_font_asset_requests(app, profile.faces.iter().map(|face| face.asset_request()));
+
+    if let Some(failure) = batch.failures.first() {
+        panic!(
+            "bundled startup font asset '{:?}' failed to resolve after registration: {:?}",
+            failure.request.locator, failure.error
+        );
+    }
+
+    batch.font_blobs
+}
+
+#[doc(hidden)]
+pub fn inject_font_blobs_and_refresh_catalog(
+    app: &mut impl GlobalsHost,
+    renderer: &mut (impl RendererFontEnvironmentHost + FontBlobInjectionHost),
+    fonts: impl IntoIterator<Item = Vec<u8>>,
+    policy: FontFamilyDefaultsPolicy,
+) -> usize {
+    let added = renderer.add_font_blobs(fonts);
+    if added > 0 {
+        let _ = apply_renderer_font_catalog_update(app, renderer, policy);
+    }
+    added
 }
 
 #[doc(hidden)]
 pub fn install_default_bundled_font_baseline(
     app: &mut impl GlobalsHost,
-    renderer: &mut impl BundledFontBaselineHost,
+    renderer: &mut impl FontBlobInjectionHost,
 ) -> usize {
     let profile = fret_fonts::default_profile();
     let _ = ensure_default_bundled_font_assets_registered(app);
@@ -181,7 +224,7 @@ pub fn install_default_bundled_font_baseline(
 #[cfg_attr(not(any(test, target_arch = "wasm32")), allow(dead_code))]
 pub fn initialize_web_startup_font_environment(
     app: &mut impl GlobalsHost,
-    renderer: &mut (impl RendererFontEnvironmentHost + BundledFontBaselineHost),
+    renderer: &mut (impl RendererFontEnvironmentHost + FontBlobInjectionHost),
     config: TextFontFamilyConfig,
 ) -> FontCatalogUpdate {
     let _ = install_default_bundled_font_baseline(app, renderer);
@@ -197,7 +240,7 @@ pub fn initialize_web_startup_font_environment(
 #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub fn initialize_desktop_startup_font_environment(
     app: &mut impl GlobalsHost,
-    renderer: &mut (impl RendererFontEnvironmentHost + BundledFontBaselineHost),
+    renderer: &mut (impl RendererFontEnvironmentHost + FontBlobInjectionHost),
     config: TextFontFamilyConfig,
     startup_async: bool,
 ) -> FontCatalogUpdate {
@@ -431,7 +474,7 @@ mod tests {
         }
     }
 
-    impl BundledFontBaselineHost for TestRenderer {
+    impl FontBlobInjectionHost for TestRenderer {
         fn add_font_blobs<I>(&mut self, fonts: I) -> usize
         where
             I: IntoIterator<Item = Vec<u8>>,
@@ -809,6 +852,40 @@ mod tests {
     }
 
     #[test]
+    fn resolve_font_asset_requests_collects_successes_and_failures() {
+        let mut app = TestApp::default();
+        let face = fret_fonts::default_profile()
+            .faces
+            .first()
+            .copied()
+            .expect("default bundled profile should expose at least one face");
+
+        fret_runtime::register_bundle_asset_entries(
+            &mut app,
+            fret_fonts::bundled_asset_bundle(),
+            fret_fonts::default_profile().asset_entries(),
+        );
+
+        let missing_request = AssetRequest::new(fret_assets::AssetLocator::bundle(
+            fret_fonts::bundled_asset_bundle(),
+            "fonts/missing.ttf",
+        ))
+        .with_kind_hint(fret_assets::AssetKindHint::Font);
+
+        let batch =
+            resolve_font_asset_requests(&app, [face.asset_request(), missing_request.clone()]);
+
+        assert_eq!(batch.font_blobs, vec![face.bytes.to_vec()]);
+        assert_eq!(
+            batch.failures,
+            vec![FontAssetResolveFailure {
+                request: missing_request,
+                error: AssetLoadError::NotFound,
+            }]
+        );
+    }
+
+    #[test]
     fn install_default_bundled_font_baseline_resolves_runtime_asset_bytes_for_startup_injection() {
         let mut app = TestApp::default();
         let mut first_renderer = TestRenderer::default();
@@ -842,6 +919,37 @@ mod tests {
 
         assert_eq!(added, expected_fonts.len());
         assert_eq!(second_renderer.font_blobs, expected_fonts);
+    }
+
+    #[test]
+    fn inject_font_blobs_and_refresh_catalog_refreshes_only_when_fonts_were_added() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer {
+            entries: vec![FontCatalogEntry {
+                family: "Inter".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+
+        let added = inject_font_blobs_and_refresh_catalog(
+            &mut app,
+            &mut renderer,
+            [b"font-bytes".to_vec()],
+            FontFamilyDefaultsPolicy::None,
+        );
+        assert_eq!(added, 1);
+        assert_eq!(renderer.steps, vec!["entries", "families", "locale"]);
+
+        renderer.steps.clear();
+        let added = inject_font_blobs_and_refresh_catalog(
+            &mut app,
+            &mut renderer,
+            std::iter::empty::<Vec<u8>>(),
+            FontFamilyDefaultsPolicy::None,
+        );
+        assert_eq!(added, 0);
+        assert!(renderer.steps.is_empty());
     }
 
     #[test]

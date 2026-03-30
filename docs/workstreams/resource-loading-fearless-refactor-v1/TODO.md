@@ -292,7 +292,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - `BundledFontFaceSpec::{asset_key,asset_locator(),asset_request(),asset_entry()}`,
       - `BundledFontProfile::asset_entries()`.
     - bundled font profiles can now be mounted into the shared asset contract through
-      `StaticAssetEntry` instead of existing only as ad-hoc byte bags for `Effect::TextAddFonts`.
+      `StaticAssetEntry` instead of existing only as ad-hoc byte bags for post-startup font
+      injection.
     - runner startup now consumes the same default profile manifest for both:
       - mounting package-owned bundled font assets into the shared runtime resolver,
       - injecting renderer font bytes from bundled face byte payloads.

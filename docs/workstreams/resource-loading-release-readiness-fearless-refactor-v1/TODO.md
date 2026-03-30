@@ -51,14 +51,17 @@ Tracking format:
     - startup bundled baseline still injects bytes into the renderer, but those bytes now resolve
       through the shared runtime asset resolver after baseline registration with no silent
       fallback path,
+    - first-party runtime bundled-font top-ups can now use `Effect::TextAddFontAssets`, which
+      resolves logical font assets through the shared asset resolver before renderer injection,
     - first-party UI Gallery bundled-font injection now also resolves default-profile faces through
-      the shared runtime asset resolver instead of reading bundled face bytes directly,
+      the shared runtime asset contract instead of masquerading as user-provided raw bytes,
     - repeated baseline installation now respects later runtime asset overrides for the same bundled
       font asset key, proving startup injection is no longer hard-wired to compiled-in bundled face
       bytes,
     - ADR/runtime/repo docs now explicitly describe startup bundled baseline loading as
       `asset identity -> resolver lookup -> renderer byte injection`, while
-      `Effect::TextAddFonts` remains the runtime/user-provided raw-byte lane.
+      `Effect::TextAddFontAssets` is the runtime asset-identity lane and `Effect::TextAddFonts`
+      remains the runtime/user-provided raw-byte lane.
   - Evidence:
     - `crates/fret-launch/src/runner/font_catalog.rs`
     - `crates/fret-runtime/src/effect.rs`

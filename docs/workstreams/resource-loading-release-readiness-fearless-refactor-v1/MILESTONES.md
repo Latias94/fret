@@ -51,8 +51,8 @@ Deliverables:
 Status note (2026-03-30):
 
 - stage-1 convergence is landed: startup bundled baselines now publish bundled asset identity,
-  resolve startup bytes through the shared runtime asset resolver, and document `TextAddFonts` as
-  the post-startup runtime/user raw-byte lane.
+  resolve startup bytes through the shared runtime asset resolver, and document
+  `TextAddFontAssets` vs `TextAddFonts` as distinct post-startup asset-identity vs raw-byte lanes.
 
 Exit criteria:
 

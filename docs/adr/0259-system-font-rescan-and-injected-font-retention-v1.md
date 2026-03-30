@@ -6,8 +6,8 @@
 ## Context
 
 Fret’s renderer shapes text via Parley and enumerates/selects fonts via fontique. Runners expose a best-effort font
-catalog to settings UIs via runtime globals (ADR 0258), and the text system supports injecting font bytes at runtime
-(`Effect::TextAddFonts`).
+catalog to settings UIs via runtime globals (ADR 0258), and the text system supports runtime font injection via either
+resolver-backed asset requests (`Effect::TextAddFontAssets`) or direct raw bytes (`Effect::TextAddFonts`).
 
 Two operational needs show up in editor-grade apps:
 
@@ -83,7 +83,8 @@ the current font-family policy (`TextFontFamilyConfig`) to ensure:
 
 ### 3) Bounded injected font retention (dedupe + LRU eviction)
 
-The renderer retains injected font bytes (from `Effect::TextAddFonts`) so it can re-register them during a system rescan.
+The renderer retains injected font bytes (from `Effect::TextAddFontAssets` and `Effect::TextAddFonts`) so it can
+re-register them during a system rescan.
 
 This retention cache is:
 

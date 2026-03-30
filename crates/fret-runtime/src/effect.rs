@@ -239,6 +239,18 @@ pub enum Effect {
     TextAddFonts {
         fonts: Vec<Vec<u8>>,
     },
+    /// Resolve logical font assets through the shared runtime asset resolver and add the resulting
+    /// bytes to the renderer text system.
+    ///
+    /// This is the framework-owned/runtime asset lane for callers that already have stable asset
+    /// identity and want resolver overrides, diagnostics, and packaged mounts to participate
+    /// before byte injection.
+    ///
+    /// The runner/backend is responsible for resolving each request, applying any successful
+    /// results to the renderer, and triggering any required invalidation/redraw.
+    TextAddFontAssets {
+        requests: Vec<fret_assets::AssetRequest>,
+    },
     /// Request a best-effort rescan of system-installed fonts (native-only).
     ///
     /// Web/WASM runners should ignore this effect, as they cannot access system font databases.

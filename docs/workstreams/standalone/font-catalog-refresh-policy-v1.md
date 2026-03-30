@@ -34,15 +34,15 @@ Evidence:
 
 Goals:
 
-- Document when runners refresh the catalog (startup/adopt + `TextAddFonts`).
+- Document when runners refresh the catalog (startup/adopt + `TextAddFontAssets` / `TextAddFonts`).
 - Ensure the UI gallery / diagnostics tooling does not accidentally depend on “refresh attempt count”.
 
 Evidence (current triggers):
 
 - Desktop runner (startup): `crates/fret-launch/src/runner/desktop/app_handler.rs`
-- Desktop runner (`Effect::TextAddFonts`): `crates/fret-launch/src/runner/desktop/mod.rs`
+- Desktop runner (`Effect::TextAddFontAssets` / `Effect::TextAddFonts`): `crates/fret-launch/src/runner/desktop/mod.rs`
 - Web runner (adopt gfx): `crates/fret-launch/src/runner/web/gfx_init.rs`
-- Web runner (`Effect::TextAddFonts`): `crates/fret-launch/src/runner/web/effects.rs`
+- Web runner (`Effect::TextAddFontAssets` / `Effect::TextAddFonts`): `crates/fret-launch/src/runner/web/effects.rs`
 
 ### M2 (optional): explicit system font rescan surface (native-only)
 
@@ -71,7 +71,8 @@ Notes:
 
 - Desktop runner runs system font rescans on a background thread by default (request-coalesced). Set
   `FRET_TEXT_SYSTEM_FONT_RESCAN_ASYNC=0` to force a synchronous rescan path (useful for debugging).
-- The renderer retains injected font bytes (from `Effect::TextAddFonts`) to re-register them during a system rescan.
+- The renderer retains injected font bytes (from `Effect::TextAddFontAssets` and `Effect::TextAddFonts`) to
+  re-register them during a system rescan.
   This cache is deduped and LRU-evicted under soft caps:
   - `FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT` (default: `256`, max: `4096`)
   - `FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_BYTES` (default: `268435456` = 256 MiB, max: 2 GiB)
