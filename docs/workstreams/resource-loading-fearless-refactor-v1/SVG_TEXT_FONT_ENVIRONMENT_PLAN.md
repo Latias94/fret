@@ -4,12 +4,14 @@
 
 Current truthful baseline:
 
-- the first-party SVG raster pipeline rejects text-bearing SVG assets,
-- the renderer backend now has an internal bridge seed that can rebuild `usvg fontdb` from the
-  current approved text collection and generic mappings, but the shipped SVG raster path does not
-  consume it yet,
+- the renderer-owned first-party SVG raster path can now rasterize text-bearing SVGs when a
+  bridge-backed parse is diagnostics-clean against the current approved text environment,
+- unresolved text-bearing SVGs still fail closed instead of guessing a host font,
+- the low-level `SvgRenderer::render_*_fit_mode(...)` helpers still reject text-bearing SVG assets
+  unless they are explicitly fed from the bridge,
 - outline/icon/illustration SVGs remain supported,
-- long-term SVG text support is deferred until shared invalidation and deterministic gates exist.
+- broader SVG text support is still deferred until shared diagnostics/export and deterministic
+  gates exist.
 
 This document defines that long-term path.
 
@@ -31,15 +33,18 @@ That gap now has a first landed slice:
 - runtime globals publish the identity/revision side through
   `RendererFontEnvironmentSnapshot`,
 - and the renderer can now rebuild a `usvg fontdb` from the current approved text collection
-  without loading system fonts independently.
+  without loading system fonts independently,
+- and the renderer-owned SVG raster path now consumes that bridge for text-bearing SVGs only when
+  the bridge diagnostics are clean.
 
 What is still missing is the end-to-end raster wiring:
 
-- the shipped SVG raster path still rejects `<text>`,
-- bridge rebuilds are not yet keyed into SVG raster/cache invalidation,
-- and deterministic SVG-text gates do not exist yet.
+- bridge diagnostics are still renderer-local and not yet exported through the shared
+  resource-loading diagnostics surface,
+- low-level direct `svg.rs` helpers still reject `<text>` unless explicitly bridged,
+- and deterministic SVG-text gates beyond the current bundled-only subset do not exist yet.
 
-That is why SVG text must still stay rejected for now.
+That is why SVG text support must still stay narrow and diagnostics-gated for now.
 
 ## Non-negotiable contract rules
 
@@ -122,13 +127,14 @@ Status note (2026-03-30):
     - successful fallback hops, and
     - post-layout missing glyphs,
   - focused renderer coverage now locks both the bridge seed and those diagnostics to a
-    bundled-only environment so host system-font drift cannot change the expected outcome.
+    bundled-only environment so host system-font drift cannot change the expected outcome,
+  - the renderer-owned shipped SVG raster path now consumes that bridge for text-bearing SVGs, but
+    only admits parses whose bridge diagnostics are clean.
 - remaining gap:
-  - the bridge is not yet wired into the shipped `render_*_fit_mode(...)` SVG raster path,
-  - shipped bridge-fed raster invalidation is not yet active even though `SvgRasterKey` now
-    carries `text_font_stack_key` for registered text-bearing SVGs,
-  - shipped-path admission does not yet consume the new bridge diagnostics,
-  - and `<text>` remains rejected in the shipped raster path.
+  - bridge diagnostics are not yet surfaced beyond renderer-local gating,
+  - the low-level `render_*_fit_mode(...)` SVG helpers still keep the text-free baseline,
+  - `textPath` / advanced shaping cases remain out of scope,
+  - and broader deterministic runtime/mobile/web gates are still missing.
 
 Once Stage 1 exists, add a renderer-internal `SvgTextFontBridge` that:
 
@@ -143,6 +149,18 @@ This keeps `usvg` as an implementation detail while removing the hidden platform
 ### Stage 3: re-enable a limited, tested SVG text subset
 
 Do not jump from "rejected" to "arbitrary SVG text works".
+
+Status note (2026-03-30):
+
+- landed slice:
+  - the renderer-owned SVG raster path now supports ordinary text-bearing SVGs when the bridge
+    parse is diagnostics-clean,
+  - unresolved font-family or missing-glyph cases still fail closed,
+  - focused renderer tests now cover both admitted and rejected paths under the bundled-only gate.
+- remaining gap:
+  - diagnostics are not yet exported to the shared resource-loading snapshot/predicate surfaces,
+  - the low-level direct SVG helpers still keep the old text-free contract,
+  - and the admitted subset is still intentionally narrow.
 
 Promote support only after focused gates exist for:
 
@@ -191,12 +209,14 @@ This plan does not aim to:
 3. Wire the existing SVG font-bridge seed into the actual SVG raster/cache invalidation path in
    `fret-render-wgpu`.
 4. Add diagnostics/tests before enabling any text-bearing SVG support.
-5. Keep `SvgRenderError::TextNodesUnsupported` as the shipped baseline until the above exists.
+5. Keep unresolved text-bearing SVGs fail-closed until bridge diagnostics can be surfaced through
+   the shared diagnostics vocabulary.
 
 Progress note:
 
-- items 1 through 4 now have first landed slices,
-- item 5 remains open at shipped-path scope because the actual raster path still rejects `<text>`.
+- items 1 through 5 now have first landed slices,
+- the remaining work is no longer "make shipped SVG text possible at all", but "promote the
+  renderer-local diagnostics-gated slice into a fully surfaced shared contract".
 
 ## Evidence anchors
 

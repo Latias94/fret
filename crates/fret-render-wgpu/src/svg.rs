@@ -284,17 +284,36 @@ impl SvgRenderer {
         self.render_rgba_for_tree(&tree, target_box_px, smooth_scale_factor, fit)
     }
 
-    #[cfg(test)]
-    fn render_rgba_fit_mode_with_bridge_font_db(
+    pub(crate) fn render_alpha_mask_fit_mode_with_bridge_font_db(
         &self,
         bytes: &[u8],
         target_box_px: (u32, u32),
         smooth_scale_factor: f32,
         fit: SvgFit,
         fontdb: &usvg::fontdb::Database,
-    ) -> Result<SvgRgbaImage, SvgRenderError> {
+    ) -> Result<(SvgAlphaMask, SvgTextBridgeDiagnostics), SvgRenderError> {
         let outcome = self.parse_tree_with_bridge_font_db(bytes, fontdb)?;
-        self.render_rgba_for_tree(&outcome.tree, target_box_px, smooth_scale_factor, fit)
+        let mask = self.render_alpha_mask_for_tree(
+            &outcome.tree,
+            target_box_px,
+            smooth_scale_factor,
+            fit,
+        )?;
+        Ok((mask, outcome.diagnostics))
+    }
+
+    pub(crate) fn render_rgba_fit_mode_with_bridge_font_db(
+        &self,
+        bytes: &[u8],
+        target_box_px: (u32, u32),
+        smooth_scale_factor: f32,
+        fit: SvgFit,
+        fontdb: &usvg::fontdb::Database,
+    ) -> Result<(SvgRgbaImage, SvgTextBridgeDiagnostics), SvgRenderError> {
+        let outcome = self.parse_tree_with_bridge_font_db(bytes, fontdb)?;
+        let image =
+            self.render_rgba_for_tree(&outcome.tree, target_box_px, smooth_scale_factor, fit)?;
+        Ok((image, outcome.diagnostics))
     }
 }
 
@@ -859,10 +878,12 @@ mod tests {
                 &fontdb,
             )
             .expect("svg text should render when fed from the renderer bridge font db");
+        let (image, diagnostics) = image;
 
         let (w, h) = image.size_px;
         assert!(w > 0 && h > 0);
         assert_eq!(image.rgba.len(), (w as usize) * (h as usize) * 4);
+        assert!(diagnostics.is_clean());
         assert!(
             image.rgba.chunks_exact(4).any(|px| px[3] > 0),
             "expected bridge-backed svg text rasterization to produce covered pixels"

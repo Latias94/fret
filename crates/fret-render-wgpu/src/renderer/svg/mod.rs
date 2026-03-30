@@ -34,8 +34,13 @@ impl SvgRegistryState {
         }
     }
 
+    #[cfg(test)]
     pub(super) fn bytes(&self, svg: fret_core::SvgId) -> Option<&[u8]> {
         self.svgs.get(svg).map(|entry| entry.bytes.as_ref())
+    }
+
+    pub(super) fn bytes_arc(&self, svg: fret_core::SvgId) -> Option<Arc<[u8]>> {
+        self.svgs.get(svg).map(|entry| Arc::clone(&entry.bytes))
     }
 
     pub(super) fn contains_text_nodes(&self, svg: fret_core::SvgId) -> bool {
@@ -121,6 +126,7 @@ pub(super) struct SvgRasterState {
     pub(super) rasters: HashMap<SvgRasterKey, SvgRasterEntry>,
     pub(super) mask_atlas_pages: Vec<Option<SvgMaskAtlasPage>>,
     pub(super) mask_atlas_free: Vec<usize>,
+    pub(super) text_bridge: Option<SvgTextFontBridgeState>,
     pub(super) raster_bytes: u64,
     pub(super) mask_atlas_bytes: u64,
     pub(super) raster_budget_bytes: u64,
@@ -136,6 +142,7 @@ impl Default for SvgRasterState {
             rasters: HashMap::new(),
             mask_atlas_pages: Vec::new(),
             mask_atlas_free: Vec::new(),
+            text_bridge: None,
             raster_bytes: 0,
             mask_atlas_bytes: 0,
             raster_budget_bytes: 64 * 1024 * 1024,
@@ -145,6 +152,11 @@ impl Default for SvgRasterState {
             frame_perf: SvgFramePerfCounters::default(),
         }
     }
+}
+
+pub(super) struct SvgTextFontBridgeState {
+    pub(super) font_stack_key: u64,
+    pub(super) fontdb: Arc<usvg::fontdb::Database>,
 }
 
 impl SvgRasterState {
@@ -283,9 +295,35 @@ mod raster;
 mod tests {
     use super::super::types::SvgRasterKind;
     use super::super::{Point, Px, Rect, Size};
-    use super::{SvgRegistryState, SvgRegistryUnregisterOutcome};
+    use super::{SvgRasterGpu, SvgRegistryState, SvgRegistryUnregisterOutcome};
     use crate::Renderer;
     use fret_core::SvgService;
+    use fret_core::TextCommonFallbackInjection;
+
+    fn bundled_only_svg_text_renderer() -> (crate::WgpuContext, Renderer) {
+        unsafe {
+            std::env::set_var("FRET_TEXT_SYSTEM_FONTS", "0");
+        }
+
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+        let added = renderer.add_fonts(fret_fonts::test_support::face_blobs(
+            fret_fonts::default_profile().faces.iter(),
+        ));
+        assert!(
+            added > 0,
+            "expected bundled fonts to load for SVG text raster tests"
+        );
+
+        let _ = renderer.set_text_font_families(&crate::TextFontFamilyConfig {
+            common_fallback_injection: TextCommonFallbackInjection::CommonFallback,
+            ui_sans: vec!["Inter".to_string()],
+            ui_mono: vec!["JetBrains Mono".to_string()],
+            ..Default::default()
+        });
+
+        (ctx, renderer)
+    }
 
     #[test]
     fn registry_deduplicates_svg_bytes_and_tracks_refcounts() {
@@ -378,5 +416,59 @@ mod tests {
 
         assert_eq!(outline_key0, outline_key1);
         assert_ne!(text_key0, text_key1);
+    }
+
+    #[test]
+    fn ensure_svg_raster_allows_text_when_bridge_diagnostics_are_clean() {
+        let (ctx, mut renderer) = bundled_only_svg_text_renderer();
+        let svg = renderer.register_svg(
+            br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 24"><text x="4" y="18" font-family="Inter" font-size="16">A&#x4E2D;</text></svg>"#,
+        );
+        let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(24.0)));
+        let gpu = SvgRasterGpu {
+            device: &ctx.device,
+            queue: &ctx.queue,
+        };
+
+        let raster = renderer.ensure_svg_raster(
+            &gpu,
+            svg,
+            rect,
+            1.0,
+            SvgRasterKind::Rgba,
+            fret_core::SvgFit::Contain,
+        );
+
+        assert!(
+            raster.is_some(),
+            "expected renderer SVG raster path to allow text when the bridge diagnostics are clean"
+        );
+    }
+
+    #[test]
+    fn ensure_svg_raster_keeps_rejecting_text_when_bridge_diagnostics_are_not_clean() {
+        let (ctx, mut renderer) = bundled_only_svg_text_renderer();
+        let svg = renderer.register_svg(
+            br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 24"><text x="4" y="18" font-family="Inter" font-size="16">&#x0378;</text></svg>"#,
+        );
+        let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(24.0)));
+        let gpu = SvgRasterGpu {
+            device: &ctx.device,
+            queue: &ctx.queue,
+        };
+
+        let raster = renderer.ensure_svg_raster(
+            &gpu,
+            svg,
+            rect,
+            1.0,
+            SvgRasterKind::Rgba,
+            fret_core::SvgFit::Contain,
+        );
+
+        assert!(
+            raster.is_none(),
+            "expected renderer SVG raster path to keep rejecting text when bridge diagnostics report unresolved glyphs"
+        );
     }
 }

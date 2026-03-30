@@ -2,11 +2,38 @@ use super::super::*;
 use super::SvgRasterGpu;
 use fret_core::AlphaMode;
 use fret_core::time::Instant;
+use std::sync::Arc;
 
 use crate::images::{ImageColorSpace, ImageDescriptor};
 use crate::svg::{SMOOTH_SVG_SCALE_FACTOR, upload_alpha_mask, upload_rgba_image};
 
 impl Renderer {
+    fn ensure_svg_text_bridge_font_db(&mut self) -> Arc<usvg::fontdb::Database> {
+        let font_stack_key = self.text_system.font_stack_key();
+        let needs_rebuild = match self.svg_raster_state.text_bridge.as_ref() {
+            Some(bridge) => bridge.font_stack_key != font_stack_key,
+            None => true,
+        };
+
+        if needs_rebuild {
+            let fontdb = Arc::new(self.text_system.build_svg_text_font_db());
+            self.svg_raster_state.text_bridge = Some(super::SvgTextFontBridgeState {
+                font_stack_key,
+                fontdb: Arc::clone(&fontdb),
+            });
+            fontdb
+        } else {
+            Arc::clone(
+                &self
+                    .svg_raster_state
+                    .text_bridge
+                    .as_ref()
+                    .expect("SVG text bridge must be cached when rebuild is false")
+                    .fontdb,
+            )
+        }
+    }
+
     pub(in crate::renderer) fn ensure_svg_raster(
         &mut self,
         gpu: &SvgRasterGpu<'_>,
@@ -57,17 +84,41 @@ impl Renderer {
                 self.svg_raster_state.perf.cache_misses.saturating_add(1);
         }
 
-        let bytes = self.svg_registry_state.bytes(svg)?;
+        let contains_text_nodes = self.svg_registry_state.contains_text_nodes(svg);
+        let bytes = self.svg_registry_state.bytes_arc(svg)?;
         let target_box_px = (key.target_w, key.target_h);
 
         let (image, uv, size_px, approx_bytes, storage) = match kind {
             SvgRasterKind::AlphaMask => {
                 let t_raster = self.svg_raster_state.perf_enabled.then(Instant::now);
-                let mask = self
-                    .svg_registry_state
-                    .renderer
-                    .render_alpha_mask_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
-                    .ok()?;
+                let mask = if contains_text_nodes {
+                    let bridge_font_db = self.ensure_svg_text_bridge_font_db();
+                    let (mask, diagnostics) = self
+                        .svg_registry_state
+                        .renderer
+                        .render_alpha_mask_fit_mode_with_bridge_font_db(
+                            bytes.as_ref(),
+                            target_box_px,
+                            SMOOTH_SVG_SCALE_FACTOR,
+                            fit,
+                            bridge_font_db.as_ref(),
+                        )
+                        .ok()?;
+                    if !diagnostics.is_clean() {
+                        return None;
+                    }
+                    mask
+                } else {
+                    self.svg_registry_state
+                        .renderer
+                        .render_alpha_mask_fit_mode(
+                            bytes.as_ref(),
+                            target_box_px,
+                            SMOOTH_SVG_SCALE_FACTOR,
+                            fit,
+                        )
+                        .ok()?
+                };
                 if let Some(t_raster) = t_raster {
                     self.svg_raster_state.perf.alpha_raster_count = self
                         .svg_raster_state
@@ -135,11 +186,34 @@ impl Renderer {
             }
             SvgRasterKind::Rgba => {
                 let t_raster = self.svg_raster_state.perf_enabled.then(Instant::now);
-                let rgba = self
-                    .svg_registry_state
-                    .renderer
-                    .render_rgba_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
-                    .ok()?;
+                let rgba = if contains_text_nodes {
+                    let bridge_font_db = self.ensure_svg_text_bridge_font_db();
+                    let (rgba, diagnostics) = self
+                        .svg_registry_state
+                        .renderer
+                        .render_rgba_fit_mode_with_bridge_font_db(
+                            bytes.as_ref(),
+                            target_box_px,
+                            SMOOTH_SVG_SCALE_FACTOR,
+                            fit,
+                            bridge_font_db.as_ref(),
+                        )
+                        .ok()?;
+                    if !diagnostics.is_clean() {
+                        return None;
+                    }
+                    rgba
+                } else {
+                    self.svg_registry_state
+                        .renderer
+                        .render_rgba_fit_mode(
+                            bytes.as_ref(),
+                            target_box_px,
+                            SMOOTH_SVG_SCALE_FACTOR,
+                            fit,
+                        )
+                        .ok()?
+                };
                 if let Some(t_raster) = t_raster {
                     self.svg_raster_state.perf.rgba_raster_count = self
                         .svg_raster_state

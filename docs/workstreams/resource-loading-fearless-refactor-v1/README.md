@@ -246,10 +246,11 @@ This workstream takes a fearless posture:
     when watcher installation fails,
   - it only tracks builder-mounted file manifests/directories,
   - and wasm/mobile still have no first-party automatic reload story today.
-- SVG text still does not share the main text baseline story, but the first-party SVG raster path
-  now truthfully rejects text-bearing assets instead of silently loading system fonts in a separate
-  font universe; the long-term shared SVG-text font environment is still tracked under the SVG
-  workstream items.
+- SVG text still does not have a fully surfaced shared diagnostics story, but the first-party
+  renderer-owned SVG raster path now only admits text-bearing assets when a bridge-backed parse is
+  diagnostics-clean against the current approved text environment; unresolved text still fails
+  closed instead of silently loading system fonts in a separate font universe, and the remaining
+  SVG-text work is tracked under the SVG workstream items.
 
 ## Current incorrect logic (must be corrected, not preserved)
 
@@ -338,15 +339,19 @@ So the framework now guarantees one deterministic bundled baseline on web and on
 runner path before platform-specific augmentation, but mobile-specific diagnostics and Android CI
 toolchain evidence are still missing.
 
-### 5) SVG text is now truthfully denied, but still lacks a shared text/font environment
+### 5) SVG text now has a narrow diagnostics-gated lane, but still lacks a shared exported contract
 
 The first-party SVG raster path no longer builds its own `usvg fontdb` or loads system fonts.
-Instead, it rejects text-bearing SVG assets outright:
+Instead, the renderer-owned path only admits text-bearing SVGs when the bridge-backed parse is
+diagnostics-clean against the current text environment, while the low-level direct helpers still
+keep the old text-free baseline:
 
 - `crates/fret-render-wgpu/src/svg.rs`
+- `crates/fret-render-wgpu/src/renderer/svg/raster.rs`
 
-That closes the silent divergence bug, because Fret no longer pretends arbitrary SVG `<text>` is
-portable across hosts when it is actually resolved in a separate font universe.
+That closes the silent divergence bug without reopening host-font guessing, because Fret no longer
+pretends arbitrary SVG `<text>` is portable across hosts when it is actually resolved in a
+separate font universe.
 
 The remaining architectural gap is still real:
 
@@ -632,8 +637,12 @@ For text inside SVG, Fret needs an explicit policy:
 
 Current landed slice:
 
-- the first-party SVG raster pipeline now enforces the short-term rule in code by rejecting
-  text-bearing SVGs through `SvgRenderError::TextNodesUnsupported`
+- the renderer-owned first-party SVG raster path now only allows text-bearing SVGs when the
+  bridge-backed parse is diagnostics-clean against the current approved text environment
+- unresolved font-family or missing-glyph SVG text still fails closed instead of guessing a host
+  font
+- the low-level `SvgRenderer::render_*_fit_mode(...)` helpers still enforce the old text-free
+  baseline through `SvgRenderError::TextNodesUnsupported`
 - outline/icon/illustration SVGs remain supported
 - the staged long-term bridge plan now lives in
   `docs/workstreams/resource-loading-fearless-refactor-v1/SVG_TEXT_FONT_ENVIRONMENT_PLAN.md`

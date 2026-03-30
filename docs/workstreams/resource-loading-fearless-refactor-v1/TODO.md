@@ -398,14 +398,17 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - `crates/fret-render-wgpu/src/svg.rs` no longer builds a private `usvg fontdb` or loads
       system fonts inside the first-party SVG raster path.
-    - the current first-party raster pipeline now parses SVGs with the default `usvg` options and
-      rejects text-bearing assets via `SvgRenderError::TextNodesUnsupported` instead of silently
-      diverging from the framework text baseline.
-    - focused renderer tests now lock both alpha-mask and RGBA SVG raster paths to reject
-      text-bearing SVG input.
+    - the low-level direct SVG helpers still reject text-bearing assets via
+      `SvgRenderError::TextNodesUnsupported` instead of silently diverging from the framework text
+      baseline.
+    - the renderer-owned shipped raster path now only admits text-bearing SVGs when the
+      bridge-backed diagnostics are clean, and otherwise still fails closed.
+    - focused renderer tests now lock both the reject-by-default low-level path and the admitted
+      vs rejected renderer-owned raster path.
   - Evidence:
     - `crates/fret-render-wgpu/src/svg.rs`
       (`svg_text_nodes_are_rejected_for_alpha_and_rgba_rasterization`)
+    - `crates/fret-render-wgpu/src/renderer/svg/{mod.rs,raster.rs}`
     - `docs/workstreams/resource-loading-fearless-refactor-v1/README.md`
     - `cargo nextest run -p fret-render-wgpu svg::tests`
 
@@ -448,14 +451,15 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - focused SVG bridge diagnostics tests now run on the bundled-only lane by forcing
       `FRET_TEXT_SYSTEM_FONTS=0`, so the expected fallback/missing-glyph outcomes are no longer
       host-system-font-dependent.
+    - the renderer-owned shipped SVG raster path now consumes that bridge for text-bearing SVGs,
+      but only allows parses whose bridge diagnostics are clean; unresolved SVG text still fails
+      closed.
   - Remaining:
-    - wire this bridge into the shipped `render_*_fit_mode(...)` SVG raster path
-    - promote the current `SvgRasterKey` text-font-stack participation into actual bridge-fed
-      raster invalidation once shipped `<text>` support is enabled
-    - decide whether shipped `<text>` admission should require a diagnostics-clean bridge parse or
-      keep the current hard rejection baseline
-    - keep `SvgRenderError::TextNodesUnsupported` as the shipped baseline until deterministic
-      end-to-end SVG-text gates exist
+    - export bridge diagnostics beyond renderer-local gating into shared resource-loading
+      diagnostics/predicate surfaces
+    - decide whether the low-level `SvgRenderer::render_*_fit_mode(...)` surface should stay
+      text-free permanently or grow an explicit bridge-backed sibling API
+    - broaden deterministic end-to-end SVG-text gates beyond the current bundled-only subset
   - Evidence:
     - `crates/fret-render-text/src/{parley_font_db.rs,parley_shaper.rs,lib.rs}`
     - `crates/fret-render-wgpu/src/{renderer/config.rs,renderer/svg/{mod.rs,prepare.rs},svg.rs,text/fonts.rs,text/tests.rs}`
