@@ -43,6 +43,15 @@ Deliverables:
 - Desktop/web/mobile share one conceptual font-environment publication flow.
 - System font scanning is layered on top as an optional capability, not the baseline identity.
 
+Status note (2026-03-30):
+
+- web and the shared native winit startup path now both install the same framework-owned bundled
+  baseline before startup font-environment publication,
+- current local evidence includes `cargo check -p fret-launch --target aarch64-apple-ios`, so the
+  same startup contract is at least compile-validated on iOS,
+- desktop system-font refresh now has a focused runner-level gate proving it augments the live
+  catalog without replacing the bundled baseline snapshot or seeding desktop family defaults.
+
 Exit criteria:
 
 - The same app can rely on one documented baseline text environment across desktop and web.

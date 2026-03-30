@@ -201,6 +201,12 @@ This workstream takes a fearless posture:
   - local evidence now includes `cargo check -p fret-launch --target aarch64-apple-ios`,
     while Android target verification is currently blocked by missing NDK clang tooling in the
     local environment.
+- bundled font baseline startup is now deterministic across the shipped first-party runner paths:
+  - web installs the framework-owned bundled baseline immediately when the renderer is adopted,
+  - the shared native winit startup path does the same before first-frame text work on desktop and
+    current mobile targets,
+  - and desktop system-font refresh keeps `FontFamilyDefaultsPolicy::None`, so later system-font
+    enumeration augments the live catalog without redefining that baseline identity.
 - Accepted ADR coverage now exists for both:
   - icon ownership/package composition (`docs/adr/0065-icon-system-and-asset-packaging.md`),
   - the general portable locator/resolver contract
@@ -221,8 +227,9 @@ This workstream takes a fearless posture:
     when watcher installation fails,
   - it only tracks builder-mounted file manifests/directories,
   - and wasm/mobile still have no first-party automatic reload story today.
-- Font startup still remains split across mobile/SVG text and is not fully solved by the current
-  slice.
+- SVG text still remains split from the main text baseline story and is tracked separately under
+  the SVG workstream items; native/web startup baseline publication itself is now aligned across
+  the current first-party runner paths.
 
 ## Current incorrect logic (must be corrected, not preserved)
 

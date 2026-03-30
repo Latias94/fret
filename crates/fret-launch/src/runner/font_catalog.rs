@@ -1070,4 +1070,73 @@ mod tests {
             "expected desktop startup to preserve an empty family config under native policy"
         );
     }
+
+    #[test]
+    fn desktop_system_font_refresh_augments_catalog_without_redefining_baseline() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer::default();
+
+        let startup_update = initialize_desktop_startup_font_environment(
+            &mut app,
+            &mut renderer,
+            TextFontFamilyConfig::default(),
+            false,
+        );
+        let baseline_snapshot = app
+            .global::<fret_runtime::BundledFontBaselineSnapshot>()
+            .cloned()
+            .expect("desktop baseline snapshot");
+
+        assert!(
+            startup_update.config.ui_sans.is_empty()
+                && startup_update.config.ui_serif.is_empty()
+                && startup_update.config.ui_mono.is_empty()
+                && startup_update.config.common_fallback.is_empty(),
+            "desktop startup baseline must not be synthesized from the current system catalog"
+        );
+
+        renderer.steps.clear();
+        renderer.entries = vec![
+            FontCatalogEntry {
+                family: "System UI".to_string(),
+                ..Default::default()
+            },
+            FontCatalogEntry {
+                family: "System Mono".to_string(),
+                ..Default::default()
+            },
+        ];
+
+        let update = apply_renderer_font_catalog_update(
+            &mut app,
+            &mut renderer,
+            FontFamilyDefaultsPolicy::None,
+        );
+
+        assert_eq!(
+            update.families,
+            vec!["System UI".to_string(), "System Mono".to_string()]
+        );
+        assert!(
+            update.config.ui_sans.is_empty()
+                && update.config.ui_serif.is_empty()
+                && update.config.ui_mono.is_empty()
+                && update.config.common_fallback.is_empty(),
+            "system font refresh should augment the live catalog, not redefine the framework baseline"
+        );
+        assert_eq!(
+            app.global::<fret_runtime::BundledFontBaselineSnapshot>()
+                .cloned()
+                .expect("baseline snapshot after refresh"),
+            baseline_snapshot,
+            "desktop system font refresh must not replace the startup bundled baseline identity"
+        );
+        assert_eq!(
+            app.global::<TextFontFamilyConfig>()
+                .cloned()
+                .expect("font config after refresh"),
+            update.config
+        );
+        assert_eq!(renderer.steps, vec!["entries", "families", "locale"]);
+    }
 }

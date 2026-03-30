@@ -259,8 +259,25 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## Font baseline unification
 
-- [ ] RESLOAD-font-300 Make bundled font baseline deterministic on every platform before first-frame
+- [x] RESLOAD-font-300 Make bundled font baseline deterministic on every platform before first-frame
       text work.
+  - Current landed slice:
+    - web startup installs the framework-owned bundled baseline immediately when the renderer
+      becomes available, before startup font-environment publication.
+    - the shared native winit startup path does the same for desktop and current mobile targets
+      before first-frame text work.
+    - runner-level tests now lock that web and desktop startup helpers both inject the same
+      bundled baseline before publishing renderer font-environment state, and local iOS target
+      compile evidence proves the shared native path still builds for mobile.
+  - Evidence:
+    - `crates/fret-launch/src/runner/web/gfx_init.rs`
+    - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
+    - `crates/fret-launch/src/runner/font_catalog.rs`
+      (`initialize_web_startup_font_environment_installs_baseline_and_seeds_missing_families`,
+      `initialize_desktop_startup_font_environment_installs_baseline_for_sync_and_async_modes`,
+      `platform_startup_helpers_share_bundled_baseline_but_keep_distinct_defaults_policy`)
+    - `cargo nextest run -p fret-launch runner::font_catalog`
+    - `cargo check -p fret-launch --target aarch64-apple-ios`
 
 - [~] RESLOAD-font-310 Ensure desktop/web/mobile all publish the same conceptual font-environment
       snapshot shape, even when capabilities differ.
@@ -304,8 +321,27 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - define how mobile/package builds surface framework-owned bundled fonts on the builder/startup
       lane
 
-- [ ] RESLOAD-font-330 Make system-font scan an optional augmentation layer, not the baseline
+- [x] RESLOAD-font-330 Make system-font scan an optional augmentation layer, not the baseline
       identity of the framework.
+  - Current landed slice:
+    - desktop startup still publishes the framework-owned bundled baseline snapshot first and keeps
+      `FontFamilyDefaultsPolicy::None`, so empty family config remains empty instead of being
+      synthesized from the current system catalog.
+    - explicit system-font refresh paths on desktop continue to refresh the live renderer/runtime
+      catalog with `FontFamilyDefaultsPolicy::None`, so system enumeration augments available
+      families without redefining the startup baseline contract.
+    - regression coverage now proves a desktop system-font refresh can replace the live catalog
+      entries while leaving both the startup bundled-baseline snapshot and the empty desktop family
+      config unchanged.
+  - Evidence:
+    - `crates/fret-launch/src/runner/desktop/runner/effects.rs`
+    - `crates/fret-launch/src/runner/font_catalog.rs`
+      (`initialize_desktop_startup_font_environment_installs_baseline_for_sync_and_async_modes`,
+      `desktop_system_font_refresh_augments_catalog_without_redefining_baseline`)
+    - `crates/fret-runtime/src/font_bootstrap.rs`
+    - `docs/adr/0258-font-catalog-refresh-and-revisioning-v1.md`
+    - `docs/adr/0259-system-font-rescan-and-injected-font-retention-v1.md`
+    - `cargo nextest run -p fret-launch runner::font_catalog`
 
 ## SVG and image pipeline unification
 
