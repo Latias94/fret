@@ -2177,6 +2177,7 @@ mod tests {
             (PAGE_TABS, "ui-gallery-tabs"),
             (PAGE_TEXTAREA, "ui-gallery-textarea"),
             (PAGE_TOGGLE_GROUP, "ui-gallery-toggle-group"),
+            (PAGE_TYPOGRAPHY, "ui-gallery-typography"),
         ];
 
         for (page, page_root_test_id) in cases {
@@ -2185,10 +2186,11 @@ mod tests {
     }
 
     #[test]
-    fn gallery_preview_card_contains_avatar_and_card_page_content_at_bottom() {
+    fn gallery_preview_card_contains_selected_component_page_content_at_bottom() {
         let cases = [
             (PAGE_AVATAR, "ui-gallery-avatar"),
             (PAGE_CARD, "ui-gallery-card"),
+            (PAGE_TYPOGRAPHY, "ui-gallery-typography"),
         ];
 
         for (page, page_root_test_id) in cases {
