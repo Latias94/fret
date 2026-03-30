@@ -1,17 +1,33 @@
 # imui sortable recipe v1 - design
 
-Status: active workstream (M1 frozen; first vertical row recipe landed)
+Status: closed closeout lane (first immediate sortable recipe landed)
 
-Last updated: 2026-03-29
+Last updated: 2026-03-30
 
 Related:
 
+- `docs/workstreams/imui-sortable-recipe-v1/CLOSEOUT_AUDIT_2026-03-30.md`
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md`
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/DRAG_DROP_BOUNDARY_AUDIT_2026-03-29.md`
 - `docs/workstreams/imui-sortable-recipe-v1/SECOND_PROOF_SURFACE_DECISION_2026-03-30.md`
 - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/headless-dnd-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/headless-dnd-fearless-refactor-v1/TODO.md`
+
+Closeout reading rule on 2026-03-30:
+
+- treat this document as the historical design record for the now-closed first immediate sortable
+  recipe lane
+- read the shipped outcome from `CLOSEOUT_AUDIT_2026-03-30.md`
+- read `SECOND_PROOF_SURFACE_DECISION_2026-03-30.md` for the explicit “no extra demo before
+  closeout” decision
+- references below to future follow-on work should be read as deferred/new-contract scope, not as
+  an active backlog inside this lane
+
+Status note (2026-03-30): this lane closed after landing the first row-level sortable recipe in
+`ecosystem/fret-ui-kit::recipes`. The remaining deferred items are future contract lanes
+(`source ghost`, `auto-scroll`, `multi-container`, shell/workspace choreography), not unfinished v1
+work.
 
 ## Purpose
 

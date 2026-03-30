@@ -1,12 +1,16 @@
 # imui sortable recipe v1 - TODO
 
-Status: active planning board
+Status: closed closeout board
 
-Last updated: 2026-03-29
+Last updated: 2026-03-30
 
 Tracking doc: `docs/workstreams/imui-sortable-recipe-v1/DESIGN.md`
 
 Milestones: `docs/workstreams/imui-sortable-recipe-v1/MILESTONES.md`
+
+Closeout audit:
+
+- `docs/workstreams/imui-sortable-recipe-v1/CLOSEOUT_AUDIT_2026-03-30.md`
 
 Predecessor closeout:
 
@@ -24,6 +28,14 @@ Decision notes:
 
 This board assumes a fearless refactor posture.
 Compatibility shims are explicitly out of scope.
+
+Closeout note (2026-03-30):
+
+- this lane is complete as the first immediate sortable recipe pass
+- `sortable_row(...)` is the shipped v1 row-level recipe boundary
+- helper extraction into `fret-dnd` is explicitly deferred until a second distinct shared consumer
+  appears
+- remaining future work belongs to new contract lanes, not to this board
 
 ## M0 - Workstream setup and owner freeze
 
@@ -88,7 +100,7 @@ Current M2 outcome:
       `ecosystem/fret-imui/src/tests/interaction.rs` so a recipe-backed reorder flow is covered.
 - [x] Keep `ecosystem/fret-ui-kit/tests/imui_drag_drop_smoke.rs` green to prove the lower seam did
       not absorb recipe policy.
-- [ ] Capture a closeout summary that records:
+- [x] Capture a closeout summary that records:
       what the recipe closed,
       what stayed deferred,
       and whether any helper extraction into `fret-dnd` was actually justified.

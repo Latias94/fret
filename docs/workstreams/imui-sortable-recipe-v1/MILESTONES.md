@@ -1,12 +1,16 @@
 # imui sortable recipe v1 - milestones
 
-Status: active follow-on workstream
+Status: closed closeout record
 
-Last updated: 2026-03-29
+Last updated: 2026-03-30
 
 Tracking doc: `docs/workstreams/imui-sortable-recipe-v1/DESIGN.md`
 
 TODO board: `docs/workstreams/imui-sortable-recipe-v1/TODO.md`
+
+Closeout audit:
+
+- `docs/workstreams/imui-sortable-recipe-v1/CLOSEOUT_AUDIT_2026-03-30.md`
 
 Decision note:
 
@@ -15,6 +19,13 @@ Decision note:
 Predecessor closeout:
 
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md`
+
+Closeout reading rule on 2026-03-30:
+
+- treat this file as the historical progress record for the now-closed first immediate sortable
+  recipe lane
+- read `CLOSEOUT_AUDIT_2026-03-30.md` for the shipped outcome and surviving defer list
+- read `SECOND_PROOF_SURFACE_DECISION_2026-03-30.md` for the proof-surface closure decision
 
 ## Phase A - Workstream setup and owner freeze
 
@@ -65,7 +76,7 @@ Current landed outcome:
 
 ## Phase C - Proof-first implementation
 
-Status: In progress
+Status: Completed
 
 Goal:
 
@@ -100,7 +111,7 @@ Exit gates:
 
 ## Phase D - Gates and closeout
 
-Status: In progress
+Status: Completed
 
 Goal:
 
@@ -117,6 +128,13 @@ Current landed slice:
 - recipe/unit coverage now lives in `ecosystem/fret-ui-kit/src/recipes/imui_sortable.rs`,
 - compile-surface smoke now lives in `ecosystem/fret-ui-kit/tests/imui_sortable_recipe_smoke.rs`,
 - and the existing `imui` reorder interaction gate remains green after the migration to the recipe.
+
+Closeout note:
+
+- the recipe contract is now considered closed for the current single-list vertical-row scope,
+- no extra first-party demo is required before closeout,
+- and wider reorder problems are deferred as new-contract lanes rather than carried as unfinished
+  work here.
 
 Exit gates:
 
