@@ -14,8 +14,13 @@ Base UI combobox lifecycle semantics.
 
 ## Upstream references (source of truth)
 
-- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/combobox.mdx`
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/base/combobox.mdx`
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/radix/combobox.mdx`
+- shadcn component skin: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/combobox.tsx`
 - shadcn demo recipe: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-demo.tsx`
+- shadcn popup recipe: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-popover.tsx`
+- shadcn responsive recipe: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx`
+- Base UI parts surface: `repo-ref/base-ui/packages/react/src/combobox/index.parts.ts`
 - Base UI contract: `repo-ref/base-ui/packages/react/src/combobox/root/AriaCombobox.tsx`
 
 ## Fret implementation anchors
@@ -96,6 +101,8 @@ Base UI combobox lifecycle semantics.
   typed recipe surface (`trigger(...)`, `ComboboxContent::new([..])`,
   `ComboboxInput::children([InputGroupAddon...])`) rather than a generic root `children(...)`
   API.
+- Note: `Combobox::responsive(true)` remains the viewport-driven follow-up for the upstream
+  responsive example instead of becoming another default docs-path section.
 
 ## Known gaps
 
@@ -143,8 +150,10 @@ Base UI combobox lifecycle semantics.
 - `cargo test -p fret-ui-shadcn --lib combobox_builder_steps_apply_the_same_patch_surface -- --exact --nocapture`
 - `cargo test -p fret-ui-shadcn --lib combobox_chips_builder_steps_apply_the_same_patch_surface -- --exact --nocapture`
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app combobox_page_uses_typed_doc_sections_for_app_facing_snippets selected_combobox_input_group_snippet_prefers_typed_input_addons selected_combobox_snippet_helpers_prefer_into_ui_element_over_anyelement selected_combobox_state_rows_prefer_into_ui_element_over_anyelement`
+- `cargo nextest run -p fret-ui-gallery --test combobox_docs_surface`
 - `cargo nextest run -p fret-ui-gallery combobox_visible_section_contents_do_not_overlap_while_scrolling`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json --dir target/fret-diag-combobox-popup-20260327-2 --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-combobox-docs-smoke.json --dir target/fret-diag-combobox-docs-20260329-1 --launch -- cargo run -p fret-ui-gallery`
 - `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-label-click-focus.json --dir target/fret-diag-combobox-label-focus-20260320-1 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-combobox cargo run -p fret-ui-gallery`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-custom-items-detail-filter-react.json --dir target/fret-diag-combobox-custom-items-20260327-1 --launch -- cargo run -p fret-ui-gallery`
 - `cargo check -p fret-ui-gallery --message-format short`

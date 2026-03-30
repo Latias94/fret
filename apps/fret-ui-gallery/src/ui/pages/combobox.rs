@@ -64,7 +64,7 @@ pub(super) fn preview_combobox(
         .no_shell();
     let popup = DocSection::build(cx, "Popup", popup)
         .description(
-            "Matches the Base UI/shadcn popup recipe: a button-like trigger with the searchable listbox in the popover content.",
+            "Matches the Base UI/shadcn popup recipe: a button-like trigger with the searchable input moved into the popup content via typed content parts.",
         )
         .code_rust_from_file_region(snippets::trigger_button::SOURCE, "example")
         .no_shell();
@@ -77,11 +77,16 @@ pub(super) fn preview_combobox(
         .description("All shadcn components should work under an RTL direction provider.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let api_reference = doc_layout::notes_block([
+        "Source axes: `repo-ref/ui/apps/v4/content/docs/components/base/combobox.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/combobox.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/combobox.tsx`, and `repo-ref/ui/apps/v4/registry/new-york-v4/examples/{combobox-demo,combobox-popover,combobox-responsive}.tsx`.",
+        "Headless contract references: `repo-ref/base-ui/packages/react/src/combobox/index.parts.ts` and `repo-ref/base-ui/packages/react/src/combobox/root/AriaCombobox.tsx`.",
+        "`repo-ref/primitives` does not ship a standalone Radix `Combobox` primitive, so this family aligns shadcn docs/recipes and Base UI headless combobox semantics rather than a dedicated Radix primitive export.",
         "API reference: `ecosystem/fret-ui-shadcn/src/combobox.rs`.",
         "`Combobox::new(value, open)` plus the direct builder chain (`.trigger(...).input(...).clear(...).content(...)`) is the default recipe root lane, while `into_element_parts(...)` stays the focused upstream-shaped patch seam on that same lane rather than a separate `compose()` story.",
+        "`Combobox::responsive(true)` remains the viewport-driven follow-up for `repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx` instead of widening the default docs path.",
         "`Combobox::required(true)` now covers both the closed trigger surface and the open search input surface, so required semantics follow the actual combobox node across states without widening the recipe to a generic children API.",
-        "Combobox is intentionally a Popover + Command recipe surface; the current parity work here is page/public-surface alignment rather than a missing overlay, focus, or dismissal mechanism.",
+        "Combobox is intentionally a Popover + Command recipe surface; the remaining work here is docs/public-surface drift rather than a `fret-ui` mechanism bug.",
         "Upstream nested children composition maps to typed parts in Fret: `ComboboxContent::new([ComboboxContentPart::...])`, `ComboboxList::{items,groups}`, and `ComboboxInput::children([InputGroupAddon...])` cover the documented lanes without widening the root to arbitrary generic children.",
+        "No extra generic root `children(...)` / `compose()` / `asChild` API is warranted here: the documented upstream lanes are already represented by `ComboboxContent::new([...])`, `ComboboxList::{items,groups}`, `ComboboxInput::children([InputGroupAddon...])`, and `ComboboxItem::content(...)`.",
         "`Input Group` demonstrates typed `ComboboxInput::children([InputGroupAddon...])` composition for inline addons; keep that surface narrow instead of widening to generic arbitrary children.",
         "If a future upstream example cannot be expressed through that typed surface, widen the recipe/public surface there first; do not push policy into `fret-ui`.",
     ]);

@@ -14,8 +14,10 @@ base examples, and the existing switch web gates.
 ## Upstream references (source of truth)
 
 - Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/switch.mdx`
-- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/switch.tsx`
+- shadcn recipe source: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/switch.tsx`
 - Example compositions: `repo-ref/ui/apps/v4/examples/base/switch-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-description.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-choice-card.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-disabled.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-invalid.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-sizes.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-rtl.tsx`
+- Radix primitive source: `repo-ref/primitives/packages/react/switch/src/switch.tsx`
+- Base UI anatomy references: `repo-ref/base-ui/packages/react/src/switch/root/SwitchRoot.tsx`, `repo-ref/base-ui/packages/react/src/switch/thumb/SwitchThumb.tsx`
 - Existing chrome gates: `goldens/shadcn-web/v4/new-york-v4/switch-demo.json`, `goldens/shadcn-web/v4/new-york-v4/switch-demo.focus.json`
 
 ## Fret implementation
@@ -31,6 +33,7 @@ base examples, and the existing switch web gates.
 - Pass: `Label::for_control(...)` and `FieldLabel::for_control(...)` now cover the upstream `htmlFor` label-binding path across the docs-path demo, size rows, and field-based examples.
 - Pass: `Switch::from_checked(...)` and `action(...)` / `action_payload(...)` remain available for action-first authoring without forcing a `Model<bool>` at every call site.
 - Pass: `FieldLabel::for_control(...)` plus `FieldLabel::wrap(...)` covers the upstream description and choice-card compositions without widening `Switch` into a generic children API.
+- Pass: Radix/Base UI `Root` / `Thumb` anatomy remains a lower-level mechanism/headless reference. It does not require widening the copyable shadcn `Switch` surface unless a real custom-parts product case appears.
 - Pass: `Switch` remains a leaf control; no extra generic `compose()` / `asChild` surface is needed here.
 
 ### Layout & default-style ownership

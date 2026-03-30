@@ -139,11 +139,15 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Upstream content has open/close + side-based slide/zoom animations; Fret matches the same
   motion taxonomy (fade + zoom + side-based slide) on both enter and exit, including a
   geometry-driven transform origin aligned to the anchor/arrow.
+- Pass: UI Gallery now also locks the docs/public surface with a popover-specific docs-surface
+  text test plus a docs smoke script promoted in the shadcn conformance suite, so docs drift is
+  separated from the existing runtime placement, dismissal, and inline-width gates.
 
 ## Validation
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn popover::tests`
+- `cargo test -p fret-ui-gallery --test popover_docs_surface`
 - Contract test: `popover_content_does_not_stretch_children_by_default`
 - UI Gallery diag: `tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-inline-children-button-not-stretched.json`
 - Contract test: `popover_modal_mode_alias_sets_expected_mode`

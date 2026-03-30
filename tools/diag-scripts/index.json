@@ -2754,6 +2754,19 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-alert-dialog-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-docs-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-alert-dialog-least-destructive-initial-focus",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
       "required_capabilities": [],
@@ -4739,6 +4752,22 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": [
+        "Navigates to the Combobox page.",
+        "Verifies the docs-path sections plus the Fret follow-ups are present.",
+        "Captures a bounded bundle for docs-surface triage."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-escape-dismiss-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-escape-dismiss-focus-restore.json",
       "required_capabilities": [
@@ -5566,6 +5595,18 @@
     {
       "id": "ui-gallery-dialog-docs-order-smoke",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-order-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-dialog-detached-trigger-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
@@ -7118,6 +7159,22 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-popover-doc-page-opens",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-doc-page-opens.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": [
+        "Navigates to the Popover page.",
+        "Verifies the docs-path sections plus the Fret follow-ups are present.",
+        "Captures a bounded bundle for docs-surface triage."
+      ]
     },
     {
       "id": "ui-gallery-popover-overlay-placement-after-code-tab-scroll-range",

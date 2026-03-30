@@ -1,10 +1,10 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "ui-gallery-popover-docs-smoke",
+    "name": "ui-gallery-combobox-docs-smoke",
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Navigates to the Popover page.",
+      "Navigates to the Combobox page.",
       "Verifies the docs-path sections plus the Fret follow-ups are present.",
       "Captures a bounded bundle for docs-surface triage."
     ]
@@ -31,29 +31,29 @@
     { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
     { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "popover" },
+    { "type": "type_text", "text": "combobox" },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" }
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-combobox" }
       },
       "timeout_frames": 600
     },
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-combobox" },
       "delta_y": -240.0,
       "timeout_frames": 600
     },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" } },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-combobox" } },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-popover" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-combobox" }
       },
       "timeout_frames": 600
     },
@@ -61,7 +61,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-content" }
+        "target": { "kind": "test_id", "id": "docsec-basic-content" }
       },
       "timeout_frames": 600
     },
@@ -69,7 +69,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-usage-content" }
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-usage-content" }
       },
       "timeout_frames": 600
     },
@@ -77,7 +77,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-basic-content" }
+        "target": { "kind": "test_id", "id": "docsec-custom-items-content" }
       },
       "timeout_frames": 600
     },
@@ -85,7 +85,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-align-content" }
+        "target": { "kind": "test_id", "id": "docsec-multiple-selection-content" }
       },
       "timeout_frames": 600
     },
@@ -93,7 +93,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-content" }
+        "target": { "kind": "test_id", "id": "docsec-clear-button-content" }
       },
       "timeout_frames": 600
     },
@@ -101,7 +101,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-rtl-content" }
+        "target": { "kind": "test_id", "id": "docsec-groups-content" }
       },
       "timeout_frames": 600
     },
@@ -109,7 +109,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-api-reference-title" }
+        "target": { "kind": "test_id", "id": "docsec-invalid-content" }
       },
       "timeout_frames": 600
     },
@@ -117,7 +117,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-api-reference-content" }
+        "target": { "kind": "test_id", "id": "docsec-disabled-content" }
       },
       "timeout_frames": 600
     },
@@ -125,7 +125,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-detached-trigger-content" }
+        "target": { "kind": "test_id", "id": "docsec-auto-highlight-content" }
       },
       "timeout_frames": 600
     },
@@ -133,7 +133,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-open-on-hover-content" }
+        "target": { "kind": "test_id", "id": "docsec-popup-content" }
       },
       "timeout_frames": 600
     },
@@ -141,7 +141,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-inline-children-content" }
+        "target": { "kind": "test_id", "id": "docsec-input-group-content" }
       },
       "timeout_frames": 600
     },
@@ -149,10 +149,58 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-notes-content" }
+        "target": { "kind": "test_id", "id": "docsec-rtl-content" }
       },
       "timeout_frames": 600
     },
-    { "type": "capture_bundle", "label": "ui-gallery-popover-docs-smoke" }
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-api-reference-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "docsec-conformance-demo-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "docsec-groups-separator-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-label-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "docsec-long-list-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-notes-content" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-combobox-docs-smoke" }
   ]
 }

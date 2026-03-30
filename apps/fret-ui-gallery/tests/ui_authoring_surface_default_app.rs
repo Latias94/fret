@@ -2853,14 +2853,14 @@ fn drawer_page_marks_usage_as_default_and_snap_points_as_follow_up() {
     let drawer_page = read("src/ui/pages/drawer.rs");
     assert!(
         drawer_page.contains(
-            "`Usage` is the default copyable `children([...])` path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane."
+            "`Usage` is the default copyable `children([...])` root plus `children(|cx| ...)` section path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane."
         ),
         "src/ui/pages/drawer.rs should distinguish the default children() lane from the Vaul/Fret follow-up lane"
     );
     assert!(
         drawer_page
-            .contains("Default copyable `children([...])` root lane with composable `with_children(...)` content sections."),
-        "src/ui/pages/drawer.rs should label Usage as the default copyable children() + with_children() path"
+            .contains("Default copyable `children([...])` root lane with composable `children(|cx| ...)` content sections."),
+        "src/ui/pages/drawer.rs should label Usage as the default copyable children() + children(|cx| ...) path"
     );
     assert!(
         drawer_page.contains(
@@ -2903,7 +2903,7 @@ fn drawer_snap_points_snippet_prefers_children_root_path() {
             ".children([",
             "shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(",
             "shadcn::DrawerPart::content_with(",
-            "shadcn::DrawerClose::from_scope().build(",
+            "shadcn::DrawerClose::from_scope().child(",
         ],
         &[
             "let open = cx.local_model(|| false);",
@@ -2927,13 +2927,13 @@ fn curated_drawer_snippets_prefer_drawer_close_scope_for_footer_close_actions() 
     ] {
         assert_normalized_markers_present(
             relative_path,
-            &["shadcn::DrawerClose::from_scope().build("],
+            &["shadcn::DrawerClose::from_scope().child("],
         );
     }
 }
 
 #[test]
-fn curated_drawer_snippets_prefer_composable_content_with_children_lane() {
+fn curated_drawer_snippets_prefer_composable_content_children_lane() {
     for relative_path in [
         "src/ui/snippets/drawer/demo.rs",
         "src/ui/snippets/drawer/usage.rs",
@@ -2956,34 +2956,34 @@ fn curated_drawer_snippets_prefer_composable_content_with_children_lane() {
             relative_path,
             &normalized,
             "shadcn::DrawerContent::new([])",
-            ".with_children(",
+            ".children(",
         );
         assert_normalized_chain_reaches(
             relative_path,
             &normalized,
             "shadcn::DrawerHeader::new([])",
-            ".with_children(",
+            ".children(",
         );
         assert_normalized_chain_reaches(
             relative_path,
             &normalized,
             "shadcn::DrawerFooter::new([])",
-            ".with_children(",
+            ".children(",
         );
 
         assert!(
             !normalized.contains("shadcn::DrawerContent::build("),
-            "{} should keep drawer content on the composable with_children lane",
+            "{} should keep drawer content on the composable children() lane",
             manifest_path(relative_path).display()
         );
         assert!(
             !normalized.contains("shadcn::DrawerHeader::build("),
-            "{} should keep drawer headers on the composable with_children lane",
+            "{} should keep drawer headers on the composable children() lane",
             manifest_path(relative_path).display()
         );
         assert!(
             !normalized.contains("shadcn::DrawerFooter::build("),
-            "{} should keep drawer footers on the composable with_children lane",
+            "{} should keep drawer footers on the composable children() lane",
             manifest_path(relative_path).display()
         );
     }

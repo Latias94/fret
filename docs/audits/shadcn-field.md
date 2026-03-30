@@ -14,9 +14,12 @@ docs and example implementations in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/field.mdx`
-- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/field.tsx`
-- Examples: `repo-ref/ui/apps/v4/examples/base/field-input.tsx`, `repo-ref/ui/apps/v4/examples/base/field-checkbox.tsx`, `repo-ref/ui/apps/v4/examples/base/field-group.tsx`, `repo-ref/ui/apps/v4/examples/base/field-fieldset.tsx`, `repo-ref/ui/apps/v4/examples/base/field-choice-card.tsx`, `repo-ref/ui/apps/v4/examples/base/field-switch.tsx`, `repo-ref/ui/apps/v4/examples/base/field-select.tsx`, `repo-ref/ui/apps/v4/examples/base/field-radio.tsx`, `repo-ref/ui/apps/v4/examples/base/field-textarea.tsx`, `repo-ref/ui/apps/v4/examples/base/field-responsive.tsx`, `repo-ref/ui/apps/v4/examples/base/field-rtl.tsx`
+- Docs pages: `repo-ref/ui/apps/v4/content/docs/components/base/field.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/field.mdx`
+- shadcn component implementations: `repo-ref/ui/apps/v4/registry/bases/base/ui/field.tsx`, `repo-ref/ui/apps/v4/registry/bases/radix/ui/field.tsx`
+- shadcn examples: `repo-ref/ui/apps/v4/examples/base/field-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/field-input.tsx`, `repo-ref/ui/apps/v4/examples/base/field-textarea.tsx`, `repo-ref/ui/apps/v4/examples/base/field-select.tsx`, `repo-ref/ui/apps/v4/examples/base/field-slider.tsx`, `repo-ref/ui/apps/v4/examples/base/field-fieldset.tsx`, `repo-ref/ui/apps/v4/examples/base/field-checkbox.tsx`, `repo-ref/ui/apps/v4/examples/base/field-radio.tsx`, `repo-ref/ui/apps/v4/examples/base/field-switch.tsx`, `repo-ref/ui/apps/v4/examples/base/field-choice-card.tsx`, `repo-ref/ui/apps/v4/examples/base/field-group.tsx`, `repo-ref/ui/apps/v4/examples/base/field-rtl.tsx`, `repo-ref/ui/apps/v4/examples/base/field-responsive.tsx`
+- Default visual-chrome examples: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-{demo,input,textarea,select,slider,fieldset,checkbox,radio,switch,choice-card,group,rtl,responsive}.tsx`
+- Headless mechanism reference: `repo-ref/base-ui/packages/react/src/field/index.parts.ts`, `repo-ref/base-ui/packages/react/src/field/root/FieldRoot.tsx`
+- Radix primitives note: `repo-ref/primitives` does not ship a standalone generic `Field` primitive, so the mechanism cross-check for Field-specific association/validation ownership is primarily Base UI rather than Radix.
 
 ## Fret implementation
 
@@ -29,7 +32,8 @@ docs and example implementations in `repo-ref/ui`.
 
 - Pass: `Field`, `FieldSet`, `FieldGroup`, `FieldLegend`, `FieldContent`, `FieldLabel`, `FieldTitle`, `FieldDescription`, `FieldSeparator`, and `FieldError` cover the documented base Field family.
 - Pass: `FieldLabel::for_control(...)` and `FieldLabel::wrap(...)` cover the upstream `htmlFor` and choice-card label-wrapping paths without requiring a generic `compose()` API.
-- Pass: the current public surface already matches the main upstream authoring outcomes; no mechanism-layer expansion is indicated here.
+- Pass: `Field::new([...])` stays the eager wrapper lane, while `Field::build(...)` is the focused field-local association lane for controls that benefit from shared label/description context.
+- Pass: the current public surface already matches the main upstream authoring outcomes; no `fret-ui` mechanism-layer expansion or generic root `children(...)` / `compose()` / `asChild` widening is indicated here.
 
 ### Layout & geometry (shadcn parity)
 
@@ -57,14 +61,16 @@ docs and example implementations in `repo-ref/ui`.
 
 ### Gallery / docs parity
 
-- Pass: the gallery now mirrors the upstream base Field docs path first: `Usage`, `Anatomy`, `Form`, the example set through `Field Group`, `RTL`, `Responsive Layout`, `Validation and Errors`, `Accessibility`, and `API Reference`.
+- Pass: the gallery now keeps the full upstream base/radix Field docs path intact through `API Reference`: `Usage`, `Anatomy`, `Form`, the example set through `Field Group`, `RTL`, `Responsive Layout`, `Validation and Errors`, `Accessibility`, and `API Reference`.
 - Pass: `Usage` and `Anatomy` are now real snippet-backed examples instead of page-local hand-written Rust strings, so the default docs lane is copyable and compiled.
+- Pass: `Composable Children` remains available as a focused Fret follow-up after `API Reference`, which keeps the upstream page order reviewable while still documenting the `FieldLabel::wrap(...)` lane explicitly.
 - Pass: the previous docs drift was mostly page/public-surface parity and source-of-truth staleness (`new-york-v4` references), not a recipe default-style bug.
 - Pass: ownership notes now stay explicit: `FieldDescription` remains recipe-owned full-width wrapping, while plain `FieldLabel` / `FieldTitle` remain intrinsic-width by default unless the enclosing `Field` orientation or call site expands them.
 
 ## Validation
 
-- Gallery compile: `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- Gallery compile: `CARGO_TARGET_DIR=target-codex-field cargo check -p fret-ui-gallery --message-format short`
+- Docs-surface gate: `apps/fret-ui-gallery/tests/field_docs_surface.rs`
 - Source-policy gate: `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` (`field_snippets_prefer_ui_cx_on_the_default_app_surface`, `field_page_usage_prefers_field_wrapper_family`)
 - Gallery docs smoke: `tools/diag-scripts/ui-gallery/field/ui-gallery-field-docs-smoke.json`
 - Web layout gate:

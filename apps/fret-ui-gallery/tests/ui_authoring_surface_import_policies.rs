@@ -566,12 +566,12 @@ fn gallery_drawer_usage_snippet_prefers_curated_part_lane() {
         path.display()
     );
     assert!(
-        source.contains("shadcn::DrawerContent::new([]).with_children("),
-        "{} should keep content composition on the copyable drawer with_children lane",
+        source.contains("shadcn::DrawerContent::new([])") && source.contains(".children(|cx| {"),
+        "{} should keep content composition on the copyable drawer children() lane",
         path.display()
     );
     assert!(
-        source.contains("shadcn::DrawerClose::from_scope().build("),
+        source.contains("shadcn::DrawerClose::from_scope().child("),
         "{} should keep close actions on the copyable drawer lane",
         path.display()
     );

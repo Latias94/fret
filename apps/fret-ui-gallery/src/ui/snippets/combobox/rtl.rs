@@ -22,7 +22,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::ComboboxItem::new("svelte", "SvelteKit"),
                 ])
                 .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
-                .input(shadcn::ComboboxInput::new().placeholder("丕亘丨孬 毓賳 廿胤丕乇 毓賲賱"))
+                .input(shadcn::ComboboxInput::new().placeholder("اختر إطار العمل"))
                 .into_element(cx)
         })]
     })
