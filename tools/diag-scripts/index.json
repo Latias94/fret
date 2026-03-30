@@ -2318,6 +2318,24 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-usage-toggle",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "accordion",
+        "interaction",
+        "shadcn",
+        "ui-gallery",
+        "usage"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-ai-agent-demo-expand-tool",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-agent-demo-expand-tool.json",
       "required_capabilities": [],
@@ -5036,7 +5054,7 @@
       "target_hints": [
         "Sets theme preset to zinc/light.",
         "Navigates to Command page and scrolls to the Docs Demo section.",
-        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. ⌘P) without tofu squares."
       ]
     },
     {
@@ -5059,7 +5077,7 @@
       "target_hints": [
         "Sets theme preset to zinc/dark.",
         "Navigates to Command page and scrolls to the Docs Demo section.",
-        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. ⌘P) without tofu squares."
       ]
     },
     {
@@ -5166,7 +5184,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery-command"
+        "ui-gallery-command",
+        "ui-gallery-shadcn-runtime-evidence"
       ],
       "tags": [
         "command",
@@ -5593,8 +5612,8 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-dialog-docs-order-smoke",
-      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-order-smoke.json",
+      "id": "ui-gallery-dialog-detached-trigger-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
@@ -5605,8 +5624,8 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-dialog-detached-trigger-focus-restore",
-      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json",
+      "id": "ui-gallery-dialog-docs-order-smoke",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-order-smoke.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
@@ -6873,7 +6892,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadcn-runtime-evidence"
       ],
       "tags": [
         "a11y",
@@ -7383,6 +7403,19 @@
         "scrollbar",
         "ui_gallery"
       ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-select-commit-and-label-update",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
