@@ -52,6 +52,10 @@ It complements (but does not replace) ADRs:
 
 ## P1 - Authoring surfaces (imui convergence)
 
+- Track the fearless stack reset of the in-tree `imui` surface in:
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
 - Track the fearless v2 consolidation of immediate-style authoring in:
   - `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md`
   - `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2-todo.md`

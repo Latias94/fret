@@ -299,12 +299,14 @@ impl UiDiagnosticsService {
             UiWindowTargetV1::FirstSeenOther => self
                 .known_windows
                 .iter()
-                .copied().find(|w| *w != current_window),
+                .copied()
+                .find(|w| *w != current_window),
             UiWindowTargetV1::LastSeen => last_seen,
             UiWindowTargetV1::LastSeenOther => self
                 .known_windows
                 .iter()
-                .copied().rfind(|w| *w != current_window),
+                .copied()
+                .rfind(|w| *w != current_window),
             UiWindowTargetV1::WindowFfi { window } => {
                 let want = AppWindowId::from(KeyData::from_ffi(window));
                 self.known_windows.contains(&want).then_some(want)
@@ -975,8 +977,7 @@ impl UiDiagnosticsService {
             // sequences), keep the script alive by migrating it to a remaining window instead of
             // silently dropping it and letting tooling time out.
             let fallback = if active.anchor_window != window
-                && self
-                    .known_windows.contains(&active.anchor_window)
+                && self.known_windows.contains(&active.anchor_window)
             {
                 Some(active.anchor_window)
             } else {
