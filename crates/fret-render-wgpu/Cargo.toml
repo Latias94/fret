@@ -44,7 +44,7 @@ naga = { workspace = true, features = ["wgsl-in"] }
 
 [dev-dependencies]
 pollster.workspace = true
-fret-fonts = { version = "0.1.0", path = "../fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite"] }
+fret-fonts = { version = "0.1.0", path = "../fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite", "test-support"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"

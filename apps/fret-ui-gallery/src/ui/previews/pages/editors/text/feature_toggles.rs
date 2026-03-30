@@ -9,7 +9,6 @@ pub(in crate::ui) fn preview_text_feature_toggles(
 ) -> Vec<AnyElement> {
     #[derive(Default)]
     struct FeatureTogglesState {
-        injected: bool,
         liga: bool,
         calt: bool,
         ss01: bool,
@@ -20,20 +19,7 @@ pub(in crate::ui) fn preview_text_feature_toggles(
         |st| st.clone(),
     );
 
-    {
-        let mut st = state.borrow_mut();
-        if !st.injected {
-            // Ensure bundled fonts are registered even in "no system fonts" mode.
-            let fonts = fret_fonts::default_fonts()
-                .iter()
-                .map(|b| b.to_vec())
-                .collect::<Vec<_>>();
-            cx.app
-                .push_effect(fret_runtime::Effect::TextAddFonts { fonts });
-            cx.app.request_redraw(cx.window);
-            st.injected = true;
-        }
-    }
+    let _ = crate::driver::ensure_ui_gallery_default_profile_fonts_present(cx.app, cx.window);
 
     let header = ui::v_flex(|cx| {
         vec![

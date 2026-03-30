@@ -72,6 +72,12 @@ Runners should refresh the catalog only on:
 
 No periodic scanning is implied by this ADR.
 
+The framework-owned startup bundled baseline is a separate bootstrap step rather than an additional
+refresh trigger: it should publish package-owned bundled font assets, resolve the same logical
+assets through the shared runtime contract, and then inject the resulting bytes into the renderer
+before the initial catalog snapshot is published. `Effect::TextAddFonts` remains the explicit
+runtime/user-provided raw-byte lane after startup.
+
 ### 4) Catalog metadata probes must remain best-effort and budgetable
 
 Some picker-facing metadata requires reading additional font tables (e.g. monospace hints). These probes:
@@ -88,6 +94,7 @@ Current knobs:
 ## Evidence: current refresh triggers (implementation)
 
 - Desktop runner (startup): `crates/fret-launch/src/runner/desktop/app_handler.rs`
+- Shared bundled-baseline bootstrap: `crates/fret-launch/src/runner/font_catalog.rs`
 - Desktop runner (`Effect::TextAddFonts`): `crates/fret-launch/src/runner/desktop/mod.rs`
 - Desktop runner (`Effect::TextRescanSystemFonts`): `crates/fret-launch/src/runner/desktop/mod.rs`
 - Web runner (adopt gfx): `crates/fret-launch/src/runner/web/gfx_init.rs`

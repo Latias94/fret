@@ -16,7 +16,7 @@ pub(in crate::ui) fn preview_text_outline_stroke(
 
     #[derive(Default)]
     struct OutlineStrokeState {
-        injected: bool,
+        controls_initialized: bool,
         outline_enabled: bool,
         outline_width_idx: usize,
         prepared_key: Option<PreparedKey>,
@@ -31,19 +31,14 @@ pub(in crate::ui) fn preview_text_outline_stroke(
         |st| st.clone(),
     );
 
+    let _ = crate::driver::ensure_ui_gallery_default_profile_fonts_present(cx.app, cx.window);
+
     {
         let mut st = state.borrow_mut();
-        if !st.injected {
-            let fonts = fret_fonts::default_fonts()
-                .iter()
-                .map(|b| b.to_vec())
-                .collect::<Vec<_>>();
-            cx.app
-                .push_effect(fret_runtime::Effect::TextAddFonts { fonts });
-            cx.app.request_redraw(cx.window);
-            st.injected = true;
+        if !st.controls_initialized {
             st.outline_enabled = true;
             st.outline_width_idx = 2;
+            st.controls_initialized = true;
         }
     }
 

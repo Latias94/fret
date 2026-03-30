@@ -48,7 +48,7 @@ Core crates live in `crates/` and must remain backend-agnostic:
 - `fret-render-core`: portable render-facing contract types.
 - `fret-render-wgpu`: wgpu renderer implementation (pipelines + text/svg rasterization + uploads).
 - `fret-render`: compatibility facade for the default renderer backend.
-- `fret-fonts`: bundled default font bytes for wasm/bootstrap (fed to `Effect::TextAddFonts`).
+- `fret-fonts`: bundled default font assets/profiles for wasm/bootstrap; startup baselines publish package-owned asset identity and resolve it to bytes for renderer injection.
 - `fret-platform`: portable platform I/O contracts (clipboard, file dialogs, external drop reading, open-url).
 - `fret`: facade crate (re-exports). It must not pull in backends by default.
 

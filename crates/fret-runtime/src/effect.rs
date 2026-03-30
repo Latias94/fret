@@ -230,6 +230,10 @@ pub enum Effect {
     },
     /// Add font bytes (TTF/OTF/TTC) to the renderer text system.
     ///
+    /// This is the runtime/user-provided raw-byte lane. Framework-owned bundled startup baselines
+    /// should publish logical asset identity through the shared runtime asset resolver and resolve
+    /// those assets to bytes before renderer injection.
+    ///
     /// The runner/backend is responsible for applying this to the renderer and triggering any
     /// required invalidation/redraw.
     TextAddFonts {

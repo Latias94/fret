@@ -21,10 +21,15 @@ read-fonts.workspace = true
 # small CJK subset to avoid "tofu" for common mixed-script UIs.
 default = ["bootstrap-subset", "cjk-lite"]
 
+# Test-only helpers that convert face manifests into owned byte blobs for deterministic
+# renderer/shaper conformance gates. Not intended for production/runtime loading paths.
+test-support = []
+
 # Compatibility alias.
 bootstrap = ["bootstrap-subset"]
 
-# UI sans + UI mono subset (plus legacy mono subset) intended to be fed into `Effect::TextAddFonts`.
+# UI sans + UI mono subset (plus legacy mono subset) for startup bootstrap or other raw-byte font
+# injection paths.
 bootstrap-subset = []
 
 # Full font files (larger); useful for native debug and for apps that can afford bigger WASM payloads.

@@ -1467,20 +1467,19 @@ mod tests {
 
     fn shaper_with_bundled_fonts() -> ParleyShaper {
         let mut shaper = ParleyShaper::new_without_system_fonts();
-        let added = shaper.add_fonts(
-            fret_fonts::bootstrap_fonts()
+        let added = shaper.add_fonts(fret_fonts::test_support::face_blobs(
+            fret_fonts::bootstrap_profile()
+                .faces
                 .iter()
-                .copied()
                 .chain(
                     fret_fonts::default_profile()
-                        .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+                        .faces_for_role(fret_fonts::BundledFontRole::EmojiFallback),
                 )
                 .chain(
                     fret_fonts::default_profile()
-                        .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
-                )
-                .map(|b| b.to_vec()),
-        );
+                        .faces_for_role(fret_fonts::BundledFontRole::CjkFallback),
+                ),
+        ));
         assert!(added > 0, "expected bundled fonts to load");
         shaper
     }
@@ -1665,7 +1664,9 @@ mod tests {
             "expected catalog entries to be empty of Inter before adding bundled fonts"
         );
 
-        let added = shaper.add_fonts(fret_fonts::bootstrap_fonts().iter().map(|b| b.to_vec()));
+        let added = shaper.add_fonts(fret_fonts::test_support::face_blobs(
+            fret_fonts::bootstrap_profile().faces.iter(),
+        ));
         assert!(added > 0, "expected bundled fonts to load");
 
         let names1 = shaper.all_font_names();
@@ -1733,7 +1734,9 @@ mod tests {
             "expected repeated cached enumerations not to rebuild the catalog"
         );
 
-        let added = shaper.add_fonts(fret_fonts::bootstrap_fonts().iter().map(|b| b.to_vec()));
+        let added = shaper.add_fonts(fret_fonts::test_support::face_blobs(
+            fret_fonts::bootstrap_profile().faces.iter(),
+        ));
         assert!(added > 0, "expected bundled fonts to load");
         let snapshot3 = shaper.font_db_diagnostics_snapshot();
         assert!(
@@ -1871,7 +1874,9 @@ mod tests {
     #[test]
     fn clamps_line_height_to_font_extents() {
         let mut shaper = ParleyShaper::new_without_system_fonts();
-        shaper.add_fonts(fret_fonts::default_fonts().iter().map(|b| b.to_vec()));
+        shaper.add_fonts(fret_fonts::test_support::face_blobs(
+            fret_fonts::default_profile().faces.iter(),
+        ));
 
         let style = TextStyle {
             font: FontId::default(),
@@ -1896,7 +1901,9 @@ mod tests {
     #[test]
     fn normalizes_descent_to_positive_magnitude() {
         let mut shaper = ParleyShaper::new_without_system_fonts();
-        shaper.add_fonts(fret_fonts::default_fonts().iter().map(|b| b.to_vec()));
+        shaper.add_fonts(fret_fonts::test_support::face_blobs(
+            fret_fonts::default_profile().faces.iter(),
+        ));
 
         let style = TextStyle {
             font: FontId::default(),
@@ -1948,7 +1955,9 @@ mod tests {
     #[test]
     fn respects_explicit_line_height_override() {
         let mut shaper = ParleyShaper::new_without_system_fonts();
-        shaper.add_fonts(fret_fonts::default_fonts().iter().map(|b| b.to_vec()));
+        shaper.add_fonts(fret_fonts::test_support::face_blobs(
+            fret_fonts::default_profile().faces.iter(),
+        ));
 
         let style = TextStyle {
             font: FontId::default(),
@@ -1965,7 +1974,9 @@ mod tests {
     #[test]
     fn explicit_line_height_increases_baseline_via_half_leading() {
         let mut shaper = ParleyShaper::new_without_system_fonts();
-        shaper.add_fonts(fret_fonts::default_fonts().iter().map(|b| b.to_vec()));
+        shaper.add_fonts(fret_fonts::test_support::face_blobs(
+            fret_fonts::default_profile().faces.iter(),
+        ));
 
         let base = TextStyle {
             font: FontId::default(),

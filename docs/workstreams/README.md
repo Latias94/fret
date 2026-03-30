@@ -16,7 +16,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 173
+- Dedicated directories: 188
 - Standalone markdown files: 44 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -136,9 +136,11 @@ Rule:
 - `docs/workstreams/a11y-range-semantics-fearless-refactor-v1/` — first 2026-02-23, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/a11y-semantics-closure-v1/` — first 2026-02-23, latest 2026-02-23, 3 markdown docs
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/` — first 2026-03-02, latest 2026-03-16, 50 markdown docs
+- `docs/workstreams/action-payload-surface-dedup-v1/` — first n/a, latest n/a, 0 markdown docs
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/` — first 2026-03-17, latest 2026-03-17, 8 markdown docs
 - `docs/workstreams/ai-elements-port/` — first 2026-02-05, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/animata-recipes-v1/` — first 2026-02-13, latest 2026-02-27, 2 markdown docs
+- `docs/workstreams/app-composition-density-follow-on-v1/` — first 2026-03-17, latest 2026-03-20, 7 markdown docs
 - `docs/workstreams/app-entry-builder-v1/` — first 2026-02-26, latest 2026-03-12, 3 markdown docs
 - `docs/workstreams/app-iteration-fast-restart-v1/` — first 2026-02-15, latest 2026-02-15, 3 markdown docs
 - `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/` — first 2026-03-16, latest 2026-03-20, 10 markdown docs
@@ -150,6 +152,7 @@ Rule:
 - `docs/workstreams/carousel-embla-fearless-refactor-v1/` — first 2026-02-26, latest 2026-03-02, 11 markdown docs
 - `docs/workstreams/carousel-embla-parity-v1/` — first 2026-02-13, latest 2026-02-27, 3 markdown docs
 - `docs/workstreams/carousel-embla-parity-v2/` — first 2026-02-28, latest 2026-03-03, 5 markdown docs
+- `docs/workstreams/clipboard-write-completion-fearless-refactor-v1/` — first 2026-03-25, latest 2026-03-25, 5 markdown docs
 - `docs/workstreams/code-editor-ecosystem-v1/` — first 2026-01-27, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/component-ecosystem-state-integration-v1/` — first 2026-02-06, latest 2026-02-14, 2 markdown docs
 - `docs/workstreams/container-queries-v1/` — first 2026-02-09, latest 2026-02-11, 3 markdown docs
@@ -164,6 +167,9 @@ Rule:
 - `docs/workstreams/diag-architecture-fearless-refactor-v1/` — first 2026-03-02, latest 2026-03-06, 20 markdown docs
 - `docs/workstreams/diag-bundle-schema-v2/` — first 2026-02-21, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/diag-cli-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-26, 5 markdown docs
+- `docs/workstreams/diag-cli-first-party-migration-v1/` — first 2026-03-26, latest 2026-03-26, 1 markdown docs
+- `docs/workstreams/diag-cli-help-and-gates-v1/` — first 2026-03-26, latest 2026-03-26, 1 markdown docs
+- `docs/workstreams/diag-cli-main-lanes-hardening-v1/` — first 2026-03-26, latest 2026-03-26, 1 markdown docs
 - `docs/workstreams/diag-devtools-gui-v1/` — first 2026-02-07, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/` — first 2026-02-10, latest 2026-02-28, 9 markdown docs
 - `docs/workstreams/diag-fearless-refactor-v1/` — first 2026-02-21, latest 2026-03-06, 16 markdown docs
@@ -183,7 +189,6 @@ Rule:
 - `docs/workstreams/editor-tabstrip-unification-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-05, 7 markdown docs
 - `docs/workstreams/editor-text-pipeline-v1/` — first 2026-02-14, latest 2026-03-03, 3 markdown docs
 - `docs/workstreams/environment-queries-v1/` — first 2026-02-09, latest 2026-03-12, 6 markdown docs
-- `docs/workstreams/environment-queries-v1-extensions/` — first n/a, latest n/a, 0 markdown docs
 - `docs/workstreams/example-suite-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-12, 9 markdown docs
 - `docs/workstreams/external-texture-imports-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/external-texture-imports-v2-zero-low-copy/` — first 2026-02-16, latest 2026-02-24, 3 markdown docs
@@ -191,6 +196,7 @@ Rule:
 - `docs/workstreams/foreground-style-context-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-06, 3 markdown docs
 - `docs/workstreams/foundation-closure-p0/` — first 2026-01-28, latest 2026-02-11, 2 markdown docs
 - `docs/workstreams/font-system-fearless-refactor-v1/` — first 2026-03-13, latest 2026-03-13, 3 markdown docs
+- `docs/workstreams/font-mainline-fearless-refactor-v1/` — first 2026-03-14, latest 2026-03-14, 3 markdown docs
 - `docs/workstreams/framework-modularity-fearless-refactor-v1/` — first 2026-02-27, latest 2026-02-27, 3 markdown docs
 - `docs/workstreams/fretboard-cli-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-26, 4 markdown docs
 - `docs/workstreams/fret-interaction-kernel-v1/` — first 2026-02-10, latest 2026-03-09, 3 markdown docs
@@ -203,6 +209,7 @@ Rule:
 - `docs/workstreams/genui-json-render-v1/` — first 2026-02-14, latest 2026-03-02, 3 markdown docs
 - `docs/workstreams/gesture-recognizers-v1/` — first 2026-02-11, latest 2026-02-11, 3 markdown docs
 - `docs/workstreams/gpui-parity-refactor/` — first 2026-01-15, latest 2026-02-16, 2 markdown docs
+- `docs/workstreams/headless-dnd-fearless-refactor-v1/` — first 2026-03-13, latest 2026-03-13, 12 markdown docs
 - `docs/workstreams/headless-table-tanstack-parity/` — first 2026-02-04, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/hotpatch-devloop-alignment-v1/` — first 2026-02-15, latest 2026-03-01, 4 markdown docs
 - `docs/workstreams/image-source-view-cache-v1/` — first 2026-02-13, latest 2026-02-13, 3 markdown docs
@@ -250,11 +257,14 @@ Rule:
 - `docs/workstreams/renderer-effect-backdrop-warp-v2/` — first 2026-02-18, latest 2026-02-20, 3 markdown docs
 - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/` — first 2026-02-25, latest 2026-03-03, 7 markdown docs
 - `docs/workstreams/renderer-execute-pass-recorders-modularization-v1/` — first 2026-02-22, latest 2026-02-22, 5 markdown docs
+- `docs/workstreams/renderer-modularity-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-13, 8 markdown docs
 - `docs/workstreams/renderer-paint-gpu-storage-unification-v1/` — first 2026-02-16, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/renderer-render-plan-semantics-audit-v1/` — first 2026-02-22, latest 2026-02-23, 3 markdown docs
 - `docs/workstreams/renderer-scene-encoding-semantics-audit-v1/` — first 2026-02-23, latest 2026-02-23, 3 markdown docs
 - `docs/workstreams/renderer-upstream-semantics-parity-v1/` — first 2026-02-22, latest 2026-02-22, 3 markdown docs
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1/` — first 2026-02-14, latest 2026-02-23, 4 markdown docs
+- `docs/workstreams/resource-loading-fearless-refactor-v1/` — first 2026-03-15, latest 2026-03-16, 7 markdown docs
+- `docs/workstreams/resource-loading-release-readiness-fearless-refactor-v1/` — first n/a, latest n/a, 3 markdown docs
 - `docs/workstreams/retained-bridge-exit-v1/` — first 2026-02-07, latest 2026-02-08, 2 markdown docs
 - `docs/workstreams/router-tanstack-parity-v1/` — first 2026-02-07, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/router-ui-v1/` — first 2026-02-08, latest 2026-03-12, 2 markdown docs

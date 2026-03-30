@@ -101,3 +101,6 @@ js-sys = "0.3"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Element", "EventTarget", "File", "FilePropertyBag", "HtmlCanvasElement", "HtmlElement", "Location", "MediaQueryList", "MediaQueryListEvent", "Node", "UrlSearchParams", "VisualViewport", "Window", "console"] }
+
+[dev-dependencies]
+fret-fonts = { version = "0.1.0", path = "../fret-fonts", features = ["test-support"] }

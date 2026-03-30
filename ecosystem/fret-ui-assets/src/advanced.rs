@@ -22,24 +22,3 @@ pub fn configure_caches_with_ui_services_and_budgets(
 ) {
     crate::app::configure_caches_with_budgets(app, budgets);
 }
-
-/// Deprecated: use [`configure_caches_with_ui_services`] to make the partial wiring semantics explicit.
-#[deprecated(
-    note = "use configure_caches_with_ui_services; this only configures caches and does not wire event handling"
-)]
-pub fn install_with_ui_services(app: &mut fret_app::App, services: &mut dyn UiServices) {
-    configure_caches_with_ui_services(app, services);
-}
-
-/// Deprecated: use [`configure_caches_with_ui_services_and_budgets`] to make the partial wiring
-/// semantics explicit.
-#[deprecated(
-    note = "use configure_caches_with_ui_services_and_budgets; this only configures caches and does not wire event handling"
-)]
-pub fn install_with_ui_services_and_budgets(
-    app: &mut fret_app::App,
-    services: &mut dyn UiServices,
-    budgets: UiAssetsBudgets,
-) {
-    configure_caches_with_ui_services_and_budgets(app, services, budgets);
-}

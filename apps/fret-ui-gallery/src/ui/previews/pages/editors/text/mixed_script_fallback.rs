@@ -7,36 +7,13 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
     cx: &mut UiCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct MixedScriptFallbackState {
-        injected: bool,
-    }
-
-    let state = cx.slot_state(
-        || std::rc::Rc::new(std::cell::RefCell::new(MixedScriptFallbackState::default())),
-        |st| st.clone(),
-    );
-
-    {
-        let mut st = state.borrow_mut();
-        if !st.injected {
-            // Ensure the bundled default font set is registered even in "no system fonts" mode.
-            let fonts = fret_fonts::default_fonts()
-                .iter()
-                .map(|b| b.to_vec())
-                .collect::<Vec<_>>();
-            cx.app
-                .push_effect(fret_runtime::Effect::TextAddFonts { fonts });
-            cx.app.request_redraw(cx.window);
-            st.injected = true;
-        }
-    }
+    let _ = crate::driver::ensure_ui_gallery_default_profile_fonts_present(cx.app, cx.window);
 
     let header = ui::v_flex(|cx| {
             vec![
                 cx.text("Goal: ensure mixed-script fallback stays tofu-free with bundled fonts."),
                 cx.text("Tip: set FRET_TEXT_SYSTEM_FONTS=0 to validate the deterministic no-system-fonts path on native."),
-                cx.text("This page injects the bundled default font set once, then renders a few coverage strings."),
+                cx.text("This page re-injects the bundled default font set whenever the live catalog no longer exposes the expected bundled families."),
             ]
         })
             .layout(LayoutRefinement::default().w_full())

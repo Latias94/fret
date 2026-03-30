@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_assets::{AssetKindHint, AssetLocator, AssetRequest};
+use fret_assets::{AssetCapabilities, AssetKindHint, AssetLocator, AssetRequest};
 use fret_core::{Color, Corners, ImageId, Px, SemanticsRole, TextOverflow, TextWrap, ViewportFit};
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -252,6 +252,17 @@ fn attachment_preview_request_for(data: &AttachmentData) -> Option<AssetRequest>
     }
 }
 
+fn capability_gated_attachment_preview_request_for(
+    data: &AttachmentData,
+    capabilities: Option<AssetCapabilities>,
+) -> Option<AssetRequest> {
+    let request = attachment_preview_request_for(data)?;
+    let supports_request = capabilities
+        .map(|caps| caps.supports(&request.locator))
+        .unwrap_or(false);
+    supports_request.then_some(request)
+}
+
 fn resolve_attachment_preview_image<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     data: &AttachmentData,
@@ -262,7 +273,10 @@ fn resolve_attachment_preview_image<H: UiHost>(
                 return Some(image);
             }
 
-            let request = attachment_preview_request_for(data)?;
+            let request = capability_gated_attachment_preview_request_for(
+                data,
+                fret_runtime::asset_capabilities(&*cx.app),
+            )?;
             cx.use_image_source_state_from_asset_request(&request).image
         }
         AttachmentData::SourceDocument(_) => None,
@@ -1589,5 +1603,40 @@ mod tests {
         );
 
         assert!(attachment_preview_request_for(&data).is_none());
+    }
+
+    #[test]
+    fn capability_gated_attachment_preview_request_requires_url_capability() {
+        let data = AttachmentData::File(
+            AttachmentFileData::new("att-image")
+                .filename("preview.png")
+                .media_type("image/png")
+                .url("https://example.com/preview.png"),
+        );
+
+        assert!(capability_gated_attachment_preview_request_for(&data, None).is_none());
+        assert!(
+            capability_gated_attachment_preview_request_for(
+                &data,
+                Some(AssetCapabilities {
+                    url: false,
+                    ..Default::default()
+                }),
+            )
+            .is_none()
+        );
+        assert_eq!(
+            capability_gated_attachment_preview_request_for(
+                &data,
+                Some(AssetCapabilities {
+                    url: true,
+                    ..Default::default()
+                }),
+            ),
+            Some(
+                AssetRequest::new(AssetLocator::url("https://example.com/preview.png"))
+                    .with_kind_hint(AssetKindHint::Image)
+            )
+        );
     }
 }

@@ -28,11 +28,10 @@ Evidence anchors:
   - `BundledGenericFamily`
   - `BundledFontFaceSpec`
   - `BundledFontProfile`
-  - `bootstrap_profile`, `default_profile`, `bootstrap_fonts`, `default_fonts`
+  - `bootstrap_profile`, `default_profile`
 - Narrowed contract guidance:
-  - role-scoped byte access should go through `BundledFontProfile::font_bytes_for_role(...)`, so
-    downstream code stays anchored on the manifest/profile contract instead of top-level helper
-    slices.
+  - role-scoped access should go through `BundledFontProfile::faces_for_role(...)`, so downstream
+    code stays anchored on bundled face identity/metadata instead of role-to-bytes shortcuts.
 - Feature flags and intent:
   - default = `bootstrap-subset + cjk-lite`
   - optional expansion flags: `bootstrap-full`, `emoji`, `cjk-lite`
@@ -74,11 +73,11 @@ Evidence anchors:
     `DEFAULT_FACES`), `crates/fret-fonts/src/profiles.rs` (`*_PROFILE_NAME`,
     `BOOTSTRAP_PROFILE`, `DEFAULT_PROFILE`)
 - Byte collection helpers
-  - Files: `crates/fret-fonts/src/profiles.rs` (`collect_font_bytes`, `default_fonts`,
-    `bootstrap_fonts`), `crates/fret-fonts/src/lib.rs` (`BundledFontProfile::font_bytes_for_role`)
+  - Files: `crates/fret-fonts/src/lib.rs` (`BundledFontProfile::faces_for_role`,
+    `BundledFontFaceSpec::bytes`)
 - Manifest / asset conformance tests
   - Files: `crates/fret-fonts/src/tests.rs` (`bundled_profiles_are_manifest_consistent`,
-    `bundled_face_family_names_match_name_tables`, `default_fonts_total_size_is_reasonable`)
+    `bundled_face_family_names_match_name_tables`, `default_profile_total_size_is_reasonable`)
 
 ## 5) Refactor hazards (what can regress easily)
 
@@ -92,9 +91,9 @@ Evidence anchors:
     workstream is ready for promotion.
 - Asset budget drift across feature combinations
   - Failure mode: WASM/bootstrap payload grows without an intentional contract update.
-  - Existing gates: `default_fonts_total_size_is_reasonable`.
-  - Missing gate to add: split out explicit budget checks for `bootstrap_fonts()` vs
-    `default_fonts()` so bootstrap-only regressions cannot hide behind the larger default profile.
+  - Existing gates: `default_profile_total_size_is_reasonable`.
+  - Missing gate to add: split out explicit budget checks for `bootstrap_profile()` vs
+    `default_profile()` so bootstrap-only regressions cannot hide behind the larger default profile.
 - Handwritten feature-matrix pressure
   - Failure mode: future bundle additions still require touching multiple handwritten constant sets
     across `assets.rs` and `profiles.rs`, making omissions possible even after the module split.
@@ -132,10 +131,10 @@ Evidence anchors:
    `cargo check -p fret-fonts --features bootstrap-full,emoji,cjk-lite`.
 2. (Done) Add a representative feature-matrix gate for the crate — outcome: bundled profile drift
    is caught before integration — gate: `python tools/check_fret_fonts_feature_matrix.py`.
-3. (Done) Narrow role-scoped byte access behind `BundledFontProfile::font_bytes_for_role(...)` —
-   outcome: profiles remain the primary public contract, and raw role slices no longer define the
-   crate surface — gate: `cargo nextest run -p fret-fonts`, dependent text-test crates compile
-   against the profile-based accessor.
+3. (Done) Narrow role-scoped access behind `BundledFontProfile::faces_for_role(...)` — outcome:
+   profiles remain the primary public contract, and callers stay anchored on bundled faces instead
+   of role-to-bytes shortcuts — gate: `cargo nextest run -p fret-fonts`, dependent text-test crates
+   compile against the profile-based face accessor.
 
 ## 8) Open questions / decisions needed
 

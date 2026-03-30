@@ -1,7 +1,5 @@
-use std::sync::OnceLock;
-
 use crate::{
-    BundledFontFaceSpec, BundledFontProfile, BundledFontRole, BundledGenericFamily,
+    BundledFontProfile, BundledFontRole, BundledGenericFamily,
     assets::{BOOTSTRAP_FACES, DEFAULT_FACES},
 };
 
@@ -197,23 +195,4 @@ pub fn bootstrap_profile() -> &'static BundledFontProfile {
 
 pub fn default_profile() -> &'static BundledFontProfile {
     &DEFAULT_PROFILE
-}
-
-fn collect_font_bytes(faces: &'static [BundledFontFaceSpec]) -> Box<[&'static [u8]]> {
-    faces
-        .iter()
-        .map(|face| face.bytes)
-        .collect::<Vec<_>>()
-        .into_boxed_slice()
-}
-
-/// Returns the default font bytes (TTF/OTF/TTC) that can be fed to `Effect::TextAddFonts`.
-pub fn default_fonts() -> &'static [&'static [u8]] {
-    static BYTES: OnceLock<Box<[&'static [u8]]>> = OnceLock::new();
-    BYTES.get_or_init(|| collect_font_bytes(default_profile().faces))
-}
-
-pub fn bootstrap_fonts() -> &'static [&'static [u8]] {
-    static BYTES: OnceLock<Box<[&'static [u8]]>> = OnceLock::new();
-    BYTES.get_or_init(|| collect_font_bytes(bootstrap_profile().faces))
 }

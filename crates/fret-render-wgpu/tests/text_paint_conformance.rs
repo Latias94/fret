@@ -134,7 +134,9 @@ fn stops_2(a: Color, b: Color) -> ([GradientStop; MAX_STOPS], u8) {
 }
 
 fn configure_deterministic_fonts(renderer: &mut Renderer) {
-    let added = renderer.add_fonts(fret_fonts::default_fonts().iter().map(|b| b.to_vec()));
+    let added = renderer.add_fonts(fret_fonts::test_support::face_blobs(
+        fret_fonts::default_profile().faces.iter(),
+    ));
     assert!(added > 0, "expected bundled fonts to add at least one face");
 
     let mut families = TextFontFamilyConfig::default();

@@ -1195,7 +1195,9 @@ mod tests {
     use std::sync::Mutex;
     use std::time::Duration;
 
-    use fret_assets::{AssetLocator, AssetRequest, AssetRevision, InMemoryAssetResolver};
+    use fret_assets::AssetLocator;
+    #[cfg(feature = "ui")]
+    use fret_assets::{AssetRequest, AssetRevision, InMemoryAssetResolver};
     use fret_core::{
         AppWindowId, ClipboardToken, Event, FrameId, ImageColorSpace, ImageId, ImageUploadToken,
         TimerToken,
@@ -1357,6 +1359,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "ui")]
     fn install_bundle_image_asset(
         host: &mut TestHost,
         revision: AssetRevision,
@@ -1391,6 +1394,7 @@ mod tests {
         (source, model, request_key, state)
     }
 
+    #[cfg(feature = "ui")]
     fn image_source_entry_count(host: &mut TestHost) -> usize {
         with_image_source_loader(host, |loader, _host| {
             loader
@@ -1403,6 +1407,7 @@ mod tests {
         .expect("dispatcher installed")
     }
 
+    #[cfg(feature = "ui")]
     fn image_source_has_entry(host: &mut TestHost, request: ImageSourceRequestKey) -> bool {
         with_image_source_loader(host, |loader, _host| {
             loader

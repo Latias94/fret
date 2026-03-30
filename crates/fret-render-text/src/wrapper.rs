@@ -368,20 +368,19 @@ mod tests {
 
     fn shaper_with_bundled_fonts() -> ParleyShaper {
         let mut shaper = ParleyShaper::new_without_system_fonts();
-        let added = shaper.add_fonts(
-            fret_fonts::bootstrap_fonts()
+        let added = shaper.add_fonts(fret_fonts::test_support::face_blobs(
+            fret_fonts::bootstrap_profile()
+                .faces
                 .iter()
-                .copied()
                 .chain(
                     fret_fonts::default_profile()
-                        .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+                        .faces_for_role(fret_fonts::BundledFontRole::EmojiFallback),
                 )
                 .chain(
                     fret_fonts::default_profile()
-                        .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
-                )
-                .map(|b| b.to_vec()),
-        );
+                        .faces_for_role(fret_fonts::BundledFontRole::CjkFallback),
+                ),
+        ));
         assert!(added > 0, "expected bundled fonts to load");
         shaper
     }

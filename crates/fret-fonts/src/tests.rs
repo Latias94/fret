@@ -122,7 +122,11 @@ fn face_covers_codepoint(face: &'static BundledFontFaceSpec, ch: char) -> bool {
 
 fn assert_profile_manifest_consistency(profile: &'static BundledFontProfile) {
     let face_families = profile_face_families(profile);
-    let bytes_from_profile = profile.font_bytes().collect::<Vec<_>>();
+    let bytes_from_profile = profile
+        .faces
+        .iter()
+        .map(|face| face.bytes)
+        .collect::<Vec<_>>();
 
     assert_eq!(
         profile.expected_family_names,
@@ -173,7 +177,7 @@ fn assert_profile_manifest_consistency(profile: &'static BundledFontProfile) {
             .iter()
             .map(|face| face.bytes)
             .collect::<Vec<_>>(),
-        "expected font_bytes() to preserve face ordering for profile {}",
+        "expected profile.faces to preserve bundled face byte ordering for profile {}",
         profile.name
     );
     assert_eq!(
@@ -214,18 +218,29 @@ fn assert_role_families_cover_codepoints(
 }
 
 #[test]
-fn default_fonts_are_non_empty() {
-    for font in crate::default_fonts() {
+fn default_profile_font_bytes_are_non_empty() {
+    for font in crate::default_profile().faces.iter().map(|face| face.bytes) {
         assert!(font.len() > 1024);
     }
 }
 
 #[test]
-fn default_profile_matches_default_fonts() {
+fn test_support_face_blobs_preserve_face_order_and_bytes() {
     let profile = crate::default_profile();
-    let bytes_from_profile = profile.font_bytes().collect::<Vec<_>>();
-    assert_eq!(crate::default_fonts(), bytes_from_profile.as_slice());
-    assert_eq!(profile.faces.len(), crate::default_fonts().len());
+    let expected = profile
+        .faces
+        .iter()
+        .map(|face| face.bytes.to_vec())
+        .collect::<Vec<_>>();
+    let actual = crate::test_support::face_blobs(profile.faces.iter()).collect::<Vec<_>>();
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn default_profile_matches_expected_manifest_contract() {
+    let profile = crate::default_profile();
+    assert!(!profile.faces.is_empty());
     assert_eq!(profile.expected_family_names, DEFAULT_EXPECTED_FAMILIES);
     assert_eq!(profile.provided_roles, DEFAULT_PROVIDED_ROLES);
 }
@@ -413,11 +428,11 @@ fn bundled_profile_matrix_explicitly_omits_cjk_fallback_when_disabled() {
 #[test]
 fn bundles_add_up_when_emoji_is_enabled() {
     let emoji_count = crate::default_profile()
-        .font_bytes_for_role(crate::BundledFontRole::EmojiFallback)
+        .faces_for_role(crate::BundledFontRole::EmojiFallback)
         .count();
     assert_eq!(
-        crate::default_fonts().len(),
-        crate::bootstrap_fonts().len() + emoji_count
+        crate::default_profile().faces.len(),
+        crate::bootstrap_profile().faces.len() + emoji_count
     );
     assert_eq!(emoji_count, 1);
 }
@@ -426,11 +441,11 @@ fn bundles_add_up_when_emoji_is_enabled() {
 #[test]
 fn bundles_add_up_when_cjk_lite_is_enabled() {
     let cjk_count = crate::default_profile()
-        .font_bytes_for_role(crate::BundledFontRole::CjkFallback)
+        .faces_for_role(crate::BundledFontRole::CjkFallback)
         .count();
     assert_eq!(
-        crate::default_fonts().len(),
-        crate::bootstrap_fonts().len() + cjk_count
+        crate::default_profile().faces.len(),
+        crate::bootstrap_profile().faces.len() + cjk_count
     );
     assert_eq!(cjk_count, 1);
 }
@@ -439,22 +454,26 @@ fn bundles_add_up_when_cjk_lite_is_enabled() {
 #[test]
 fn bundles_add_up_when_emoji_and_cjk_lite_are_enabled() {
     let emoji_count = crate::default_profile()
-        .font_bytes_for_role(crate::BundledFontRole::EmojiFallback)
+        .faces_for_role(crate::BundledFontRole::EmojiFallback)
         .count();
     let cjk_count = crate::default_profile()
-        .font_bytes_for_role(crate::BundledFontRole::CjkFallback)
+        .faces_for_role(crate::BundledFontRole::CjkFallback)
         .count();
     assert_eq!(
-        crate::default_fonts().len(),
-        crate::bootstrap_fonts().len() + emoji_count + cjk_count
+        crate::default_profile().faces.len(),
+        crate::bootstrap_profile().faces.len() + emoji_count + cjk_count
     );
     assert_eq!(emoji_count, 1);
     assert_eq!(cjk_count, 1);
 }
 
 #[test]
-fn default_fonts_total_size_is_reasonable() {
-    let total: usize = crate::default_fonts().iter().map(|b| b.len()).sum();
+fn default_profile_total_size_is_reasonable() {
+    let total: usize = crate::default_profile()
+        .faces
+        .iter()
+        .map(|face| face.bytes.len())
+        .sum();
 
     #[cfg(all(
         not(feature = "emoji"),

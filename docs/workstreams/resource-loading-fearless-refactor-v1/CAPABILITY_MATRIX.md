@@ -1,6 +1,6 @@
 # Resource Loading Fearless Refactor v1 — Capability Matrix
 
-Status: Published current-truth matrix (2026-03-16)
+Status: Published current-truth matrix (updated 2026-03-30)
 
 ## Scope
 
@@ -89,6 +89,10 @@ escape hatches.
     resolves it on any target,
   - web/WASM exposes `ImageSource::from_url(...)` as a direct image helper, and the
     `resolve_image_source*` bridge can consume a resolver-provided URL reference there,
+  - when no resolver layer returns a URL reference, web/WASM `resolve_image_source*` falls back to
+    resolving bytes and feeding `ImageSource::from_resolved_asset_bytes(...)`, so the current
+    first-party packaged/bundle lane is still a byte-fetch + Rust decode path rather than a
+    browser-native decode lane,
   - there is no matching first-party SVG/font URL lane.
 - Guidance:
   - treat URL loading as a custom-resolver or target-specific escape hatch,
@@ -155,6 +159,8 @@ escape hatches.
   - `fret::assets::register_file_manifest(...)`.
 - Escape hatches:
   - direct file-path UI helpers are for native/dev compatibility only,
+  - direct `fret-ui-assets` app wiring is intentionally named `configure_caches*` because cache
+    setup and event-driving are separate responsibilities,
   - URL loading is target-specific or custom-resolver territory.
 
 ### Ecosystem authors

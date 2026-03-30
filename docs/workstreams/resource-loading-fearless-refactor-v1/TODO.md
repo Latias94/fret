@@ -295,7 +295,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `StaticAssetEntry` instead of existing only as ad-hoc byte bags for `Effect::TextAddFonts`.
     - runner startup now consumes the same default profile manifest for both:
       - mounting package-owned bundled font assets into the shared runtime resolver,
-      - injecting renderer font bytes from `BundledFontProfile::font_bytes()`.
+      - injecting renderer font bytes from bundled face byte payloads.
     - regression coverage now proves the startup helper resolves bundled font faces through the
       runtime asset resolver and does not register duplicate font-asset resolver layers on
       repeated baseline installation.
@@ -348,9 +348,18 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 - [x] RESLOAD-api-500 Rename or replace misleading install surfaces in `fret-ui-assets`.
   - `install()` must either perform complete wiring or stop being called `install()`.
+  - Current landed slice:
+    - `ecosystem/fret-ui-assets::app` now exposes only `configure_caches(...)` and
+      `configure_caches_with_budgets(...)`
+    - `ecosystem/fret-ui-assets::advanced` now exposes only
+      `configure_caches_with_ui_services(...)` and
+      `configure_caches_with_ui_services_and_budgets(...)`
+    - the deprecated `install*` compatibility aliases are deleted instead of being kept as
+      pre-release baggage
   - Evidence:
     - `ecosystem/fret-ui-assets/src/app.rs`
     - `ecosystem/fret-ui-assets/src/advanced.rs`
+    - `ecosystem/fret-ui-assets/src/lib.rs`
 
 - [~] RESLOAD-api-510 Design the golden-path authoring API for app and ecosystem authors.
   - Target qualities:

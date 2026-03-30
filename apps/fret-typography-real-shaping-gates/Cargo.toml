@@ -13,9 +13,8 @@ publish = false
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
-fret-fonts = { path = "../../crates/fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite"] }
+fret-fonts = { path = "../../crates/fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite", "test-support"] }
 fret-render-text = { path = "../../crates/fret-render-text" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
-

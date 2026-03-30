@@ -5,6 +5,14 @@
 //!
 //! This is an ecosystem crate: it composes higher-level policies on top of the core runtime
 //! services. See ADR 0106.
+//!
+//! Web/WASM note:
+//! - `ImageSource::from_url(...)` remains an explicit direct helper for browser-managed URL loads.
+//! - For logical asset requests (`resolve_image_source*`), Web/WASM only gets a browser-native URL
+//!   lane when the winning resolver layer returns `AssetExternalReference::Url`.
+//! - Otherwise the current first-party path falls back to resolving bytes and decoding from
+//!   `ResolvedAssetBytes`, which can cost more CPU and memory than a browser-native decode path on
+//!   image-heavy surfaces.
 
 pub mod asset_resolver;
 pub mod image_asset_cache;
@@ -75,34 +83,16 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn legacy_install_aliases_stay_deprecated_and_point_to_explicit_cache_setup() {
+    fn cache_setup_surface_keeps_only_explicit_configuration_names() {
         assert!(APP_RS.contains("pub fn configure_caches(app: &mut fret_app::App)"));
         assert!(APP_RS.contains("pub fn configure_caches_with_budgets("));
-        assert!(APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
-        assert!(APP_RS.contains("pub fn install_with_budgets("));
-        assert!(APP_RS.contains(
-            "use configure_caches; this only configures caches and does not wire event handling"
-        ));
-        assert!(
-            APP_RS.contains(
-                "use configure_caches_with_budgets; this only configures caches and does not wire event handling"
-            )
-        );
+        assert!(!APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
+        assert!(!APP_RS.contains("pub fn install_with_budgets("));
 
         assert!(ADVANCED_RS.contains("pub fn configure_caches_with_ui_services("));
         assert!(ADVANCED_RS.contains("pub fn configure_caches_with_ui_services_and_budgets("));
-        assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
-        assert!(ADVANCED_RS.contains("pub fn install_with_ui_services_and_budgets("));
-        assert!(
-            ADVANCED_RS.contains(
-                "use configure_caches_with_ui_services; this only configures caches and does not wire event handling"
-            )
-        );
-        assert!(
-            ADVANCED_RS.contains(
-                "use configure_caches_with_ui_services_and_budgets; this only configures caches and does not wire event handling"
-            )
-        );
+        assert!(!ADVANCED_RS.contains("pub fn install_with_ui_services("));
+        assert!(!ADVANCED_RS.contains("pub fn install_with_ui_services_and_budgets("));
     }
 
     #[test]

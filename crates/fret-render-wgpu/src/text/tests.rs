@@ -120,6 +120,19 @@ fn reset_bundled_only_font_runtime(text: &mut super::TextSystem) {
     text.font_runtime.font_stack_key = 0;
 }
 
+fn bundled_profile_face_blobs(
+    profile: &'static fret_fonts::BundledFontProfile,
+) -> impl Iterator<Item = Vec<u8>> {
+    fret_fonts::test_support::face_blobs(profile.faces.iter())
+}
+
+fn bundled_profile_role_face_blobs(
+    profile: &'static fret_fonts::BundledFontProfile,
+    role: fret_fonts::BundledFontRole,
+) -> impl Iterator<Item = Vec<u8>> {
+    fret_fonts::test_support::face_blobs(profile.faces_for_role(role))
+}
+
 #[test]
 fn subpixel_mask_to_alpha_uses_channel_max() {
     let data = vec![
@@ -597,10 +610,7 @@ fn multiline_metrics_are_pixel_snapped_under_non_integer_scale_factor() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
 
@@ -671,10 +681,7 @@ fn wrapped_measure_matches_prepare_under_fractional_scale_factor() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
 
@@ -726,10 +733,7 @@ fn glyph_cache_key_tracks_scale_factor_below_one() {
     // Keep this test deterministic: bundled fonts only (no system font discovery).
     reset_bundled_only_font_runtime(&mut text);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
 
@@ -783,10 +787,7 @@ fn grapheme_wrapped_measure_matches_prepare_under_fractional_scale_factor() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
 
@@ -834,10 +835,7 @@ fn max_content_width_round_trip_does_not_force_wrapping_under_fractional_scale_f
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
 
@@ -888,10 +886,7 @@ fn grapheme_wrapped_measure_attributed_matches_prepare_under_fractional_scale_fa
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
 
@@ -973,14 +968,11 @@ fn emoji_sequences_use_color_quads_when_color_font_is_available() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .copied()
-        .chain(
-            fret_fonts::default_profile()
-                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
-        )
-        .map(|b| b.to_vec())
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
+        .chain(bundled_profile_role_face_blobs(
+            fret_fonts::default_profile(),
+            fret_fonts::BundledFontRole::EmojiFallback,
+        ))
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -1034,14 +1026,11 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .copied()
-        .chain(
-            fret_fonts::default_profile()
-                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
-        )
-        .map(|b| b.to_vec())
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
+        .chain(bundled_profile_role_face_blobs(
+            fret_fonts::default_profile(),
+            fret_fonts::BundledFontRole::CjkFallback,
+        ))
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -1104,14 +1093,11 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
     reset_bundled_only_font_runtime(&mut text);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .copied()
-        .chain(
-            fret_fonts::default_profile()
-                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
-        )
-        .map(|b| b.to_vec())
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
+        .chain(bundled_profile_role_face_blobs(
+            fret_fonts::default_profile(),
+            fret_fonts::BundledFontRole::CjkFallback,
+        ))
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -1199,10 +1185,7 @@ fn font_trace_records_missing_glyphs_for_named_family_when_system_fonts_are_abse
     text.font_runtime.font_db_revision = 0;
     text.font_runtime.font_stack_key = 0;
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
 
@@ -1263,14 +1246,11 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
     text.font_runtime.font_db_revision = 0;
     text.font_runtime.font_stack_key = 0;
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .copied()
-        .chain(
-            fret_fonts::default_profile()
-                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
-        )
-        .map(|b| b.to_vec())
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
+        .chain(bundled_profile_role_face_blobs(
+            fret_fonts::default_profile(),
+            fret_fonts::BundledFontRole::CjkFallback,
+        ))
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -1352,14 +1332,11 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
     text.font_runtime.font_db_revision = 0;
     text.font_runtime.font_stack_key = 0;
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .copied()
-        .chain(
-            fret_fonts::default_profile()
-                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
-        )
-        .map(|b| b.to_vec())
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
+        .chain(bundled_profile_role_face_blobs(
+            fret_fonts::default_profile(),
+            fret_fonts::BundledFontRole::EmojiFallback,
+        ))
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -1652,10 +1629,7 @@ fn paint_only_changes_miss_blob_cache_but_hit_shape_cache() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
 
@@ -2479,10 +2453,10 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
     text.font_runtime.font_db_revision = 0;
     text.font_runtime.font_stack_key = 0;
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::default_profile()
-        .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback)
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = fret_fonts::test_support::face_blobs(
+        fret_fonts::default_profile().faces_for_role(fret_fonts::BundledFontRole::CjkFallback),
+    )
+    .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected cjk-lite fonts to load");
 
@@ -2683,10 +2657,7 @@ fn fallback_policy_key_changes_when_generic_candidate_order_changes() {
 
     reset_bundled_only_font_runtime(&mut text);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::default_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::default_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
 
@@ -2742,10 +2713,7 @@ fn ui_generic_resolution_prefers_first_available_configured_candidate() {
 
     reset_bundled_only_font_runtime(&mut text);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::default_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::default_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
 
@@ -2810,10 +2778,7 @@ fn bundled_only_defaults_use_profile_ui_family_when_config_is_empty() {
 
     reset_bundled_only_font_runtime(&mut text);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled bootstrap fonts to load");
 
@@ -2856,10 +2821,7 @@ fn fallback_policy_snapshot_reports_profile_contract_and_defaults() {
 
     reset_bundled_only_font_runtime(&mut text);
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::default_fonts()
-        .iter()
-        .map(|b| b.to_vec())
-        .collect();
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::default_profile()).collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
 
@@ -2970,18 +2932,15 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
     text.font_runtime.font_db_revision = 0;
     text.font_runtime.font_stack_key = 0;
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .copied()
-        .chain(
-            fret_fonts::default_profile()
-                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
-        )
-        .chain(
-            fret_fonts::default_profile()
-                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
-        )
-        .map(|b| b.to_vec())
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
+        .chain(bundled_profile_role_face_blobs(
+            fret_fonts::default_profile(),
+            fret_fonts::BundledFontRole::CjkFallback,
+        ))
+        .chain(bundled_profile_role_face_blobs(
+            fret_fonts::default_profile(),
+            fret_fonts::BundledFontRole::EmojiFallback,
+        ))
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -3088,18 +3047,15 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
     text.font_runtime.font_db_revision = 0;
     text.font_runtime.font_stack_key = 0;
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-        .iter()
-        .copied()
-        .chain(
-            fret_fonts::default_profile()
-                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
-        )
-        .chain(
-            fret_fonts::default_profile()
-                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
-        )
-        .map(|b| b.to_vec())
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
+        .chain(bundled_profile_role_face_blobs(
+            fret_fonts::default_profile(),
+            fret_fonts::BundledFontRole::CjkFallback,
+        ))
+        .chain(bundled_profile_role_face_blobs(
+            fret_fonts::default_profile(),
+            fret_fonts::BundledFontRole::EmojiFallback,
+        ))
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");

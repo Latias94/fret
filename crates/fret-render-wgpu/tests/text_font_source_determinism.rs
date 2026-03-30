@@ -22,7 +22,9 @@ fn text_can_run_with_system_fonts_disabled_and_bundled_fonts_injected() {
     };
 
     let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
-    let added = renderer.add_fonts(fret_fonts::default_fonts().iter().map(|b| b.to_vec()));
+    let added = renderer.add_fonts(fret_fonts::test_support::face_blobs(
+        fret_fonts::default_profile().faces.iter(),
+    ));
     assert!(added > 0, "expected bundled fonts to add at least one face");
 
     let mut families = TextFontFamilyConfig::default();

@@ -102,6 +102,112 @@ fn apply_ui_gallery_text_font_fallback_overrides(config: &mut fret_render::TextF
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct UiGalleryBundledFontAssetsRegistered(bool);
+
+fn ensure_ui_gallery_default_bundled_font_assets_registered(app: &mut App) -> bool {
+    app.with_global_mut(
+        UiGalleryBundledFontAssetsRegistered::default,
+        |registered, app| {
+            if registered.0 {
+                return false;
+            }
+            fret_runtime::register_bundle_asset_entries(
+                app,
+                fret_fonts::bundled_asset_bundle(),
+                fret_fonts::default_profile().asset_entries(),
+            );
+            registered.0 = true;
+            true
+        },
+    )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct UiGalleryFontCatalogSignature {
+    revision: u64,
+    family_count: usize,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct UiGalleryDefaultProfileFontInjectionState {
+    pending: bool,
+    pending_catalog_signature: Option<UiGalleryFontCatalogSignature>,
+}
+
+fn ui_gallery_font_catalog_signature(app: &App) -> Option<UiGalleryFontCatalogSignature> {
+    app.global::<fret_runtime::FontCatalog>().map(|catalog| UiGalleryFontCatalogSignature {
+        revision: catalog.revision,
+        family_count: catalog.families.len(),
+    })
+}
+
+fn ui_gallery_default_profile_expected_families_present(app: &App) -> bool {
+    let Some(catalog) = app.global::<fret_runtime::FontCatalog>() else {
+        return false;
+    };
+
+    fret_fonts::default_profile()
+        .expected_family_names
+        .iter()
+        .all(|expected| {
+            catalog
+                .families
+                .iter()
+                .any(|family| family.eq_ignore_ascii_case(expected))
+        })
+}
+
+pub(crate) fn ui_gallery_default_profile_font_blobs(app: &mut App) -> Vec<Vec<u8>> {
+    let _ = ensure_ui_gallery_default_bundled_font_assets_registered(app);
+    fret_fonts::default_profile()
+        .faces
+        .iter()
+        .map(|face| {
+            fret_runtime::resolve_asset_bytes(app, &face.asset_request())
+                .unwrap_or_else(|err| {
+                    panic!(
+                        "ui-gallery bundled font asset '{}' failed to resolve after registration: {:?}",
+                        face.asset_key, err
+                    )
+                })
+                .bytes
+                .as_ref()
+                .to_vec()
+        })
+        .collect()
+}
+
+pub(crate) fn ensure_ui_gallery_default_profile_fonts_present(
+    app: &mut App,
+    window: AppWindowId,
+) -> bool {
+    let catalog_signature = ui_gallery_font_catalog_signature(app);
+    let expected_families_present = ui_gallery_default_profile_expected_families_present(app);
+
+    app.with_global_mut_untracked(
+        UiGalleryDefaultProfileFontInjectionState::default,
+        |state, app| {
+            if expected_families_present {
+                state.pending = false;
+                state.pending_catalog_signature = catalog_signature;
+                return false;
+            }
+
+            if state.pending && state.pending_catalog_signature == catalog_signature {
+                return false;
+            }
+
+            let fonts = ui_gallery_default_profile_font_blobs(app);
+            app.push_effect(fret_runtime::Effect::TextAddFonts { fonts });
+            app.request_redraw(window);
+            state.pending = true;
+            state.pending_catalog_signature = catalog_signature;
+            true
+        },
+    )
+}
+
 #[derive(Default)]
 struct DebugHudState {
     last_tick: Option<fret_core::time::Instant>,
@@ -1042,10 +1148,7 @@ impl WinitAppDriver for UiGalleryDriver {
         let wants_bootstrap_fonts =
             std::env::var_os("FRET_UI_GALLERY_BOOTSTRAP_FONTS").is_some_and(|v| !v.is_empty());
         if wants_bootstrap_fonts {
-            let fonts = fret_fonts::default_fonts()
-                .iter()
-                .map(|bytes| bytes.to_vec())
-                .collect::<Vec<_>>();
+            let fonts = ui_gallery_default_profile_font_blobs(app);
             let _ = renderer.add_fonts(fonts);
 
             let update = fret_runtime::apply_font_catalog_update(
@@ -2171,6 +2274,68 @@ mod tests {
 
         sync_in_flight_frame_id(&mut app);
         assert_eq!(app.frame_id(), FrameId(2));
+    }
+
+    #[test]
+    fn ensure_ui_gallery_default_profile_fonts_present_requeues_after_catalog_regression() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        assert!(ensure_ui_gallery_default_profile_fonts_present(&mut app, window));
+        let effects = app.flush_effects();
+        assert_eq!(
+            effects
+                .iter()
+                .filter(|effect| matches!(effect, Effect::TextAddFonts { .. }))
+                .count(),
+            1
+        );
+        assert_eq!(
+            effects
+                .iter()
+                .filter(|effect| matches!(effect, Effect::Redraw(id) if *id == window))
+                .count(),
+            1
+        );
+
+        assert!(!ensure_ui_gallery_default_profile_fonts_present(
+            &mut app, window
+        ));
+        assert!(app.flush_effects().is_empty());
+
+        app.set_global::<fret_runtime::FontCatalog>(fret_runtime::FontCatalog {
+            families: fret_fonts::default_profile()
+                .expected_family_names
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect(),
+            revision: 1,
+        });
+        assert!(!ensure_ui_gallery_default_profile_fonts_present(
+            &mut app, window
+        ));
+        assert!(app.flush_effects().is_empty());
+
+        app.set_global::<fret_runtime::FontCatalog>(fret_runtime::FontCatalog {
+            families: Vec::new(),
+            revision: 2,
+        });
+        assert!(ensure_ui_gallery_default_profile_fonts_present(&mut app, window));
+        let effects = app.flush_effects();
+        assert_eq!(
+            effects
+                .iter()
+                .filter(|effect| matches!(effect, Effect::TextAddFonts { .. }))
+                .count(),
+            1
+        );
+        assert_eq!(
+            effects
+                .iter()
+                .filter(|effect| matches!(effect, Effect::Redraw(id) if *id == window))
+                .count(),
+            1
+        );
     }
 }
 

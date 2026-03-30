@@ -73,7 +73,7 @@ Crate boundaries are locked in ADR 0092: `docs/adr/0092-crate-structure-core-bac
 - `crates/fret-core`: platform-agnostic core (IDs, geometry, docking model, layout/input contracts).
 - `crates/fret-runtime`: host-facing runtime boundary traits + portable value types used by `fret-ui` (ADR 0052).
 - `crates/fret-app`: app runtime (global services, models/entities, scheduling, command/action dispatch).
-- `crates/fret-fonts`: bundled default font bytes for wasm/bootstrap (fed to `Effect::TextAddFonts`).
+- `crates/fret-fonts`: bundled default font assets/profiles for wasm/bootstrap; startup baselines publish package-owned asset identity and resolve it to bytes for renderer injection.
 - `crates/fret-platform`: portable platform I/O contracts (clipboard, external drops, file dialogs, open-url).
 - `crates/fret-platform-native`: native implementations for `fret-platform` contracts.
 - `crates/fret-platform-web`: wasm/browser implementations for `fret-platform`-adjacent services.

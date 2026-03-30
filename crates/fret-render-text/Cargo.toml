@@ -22,4 +22,4 @@ unicode-segmentation.workspace = true
 [dev-dependencies]
 serde.workspace = true
 serde_json.workspace = true
-fret-fonts = { version = "0.1.0", path = "../fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite"] }
+fret-fonts = { version = "0.1.0", path = "../fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite", "test-support"] }

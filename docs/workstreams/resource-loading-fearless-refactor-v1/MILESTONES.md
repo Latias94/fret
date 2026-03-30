@@ -98,6 +98,8 @@ Exit criteria:
 Deliverables:
 
 - Legacy path-first helpers are deprecated or removed.
+- Legacy partial-install compatibility aliases are removed; partial cache setup keeps explicit
+  `configure_caches*` naming until a fully wired bootstrap surface exists.
 - Deprecated UI-specific reload aliases are removed once first-party migration is complete.
 - The explicit M5 cleanup checklist for the former compatibility surfaces is burned down:
   - `UiAssetsReloadEpoch`

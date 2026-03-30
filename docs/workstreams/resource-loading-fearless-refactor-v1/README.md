@@ -267,9 +267,9 @@ So the current story is structurally wrong:
 
 At most, `path` is a development/native capability escape hatch.
 
-### 3) `install()` is only half an install
+### 3) The former `install()` aliases were only half an install
 
-`fret-ui-assets::app::install()` currently only configures cache budgets:
+`fret-ui-assets` used to expose `install*` aliases that only configured cache budgets:
 
 - `ecosystem/fret-ui-assets/src/app.rs`
 - `ecosystem/fret-ui-assets/src/ui_assets.rs`
@@ -280,8 +280,10 @@ driver:
 - `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
 - `apps/fret-ui-gallery/src/driver/runtime_driver.rs`
 
-This is too easy to misuse. A public-looking `install()` API must either perform complete runtime
-wiring or be renamed to describe its actual effect.
+That naming was too easy to misuse. The compatibility aliases are now deleted, and the only
+remaining first-party surface is the explicit `configure_caches*` family. Any future fully wired
+startup story still needs to live behind a higher-level bootstrap/bundle surface that also owns
+event driving.
 
 ### 4) Font baseline semantics are still under-verified across platforms
 

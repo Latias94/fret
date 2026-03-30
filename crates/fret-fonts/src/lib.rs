@@ -4,6 +4,12 @@
 //! - Web/WASM cannot access system fonts, so applications must provide font bytes.
 //! - This crate exposes both the bytes and a small manifest describing which bundled profile
 //!   guarantees which family/role surface.
+//! - Framework-owned startup baselines should publish bundled asset identity through the shared
+//!   runtime asset contract and resolve startup bytes from that identity before renderer
+//!   injection.
+//! - The shipped bootstrap/default profiles currently guarantee `sans` and `monospace`, but they
+//!   do not guarantee `serif`; app shells that need deterministic serif typography on Web/WASM
+//!   must bundle and register serif-capable fonts explicitly.
 
 use fret_assets::{
     AssetBundleId, AssetKindHint, AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry,
@@ -11,11 +17,13 @@ use fret_assets::{
 
 mod assets;
 mod profiles;
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_support;
 
 #[cfg(test)]
 mod tests;
 
-pub use profiles::{bootstrap_fonts, bootstrap_profile, default_fonts, default_profile};
+pub use profiles::{bootstrap_profile, default_profile};
 
 pub fn bundled_asset_bundle() -> AssetBundleId {
     AssetBundleId::package(env!("CARGO_PKG_NAME"))
@@ -60,26 +68,21 @@ pub struct BundledFontProfile {
 }
 
 impl BundledFontProfile {
-    pub fn font_bytes(&self) -> impl ExactSizeIterator<Item = &'static [u8]> + '_ {
-        self.faces.iter().map(|face| face.bytes)
-    }
-
     pub fn asset_entries(&self) -> impl ExactSizeIterator<Item = StaticAssetEntry> + '_ {
         self.faces.iter().map(BundledFontFaceSpec::asset_entry)
     }
 
-    pub fn font_bytes_for_role(
+    pub fn faces_for_role(
         &self,
         role: BundledFontRole,
-    ) -> impl Iterator<Item = &'static [u8]> + '_ {
+    ) -> impl Iterator<Item = &BundledFontFaceSpec> + '_ {
         self.faces
             .iter()
-            .filter(move |face| face.roles.contains(&role))
-            .map(|face| face.bytes)
+            .filter(move |face| face.supports_role(role))
     }
 
     pub fn supports_role(&self, role: BundledFontRole) -> bool {
-        self.faces.iter().any(|face| face.roles.contains(&role))
+        self.faces_for_role(role).next().is_some()
     }
 
     pub fn guarantees_generic_family(&self, family: BundledGenericFamily) -> bool {
@@ -92,6 +95,10 @@ impl BundledFontProfile {
 }
 
 impl BundledFontFaceSpec {
+    pub fn supports_role(&self, role: BundledFontRole) -> bool {
+        self.roles.contains(&role)
+    }
+
     pub fn asset_locator(&self) -> AssetLocator {
         AssetLocator::bundle(bundled_asset_bundle(), self.asset_key)
     }

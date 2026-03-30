@@ -43,7 +43,7 @@ Current deletion posture:
   locator-first helpers cover the same development workflows, and first-party callers no longer
   need them on the default authoring lane.
 
-## 2. Partial `install(...)` semantics are misleading
+## 2. Former partial `install(...)` semantics were misleading and are now deleted
 
 Evidence:
 
@@ -53,28 +53,27 @@ Evidence:
 
 What exists today:
 
-- deprecated `install(...)` / `install_with_budgets(...)`
-- deprecated `install_with_ui_services(...)` /
-  `install_with_ui_services_and_budgets(...)`
+- explicit `configure_caches(...)` / `configure_caches_with_budgets(...)`
+- explicit `configure_caches_with_ui_services(...)` /
+  `configure_caches_with_ui_services_and_budgets(...)`
 
-Why this is wrong:
+Why the old shape was wrong:
 
-- the old names imply a fully wired subsystem.
-- these functions only create caches and apply budgets; they do not drive
+- the old `install*` names implied a fully wired subsystem.
+- these cache setup functions only create caches and apply budgets; they do not drive
   `UiAssets::handle_event(...)`.
-- partial setup hidden behind `install(...)` makes image/SVG readiness bugs look like runtime
+- partial setup hidden behind install-like naming made image/SVG readiness bugs look like runtime
   flakiness instead of an incomplete startup contract.
 
 Correct direction:
 
-- keep the honest names (`configure_caches*`) on the app/advanced surfaces.
+- keep only the honest names (`configure_caches*`) on the app/advanced surfaces.
 - any future fully wired startup story should live behind a higher-level bootstrap/bundle surface
   that also documents event-driving responsibilities.
 
 Current deletion posture:
 
-- keep the deprecated `install*` aliases until downstream first-party callers and public examples
-  have migrated to `configure_caches*`.
+- deleted; no deprecated `install*` compatibility aliases remain on `fret-ui-assets`.
 
 ## 3. Font baseline behavior is improved but not fully closed
 
@@ -112,7 +111,7 @@ Current deletion posture:
 
 ## 4. Removal checklist for deprecated compatibility seams
 
-The deprecated path/install helpers may be deleted only after all of the following are true:
+The remaining deprecated path helpers may be deleted only after all of the following are true:
 
 1. first-party docs, gallery snippets, cookbook examples, and scaffolds teach locator-first asset
    authoring and explicit cache/configuration semantics first;
@@ -122,5 +121,5 @@ The deprecated path/install helpers may be deleted only after all of the followi
    installer/bundle surface;
 4. desktop/web/mobile all publish the same conceptual bundled font baseline before first-frame
    text work;
-5. the remaining compatibility shims are unused by first-party teaching surfaces and can be
-   removed without reintroducing a platform lie.
+5. the remaining path-first compatibility shims are unused by first-party teaching surfaces and
+   can be removed without reintroducing a platform lie.

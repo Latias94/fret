@@ -93,10 +93,14 @@ Notes:
 
 Baseline contract for Web/WASM:
 
-- The runner must inject at least one bundled font set on startup via `Effect::TextAddFonts`.
+- The runner must install at least one bundled font set on startup before finalizing the startup
+  font environment.
+- The framework-owned startup baseline must publish a truthful bundled asset identity even if the
+  runner resolves those assets to bytes and injects them directly into the renderer.
+- `Effect::TextAddFonts` remains the runtime/user-provided raw-byte lane after startup.
 - The `fret-fonts` crate provides **role-based bundles** (not “complete coverage”).
 
-Minimum requirement for `fret-fonts::default_fonts()` (v1):
+Minimum requirement for the shipped `fret_fonts::default_profile()` (v1):
 
 - one **UI sans** font (or subset) suitable for labels and UI controls,
 - one **monospace** font (or subset) for developer tooling / code-like surfaces,
