@@ -1014,8 +1014,7 @@ impl SelectValue {
 }
 
 /// shadcn/ui v4 `SelectTrigger` (configuration wrapper for Fret's `Select` recipe).
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct SelectTrigger {
     size: SelectTriggerSize,
     chrome: ChromeRefinement,
@@ -1028,7 +1027,6 @@ pub struct SelectTrigger {
     font_override: Option<FontId>,
     label_policy: SelectTriggerLabelPolicy,
 }
-
 
 impl SelectTrigger {
     pub fn new() -> Self {
@@ -2104,8 +2102,6 @@ fn select_impl<H: UiHost>(
         let labelled_by_element_for_trigger = labelled_by_element;
         let described_by_element_for_trigger = described_by_element;
         let has_a11y_label_for_trigger = a11y_label.is_some();
-
-        
 
         decl_chrome::control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
             if let (Some(control_id), Some(control_registry)) = (
@@ -6952,9 +6948,7 @@ mod tests {
         assert_eq!(selected.as_deref(), Some("beta"));
         assert_eq!(calls.load(Ordering::SeqCst), 1);
         assert_eq!(
-            last.lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .as_deref(),
+            last.lock().unwrap_or_else(|e| e.into_inner()).as_deref(),
             Some("beta")
         );
 
@@ -8164,9 +8158,7 @@ mod tests {
                 .iter()
                 .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
                 .expect("select viewport node");
-            let viewport_bounds = ui
-                .debug_node_bounds(viewport.id)
-                .unwrap_or(viewport.bounds);
+            let viewport_bounds = ui.debug_node_bounds(viewport.id).unwrap_or(viewport.bounds);
             let viewport_center = Point::new(
                 Px(viewport_bounds.origin.x.0 + viewport_bounds.size.width.0 * 0.5),
                 Px(viewport_bounds.origin.y.0 + viewport_bounds.size.height.0 * 0.5),
@@ -8450,9 +8442,7 @@ mod tests {
             .iter()
             .find(|n| n.role == SemanticsRole::ListBox)
             .expect("listbox node");
-        let listbox_before = ui
-            .debug_node_bounds(listbox.id)
-            .unwrap_or(listbox.bounds);
+        let listbox_before = ui.debug_node_bounds(listbox.id).unwrap_or(listbox.bounds);
 
         let banana = snap
             .nodes
@@ -8515,9 +8505,7 @@ mod tests {
             .iter()
             .find(|n| n.role == SemanticsRole::ListBox)
             .expect("listbox node during exit transition");
-        let listbox_after = ui
-            .debug_node_bounds(listbox.id)
-            .unwrap_or(listbox.bounds);
+        let listbox_after = ui.debug_node_bounds(listbox.id).unwrap_or(listbox.bounds);
 
         let dy = (listbox_after.origin.y.0 - listbox_before.origin.y.0).abs();
         assert!(
