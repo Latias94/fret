@@ -24,7 +24,7 @@ pub(in super::super) fn encode_svg_mask_icon(
         rect.origin,
         Size::new(Px(rect.size.width.0 * s), Px(rect.size.height.0 * s)),
     );
-    let key = Renderer::svg_raster_key(
+    let key = renderer.svg_raster_key(
         svg,
         key_rect,
         state.scale_factor,
@@ -139,7 +139,7 @@ pub(in super::super) fn encode_svg_image(
         Size::new(Px(rect.size.width.0 * s), Px(rect.size.height.0 * s)),
     );
 
-    let key = Renderer::svg_raster_key(svg, key_rect, state.scale_factor, SvgRasterKind::Rgba, fit);
+    let key = renderer.svg_raster_key(svg, key_rect, state.scale_factor, SvgRasterKind::Rgba, fit);
     let Some(entry) = renderer.svg_raster_state.rasters.get(&key) else {
         return;
     };

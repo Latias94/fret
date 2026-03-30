@@ -111,13 +111,17 @@ Status note (2026-03-30):
   - `crates/fret-render-wgpu/src/svg.rs` now also has an internal bridge-backed render helper and
     an end-to-end test proving that text-bearing SVG can render when explicitly fed from the
     renderer-built bridge `fontdb`,
+  - registered text-bearing SVGs now also thread the current `text_font_stack_key` into
+    `SvgRasterKey`, while outline-only SVGs keep a zero key, so cache identity is already aligned
+    with the renderer text environment before shipped `<text>` support is turned on,
   - generic sans/serif/monospace mapping in the bridge now follows the renderer's current text
     policy instead of host/system discovery,
   - focused renderer coverage now locks the bridge seed to export bundled-only `Inter`,
     `JetBrains Mono`, and matching generic mappings.
 - remaining gap:
   - the bridge is not yet wired into the shipped `render_*_fit_mode(...)` SVG raster path,
-  - SVG raster/cache invalidation is not yet keyed to the shared font-environment revision,
+  - shipped bridge-fed raster invalidation is not yet active even though `SvgRasterKey` now
+    carries `text_font_stack_key` for registered text-bearing SVGs,
   - and `<text>` remains rejected in the shipped raster path.
 
 Once Stage 1 exists, add a renderer-internal `SvgTextFontBridge` that:
@@ -195,5 +199,5 @@ Progress note:
 - `crates/fret-runtime/src/font_catalog.rs`
 - `crates/fret-launch/src/runner/font_catalog.rs`
 - `crates/fret-render-text/src/{parley_font_db.rs,parley_shaper.rs}`
-- `crates/fret-render-wgpu/src/{renderer/config.rs,svg.rs,text/fonts.rs,text/tests.rs}`
+- `crates/fret-render-wgpu/src/{renderer/config.rs,renderer/svg/{mod.rs,prepare.rs},svg.rs,text/fonts.rs,text/tests.rs}`
 - `crates/fret-render-wgpu/src/svg.rs`

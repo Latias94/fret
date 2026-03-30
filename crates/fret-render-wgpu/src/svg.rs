@@ -227,6 +227,13 @@ impl Default for SvgRenderer {
 }
 
 fn ensure_svg_text_free(bytes: &[u8]) -> Result<(), SvgRenderError> {
+    if svg_contains_text_nodes(bytes)? {
+        return Err(SvgRenderError::TextNodesUnsupported);
+    }
+    Ok(())
+}
+
+pub(crate) fn svg_contains_text_nodes(bytes: &[u8]) -> Result<bool, SvgRenderError> {
     let xml = decode_svg_xml(bytes)?;
     let options = usvg::roxmltree::ParsingOptions {
         allow_dtd: true,
@@ -234,10 +241,7 @@ fn ensure_svg_text_free(bytes: &[u8]) -> Result<(), SvgRenderError> {
     };
     let document = usvg::roxmltree::Document::parse_with_options(xml.as_ref(), options)
         .map_err(usvg::Error::ParsingFailed)?;
-    if document.descendants().any(is_text_element) {
-        return Err(SvgRenderError::TextNodesUnsupported);
-    }
-    Ok(())
+    Ok(document.descendants().any(is_text_element))
 }
 
 fn decode_svg_xml(bytes: &[u8]) -> Result<Cow<'_, str>, SvgRenderError> {

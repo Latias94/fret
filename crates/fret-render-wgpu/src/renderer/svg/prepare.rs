@@ -3,6 +3,17 @@ use super::SvgRasterGpu;
 use crate::svg::SMOOTH_SVG_SCALE_FACTOR;
 
 impl Renderer {
+    pub(in crate::renderer) fn svg_text_font_stack_key_for_svg(
+        &self,
+        svg: fret_core::SvgId,
+    ) -> u64 {
+        if self.svg_registry_state.contains_text_nodes(svg) {
+            self.text_system.font_stack_key()
+        } else {
+            0
+        }
+    }
+
     pub(in crate::renderer) fn svg_target_box_px(rect: Rect, scale_factor: f32) -> (u32, u32) {
         let w = (rect.size.width.0 * scale_factor).ceil().max(1.0);
         let h = (rect.size.height.0 * scale_factor).ceil().max(1.0);
@@ -10,6 +21,7 @@ impl Renderer {
     }
 
     pub(in crate::renderer) fn svg_raster_key(
+        &self,
         svg: fret_core::SvgId,
         rect: Rect,
         scale_factor: f32,
@@ -22,6 +34,7 @@ impl Renderer {
             target_w,
             target_h,
             smooth_scale_bits: SMOOTH_SVG_SCALE_FACTOR.to_bits(),
+            text_font_stack_key: self.svg_text_font_stack_key_for_svg(svg),
             kind,
             fit,
         }

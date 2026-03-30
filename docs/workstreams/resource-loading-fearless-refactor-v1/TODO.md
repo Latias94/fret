@@ -435,18 +435,23 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `crates/fret-render-wgpu/src/svg.rs` now has an internal bridge-backed render helper and a
       focused end-to-end test proving text-bearing SVG can render when fed from that renderer-built
       `fontdb`, while the shipped path still rejects `<text>`.
+    - registered text-bearing SVGs now also carry the current `text_font_stack_key` in
+      `SvgRasterKey`, while outline-only SVGs keep a zero key, so future SVG-text cache
+      invalidation follows the renderer text environment instead of introducing a separate cache
+      epoch.
     - sans/serif/monospace generic-family mapping inside the bridge now follows the renderer's
       current text policy instead of host/system discovery.
     - focused coverage now locks the bundled-only bridge seed to export `Inter`,
       `JetBrains Mono`, and matching generic mappings.
   - Remaining:
     - wire this bridge into the shipped `render_*_fit_mode(...)` SVG raster path
-    - key bridge/raster invalidation off the shared font-environment revision
+    - promote the current `SvgRasterKey` text-font-stack participation into actual bridge-fed
+      raster invalidation once shipped `<text>` support is enabled
     - keep `SvgRenderError::TextNodesUnsupported` as the shipped baseline until deterministic
       end-to-end SVG-text gates exist
   - Evidence:
     - `crates/fret-render-text/src/{parley_font_db.rs,parley_shaper.rs,lib.rs}`
-    - `crates/fret-render-wgpu/src/{renderer/config.rs,svg.rs,text/fonts.rs,text/tests.rs}`
+    - `crates/fret-render-wgpu/src/{renderer/config.rs,renderer/svg/{mod.rs,prepare.rs},svg.rs,text/fonts.rs,text/tests.rs}`
     - `cargo nextest run -p fret-render-wgpu text::tests::svg_text_font_db_uses_current_collection_fonts_and_generic_mappings`
     - `cargo nextest run -p fret-render-wgpu svg::tests`
 

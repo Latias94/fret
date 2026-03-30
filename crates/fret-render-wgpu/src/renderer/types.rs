@@ -938,6 +938,7 @@ pub(super) struct SvgRasterKey {
     pub(super) target_w: u32,
     pub(super) target_h: u32,
     pub(super) smooth_scale_bits: u32,
+    pub(super) text_font_stack_key: u64,
     pub(super) kind: SvgRasterKind,
     pub(super) fit: fret_core::SvgFit,
 }
@@ -973,6 +974,7 @@ pub(super) struct SvgRasterEntry {
 #[derive(Debug, Clone)]
 pub(super) struct SvgEntry {
     pub(super) bytes: Arc<[u8]>,
+    pub(super) contains_text_nodes: bool,
     pub(super) refs: u32,
 }
 

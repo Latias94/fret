@@ -38,8 +38,15 @@ impl SvgRegistryState {
         self.svgs.get(svg).map(|entry| entry.bytes.as_ref())
     }
 
+    pub(super) fn contains_text_nodes(&self, svg: fret_core::SvgId) -> bool {
+        self.svgs
+            .get(svg)
+            .is_some_and(|entry| entry.contains_text_nodes)
+    }
+
     pub(super) fn register_svg(&mut self, bytes: &[u8]) -> fret_core::SvgId {
         let hash = hash_bytes(bytes);
+        let contains_text_nodes = crate::svg::svg_contains_text_nodes(bytes).unwrap_or(false);
         if let Some(ids) = self.hash_index.get(&hash) {
             for &id in ids {
                 let Some(existing) = self.svgs.get(id) else {
@@ -56,6 +63,7 @@ impl SvgRegistryState {
 
         let id = self.svgs.insert(SvgEntry {
             bytes: Arc::<[u8]>::from(bytes),
+            contains_text_nodes,
             refs: 1,
         });
         self.hash_index.entry(hash).or_default().push(id);
@@ -273,7 +281,11 @@ mod raster;
 
 #[cfg(test)]
 mod tests {
+    use super::super::types::SvgRasterKind;
+    use super::super::{Point, Px, Rect, Size};
     use super::{SvgRegistryState, SvgRegistryUnregisterOutcome};
+    use crate::Renderer;
+    use fret_core::SvgService;
 
     #[test]
     fn registry_deduplicates_svg_bytes_and_tracks_refcounts() {
@@ -299,5 +311,72 @@ mod tests {
             state.unregister_svg(first),
             SvgRegistryUnregisterOutcome::Missing
         ));
+    }
+
+    #[test]
+    fn registry_records_svg_text_presence() {
+        let mut state = SvgRegistryState::new();
+        let outline =
+            br#"<svg xmlns="http://www.w3.org/2000/svg"><rect width="8" height="8"/></svg>"#;
+        let text =
+            br#"<svg xmlns="http://www.w3.org/2000/svg"><text x="1" y="6">Fret</text></svg>"#;
+
+        let outline_id = state.register_svg(outline);
+        let text_id = state.register_svg(text);
+
+        assert!(!state.contains_text_nodes(outline_id));
+        assert!(state.contains_text_nodes(text_id));
+    }
+
+    #[test]
+    fn raster_key_tracks_text_font_stack_only_for_text_svgs() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+
+        let outline_svg = renderer.register_svg(
+            br#"<svg xmlns="http://www.w3.org/2000/svg"><rect width="8" height="8"/></svg>"#,
+        );
+        let text_svg = renderer.register_svg(
+            br#"<svg xmlns="http://www.w3.org/2000/svg"><text x="1" y="6">Fret</text></svg>"#,
+        );
+
+        let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(32.0), Px(16.0)));
+        let outline_key0 = renderer.svg_raster_key(
+            outline_svg,
+            rect,
+            1.0,
+            SvgRasterKind::Rgba,
+            fret_core::SvgFit::Contain,
+        );
+        let text_key0 = renderer.svg_raster_key(
+            text_svg,
+            rect,
+            1.0,
+            SvgRasterKind::Rgba,
+            fret_core::SvgFit::Contain,
+        );
+
+        assert_eq!(outline_key0.text_font_stack_key, 0);
+        assert_ne!(text_key0.text_font_stack_key, 0);
+
+        assert!(renderer.set_text_locale(Some("zh-CN")));
+
+        let outline_key1 = renderer.svg_raster_key(
+            outline_svg,
+            rect,
+            1.0,
+            SvgRasterKind::Rgba,
+            fret_core::SvgFit::Contain,
+        );
+        let text_key1 = renderer.svg_raster_key(
+            text_svg,
+            rect,
+            1.0,
+            SvgRasterKind::Rgba,
+            fret_core::SvgFit::Contain,
+        );
+
+        assert_eq!(outline_key0, outline_key1);
+        assert_ne!(text_key0, text_key1);
     }
 }

@@ -16,7 +16,7 @@ impl Renderer {
         kind: SvgRasterKind,
         fit: fret_core::SvgFit,
     ) -> Option<(fret_core::ImageId, fret_core::UvRect, (u32, u32))> {
-        let key = Self::svg_raster_key(svg, rect, scale_factor, kind, fit);
+        let key = self.svg_raster_key(svg, rect, scale_factor, kind, fit);
         if self.svg_raster_state.rasters.contains_key(&key) {
             if self.diagnostics_state.perf_enabled() {
                 self.svg_raster_state.frame_perf.raster_cache_hits = self
