@@ -8,6 +8,22 @@ use std::hash::{Hash as _, Hasher as _};
 use crate::FontCatalogEntryMetadata;
 use crate::FontVariableAxisMetadata;
 
+fn canonical_family_names(fcx: &mut FontContext) -> Vec<String> {
+    let mut by_lower: HashMap<String, String> = HashMap::new();
+    for name in fcx.collection.family_names() {
+        let key = name.to_ascii_lowercase();
+        by_lower.entry(key).or_insert_with(|| name.to_string());
+    }
+
+    let mut names: Vec<String> = by_lower.into_values().collect();
+    names.sort_unstable_by(|a, b| {
+        a.to_ascii_lowercase()
+            .cmp(&b.to_ascii_lowercase())
+            .then(a.cmp(b))
+    });
+    names
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ParleyShaperFontDbDiagnosticsSnapshot {
     registered_font_blobs_count: u64,
@@ -213,19 +229,7 @@ impl ParleyFontDbState {
             return cache.clone();
         }
 
-        let mut by_lower: HashMap<String, String> = HashMap::new();
-        for name in fcx.collection.family_names() {
-            let key = name.to_ascii_lowercase();
-            by_lower.entry(key).or_insert_with(|| name.to_string());
-        }
-
-        let mut names: Vec<String> = by_lower.into_values().collect();
-        names.sort_unstable_by(|a, b| {
-            a.to_ascii_lowercase()
-                .cmp(&b.to_ascii_lowercase())
-                .then(a.cmp(b))
-        });
-
+        let names = canonical_family_names(fcx);
         self.all_font_names_cache = Some(names.clone());
         names
     }
@@ -243,19 +247,7 @@ impl ParleyFontDbState {
             String::from_utf8_lossy(&tag_be_bytes).to_string()
         }
 
-        let mut by_lower: HashMap<String, String> = HashMap::new();
-        for name in fcx.collection.family_names() {
-            let key = name.to_ascii_lowercase();
-            by_lower.entry(key).or_insert_with(|| name.to_string());
-        }
-
-        let mut names: Vec<String> = by_lower.into_values().collect();
-        names.sort_unstable_by(|a, b| {
-            a.to_ascii_lowercase()
-                .cmp(&b.to_ascii_lowercase())
-                .then(a.cmp(b))
-        });
-
+        let names = canonical_family_names(fcx);
         let mut out: Vec<FontCatalogEntryMetadata> = Vec::with_capacity(names.len());
         for family in names {
             let Some(id) = fcx.collection.family_id(&family) else {
@@ -340,6 +332,54 @@ impl ParleyFontDbState {
 
         self.all_font_catalog_entries_cache = Some(out.clone());
         out
+    }
+
+    pub(crate) fn family_name_for_id(
+        &mut self,
+        fcx: &mut FontContext,
+        id: FamilyId,
+    ) -> Option<String> {
+        fcx.collection.family_name(id).map(|name| name.to_string())
+    }
+
+    pub(crate) fn for_each_font_environment_blob(
+        &mut self,
+        fcx: &mut FontContext,
+        mut f: impl FnMut(crate::FontEnvironmentBlobRef<'_>),
+    ) {
+        let names = canonical_family_names(fcx);
+        let mut seen: Vec<RegisteredFontBlob> = Vec::new();
+
+        for family in names {
+            let Some(id) = fcx.collection.family_id(&family) else {
+                continue;
+            };
+            let Some(info) = fcx.collection.family(id) else {
+                continue;
+            };
+
+            for font in info.fonts() {
+                let Some(blob) = font.load(Some(&mut fcx.source_cache)) else {
+                    continue;
+                };
+
+                let bytes = blob.as_ref();
+                let len = bytes.len();
+                let hash = hash_bytes(bytes);
+                if seen.iter().any(|existing| {
+                    existing.hash == hash && existing.len == len && existing.blob.as_ref() == bytes
+                }) {
+                    continue;
+                }
+
+                seen.push(RegisteredFontBlob {
+                    hash,
+                    len,
+                    blob: blob.clone(),
+                });
+                f(crate::FontEnvironmentBlobRef::new(hash, bytes));
+            }
+        }
     }
 
     pub(crate) fn resolve_family_id(

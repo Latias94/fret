@@ -5,8 +5,11 @@
 Current truthful baseline:
 
 - the first-party SVG raster pipeline rejects text-bearing SVG assets,
+- the renderer backend now has an internal bridge seed that can rebuild `usvg fontdb` from the
+  current approved text collection and generic mappings, but the shipped SVG raster path does not
+  consume it yet,
 - outline/icon/illustration SVGs remain supported,
-- long-term SVG text support is deferred until it can share the framework font publication story.
+- long-term SVG text support is deferred until shared invalidation and deterministic gates exist.
 
 This document defines that long-term path.
 
@@ -20,17 +23,23 @@ Fret now has a deterministic startup font baseline story for main text:
 - and runtime globals publish coarse font-environment metadata such as
   `BundledFontBaselineSnapshot`, `FontCatalogMetadata`, and `TextFontStackKey`.
 
-What is still missing for SVG text is the authoritative "which exact fonts are currently usable for
+What was missing for SVG text was the authoritative "which exact fonts are currently usable for
 rendering?" surface.
 
-Today:
+That gap now has a first landed slice:
 
-- `FontCatalogMetadata` is a best-effort family picker/diagnostics view,
-- `TextFontStackKey` is a stable invalidation key,
-- but neither one is enough to rebuild an SVG text font environment from the same bytes/identity
-  the renderer is actually using.
+- runtime globals publish the identity/revision side through
+  `RendererFontEnvironmentSnapshot`,
+- and the renderer can now rebuild a `usvg fontdb` from the current approved text collection
+  without loading system fonts independently.
 
-That is why SVG text must stay rejected for now.
+What is still missing is the end-to-end raster wiring:
+
+- the shipped SVG raster path still rejects `<text>`,
+- bridge rebuilds are not yet keyed into SVG raster/cache invalidation,
+- and deterministic SVG-text gates do not exist yet.
+
+That is why SVG text must still stay rejected for now.
 
 ## Non-negotiable contract rules
 
@@ -60,8 +69,8 @@ Status note (2026-03-30):
   - `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_{impl,types}.rs` now exports the
     same inventory under `debug.resource_loading.font_environment.renderer_font_*`.
 - remaining gap:
-  - the current snapshot intentionally publishes stable identity + byte fingerprints, but not yet
-    reproducible raw bytes or a renderer-owned rehydration handle for an SVG-text bridge.
+  - the current snapshot intentionally stays identity/fingerprint-first at runtime-global scope,
+    while the actual SVG bridge rehydration now lives renderer-locally.
 
 Add a runtime-visible snapshot that answers:
 
@@ -77,19 +86,41 @@ Minimum shape:
   - source lane (`bundled_startup`, `asset_request`, `raw_runtime_bytes`),
   - optional logical identity (`AssetRequest` or equivalent asset key/bundle pair),
   - stable byte fingerprint,
-  - actual font bytes or a renderer-owned handle that can reproduce them.
+  - enough information for diagnostics and provenance; actual bridge rehydration may stay
+    renderer-local instead of being copied into runtime globals.
 
 Why this is required:
 
 - `FontCatalogMetadata` only publishes family names and coarse axis hints,
 - family names are not enough to rebuild deterministic SVG text rendering,
-- SVG needs the same byte-level font authority as main text, not a second resolver path.
+- SVG needs the same font authority as main text, not a second resolver path,
+- and the bridge decision should preserve layering by keeping bridge rehydration in the renderer
+  instead of pushing more font bytes through runtime globals.
 
 ### Stage 2: build an SVG font bridge from the published inventory
 
+Status note (2026-03-30):
+
+- landed slice:
+  - `fret-render-text::ParleyShaper::{family_name_for_id,for_each_font_environment_blob}` can now
+    enumerate deduped blobs from the current approved text collection and map the current generic
+    family ids back to names,
+  - `fret-render-wgpu::TextSystem::build_svg_text_font_db()` and
+    `Renderer::build_svg_text_font_db_for_bridge()` now rebuild a `usvg::fontdb::Database` only
+    from that live renderer text collection,
+  - generic sans/serif/monospace mapping in the bridge now follows the renderer's current text
+    policy instead of host/system discovery,
+  - focused renderer coverage now locks the bridge seed to export bundled-only `Inter`,
+    `JetBrains Mono`, and matching generic mappings.
+- remaining gap:
+  - the bridge is not yet wired into `crates/fret-render-wgpu/src/svg.rs`,
+  - SVG raster/cache invalidation is not yet keyed to the shared font-environment revision,
+  - and `<text>` remains rejected in the shipped raster path.
+
 Once Stage 1 exists, add a renderer-internal `SvgTextFontBridge` that:
 
-- rebuilds a `usvg fontdb` only from the published renderer font inventory,
+- rebuilds a `usvg fontdb` only from the renderer's current approved text collection and the
+  shared font-environment publication model,
 - never calls `load_system_fonts()`,
 - keys rebuilds and raster cache invalidation off the shared font-environment revision,
 - remains empty/disabled when no SVG-text support is enabled.
@@ -144,18 +175,22 @@ This plan does not aim to:
 1. Add the runtime/global font-inventory snapshot described in Stage 1.
 2. Thread successful font injection (`install_default_bundled_font_baseline`,
    `TextAddFontAssets`, `TextAddFonts`) through that snapshot.
-3. Add an SVG font-bridge revision surface in `fret-render-wgpu`.
+3. Wire the existing SVG font-bridge seed into the actual SVG raster/cache invalidation path in
+   `fret-render-wgpu`.
 4. Add diagnostics/tests before enabling any text-bearing SVG support.
 5. Keep `SvgRenderError::TextNodesUnsupported` as the shipped baseline until the above exists.
 
 Progress note:
 
-- items 1 and 2 now have a first landed slice,
-- items 3 through 5 remain open.
+- items 1 through 3 now have first landed slices,
+- items 4 and 5 remain open at shipped-path scope because the actual raster path still rejects
+  `<text>`.
 
 ## Evidence anchors
 
 - `crates/fret-runtime/src/effect.rs`
 - `crates/fret-runtime/src/font_catalog.rs`
 - `crates/fret-launch/src/runner/font_catalog.rs`
+- `crates/fret-render-text/src/{parley_font_db.rs,parley_shaper.rs}`
+- `crates/fret-render-wgpu/src/{renderer/config.rs,text/fonts.rs,text/tests.rs}`
 - `crates/fret-render-wgpu/src/svg.rs`

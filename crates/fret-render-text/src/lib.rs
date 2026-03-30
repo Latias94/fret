@@ -44,8 +44,8 @@ pub use geometry::{
 pub use line_layout::TextLineLayout;
 pub use measure::TextMeasureCaches;
 pub use parley_shaper::{
-    FontSynthesis, GlyphFontData, ParleyGlyph, ParleyShaper, ParleyShaperFontDbDiagnosticsSnapshot,
-    ShapedCluster, ShapedLineLayout, run_system_font_rescan,
+    FontEnvironmentBlobRef, FontSynthesis, GlyphFontData, ParleyGlyph, ParleyShaper,
+    ParleyShaperFontDbDiagnosticsSnapshot, ShapedCluster, ShapedLineLayout, run_system_font_rescan,
 };
 pub use prepare_layout::{PreparedLayout, PreparedLine, prepare_layout_from_wrapped};
 pub use spans::{

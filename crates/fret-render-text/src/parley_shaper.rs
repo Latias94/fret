@@ -18,6 +18,34 @@ use crate::FontCatalogEntryMetadata;
 use crate::parley_font_db::ParleyFontDbState;
 pub use crate::parley_font_db::ParleyShaperFontDbDiagnosticsSnapshot;
 
+#[derive(Debug, Clone, Copy)]
+pub struct FontEnvironmentBlobRef<'a> {
+    hash: u64,
+    bytes: &'a [u8],
+}
+
+impl<'a> FontEnvironmentBlobRef<'a> {
+    pub(crate) fn new(hash: u64, bytes: &'a [u8]) -> Self {
+        Self { hash, bytes }
+    }
+
+    pub fn hash(&self) -> u64 {
+        self.hash
+    }
+
+    pub fn len(&self) -> u64 {
+        self.bytes.len() as u64
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.bytes.is_empty()
+    }
+
+    pub fn bytes(&self) -> &'a [u8] {
+        self.bytes
+    }
+}
+
 fn env_disables_system_fonts() -> bool {
     let Ok(raw) = std::env::var("FRET_TEXT_SYSTEM_FONTS") else {
         return false;
@@ -492,6 +520,10 @@ impl ParleyShaper {
         self.font_db.resolve_family_id(&mut self.fcx, name)
     }
 
+    pub fn family_name_for_id(&mut self, id: FamilyId) -> Option<String> {
+        self.font_db.family_name_for_id(&mut self.fcx, id)
+    }
+
     pub fn generic_family_ids(&mut self, generic: GenericFamily) -> Vec<FamilyId> {
         self.font_db.generic_family_ids(&mut self.fcx, generic)
     }
@@ -503,6 +535,11 @@ impl ParleyShaper {
 
     pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
         self.font_db.add_fonts(&mut self.fcx, fonts)
+    }
+
+    pub fn for_each_font_environment_blob(&mut self, f: impl FnMut(FontEnvironmentBlobRef<'_>)) {
+        self.font_db
+            .for_each_font_environment_blob(&mut self.fcx, f);
     }
 
     pub fn system_font_rescan_seed(&self) -> Option<crate::SystemFontRescanSeed> {

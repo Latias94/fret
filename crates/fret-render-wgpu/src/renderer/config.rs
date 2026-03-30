@@ -442,6 +442,11 @@ impl Renderer {
         self.text_system.all_font_catalog_entries()
     }
 
+    /// Builds a `usvg` font database from the renderer's current approved text environment.
+    pub fn build_svg_text_font_db_for_bridge(&mut self) -> usvg::fontdb::Database {
+        self.text_system.build_svg_text_font_db()
+    }
+
     /// Adds font bytes (TTF/OTF/TTC) to the renderer text system.
     ///
     /// Returns the number of newly loaded faces.

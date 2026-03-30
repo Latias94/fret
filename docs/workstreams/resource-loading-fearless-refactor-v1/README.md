@@ -219,6 +219,13 @@ This workstream takes a fearless posture:
     one runtime-visible source of truth instead of reconstructing it from logs or family names,
   - and resource-loading predicates can now gate that inventory by revision, source lane, and
     asset key instead of treating it as screenshot-only debug data.
+- the renderer backend now also has the first Stage 2 SVG-text bridge seed:
+  - `fret-render-text` can enumerate deduped font blobs from the current approved text collection
+    and resolve the current generic-family ids back to family names,
+  - `fret-render-wgpu::{TextSystem,Renderer}` can rebuild a `usvg::fontdb::Database` only from
+    that current collection plus the current generic-family mapping,
+  - and focused renderer coverage now locks the bundled-only bridge seed to export the expected
+    families and generic mappings instead of falling back to host guesses.
 - Accepted ADR coverage now exists for both:
   - icon ownership/package composition (`docs/adr/0065-icon-system-and-asset-packaging.md`),
   - the general portable locator/resolver contract
@@ -317,8 +324,9 @@ The remaining gap is now narrower:
 
 - native still keeps `FontFamilyDefaultsPolicy::None` and layers optional system scanning on top,
 - the runtime now publishes a real renderer font-source inventory and diagnostics-facing revision,
-  but it still does not expose reproducible bytes or a renderer-owned rehydration handle for the
-  future SVG-text bridge,
+- Stage 2 no longer needs extra runtime-global raw bytes because `fret-render-wgpu` can now seed a
+  `usvg fontdb` directly from the renderer's current approved text collection and current
+  generic-family mapping,
 - mobile shell/toolchain verification is still incomplete even though the current non-wasm runner
   path routes through the same startup helper,
 - and Android local verification currently depends on an external NDK clang toolchain that is not
@@ -342,9 +350,12 @@ portable across hosts when it is actually resolved in a separate font universe.
 
 The remaining architectural gap is still real:
 
-- SVG text does not yet share the main renderer text/font environment,
+- the backend now has a renderer-owned bridge seed that can export a `usvg fontdb` from the
+  current approved text collection,
+- but the shipped SVG raster path still does not consume that bridge or key raster invalidation
+  off the shared font-environment revision,
 - so the current truthful baseline is “outline-only SVGs for first-party UI rendering,”
-- and long-term shared-font support still needs its own follow-up design.
+- and long-term shared-font support still needs end-to-end raster wiring plus deterministic gates.
 
 ### 6) SVG file loading is sync filesystem I/O with epoch polling
 

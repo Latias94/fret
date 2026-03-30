@@ -50,6 +50,9 @@ Status note (2026-03-30):
 - the runtime now also publishes `RendererFontEnvironmentSnapshot` so bundled startup, runtime
   asset-request injection, and raw runtime font bytes share one renderer-visible source inventory
   with a monotonic revision and diagnostics-facing source records,
+- `fret-render-wgpu` can now also rebuild a `usvg::fontdb::Database` from the renderer's current
+  approved text collection plus current generic mappings, so Stage 2 no longer depends on
+  publishing extra raw font bytes into runtime globals,
 - current local evidence includes `cargo check -p fret-launch --target aarch64-apple-ios`, so the
   same startup contract is at least compile-validated on iOS,
 - desktop system-font refresh now has a focused runner-level gate proving it augments the live
@@ -59,8 +62,8 @@ Exit criteria:
 
 - The same app can rely on one documented baseline text environment across desktop and web.
 - The remaining platform differences are explicit capability differences, not startup accidents.
-- Any remaining SVG-text gap is reduced to the still-open bridge/rehydration question, not to
-  missing runner-visible font provenance.
+- Any remaining SVG-text gap is reduced to raster wiring/cache invalidation and supported-scope
+  decisions, not to missing runner-visible font provenance or a missing backend bridge seed.
 
 ## M3 — Unified image and SVG loading
 
@@ -75,6 +78,8 @@ Status note (2026-03-30):
 
 - image loading and the current SVG bridge now both sit on the shared locator/resolver contract,
 - the first-party SVG raster path no longer silently loads system fonts for SVG `<text>`,
+- the renderer backend now has a bridge seed that rebuilds `usvg fontdb` from the current text
+  collection and generic mappings without reopening a hidden host-font lane,
 - text-bearing SVGs are now explicitly rejected until a shared text/font environment exists, and
 - that long-term bridge is now documented in
   `docs/workstreams/resource-loading-fearless-refactor-v1/SVG_TEXT_FONT_ENVIRONMENT_PLAN.md`.

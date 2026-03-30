@@ -304,13 +304,16 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `UiPredicateV1` resource-loading gates can now also assert renderer-font inventory revision,
       source lane, and asset key, so scripted diagnostics can fail on provenance regressions
       without hand-reading debug snapshots.
+    - the renderer now keeps the actual SVG bridge rehydration local:
+      `fret-render-text` can enumerate deduped blobs from the current approved text collection,
+      and `fret-render-wgpu` can rebuild a `usvg fontdb` from that live collection plus the
+      current generic-family mapping without pushing more raw font bytes into runtime globals.
     - native intentionally keeps `FontFamilyDefaultsPolicy::None`, so system-font augmentation
       remains an additive capability instead of redefining the baseline identity.
     - local iOS target evidence now exists:
       - `cargo check -p fret-launch --target aarch64-apple-ios`
   - Remaining:
-    - decide whether Stage 2 needs raw font bytes or a renderer-owned rehydration handle to
-      rebuild a shared SVG-text font environment from the published inventory
+    - wire the renderer-local SVG bridge seed into the actual SVG raster/cache invalidation path
     - add stable Android target evidence once the local/CI environment provides NDK clang
       toolchains
     - add mobile-specific diagnostics or startup gates beyond shared native runner wiring
@@ -322,6 +325,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `inject_font_asset_batch_and_refresh_catalog_records_asset_sources`,
       `inject_font_blobs_and_refresh_catalog_refreshes_only_when_fonts_were_added`,
       `publish_renderer_font_environment_sets_key_after_locale_application`)
+    - `crates/fret-render-text/src/{parley_font_db.rs,parley_shaper.rs}`
+    - `crates/fret-render-wgpu/src/{renderer/config.rs,text/fonts.rs,text/tests.rs}`
     - `ecosystem/fret-bootstrap/src/ui_diagnostics/{debug_snapshot_impl.rs,debug_snapshot_predicates.rs,debug_snapshot_types.rs}`
     - `cargo nextest run -p fret-launch`
     - `cargo nextest run -p fret-bootstrap --features 'ui-app-driver diagnostics' debug_snapshot_types_tests::font_environment_snapshot_from_runtime_keeps_renderer_font_sources`
@@ -417,6 +422,29 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `docs/workstreams/resource-loading-fearless-refactor-v1/SVG_TEXT_FONT_ENVIRONMENT_PLAN.md`
     - `crates/fret-runtime/src/effect.rs`
     - `crates/fret-launch/src/runner/font_catalog.rs`
+
+- [~] RESLOAD-svg-425 Seed a renderer-owned SVG-text font bridge from the live text environment.
+  - Current landed slice:
+    - `fret-render-text::ParleyShaper::{family_name_for_id,for_each_font_environment_blob}` now
+      expose the current approved text collection as:
+      - deduped live font blobs,
+      - current family-name lookup for injected generic ids.
+    - `fret-render-wgpu::TextSystem::build_svg_text_font_db()` and
+      `Renderer::build_svg_text_font_db_for_bridge()` now rebuild a `usvg::fontdb::Database`
+      only from that live renderer text collection.
+    - sans/serif/monospace generic-family mapping inside the bridge now follows the renderer's
+      current text policy instead of host/system discovery.
+    - focused coverage now locks the bundled-only bridge seed to export `Inter`,
+      `JetBrains Mono`, and matching generic mappings.
+  - Remaining:
+    - wire this bridge into `crates/fret-render-wgpu/src/svg.rs`
+    - key bridge/raster invalidation off the shared font-environment revision
+    - keep `SvgRenderError::TextNodesUnsupported` as the shipped baseline until deterministic
+      end-to-end SVG-text gates exist
+  - Evidence:
+    - `crates/fret-render-text/src/{parley_font_db.rs,parley_shaper.rs,lib.rs}`
+    - `crates/fret-render-wgpu/src/{renderer/config.rs,text/fonts.rs,text/tests.rs}`
+    - `cargo nextest run -p fret-render-wgpu text::tests::svg_text_font_db_uses_current_collection_fonts_and_generic_mappings`
 
 - [~] RESLOAD-img-430 Move image loading onto the shared locator/resolver contract while preserving
       the existing async/UI invalidation ergonomics.

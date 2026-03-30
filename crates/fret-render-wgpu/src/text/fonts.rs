@@ -1,4 +1,5 @@
 use super::{TextFontFamilyConfig, TextSystem};
+use parley::fontique::GenericFamily;
 
 impl TextSystem {
     pub(super) fn finish_initial_font_bootstrap(&mut self) {
@@ -28,6 +29,32 @@ impl TextSystem {
 
     pub fn font_stack_key(&self) -> u64 {
         self.font_runtime.font_stack_key
+    }
+
+    pub(crate) fn build_svg_text_font_db(&mut self) -> usvg::fontdb::Database {
+        let mut db = usvg::fontdb::Database::new();
+        self.parley_shaper.for_each_font_environment_blob(|blob| {
+            db.load_font_data(blob.bytes().to_vec());
+        });
+
+        if let Some(family) = self.first_family_name_for_svg_generic(GenericFamily::SansSerif) {
+            db.set_sans_serif_family(family);
+        }
+        if let Some(family) = self.first_family_name_for_svg_generic(GenericFamily::Serif) {
+            db.set_serif_family(family);
+        }
+        if let Some(family) = self.first_family_name_for_svg_generic(GenericFamily::Monospace) {
+            db.set_monospace_family(family);
+        }
+
+        db
+    }
+
+    fn first_family_name_for_svg_generic(&mut self, generic: GenericFamily) -> Option<String> {
+        self.parley_shaper
+            .generic_family_ids(generic)
+            .into_iter()
+            .find_map(|id| self.parley_shaper.family_name_for_id(id))
     }
 
     /// Sets the default locale for text shaping and font fallback selection.

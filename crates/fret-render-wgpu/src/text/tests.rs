@@ -133,6 +133,18 @@ fn bundled_profile_role_face_blobs(
     fret_fonts::test_support::face_blobs(profile.faces_for_role(role))
 }
 
+fn query_fontdb_family(
+    db: &usvg::fontdb::Database,
+    family: usvg::fontdb::Family<'_>,
+) -> Option<usvg::fontdb::ID> {
+    db.query(&usvg::fontdb::Query {
+        families: &[family],
+        weight: usvg::fontdb::Weight(400),
+        stretch: usvg::fontdb::Stretch::Normal,
+        style: usvg::fontdb::Style::Normal,
+    })
+}
+
 #[test]
 fn subpixel_mask_to_alpha_uses_channel_max() {
     let data = vec![
@@ -2768,6 +2780,45 @@ fn ui_generic_resolution_prefers_first_available_configured_candidate() {
             .iter()
             .any(|face| jetbrains_faces.contains(face)),
         "expected FontId::Ui to resolve through the reordered first configured candidate"
+    );
+}
+
+#[test]
+fn svg_text_font_db_uses_current_collection_fonts_and_generic_mappings() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+
+    reset_bundled_only_font_runtime(&mut text);
+
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::default_profile()).collect();
+    let added = text.add_fonts(fonts);
+    assert!(added > 0, "expected bundled fonts to load");
+
+    let _ = text.set_font_families(&fret_core::TextFontFamilyConfig {
+        common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
+        ui_sans: vec!["Inter".to_string()],
+        ui_mono: vec!["JetBrains Mono".to_string()],
+        ..Default::default()
+    });
+
+    let db = text.build_svg_text_font_db();
+
+    let inter = query_fontdb_family(&db, usvg::fontdb::Family::Name("Inter"))
+        .expect("expected Inter to be exported into the svg text font db");
+    let mono = query_fontdb_family(&db, usvg::fontdb::Family::Name("JetBrains Mono"))
+        .expect("expected JetBrains Mono to be exported into the svg text font db");
+    let sans_generic = query_fontdb_family(&db, usvg::fontdb::Family::SansSerif)
+        .expect("expected a sans-serif generic mapping in the svg text font db");
+    let mono_generic = query_fontdb_family(&db, usvg::fontdb::Family::Monospace)
+        .expect("expected a monospace generic mapping in the svg text font db");
+
+    assert_eq!(
+        sans_generic, inter,
+        "expected svg sans-serif generic resolution to follow the current text-system mapping"
+    );
+    assert_eq!(
+        mono_generic, mono,
+        "expected svg monospace generic resolution to follow the current text-system mapping"
     );
 }
 
