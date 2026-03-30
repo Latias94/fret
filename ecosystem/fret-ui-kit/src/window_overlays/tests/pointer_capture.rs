@@ -702,6 +702,143 @@ fn pointer_capture_restores_tooltips_after_release() {
 }
 
 #[test]
+fn pointer_capture_keeps_noninteractive_hover_overlays_and_tooltips_visible() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+    let underlay_clicked = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let (trigger, _underlay) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: false,
+            trigger,
+            open: open.clone(),
+            present: true,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: trigger,
+            root_name: tooltip_root_name(trigger),
+            interactive: false,
+            trigger: Some(trigger),
+            open: open.clone(),
+            present: true,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let (hover_layer, tooltip_layer) =
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+            let hover_layer = overlays
+                .hover_overlays
+                .get(&(window, trigger))
+                .map(|h| h.layer)
+                .expect("hover overlay layer");
+            let tooltip_layer = overlays
+                .tooltips
+                .get(&(window, trigger))
+                .map(|t| t.layer)
+                .expect("tooltip layer");
+            (hover_layer, tooltip_layer)
+        });
+    assert!(ui.is_layer_visible(hover_layer));
+    assert!(ui.is_layer_visible(tooltip_layer));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(
+        ui.captured().is_some(),
+        "expected pressable pointer down to capture"
+    );
+
+    begin_frame(&mut app, window);
+    let (_trigger2, _underlay2) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: false,
+            trigger,
+            open: open.clone(),
+            present: true,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: trigger,
+            root_name: tooltip_root_name(trigger),
+            interactive: false,
+            trigger: Some(trigger),
+            open: open.clone(),
+            present: true,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    assert!(ui.is_layer_visible(hover_layer));
+    assert!(ui.is_layer_visible(tooltip_layer));
+}
+
+#[test]
 fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
     let window = AppWindowId::default();
     let mut app = App::new();
