@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::sync::Arc;
 
 use fret_core::SvgFit;
 use resvg::tiny_skia::{Pixmap, Transform};
@@ -44,10 +43,8 @@ pub(crate) enum SvgRenderError {
     Parse(#[from] usvg::Error),
 }
 
-#[derive(Clone)]
-pub(crate) struct SvgRenderer {
-    usvg_options: Arc<usvg::Options<'static>>,
-}
+#[derive(Clone, Copy)]
+pub(crate) struct SvgRenderer;
 
 fn render_scale(
     svg_size: usvg::Size,
@@ -96,32 +93,45 @@ fn render_scale(
 
 impl SvgRenderer {
     pub(crate) fn new() -> Self {
-        Self {
-            usvg_options: Arc::new(usvg::Options::default()),
-        }
+        Self
     }
 
     fn parse_supported_tree(&self, bytes: &[u8]) -> Result<usvg::Tree, SvgRenderError> {
-        ensure_svg_text_free(bytes)?;
-        let tree = usvg::Tree::from_data(bytes, self.usvg_options.as_ref())?;
+        self.parse_tree(bytes, None)
+    }
+
+    fn parse_tree(
+        &self,
+        bytes: &[u8],
+        bridge_font_db: Option<&usvg::fontdb::Database>,
+    ) -> Result<usvg::Tree, SvgRenderError> {
+        if bridge_font_db.is_none() {
+            ensure_svg_text_free(bytes)?;
+        }
+
+        let mut options = usvg::Options::default();
+        if let Some(fontdb) = bridge_font_db {
+            *options.fontdb_mut() = fontdb.clone();
+        }
+
+        let tree = usvg::Tree::from_data(bytes, &options)?;
         Ok(tree)
     }
 
-    pub(crate) fn render_alpha_mask_fit_mode(
+    fn render_alpha_mask_for_tree(
         &self,
-        bytes: &[u8],
+        tree: &usvg::Tree,
         target_box_px: (u32, u32),
         smooth_scale_factor: f32,
         fit: SvgFit,
     ) -> Result<SvgAlphaMask, SvgRenderError> {
-        let tree = self.parse_supported_tree(bytes)?;
         let svg_size = tree.size();
         let (sx, sy, out_w, out_h) =
             render_scale(svg_size, target_box_px, smooth_scale_factor, fit)?;
 
         let mut pixmap = Pixmap::new(out_w, out_h).ok_or(usvg::Error::InvalidSize)?;
         let transform = Transform::from_scale(sx, sy);
-        resvg::render(&tree, transform, &mut pixmap.as_mut());
+        resvg::render(tree, transform, &mut pixmap.as_mut());
 
         let alpha = pixmap
             .pixels()
@@ -134,21 +144,20 @@ impl SvgRenderer {
         })
     }
 
-    pub(crate) fn render_rgba_fit_mode(
+    fn render_rgba_for_tree(
         &self,
-        bytes: &[u8],
+        tree: &usvg::Tree,
         target_box_px: (u32, u32),
         smooth_scale_factor: f32,
         fit: SvgFit,
     ) -> Result<SvgRgbaImage, SvgRenderError> {
-        let tree = self.parse_supported_tree(bytes)?;
         let svg_size = tree.size();
         let (sx, sy, out_w, out_h) =
             render_scale(svg_size, target_box_px, smooth_scale_factor, fit)?;
 
         let mut pixmap = Pixmap::new(out_w, out_h).ok_or(usvg::Error::InvalidSize)?;
         let transform = Transform::from_scale(sx, sy);
-        resvg::render(&tree, transform, &mut pixmap.as_mut());
+        resvg::render(tree, transform, &mut pixmap.as_mut());
 
         // tiny-skia pixmap stores RGBA premultiplied alpha. Our image pipeline expects
         // unpremultiplied RGBA (it premultiplies in the shader).
@@ -173,6 +182,41 @@ impl SvgRenderer {
             size_px: (out_w, out_h),
             rgba,
         })
+    }
+
+    pub(crate) fn render_alpha_mask_fit_mode(
+        &self,
+        bytes: &[u8],
+        target_box_px: (u32, u32),
+        smooth_scale_factor: f32,
+        fit: SvgFit,
+    ) -> Result<SvgAlphaMask, SvgRenderError> {
+        let tree = self.parse_supported_tree(bytes)?;
+        self.render_alpha_mask_for_tree(&tree, target_box_px, smooth_scale_factor, fit)
+    }
+
+    pub(crate) fn render_rgba_fit_mode(
+        &self,
+        bytes: &[u8],
+        target_box_px: (u32, u32),
+        smooth_scale_factor: f32,
+        fit: SvgFit,
+    ) -> Result<SvgRgbaImage, SvgRenderError> {
+        let tree = self.parse_supported_tree(bytes)?;
+        self.render_rgba_for_tree(&tree, target_box_px, smooth_scale_factor, fit)
+    }
+
+    #[cfg(test)]
+    fn render_rgba_fit_mode_with_bridge_font_db(
+        &self,
+        bytes: &[u8],
+        target_box_px: (u32, u32),
+        smooth_scale_factor: f32,
+        fit: SvgFit,
+        fontdb: &usvg::fontdb::Database,
+    ) -> Result<SvgRgbaImage, SvgRenderError> {
+        let tree = self.parse_tree(bytes, Some(fontdb))?;
+        self.render_rgba_for_tree(&tree, target_box_px, smooth_scale_factor, fit)
     }
 }
 
@@ -364,6 +408,26 @@ pub fn upload_rgba_image(
 mod tests {
     use super::*;
 
+    fn build_svg_bridge_font_db() -> usvg::fontdb::Database {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut renderer = crate::Renderer::new(&ctx.adapter, &ctx.device);
+
+        let fonts: Vec<Vec<u8>> =
+            fret_fonts::test_support::face_blobs(fret_fonts::default_profile().faces.iter())
+                .collect();
+        let added = renderer.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load for svg bridge");
+
+        let _ = renderer.set_text_font_families(&fret_core::TextFontFamilyConfig {
+            common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
+            ui_sans: vec!["Inter".to_string()],
+            ui_mono: vec!["JetBrains Mono".to_string()],
+            ..Default::default()
+        });
+
+        renderer.build_svg_text_font_db_for_bridge()
+    }
+
     #[test]
     fn svg_alpha_mask_has_coverage() {
         let svg = r#"
@@ -443,5 +507,34 @@ mod tests {
             )
             .expect_err("text-bearing SVG rgba raster should be rejected");
         assert!(matches!(rgba_err, SvgRenderError::TextNodesUnsupported));
+    }
+
+    #[test]
+    fn svg_text_can_render_with_bridge_font_db_seed() {
+        let svg = r##"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 24">
+  <text x="4" y="18" font-family="Inter" font-size="16" fill="#000000">Fret</text>
+</svg>
+"##;
+        let renderer = SvgRenderer::new();
+        let fontdb = build_svg_bridge_font_db();
+
+        let image = renderer
+            .render_rgba_fit_mode_with_bridge_font_db(
+                svg.as_bytes(),
+                (128, 48),
+                SMOOTH_SVG_SCALE_FACTOR,
+                SvgFit::Contain,
+                &fontdb,
+            )
+            .expect("svg text should render when fed from the renderer bridge font db");
+
+        let (w, h) = image.size_px;
+        assert!(w > 0 && h > 0);
+        assert_eq!(image.rgba.len(), (w as usize) * (h as usize) * 4);
+        assert!(
+            image.rgba.chunks_exact(4).any(|px| px[3] > 0),
+            "expected bridge-backed svg text rasterization to produce covered pixels"
+        );
     }
 }
