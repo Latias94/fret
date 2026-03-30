@@ -6,8 +6,8 @@
 use fret_core::{Edges, Point, Px, Rect, Size};
 use fret_ui::overlay_placement::{
     AnchoredPanelLayout, AnchoredPanelLayoutTrace, AnchoredPanelOptions, CollisionOptions,
-    anchored_panel_layout_ex, anchored_panel_layout_ex_with_trace, anchored_panel_layout_sized_ex,
-    anchored_panel_layout_sized_ex_with_trace, inset_rect, intersect_rect,
+    anchored_panel_layout, anchored_panel_layout_sized, anchored_panel_layout_sized_with_trace,
+    anchored_panel_layout_with_trace, inset_rect, intersect_rect,
 };
 
 pub use fret_ui::overlay_placement::{
@@ -196,7 +196,7 @@ pub fn popper_content_layout_size_unclamped(
     desired: Size,
     placement: PopperContentPlacement,
 ) -> AnchoredPanelLayout {
-    anchored_panel_layout_ex(
+    anchored_panel_layout(
         outer,
         anchor,
         desired,
@@ -214,7 +214,7 @@ pub fn popper_content_layout_size_unclamped_with_trace(
     desired: Size,
     placement: PopperContentPlacement,
 ) -> (AnchoredPanelLayout, AnchoredPanelLayoutTrace) {
-    anchored_panel_layout_ex_with_trace(
+    anchored_panel_layout_with_trace(
         outer,
         anchor,
         desired,
@@ -238,7 +238,7 @@ pub fn popper_content_layout_unclamped(
     let mut options = placement.options();
     // Allow the panel to overflow the collision boundary on the main axis (no shift/clamp).
     options.shift.main_axis = false;
-    anchored_panel_layout_ex(
+    anchored_panel_layout(
         outer,
         anchor,
         desired,
@@ -258,7 +258,7 @@ pub fn popper_content_layout_unclamped_with_trace(
 ) -> (AnchoredPanelLayout, AnchoredPanelLayoutTrace) {
     let mut options = placement.options();
     options.shift.main_axis = false;
-    anchored_panel_layout_ex_with_trace(
+    anchored_panel_layout_with_trace(
         outer,
         anchor,
         desired,
@@ -432,7 +432,7 @@ pub fn popper_layout_sized(
     align: Align,
     options: AnchoredPanelOptions,
 ) -> AnchoredPanelLayout {
-    anchored_panel_layout_sized_ex(outer, anchor, desired, side_offset, side, align, options)
+    anchored_panel_layout_sized(outer, anchor, desired, side_offset, side, align, options)
 }
 
 /// Like [`popper_layout_sized`], but returns a debug trace describing solver decisions.
@@ -445,7 +445,7 @@ pub fn popper_layout_sized_with_trace(
     align: Align,
     options: AnchoredPanelOptions,
 ) -> (AnchoredPanelLayout, AnchoredPanelLayoutTrace) {
-    anchored_panel_layout_sized_ex_with_trace(
+    anchored_panel_layout_sized_with_trace(
         outer,
         anchor,
         desired,

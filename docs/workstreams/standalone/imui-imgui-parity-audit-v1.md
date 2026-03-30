@@ -1,5 +1,26 @@
 # imui ↔ Dear ImGui Parity Audit (v1)
 
+## Historical note (pre-reset)
+
+This note describes the pre-`imui-stack-fearless-refactor-v1` facade shape.
+It remains useful as a parity audit, but several names mentioned below are historical and were
+deleted by the fearless refactor rather than kept as compatibility aliases:
+
+- `begin_disabled` -> `disabled_scope(...)`
+- `same_line` / `items` -> explicit layout helpers (`horizontal_with_options(...)`,
+  `vertical_with_options(...)`, `grid_with_options(...)`, `scroll_with_options(...)`)
+- `floating_area_show_ex` -> `floating_area_with_options(...)`
+- `window_ex` -> `window(...)`
+- `window_open_ex` -> `window_with_options(..., WindowOptions::default().with_open(...), ...)`
+- `select_model_ex` -> `select_model_with_options(...)`
+
+Do not use the historical names below as current API guidance.
+
+For the current canonical `imui` ownership story and API reset, use:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
 
 ## Upstream references (non-normative)
 
@@ -9,8 +30,8 @@ Upstream sources:
 - Dear ImGui: https://github.com/ocornut/imgui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-Status: Draft (audit note; not an ADR)
-Last updated: 2026-02-10
+Status: Historical archive note (audit record; not an ADR)
+Last updated: 2026-03-27
 
 This document records a *behavior-focused* audit of Fret's immediate-mode ecosystem facade
 (`ecosystem/fret-ui-kit::imui` + `ecosystem/fret-imui`) against Dear ImGui (C++).
@@ -29,6 +50,7 @@ ImGui reference snapshot (local, not committed):
 
 Related workstreams:
 
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md` (current source of truth for the stack reset)
 - `docs/workstreams/imui-ecosystem-facade-v3/imui-ecosystem-facade-v3.md` (tracks parity-related work at the ecosystem facade layer)
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md` (docking + multi-viewport parity; runner/platform owned)
 
@@ -184,9 +206,13 @@ Not implemented / diverging (explicitly):
 
 - **Scoped disabling** (`BeginDisabled`): **Aligned (facade-level)**
   - ImGui: `BeginDisabled()` disables interactions and multiplies `Style.Alpha` by `Style.DisabledAlpha` (`0.60f` default).
-  - Fret `imui` facade: `disabled_scope(true, |ui| ...)` / `begin_disabled(true, |ui| ...)` disables `imui`-facade widget
-    interactions in the subtree and dims visuals via an `Opacity` group. The alpha multiplier is configurable via the theme
-    number `component.imui.disabled_alpha` (default `0.60`).
+  - Fret `imui` facade:
+    - historical pre-reset surface: both `disabled_scope(true, |ui| ...)` and
+      `begin_disabled(true, |ui| ...)` existed,
+    - current canonical surface: `begin_disabled` was deleted and `disabled_scope(true, |ui| ...)`
+      remains.
+    The subtree is dimmed via an `Opacity` group, and the alpha multiplier is configurable via the
+    theme number `component.imui.disabled_alpha` (default `0.60`).
   - Response contract: disabled items suppress interaction signals by default (`hovered=false`, `pressed=false`, `focused=false`,
     `clicked=false`, `changed=false`, and `hovered_like_imgui()==false`).
   - ImGui-style per-query override: `ResponseExt::is_hovered(ImUiHoveredFlags::ALLOW_WHEN_DISABLED)` (facade-only).
@@ -200,17 +226,20 @@ Not implemented / diverging (explicitly):
   - Fret: explicit keyed scopes (`ui.push_id(...)`, `ui.id(...)`, `for_each_keyed`).
   - Gap (ergonomics): no helper/note translating ImGui `"##"` / `"###"` patterns into Fret’s keyed scopes.
 
-### 1.4.1 Default item flow (`items` / `SameLine`) convenience (facade-level)
+### 1.4.1 Historical default item flow convenience (`items` / `SameLine`)
 
 ImGui's default authoring model is a window-scoped "layout cursor" that advances as items are
-submitted. Fret's `imui` facade keeps layout explicit, but provides a small set of helpers to make
-ImGui ports less noisy:
+submitted. The pre-reset Fret `imui` facade kept layout explicit, but also exposed a small set of
+helpers to make ImGui ports less noisy:
 
 - `ui.items(...)`: vertical item flow with ImGui-like default spacing (`Style.ItemSpacing.y`).
 - `ui.same_line(...)`: horizontal item flow with ImGui-like default spacing (`Style.ItemSpacing.x`).
 - Both are theme-tunable:
   - `component.imui.item_spacing_x_px` (fallback `8px`)
   - `component.imui.item_spacing_y_px` (fallback `4px`)
+
+Those helpers were removed by the fearless refactor. Current canonical guidance keeps layout
+explicit and does not treat `items` / `same_line` as surviving entry points.
 
 ### 1.5 Popups / context menus
 

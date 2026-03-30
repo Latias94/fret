@@ -85,7 +85,7 @@ fn anchored_places_child_via_render_transform_and_updates_layout_out() {
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    let expected = crate::overlay_placement::anchored_panel_layout_sized_ex(
+    let expected = crate::overlay_placement::anchored_panel_layout_sized(
         bounds,
         anchor,
         Size::new(Px(100.0), Px(20.0)),
@@ -257,7 +257,7 @@ fn anchored_can_resolve_anchor_element_bounds_in_layout() {
     // The anchor is laid out before the anchored subtree in the same pass, so the anchor element
     // rect should be available without relying on cross-frame element queries.
     let expected_anchor = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
-    let expected = crate::overlay_placement::anchored_panel_layout_sized_ex(
+    let expected = crate::overlay_placement::anchored_panel_layout_sized(
         bounds,
         expected_anchor,
         Size::new(Px(100.0), Px(20.0)),

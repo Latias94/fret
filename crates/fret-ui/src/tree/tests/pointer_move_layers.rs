@@ -37,7 +37,13 @@ fn pointer_move_observers_are_suppressed_when_pointer_is_captured_by_another_lay
     let overlay_root = ui.create_node(CountMoves {
         moves: overlay_moves.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay_root, false, false);
+    let layer = ui.push_overlay_root_with_options(
+        overlay_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: false,
+            hit_testable: false,
+        },
+    );
     ui.set_layer_wants_pointer_move_events(layer, true);
     ui.set_layer_visible(layer, true);
 
@@ -202,7 +208,13 @@ fn pointer_move_observers_ignore_touch_pointers() {
     let overlay_root = ui.create_node(CountObserverMoves {
         moves: overlay_moves.clone(),
     });
-    let layer = ui.push_overlay_root_ex(overlay_root, false, false);
+    let layer = ui.push_overlay_root_with_options(
+        overlay_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: false,
+            hit_testable: false,
+        },
+    );
     ui.set_layer_wants_pointer_move_events(layer, true);
     ui.set_layer_visible(layer, true);
 

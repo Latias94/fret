@@ -5,7 +5,7 @@ fn select_wrapper_does_not_materialize_items_vec_each_frame() {
     let source = include_str!("../src/imui.rs");
     assert!(
         !source.contains("let items: Vec<Arc<str>> = items.to_vec();"),
-        "select_model_ex should keep items borrowed instead of cloning into Vec each frame"
+        "select_model_with_options should keep items borrowed instead of cloning into Vec each frame"
     );
 }
 
@@ -33,7 +33,7 @@ fn floating_layer_z_order_does_not_clone_vec_each_frame() {
 
 #[test]
 fn popup_menu_uses_environment_viewport_bounds_for_popper_outer_bounds() {
-    let source = include_str!("../src/imui.rs");
+    let source = include_str!("../src/imui/popup_overlay.rs");
     assert!(
         source.contains("environment_viewport_bounds"),
         "imui popup menu should derive popper outer bounds from committed environment viewport bounds"

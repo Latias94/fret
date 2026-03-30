@@ -1,7 +1,25 @@
 # imui Ecosystem Facade v2 M4 Performance Gates
 
-Status: Accepted (M4 locked)
-Last updated: 2026-02-06
+## Historical note (pre-reset)
+
+This note records a pre-`imui-stack-fearless-refactor-v1` facade stage.
+Names mentioned below may reflect the old public surface (`select_model_ex`, older floating/window
+helpers, etc.) and should be read as historical evidence, not current API guidance.
+
+Current source of truth:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+Canonical name mapping for historical references in this note:
+
+- `select_model_ex` -> `select_model_with_options(...)`
+- older floating/window helper names -> `window(...)`, `window_with_options(...)`,
+  `floating_area_with_options(...)`
+
+Status: Historical archive note (pre-reset M4 record)
+Last updated: 2026-03-27
 
 This note locks the v2 M4 scope that turns perf guidance into concrete review and test gates.
 

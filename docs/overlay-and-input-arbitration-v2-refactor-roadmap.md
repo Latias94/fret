@@ -25,7 +25,9 @@ References (existing accepted contracts):
 
 Implementation anchors (current):
 
-- Layer substrate: `crates/fret-ui/src/tree/layers.rs` (`push_overlay_root_ex`, `blocks_underlay_input`, `hit_testable`, outside-press flags)
+- Layer substrate: `crates/fret-ui/src/tree/layers/impls.rs` +
+  `crates/fret-ui/src/tree/layers/types.rs` (`push_overlay_root_with_options`,
+  `OverlayRootOptions`, `blocks_underlay_input`, `hit_testable`, outside-press flags)
 - Dispatch: `crates/fret-ui/src/tree/dispatch.rs` + `crates/fret-ui/src/tree/mod.rs` (outside-press observer pass)
 - Policy orchestration: `ecosystem/fret-ui-kit/src/overlay_controller.rs` + `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
 
@@ -104,7 +106,9 @@ For a general-purpose UI framework, this is an intentional trade-off:
 ### Layering
 
 The runtime provides window-level layer roots with z-order and deterministic dispatch
-(see ADR 0011). Overlays are installed by policy code via `UiTree::push_overlay_root_ex`.
+(see ADR 0011). Overlays are installed by policy code via
+`UiTree::push_overlay_root_with_options(...)` (or `push_overlay_root(...)` when the default
+hit-testable behavior is sufficient).
 
 Key runtime knobs (today):
 

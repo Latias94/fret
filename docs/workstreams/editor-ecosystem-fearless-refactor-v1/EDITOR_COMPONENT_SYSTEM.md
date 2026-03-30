@@ -5,13 +5,13 @@ Tracking doc:
 
 Related docs:
 
-- `docs/workstreams/ui-editor-v1.md`
-- `docs/workstreams/ui-editor-egui-imgui-gap-v1.md`
+- `docs/workstreams/ui-editor-v1/ui-editor-v1.md`
+- `docs/workstreams/standalone/ui-editor-egui-imgui-gap-v1.md`
 - `docs/adr/0316-editor-ecosystem-token-namespaces-and-skinning-boundary-v1.md`
 
 Status: Active design note (workstream contract, not an ADR)
 
-Last updated: 2026-03-14
+Last updated: 2026-03-27
 
 ## Purpose
 

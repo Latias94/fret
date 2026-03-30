@@ -1,5 +1,33 @@
 # imui Ecosystem Facade (egui/imgui-like ergonomics) v1
 
+## Historical note (pre-reset)
+
+This v1 note describes an earlier `imui` facade stage before the
+`imui-stack-fearless-refactor-v1` reset.
+It remains useful as historical context, but several convenience names mentioned below were later
+deleted instead of preserved as compatibility wrappers.
+
+Current source of truth:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+Canonical name mapping for historical references in this note:
+
+- `begin_disabled` -> `disabled_scope(...)`
+- `same_line` / `items` -> explicit layout helpers (`horizontal_with_options(...)`,
+  `vertical_with_options(...)`, `grid_with_options(...)`, `scroll_with_options(...)`)
+- `window_ex` -> `window(...)`
+- `window_open_ex` -> `window_with_options(..., WindowOptions::default().with_open(...), ...)`
+- `floating_area_show_ex` -> `floating_area_with_options(...)`
+- `floating_area_drag_surface_ex` -> `floating_area_drag_surface(...)`
+- `begin_popup_menu_ex` -> `begin_popup_menu_with_options(...)`
+- `begin_popup_modal_ex` -> `begin_popup_modal_with_options(...)`
+- `menu_item_checkbox_ex` -> `menu_item_checkbox_with_options(...)`
+- `menu_item_radio_ex` -> `menu_item_radio_with_options(...)`
+
+Do not read the old names below as surviving API surface.
 
 ## Upstream references (non-normative)
 
@@ -11,8 +39,8 @@ Upstream sources:
 - Dear ImGui: https://github.com/ocornut/imgui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-09
+Status: Historical archive note (pre-reset workstream record; not an ADR)
+Last updated: 2026-03-27
 
 This document proposes an ecosystem-level “batteries included” facade built on top of Fret’s
 immediate-mode authoring surface (`imui`) that targets **egui/Dear ImGui-style ergonomics**
@@ -49,10 +77,13 @@ Status snapshot (2026-02-09):
     - `pointer_passthrough`: pointer hit-test transparent (ImGui `NoMouseInputs`-like),
     - `no_inputs`: pointer click-through and skipped by focus traversal (ImGui `NoInputs`-like).
 - `ui.area(...)` / `ui.window(...)` wrappers return meaningful reports (`FloatingAreaResponse`, `FloatingWindowResponse`) for persistence/debugging.
-- ImGui-aligned authoring conveniences are available without changing the low-level layout primitives:
-  - `ui.items(...)` models ImGui's default vertical item flow (`Style.ItemSpacing.y`, `Items::Start`).
-  - `ui.same_line(...)` models ImGui's `SameLine()` (`Style.ItemSpacing.x`).
+- Historical pre-reset authoring conveniences were available without changing the low-level layout
+  primitives:
+  - `ui.items(...)` modeled ImGui's default vertical item flow (`Style.ItemSpacing.y`, `Items::Start`).
+  - `ui.same_line(...)` modeled ImGui's `SameLine()` (`Style.ItemSpacing.x`).
   - Both are theme-tunable via `component.imui.item_spacing_{x,y}_px` (fallbacks `8px`/`4px`).
+  - These helpers were later deleted by the fearless refactor; current canonical guidance keeps
+    layout explicit instead of teaching `items` / `same_line` as surviving entry points.
 - OS-window promotion scope for non-docking floatings is explicitly locked: docking-only in v1, with a capability-gated promotion checklist for later milestones.
 - Performance guidance is tracked in a dedicated short guide for facade authors and reviewers.
   - `docs/workstreams/standalone/imui-ecosystem-facade-perf-v1.md`

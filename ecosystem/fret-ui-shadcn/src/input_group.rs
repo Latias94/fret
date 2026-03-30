@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::bool_model::IntoBoolModel;
 use crate::button::{ButtonVariant, variant_colors};
 use crate::rtl;
 use crate::text_value_model::IntoTextValueModel;
@@ -1946,8 +1947,12 @@ impl InputGroupButton {
         self
     }
 
-    pub fn toggle_model(mut self, model: Model<bool>) -> Self {
-        self.toggle_model = Some(model);
+    /// Toggle an externally owned boolean model when the input-group button activates.
+    ///
+    /// This stays on the component/policy layer for trigger-style affordances and should not be
+    /// read as precedent for reintroducing `toggle_model(...)` on the `imui` form-control lane.
+    pub fn toggle_model(mut self, model: impl IntoBoolModel) -> Self {
+        self.toggle_model = Some(model.into_bool_model());
         self
     }
 

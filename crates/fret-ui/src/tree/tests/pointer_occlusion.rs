@@ -182,7 +182,7 @@ fn pointer_occlusion_block_mouse_except_scroll_suppresses_underlay_hit_dispatch_
 
     // An overlay layer that occludes underlay pointer interactions, but allows scroll.
     let overlay_root = ui.create_node(HitTestTransparent);
-    let overlay_layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let overlay_layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_pointer_occlusion(overlay_layer, PointerOcclusion::BlockMouseExceptScroll);
 
     let mut services = FakeUiServices;
@@ -259,7 +259,7 @@ fn pointer_occlusion_block_mouse_suppresses_underlay_hit_dispatch_including_whee
     ui.set_root(base);
 
     let overlay_root = ui.create_node(HitTestTransparent);
-    let overlay_layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let overlay_layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_pointer_occlusion(overlay_layer, PointerOcclusion::BlockMouse);
 
     let mut services = FakeUiServices;
@@ -331,8 +331,13 @@ fn modal_barrier_scoping_blocks_underlay_wheel_even_when_barrier_is_hit_test_ine
     // A modal barrier layer that is hit-test-inert (e.g. during a close transition). The barrier
     // must still scope wheel routing and prevent the underlay from receiving wheel events.
     let barrier_root = ui.create_node(HitTestTransparent);
-    let _barrier_layer =
-        ui.push_overlay_root_ex(barrier_root, /* blocks_underlay_input */ true, false);
+    let _barrier_layer = ui.push_overlay_root_with_options(
+        barrier_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: true,
+            hit_testable: false,
+        },
+    );
 
     let mut services = FakeUiServices;
     let bounds = Rect::new(
@@ -391,7 +396,7 @@ fn pointer_occlusion_block_mouse_except_scroll_is_window_global_across_pointers(
     ui.set_root(base);
 
     let overlay_root = ui.create_node(HitTestTransparent);
-    let overlay_layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let overlay_layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_pointer_occlusion(overlay_layer, PointerOcclusion::BlockMouseExceptScroll);
 
     let mut services = FakeUiServices;
@@ -478,7 +483,7 @@ fn pointer_occlusion_does_not_suppress_outside_press_observer_dispatch() {
     let overlay_root = ui.create_node(OutsidePressObserverCounter {
         observer_downs: observer_downs.clone(),
     });
-    let overlay_layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let overlay_layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_wants_pointer_down_outside_events(overlay_layer, true);
     ui.set_layer_pointer_occlusion(overlay_layer, PointerOcclusion::BlockMouseExceptScroll);
 
@@ -534,7 +539,7 @@ fn pointer_occlusion_allows_pointer_move_observer_dispatch_while_suppressing_und
     let overlay_root = ui.create_node(PointerMoveObserverCounter {
         observer_moves: observer_moves.clone(),
     });
-    let overlay_layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let overlay_layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_wants_pointer_move_events(overlay_layer, true);
     ui.set_layer_pointer_occlusion(overlay_layer, PointerOcclusion::BlockMouseExceptScroll);
 
@@ -607,7 +612,7 @@ fn pointer_occlusion_respects_pointer_capture_for_one_pointer_but_occludes_other
         downs: overlay_downs.clone(),
         observer_downs: observer_downs.clone(),
     });
-    let overlay_layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    let overlay_layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_wants_pointer_down_outside_events(overlay_layer, true);
     ui.set_layer_pointer_occlusion(overlay_layer, PointerOcclusion::BlockMouseExceptScroll);
 

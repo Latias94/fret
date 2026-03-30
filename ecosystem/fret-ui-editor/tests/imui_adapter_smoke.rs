@@ -4,15 +4,20 @@ use std::sync::Arc;
 
 use fret_authoring::UiWriter;
 use fret_core::Color;
+use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::UiHost;
+use fret_ui_kit::headless::text_assist::TextAssistItem;
 
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
-    DragValue, DragValueOptions, DragValueOutcome, EnumSelect, EnumSelectItem, EnumSelectOptions,
-    NumericPresentation, NumericValueConstraints, Slider, SliderOptions, TextField,
-    TextFieldOptions, TransformEdit, TransformEditAxisOutcome, TransformEditPresentations,
-    Vec3Edit, VecEditAxisOutcome,
+    ColorEdit, ColorEditOptions, DragValue, DragValueOptions, DragValueOutcome, EnumSelect,
+    EnumSelectItem, EnumSelectOptions, IconButton, IconButtonOptions, MiniSearchBox,
+    MiniSearchBoxOptions, NumericInput, NumericInputOptions, NumericPresentation,
+    NumericValueConstraints, Slider, SliderOptions, TextAssistField, TextAssistFieldOptions,
+    TextAssistFieldSurface, TextField, TextFieldOptions, TransformEdit, TransformEditAxisOutcome,
+    TransformEditOptions, TransformEditPresentations, Vec2Edit, Vec3Edit, Vec4Edit,
+    VecEditAxisOutcome, VecEditOptions,
 };
 use fret_ui_editor::imui;
 
@@ -20,15 +25,24 @@ use fret_ui_editor::imui;
 fn editor_imui_adapters_compile<H: UiHost + 'static>(
     ui: &mut impl UiWriter<H>,
     name_model: &Model<String>,
+    color_model: &Model<Color>,
     value_model: &Model<f64>,
     enabled_model: &Model<bool>,
     mode_model: &Model<Option<Arc<str>>>,
+    search_model: &Model<String>,
+    search_dismissed_query_model: &Model<String>,
+    search_active_item_id_model: &Model<Option<Arc<str>>>,
 ) {
     let value_presentation = NumericPresentation::<f64>::fixed_decimals(3);
     let blend_presentation = NumericPresentation::<f64>::percent_0_1(0);
     let items: Arc<[EnumSelectItem]> = vec![
         EnumSelectItem::new("lit", "Lit"),
         EnumSelectItem::new("unlit", "Unlit"),
+    ]
+    .into();
+    let assist_items: Arc<[TextAssistItem]> = vec![
+        TextAssistItem::new("cube", "Cube"),
+        TextAssistItem::new("camera", "Camera"),
     ]
     .into();
 
@@ -40,11 +54,43 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
         }),
     );
 
+    imui::color_edit(
+        ui,
+        ColorEdit::new(color_model.clone()).options(ColorEditOptions {
+            id_source: Some(Arc::from("tests.color_edit")),
+            ..Default::default()
+        }),
+    );
+
     imui::drag_value(
         ui,
         DragValue::from_presentation(value_model.clone(), value_presentation.clone()).options(
             DragValueOptions {
                 id_source: Some(Arc::from("tests.drag_value")),
+                ..Default::default()
+            },
+        ),
+    );
+
+    imui::axis_drag_value(
+        ui,
+        AxisDragValue::from_presentation(
+            Arc::from("X"),
+            Color::from_srgb_hex_rgb(0xf2_59_59),
+            value_model.clone(),
+            value_presentation.clone(),
+        )
+        .options(AxisDragValueOptions {
+            id_source: Some(Arc::from("tests.axis_drag_value")),
+            ..Default::default()
+        }),
+    );
+
+    imui::numeric_input(
+        ui,
+        NumericInput::from_presentation(value_model.clone(), value_presentation.clone()).options(
+            NumericInputOptions {
+                id_source: Some(Arc::from("tests.numeric_input")),
                 ..Default::default()
             },
         ),
@@ -102,14 +148,92 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
         ..Default::default()
     });
 
+    imui::mini_search_box(
+        ui,
+        MiniSearchBox::new(search_model.clone()).options(MiniSearchBoxOptions {
+            test_id: Some(Arc::from("tests.mini_search_box")),
+            ..Default::default()
+        }),
+    );
+
+    imui::text_assist_field(
+        ui,
+        TextAssistField::new(
+            search_model.clone(),
+            search_dismissed_query_model.clone(),
+            search_active_item_id_model.clone(),
+            assist_items,
+        )
+        .options(TextAssistFieldOptions {
+            field: TextFieldOptions {
+                id_source: Some(Arc::from("tests.text_assist_field")),
+                ..Default::default()
+            },
+            surface: TextAssistFieldSurface::AnchoredOverlay,
+            ..Default::default()
+        }),
+    );
+
+    imui::icon_button(
+        ui,
+        IconButton::new(ids::ui::SEARCH, Arc::new(|_host, _action_cx| {})).options(
+            IconButtonOptions {
+                test_id: Some(Arc::from("tests.icon_button")),
+                ..Default::default()
+            },
+        ),
+    );
+
+    imui::vec2_edit(
+        ui,
+        Vec2Edit::from_presentation(
+            value_model.clone(),
+            value_model.clone(),
+            value_presentation.clone(),
+        )
+        .options(VecEditOptions {
+            id_source: Some(Arc::from("tests.vec2_edit")),
+            ..Default::default()
+        }),
+    );
+
     let _ = Vec3Edit::from_presentation(
         value_model.clone(),
         value_model.clone(),
         value_model.clone(),
         value_presentation.clone(),
     )
-    .on_axis_outcome(Some(on_vec_axis_outcome))
+    .on_axis_outcome(Some(on_vec_axis_outcome.clone()))
     .options(Default::default());
+
+    imui::vec3_edit(
+        ui,
+        Vec3Edit::from_presentation(
+            value_model.clone(),
+            value_model.clone(),
+            value_model.clone(),
+            value_presentation.clone(),
+        )
+        .options(VecEditOptions {
+            id_source: Some(Arc::from("tests.vec3_edit")),
+            ..Default::default()
+        }),
+    );
+
+    imui::vec4_edit(
+        ui,
+        Vec4Edit::from_presentation(
+            value_model.clone(),
+            value_model.clone(),
+            value_model.clone(),
+            value_model.clone(),
+            value_presentation.clone(),
+        )
+        .options(VecEditOptions {
+            id_source: Some(Arc::from("tests.vec4_edit")),
+            ..Default::default()
+        }),
+    );
 
     let _ = TransformEdit::from_presentations(
         (
@@ -131,6 +255,32 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
     )
     .on_axis_outcome(Some(on_transform_axis_outcome))
     .options(Default::default());
+
+    imui::transform_edit(
+        ui,
+        TransformEdit::from_presentations(
+            (
+                value_model.clone(),
+                value_model.clone(),
+                value_model.clone(),
+            ),
+            (
+                value_model.clone(),
+                value_model.clone(),
+                value_model.clone(),
+            ),
+            (
+                value_model.clone(),
+                value_model.clone(),
+                value_model.clone(),
+            ),
+            TransformEditPresentations::shared(value_presentation.clone()),
+        )
+        .options(TransformEditOptions {
+            id_source: Some(Arc::from("tests.transform_edit")),
+            ..Default::default()
+        }),
+    );
 
     imui::slider(
         ui,
@@ -166,8 +316,16 @@ fn editor_imui_adapter_option_defaults_compile() {
 
     assert_eq!(items.len(), 2);
     let _ = TextFieldOptions::default();
+    let _ = ColorEditOptions::default();
     let _ = DragValueOptions::default();
+    let _ = AxisDragValueOptions::default();
+    let _ = NumericInputOptions::default();
+    let _ = MiniSearchBoxOptions::default();
+    let _ = TextAssistFieldOptions::default();
+    let _ = IconButtonOptions::default();
     let _ = SliderOptions::default();
     let _ = CheckboxOptions::default();
     let _ = EnumSelectOptions::default();
+    let _ = VecEditOptions::default();
+    let _ = TransformEditOptions::default();
 }

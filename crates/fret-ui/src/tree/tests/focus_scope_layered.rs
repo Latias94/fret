@@ -115,8 +115,7 @@ fn focus_scope_traps_focus_traversal_inside_modal_overlay_layer_root() {
     );
 
     ui.set_root(base_root);
-    let _overlay_layer =
-        ui.push_overlay_root_ex(overlay_root, /* blocks_underlay_input */ true, true);
+    let _overlay_layer = ui.push_overlay_root(overlay_root, /* blocks_underlay_input */ true);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     let before = before.expect("before id");
@@ -263,8 +262,7 @@ fn stacked_trapped_focus_scopes_prefer_innermost_scope_across_layer_root() {
             )]
         },
     );
-    let _overlay_layer =
-        ui.push_overlay_root_ex(overlay_root, /* blocks_underlay_input */ true, true);
+    let _overlay_layer = ui.push_overlay_root(overlay_root, /* blocks_underlay_input */ true);
 
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 

@@ -1,5 +1,28 @@
 # imui Ecosystem Facade v3 (ImGui Parity + Ecosystem ABI + Perf Ceilings)
 
+## Historical note (pre-reset)
+
+This workstream note describes the pre-`imui-stack-fearless-refactor-v1` facade surface.
+It is still useful as a design record, but it should not be read as the current canonical API
+surface. In particular, names such as `begin_disabled`, `window_ex`, `window_open_ex`, and
+`floating_area_show_ex` were deleted by the fearless refactor rather than preserved.
+
+Current source of truth:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+Canonical name mapping for historical references in this note:
+
+- `begin_disabled` -> `disabled_scope(...)`
+- `window_ex` -> `window(...)`
+- `window_open_ex` -> `window_with_options(..., WindowOptions::default().with_open(...), ...)`
+- `floating_area_show_ex` -> `floating_area_with_options(...)`
+- `select_model_ex` -> `select_model_with_options(...)`
+
+This note remains valuable as a parity/design archive, but it should not be used as the current
+API guide for first-party code.
 
 ## Upstream references (non-normative)
 
@@ -9,8 +32,8 @@ Upstream sources:
 - Dear ImGui: https://github.com/ocornut/imgui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-10
+Status: Historical archive note (pre-reset workstream record; not an ADR)
+Last updated: 2026-03-27
 
 This workstream starts after `imui` ecosystem facade v2 is locked and complete.
 
@@ -24,6 +47,7 @@ v2 outcome (baseline for v3):
 
 Related:
 
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md` (current stack-reset source of truth)
 - `docs/workstreams/imui-ecosystem-facade-v2/imui-ecosystem-facade-v2.md`
 - `docs/workstreams/imui-ecosystem-facade-v2/imui-ecosystem-facade-v2-todo.md`
 - `docs/workstreams/imui-ecosystem-facade-v2/imui-ecosystem-facade-v2-m5-readiness-review.md`
@@ -112,8 +136,10 @@ Known gaps vs ImGui (tracked in this v3 TODO):
   `NO_SHARED_DELAY`, and hover intent gating via `STATIONARY` / `DELAY_SHORT` / `DELAY_NORMAL` / `FOR_TOOLTIP`).
   A window-scoped shared hover delay is implemented (best-effort) to match ImGui tooltip hand-feel.
   Remaining gaps include most of `ImGuiHoveredFlags_` (window/root hierarchy flags, overlap rules, active-item suppression).
-- Scoped disable helper is available (`disabled_scope` / `begin_disabled`), and disabled items suppress interaction
-  signals by default (`hovered=false`, `clicked=false`, etc.).
+- Historical pre-reset v3 surface exposed both `disabled_scope` and `begin_disabled`.
+  The fearless refactor deleted `begin_disabled` and kept `disabled_scope` as the canonical
+  surviving helper; disabled items still suppress interaction signals by default
+  (`hovered=false`, `clicked=false`, etc.).
 - Drag threshold is expressed as a theme metric knob (`component.imui.drag_threshold_px`, default `6px`).
 
 ## 1) Why v3

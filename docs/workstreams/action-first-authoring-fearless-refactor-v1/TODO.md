@@ -310,7 +310,7 @@ This workstream is now closed for the v1 action/view migration and default-path 
 
 - [x] AFA-frontends-030 Add an imui seam to dispatch `ActionId` without string commands.
   - Evidence:
-    - `ecosystem/fret-ui-kit/src/imui.rs` (`action_button_ex`, `menu_item_action_ex`)
+    - `ecosystem/fret-ui-kit/src/imui.rs` (`action_button_with_options`, `menu_item_action_with_options`)
     - `apps/fret-cookbook/examples/imui_action_basics.rs`
     - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
 - [x] AFA-frontends-031 Ensure imui outputs stable semantics/test IDs for diag scripts.
@@ -329,7 +329,7 @@ This workstream is now closed for the v1 action/view migration and default-path 
 - [x] AFA-frontends-034 Add facade-level wrappers for imui menu items that dispatch `ActionId`.
   - Goal: keep focusability tracking (initial focus selection) consistent with action availability gating.
   - Evidence:
-    - `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiFacade::menu_item_action_ex`)
+    - `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiFacade::menu_item_action_with_options`)
 
 ---
 

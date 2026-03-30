@@ -148,7 +148,13 @@ fn modal_barrier_hides_pointer_occlusion_layers_below_barrier_in_arbitration_sna
     ui.set_layer_pointer_occlusion(base_layer, PointerOcclusion::BlockMouse);
 
     let modal_root = ui.create_node(TestStack);
-    ui.push_overlay_root_ex(modal_root, true, false);
+    ui.push_overlay_root_with_options(
+        modal_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: true,
+            hit_testable: false,
+        },
+    );
 
     let mut services = FakeUiServices;
     let bounds = Rect::new(
@@ -203,10 +209,16 @@ fn pointer_occlusion_above_modal_barrier_is_reported_in_arbitration_snapshot() {
     ui.set_base_root(base_root);
 
     let modal_root = ui.create_node(TestStack);
-    ui.push_overlay_root_ex(modal_root, true, false);
+    ui.push_overlay_root_with_options(
+        modal_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: true,
+            hit_testable: false,
+        },
+    );
 
     let top_root = ui.create_node(TestStack);
-    let top_layer = ui.push_overlay_root_ex(top_root, false, true);
+    let top_layer = ui.push_overlay_root(top_root, false);
     ui.set_layer_pointer_occlusion(top_layer, PointerOcclusion::BlockMouseExceptScroll);
 
     let mut services = FakeUiServices;
@@ -299,7 +311,13 @@ fn modal_barrier_scopes_pointer_capture_to_active_roots() {
     assert_eq!(ui.captured_for(fret_core::PointerId(0)), Some(capture));
 
     let modal_root = ui.create_node(TestStack);
-    ui.push_overlay_root_ex(modal_root, true, false);
+    ui.push_overlay_root_with_options(
+        modal_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: true,
+            hit_testable: false,
+        },
+    );
 
     ui.dispatch_event(
         &mut app,

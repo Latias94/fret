@@ -1,7 +1,33 @@
 # imui Ecosystem Facade (egui/imgui-like ergonomics) v1 - TODO Tracker
 
-Status: Draft
-Last updated: 2026-02-06
+## Historical note (pre-reset)
+
+This tracker records a pre-`imui-stack-fearless-refactor-v1` facade stage.
+Names mentioned below may reflect the old public surface (`floating_window`, `floating_window_open`,
+`floating_window_resizable`, `floating_area_drag_surface_ex`, etc.) and should be read as
+historical evidence, not current API guidance.
+
+Current source of truth:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+Canonical name mapping for historical references in this tracker:
+
+- `window_ex` -> `window(...)`
+- `window_open_ex` -> `window_with_options(..., WindowOptions::default().with_open(...), ...)`
+- `floating_area_show_ex` -> `floating_area_with_options(...)`
+- `floating_area_drag_surface_ex` -> `floating_area_drag_surface(...)`
+- `begin_popup_menu_ex` -> `begin_popup_menu_with_options(...)`
+- `begin_popup_modal_ex` -> `begin_popup_modal_with_options(...)`
+- `menu_item_checkbox_ex` -> `menu_item_checkbox_with_options(...)`
+- `menu_item_radio_ex` -> `menu_item_radio_with_options(...)`
+
+Do not add new migration work here; use the active stack-reset workstream instead.
+
+Status: Historical archive note
+Last updated: 2026-03-27
 
 This tracker covers the work described in:
 

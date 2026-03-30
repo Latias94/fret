@@ -813,7 +813,7 @@ impl ElementHostWidget {
                         let desired_child = child_bounds.size;
                         let outer =
                             crate::overlay_placement::inset_rect(cx.bounds, props.outer_margin);
-                        let layout = crate::overlay_placement::anchored_panel_layout_sized_ex(
+                        let layout = crate::overlay_placement::anchored_panel_layout_sized(
                             outer,
                             anchor,
                             desired_child,
@@ -882,7 +882,7 @@ impl ElementHostWidget {
                 }
 
                 let outer = crate::overlay_placement::inset_rect(cx.bounds, props.outer_margin);
-                let layout = crate::overlay_placement::anchored_panel_layout_sized_ex(
+                let layout = crate::overlay_placement::anchored_panel_layout_sized(
                     outer,
                     anchor,
                     desired_child,

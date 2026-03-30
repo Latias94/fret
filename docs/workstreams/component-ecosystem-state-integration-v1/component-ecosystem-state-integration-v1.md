@@ -1,7 +1,7 @@
 # Component Ecosystem State Integration v1
 
 Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-06
+Last updated: 2026-03-27
 
 Related:
 
@@ -9,7 +9,7 @@ Related:
 - `docs/workstreams/state-management-v1/state-management-v1-extension-contract.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
-- `docs/workstreams/imui-ecosystem-facade-v1/imui-ecosystem-facade-v1.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/standalone/imui-state-integration-v1.md`
 
 This document answers a practical question for ecosystem authors:
@@ -151,6 +151,8 @@ Best for:
 
 Recommended approach:
 
+- keep current `imui` ownership and canonical API naming aligned with
+  `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`,
 - use service-first query APIs outside hook-only contexts,
 - compute selector/query snapshots in host app state,
 - pass plain data into immediate draw calls,
@@ -317,8 +319,9 @@ opt-in state integration path.
 
 ## 14) imui compatibility landing (service-first)
 
-The immediate-mode compatibility guidance is now captured in:
+The current `imui` ownership baseline and service-first integration guidance are captured in:
 
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/standalone/imui-state-integration-v1.md`
 
 Scope of that landing note:

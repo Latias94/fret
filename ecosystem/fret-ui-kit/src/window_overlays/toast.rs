@@ -622,7 +622,7 @@ impl ToastStore {
         true
     }
 
-    pub fn set_window_swipe_config_ex(
+    pub fn set_window_swipe_config_with_options(
         &mut self,
         window: AppWindowId,
         config: ToastSwipeConfig,
@@ -1761,7 +1761,7 @@ mod tests {
         let mut store = ToastStore::default();
 
         let id = store.add_toast(window, ToastRequest::new("Cancel").duration(None), None);
-        store.set_window_swipe_config_ex(
+        store.set_window_swipe_config_with_options(
             window,
             ToastSwipeConfig {
                 direction: ToastSwipeDirection::Right,
@@ -1811,7 +1811,7 @@ mod tests {
         let mut store = ToastStore::default();
 
         let id = store.add_toast(window, ToastRequest::new("Dismiss").duration(None), None);
-        store.set_window_swipe_config_ex(
+        store.set_window_swipe_config_with_options(
             window,
             ToastSwipeConfig {
                 direction: ToastSwipeDirection::Right,
@@ -1955,7 +1955,7 @@ mod tests {
         let mut store = ToastStore::default();
 
         let id = store.add_toast(window, ToastRequest::new("Clamp").duration(None), None);
-        store.set_window_swipe_config_ex(
+        store.set_window_swipe_config_with_options(
             window,
             ToastSwipeConfig {
                 direction: ToastSwipeDirection::Right,
@@ -1993,7 +1993,7 @@ mod tests {
         let mut store = ToastStore::default();
 
         let id = store.add_toast(window, ToastRequest::new("Threshold").duration(None), None);
-        store.set_window_swipe_config_ex(
+        store.set_window_swipe_config_with_options(
             window,
             ToastSwipeConfig {
                 direction: ToastSwipeDirection::Right,

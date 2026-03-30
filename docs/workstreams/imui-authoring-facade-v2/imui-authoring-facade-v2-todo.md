@@ -1,5 +1,17 @@
 # Immediate-Mode Authoring Facade ("imui") v2 - TODO Tracker
 
+## Historical archive note
+
+This tracker records the pre-`imui-stack-fearless-refactor-v1` authoring consolidation.
+It should be kept as implementation history only; current API guidance and future cleanup belong in
+the active stack-reset workstream.
+
+Current source of truth:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
 Status: Complete (M0–M5 implemented; keep for history)
 Last updated: 2026-02-03
 

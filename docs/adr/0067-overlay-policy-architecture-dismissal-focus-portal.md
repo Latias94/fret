@@ -34,7 +34,7 @@ without forcing runtime churn (ADR 0066).
 
 `crates/fret-ui` owns overlay **mechanisms**:
 
-- per-window overlay root stack (`push_overlay_root_ex`, `remove_layer`),
+- per-window overlay root stack (`push_overlay_root_with_options`, `remove_layer`),
 - modal barrier *mechanism* (`blocks_underlay_input` + `barrier_root` semantics),
 - deterministic hit testing and pointer routing across roots (including pointer transparency),
 - placement solver (`overlay_placement`) and geometry queries (`elements::bounds_for_element`).
@@ -55,7 +55,8 @@ Radix outcomes:
 
 #### 2.1 Portal (layer install/uninstall)
 
-- Installs an overlay root using `UiTree::push_overlay_root_ex(...)`.
+- Installs an overlay root using `UiTree::push_overlay_root_with_options(...)`
+  (or `push_overlay_root(...)` for the default hit-testable case).
 - Uninstalls using `UiTree::remove_layer(...)`.
 - Determines whether the root blocks underlay input (`blocks_underlay_input`) and whether it is
   pointer-transparent (tooltip-like).

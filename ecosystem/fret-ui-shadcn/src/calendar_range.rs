@@ -19,6 +19,7 @@ use fret_ui_kit::{
 };
 use time::{Date, OffsetDateTime, Weekday};
 
+use crate::bool_model::IntoBoolModel;
 use crate::calendar::{
     CalendarCaptionLayout, CalendarDayButton, CalendarDayButtonInfo, CalendarLocale,
     CalendarMultiMonthNavProps, CalendarSingleMonthHeaderProps, calendar_caption_value_models,
@@ -250,8 +251,8 @@ impl CalendarRange {
     }
 
     /// Closes the parent popover when the selection becomes complete (both ends chosen).
-    pub fn close_on_select(mut self, open: Model<bool>) -> Self {
-        self.close_on_select = Some(open);
+    pub fn close_on_select(mut self, open: impl IntoBoolModel) -> Self {
+        self.close_on_select = Some(open.into_bool_model());
         self
     }
 

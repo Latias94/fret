@@ -16,7 +16,7 @@ fn escape_dismisses_topmost_overlay_without_focus() {
     let overlay = ui.create_node(TestStack);
     let overlay_element = crate::GlobalElementId(0xdead_beef);
     ui.set_node_element(overlay, Some(overlay_element));
-    let _layer = ui.push_overlay_root_ex(overlay, false, true);
+    let _layer = ui.push_overlay_root(overlay, false);
 
     crate::elements::with_element_state(
         &mut app,
@@ -72,7 +72,7 @@ fn escape_dismisses_only_the_topmost_overlay() {
     let overlay_a = ui.create_node(TestStack);
     let overlay_a_element = crate::GlobalElementId(0xdead_beef);
     ui.set_node_element(overlay_a, Some(overlay_a_element));
-    let _layer_a = ui.push_overlay_root_ex(overlay_a, false, true);
+    let _layer_a = ui.push_overlay_root(overlay_a, false);
 
     crate::elements::with_element_state(
         &mut app,
@@ -91,7 +91,7 @@ fn escape_dismisses_only_the_topmost_overlay() {
     let overlay_b = ui.create_node(TestStack);
     let overlay_b_element = crate::GlobalElementId(0xcafe_babe);
     ui.set_node_element(overlay_b, Some(overlay_b_element));
-    let _layer_b = ui.push_overlay_root_ex(overlay_b, false, true);
+    let _layer_b = ui.push_overlay_root(overlay_b, false);
 
     crate::elements::with_element_state(
         &mut app,

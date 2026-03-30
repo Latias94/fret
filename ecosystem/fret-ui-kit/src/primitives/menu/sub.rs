@@ -18,7 +18,7 @@ use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost, UiFocusActionHost};
 use fret_ui::overlay_placement::{
-    Align, AnchoredPanelOptions, Offset, ShiftOptions, Side, StickyMode, anchored_panel_layout_ex,
+    Align, AnchoredPanelOptions, Offset, ShiftOptions, Side, StickyMode, anchored_panel_layout,
 };
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
@@ -127,7 +127,7 @@ pub fn default_submenu_bounds(
         sticky: StickyMode::Partial,
     };
 
-    anchored_panel_layout_ex(
+    anchored_panel_layout(
         outer,
         trigger_anchor,
         desired,

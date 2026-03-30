@@ -1640,7 +1640,7 @@ pub(crate) fn assert_hover_overlay_panel_size_matches_by_portal_slot_theme(
     ) -> AnyElement
     + Clone,
 ) {
-    assert_hover_overlay_panel_size_matches_by_portal_slot_theme_ex(
+    assert_hover_overlay_panel_size_matches_by_portal_slot_theme_with_optional_width_check(
         web_name,
         web_portal_slot,
         web_theme_name,
@@ -1667,7 +1667,7 @@ pub(crate) fn assert_hover_overlay_panel_height_matches_by_portal_slot_theme(
     ) -> AnyElement
     + Clone,
 ) {
-    assert_hover_overlay_panel_size_matches_by_portal_slot_theme_ex(
+    assert_hover_overlay_panel_size_matches_by_portal_slot_theme_with_optional_width_check(
         web_name,
         web_portal_slot,
         web_theme_name,
@@ -1680,7 +1680,7 @@ pub(crate) fn assert_hover_overlay_panel_height_matches_by_portal_slot_theme(
     );
 }
 
-pub(crate) fn assert_hover_overlay_panel_size_matches_by_portal_slot_theme_ex(
+pub(crate) fn assert_hover_overlay_panel_size_matches_by_portal_slot_theme_with_optional_width_check(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,

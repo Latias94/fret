@@ -2,7 +2,7 @@
 
 Status: **in progress**
 
-Last updated: **2026-03-18**
+Last updated: **2026-03-27**
 
 Goal: turn Fret's editor-facing crates into one coherent product line without collapsing crate
 boundaries, creating a second widget library, or coupling reusable editor surfaces to one design
@@ -334,13 +334,13 @@ These notes remain useful, but they are no longer the primary execution surface 
 ## Adjacent workstreams and notes
 
 - Editor widget surface and starter set:
-  [docs/workstreams/ui-editor-v1.md](../ui-editor-v1.md)
+  [docs/workstreams/ui-editor-v1/ui-editor-v1.md](../ui-editor-v1/ui-editor-v1.md)
 - Detailed egui/imgui capability gap matrix:
-  [docs/workstreams/ui-editor-egui-imgui-gap-v1.md](../ui-editor-egui-imgui-gap-v1.md)
-- Immediate-mode facade/runtime-adjacent work:
-  [docs/workstreams/imui-ecosystem-facade-v3.md](../imui-ecosystem-facade-v3.md)
+  [docs/workstreams/standalone/ui-editor-egui-imgui-gap-v1.md](../standalone/ui-editor-egui-imgui-gap-v1.md)
+- Current immediate-mode stack reset and ownership baseline:
+  [docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md](../imui-stack-fearless-refactor-v1/DESIGN.md)
 - Code editing surface:
-  [docs/workstreams/code-editor-ecosystem-v1.md](../code-editor-ecosystem-v1.md)
+  [docs/workstreams/code-editor-ecosystem-v1/code-editor-ecosystem-v1.md](../code-editor-ecosystem-v1/code-editor-ecosystem-v1.md)
 - Token/skinning boundary ADR:
   [docs/adr/0316-editor-ecosystem-token-namespaces-and-skinning-boundary-v1.md](../../adr/0316-editor-ecosystem-token-namespaces-and-skinning-boundary-v1.md)
 

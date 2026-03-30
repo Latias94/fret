@@ -69,6 +69,36 @@ Use this note when:
 Do not rewrite every old symbol out of closeout records, migration matrices, or delete audits. In
 those files, keep historical names when they are the evidence.
 
+## Immediate-Mode Workstream Map
+
+Current source of truth for the in-tree immediate-mode stack:
+
+- Active stack reset:
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+
+Historical archive directories retained for rationale/audit history only:
+
+- `docs/workstreams/imui-authoring-facade-v1/`
+- `docs/workstreams/imui-authoring-facade-v2/`
+- `docs/workstreams/imui-ecosystem-facade-v1/`
+- `docs/workstreams/imui-ecosystem-facade-v2/`
+- `docs/workstreams/imui-ecosystem-facade-v3/`
+
+Historical companion/audit notes retained under `standalone/`:
+
+- `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
+- `docs/workstreams/standalone/imui-ecosystem-facade-perf-v1.md`
+- `docs/workstreams/standalone/imui-shadcn-adapter-v1.md`
+- `docs/workstreams/standalone/imui-state-integration-v1.md`
+
+Rule:
+
+- Prefer the active stack-reset docs for current API/ownership guidance.
+- Read the older `imui-*` files only as archive evidence, parity notes, or migration history.
+- Treat any old symbol names in those archive files as historical unless explicitly marked as retained.
+
 ## Directory Index
 
 - `docs/workstreams/a11y-accesskit-xplat-bridge-v1/` — first 2026-02-16, latest 2026-02-16, 3 markdown docs
@@ -146,11 +176,12 @@ those files, keep historical names when they are the evidence.
 - `docs/workstreams/hotpatch-devloop-alignment-v1/` — first 2026-02-15, latest 2026-03-01, 4 markdown docs
 - `docs/workstreams/image-source-view-cache-v1/` — first 2026-02-13, latest 2026-02-13, 3 markdown docs
 - `docs/workstreams/image-support-v1/` — first 2026-02-09, latest 2026-02-11, 2 markdown docs
-- `docs/workstreams/imui-authoring-facade-v1/` — first 2026-02-03, latest 2026-02-16, 2 markdown docs
-- `docs/workstreams/imui-authoring-facade-v2/` — first 2026-02-03, latest 2026-03-02, 2 markdown docs
-- `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs
-- `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs
-- `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs
+- `docs/workstreams/imui-authoring-facade-v1/` — first 2026-02-03, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
+- `docs/workstreams/imui-authoring-facade-v2/` — first 2026-02-03, latest 2026-03-02, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
+- `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
+- `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
+- `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
+- `docs/workstreams/imui-stack-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-27, 3 markdown docs (active immediate-mode source of truth)
 - `docs/workstreams/input-dispatch-v2/` — first 2026-01-22, latest 2026-02-14, 3 markdown docs
 - `docs/workstreams/into-element-surface-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-20, 6 markdown docs
 - `docs/workstreams/launcher-utility-windows-v1/` — first 2026-03-03, latest 2026-03-03, 4 markdown docs

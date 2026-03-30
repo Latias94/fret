@@ -29,6 +29,7 @@ use fret_ui_kit::{
     WidgetStates, resolve_override_slot, ui,
 };
 
+use crate::bool_model::IntoBoolModel;
 use crate::overlay_motion;
 
 #[derive(Debug, Clone, Default)]
@@ -746,8 +747,13 @@ impl Button {
         self
     }
 
-    pub fn toggle_model(mut self, model: fret_runtime::Model<bool>) -> Self {
-        self.toggle_model = Some(model);
+    /// Toggle an externally owned boolean model when the button activates.
+    ///
+    /// This is an intentional component-layer policy hook for trigger-style buttons such as
+    /// dialog, popover, sheet, and custom "open/close" controls. It is not the same concept as
+    /// the `imui` boolean field helper, whose canonical name is `switch_model(...)`.
+    pub fn toggle_model(mut self, model: impl IntoBoolModel) -> Self {
+        self.toggle_model = Some(model.into_bool_model());
         self
     }
 

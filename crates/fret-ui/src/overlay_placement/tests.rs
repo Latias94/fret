@@ -112,7 +112,7 @@ fn offset_applies_cross_axis_skidding() {
     let anchor = r(100.0, 100.0, 40.0, 10.0);
     let content = Size::new(Px(120.0), Px(80.0));
 
-    let base = anchored_panel_layout_ex(
+    let base = anchored_panel_layout(
         outer,
         anchor,
         content,
@@ -122,7 +122,7 @@ fn offset_applies_cross_axis_skidding() {
         AnchoredPanelOptions::default(),
     );
 
-    let skidded = anchored_panel_layout_ex(
+    let skidded = anchored_panel_layout(
         outer,
         anchor,
         content,
@@ -148,7 +148,7 @@ fn alignment_axis_inverts_under_rtl_for_vertical_alignments() {
     let anchor = r(100.0, 100.0, 40.0, 10.0);
     let content = Size::new(Px(120.0), Px(80.0));
 
-    let ltr_base = anchored_panel_layout_ex(
+    let ltr_base = anchored_panel_layout(
         outer,
         anchor,
         content,
@@ -165,7 +165,7 @@ fn alignment_axis_inverts_under_rtl_for_vertical_alignments() {
         },
     );
 
-    let ltr = anchored_panel_layout_ex(
+    let ltr = anchored_panel_layout(
         outer,
         anchor,
         content,
@@ -182,7 +182,7 @@ fn alignment_axis_inverts_under_rtl_for_vertical_alignments() {
         },
     );
 
-    let rtl_base = anchored_panel_layout_ex(
+    let rtl_base = anchored_panel_layout(
         outer,
         anchor,
         content,
@@ -199,7 +199,7 @@ fn alignment_axis_inverts_under_rtl_for_vertical_alignments() {
         },
     );
 
-    let rtl = anchored_panel_layout_ex(
+    let rtl = anchored_panel_layout(
         outer,
         anchor,
         content,
@@ -231,7 +231,7 @@ fn arrow_centers_when_possible() {
     let anchor = r(300.0, 200.0, 100.0, 20.0);
     let content = Size::new(Px(200.0), Px(120.0));
 
-    let layout = anchored_panel_layout_ex(
+    let layout = anchored_panel_layout(
         outer,
         anchor,
         content,
@@ -260,7 +260,7 @@ fn arrow_clamps_to_padding_near_edge() {
     let anchor = r(0.0, 50.0, 10.0, 10.0);
     let content = Size::new(Px(200.0), Px(80.0));
 
-    let layout = anchored_panel_layout_ex(
+    let layout = anchored_panel_layout(
         outer,
         anchor,
         content,
@@ -287,7 +287,7 @@ fn collision_padding_insets_outer_before_flip_decision() {
     let anchor = r(10.0, 40.0, 40.0, 10.0);
     let content = Size::new(Px(120.0), Px(40.0));
 
-    let layout = anchored_panel_layout_ex(
+    let layout = anchored_panel_layout(
         outer,
         anchor,
         content,
@@ -318,7 +318,7 @@ fn collision_boundary_intersects_outer_before_solving() {
     let anchor = r(80.0, 80.0, 10.0, 10.0);
     let content = Size::new(Px(60.0), Px(40.0));
 
-    let layout = anchored_panel_layout_ex(
+    let layout = anchored_panel_layout(
         outer,
         anchor,
         content,
@@ -345,7 +345,7 @@ fn sticky_always_clamps_into_outer() {
     let anchor = r(150.0, 10.0, 10.0, 10.0);
     let content = Size::new(Px(10.0), Px(10.0));
 
-    let layout = anchored_panel_layout_ex(
+    let layout = anchored_panel_layout(
         outer,
         anchor,
         content,
@@ -368,7 +368,7 @@ fn sticky_partial_limits_shift_to_keep_anchor_touching() {
     let anchor = r(150.0, 10.0, 10.0, 10.0);
     let content = Size::new(Px(10.0), Px(10.0));
 
-    let layout = anchored_panel_layout_ex(
+    let layout = anchored_panel_layout(
         outer,
         anchor,
         content,

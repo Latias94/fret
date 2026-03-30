@@ -3144,11 +3144,6 @@ impl ContextMenu {
         }
     }
 
-    /// Compatibility alias for call sites that still own the open model explicitly.
-    pub fn new(open: Model<bool>) -> Self {
-        Self::from_open(open)
-    }
-
     /// Default typed root constructor for the common uncontrolled context-menu authoring path.
     ///
     /// This stores the internal `open` model at the root call site and starts closed.

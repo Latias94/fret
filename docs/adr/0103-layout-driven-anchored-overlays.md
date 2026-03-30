@@ -98,7 +98,7 @@ During `layout`:
 1. Measure/layout children at the wrapper origin using the available size budget.
 2. Compute the subtree intrinsic `desired: Size` as the max non-absolute child size.
 3. Compute `outer = inset_rect(cx.bounds, outer_margin)`.
-4. Run `anchored_panel_layout_sized_ex(outer, anchor, desired, side_offset, side, align, options)`.
+4. Run `anchored_panel_layout_sized(outer, anchor, desired, side_offset, side, align, options)`.
 5. Derive `transform = translation(layout.rect.origin - cx.bounds.origin)` and store it on the
    host widget so `render_transform` returns it.
 6. If `layout_out` is provided, update the model with the computed `AnchoredPanelLayout`.

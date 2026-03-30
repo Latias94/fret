@@ -130,7 +130,7 @@ impl View for ImUiActionBasicsView {
             let imui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                 fret_imui::imui(cx, |ui| {
                     ui.text("IMUI");
-                    ui.action_button_ex(
+                    ui.action_button_with_options(
                         Arc::from("Increment (imui)"),
                         act::Inc,
                         ButtonOptions {

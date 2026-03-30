@@ -35,8 +35,13 @@ fn focus_barrier_can_remain_active_while_layer_is_hit_test_inert() {
 
     // Simulate a close-transition style barrier: the overlay layer is still visible and blocks
     // underlay focus, but it is hit-test-inert for pointer events.
-    let overlay_layer =
-        ui.push_overlay_root_ex(overlay_root, /* blocks_underlay_input */ false, false);
+    let overlay_layer = ui.push_overlay_root_with_options(
+        overlay_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: false,
+            hit_testable: false,
+        },
+    );
 
     let mut services = FakeUiServices;
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));

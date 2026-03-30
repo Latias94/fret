@@ -1,7 +1,7 @@
 # Component Ecosystem State Integration v1 - TODO Tracker
 
 Status: Draft
-Last updated: 2026-02-06
+Last updated: 2026-03-27
 
 This tracker covers the work described in:
 
@@ -11,7 +11,8 @@ Related:
 
 - `docs/workstreams/state-management-v1/state-management-v1.md`
 - `docs/workstreams/state-management-v1/state-management-v1-extension-contract.md`
-- `docs/workstreams/imui-ecosystem-facade-v1/imui-ecosystem-facade-v1.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/standalone/imui-state-integration-v1.md`
 
 Legend:
 
