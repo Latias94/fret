@@ -509,9 +509,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         #[cfg(any(target_os = "android", target_os = "ios"))]
         {
             if self.main_window.is_none() {
-                let mut spec = self.config.main_window_spec();
                 #[cfg(feature = "dev-state")]
-                self.dev_state.apply_main_window_spec(&mut spec);
+                let spec = {
+                    let mut spec = self.config.main_window_spec();
+                    self.dev_state.apply_main_window_spec(&mut spec);
+                    spec
+                };
+                #[cfg(not(feature = "dev-state"))]
+                let spec = self.config.main_window_spec();
                 let style = self.config.main_window_style.clone();
                 let caps = self
                     .app
@@ -950,6 +955,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 RunnerUserEvent::PlatformCompletion { window, completion } => {
                     self.deliver_platform_completion_now(window, completion);
                 }
+                #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
                 RunnerUserEvent::AssetReloadWake => {
                     let windows = self.windows.keys().collect::<Vec<_>>();
                     if let Some(asset_reload) = self.asset_reload.as_mut() {

@@ -1,4 +1,6 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+use std::collections::BTreeSet;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::sync::{
@@ -11,6 +13,7 @@ use fret_app::App;
 use fret_core::AppWindowId;
 use fret_core::time::Instant;
 
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use super::event_loop::RunnerUserEvent;
 use super::window::TimerEntry;
 
@@ -117,6 +120,7 @@ enum AssetReloadMode {
 
 #[derive(Debug)]
 struct NativeWatchState {
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     fallback_poll_interval: std::time::Duration,
     fallback_poll: Option<PollTimerState>,
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -126,9 +130,10 @@ struct NativeWatchState {
 }
 
 impl NativeWatchState {
-    fn new(fallback_poll_interval: std::time::Duration) -> Self {
+    fn new(_fallback_poll_interval: std::time::Duration) -> Self {
         Self {
-            fallback_poll_interval,
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            fallback_poll_interval: _fallback_poll_interval,
             fallback_poll: None,
             #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
             pending_signal: Arc::new(AtomicBool::new(false)),
@@ -137,6 +142,7 @@ impl NativeWatchState {
         }
     }
 
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     fn ensure_fallback_poll(
         &mut self,
         app: &mut App,
@@ -191,24 +197,9 @@ impl NativeWatchState {
         Ok(())
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    fn set_event_loop_proxy(
-        &mut self,
-        _targets: &[AssetReloadWatchedTarget],
-        _proxy: (),
-        _proxy_events: (),
-    ) -> Result<(), std::convert::Infallible> {
-        Ok(())
-    }
-
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     fn take_pending_signal(&self) -> bool {
         self.pending_signal.swap(false, Ordering::SeqCst)
-    }
-
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    fn take_pending_signal(&self) -> bool {
-        false
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -229,9 +220,6 @@ impl NativeWatchState {
 
         handle.roots = next_roots;
     }
-
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    fn refresh_watch_roots(&mut self, _targets: &[AssetReloadWatchedTarget]) {}
 
     #[cfg(test)]
     fn note_watch_signal_for_tests(&self) {
@@ -370,6 +358,7 @@ impl AssetReloadController {
         self.apply_reload_if_changed(app, windows)
     }
 
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     pub(super) fn handle_proxy_wake(&mut self, app: &mut App, windows: &[AppWindowId]) -> bool {
         let has_pending_signal = match &self.mode {
             AssetReloadMode::NativeWatch(watch) => watch.take_pending_signal(),

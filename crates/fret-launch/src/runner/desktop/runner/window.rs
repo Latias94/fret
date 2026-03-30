@@ -1421,11 +1421,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     pub(super) fn window_under_cursor_platform(
         &self,
-        screen_pos: PhysicalPosition<f64>,
-        prefer_not: Option<fret_core::AppWindowId>,
+        _screen_pos: PhysicalPosition<f64>,
+        _prefer_not: Option<fret_core::AppWindowId>,
     ) -> WindowUnderCursorHit {
         #[cfg(target_os = "macos")]
-        if let Some(window) = self.window_under_cursor_macos(screen_pos, prefer_not) {
+        if let Some(window) = self.window_under_cursor_macos(_screen_pos, _prefer_not) {
             return WindowUnderCursorHit {
                 window: Some(window),
                 source: fret_runtime::WindowUnderCursorSource::PlatformMacos,
@@ -1433,7 +1433,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         #[cfg(target_os = "windows")]
-        if let Some(window) = self.window_under_cursor_win32(screen_pos, prefer_not) {
+        if let Some(window) = self.window_under_cursor_win32(_screen_pos, _prefer_not) {
             return WindowUnderCursorHit {
                 window: Some(window),
                 source: fret_runtime::WindowUnderCursorSource::PlatformWin32,

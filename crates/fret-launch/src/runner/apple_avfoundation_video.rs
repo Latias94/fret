@@ -11,17 +11,18 @@
 //!   (renderer-owned texture backed by IOSurface) or an explicit external-handle import API from
 //!   the backend. Both remain capability-gated.
 
+#[cfg(target_os = "macos")]
 use std::path::{Path, PathBuf};
 use std::{cell::RefCell, rc::Rc};
 
-use super::{
-    EngineFrameKeepalive, NativeExternalImportError, NativeExternalImportedFrame,
-    NativeExternalTextureFrame,
-};
+#[cfg(target_os = "macos")]
+use super::EngineFrameKeepalive;
+use super::{NativeExternalImportError, NativeExternalImportedFrame, NativeExternalTextureFrame};
+#[cfg(target_os = "macos")]
 use fret_render::{
     RenderTargetIngestStrategy, RenderTargetMatrixCoefficients, RenderTargetMetadata,
-    RendererCapabilities, WgpuContext,
 };
+use fret_render::{RendererCapabilities, WgpuContext};
 
 #[derive(Clone)]
 pub struct AvfVideoNativeExternalImporter {
@@ -34,13 +35,16 @@ struct AvfVideoNativeExternalState {
     reader: Option<AvfVideoReader>,
     texture: Option<wgpu::Texture>,
     texture_size: (u32, u32),
+    #[cfg(target_os = "macos")]
     orientation: fret_render::RenderTargetOrientation,
 }
 
 struct AvfVideoNativeExternalFrame {
+    #[cfg(target_os = "macos")]
     inner: Rc<RefCell<AvfVideoNativeExternalState>>,
 }
 
+#[cfg(target_os = "macos")]
 struct AvfVideoNativeExternalKeepalive {
     _inner: Rc<RefCell<AvfVideoNativeExternalState>>,
 }
@@ -54,6 +58,7 @@ impl AvfVideoNativeExternalImporter {
                 reader: None,
                 texture: None,
                 texture_size: (0, 0),
+                #[cfg(target_os = "macos")]
                 orientation: fret_render::RenderTargetOrientation::default(),
             })),
         }
@@ -79,6 +84,7 @@ impl AvfVideoNativeExternalImporter {
 
     pub fn frame(&self) -> Box<dyn NativeExternalTextureFrame> {
         Box::new(AvfVideoNativeExternalFrame {
+            #[cfg(target_os = "macos")]
             inner: self.inner.clone(),
         })
     }
@@ -598,6 +604,7 @@ mod avf {
 #[cfg(target_os = "macos")]
 use avf::AvfVideoReader;
 
+#[cfg(target_os = "macos")]
 fn resolve_video_source_path(raw: &str) -> anyhow::Result<PathBuf> {
     let p = Path::new(raw);
     if p.is_file() {
