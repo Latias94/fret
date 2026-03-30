@@ -172,7 +172,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let dispatcher = WebDispatcher::new(caps.exec);
         app.set_global::<fret_runtime::DispatcherHandle>(dispatcher.handle());
-        crate::assets::ensure_url_passthrough_resolver(&mut app);
+        crate::assets::ensure_default_web_url_passthrough_resolver(&mut app);
 
         Self {
             config,

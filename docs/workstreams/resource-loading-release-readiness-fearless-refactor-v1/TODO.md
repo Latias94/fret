@@ -28,7 +28,8 @@ Tracking format:
     - or gate/remove default surfaces that imply built-in URL preview support.
   - Current landed slice:
     - the default AI attachment preview surface is still capability-gated instead of blindly
-      emitting URL previews on hosts that cannot support them,
+      emitting URL previews on hosts that cannot support them, and it now also requires the URL
+      request to resolve into an actual image source before entering the image preview path,
     - the shipped web launch host now installs a first-party `UrlPassthroughAssetResolver`, so
       `AssetLocator::url(...)` can resolve through the general resolver contract there for
       browser-native image URL loading,

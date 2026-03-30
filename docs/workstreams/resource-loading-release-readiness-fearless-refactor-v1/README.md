@@ -87,7 +87,8 @@ Progress update (2026-03-30):
 
 - `RLRR-001` is landed: wasm renderer bootstrap is now bundled-only by construction.
 - `RLRR-002` is landed: the default AI attachment preview surface no longer implies built-in URL
-  asset support unless the host resolver explicitly advertises `url` capability.
+  asset support unless the host resolver explicitly advertises `url` capability and the request
+  can actually resolve into an image-consumable source.
 - `RLRR-003` is landed as a stage-1 closure: startup bundled-font injection now re-resolves bytes
   from the shared runtime asset resolver with no silent fallback path, and the ADR/runtime wording
   now explicitly distinguishes that startup baseline from the runtime `Effect::TextAddFonts` lane.
@@ -141,13 +142,15 @@ browser-native image URL loading can participate in the shared resolver contract
 
 Release consequence:
 
-- default surfaces no longer have to lie about built-in web image URL preview support, but desktop
-  native still does not ship a first-party default URL resolver and first-party SVG/font URL lanes
-  are still open.
+- default surfaces no longer have to lie about built-in web image URL preview support, and
+  desktop-native reference-only URL resolvers no longer accidentally look image-preview-ready just
+  because they set `url: true`; desktop native still does not ship a first-party default URL
+  resolver and first-party SVG/font URL lanes are still open.
 
 Status note (2026-03-30):
 
-- the default AI attachment preview surface is capability-gated,
+- the default AI attachment preview surface is capability-gated and now also requires the URL
+  request to resolve into an actual `ImageSource` before entering the image UI path,
 - the shipped web host now installs `UrlPassthroughAssetResolver`, so that capability is truthful
   on web instead of remaining a docs-only extension point,
 - the unresolved part is now the lack of a first-party desktop/native default URL resolver plus the

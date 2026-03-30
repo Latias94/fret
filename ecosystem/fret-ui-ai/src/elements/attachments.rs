@@ -263,6 +263,17 @@ fn capability_gated_attachment_preview_request_for(
     supports_request.then_some(request)
 }
 
+fn resolve_attachment_preview_source_from_host(
+    host: &impl fret_runtime::GlobalsHost,
+    data: &AttachmentData,
+) -> Option<fret_ui_assets::ImageSource> {
+    let request = capability_gated_attachment_preview_request_for(
+        data,
+        fret_runtime::asset_capabilities(host),
+    )?;
+    fret_ui_assets::resolve_image_source_from_host(host, &request).ok()
+}
+
 fn resolve_attachment_preview_image<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     data: &AttachmentData,
@@ -273,11 +284,8 @@ fn resolve_attachment_preview_image<H: UiHost>(
                 return Some(image);
             }
 
-            let request = capability_gated_attachment_preview_request_for(
-                data,
-                fret_runtime::asset_capabilities(&*cx.app),
-            )?;
-            cx.use_image_source_state_from_asset_request(&request).image
+            let source = resolve_attachment_preview_source_from_host(&*cx.app, data)?;
+            cx.use_image_source_state(&source).image
         }
         AttachmentData::SourceDocument(_) => None,
     }
@@ -1638,5 +1646,114 @@ mod tests {
                     .with_kind_hint(AssetKindHint::Image)
             )
         );
+    }
+
+    #[test]
+    fn attachment_preview_source_accepts_byte_backed_url_resolvers() {
+        use std::sync::Arc;
+
+        use fret_app::App;
+        use fret_assets::{
+            AssetLoadError, AssetResolver, AssetRevision, ResolvedAssetBytes,
+            ResolvedAssetReference,
+        };
+
+        struct ByteUrlResolver;
+
+        impl AssetResolver for ByteUrlResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    url: true,
+                    ..Default::default()
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Ok(ResolvedAssetBytes::new(
+                    request.locator.clone(),
+                    AssetRevision(7),
+                    &b"fake-image-bytes"[..],
+                ))
+            }
+
+            fn resolve_reference(
+                &self,
+                _request: &AssetRequest,
+            ) -> Result<ResolvedAssetReference, AssetLoadError> {
+                Err(AssetLoadError::ExternalReferenceUnavailable {
+                    kind: fret_assets::AssetLocatorKind::Url,
+                })
+            }
+        }
+
+        let data = AttachmentData::File(
+            AttachmentFileData::new("att-image")
+                .filename("preview.png")
+                .media_type("image/png")
+                .url("https://example.com/preview.png"),
+        );
+
+        let mut app = App::new();
+        fret_runtime::set_asset_resolver(&mut app, Arc::new(ByteUrlResolver));
+
+        assert!(resolve_attachment_preview_source_from_host(&app, &data).is_some());
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn attachment_preview_source_skips_native_reference_only_url_resolvers() {
+        use std::sync::Arc;
+
+        use fret_app::App;
+        use fret_assets::{
+            AssetExternalReference, AssetLoadError, AssetResolver, AssetRevision,
+            ResolvedAssetBytes, ResolvedAssetReference,
+        };
+
+        struct ReferenceOnlyUrlResolver;
+
+        impl AssetResolver for ReferenceOnlyUrlResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    url: true,
+                    ..Default::default()
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                _request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Err(AssetLoadError::ReferenceOnlyLocator {
+                    kind: fret_assets::AssetLocatorKind::Url,
+                })
+            }
+
+            fn resolve_reference(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetReference, AssetLoadError> {
+                Ok(ResolvedAssetReference::new(
+                    request.locator.clone(),
+                    AssetRevision(11),
+                    AssetExternalReference::url("https://example.com/preview.png"),
+                ))
+            }
+        }
+
+        let data = AttachmentData::File(
+            AttachmentFileData::new("att-image")
+                .filename("preview.png")
+                .media_type("image/png")
+                .url("https://example.com/preview.png"),
+        );
+
+        let mut app = App::new();
+        fret_runtime::set_asset_resolver(&mut app, Arc::new(ReferenceOnlyUrlResolver));
+
+        assert!(resolve_attachment_preview_source_from_host(&app, &data).is_none());
     }
 }

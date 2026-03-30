@@ -91,6 +91,10 @@ escape hatches.
     byte-backed assets,
   - web/WASM exposes `ImageSource::from_url(...)` as a direct image helper, and the
     `resolve_image_source*` bridge can consume a resolver-provided URL reference there,
+  - native image preview surfaces should not treat `AssetCapabilities { url: true, .. }` as a
+    blanket promise that a resolver-provided URL reference is already image-consumable; the
+    current first-party image bridge only treats URL external references as directly loadable on
+    web/WASM,
   - when no resolver layer returns a URL reference, web/WASM `resolve_image_source*` falls back to
     resolving bytes and feeding `ImageSource::from_resolved_asset_bytes(...)`, so the current
     first-party packaged/bundle lane is still a byte-fetch + Rust decode path rather than a
