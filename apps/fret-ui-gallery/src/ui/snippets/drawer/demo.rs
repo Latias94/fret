@@ -167,39 +167,47 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .into_element(cx);
 
                 shadcn::DrawerContent::new([])
-                    .with_children(cx, |cx| {
+                    .children(|cx| {
                         vec![
-                            shadcn::DrawerHeader::new([]).with_children(cx, |cx| {
-                                vec![
-                                    shadcn::DrawerTitle::new("Move Goal").into_element(cx),
-                                    shadcn::DrawerDescription::new("Set your daily activity goal.")
-                                        .into_element(cx),
+                            ui::v_stack(move |cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::DrawerHeader::new([]).children(|cx| {
+                                        ui::children![
+                                            cx;
+                                            shadcn::DrawerTitle::new("Move Goal"),
+                                            shadcn::DrawerDescription::new(
+                                                "Set your daily activity goal.",
+                                            )
+                                        ]
+                                    }),
+                                    content,
+                                    shadcn::DrawerFooter::new([]).children(|cx| {
+                                        ui::children![
+                                            cx;
+                                            shadcn::Button::new("Submit"),
+                                            shadcn::DrawerClose::from_scope().child(
+                                                shadcn::Button::new("Cancel")
+                                                    .variant(shadcn::ButtonVariant::Outline),
+                                            )
+                                        ]
+                                    })
                                 ]
-                            }),
-                            ui::v_stack(move |_cx| vec![content])
-                                .gap(Space::N0)
-                                .items_stretch()
-                                .layout(
-                                    LayoutRefinement::default()
-                                        .w_full()
-                                        .max_w(Px(384.0))
-                                        .min_w_0()
-                                        .mx_auto(),
-                                )
-                                .into_element(cx),
-                            shadcn::DrawerFooter::new([]).with_children(cx, |cx| {
-                                vec![
-                                    shadcn::Button::new("Submit").into_element(cx),
-                                    shadcn::DrawerClose::from_scope().build(
-                                        cx,
-                                        shadcn::Button::new("Cancel")
-                                            .variant(shadcn::ButtonVariant::Outline),
-                                    ),
-                                ]
-                            }),
+                            })
+                            .gap(Space::N0)
+                            .items_stretch()
+                            .layout(
+                                LayoutRefinement::default()
+                                    .w_full()
+                                    .max_w(Px(384.0))
+                                    .min_w_0()
+                                    .mx_auto(),
+                            )
+                            .into_element(cx),
                         ]
                     })
                     .test_id("ui-gallery-drawer-demo-content")
+                    .into_element(cx)
             }),
         ])
         .into_element(cx)

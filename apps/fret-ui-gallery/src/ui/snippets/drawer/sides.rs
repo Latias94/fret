@@ -49,32 +49,33 @@ fn side_button<H: UiHost + 'static>(
                     .into_element(cx);
 
                 shadcn::DrawerContent::new([])
-                    .with_children(cx, |cx| {
-                        vec![
-                            shadcn::DrawerHeader::new([]).with_children(cx, |cx| {
-                                vec![
-                                    shadcn::DrawerTitle::new(format!("{title} Drawer"))
-                                        .into_element(cx),
+                    .children(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::DrawerHeader::new([]).children(|cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::DrawerTitle::new(format!("{title} Drawer")),
                                     shadcn::DrawerDescription::new(
                                         "Use the `direction` prop to control drawer placement.",
                                     )
-                                    .into_element(cx),
                                 ]
                             }),
                             body,
-                            shadcn::DrawerFooter::new([]).with_children(cx, |cx| {
-                                vec![
-                                    shadcn::Button::new("Submit").into_element(cx),
-                                    shadcn::DrawerClose::from_scope().build(
-                                        cx,
+                            shadcn::DrawerFooter::new([]).children(|cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::Button::new("Submit"),
+                                    shadcn::DrawerClose::from_scope().child(
                                         shadcn::Button::new("Cancel")
                                             .variant(shadcn::ButtonVariant::Outline),
-                                    ),
+                                    )
                                 ]
-                            }),
+                            })
                         ]
                     })
                     .test_id(format!("{test_id_prefix}-content"))
+                    .into_element(cx)
             }),
         ])
         .into_element(cx)

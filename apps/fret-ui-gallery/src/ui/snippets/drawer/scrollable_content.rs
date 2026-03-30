@@ -68,31 +68,33 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 };
 
                 shadcn::DrawerContent::new([])
-                    .with_children(cx, |cx| {
-                        vec![
-                            shadcn::DrawerHeader::new([]).with_children(cx, |cx| {
-                                vec![
-                                    shadcn::DrawerTitle::new("Scrollable Content").into_element(cx),
+                    .children(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::DrawerHeader::new([]).children(|cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::DrawerTitle::new("Scrollable Content"),
                                     shadcn::DrawerDescription::new(
                                         "Keep actions visible while the content scrolls.",
                                     )
-                                    .into_element(cx),
                                 ]
                             }),
                             padded,
-                            shadcn::DrawerFooter::new([]).with_children(cx, |cx| {
-                                vec![
-                                    shadcn::Button::new("Submit").into_element(cx),
-                                    shadcn::DrawerClose::from_scope().build(
-                                        cx,
+                            shadcn::DrawerFooter::new([]).children(|cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::Button::new("Submit"),
+                                    shadcn::DrawerClose::from_scope().child(
                                         shadcn::Button::new("Cancel")
                                             .variant(shadcn::ButtonVariant::Outline),
-                                    ),
+                                    )
                                 ]
-                            }),
+                            })
                         ]
                     })
                     .test_id("ui-gallery-drawer-scrollable-content")
+                    .into_element(cx)
             }),
         ])
         .into_element(cx)

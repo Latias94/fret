@@ -367,6 +367,20 @@ fn collect_built_drawer_children<H: UiHost>(
     out
 }
 
+fn collect_landed_drawer_children<H: UiHost, I, TChild>(
+    cx: &mut ElementContext<'_, H>,
+    children: I,
+) -> Vec<AnyElement>
+where
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+    children
+        .into_iter()
+        .map(|child| child.into_element(cx))
+        .collect()
+}
+
 fn apply_drawer_header_text_alignment(mut element: AnyElement, align: TextAlign) -> AnyElement {
     let apply_text = |layout: &mut LayoutStyle, text_align: &mut TextAlign| {
         if matches!(layout.size.width, Length::Auto) {
@@ -442,14 +456,36 @@ impl DrawerContent {
         self
     }
 
+    pub fn children<H: UiHost, I, TChild, Children>(
+        self,
+        children: Children,
+    ) -> DrawerContentChildrenBuild<H, Children>
+    where
+        Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+        I: IntoIterator<Item = TChild>,
+        TChild: IntoUiElement<H>,
+    {
+        DrawerContentChildrenBuild {
+            content: self,
+            children: Some(children),
+            test_id: None,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Explicit raw seam for pre-landed drawer content children.
+    pub fn children_raw(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
     #[track_caller]
     pub fn with_children<H: UiHost>(
-        mut self,
+        self,
         cx: &mut ElementContext<'_, H>,
-        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
-        self.children = build(cx);
-        self.into_element(cx)
+        self.children(children).into_element(cx)
     }
 
     #[track_caller]
@@ -621,6 +657,95 @@ impl DrawerContent {
     }
 }
 
+pub struct DrawerContentChildrenBuild<H: UiHost, Children> {
+    content: DrawerContent,
+    children: Option<Children>,
+    test_id: Option<Arc<str>>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, I, TChild, Children> DrawerContentChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.content = self.content.refine_style(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.content = self.content.refine_layout(layout);
+        self
+    }
+
+    pub fn drag_handle_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.content = self.content.drag_handle_test_id(id);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let built_children = (self
+            .children
+            .expect("expected drawer content children closure"))(cx);
+        let content = self
+            .content
+            .children_raw(collect_landed_drawer_children(cx, built_children));
+        let content = content.into_element(cx);
+        if let Some(id) = self.test_id {
+            content.test_id(id)
+        } else {
+            content
+        }
+    }
+}
+
+impl<H: UiHost, I, TChild, Children> UiPatchTarget for DrawerContentChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, I, TChild, Children> UiSupportsChrome for DrawerContentChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+}
+
+impl<H: UiHost, I, TChild, Children> UiSupportsLayout for DrawerContentChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+}
+
+impl<H: UiHost, I, TChild, Children> IntoUiElement<H> for DrawerContentChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerContentChildrenBuild::into_element(self, cx)
+    }
+}
+
 pub struct DrawerContentBuild<H, B> {
     build: Option<B>,
     chrome: ChromeRefinement,
@@ -751,14 +876,35 @@ impl DrawerHeader {
         self
     }
 
+    pub fn children<H: UiHost, I, TChild, Children>(
+        self,
+        children: Children,
+    ) -> DrawerHeaderChildrenBuild<H, Children>
+    where
+        Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+        I: IntoIterator<Item = TChild>,
+        TChild: IntoUiElement<H>,
+    {
+        DrawerHeaderChildrenBuild {
+            header: self,
+            children: Some(children),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Explicit raw seam for pre-landed drawer header children.
+    pub fn children_raw(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
     #[track_caller]
     pub fn with_children<H: UiHost>(
-        mut self,
+        self,
         cx: &mut ElementContext<'_, H>,
-        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
-        self.children = build(cx);
-        self.into_element(cx)
+        self.children(children).into_element(cx)
     }
 
     #[track_caller]
@@ -803,6 +949,83 @@ impl DrawerHeader {
                 .items_stretch(),
             children,
         )
+    }
+}
+
+pub struct DrawerHeaderChildrenBuild<H: UiHost, Children> {
+    header: DrawerHeader,
+    children: Option<Children>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, I, TChild, Children> DrawerHeaderChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.header = self.header.refine_style(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.header = self.header.refine_layout(layout);
+        self
+    }
+
+    pub fn text_align(mut self, align: TextAlign) -> Self {
+        self.header = self.header.text_align(align);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let built_children = (self
+            .children
+            .expect("expected drawer header children closure"))(cx);
+        self.header
+            .children_raw(collect_landed_drawer_children(cx, built_children))
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, I, TChild, Children> UiPatchTarget for DrawerHeaderChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, I, TChild, Children> UiSupportsChrome for DrawerHeaderChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+}
+
+impl<H: UiHost, I, TChild, Children> UiSupportsLayout for DrawerHeaderChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+}
+
+impl<H: UiHost, I, TChild, Children> IntoUiElement<H> for DrawerHeaderChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerHeaderChildrenBuild::into_element(self, cx)
     }
 }
 
@@ -917,14 +1140,35 @@ impl DrawerFooter {
         self
     }
 
+    pub fn children<H: UiHost, I, TChild, Children>(
+        self,
+        children: Children,
+    ) -> DrawerFooterChildrenBuild<H, Children>
+    where
+        Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+        I: IntoIterator<Item = TChild>,
+        TChild: IntoUiElement<H>,
+    {
+        DrawerFooterChildrenBuild {
+            footer: self,
+            children: Some(children),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Explicit raw seam for pre-landed drawer footer children.
+    pub fn children_raw(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
     #[track_caller]
     pub fn with_children<H: UiHost>(
-        mut self,
+        self,
         cx: &mut ElementContext<'_, H>,
-        build: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
-        self.children = build(cx);
-        self.into_element(cx)
+        self.children(children).into_element(cx)
     }
 
     #[track_caller]
@@ -948,6 +1192,78 @@ impl DrawerFooter {
                 .items_stretch(),
             children,
         )
+    }
+}
+
+pub struct DrawerFooterChildrenBuild<H: UiHost, Children> {
+    footer: DrawerFooter,
+    children: Option<Children>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, I, TChild, Children> DrawerFooterChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.footer = self.footer.refine_style(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.footer = self.footer.refine_layout(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let built_children = (self
+            .children
+            .expect("expected drawer footer children closure"))(cx);
+        self.footer
+            .children_raw(collect_landed_drawer_children(cx, built_children))
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, I, TChild, Children> UiPatchTarget for DrawerFooterChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, I, TChild, Children> UiSupportsChrome for DrawerFooterChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+}
+
+impl<H: UiHost, I, TChild, Children> UiSupportsLayout for DrawerFooterChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+}
+
+impl<H: UiHost, I, TChild, Children> IntoUiElement<H> for DrawerFooterChildrenBuild<H, Children>
+where
+    Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = TChild>,
+    TChild: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerFooterChildrenBuild::into_element(self, cx)
     }
 }
 
@@ -2460,6 +2776,18 @@ impl DrawerClose {
         self
     }
 
+    /// Builder-first variant that keeps the close affordance on the composable children lane.
+    pub fn child<H: UiHost, T>(self, child: T) -> DrawerCloseChild<H, T>
+    where
+        T: IntoUiElement<H>,
+    {
+        DrawerCloseChild {
+            close: self,
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn build<H: UiHost>(
         self,
@@ -2472,6 +2800,33 @@ impl DrawerClose {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.inner.into_element(cx)
+    }
+}
+
+pub struct DrawerCloseChild<H, T> {
+    close: DrawerClose,
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, T> DrawerCloseChild<H, T>
+where
+    T: IntoUiElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.close
+            .build(cx, self.child.expect("expected drawer close child"))
+    }
+}
+
+impl<H: UiHost, T> IntoUiElement<H> for DrawerCloseChild<H, T>
+where
+    T: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerCloseChild::into_element(self, cx)
     }
 }
 
@@ -2594,6 +2949,52 @@ mod tests {
             fret_ui::element::ElementKind::Container(_)
         ));
         assert!(find_text(&element, "Title").is_some());
+        assert!(find_text(&element, "Close").is_some());
+    }
+
+    #[test]
+    fn drawer_content_children_builder_accepts_composable_sections_surface() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                DrawerContent::new([])
+                    .children(|cx| {
+                        vec![
+                            DrawerHeader::new([])
+                                .children(|_cx| vec![DrawerTitle::new("Title")])
+                                .into_element(cx),
+                            DrawerFooter::new([])
+                                .children(|_cx| vec![crate::button::Button::new("Close")])
+                                .into_element(cx),
+                        ]
+                    })
+                    .test_id("content")
+                    .into_element(cx)
+            });
+
+        assert!(matches!(
+            element.kind,
+            fret_ui::element::ElementKind::Container(_)
+        ));
+        assert!(find_text(&element, "Title").is_some());
+        assert!(find_text(&element, "Close").is_some());
+    }
+
+    #[test]
+    fn drawer_close_child_builder_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                DrawerClose::new(open.clone())
+                    .child(crate::button::Button::new("Close"))
+                    .into_element(cx)
+            });
+
         assert!(find_text(&element, "Close").is_some());
     }
 
