@@ -35,7 +35,8 @@ Tracking format:
       browser-native image URL loading,
     - the shared `fret-ui-assets` image bridge now also accepts resolver-provided URL references on
       every platform, so custom native hosts can participate without desktop shipping a first-party
-      default URL resolver,
+      default URL resolver, and the non-wasm fetch + Rust decode lane is now covered by a focused
+      local-HTTP regression test,
     - native default URL support plus first-party SVG/font URL lanes remain explicitly out of scope
       for the current shipped default.
   - Evidence:
@@ -46,6 +47,7 @@ Tracking format:
     - `crates/fret-launch/src/assets.rs`
     - `crates/fret-launch/src/runner/web/mod.rs`
     - `cargo nextest run -p fret-ui-assets asset_resolver -p fret-ui-ai attachment_preview`
+    - `cargo nextest run -p fret-ui-assets --features 'ui image-decode' image_source_url_fetch_drives_decode_and_gpu_ready_bumps_signal_model`
 
 - [x] RLRR-003 Close stage-1 drift between font asset identity and actual load path.
   - Required outcomes:

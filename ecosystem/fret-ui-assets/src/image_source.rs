@@ -1432,6 +1432,64 @@ mod tests {
         }
     }
 
+    #[cfg(all(feature = "image-decode", not(target_arch = "wasm32")))]
+    struct OneShotHttpImageServer {
+        url: String,
+        join: Option<std::thread::JoinHandle<()>>,
+    }
+
+    #[cfg(all(feature = "image-decode", not(target_arch = "wasm32")))]
+    impl OneShotHttpImageServer {
+        fn serve(content_type: &str, body: Vec<u8>) -> Self {
+            use std::io::{Read as _, Write as _};
+            use std::net::TcpListener;
+
+            let listener = TcpListener::bind(("127.0.0.1", 0))
+                .expect("test image server should bind localhost");
+            let addr = listener
+                .local_addr()
+                .expect("test image server should expose its bound address");
+            let content_type = content_type.to_string();
+            let join = std::thread::spawn(move || {
+                let (mut stream, _) = listener.accept().expect("test image server should accept");
+                let mut request = [0u8; 1024];
+                let _ = stream.read(&mut request);
+                let headers = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                stream
+                    .write_all(headers.as_bytes())
+                    .expect("test image server should write headers");
+                stream
+                    .write_all(&body)
+                    .expect("test image server should write image bytes");
+                stream
+                    .flush()
+                    .expect("test image server should flush response");
+            });
+
+            Self {
+                url: format!("http://{addr}/image"),
+                join: Some(join),
+            }
+        }
+
+        fn url(&self) -> &str {
+            self.url.as_str()
+        }
+    }
+
+    #[cfg(all(feature = "image-decode", not(target_arch = "wasm32")))]
+    impl Drop for OneShotHttpImageServer {
+        fn drop(&mut self) {
+            if let Some(join) = self.join.take() {
+                join.join()
+                    .expect("test image server thread should exit cleanly");
+            }
+        }
+    }
+
     #[cfg(feature = "ui")]
     fn install_bundle_image_asset(
         host: &mut TestHost,
@@ -1616,6 +1674,93 @@ mod tests {
             .expect("expected ImageRegisterRgba8 after decode");
 
         // GPU-ready event should bump the same signal model (per-key).
+        let image = ImageId::default();
+        let event = Event::ImageRegistered {
+            token,
+            image,
+            width,
+            height,
+        };
+        let _ = crate::UiAssets::handle_event(&mut host, window, &event);
+        let rev2 = host.models().revision(&model).unwrap_or(0);
+        assert!(rev2 > rev1, "expected GPU-ready to bump signal model");
+    }
+
+    #[cfg(all(feature = "ui", feature = "image-decode", not(target_arch = "wasm32")))]
+    #[test]
+    fn image_source_url_fetch_drives_decode_and_gpu_ready_bumps_signal_model() {
+        let dispatcher = Arc::new(QueuedDispatcher::default());
+        let mut host = TestHost {
+            frame_id: FrameId(1),
+            ..Default::default()
+        };
+        host.set_global::<DispatcherHandle>(dispatcher.clone());
+        let window = AppWindowId::default();
+
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../assets/textures/test.jpg");
+        let bytes = std::fs::read(path).expect("expected assets/textures/test.jpg to exist");
+        let server = OneShotHttpImageServer::serve("image/jpeg", bytes);
+        let src = ImageSource::from_url(server.url().to_string());
+
+        let model = with_image_source_loader(&mut host, |loader, host| {
+            loader.use_signal_model(host, &src, ImageSourceOptions::default())
+        })
+        .expect("dispatcher installed");
+        let rev0 = host.models().revision(&model).unwrap_or(0);
+
+        let _ = use_image_source_state(&mut host, window, &src);
+        dispatcher.run_background_tasks();
+
+        let runtime = with_image_source_loader(&mut host, |loader, _host| loader.runtime.clone())
+            .expect("dispatcher installed");
+        for msg in runtime.inbox.drain() {
+            runtime.apply_msg(&mut host, msg);
+        }
+        let rev1 = host.models().revision(&model).unwrap_or(0);
+        assert!(
+            rev1 > rev0,
+            "expected URL decode completion to bump signal model"
+        );
+
+        let request = ImageSourceRequestKey {
+            source: src.id,
+            color_space: ImageColorSpace::Srgb,
+            reload_epoch: 0,
+        };
+        let (decoded_width, decoded_height) =
+            with_image_source_loader(&mut host, |loader, _host| {
+                let entries = loader
+                    .runtime
+                    .entries
+                    .lock()
+                    .expect("poisoned ImageSourceRuntime mutex");
+                let entry = entries.get(&request).expect("expected entry after decode");
+                match &entry.state {
+                    ImageSourceEntryState::Decoded { decoded, .. } => {
+                        (decoded.width, decoded.height)
+                    }
+                    ImageSourceEntryState::Failed { message, .. } => {
+                        panic!("url decode failed: {message}");
+                    }
+                    other => panic!("expected Decoded state after inbox apply, got {other:?}"),
+                }
+            })
+            .expect("dispatcher installed");
+
+        let state = use_image_source_state(&mut host, window, &src);
+        let (width, height) = state
+            .intrinsic_size_px
+            .unwrap_or((decoded_width, decoded_height));
+        let token = host
+            .effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::ImageRegisterRgba8 { token, .. } => Some(*token),
+                _ => None,
+            })
+            .expect("expected ImageRegisterRgba8 after URL decode");
+
         let image = ImageId::default();
         let event = Event::ImageRegistered {
             token,
