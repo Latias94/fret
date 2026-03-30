@@ -22,6 +22,7 @@ use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::style as decl_style;
@@ -254,6 +255,58 @@ fn sidebar_accent_fg(theme: &Theme) -> Color {
 
 fn sidebar_ring(theme: &Theme, radius: Px) -> RingStyle {
     decl_style::focus_ring(theme, radius)
+}
+
+fn sidebar_rail_layout(side: SidebarSide, variant: SidebarVariant) -> LayoutRefinement {
+    let mut layout = LayoutRefinement::default()
+        .absolute()
+        .top_px(Px(0.0))
+        .bottom_px(Px(0.0))
+        .w_px(Px(16.0))
+        .h_full();
+
+    layout = match side {
+        SidebarSide::Left => layout.right_neg_px(Px(8.0)),
+        SidebarSide::Right => layout.left_neg_px(Px(8.0)),
+    };
+
+    if matches!(variant, SidebarVariant::Floating | SidebarVariant::Inset) {
+        layout = match side {
+            SidebarSide::Left => layout.right_neg_px(Px(2.0)),
+            SidebarSide::Right => layout.left_neg_px(Px(2.0)),
+        };
+    }
+
+    layout
+}
+
+fn sidebar_rail_line_offset(collapsible: SidebarCollapsible) -> Px {
+    if matches!(collapsible, SidebarCollapsible::Offcanvas) {
+        Px(16.0)
+    } else {
+        Px(8.0)
+    }
+}
+
+fn sidebar_rail_surface_bg(
+    theme: &Theme,
+    hovered: bool,
+    pressed: bool,
+    collapsible: SidebarCollapsible,
+) -> Color {
+    if matches!(collapsible, SidebarCollapsible::Offcanvas) && (hovered || pressed) {
+        sidebar_bg(theme)
+    } else {
+        Color::TRANSPARENT
+    }
+}
+
+fn sidebar_rail_line_bg(theme: &Theme, hovered: bool, pressed: bool) -> Color {
+    if hovered || pressed {
+        sidebar_border(theme)
+    } else {
+        Color::TRANSPARENT
+    }
 }
 
 fn menu_button_style(theme: &Theme) -> TextStyle {
@@ -1513,30 +1566,10 @@ impl SidebarRail {
         let sidebar_ctx = use_sidebar(cx);
         let surface_ctx = use_sidebar_surface(cx);
         let side = surface_ctx.map(|ctx| ctx.side).unwrap_or_default();
+        let collapsible = surface_ctx.map(|ctx| ctx.collapsible).unwrap_or_default();
         let variant = surface_ctx.map(|ctx| ctx.variant).unwrap_or_default();
-
-        let rail_layout = {
-            let mut layout = LayoutRefinement::default()
-                .absolute()
-                .top_px(Px(0.0))
-                .bottom_px(Px(0.0))
-                .w_px(Px(16.0))
-                .h_full();
-
-            layout = match side {
-                SidebarSide::Left => layout.right_neg_px(Px(8.0)),
-                SidebarSide::Right => layout.left_neg_px(Px(8.0)),
-            };
-
-            if matches!(variant, SidebarVariant::Floating | SidebarVariant::Inset) {
-                layout = match side {
-                    SidebarSide::Left => layout.right_neg_px(Px(2.0)),
-                    SidebarSide::Right => layout.left_neg_px(Px(2.0)),
-                };
-            }
-
-            layout
-        };
+        let rail_layout = sidebar_rail_layout(side, variant).merge(self.layout);
+        let line_offset = sidebar_rail_line_offset(collapsible);
 
         let command = self.on_click;
         let user_on_activate = self.on_activate.clone();
@@ -1565,40 +1598,118 @@ impl SidebarRail {
             || command
                 .as_ref()
                 .is_some_and(|cmd| !cx.command_is_enabled(cmd));
+        let test_id = self.test_id;
+        let user_chrome = self.chrome;
 
-        let mut rail = Button::new("")
-            .a11y_label("Toggle Sidebar")
-            .variant(ButtonVariant::Ghost)
-            .size(ButtonSize::IconSm)
-            .on_hover_change(Arc::new(move |host, acx, hovered| {
+        cx.pressable_with_id_props(move |cx, st, id| {
+            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+            if let Some(on_activate) = toggle_on_activate.clone() {
+                cx.pressable_on_activate(on_activate);
+            }
+            cx.pressable_on_hover_change(Arc::new(move |host, acx, hovered| {
                 if hovered {
                     host.push_effect(Effect::CursorSetIcon {
                         window: acx.window,
                         icon: CursorIcon::ColResize,
                     });
                 }
-            }))
-            .disabled(disabled)
-            .focusable(false)
-            .refine_style(
-                ChromeRefinement::default()
-                    .p(Space::N0)
-                    .rounded(Radius::Md)
-                    .merge(self.chrome),
+            }));
+
+            let target_surface_bg = sidebar_rail_surface_bg(
+                Theme::global(&*cx.app),
+                st.hovered,
+                st.pressed,
+                collapsible,
+            );
+            let target_line_bg =
+                sidebar_rail_line_bg(Theme::global(&*cx.app), st.hovered, st.pressed);
+            let duration = overlay_motion::shadcn_motion_duration_150(cx);
+            let surface_bg = drive_tween_color_for_element(
+                cx,
+                id,
+                "sidebar.rail.surface.bg",
+                target_surface_bg,
+                duration,
+                fret_ui_kit::declarative::overlay_motion::ease_linear,
+            );
+            let line_bg = drive_tween_color_for_element(
+                cx,
+                id,
+                "sidebar.rail.line.bg",
+                target_line_bg,
+                duration,
+                fret_ui_kit::declarative::overlay_motion::ease_linear,
+            );
+            let theme = Theme::global(&*cx.app).snapshot();
+
+            let user_bg_override =
+                user_chrome.background.is_some() || user_chrome.background_paint.is_some();
+            let mut surface_chrome = ChromeRefinement::default().p(Space::N0).rounded(Radius::Md);
+            if !user_bg_override && (surface_bg.animating || surface_bg.value.a > 0.0) {
+                surface_chrome.background = Some(ColorRef::Color(surface_bg.value));
+            }
+            surface_chrome = surface_chrome.merge(user_chrome.clone());
+
+            let pressable_props = PressableProps {
+                layout: {
+                    let mut layout = decl_style::layout_style(&theme, rail_layout.clone());
+                    layout.overflow = Overflow::Visible;
+                    layout
+                },
+                enabled: !disabled,
+                focusable: false,
+                a11y: fret_ui::element::PressableA11y {
+                    label: Some(Arc::<str>::from("Toggle Sidebar")),
+                    test_id: test_id.clone(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+
+            let root_props = {
+                let mut props = ContainerProps::default();
+                props.layout = decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default().w_full().h_full().relative(),
+                );
+                props.layout.overflow = Overflow::Visible;
+                props
+            };
+            let surface_props = {
+                let mut props = decl_style::container_props(
+                    &theme,
+                    surface_chrome,
+                    LayoutRefinement::default()
+                        .absolute()
+                        .top_px(Px(0.0))
+                        .right_px(Px(0.0))
+                        .bottom_px(Px(0.0))
+                        .left_px(Px(0.0)),
+                );
+                props.layout.overflow = Overflow::Clip;
+                props
+            };
+            let line_props = decl_style::container_props(
+                &theme,
+                ChromeRefinement::default().bg(ColorRef::Color(line_bg.value)),
+                LayoutRefinement::default()
+                    .absolute()
+                    .top_px(Px(0.0))
+                    .bottom_px(Px(0.0))
+                    .left_px(line_offset)
+                    .w_px(Px(2.0)),
+            );
+
+            (
+                pressable_props,
+                vec![cx.container(root_props, move |cx| {
+                    vec![
+                        cx.container(surface_props, |_cx| Vec::<AnyElement>::new()),
+                        cx.container(line_props, |_cx| Vec::<AnyElement>::new()),
+                    ]
+                })],
             )
-            .refine_layout(rail_layout.merge(self.layout));
-
-        if let Some(command) = command {
-            rail = rail.on_click(command);
-        }
-        if let Some(on_activate) = toggle_on_activate {
-            rail = rail.on_activate(on_activate);
-        }
-        if let Some(test_id) = self.test_id {
-            rail = rail.test_id(test_id);
-        }
-
-        rail.into_element(cx)
+        })
     }
 }
 
@@ -6013,6 +6124,45 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_rail_hover_surface_matches_default_and_offcanvas_recipe() {
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let theme = Theme::global(&app);
+
+        assert_eq!(sidebar_rail_line_offset(SidebarCollapsible::Icon), Px(8.0));
+        assert_eq!(
+            sidebar_rail_line_offset(SidebarCollapsible::Offcanvas),
+            Px(16.0)
+        );
+
+        assert_eq!(
+            sidebar_rail_surface_bg(&theme, false, false, SidebarCollapsible::Icon),
+            Color::TRANSPARENT,
+            "expected default rail idle background to stay transparent"
+        );
+        assert_eq!(
+            sidebar_rail_surface_bg(&theme, true, false, SidebarCollapsible::Icon),
+            Color::TRANSPARENT,
+            "expected default rail hover to avoid painting a full-width background"
+        );
+        assert_eq!(
+            sidebar_rail_surface_bg(&theme, true, false, SidebarCollapsible::Offcanvas),
+            sidebar_bg(&theme),
+            "expected offcanvas rail hover to paint the sidebar background"
+        );
+        assert_eq!(
+            sidebar_rail_line_bg(&theme, false, false),
+            Color::TRANSPARENT,
+            "expected rail hairline to stay hidden until hover/press"
+        );
+        assert_eq!(
+            sidebar_rail_line_bg(&theme, true, false),
+            sidebar_border(&theme),
+            "expected rail hover to reveal the sidebar border hairline"
+        );
+    }
+
+    #[test]
     fn sidebar_rail_tracks_side_and_offcanvas_position_matrix() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -7333,9 +7483,9 @@ mod tests {
         };
         assert_eq!(props.layout.size.width, Length::Fill);
 
-        let theme = Theme::global(&app);
+        let theme = Theme::global(&app).snapshot();
         let expected = typography::composable_refinement_from_style(
-            &typography::control_text_style(theme, typography::UiTextSize::Sm),
+            &typography::control_text_style(&theme, typography::UiTextSize::Sm),
         );
         assert_eq!(element.inherited_text_style.as_ref(), Some(&expected));
 

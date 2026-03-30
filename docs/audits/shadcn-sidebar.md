@@ -168,6 +168,12 @@ coverage for `sidebar-*` pages.
 - Updated the UI gallery sidebar `Structure` section to keep the official `SidebarGroupLabel asChild + CollapsibleTrigger` composition lane copyable instead of leaving it implicit.
 - Added a docs-surface regression test for the sidebar page/snippet teaching surface in `apps/fret-ui-gallery/tests/sidebar_docs_surface.rs`.
 
+### Update note (2026-03-29)
+
+- Aligned `SidebarRail` hover chrome with the upstream recipe split: default/icon rails now reveal only the `2px` border hairline, while offcanvas rails additionally paint the full rail surface with `sidebar_bg`.
+- Kept the `SidebarRail` fix scoped to `fret-ui-shadcn` recipe code by moving the visible rail treatment to a dedicated pressable composition path instead of widening the mechanism layer for directional cursor variants first.
+- Added a targeted unit test asserting the hover recipe split (`default/icon` transparent surface vs `offcanvas` filled surface) and the offcanvas hairline offset in `ecosystem/fret-ui-shadcn/src/sidebar.rs`.
+
 ## Component-by-component audit (24/24)
 
 Status legend:
@@ -182,7 +188,7 @@ Status legend:
 | `use_sidebar` | Access provider state/actions | Context read contract | Partial | Hook exists and now exposes `set_open/set_open_mobile` and function-style setters (`set_open_with` / `set_open_mobile_with`) on context; parity gaps remain around cookie-backed persistence and full React API-shape parity | `fret-ui-shadcn` |
 | `Sidebar` | Desktop shell + mobile sheet branch; side/variant/collapsible data-state channel | Sheet/Dialog for mobile | Partial | `side/collapsible` + mobile `Sheet` are in place, the desktop/mobile width matrix now reads provider-owned resolved widths first, and theme tokens remain recipe fallback; richer data-slot channels and cookie persistence parity remain | `fret-ui-shadcn` |
 | `SidebarTrigger` | Toggle sidebar state | Provider action + button semantics | Partial | Toggle behavior and RTL icon flip are wired; upstream data-slot conventions and full keyboard shortcut/API-shape parity remain to align | `fret-ui-shadcn` |
-| `SidebarRail` | Thin rail toggle affordance | Provider action + pointer affordance | Partial | Rail toggle + side/offcanvas hit-box placement matrix are wired, and hover now requests `CursorIcon::ColResize` as a first-pass cursor affordance; pseudo-element hit-area parity, richer directional cursor semantics, and full class-state styling parity remain | `fret-ui-shadcn` |
+| `SidebarRail` | Thin rail toggle affordance | Provider action + pointer affordance | Partial | Rail toggle + side/offcanvas hit-box placement matrix are wired, hover chrome now matches the upstream default-vs-offcanvas split (hairline-only vs filled surface), and hover requests `CursorIcon::ColResize` as a first-pass cursor affordance; richer directional cursor semantics and remaining class-state polish still remain | `fret-ui-shadcn` |
 | `SidebarInset` | Peer/inset content container | None (layout recipe) | Partial | First-pass `variant=inset` peer-surface matrix is now wired (margin/radius/shadow + collapsed margin step); responsive breakpoint choreography and full class-state parity remain | `fret-ui-shadcn` |
 | `SidebarInput` | Sidebar-local input style wrapper | None (input styling wrapper) | Partial | 32px height + background wrapper exists; full class-level state variants are still narrower than upstream | `fret-ui-shadcn` |
 | `SidebarSeparator` | Sidebar-local separator wrapper | None (separator styling wrapper) | Partial | Sidebar-border + horizontal wrapper exists; upstream data-slot/class and variant nuances remain | `fret-ui-shadcn` |
