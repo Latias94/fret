@@ -227,9 +227,10 @@ This workstream takes a fearless posture:
     when watcher installation fails,
   - it only tracks builder-mounted file manifests/directories,
   - and wasm/mobile still have no first-party automatic reload story today.
-- SVG text still remains split from the main text baseline story and is tracked separately under
-  the SVG workstream items; native/web startup baseline publication itself is now aligned across
-  the current first-party runner paths.
+- SVG text still does not share the main text baseline story, but the first-party SVG raster path
+  now truthfully rejects text-bearing assets instead of silently loading system fonts in a separate
+  font universe; the long-term shared SVG-text font environment is still tracked under the SVG
+  workstream items.
 
 ## Current incorrect logic (must be corrected, not preserved)
 
@@ -314,16 +315,21 @@ So the framework now guarantees one deterministic bundled baseline on web and on
 runner path before platform-specific augmentation, but mobile-specific diagnostics and Android CI
 toolchain evidence are still missing.
 
-### 5) SVG text does not share the text system font environment
+### 5) SVG text is now truthfully denied, but still lacks a shared text/font environment
 
-The SVG renderer builds its own `usvg fontdb` and loads system fonts directly:
+The first-party SVG raster path no longer builds its own `usvg fontdb` or loads system fonts.
+Instead, it rejects text-bearing SVG assets outright:
 
 - `crates/fret-render-wgpu/src/svg.rs`
 
-So even when the main text system has a known bundled/system font state, SVG `<text>` resolution
-can still diverge.
+That closes the silent divergence bug, because Fret no longer pretends arbitrary SVG `<text>` is
+portable across hosts when it is actually resolved in a separate font universe.
 
-For a framework that wants truthful cross-platform text behavior, that is the wrong architecture.
+The remaining architectural gap is still real:
+
+- SVG text does not yet share the main renderer text/font environment,
+- so the current truthful baseline is “outline-only SVGs for first-party UI rendering,”
+- and long-term shared-font support still needs its own follow-up design.
 
 ### 6) SVG file loading is sync filesystem I/O with epoch polling
 
@@ -597,6 +603,12 @@ For text inside SVG, Fret needs an explicit policy:
 - long-term correct rule:
   - SVG text resolution should share the renderer text/font environment instead of loading system
     fonts independently inside `usvg`
+
+Current landed slice:
+
+- the first-party SVG raster pipeline now enforces the short-term rule in code by rejecting
+  text-bearing SVGs through `SvgRenderError::TextNodesUnsupported`
+- outline/icon/illustration SVGs remain supported
 
 The short-term restriction is acceptable.
 The current silent divergence is not.

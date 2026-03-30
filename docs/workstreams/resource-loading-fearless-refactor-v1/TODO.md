@@ -359,10 +359,20 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `SvgFileSource` still exists as a native/dev compatibility shim because `fret_ui::SvgSource`
       is currently bytes-only.
 
-- [ ] RESLOAD-svg-410 Decide the short-term SVG text policy and enforce it in docs/tests.
-  - Preferred truthful baseline:
-    - outlines for UI icons/illustrations,
-    - no silent promises for arbitrary `<text>`.
+- [x] RESLOAD-svg-410 Decide the short-term SVG text policy and enforce it in docs/tests.
+  - Current landed slice:
+    - `crates/fret-render-wgpu/src/svg.rs` no longer builds a private `usvg fontdb` or loads
+      system fonts inside the first-party SVG raster path.
+    - the current first-party raster pipeline now parses SVGs with the default `usvg` options and
+      rejects text-bearing assets via `SvgRenderError::TextNodesUnsupported` instead of silently
+      diverging from the framework text baseline.
+    - focused renderer tests now lock both alpha-mask and RGBA SVG raster paths to reject
+      text-bearing SVG input.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/svg.rs`
+      (`svg_text_nodes_are_rejected_for_alpha_and_rgba_rasterization`)
+    - `docs/workstreams/resource-loading-fearless-refactor-v1/README.md`
+    - `cargo nextest run -p fret-render-wgpu svg::tests`
 
 - [ ] RESLOAD-svg-420 Plan the long-term shared SVG-text font environment path.
   - The SVG renderer should not permanently own an unrelated `fontdb` universe.

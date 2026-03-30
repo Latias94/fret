@@ -66,6 +66,12 @@ Deliverables:
 - Dedicated file-only SVG helper concepts are deleted or reduced to thin compatibility shims.
 - Revision/invalidation semantics are shared.
 
+Status note (2026-03-30):
+
+- image loading and the current SVG bridge now both sit on the shared locator/resolver contract,
+- the first-party SVG raster path no longer silently loads system fonts for SVG `<text>`,
+- text-bearing SVGs are now explicitly rejected until a shared text/font environment exists.
+
 Exit criteria:
 
 - There is no separate “image path story” and “SVG path story”.

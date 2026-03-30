@@ -1,7 +1,9 @@
-use std::sync::{Arc, LazyLock};
+use std::borrow::Cow;
+use std::sync::Arc;
 
 use fret_core::SvgFit;
 use resvg::tiny_skia::{Pixmap, Transform};
+use thiserror::Error;
 
 use crate::upload_counters::record_svg_upload;
 
@@ -30,6 +32,16 @@ pub struct UploadedRgbaImage {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
     pub size_px: (u32, u32),
+}
+
+#[derive(Debug, Error)]
+pub(crate) enum SvgRenderError {
+    #[error(
+        "text-bearing SVG assets are not supported by the first-party SVG raster pipeline; convert text to outlines"
+    )]
+    TextNodesUnsupported,
+    #[error(transparent)]
+    Parse(#[from] usvg::Error),
 }
 
 #[derive(Clone)]
@@ -84,30 +96,15 @@ fn render_scale(
 
 impl SvgRenderer {
     pub(crate) fn new() -> Self {
-        static FONT_DB: LazyLock<Arc<usvg::fontdb::Database>> = LazyLock::new(|| {
-            let mut db = usvg::fontdb::Database::new();
-            db.load_system_fonts();
-            Arc::new(db)
-        });
-        let default_font_resolver = usvg::FontResolver::default_font_selector();
-        let font_resolver = Box::new(
-            move |font: &usvg::Font, db: &mut Arc<usvg::fontdb::Database>| {
-                if db.is_empty() {
-                    *db = FONT_DB.clone();
-                }
-                default_font_resolver(font, db)
-            },
-        );
-        let options = usvg::Options {
-            font_resolver: usvg::FontResolver {
-                select_font: font_resolver,
-                select_fallback: usvg::FontResolver::default_fallback_selector(),
-            },
-            ..Default::default()
-        };
         Self {
-            usvg_options: Arc::new(options),
+            usvg_options: Arc::new(usvg::Options::default()),
         }
+    }
+
+    fn parse_supported_tree(&self, bytes: &[u8]) -> Result<usvg::Tree, SvgRenderError> {
+        ensure_svg_text_free(bytes)?;
+        let tree = usvg::Tree::from_data(bytes, self.usvg_options.as_ref())?;
+        Ok(tree)
     }
 
     pub(crate) fn render_alpha_mask_fit_mode(
@@ -116,8 +113,8 @@ impl SvgRenderer {
         target_box_px: (u32, u32),
         smooth_scale_factor: f32,
         fit: SvgFit,
-    ) -> Result<SvgAlphaMask, usvg::Error> {
-        let tree = usvg::Tree::from_data(bytes, &self.usvg_options)?;
+    ) -> Result<SvgAlphaMask, SvgRenderError> {
+        let tree = self.parse_supported_tree(bytes)?;
         let svg_size = tree.size();
         let (sx, sy, out_w, out_h) =
             render_scale(svg_size, target_box_px, smooth_scale_factor, fit)?;
@@ -143,8 +140,8 @@ impl SvgRenderer {
         target_box_px: (u32, u32),
         smooth_scale_factor: f32,
         fit: SvgFit,
-    ) -> Result<SvgRgbaImage, usvg::Error> {
-        let tree = usvg::Tree::from_data(bytes, &self.usvg_options)?;
+    ) -> Result<SvgRgbaImage, SvgRenderError> {
+        let tree = self.parse_supported_tree(bytes)?;
         let svg_size = tree.size();
         let (sx, sy, out_w, out_h) =
             render_scale(svg_size, target_box_px, smooth_scale_factor, fit)?;
@@ -183,6 +180,44 @@ impl Default for SvgRenderer {
     fn default() -> Self {
         Self::new()
     }
+}
+
+fn ensure_svg_text_free(bytes: &[u8]) -> Result<(), SvgRenderError> {
+    let xml = decode_svg_xml(bytes)?;
+    let options = usvg::roxmltree::ParsingOptions {
+        allow_dtd: true,
+        ..Default::default()
+    };
+    let document = usvg::roxmltree::Document::parse_with_options(xml.as_ref(), options)
+        .map_err(usvg::Error::ParsingFailed)?;
+    if document.descendants().any(is_text_element) {
+        return Err(SvgRenderError::TextNodesUnsupported);
+    }
+    Ok(())
+}
+
+fn decode_svg_xml(bytes: &[u8]) -> Result<Cow<'_, str>, SvgRenderError> {
+    if bytes.starts_with(&[0x1f, 0x8b]) {
+        let decoded = usvg::decompress_svgz(bytes)?;
+        let text = std::str::from_utf8(&decoded).map_err(|_| usvg::Error::NotAnUtf8Str)?;
+        Ok(Cow::Owned(text.to_owned()))
+    } else {
+        let text = std::str::from_utf8(bytes).map_err(|_| usvg::Error::NotAnUtf8Str)?;
+        Ok(Cow::Borrowed(text))
+    }
+}
+
+fn is_text_element(node: usvg::roxmltree::Node<'_, '_>) -> bool {
+    if !node.is_element() {
+        return false;
+    }
+
+    let tag_name = node.tag_name();
+    if tag_name.namespace() != Some("http://www.w3.org/2000/svg") {
+        return false;
+    }
+
+    matches!(tag_name.name(), "text" | "tspan" | "textPath" | "tref")
 }
 
 pub fn upload_alpha_mask(
@@ -378,5 +413,35 @@ mod tests {
         // The output is composited on an opaque background (the red rect), so alpha will likely
         // be fully opaque; assert color blending instead.
         assert!(img.rgba.chunks_exact(4).any(|px| px[1] > 0 && px[0] < 255));
+    }
+
+    #[test]
+    fn svg_text_nodes_are_rejected_for_alpha_and_rgba_rasterization() {
+        let svg = r#"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 16">
+  <text x="4" y="12" font-size="12">Fret</text>
+</svg>
+"#;
+        let renderer = SvgRenderer::new();
+
+        let alpha_err = renderer
+            .render_alpha_mask_fit_mode(
+                svg.as_bytes(),
+                (64, 32),
+                SMOOTH_SVG_SCALE_FACTOR,
+                SvgFit::Contain,
+            )
+            .expect_err("text-bearing SVG alpha mask should be rejected");
+        assert!(matches!(alpha_err, SvgRenderError::TextNodesUnsupported));
+
+        let rgba_err = renderer
+            .render_rgba_fit_mode(
+                svg.as_bytes(),
+                (64, 32),
+                SMOOTH_SVG_SCALE_FACTOR,
+                SvgFit::Contain,
+            )
+            .expect_err("text-bearing SVG rgba raster should be rejected");
+        assert!(matches!(rgba_err, SvgRenderError::TextNodesUnsupported));
     }
 }
