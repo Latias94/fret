@@ -113,7 +113,7 @@
       },
       "delta_x": 0.0,
       "delta_y": -180.0,
-      "require_fully_within_container": false,
+      "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 24.0,
       "padding_insets_px": null,

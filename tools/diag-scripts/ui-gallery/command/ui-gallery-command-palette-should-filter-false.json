@@ -118,7 +118,8 @@
         "kind": "test_id"
       },
       "timeout_frames": 600,
-      "type": "scroll_into_view"
+      "type": "scroll_into_view",
+      "require_fully_within_container": true
     },
     {
       "padding_px": 4.0,

@@ -2,40 +2,79 @@
   "schema_version": 2,
   "meta": {
     "name": "UI Gallery: Popover escape dismiss restores focus to trigger",
-    "tags": ["ui-gallery", "shadcn", "popover", "overlay", "focus_restore"],
-    "required_capabilities": ["diag.script_v2"]
+    "tags": [
+      "ui-gallery",
+      "shadcn",
+      "popover",
+      "overlay",
+      "focus_restore"
+    ],
+    "required_capabilities": [
+      "diag.script_v2"
+    ]
   },
   "steps": [
-    { "type": "reset_diagnostics" },
+    {
+      "type": "reset_diagnostics"
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-search"
+        }
       },
       "timeout_frames": 600
     },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 15 },
+    {
+      "type": "press_key",
+      "key": "escape"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "set_window_inner_size",
+      "width_px": 1280.0,
+      "height_px": 720.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 15
+    },
     {
       "type": "type_text_into",
-      "target": { "kind": "role_and_name", "role": "text_field", "name": "Search components" },
+      "target": {
+        "kind": "role_and_name",
+        "role": "text_field",
+        "name": "Search components"
+      },
       "text": "popover"
     },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-popover"
+        }
       },
       "timeout_frames": 600
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-popover"
+      },
       "stable_frames": 2,
       "max_move_px": 2.0,
       "timeout_frames": 600
@@ -44,42 +83,69 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-popover" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-popover"
+        }
       },
       "timeout_frames": 600
     },
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-tabs-trigger-preview" },
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-scroll"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-popover-demo-tabs-trigger-preview"
+      },
       "delta_y": 240.0,
-      "require_fully_within_container": false,
+      "require_fully_within_container": true,
       "require_fully_within_window": false,
       "padding_px": 24.0,
       "timeout_frames": 600
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-tabs-trigger-preview" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-popover-demo-tabs-trigger-preview"
+      },
       "stable_frames": 2,
       "max_move_px": 2.0,
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_frames",
+      "n": 4
+    },
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-popover" },
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-scroll"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-popover-demo-popover"
+      },
       "delta_y": 240.0,
-      "require_fully_within_container": false,
+      "require_fully_within_container": true,
       "require_fully_within_window": false,
       "padding_px": 24.0,
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-popover" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-popover-demo-popover"
+      },
       "stable_frames": 2,
       "max_move_px": 2.0,
       "timeout_frames": 600
@@ -88,18 +154,29 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-panel" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-popover-demo-panel"
+        }
       },
       "timeout_frames": 240
     },
-    { "type": "wait_frames", "n": 10 },
-
-    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_frames",
+      "n": 10
+    },
+    {
+      "type": "press_key",
+      "key": "escape"
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-panel" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-popover-demo-panel"
+        }
       },
       "timeout_frames": 240
     },
@@ -107,10 +184,15 @@
       "type": "assert",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-popover" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-popover-demo-popover"
+        }
       }
     },
-
-    { "type": "capture_bundle", "label": "ui-gallery-popover-escape-focus-restore" }
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-popover-escape-focus-restore"
+    }
   ]
 }

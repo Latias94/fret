@@ -7,13 +7,18 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let item = shadcn::AccordionItemPart::new("item-1")
-        .trigger(shadcn::AccordionTriggerPart::new(vec![
-            cx.text("Is it accessible?"),
-        ]))
-        .content(shadcn::AccordionContentPart::new(ui::children![
-            cx;
-            shadcn::raw::typography::p("Yes. It adheres to the WAI-ARIA design pattern.")
-        ]));
+        .test_id("ui-gallery-accordion-usage-item")
+        .trigger(
+            shadcn::AccordionTriggerPart::new(vec![cx.text("Is it accessible?")])
+                .test_id("ui-gallery-accordion-usage-trigger"),
+        )
+        .content(
+            shadcn::AccordionContentPart::new(ui::children![
+                cx;
+                shadcn::raw::typography::p("Yes. It adheres to the WAI-ARIA design pattern.")
+            ])
+            .test_id("ui-gallery-accordion-usage-panel"),
+        );
 
     shadcn::AccordionRoot::single_uncontrolled(Some("item-1"))
         .collapsible(true)
@@ -23,7 +28,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .min_w_0()
                 .max_w(Px(384.0)),
         )
-        .items([item])
+        .item(item)
         .into_element(cx)
         .test_id("ui-gallery-accordion-usage")
 }

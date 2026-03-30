@@ -1725,6 +1725,38 @@ mod tests {
             "expected test_id={target_test_id} to appear within {max_frames} frames; present_test_ids={present:?}"
         );
     }
+
+    fn wait_until_test_id_absent(
+        rendered: &mut RenderedGalleryPage,
+        target_test_id: &str,
+        max_frames: usize,
+    ) {
+        for _ in 0..=max_frames {
+            let snapshot = rendered
+                .state
+                .ui
+                .semantics_snapshot()
+                .expect("expected semantics snapshot while waiting for test id removal");
+            if find_node_by_test_id(snapshot, target_test_id).is_none() {
+                return;
+            }
+            render_gallery_frame(rendered);
+        }
+
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after waiting for test id removal");
+        let present = snapshot
+            .nodes
+            .iter()
+            .filter_map(|node| node.test_id.as_deref())
+            .collect::<Vec<_>>();
+        panic!(
+            "expected test_id={target_test_id} to disappear within {max_frames} frames; present_test_ids={present:?}"
+        );
+    }
     #[cfg(feature = "gallery-dev")]
     fn hit_chain_at(rendered: &mut RenderedGalleryPage, position: Point) -> Vec<String> {
         let snapshot = rendered
@@ -3070,6 +3102,45 @@ mod tests {
         assert_notes_section_keeps_stable_height_while_scrolling_into_view(
             PAGE_TOOLTIP,
             "ui-gallery-tooltip-notes-content",
+        );
+    }
+
+    #[test]
+    fn accordion_usage_preview_stays_interactive_when_toggling_the_single_item() {
+        let mut rendered = render_gallery_page(PAGE_ACCORDION);
+        let trigger_test_id = "ui-gallery-accordion-usage-trigger";
+        let panel_test_id = "ui-gallery-accordion-usage-panel";
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, trigger_test_id);
+        wait_until_test_id_exists(&mut rendered, trigger_test_id, 12);
+        wait_until_test_id_exists(&mut rendered, panel_test_id, 12);
+
+        let trigger_bounds = visual_bounds_by_test_id(&rendered, trigger_test_id);
+        let panel_bounds = visual_bounds_by_test_id(&rendered, panel_test_id);
+        assert!(
+            panel_bounds.origin.y.0
+                >= trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 - 1.0,
+            "expected accordion usage preview panel to sit below its trigger: trigger={trigger_bounds:?} panel={panel_bounds:?}"
+        );
+
+        click_test_id_center(&mut rendered, trigger_test_id);
+        wait_until_test_id_absent(&mut rendered, panel_test_id, 32);
+
+        click_test_id_center(&mut rendered, trigger_test_id);
+        wait_until_test_id_exists(&mut rendered, panel_test_id, 24);
+
+        // Re-render a few frames to make sure the uncontrolled preview state does not snap back.
+        for _ in 0..8 {
+            render_gallery_frame(&mut rendered);
+        }
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected accordion usage semantics after reopen");
+        assert!(
+            find_node_by_test_id(snapshot, panel_test_id).is_some(),
+            "expected accordion usage preview to keep the reopened panel mounted after settling"
         );
     }
 

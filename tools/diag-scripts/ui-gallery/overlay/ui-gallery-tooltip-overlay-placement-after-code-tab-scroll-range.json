@@ -2,123 +2,216 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range",
-    "required_capabilities": ["diag.script_v2", "diag.overlay_placement_trace"],
-    "tags": ["ui_gallery", "shadcn", "tooltip", "overlay", "tabs", "scroll", "regression"]
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.overlay_placement_trace"
+    ],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "tooltip",
+      "overlay",
+      "tabs",
+      "scroll",
+      "regression"
+    ]
   },
   "steps": [
-    { "type": "reset_diagnostics" },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 20 },
-
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "press_key",
+      "key": "escape"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "set_window_inner_size",
+      "width_px": 1280.0,
+      "height_px": 720.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 20
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-search"
+        }
       },
       "timeout_frames": 600
     },
     {
       "type": "type_text_into",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
+      },
       "text": "tooltip",
       "clear_before_type": true,
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_frames",
+      "n": 4
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-tooltip" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-tooltip"
+        }
       },
       "timeout_frames": 600
     },
     {
       "type": "ensure_visible",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-tooltip" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-tooltip"
+      },
       "within_window": true,
       "padding_px": 8.0,
       "timeout_frames": 600
     },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-tooltip" } },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-tooltip"
+      }
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-tooltip" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-tooltip"
+        }
       },
       "timeout_frames": 600
     },
-
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "ui-gallery-tooltip-demo-trigger" },
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-tooltip-demo-trigger"
+      },
       "delta_y": -120.0,
       "require_fully_within_window": true,
       "padding_px": 24.0,
       "timeout_frames": 900
     },
-    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-tooltip-demo-trigger" } },
-    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "move_pointer",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-tooltip-demo-trigger"
+      }
+    },
+    {
+      "type": "wait_frames",
+      "n": 12
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-demo-panel" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-demo-panel"
+        }
       },
       "timeout_frames": 600
     },
     {
       "type": "wait_overlay_placement_trace",
-      "query": { "kind": "anchored_panel" },
+      "query": {
+        "kind": "anchored_panel"
+      },
       "timeout_frames": 600
     },
     {
       "type": "assert",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-demo-panel" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-demo-panel"
+        },
         "padding_px": 0.0,
         "eps_px": 1.0
       }
     },
-
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "docsec-disabled-button-tabs-trigger-code" },
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "docsec-disabled-button-tabs-trigger-code"
+      },
       "delta_y": -120.0,
       "require_fully_within_window": true,
       "padding_px": 24.0,
-      "timeout_frames": 900
+      "timeout_frames": 900,
+      "require_fully_within_container": true
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "docsec-disabled-button-tabs-trigger-code" },
+      "target": {
+        "kind": "test_id",
+        "id": "docsec-disabled-button-tabs-trigger-code"
+      },
       "stable_frames": 2,
       "max_move_px": 2.0,
       "timeout_frames": 900
     },
-    { "type": "wait_frames", "n": 12 },
-    { "type": "capture_bundle", "label": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.after_tab_switch" },
-
+    {
+      "type": "wait_frames",
+      "n": 12
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.after_tab_switch"
+    },
     {
       "type": "assert",
       "predicate": {
         "kind": "semantics_scroll_is_finite",
-        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-content-viewport"
+        },
         "field": "y_max"
       }
     },
-
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "ui-gallery-tooltip-rtl" },
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-tooltip-rtl"
+      },
       "delta_y": -120.0,
       "require_fully_within_window": true,
       "padding_px": 24.0,
@@ -128,38 +221,59 @@
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-rtl" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-rtl"
+        },
         "padding_px": 24.0,
         "eps_px": 1.0
       },
       "timeout_frames": 600
     },
-
-    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-tooltip-rtl-top-trigger" } },
-    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "move_pointer",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-tooltip-rtl-top-trigger"
+      }
+    },
+    {
+      "type": "wait_frames",
+      "n": 12
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-rtl-top-panel" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-rtl-top-panel"
+        }
       },
       "timeout_frames": 600
     },
     {
       "type": "wait_overlay_placement_trace",
-      "query": { "kind": "anchored_panel" },
+      "query": {
+        "kind": "anchored_panel"
+      },
       "timeout_frames": 600
     },
     {
       "type": "assert",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-rtl-top-panel" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-rtl-top-panel"
+        },
         "padding_px": 0.0,
         "eps_px": 1.0
       }
     },
-
-    { "type": "capture_bundle", "label": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range" }
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range"
+    }
   ]
 }

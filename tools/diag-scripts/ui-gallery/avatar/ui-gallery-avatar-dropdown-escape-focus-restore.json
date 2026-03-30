@@ -41,6 +41,7 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-avatar-dropdown-trigger-avatar" },
       "delta_y": -520.0,
+      "require_fully_within_container": true,
       "padding_px": 16.0,
       "timeout_frames": 1800
     },
@@ -86,4 +87,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-avatar-dropdown-escape-focus-restore" }
   ]
 }
-

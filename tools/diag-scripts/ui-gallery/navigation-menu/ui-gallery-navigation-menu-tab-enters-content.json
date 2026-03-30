@@ -60,6 +60,7 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo" },
       "delta_y": -240.0,
+      "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 12.0,
       "timeout_frames": 1200

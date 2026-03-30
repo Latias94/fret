@@ -5,58 +5,94 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-search"
+        }
       },
       "timeout_frames": 240
     },
     {
       "type": "type_text_into",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
+      },
       "text": "overlay",
       "clear_before_type": true,
       "timeout_frames": 240
     },
-    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_frames",
+      "n": 4
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-overlay" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-overlay"
+        }
       },
       "timeout_frames": 240
     },
     {
       "type": "ensure_visible",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-overlay" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-overlay"
+      },
       "within_window": true,
       "padding_px": 8.0,
       "timeout_frames": 240
     },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-overlay" } },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-overlay"
+      }
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-overlay" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-overlay"
+        }
       },
       "timeout_frames": 240
     },
-    { "type": "wait_frames", "n": 20 },
-
+    {
+      "type": "wait_frames",
+      "n": 20
+    },
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "ui-gallery-alert-dialog-trigger" },
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-alert-dialog-trigger"
+      },
       "delta_y": -120.0,
       "require_fully_within_window": true,
       "padding_px": 24.0,
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "require_fully_within_container": true
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-alert-dialog-trigger" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-alert-dialog-trigger"
+        },
         "padding_px": 24.0,
         "eps_px": 1.0
       },
@@ -64,13 +100,19 @@
     },
     {
       "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-alert-dialog-trigger" }
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-alert-dialog-trigger"
+      }
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-alert-dialog-content" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-alert-dialog-content"
+        }
       },
       "timeout_frames": 240
     },
@@ -78,12 +120,17 @@
       "type": "wait_until",
       "predicate": {
         "kind": "focused_descendant_is",
-        "scope": { "kind": "test_id", "id": "ui-gallery-alert-dialog-content" },
-        "target": { "kind": "test_id", "id": "ui-gallery-alert-dialog-cancel" }
+        "scope": {
+          "kind": "test_id",
+          "id": "ui-gallery-alert-dialog-content"
+        },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-alert-dialog-cancel"
+        }
       },
       "timeout_frames": 60
     },
-
     {
       "type": "capture_bundle",
       "label": "ui-gallery-alert-dialog-least-destructive-initial-focus"
