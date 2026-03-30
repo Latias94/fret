@@ -59,6 +59,7 @@ unic-langid = "0.9"
 parley = "0.7.0"
 read-fonts = "0.37.0"
 swash = { version = "0.2.6", features = ["scale"] }
+ttf-parser = "0.25.1"
 unicode-script = "0.5.8"
 unicode-segmentation = "1.12.0"
 unicode-ident = "1.0.13"

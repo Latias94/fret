@@ -80,6 +80,8 @@ Status note (2026-03-30):
 - the first-party SVG raster path no longer silently loads system fonts for SVG `<text>`,
 - the renderer backend now has a bridge seed that rebuilds `usvg fontdb` from the current text
   collection and generic mappings without reopening a hidden host-font lane,
+- renderer-local SVG bridge diagnostics now record explicit font-family misses, fallback hops, and
+  missing glyphs under bundled-only gates, while shipped `<text>` support stays disabled,
 - text-bearing SVGs are now explicitly rejected until a shared text/font environment exists, and
 - that long-term bridge is now documented in
   `docs/workstreams/resource-loading-fearless-refactor-v1/SVG_TEXT_FONT_ENVIRONMENT_PLAN.md`.

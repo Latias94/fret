@@ -443,10 +443,17 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       current text policy instead of host/system discovery.
     - focused coverage now locks the bundled-only bridge seed to export `Inter`,
       `JetBrains Mono`, and matching generic mappings.
+    - `crates/fret-render-wgpu/src/svg.rs` now also records renderer-local bridge diagnostics for
+      explicit font-family selection misses, fallback hops, and post-layout missing glyphs.
+    - focused SVG bridge diagnostics tests now run on the bundled-only lane by forcing
+      `FRET_TEXT_SYSTEM_FONTS=0`, so the expected fallback/missing-glyph outcomes are no longer
+      host-system-font-dependent.
   - Remaining:
     - wire this bridge into the shipped `render_*_fit_mode(...)` SVG raster path
     - promote the current `SvgRasterKey` text-font-stack participation into actual bridge-fed
       raster invalidation once shipped `<text>` support is enabled
+    - decide whether shipped `<text>` admission should require a diagnostics-clean bridge parse or
+      keep the current hard rejection baseline
     - keep `SvgRenderError::TextNodesUnsupported` as the shipped baseline until deterministic
       end-to-end SVG-text gates exist
   - Evidence:

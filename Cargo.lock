@@ -2644,6 +2644,7 @@ dependencies = [
  "swash",
  "thiserror 2.0.18",
  "tracing",
+ "ttf-parser",
  "unicode-script",
  "unicode-segmentation",
  "usvg",

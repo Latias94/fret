@@ -30,6 +30,7 @@ slotmap.workspace = true
 thiserror.workspace = true
 parley.workspace = true
 swash.workspace = true
+ttf-parser.workspace = true
 read-fonts.workspace = true
 unicode-script.workspace = true
 unicode-segmentation.workspace = true

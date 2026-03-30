@@ -1,4 +1,8 @@
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    collections::BTreeSet,
+    sync::{Arc, Mutex},
+};
 
 use fret_core::SvgFit;
 use resvg::tiny_skia::{Pixmap, Transform};
@@ -33,6 +37,45 @@ pub struct UploadedRgbaImage {
     pub size_px: (u32, u32),
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct SvgTextBridgeDiagnostics {
+    pub selection_misses: Vec<SvgTextFontSelectionMiss>,
+    pub fallback_records: Vec<SvgTextFontFallbackRecord>,
+    pub missing_glyphs: Vec<SvgTextMissingGlyphRecord>,
+}
+
+impl SvgTextBridgeDiagnostics {
+    pub(crate) fn is_clean(&self) -> bool {
+        self.selection_misses.is_empty() && self.missing_glyphs.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct SvgTextFontSelectionMiss {
+    pub requested_families: Vec<String>,
+    pub weight: u16,
+    pub style: &'static str,
+    pub stretch: &'static str,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct SvgTextFontFallbackRecord {
+    pub text: String,
+    pub from_family: String,
+    pub to_family: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct SvgTextMissingGlyphRecord {
+    pub text: String,
+    pub resolved_family: String,
+}
+
+struct SvgBridgeParseOutcome {
+    tree: usvg::Tree,
+    diagnostics: SvgTextBridgeDiagnostics,
+}
+
 #[derive(Debug, Error)]
 pub(crate) enum SvgRenderError {
     #[error(
@@ -45,6 +88,12 @@ pub(crate) enum SvgRenderError {
 
 #[derive(Clone, Copy)]
 pub(crate) struct SvgRenderer;
+
+#[derive(Default)]
+struct SvgTextBridgeDiagnosticsCollector {
+    selection_misses: BTreeSet<SvgTextFontSelectionMiss>,
+    fallback_records: BTreeSet<SvgTextFontFallbackRecord>,
+}
 
 fn render_scale(
     svg_size: usvg::Size,
@@ -105,17 +154,46 @@ impl SvgRenderer {
         bytes: &[u8],
         bridge_font_db: Option<&usvg::fontdb::Database>,
     ) -> Result<usvg::Tree, SvgRenderError> {
-        if bridge_font_db.is_none() {
-            ensure_svg_text_free(bytes)?;
-        }
-
-        let mut options = usvg::Options::default();
         if let Some(fontdb) = bridge_font_db {
-            *options.fontdb_mut() = fontdb.clone();
+            let outcome = self.parse_tree_with_bridge_font_db(bytes, fontdb)?;
+            debug_assert!(
+                outcome.diagnostics.is_clean(),
+                "bridge-backed shipped svg parse path must stay diagnostics-clean until text support is promoted"
+            );
+            return Ok(outcome.tree);
         }
 
+        ensure_svg_text_free(bytes)?;
+
+        let options = usvg::Options::default();
         let tree = usvg::Tree::from_data(bytes, &options)?;
         Ok(tree)
+    }
+
+    fn parse_tree_with_bridge_font_db(
+        &self,
+        bytes: &[u8],
+        bridge_font_db: &usvg::fontdb::Database,
+    ) -> Result<SvgBridgeParseOutcome, SvgRenderError> {
+        let collector = Arc::new(Mutex::new(SvgTextBridgeDiagnosticsCollector::default()));
+        let mut options = usvg::Options::default();
+        *options.fontdb_mut() = bridge_font_db.clone();
+        options.font_resolver = build_bridge_font_resolver(Arc::clone(&collector));
+
+        let tree = usvg::Tree::from_data(bytes, &options)?;
+        let missing_glyphs = collect_missing_glyphs_from_tree(&tree);
+        let collector = collector
+            .lock()
+            .expect("svg bridge diagnostics collector lock poisoned");
+
+        Ok(SvgBridgeParseOutcome {
+            tree,
+            diagnostics: SvgTextBridgeDiagnostics {
+                selection_misses: collector.selection_misses.iter().cloned().collect(),
+                fallback_records: collector.fallback_records.iter().cloned().collect(),
+                missing_glyphs,
+            },
+        })
     }
 
     fn render_alpha_mask_for_tree(
@@ -215,8 +293,8 @@ impl SvgRenderer {
         fit: SvgFit,
         fontdb: &usvg::fontdb::Database,
     ) -> Result<SvgRgbaImage, SvgRenderError> {
-        let tree = self.parse_tree(bytes, Some(fontdb))?;
-        self.render_rgba_for_tree(&tree, target_box_px, smooth_scale_factor, fit)
+        let outcome = self.parse_tree_with_bridge_font_db(bytes, fontdb)?;
+        self.render_rgba_for_tree(&outcome.tree, target_box_px, smooth_scale_factor, fit)
     }
 }
 
@@ -266,6 +344,249 @@ fn is_text_element(node: usvg::roxmltree::Node<'_, '_>) -> bool {
     }
 
     matches!(tag_name.name(), "text" | "tspan" | "textPath" | "tref")
+}
+
+fn build_bridge_font_resolver(
+    collector: Arc<Mutex<SvgTextBridgeDiagnosticsCollector>>,
+) -> usvg::FontResolver<'static> {
+    let selection_collector = Arc::clone(&collector);
+    let fallback_collector = Arc::clone(&collector);
+
+    usvg::FontResolver {
+        select_font: Box::new(move |font, fontdb| {
+            let requested_query_families = font
+                .families()
+                .iter()
+                .map(svg_font_family_to_fontdb_family)
+                .collect::<Vec<_>>();
+            let requested_query = usvg::fontdb::Query {
+                families: &requested_query_families,
+                weight: usvg::fontdb::Weight(font.weight()),
+                stretch: svg_font_stretch_to_fontdb(font.stretch()),
+                style: svg_font_style_to_fontdb(font.style()),
+            };
+            if fontdb.query(&requested_query).is_none() {
+                let record = SvgTextFontSelectionMiss {
+                    requested_families: font.families().iter().map(svg_font_family_label).collect(),
+                    weight: font.weight(),
+                    style: svg_font_style_label(font.style()),
+                    stretch: svg_font_stretch_label(font.stretch()),
+                };
+                selection_collector
+                    .lock()
+                    .expect("svg bridge diagnostics collector lock poisoned")
+                    .selection_misses
+                    .insert(record);
+            }
+
+            let mut query_families = requested_query_families;
+            query_families.push(usvg::fontdb::Family::Serif);
+            let query = usvg::fontdb::Query {
+                families: &query_families,
+                weight: usvg::fontdb::Weight(font.weight()),
+                stretch: svg_font_stretch_to_fontdb(font.stretch()),
+                style: svg_font_style_to_fontdb(font.style()),
+            };
+            fontdb.query(&query)
+        }),
+        select_fallback: Box::new(move |character, exclude_fonts, fontdb| {
+            let &base_font_id = exclude_fonts.first()?;
+            let base_face = fontdb.face(base_font_id)?;
+
+            for face in fontdb.faces() {
+                if exclude_fonts.contains(&face.id) {
+                    continue;
+                }
+
+                if base_face.style != face.style
+                    && base_face.weight != face.weight
+                    && base_face.stretch != face.stretch
+                {
+                    continue;
+                }
+
+                if !face_supports_character(fontdb.as_ref(), face.id, character) {
+                    continue;
+                }
+
+                fallback_collector
+                    .lock()
+                    .expect("svg bridge diagnostics collector lock poisoned")
+                    .fallback_records
+                    .insert(SvgTextFontFallbackRecord {
+                        text: character.to_string(),
+                        from_family: preferred_face_family_name(base_face),
+                        to_family: preferred_face_family_name(face),
+                    });
+                return Some(face.id);
+            }
+
+            None
+        }),
+    }
+}
+
+fn svg_font_family_to_fontdb_family(family: &usvg::FontFamily) -> usvg::fontdb::Family<'_> {
+    match family {
+        usvg::FontFamily::Serif => usvg::fontdb::Family::Serif,
+        usvg::FontFamily::SansSerif => usvg::fontdb::Family::SansSerif,
+        usvg::FontFamily::Cursive => usvg::fontdb::Family::Cursive,
+        usvg::FontFamily::Fantasy => usvg::fontdb::Family::Fantasy,
+        usvg::FontFamily::Monospace => usvg::fontdb::Family::Monospace,
+        usvg::FontFamily::Named(name) => usvg::fontdb::Family::Name(name),
+    }
+}
+
+fn svg_font_family_label(family: &usvg::FontFamily) -> String {
+    match family {
+        usvg::FontFamily::Serif => "serif".to_string(),
+        usvg::FontFamily::SansSerif => "sans-serif".to_string(),
+        usvg::FontFamily::Cursive => "cursive".to_string(),
+        usvg::FontFamily::Fantasy => "fantasy".to_string(),
+        usvg::FontFamily::Monospace => "monospace".to_string(),
+        usvg::FontFamily::Named(name) => name.to_string(),
+    }
+}
+
+fn svg_font_style_to_fontdb(style: usvg::FontStyle) -> usvg::fontdb::Style {
+    match style {
+        usvg::FontStyle::Normal => usvg::fontdb::Style::Normal,
+        usvg::FontStyle::Italic => usvg::fontdb::Style::Italic,
+        usvg::FontStyle::Oblique => usvg::fontdb::Style::Oblique,
+    }
+}
+
+fn svg_font_style_label(style: usvg::FontStyle) -> &'static str {
+    match style {
+        usvg::FontStyle::Normal => "normal",
+        usvg::FontStyle::Italic => "italic",
+        usvg::FontStyle::Oblique => "oblique",
+    }
+}
+
+fn svg_font_stretch_to_fontdb(stretch: usvg::FontStretch) -> usvg::fontdb::Stretch {
+    match stretch {
+        usvg::FontStretch::UltraCondensed => usvg::fontdb::Stretch::UltraCondensed,
+        usvg::FontStretch::ExtraCondensed => usvg::fontdb::Stretch::ExtraCondensed,
+        usvg::FontStretch::Condensed => usvg::fontdb::Stretch::Condensed,
+        usvg::FontStretch::SemiCondensed => usvg::fontdb::Stretch::SemiCondensed,
+        usvg::FontStretch::Normal => usvg::fontdb::Stretch::Normal,
+        usvg::FontStretch::SemiExpanded => usvg::fontdb::Stretch::SemiExpanded,
+        usvg::FontStretch::Expanded => usvg::fontdb::Stretch::Expanded,
+        usvg::FontStretch::ExtraExpanded => usvg::fontdb::Stretch::ExtraExpanded,
+        usvg::FontStretch::UltraExpanded => usvg::fontdb::Stretch::UltraExpanded,
+    }
+}
+
+fn svg_font_stretch_label(stretch: usvg::FontStretch) -> &'static str {
+    match stretch {
+        usvg::FontStretch::UltraCondensed => "ultra-condensed",
+        usvg::FontStretch::ExtraCondensed => "extra-condensed",
+        usvg::FontStretch::Condensed => "condensed",
+        usvg::FontStretch::SemiCondensed => "semi-condensed",
+        usvg::FontStretch::Normal => "normal",
+        usvg::FontStretch::SemiExpanded => "semi-expanded",
+        usvg::FontStretch::Expanded => "expanded",
+        usvg::FontStretch::ExtraExpanded => "extra-expanded",
+        usvg::FontStretch::UltraExpanded => "ultra-expanded",
+    }
+}
+
+fn preferred_face_family_name(face: &usvg::fontdb::FaceInfo) -> String {
+    face.families
+        .iter()
+        .find(|(_, language)| *language == usvg::fontdb::Language::English_UnitedStates)
+        .or_else(|| face.families.first())
+        .map(|(family, _)| family.clone())
+        .unwrap_or_else(|| face.post_script_name.clone())
+}
+
+fn face_supports_character(
+    fontdb: &usvg::fontdb::Database,
+    face_id: usvg::fontdb::ID,
+    character: char,
+) -> bool {
+    fontdb
+        .with_face_data(face_id, |font_data, face_index| {
+            ttf_parser::Face::parse(font_data, face_index)
+                .ok()
+                .and_then(|face| face.glyph_index(character))
+                .filter(|glyph_id| glyph_id.0 != 0)
+                .is_some()
+        })
+        .unwrap_or(false)
+}
+
+fn collect_missing_glyphs_from_tree(tree: &usvg::Tree) -> Vec<SvgTextMissingGlyphRecord> {
+    let mut records = BTreeSet::new();
+    collect_missing_glyphs_from_group(tree.root(), tree.fontdb().as_ref(), &mut records);
+    records.into_iter().collect()
+}
+
+fn collect_missing_glyphs_from_group(
+    group: &usvg::Group,
+    fontdb: &usvg::fontdb::Database,
+    records: &mut BTreeSet<SvgTextMissingGlyphRecord>,
+) {
+    for node in group.children() {
+        match node {
+            usvg::Node::Group(child_group) => {
+                collect_missing_glyphs_from_group(child_group, fontdb, records);
+            }
+            usvg::Node::Path(_) => {}
+            usvg::Node::Image(image) => {
+                if let usvg::ImageKind::SVG(tree) = image.kind() {
+                    collect_missing_glyphs_from_group(tree.root(), tree.fontdb().as_ref(), records);
+                }
+            }
+            usvg::Node::Text(text) => collect_missing_glyphs_from_text(text, fontdb, records),
+        }
+    }
+
+    if let Some(clip_path) = group.clip_path() {
+        collect_missing_glyphs_from_group(clip_path.root(), fontdb, records);
+        if let Some(sub_clip_path) = clip_path.clip_path() {
+            collect_missing_glyphs_from_group(sub_clip_path.root(), fontdb, records);
+        }
+    }
+
+    if let Some(mask) = group.mask() {
+        collect_missing_glyphs_from_group(mask.root(), fontdb, records);
+        if let Some(sub_mask) = mask.mask() {
+            collect_missing_glyphs_from_group(sub_mask.root(), fontdb, records);
+        }
+    }
+
+    for filter in group.filters() {
+        for primitive in filter.primitives() {
+            if let usvg::filter::Kind::Image(image) = primitive.kind() {
+                collect_missing_glyphs_from_group(image.root(), fontdb, records);
+            }
+        }
+    }
+}
+
+fn collect_missing_glyphs_from_text(
+    text: &usvg::Text,
+    fontdb: &usvg::fontdb::Database,
+    records: &mut BTreeSet<SvgTextMissingGlyphRecord>,
+) {
+    for span in text.layouted() {
+        for glyph in &span.positioned_glyphs {
+            if glyph.id.0 != 0 {
+                continue;
+            }
+
+            let resolved_family = fontdb
+                .face(glyph.font)
+                .map(preferred_face_family_name)
+                .unwrap_or_else(|| "<unknown>".to_string());
+            records.insert(SvgTextMissingGlyphRecord {
+                text: glyph.text.clone(),
+                resolved_family,
+            });
+        }
+    }
 }
 
 pub fn upload_alpha_mask(
@@ -413,6 +734,12 @@ mod tests {
     use super::*;
 
     fn build_svg_bridge_font_db() -> usvg::fontdb::Database {
+        // Keep SVG bridge diagnostics/tests on the bundled-only lane so host system-font drift
+        // cannot change fallback outcomes.
+        unsafe {
+            std::env::set_var("FRET_TEXT_SYSTEM_FONTS", "0");
+        }
+
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut renderer = crate::Renderer::new(&ctx.adapter, &ctx.device);
 
@@ -540,5 +867,92 @@ mod tests {
             image.rgba.chunks_exact(4).any(|px| px[3] > 0),
             "expected bridge-backed svg text rasterization to produce covered pixels"
         );
+    }
+
+    #[test]
+    fn svg_text_bridge_diagnostics_record_font_selection_misses() {
+        let svg = r#"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 24">
+  <text x="4" y="18" font-family="Definitely Missing" font-size="16">Fret</text>
+</svg>
+"#;
+        let renderer = SvgRenderer::new();
+        let fontdb = build_svg_bridge_font_db();
+
+        let outcome = renderer
+            .parse_tree_with_bridge_font_db(svg.as_bytes(), &fontdb)
+            .expect("bridge parse should succeed even when the requested font family is absent");
+
+        assert_eq!(
+            outcome.diagnostics.selection_misses,
+            vec![SvgTextFontSelectionMiss {
+                requested_families: vec!["Definitely Missing".to_string()],
+                weight: 400,
+                style: "normal",
+                stretch: "normal",
+            }]
+        );
+        assert!(outcome.diagnostics.fallback_records.is_empty());
+        assert!(outcome.diagnostics.missing_glyphs.is_empty());
+        assert!(!outcome.diagnostics.is_clean());
+    }
+
+    #[test]
+    fn svg_text_bridge_diagnostics_record_fallbacks() {
+        let svg = r#"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 24">
+  <text x="4" y="18" font-family="Inter" font-size="16">A中</text>
+</svg>
+"#;
+        let renderer = SvgRenderer::new();
+        let fontdb = build_svg_bridge_font_db();
+
+        let outcome = renderer
+            .parse_tree_with_bridge_font_db(svg.as_bytes(), &fontdb)
+            .expect("bridge parse should succeed when fallback fonts cover the text");
+
+        assert!(outcome.diagnostics.selection_misses.is_empty());
+        assert!(
+            outcome
+                .diagnostics
+                .fallback_records
+                .contains(&SvgTextFontFallbackRecord {
+                    text: "中".to_string(),
+                    from_family: "Inter".to_string(),
+                    to_family: "Noto Sans CJK SC".to_string(),
+                }),
+            "expected fallback diagnostics to record the renderer-approved CJK fallback face, actual diagnostics: {:?}",
+            outcome.diagnostics
+        );
+        assert!(outcome.diagnostics.missing_glyphs.is_empty());
+        assert!(outcome.diagnostics.is_clean());
+    }
+
+    #[test]
+    fn svg_text_bridge_diagnostics_record_missing_glyphs() {
+        let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 24\">\
+  <text x=\"4\" y=\"18\" font-family=\"Inter\" font-size=\"16\">&#x0378;</text>\
+</svg>";
+        let renderer = SvgRenderer::new();
+        let fontdb = build_svg_bridge_font_db();
+
+        let outcome = renderer
+            .parse_tree_with_bridge_font_db(svg.as_bytes(), &fontdb)
+            .expect("bridge parse should succeed even when a glyph cannot be resolved");
+
+        assert!(outcome.diagnostics.selection_misses.is_empty());
+        assert!(
+            outcome.diagnostics.fallback_records.is_empty(),
+            "expected no successful fallback records for an unsupported scalar, actual diagnostics: {:?}",
+            outcome.diagnostics
+        );
+        assert_eq!(
+            outcome.diagnostics.missing_glyphs,
+            vec![SvgTextMissingGlyphRecord {
+                text: "\u{378}".to_string(),
+                resolved_family: "Inter".to_string(),
+            }]
+        );
+        assert!(!outcome.diagnostics.is_clean());
     }
 }

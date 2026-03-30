@@ -116,12 +116,18 @@ Status note (2026-03-30):
     with the renderer text environment before shipped `<text>` support is turned on,
   - generic sans/serif/monospace mapping in the bridge now follows the renderer's current text
     policy instead of host/system discovery,
-  - focused renderer coverage now locks the bridge seed to export bundled-only `Inter`,
-    `JetBrains Mono`, and matching generic mappings.
+  - `crates/fret-render-wgpu/src/svg.rs` now also has renderer-local structured diagnostics for
+    bridge-backed SVG text parses, recording:
+    - explicit font-family selection misses,
+    - successful fallback hops, and
+    - post-layout missing glyphs,
+  - focused renderer coverage now locks both the bridge seed and those diagnostics to a
+    bundled-only environment so host system-font drift cannot change the expected outcome.
 - remaining gap:
   - the bridge is not yet wired into the shipped `render_*_fit_mode(...)` SVG raster path,
   - shipped bridge-fed raster invalidation is not yet active even though `SvgRasterKey` now
     carries `text_font_stack_key` for registered text-bearing SVGs,
+  - shipped-path admission does not yet consume the new bridge diagnostics,
   - and `<text>` remains rejected in the shipped raster path.
 
 Once Stage 1 exists, add a renderer-internal `SvgTextFontBridge` that:
@@ -189,9 +195,8 @@ This plan does not aim to:
 
 Progress note:
 
-- items 1 through 3 now have first landed slices,
-- items 4 and 5 remain open at shipped-path scope because the actual raster path still rejects
-  `<text>`.
+- items 1 through 4 now have first landed slices,
+- item 5 remains open at shipped-path scope because the actual raster path still rejects `<text>`.
 
 ## Evidence anchors
 
