@@ -74,7 +74,7 @@ Evidence anchors:
 
 - `crates/fret-runtime/src/asset_reload.rs` (`AssetReloadEpoch`)
 - `ecosystem/fret-ui-assets/src/image_source.rs` (epoch in cache keys)
-- `ecosystem/fret-ui-assets/src/svg_file.rs` (epoch-gated SVG file bytes)
+- `ecosystem/fret-ui-assets/src/ui.rs` (internal epoch-gated SVG file-reference cache)
 - `ecosystem/fret-bootstrap/src/dev_reload.rs` (trigger file watcher)
 
 ## M4 — Hot literals (no compile) (time-boxed)

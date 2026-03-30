@@ -5,8 +5,6 @@ use fret_assets::{
 use fret_runtime::GlobalsHost;
 
 use crate::ImageSource;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::SvgFileSource;
 
 fn image_source_from_reference(resolved: &ResolvedAssetReference) -> Option<ImageSource> {
     match &resolved.reference {
@@ -71,54 +69,6 @@ pub fn resolve_image_source_from_host_locator(
     locator: AssetLocator,
 ) -> Result<ImageSource, AssetLoadError> {
     resolve_image_source_from_host(host, &AssetRequest::new(locator))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn svg_file_source_from_reference(resolved: &ResolvedAssetReference) -> Option<SvgFileSource> {
-    match &resolved.reference {
-        AssetExternalReference::FilePath(path) => {
-            Some(SvgFileSource::from_native_file_path(path.clone()))
-        }
-        AssetExternalReference::Url(_) => None,
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn resolve_svg_file_source(
-    resolver: &dyn AssetResolver,
-    request: &AssetRequest,
-) -> Result<SvgFileSource, AssetLoadError> {
-    let resolved = resolver.resolve_reference(request)?;
-    svg_file_source_from_reference(&resolved).ok_or(AssetLoadError::ExternalReferenceUnavailable {
-        kind: request.locator.kind(),
-    })
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn resolve_svg_file_source_from_locator(
-    resolver: &dyn AssetResolver,
-    locator: AssetLocator,
-) -> Result<SvgFileSource, AssetLoadError> {
-    resolve_svg_file_source(resolver, &AssetRequest::new(locator))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn resolve_svg_file_source_from_host(
-    host: &impl GlobalsHost,
-    request: &AssetRequest,
-) -> Result<SvgFileSource, AssetLoadError> {
-    let resolved = fret_runtime::resolve_asset_reference(host, request)?;
-    svg_file_source_from_reference(&resolved).ok_or(AssetLoadError::ExternalReferenceUnavailable {
-        kind: request.locator.kind(),
-    })
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn resolve_svg_file_source_from_host_locator(
-    host: &impl GlobalsHost,
-    locator: AssetLocator,
-) -> Result<SvgFileSource, AssetLoadError> {
-    resolve_svg_file_source_from_host(host, &AssetRequest::new(locator))
 }
 
 #[cfg(feature = "ui")]
@@ -348,35 +298,6 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    fn resolve_svg_file_source_from_host_rejects_byte_only_bundle_assets_truthfully() {
-        let mut host = TestHost::default();
-        fret_runtime::register_bundle_asset_entries(
-            &mut host,
-            "app",
-            [fret_assets::StaticAssetEntry::new(
-                "icons/search.svg",
-                AssetRevision(2),
-                br#"<svg viewBox="0 0 1 1"></svg>"#,
-            )
-            .with_media_type("image/svg+xml")],
-        );
-
-        let err = resolve_svg_file_source_from_host_locator(
-            &host,
-            AssetLocator::bundle("app", "icons/search.svg"),
-        )
-        .expect_err("byte-only bundle assets should not pretend to be SvgFileSource");
-
-        assert_eq!(
-            err,
-            AssetLoadError::ExternalReferenceUnavailable {
-                kind: fret_assets::AssetLocatorKind::BundleAsset,
-            }
-        );
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    #[test]
     fn resolve_image_source_from_host_prefers_file_reference_for_file_backed_bundle_assets() {
         let root = TempAssetDir::new("image_file_reference", &[("images/logo.png", b"png")]);
         let resolver = fret_assets::FileAssetManifestResolver::from_bundle_dir("app", root.path())
@@ -395,32 +316,38 @@ mod tests {
         assert_eq!(source.id(), expected.id());
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(feature = "ui")]
     #[test]
-    fn resolve_svg_file_source_from_host_locator_bridges_file_backed_bundle_locator() {
-        let root = TempAssetDir::new(
-            "svg_file_reference",
-            &[("icons/search.svg", br#"<svg viewBox="0 0 1 1"></svg>"#)],
-        );
-        let resolver = fret_assets::FileAssetManifestResolver::from_bundle_dir("app", root.path())
-            .expect("bundle dir should scan");
-
+    fn resolve_svg_source_from_host_locator_reads_byte_backed_bundle_assets() {
         let mut host = TestHost::default();
-        fret_runtime::set_asset_resolver(&mut host, Arc::new(resolver));
+        fret_runtime::register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [fret_assets::StaticAssetEntry::new(
+                "icons/search.svg",
+                AssetRevision(2),
+                br#"<svg viewBox="0 0 1 1"></svg>"#,
+            )
+            .with_media_type("image/svg+xml")],
+        );
 
-        let source = resolve_svg_file_source_from_host_locator(
+        let source = resolve_svg_source_from_host_locator(
             &host,
             AssetLocator::bundle("app", "icons/search.svg"),
         )
-        .expect("file-backed bundle locator should bridge to SvgFileSource");
-        let expected = root.path().join("icons/search.svg");
+        .expect("byte-backed bundle svg should resolve");
 
-        assert_eq!(source.path.as_ref(), expected.as_path());
+        match source {
+            fret_ui::SvgSource::Bytes(bytes) => {
+                assert_eq!(bytes.as_ref(), br#"<svg viewBox="0 0 1 1"></svg>"#);
+            }
+            other => panic!("expected bytes-backed svg source, got {other:?}"),
+        }
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(feature = "ui")]
     #[test]
-    fn resolve_svg_file_source_from_host_rejects_reference_only_url_resolvers_truthfully() {
+    fn resolve_svg_source_from_host_reports_reference_only_url_resolvers_truthfully() {
         struct ReferenceOnlyUrlResolver;
 
         impl AssetResolver for ReferenceOnlyUrlResolver {
@@ -455,17 +382,15 @@ mod tests {
         let mut host = TestHost::default();
         fret_runtime::set_asset_resolver(&mut host, Arc::new(ReferenceOnlyUrlResolver));
 
-        let err = resolve_svg_file_source_from_host_locator(
+        let err = resolve_svg_source_from_host_locator(
             &host,
             AssetLocator::url("https://example.com/icon.svg"),
         )
-        .expect_err(
-            "svg file bridge should reject URL references until svg URL lanes are explicit",
-        );
+        .expect_err("svg source bridge should keep URL locators reference-only until explicit");
 
         assert_eq!(
             err,
-            AssetLoadError::ExternalReferenceUnavailable {
+            AssetLoadError::ReferenceOnlyLocator {
                 kind: fret_assets::AssetLocatorKind::Url,
             }
         );

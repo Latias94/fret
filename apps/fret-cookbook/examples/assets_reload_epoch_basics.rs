@@ -302,7 +302,7 @@ fn render_svg_panel(
                 ui::children![cx;
                     shadcn::card_title("SVG icon from logical bundle locator"),
                     shadcn::card_description(
-                        "Loads `demo/icon-search.svg` from the default app bundle mounted by `FretApp::asset_dir(...)`; the UI helper resolves the logical locator through the shared asset contract and keeps native/package-dev reload ergonomics without app code constructing `SvgFileSource` directly.",
+                        "Loads `demo/icon-search.svg` from the default app bundle mounted by `FretApp::asset_dir(...)`; the UI helper resolves the logical locator through the shared asset contract and keeps native/package-dev reload ergonomics without app code managing a separate file-path SVG shim.",
                     ),
                 ]
             }),

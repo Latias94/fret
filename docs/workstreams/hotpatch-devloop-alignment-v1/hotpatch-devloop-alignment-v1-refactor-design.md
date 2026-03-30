@@ -50,7 +50,7 @@ These channels must work even when Rust hotpatch is not active (reload-boundary-
 - Hot literals: `.fret/literals.json` → global `HotLiterals`
 - Assets: `.fret/asset_reload.touch` bumps the shared `AssetReloadEpoch` to invalidate path-based asset caches
   - native file-reference image decode bridges include the epoch in their cache key
-  - SVG files: `SvgFileSource` file bytes cache respects the epoch
+  - native SVG request helpers keep their internal file-reference bytes cache epoch-gated
 - Fonts: `.fret/fonts.json` (TTF/OTF/TTC list) applied via `Effect::TextAddFonts`
 
 Evidence anchors:
@@ -58,7 +58,7 @@ Evidence anchors:
 - `ecosystem/fret-bootstrap/src/dev_reload.rs` (polling watcher + apply)
 - `crates/fret-runtime/src/asset_reload.rs` (`AssetReloadEpoch`)
 - `ecosystem/fret-ui-assets/src/image_source.rs` (epoch in cache key)
-- `ecosystem/fret-ui-assets/src/svg_file.rs` (epoch-gated file bytes cache)
+- `ecosystem/fret-ui-assets/src/ui.rs` (internal epoch-gated SVG file-reference cache)
 - `crates/fret-launch/src/runner/desktop/runner/effects.rs` (`Effect::TextAddFonts`)
 
 ## 2) Detect surface (L1)

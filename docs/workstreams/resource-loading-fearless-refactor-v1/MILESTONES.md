@@ -77,6 +77,8 @@ Deliverables:
 Status note (2026-03-30):
 
 - image loading and the current SVG bridge now both sit on the shared locator/resolver contract,
+- the public `SvgFileSource` / `resolve_svg_file_source*` compatibility seam is now deleted while
+  the native file-reference reload cache remains internal to `SvgAssetElementContextExt`,
 - the first-party SVG raster path no longer silently loads system fonts for SVG `<text>`,
 - the renderer backend now has a bridge seed that rebuilds `usvg fontdb` from the current text
   collection and generic mappings without reopening a hidden host-font lane,

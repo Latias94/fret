@@ -59,7 +59,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] HP-DL-asset-001 Asset invalidation + redraw contract (svg/png/fonts).
   - Evidence: `docs/workstreams/hotpatch-devloop-alignment-v1/hotpatch-devloop-alignment-v1.md` (section 4.2), `ecosystem/fret-ui-assets/src/reload.rs`
 - [x] HP-DL-asset-002 Implement for one asset type (svg or png) and validate.
-  - Evidence: `ecosystem/fret-ui-assets/src/image_source.rs`, `ecosystem/fret-ui-assets/src/svg_file.rs`
+  - Evidence: `ecosystem/fret-ui-assets/src/image_source.rs`, `ecosystem/fret-ui-assets/src/ui.rs`
 
 ## M4 — No-compile: hot literals
 

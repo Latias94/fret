@@ -39,7 +39,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Evidence:
     - `docs/workstreams/resource-loading-fearless-refactor-v1/AUDIT.md`
     - `ecosystem/fret-ui-assets/src/image_source.rs`
-    - `ecosystem/fret-ui-assets/src/svg_file.rs`
+    - `ecosystem/fret-ui-assets/src/ui.rs`
     - `ecosystem/fret-ui-assets/src/app.rs`
     - `ecosystem/fret-ui-assets/src/advanced.rs`
     - `crates/fret-launch/src/runner/font_catalog.rs`
@@ -64,7 +64,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `docs/workstreams/resource-loading-fearless-refactor-v1/CAPABILITY_MATRIX.md`
     - `crates/fret-assets/src/file_manifest.rs`
     - `ecosystem/fret-ui-assets/src/image_source.rs`
-    - `ecosystem/fret-ui-assets/src/svg_file.rs`
+    - `ecosystem/fret-ui-assets/src/{asset_resolver.rs,ui.rs}`
     - `crates/fret-launch/src/runner/web/gfx_init.rs`
     - `crates/fret-launch/src/runner/web/effects.rs`
     - `crates/fret-launch/src/runner/desktop/runner/effects.rs`
@@ -105,7 +105,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
         falls back to bytes when the winning layer cannot provide a usable external reference,
       - shared URL image bridging on every platform when the winning resolver returns
         `AssetExternalReference::Url`,
-      - native bundle-locator -> `SvgFileSource` bridging for reloadable file-backed SVGs
+      - native SVG request helpers keeping reloadable file-reference caching internal while
+        ordinary UI code stays on logical bundle locators
     - runtime file-read failures now stay typed as `AssetLoadError::Io { operation, path, message }`
       instead of collapsing into free-form strings, and `fret-diag` now exposes the corresponding
       `debug.resource_loading.asset_load.io_requests` counter through both stats and post-run gates
@@ -385,19 +386,14 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## SVG and image pipeline unification
 
-- [~] RESLOAD-svg-400 Replace dedicated SVG file helpers with the unified asset locator story.
+- [x] RESLOAD-svg-400 Replace dedicated SVG file helpers with the unified asset locator story.
   - Current landed slice:
-    - `resolve_svg_file_source(...)` /
-      `resolve_svg_file_source_from_host(...)` in
-      `ecosystem/fret-ui-assets/src/asset_resolver.rs` now bridge logical bundle locators into
-      `SvgFileSource` through the shared external-reference contract instead of teaching raw
-      widget-level file paths.
+    - the public `resolve_svg_file_source(...)` /
+      `resolve_svg_file_source_from_host(...)` compatibility seams are deleted, so the SVG app/UI
+      surface no longer exposes a separate native file handoff object.
     - `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
       now lets ordinary UI code stay on logical bundle locators while the native/dev file-backed
-      compatibility shim remains hidden behind the UI helper.
-  - Remaining:
-    - `SvgFileSource` still exists as a native/dev compatibility shim because `fret_ui::SvgSource`
-      is currently bytes-only.
+      reload cache lives only as an internal implementation detail in `ecosystem/fret-ui-assets/src/ui.rs`.
 
 - [x] RESLOAD-svg-410 Decide the short-term SVG text policy and enforce it in docs/tests.
   - Current landed slice:
@@ -586,15 +582,18 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 - [x] RESLOAD-api-530 Remove deprecated direct file-path constructors after first-party migration.
   - `ImageSource::from_file_path(...)`
-  - `SvgFileSource::from_file_path(...)`
+  - historical `SvgFileSource::from_file_path(...)`
   - Current landed slice:
     - internal bridge code stays on crate-private native constructors in
-      `ecosystem/fret-ui-assets/src/{image_source.rs,svg_file.rs}`.
-    - the public deprecated direct file-path constructors are removed from
-      `ecosystem/fret-ui-assets/src/{image_source.rs,svg_file.rs}`.
-    - the lower-level host locator bridge helpers remain as the explicit non-UI compatibility seam:
+      `ecosystem/fret-ui-assets/src/image_source.rs` plus the internal native SVG request cache in
+      `ecosystem/fret-ui-assets/src/ui.rs`.
+    - the public deprecated direct file-path constructors are removed from the image/SVG authoring
+      surface.
+    - the lower-level UI-ready locator bridge helpers remain explicit:
       - `resolve_image_source_from_host_locator(...)`
-      - `resolve_svg_file_source_from_host_locator(...)`
+      - `resolve_svg_source_from_host_locator(...)`
+    - non-UI integrations that truly need raw external references now use
+      `fret::assets::resolve_reference(...)` / `resolve_locator_reference(...)` directly.
 
 - [x] RESLOAD-api-540 Remove UI-specific reload naming after migration.
   - Current landed slice:
@@ -676,8 +675,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - byte-backed URL resolvers remaining consumable through the shared image bridge,
       - native reference-only URL resolvers failing truthfully instead of pretending they are
         image-ready,
-      - `SvgFileSource` staying truthful about requiring an external file reference instead of
-        silently treating byte-only bundle assets as native files.
+      - SVG UI helpers keeping native file-reference reload caching internal while byte-backed
+        bundle assets and URL locators remain truthful about whether they are immediately SVG-ready.
   - Remaining:
     - add broader packaged/mobile-facing capability tests once builder/package startup lanes are
       defined

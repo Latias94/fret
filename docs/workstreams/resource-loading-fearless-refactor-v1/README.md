@@ -172,10 +172,11 @@ This workstream takes a fearless posture:
     external reference; `ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
     now keeps the UI-facing app/widget story locator-first instead of forcing app code to resolve
     `ImageSource` eagerly,
-  - native SVG helpers can now bridge logical bundle locators into `SvgFileSource` for reloadable
-    file-backed development ergonomics without teaching raw app paths as the primary authoring
-    story, and `fret-ui-assets::ui::SvgAssetElementContextExt` now keeps the UI-facing app/widget
-    story locator-first instead of exposing `SvgFileSource` directly in ordinary render code,
+  - native SVG helpers now bridge logical bundle locators into an internal file-reference reload
+    cache for reloadable file-backed development ergonomics without teaching raw app paths as the
+    primary authoring story, and `fret-ui-assets::ui::SvgAssetElementContextExt` keeps the
+    UI-facing app/widget story locator-first instead of exposing a separate native file handoff
+    type in ordinary render code,
   - byte-based SVG loading and the existing async image invalidation ergonomics remain intact.
 - The general asset contract now also models explicit external-reference handoff:
   - `ResolvedAssetReference` / `AssetExternalReference` in `crates/fret-assets`,
@@ -269,8 +270,8 @@ Examples:
 
 - Images:
   - `ecosystem/fret-ui-assets/src/image_source.rs`
-- SVG file helpers:
-  - `ecosystem/fret-ui-assets/src/svg_file.rs`
+- SVG UI/native reload bridge:
+  - `ecosystem/fret-ui-assets/src/ui.rs`
 - Font startup/bootstrap:
   - `crates/fret-launch/src/runner/font_catalog.rs`
   - `crates/fret-launch/src/runner/web/gfx_init.rs`
@@ -284,7 +285,7 @@ Historically, resource helpers exposed file-path loading and older workstream/do
 it as a primary authoring path:
 
 - `ImageSource::from_file_path(...)` in `ecosystem/fret-ui-assets/src/image_source.rs`
-- `SvgFileSource::from_file_path(...)` in `ecosystem/fret-ui-assets/src/svg_file.rs`
+- a historical dedicated SVG file helper in `fret-ui-assets` (now deleted in this branch)
 - cookbook examples:
   - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
   - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
@@ -375,14 +376,15 @@ The remaining architectural gap is still real:
 - and long-term shared-font support still needs broader deterministic wasm/mobile/runtime-font
   gates plus an explicit supported-scope decision for advanced SVG text cases.
 
-### 6) SVG file loading is sync filesystem I/O with epoch polling
+### 6) Native reloadable SVG loading still does sync filesystem I/O behind the UI helper
 
-`read_svg_file_cached(...)` does a synchronous `std::fs::read(...)` behind an epoch cache:
+The native SVG request bridge still does a synchronous `std::fs::read(...)` behind an
+epoch-gated internal cache:
 
-- `ecosystem/fret-ui-assets/src/svg_file.rs`
+- `ecosystem/fret-ui-assets/src/ui.rs`
 
-Images already have an async decode/event-driven story. SVG file loading should not remain a
-completely different native-only pipeline.
+The public `SvgFileSource` shim is now gone, which fixes the authoring-surface drift, but native
+reloadable SVG loading is still intentionally different from the async image decode path.
 
 ### 7) The wasm build is not currently closed
 

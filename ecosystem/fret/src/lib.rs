@@ -82,8 +82,9 @@
 //!   or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
 //!   consume the resolver's bundle/reference bridge instead of constructing raw file-path sources
 //!   directly; keep `resolve_image_source_from_host_locator(...)` /
-//!   `resolve_svg_file_source_from_host_locator(...)` as the lower-level compatibility seam when a
-//!   non-UI integration truly needs the bridged source or native file handoff object
+//!   `resolve_svg_source_from_host_locator(...)` as the lower-level UI-ready source seams, and use
+//!   `fret::assets::resolve_reference(...)` / `resolve_locator_reference(...)` when a non-UI
+//!   integration truly needs the raw external reference
 //! - enable `editor` for opt-in app-level replay of installed `fret-ui-editor` presets after the
 //!   `FretApp` shadcn auto-theme middleware resets the host theme
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
@@ -3776,7 +3777,8 @@ mod authoring_surface_policy_tests {
         assert!(advanced_surface.contains("AppUiRenderRootState"));
         assert!(advanced_surface.contains("UiCxDataExt"));
         assert!(advanced_surface.contains("render_root_with_app_ui"));
-        assert!(advanced_surface.contains("ViewWindowState, view_init_window,"));
+        assert!(advanced_surface.contains("ViewWindowState,"));
+        assert!(advanced_surface.contains("view_init_window,"));
         assert!(advanced_surface.contains("view_view"));
         assert!(advanced_surface.contains("view_record_engine_frame"));
     }

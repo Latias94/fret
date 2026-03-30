@@ -3,8 +3,12 @@
 //! This module is intentionally optional (feature-flagged) to keep `fret-ui-assets` usable in
 //! non-`fret-ui` contexts while still providing ViewCache-safe ergonomics for UI authors.
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+#[cfg(not(target_arch = "wasm32"))]
+use fret_assets::AssetExternalReference;
 use fret_assets::{AssetLoadError, AssetLocator, AssetRequest};
 use fret_runtime::AssetReloadEpoch;
 use fret_ui::{ElementContext, Invalidation, UiHost};
@@ -15,8 +19,6 @@ use crate::image_source::{
     with_image_source_loader,
 };
 #[cfg(not(target_arch = "wasm32"))]
-use crate::svg_file::{SvgFileSource, svg_source_from_file_cached};
-
 pub trait ImageSourceElementContextExt {
     fn use_image_source_state(&mut self, source: &ImageSource) -> ImageSourceState;
 
@@ -183,14 +185,91 @@ impl SvgAssetSourceState {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Clone, Default)]
+struct SvgReferenceFileCache {
+    entries: std::collections::HashMap<PathBuf, SvgReferenceFileCacheEntry>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Clone)]
+struct SvgReferenceFileCacheEntry {
+    epoch: u64,
+    bytes: Option<Arc<[u8]>>,
+    error: Option<Arc<str>>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Default for SvgReferenceFileCacheEntry {
+    fn default() -> Self {
+        Self {
+            epoch: u64::MAX,
+            bytes: None,
+            error: None,
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn svg_asset_source_state_from_native_file_cached<
+    H: fret_runtime::GlobalsHost + fret_runtime::TimeHost,
+>(
+    host: &mut H,
+    path: &Path,
+) -> SvgAssetSourceState {
+    let epoch = host
+        .global::<AssetReloadEpoch>()
+        .map(|value| value.0)
+        .unwrap_or(0);
+    let path = path.to_path_buf();
+
+    host.with_global_mut_untracked(SvgReferenceFileCache::default, |cache, _host| {
+        let entry = cache
+            .entries
+            .entry(path.clone())
+            .or_insert_with(SvgReferenceFileCacheEntry::default);
+        if entry.epoch != epoch {
+            match std::fs::read(&path) {
+                Ok(bytes) => {
+                    entry.epoch = epoch;
+                    entry.bytes = Some(Arc::<[u8]>::from(bytes));
+                    entry.error = None;
+                }
+                Err(err) => {
+                    entry.epoch = epoch;
+                    entry.bytes = None;
+                    entry.error = Some(Arc::<str>::from(err.to_string()));
+                }
+            }
+        }
+
+        if let Some(err) = entry.error.clone() {
+            return SvgAssetSourceState::error(err);
+        }
+
+        let Some(bytes) = entry.bytes.clone() else {
+            return SvgAssetSourceState::error("missing svg bytes");
+        };
+
+        SvgAssetSourceState::ready(fret_ui::SvgSource::Bytes(bytes))
+    })
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn resolve_svg_asset_source_state<H: fret_runtime::GlobalsHost + fret_runtime::TimeHost>(
     host: &mut H,
     request: &AssetRequest,
 ) -> SvgAssetSourceState {
-    match crate::resolve_svg_file_source_from_host(host, request) {
-        Ok(source) => match svg_source_from_file_cached(host, &source) {
-            Ok(source) => SvgAssetSourceState::ready(source),
-            Err(err) => SvgAssetSourceState::error(err),
+    match fret_runtime::resolve_asset_reference(host, request) {
+        Ok(resolved) => match resolved.reference {
+            AssetExternalReference::FilePath(path) => {
+                svg_asset_source_state_from_native_file_cached(host, &path)
+            }
+            AssetExternalReference::Url(_) => SvgAssetSourceState::error(
+                AssetLoadError::ExternalReferenceUnavailable {
+                    kind: request.locator.kind(),
+                }
+                .to_string(),
+            ),
         },
         Err(AssetLoadError::ExternalReferenceUnavailable { .. }) => {
             match crate::resolve_svg_source_from_host(&*host, request) {
@@ -248,35 +327,6 @@ impl<H: UiHost> SvgAssetElementContextExt for ElementContext<'_, H> {
     ) -> SvgAssetSourceState {
         self.observe_global::<AssetReloadEpoch>(invalidation);
         resolve_svg_asset_source_state(self.app, request)
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub trait SvgFileElementContextExt {
-    fn svg_source_from_file(&mut self, source: &SvgFileSource) -> Option<fret_ui::SvgSource>;
-
-    /// Like [`Self::svg_source_from_file`], but allows callers to choose the invalidation kind
-    /// used for the dev reload epoch signal.
-    fn svg_source_from_file_with_invalidation(
-        &mut self,
-        source: &SvgFileSource,
-        invalidation: Invalidation,
-    ) -> Option<fret_ui::SvgSource>;
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl<H: UiHost> SvgFileElementContextExt for ElementContext<'_, H> {
-    fn svg_source_from_file(&mut self, source: &SvgFileSource) -> Option<fret_ui::SvgSource> {
-        self.svg_source_from_file_with_invalidation(source, Invalidation::Paint)
-    }
-
-    fn svg_source_from_file_with_invalidation(
-        &mut self,
-        source: &SvgFileSource,
-        invalidation: Invalidation,
-    ) -> Option<fret_ui::SvgSource> {
-        self.observe_global::<AssetReloadEpoch>(invalidation);
-        svg_source_from_file_cached(self.app, source).ok()
     }
 }
 
@@ -430,6 +480,51 @@ mod tests {
             }
             other => panic!("expected bytes-backed svg source, got {other:?}"),
         }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn svg_asset_source_state_keeps_cached_file_bytes_until_reload_epoch_bumps() {
+        let root = TempAssetDir::new(
+            "svg_epoch_cache",
+            &[("icons/search.svg", br#"<svg viewBox="0 0 1 1"></svg>"#)],
+        );
+        let resolver = fret_assets::FileAssetManifestResolver::from_bundle_dir("app", root.path())
+            .expect("bundle dir should scan");
+
+        let mut host = TestHost::default();
+        host.set_global(AssetReloadEpoch(0));
+        fret_runtime::set_asset_resolver(&mut host, Arc::new(resolver));
+
+        let request = AssetRequest::new(AssetLocator::bundle("app", "icons/search.svg"));
+
+        let first = resolve_svg_asset_source_state(&mut host, &request);
+        let first_bytes = match first.source {
+            Some(fret_ui::SvgSource::Bytes(bytes)) => bytes,
+            other => panic!("expected bytes-backed svg source, got {other:?}"),
+        };
+        assert_eq!(first_bytes.as_ref(), br#"<svg viewBox="0 0 1 1"></svg>"#);
+
+        std::fs::write(
+            root.path().join("icons/search.svg"),
+            br#"<svg viewBox="0 0 2 2"></svg>"#,
+        )
+        .expect("svg file should rewrite");
+
+        let same_epoch = resolve_svg_asset_source_state(&mut host, &request);
+        let same_epoch_bytes = match same_epoch.source {
+            Some(fret_ui::SvgSource::Bytes(bytes)) => bytes,
+            other => panic!("expected bytes-backed svg source, got {other:?}"),
+        };
+        assert_eq!(same_epoch_bytes.as_ref(), first_bytes.as_ref());
+
+        fret_runtime::bump_asset_reload_epoch(&mut host);
+        let bumped = resolve_svg_asset_source_state(&mut host, &request);
+        let bumped_bytes = match bumped.source {
+            Some(fret_ui::SvgSource::Bytes(bytes)) => bytes,
+            other => panic!("expected bytes-backed svg source, got {other:?}"),
+        };
+        assert_eq!(bumped_bytes.as_ref(), br#"<svg viewBox="0 0 2 2"></svg>"#);
     }
 
     #[test]

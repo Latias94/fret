@@ -26,7 +26,6 @@ pub mod image_upload;
 pub mod reload;
 pub mod svg_asset_cache;
 pub mod svg_asset_state;
-pub mod svg_file;
 pub mod ui_assets;
 
 #[cfg(feature = "ui")]
@@ -38,7 +37,6 @@ pub use image_source::*;
 pub use image_upload::*;
 pub use reload::*;
 pub use svg_asset_cache::*;
-pub use svg_file::*;
 pub use ui_assets::*;
 
 #[cfg(feature = "app-integration")]
@@ -53,7 +51,8 @@ mod surface_policy_tests {
     const ADVANCED_RS: &str = include_str!("advanced.rs");
     const IMAGE_SOURCE_RS: &str = include_str!("image_source.rs");
     const RELOAD_RS: &str = include_str!("reload.rs");
-    const SVG_FILE_RS: &str = include_str!("svg_file.rs");
+    const UI_RS: &str = include_str!("ui.rs");
+    const ASSET_RESOLVER_RS: &str = include_str!("asset_resolver.rs");
 
     fn public_surface() -> &'static str {
         LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
@@ -78,12 +77,15 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn legacy_public_path_helpers_are_deleted_while_internal_native_bridges_remain() {
-        for source in [IMAGE_SOURCE_RS, SVG_FILE_RS] {
-            assert!(source.contains("pub(crate) fn from_native_file_path("));
-            assert!(!source.contains("pub fn from_file_path("));
-            assert!(!source.contains("pub fn from_path("));
-        }
+    fn legacy_public_path_helpers_and_svg_file_shims_are_deleted() {
+        assert!(IMAGE_SOURCE_RS.contains("pub(crate) fn from_native_file_path("));
+        assert!(!IMAGE_SOURCE_RS.contains("pub fn from_file_path("));
+        assert!(!IMAGE_SOURCE_RS.contains("pub fn from_path("));
+        assert!(!public_surface().contains("pub mod svg_file;"));
+        assert!(!public_surface().contains("pub use svg_file::*;"));
+        assert!(!ASSET_RESOLVER_RS.contains("pub fn resolve_svg_file_source("));
+        assert!(!ASSET_RESOLVER_RS.contains("pub fn resolve_svg_file_source_from_host("));
+        assert!(!UI_RS.contains("pub trait SvgFileElementContextExt"));
     }
 
     #[test]

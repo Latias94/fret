@@ -13,14 +13,15 @@ Purpose:
 Evidence:
 
 - `ecosystem/fret-ui-assets/src/image_source.rs`
-- `ecosystem/fret-ui-assets/src/svg_file.rs`
+- `ecosystem/fret-ui-assets/src/ui.rs`
 - `docs/adr/0317-portable-asset-locator-and-resolver-contract-v1.md`
 
 What exists today:
 
 - `ImageSource::from_file_path(...)` / `ImageSource::from_path(...)`
-- `SvgFileSource::from_file_path(...)` / `SvgFileSource::from_path(...)`
 - native-only `AssetLocator::file(...)` bridging for development flows
+- native/dev SVG file-reference reload caching is internal to
+  `SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
 
 Why this is wrong as the main story:
 
@@ -39,9 +40,10 @@ Correct direction:
 
 Current deletion posture:
 
-- keep the path constructors deprecated until first-party docs/examples no longer teach them,
-  locator-first helpers cover the same development workflows, and first-party callers no longer
-  need them on the default authoring lane.
+- public SVG file-path shims are deleted; only the internal native file-reference cache remains.
+- keep the remaining public path constructors deprecated until first-party docs/examples no longer
+  teach them, locator-first helpers cover the same development workflows, and first-party callers
+  no longer need them on the default authoring lane.
 
 ## 2. Former partial `install(...)` semantics were misleading and are now deleted
 

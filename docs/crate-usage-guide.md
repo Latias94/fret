@@ -202,10 +202,10 @@ surface on logical bundle locators and let
 `fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
 or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
 consume the resolver's bundle/reference bridge instead of introducing direct raw file-path widget
-loading in app code. Keep
-`resolve_image_source_from_host_locator(...)` / `resolve_svg_file_source_from_host_locator(...)`
-as the lower-level compatibility seam when a non-UI integration truly needs the bridged source or
-native file handoff object itself.
+loading in app code. Keep `resolve_image_source_from_host_locator(...)` /
+`resolve_svg_source_from_host_locator(...)` as the lower-level UI-ready source seams, and use
+`fret::assets::resolve_reference(...)` / `resolve_locator_reference(...)` when a non-UI
+integration truly needs the raw external reference itself.
 Use `fret::assets::register_file_manifest(...)` when tooling already emits an explicit manifest
 artifact that should be reviewed, versioned, or packaged directly.
 For a first-party manifest artifact command, use

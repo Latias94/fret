@@ -192,7 +192,7 @@ escape hatches.
 - `ecosystem/fret/src/app_entry.rs`
 - `apps/fretboard/src/assets.rs`
 - `ecosystem/fret-ui-assets/src/image_source.rs`
-- `ecosystem/fret-ui-assets/src/svg_file.rs`
+- `ecosystem/fret-ui-assets/src/ui.rs`
 - `ecosystem/fret-ui-assets/src/reload.rs`
 - `crates/fret-launch/src/runner/web/gfx_init.rs`
 - `crates/fret-launch/src/runner/web/effects.rs`
