@@ -418,6 +418,57 @@ mod tests {
         assert_eq!(source.path.as_ref(), expected.as_path());
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn resolve_svg_file_source_from_host_rejects_reference_only_url_resolvers_truthfully() {
+        struct ReferenceOnlyUrlResolver;
+
+        impl AssetResolver for ReferenceOnlyUrlResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    url: true,
+                    ..Default::default()
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                _request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Err(AssetLoadError::ReferenceOnlyLocator {
+                    kind: fret_assets::AssetLocatorKind::Url,
+                })
+            }
+
+            fn resolve_reference(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetReference, AssetLoadError> {
+                Ok(ResolvedAssetReference::new(
+                    request.locator.clone(),
+                    AssetRevision(12),
+                    AssetExternalReference::url("https://example.com/icon.svg"),
+                ))
+            }
+        }
+
+        let mut host = TestHost::default();
+        fret_runtime::set_asset_resolver(&mut host, Arc::new(ReferenceOnlyUrlResolver));
+
+        let err = resolve_svg_file_source_from_host_locator(
+            &host,
+            AssetLocator::url("https://example.com/icon.svg"),
+        )
+        .expect_err("svg file bridge should reject URL references until svg URL lanes are explicit");
+
+        assert_eq!(
+            err,
+            AssetLoadError::ExternalReferenceUnavailable {
+                kind: fret_assets::AssetLocatorKind::Url,
+            }
+        );
+    }
+
     #[test]
     fn resolve_image_source_from_host_propagates_unsupported_file_locator_kind() {
         let mut host = TestHost::default();

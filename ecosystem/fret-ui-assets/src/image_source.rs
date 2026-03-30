@@ -1110,7 +1110,7 @@ async fn fetch_and_decode_rgba8(url: &str) -> Result<DecodedRgba8, String> {
     decode_bytes_rgba8(&bytes)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "image-decode"))]
 fn fetch_url_bytes_blocking(url: &str) -> Result<Vec<u8>, String> {
     use std::io::Read as _;
     use std::time::Duration;
