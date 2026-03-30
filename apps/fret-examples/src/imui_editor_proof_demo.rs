@@ -6,7 +6,7 @@ use fret::advanced::view::{UiCxDataExt as _, ViewWindowState};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;
-use fret_core::{Color, PanelKind, Px, TextAlign};
+use fret_core::{Color, Corners, Edges, PanelKind, Px, TextAlign};
 use fret_docking::{
     DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
     DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
@@ -40,6 +40,9 @@ use fret_ui_kit::headless::text_assist::{
     input_owned_text_assist_expanded,
 };
 use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
+use fret_ui_kit::recipes::imui_drag_preview::{
+    DragPreviewGhostOptions, drag_preview_ghost_with_options,
+};
 use fret_ui_kit::recipes::imui_sortable::{
     SortableInsertionSide, reorder_vec_by_key, sortable_row,
 };
@@ -299,6 +302,29 @@ fn proof_outliner_order_line(items: &[ProofOutlinerItem]) -> String {
         .collect::<Vec<_>>()
         .join(" -> ");
     format!("Order: {labels}")
+}
+
+fn proof_drag_preview_card<H: UiHost>(
+    title: Arc<str>,
+    subtitle: Option<Arc<str>>,
+) -> impl IntoUiElement<H> + use<H> {
+    fret_ui_kit::ui::container_build(move |cx, out| {
+        let theme = fret_ui::Theme::global(&*cx.app);
+        let mut props = fret_ui::element::ContainerProps::default();
+        props.layout.size.width = Length::Auto;
+        props.layout.size.height = Length::Auto;
+        props.padding = Edges::symmetric(Px(10.0), Px(8.0)).into();
+        props.background = Some(theme.color_token("popover"));
+        props.border = Edges::all(Px(1.0));
+        props.border_color = Some(theme.color_token("border"));
+        props.corner_radii = Corners::all(Px(8.0));
+
+        let text = subtitle
+            .as_ref()
+            .map(|subtitle| format!("{title}\n{subtitle}"))
+            .unwrap_or_else(|| title.as_ref().to_string());
+        out.push(cx.container(props, move |cx| vec![cx.text(text)]));
+    })
 }
 
 fn editor_text_assist_readout(
@@ -2838,7 +2864,7 @@ fn render_authoring_parity_imui_group(
 
         ui.separator();
         ui.text("Typed drag/drop helpers");
-        ui.text("Drag an asset chip onto the material slot. Payload stays app-defined.");
+        ui.text("Drag an asset chip onto the material slot. Payload and preview stay app-defined.");
 
         let asset_slot_model = authoring_parity_asset_slot_model(ui.cx_mut());
         let asset_chips = authoring_parity_drag_assets();
@@ -2854,13 +2880,20 @@ fn render_authoring_parity_imui_group(
                         ..Default::default()
                     },
                 );
-                let _ = ui.drag_source_with_options(
-                    trigger,
-                    asset.clone(),
-                    fret_ui_kit::imui::DragSourceOptions {
-                        cross_window: true,
+                let source = ui.drag_source(trigger, asset.clone());
+                let ghost_id =
+                    format!("imui-editor-proof.authoring.imui.drag-drop.asset.{ix}.ghost");
+                let _ = drag_preview_ghost_with_options(
+                    ui,
+                    ghost_id.as_str(),
+                    source,
+                    DragPreviewGhostOptions {
+                        test_id: Some(Arc::from(format!(
+                            "imui-editor-proof.authoring.imui.drag-drop.asset.{ix}.ghost"
+                        ))),
                         ..Default::default()
                     },
+                    proof_drag_preview_card(asset.label.clone(), Some(asset.path.clone())),
                 );
             }
         });
@@ -2955,6 +2988,23 @@ fn render_authoring_parity_imui_group(
                         label: item.label.clone(),
                     };
                     let sortable = sortable_row(ui, row.trigger, payload);
+                    let ghost_id = format!(
+                        "imui-editor-proof.authoring.imui.outliner.reorder.row.{}.ghost",
+                        item.id
+                    );
+                    let _ = drag_preview_ghost_with_options(
+                        ui,
+                        ghost_id.as_str(),
+                        sortable.source(),
+                        DragPreviewGhostOptions {
+                            test_id: Some(Arc::from(format!(
+                                "imui-editor-proof.authoring.imui.outliner.reorder.row.{}.ghost",
+                                item.id
+                            ))),
+                            ..Default::default()
+                        },
+                        proof_drag_preview_card(item.label.clone(), None),
+                    );
 
                     if let Some(signal) = sortable.delivered_reorder() {
                         let dragged = signal.payload();

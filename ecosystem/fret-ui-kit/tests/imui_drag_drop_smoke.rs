@@ -46,6 +46,7 @@ fn drag_drop_response_accessors_compile() {
     let source = DragSourceResponse::default();
     assert!(!source.active());
     assert!(!source.cross_window());
+    assert!(source.position().is_none());
 
     let target = DropTargetResponse::<DemoPayload>::default();
     assert!(!target.active());

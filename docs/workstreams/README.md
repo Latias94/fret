@@ -16,7 +16,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 171
+- Dedicated directories: 172
 - Standalone markdown files: 44 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -93,6 +93,12 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-sortable-recipe-v1/CLOSEOUT_AUDIT_2026-03-30.md`
   - `docs/workstreams/imui-sortable-recipe-v1/SECOND_PROOF_SURFACE_DECISION_2026-03-30.md`
 
+- Active source-side drag preview ghost follow-on:
+  - `docs/workstreams/imui-drag-preview-ghost-v1/DESIGN.md`
+  - `docs/workstreams/imui-drag-preview-ghost-v1/TODO.md`
+  - `docs/workstreams/imui-drag-preview-ghost-v1/MILESTONES.md`
+  - `docs/workstreams/imui-drag-preview-ghost-v1/UPSTREAM_PARITY_AUDIT_2026-03-30.md`
+
 Historical archive directories retained for rationale/audit history only:
 
 - `docs/workstreams/imui-authoring-facade-v1/`
@@ -113,6 +119,7 @@ Rule:
 - Prefer the completed stack-reset docs for baseline API/ownership guidance.
 - Prefer the editor-grade closeout docs for what landed and what was intentionally deferred.
 - Prefer the sortable recipe closeout docs for the shipped v1 row-level recipe boundary.
+- Prefer the drag preview ghost lane for the active source-side drag preview contract work.
 - Read the older `imui-*` files only as archive evidence, parity notes, or migration history.
 - Treat any old symbol names in those archive files as historical unless explicitly marked as retained.
 
@@ -195,6 +202,7 @@ Rule:
 - `docs/workstreams/image-support-v1/` — first 2026-02-09, latest 2026-02-11, 2 markdown docs
 - `docs/workstreams/imui-authoring-facade-v1/` — first 2026-02-03, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
 - `docs/workstreams/imui-authoring-facade-v2/` — first 2026-02-03, latest 2026-03-02, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
+- `docs/workstreams/imui-drag-preview-ghost-v1/` — first n/a, latest n/a, 4 markdown docs (active follow-on for source-side drag preview / ghost contract work)
 - `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)

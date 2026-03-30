@@ -1665,7 +1665,8 @@ pub fn render<H: UiHost + 'static>(
             if from_producer {
                 entry.last_seen_frame = frame_id;
             }
-            let present = !capture_conflicts_with_layer(arbitration, entry.layer);
+            let present =
+                !capture_conflicts_with_layer(arbitration, entry.layer) || !req.interactive;
             apply_hover_layer(ui, entry.layer, present, interactive && present);
             ui.set_layer_wants_pointer_move_events(
                 entry.layer,
@@ -1772,7 +1773,8 @@ pub fn render<H: UiHost + 'static>(
             if from_producer {
                 entry.last_seen_frame = frame_id;
             }
-            let present = !capture_conflicts_with_layer(arbitration, entry.layer);
+            let present =
+                !capture_conflicts_with_layer(arbitration, entry.layer) || !req.interactive;
             let interactive = interactive && present;
 
             apply_tooltip_layer(ui, entry.layer, present, interactive);

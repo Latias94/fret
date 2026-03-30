@@ -24,6 +24,7 @@ pub struct DragResponse {
 pub struct DragSourceResponse {
     pub active: bool,
     pub cross_window: bool,
+    pub position: Option<Point>,
 }
 
 /// ImGui-style hovered query flags for `ResponseExt` convenience helpers.
@@ -257,6 +258,10 @@ impl DragSourceResponse {
 
     pub fn cross_window(self) -> bool {
         self.cross_window
+    }
+
+    pub fn position(self) -> Option<Point> {
+        self.position
     }
 }
 

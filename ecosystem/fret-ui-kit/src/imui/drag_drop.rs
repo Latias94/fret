@@ -116,6 +116,7 @@ fn source_response_for<H: UiHost>(
     DragSourceResponse {
         active: true,
         cross_window: drag.cross_window_hover,
+        position: Some(drag.position),
     }
 }
 
