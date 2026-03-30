@@ -10,7 +10,8 @@ use super::layout::{
 };
 use super::manager::DockManager;
 use super::paint::{
-    PaintDockParams, paint_dock, paint_drop_hints, paint_drop_overlay, paint_split_handles,
+    PaintDockParams, paint_dock, paint_drag_payload_ghost, paint_drop_hints, paint_drop_overlay,
+    paint_split_handles,
 };
 use super::prelude_core::*;
 use super::prelude_runtime::*;
@@ -98,6 +99,26 @@ fn diag_scale_factor_x1000(scale_factor: f32) -> u32 {
         return u32::MAX;
     }
     v as u32
+}
+
+fn dock_drag_payload_ghost_visible(
+    drag: &fret_runtime::DragSession,
+    window: fret_core::AppWindowId,
+) -> bool {
+    if !drag.dragging || drag.current_window != window || drag.moving_window.is_some() {
+        return false;
+    }
+    if drag.payload::<DockPanelDragPayload>().is_some() {
+        return true;
+    }
+    drag.payload::<DockTabsDragPayload>()
+        .is_some_and(|payload| {
+            payload
+                .tabs
+                .get(payload.active)
+                .or_else(|| payload.tabs.first())
+                .is_some()
+        })
 }
 
 fn dock_graph_stats_for_window(
@@ -2667,6 +2688,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
+                    payload_ghost_visible: dock_drag_payload_ghost_visible(drag, self.window),
                     transparent_payload_applied: drag.transparent_payload_applied,
                     transparent_payload_hit_test_passthrough_applied: drag
                         .transparent_payload_hit_test_passthrough_applied,
@@ -6954,6 +6976,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
+                    payload_ghost_visible: dock_drag_payload_ghost_visible(drag, self.window),
                     transparent_payload_applied: drag.transparent_payload_applied,
                     transparent_payload_hit_test_passthrough_applied: drag
                         .transparent_payload_hit_test_passthrough_applied,
@@ -7253,6 +7276,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
+                    payload_ghost_visible: dock_drag_payload_ghost_visible(drag, self.window),
                     transparent_payload_applied: drag.transparent_payload_applied,
                     transparent_payload_hit_test_passthrough_applied: drag
                         .transparent_payload_hit_test_passthrough_applied,
@@ -7403,6 +7427,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
         let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
         let frame_id = app.frame_id();
+        #[derive(Clone)]
+        struct DockDragGhostSnapshot {
+            panel: PanelKey,
+            position: Point,
+            grab_offset: Point,
+        }
         let dock_drag_pointer_id = app.find_drag_pointer_id(|d| {
             (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
                 || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
@@ -7421,6 +7451,30 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .and_then(|pointer_id| app.drag(pointer_id))
             .and_then(|drag| drag.payload::<DockTabsDragPayload>())
             .map(|payload| payload.source_tabs);
+        let dock_drag_ghost = dock_drag_pointer_id.and_then(|pointer_id| {
+            let drag = app.drag(pointer_id)?;
+            if let Some(payload) = drag.payload::<DockPanelDragPayload>() {
+                return Some(DockDragGhostSnapshot {
+                    panel: payload.panel.clone(),
+                    position: drag.position,
+                    grab_offset: payload.grab_offset,
+                });
+            }
+            let payload = drag.payload::<DockTabsDragPayload>()?;
+            let panel = payload
+                .tabs
+                .get(payload.active)
+                .or_else(|| payload.tabs.first())?
+                .clone();
+            Some(DockDragGhostSnapshot {
+                panel,
+                position: drag.position,
+                grab_offset: payload.grab_offset,
+            })
+        });
+        let dock_drag_payload_ghost_is_visible = dock_drag_pointer_id
+            .and_then(|pointer_id| app.drag(pointer_id))
+            .is_some_and(|drag| dock_drag_payload_ghost_visible(drag, self.window));
         let text_font_stack_key = app.global::<fret_runtime::TextFontStackKey>().map(|k| k.0);
 
         let caps = app
@@ -7515,6 +7569,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let drag_tab_title = dock_drag_panel
                 .as_ref()
                 .and_then(|panel| self.tab_titles.get(panel).copied());
+            let dock_drag_ghost = dock_drag_ghost
+                .clone()
+                .filter(|_| dock_drag_payload_ghost_is_visible)
+                .and_then(|ghost| {
+                    self.tab_titles.get(&ghost.panel).copied().map(|title| {
+                        super::paint::DockDragGhostPaint {
+                            position: ghost.position,
+                            grab_offset: ghost.grab_offset,
+                            title,
+                        }
+                    })
+                });
             let close_glyph_present =
                 self.tab_close_glyph.is_some() || self.tab_close_svg.is_some();
             self.tab_widths.clear();
@@ -7908,6 +7974,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 close_glyph_present,
                 scene,
             );
+            paint_drag_payload_ghost(theme.clone(), dock_drag_ghost, close_glyph_present, scene);
 
             self.paint_tab_context_menu(services, theme, scale_factor, bounds, scene);
 

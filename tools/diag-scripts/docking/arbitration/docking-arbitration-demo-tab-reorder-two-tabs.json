@@ -45,6 +45,12 @@
     { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
     { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
     {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drag_payload_ghost_visible_is", "visible": true },
+      "timeout_frames": 120
+    },
+    {
       "type": "move_pointer",
       "window": { "kind": "current" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" }

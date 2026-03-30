@@ -42,6 +42,7 @@ use fret_ui_kit::headless::text_assist::{
 use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 use fret_ui_kit::recipes::imui_drag_preview::{
     DragPreviewGhostOptions, drag_preview_ghost_with_options,
+    publish_cross_window_drag_preview_ghost_with_options, render_cross_window_drag_preview_ghosts,
 };
 use fret_ui_kit::recipes::imui_sortable::{
     SortableInsertionSide, reorder_vec_by_key, sortable_row,
@@ -2286,6 +2287,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
         })
         .size_full();
         ui.add_ui(root);
+        let _ = render_cross_window_drag_preview_ghosts(ui.cx_mut());
     })
 }
 
@@ -2880,10 +2882,17 @@ fn render_authoring_parity_imui_group(
                         ..Default::default()
                     },
                 );
-                let source = ui.drag_source(trigger, asset.clone());
+                let source = ui.drag_source_with_options(
+                    trigger,
+                    asset.clone(),
+                    fret_ui_kit::imui::DragSourceOptions {
+                        cross_window: true,
+                        ..Default::default()
+                    },
+                );
                 let ghost_id =
                     format!("imui-editor-proof.authoring.imui.drag-drop.asset.{ix}.ghost");
-                let _ = drag_preview_ghost_with_options(
+                let _ = publish_cross_window_drag_preview_ghost_with_options(
                     ui,
                     ghost_id.as_str(),
                     source,
@@ -2893,7 +2902,11 @@ fn render_authoring_parity_imui_group(
                         ))),
                         ..Default::default()
                     },
-                    proof_drag_preview_card(asset.label.clone(), Some(asset.path.clone())),
+                    {
+                        let label = asset.label.clone();
+                        let path = asset.path.clone();
+                        move |_cx| proof_drag_preview_card(label.clone(), Some(path.clone()))
+                    },
                 );
             }
         });

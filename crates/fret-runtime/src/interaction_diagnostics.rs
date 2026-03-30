@@ -51,6 +51,10 @@ pub struct DockDragDiagnostics {
     pub kind: DragKindId,
     pub dragging: bool,
     pub cross_window_hover: bool,
+    /// True when the shell-local dock payload ghost should currently paint in this window.
+    ///
+    /// This reflects shell choreography only; it does not imply a native or external drag preview.
+    pub payload_ghost_visible: bool,
     /// True when the runner has applied an ImGui-style "transparent payload" treatment to the
     /// moving dock window (e.g. click-through/NoInputs while following the cursor).
     pub transparent_payload_applied: bool,

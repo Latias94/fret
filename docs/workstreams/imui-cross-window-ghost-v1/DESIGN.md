@@ -1,14 +1,24 @@
 # imui cross-window ghost v1 - design
 
-Status: active workstream
+Status: Historical reference (closed closeout record; successor lane is `docs/workstreams/imui-shell-ghost-choreography-v1/`)
 
 Last updated: 2026-03-30
+
+Status note (2026-03-30): this document remains useful for the shipped generic cross-window ghost
+baseline, but the current landed guidance now lives in
+`docs/workstreams/imui-cross-window-ghost-v1/CLOSEOUT_AUDIT_2026-03-30.md` and the current
+follow-on planning now lives in `docs/workstreams/imui-shell-ghost-choreography-v1/DESIGN.md`.
+References below to active cross-window planning should be read as closed for the generic
+`current_window` transfer slice unless explicitly marked as deferred.
 
 Related:
 
 - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/imui-sortable-recipe-v1/CLOSEOUT_AUDIT_2026-03-30.md`
 - `docs/workstreams/imui-drag-preview-ghost-v1/CLOSEOUT_AUDIT_2026-03-30.md`
+- `docs/workstreams/imui-cross-window-ghost-v1/M1_CONTRACT_FREEZE_2026-03-30.md`
+- `docs/workstreams/imui-cross-window-ghost-v1/CLOSEOUT_AUDIT_2026-03-30.md`
+- `docs/workstreams/imui-shell-ghost-choreography-v1/DESIGN.md`
 
 ## Purpose
 
@@ -156,6 +166,35 @@ So this lane must explicitly state how the cross-window ghost contract degrades 
 - hover detection across windows is unreliable,
 - or the platform cannot guarantee cross-window positioning fidelity.
 
+### 5) Phase B is now frozen around `current_window` paint ownership
+
+The accepted M1 contract freeze is:
+
+- semantic ownership stays at the source,
+- generic paint ownership follows `DragSession.current_window`,
+- and `moving_window` / `window_under_moving_window` remain shell-specific choreography hints.
+
+See:
+
+- `docs/workstreams/imui-cross-window-ghost-v1/M1_CONTRACT_FREEZE_2026-03-30.md`
+
+### 6) Cross-window rendering uses recipe-owned descriptor transfer
+
+The accepted transfer rule is:
+
+- the source authors preview meaning,
+- the recipe layer may publish a minimal transferred descriptor keyed by drag session,
+- and the hovered/current window renders from that descriptor without turning runtime into a
+  preview-policy registry.
+
+### 7) Capability fallback consumes runner truth and adds no recipe heuristics
+
+The accepted fallback split is:
+
+- `Reliable`: full generic transfer contract,
+- `BestEffort`: follow runner-selected `current_window` on a best-effort basis only,
+- `None` / single-window: stay on same-window ghost behavior.
+
 ## Target architecture
 
 ### `ecosystem/fret-ui-kit::imui`
@@ -169,11 +208,11 @@ Default assumption:
 
 ### `ecosystem/fret-ui-kit::recipes`
 
-Open question to resolve in this lane:
+Accepted Phase B baseline:
 
-- whether a shell-agnostic cross-window ghost helper really exists,
-- or whether the generic recipe surface should stop at same-window and let shell layers own the
-  transfer choreography.
+- a shell-agnostic cross-window ghost helper may exist here,
+- but it must be limited to generic transferred preview ownership keyed by `current_window`,
+- and it must not absorb moving-window / docking / tear-out choreography.
 
 ### Shell-aware layers
 
@@ -187,7 +226,7 @@ Expected likely owners for non-generic behavior:
 
 Minimum package expected before implementation is considered reviewable:
 
-- one explicit owner decision for generic vs shell-specific choreography,
+- one accepted M1 contract freeze record for generic vs shell-specific choreography,
 - one first-party multi-window proof surface,
 - one interaction/regression gate that can observe ghost ownership moving across windows,
 - and one explicit capability-fallback note for single-window / wasm-like environments.

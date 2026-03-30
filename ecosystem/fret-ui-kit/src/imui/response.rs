@@ -3,7 +3,8 @@
 use std::rc::Rc;
 
 use fret_authoring::Response;
-use fret_core::{Point, Rect, Size};
+use fret_core::{Point, PointerId, Rect, Size};
+use fret_runtime::DragSessionId;
 use fret_ui::GlobalElementId;
 
 /// A richer interaction result intended for immediate-mode facade helpers.
@@ -25,6 +26,8 @@ pub struct DragSourceResponse {
     pub active: bool,
     pub cross_window: bool,
     pub position: Option<Point>,
+    pub pointer_id: Option<PointerId>,
+    pub session_id: Option<DragSessionId>,
 }
 
 /// ImGui-style hovered query flags for `ResponseExt` convenience helpers.
@@ -262,6 +265,14 @@ impl DragSourceResponse {
 
     pub fn position(self) -> Option<Point> {
         self.position
+    }
+
+    pub fn pointer_id(self) -> Option<PointerId> {
+        self.pointer_id
+    }
+
+    pub fn session_id(self) -> Option<DragSessionId> {
+        self.session_id
     }
 }
 

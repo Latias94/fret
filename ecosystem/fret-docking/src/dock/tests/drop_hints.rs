@@ -706,3 +706,242 @@ fn dock_center_drop_overlay_draws_tab_preview_for_drag_payload() {
         "expected hover to remain a dock target, got: {hover:?}",
     );
 }
+
+#[test]
+fn dock_drag_payload_ghost_renders_for_tabs_drag_without_moving_window() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let source_tabs = app.with_global_mut(DockManager::default, |dock, _app| {
+        let source_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("left.panel"), PanelKey::new("right.panel")],
+            active: 1,
+        });
+        dock.graph.set_window_root(window, source_tabs);
+        dock.panels.insert(
+            PanelKey::new("left.panel"),
+            DockPanel {
+                title: "Left".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        dock.panels.insert(
+            PanelKey::new("right.panel"),
+            DockPanel {
+                title: "Right".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        source_tabs
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        fret_runtime::DRAG_KIND_DOCK_TABS,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockTabsDragPayload {
+            source_tabs,
+            tabs: vec![PanelKey::new("left.panel"), PanelKey::new("right.panel")],
+            active: 1,
+            grab_offset: Point::new(Px(10.0), Px(6.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_requested_at_tick: None,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+        drag.current_window = window;
+        drag.position = Point::new(Px(240.0), Px(120.0));
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    assert!(
+        scene.ops().iter().any(|op| matches!(
+            op,
+            SceneOp::Quad { order, .. } if *order == fret_core::DrawOrder(10_020)
+        )),
+        "expected a docking payload ghost quad while dragging tabs without a moving window",
+    );
+}
+
+#[test]
+fn dock_drag_payload_ghost_is_suppressed_when_runner_reports_moving_window() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.hierarchy"),
+            grab_offset: Point::new(Px(8.0), Px(4.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_requested_at_tick: None,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+        drag.current_window = window;
+        drag.position = Point::new(Px(240.0), Px(120.0));
+        drag.moving_window = Some(window);
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    assert!(
+        !scene.ops().iter().any(|op| matches!(
+            op,
+            SceneOp::Quad { order, .. } if *order == fret_core::DrawOrder(10_020)
+        )),
+        "expected docking payload ghost to be suppressed once a moving window is active",
+    );
+}
+
+#[test]
+fn dock_drag_payload_ghost_only_renders_in_current_window() {
+    use slotmap::KeyData;
+
+    let window_a = AppWindowId::from(KeyData::from_ffi(1));
+    let window_b = AppWindowId::from(KeyData::from_ffi(2));
+
+    let mut ui_a: UiTree<TestHost> = UiTree::new();
+    ui_a.set_window(window_a);
+    let root_a = ui_a.create_node_retained(DockSpace::new(window_a));
+    ui_a.set_root(root_a);
+
+    let mut ui_b: UiTree<TestHost> = UiTree::new();
+    ui_b.set_window(window_b);
+    let root_b = ui_b.create_node_retained(DockSpace::new(window_b));
+    ui_b.set_root(root_b);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs_a = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("source.panel")],
+            active: 0,
+        });
+        let tabs_b = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("target.panel")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window_a, tabs_a);
+        dock.graph.set_window_root(window_b, tabs_b);
+        dock.panels.insert(
+            PanelKey::new("source.panel"),
+            DockPanel {
+                title: "Source".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        dock.panels.insert(
+            PanelKey::new("target.panel"),
+            DockPanel {
+                title: "Target".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window_a,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("source.panel"),
+            grab_offset: Point::new(Px(8.0), Px(4.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_requested_at_tick: None,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+        drag.current_window = window_b;
+        drag.position = Point::new(Px(220.0), Px(118.0));
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+
+    ui_a.layout(&mut app, &mut text, root_a, size, 1.0);
+    let mut scene_a = Scene::default();
+    ui_a.paint(&mut app, &mut text, root_a, bounds, &mut scene_a, 1.0);
+
+    ui_b.layout(&mut app, &mut text, root_b, size, 1.0);
+    let mut scene_b = Scene::default();
+    ui_b.paint(&mut app, &mut text, root_b, bounds, &mut scene_b, 1.0);
+
+    assert!(
+        !scene_a.ops().iter().any(|op| matches!(
+            op,
+            SceneOp::Quad { order, .. } if *order == fret_core::DrawOrder(10_020)
+        )),
+        "expected no payload ghost in the source window once current_window moves away",
+    );
+    assert!(
+        scene_b.ops().iter().any(|op| matches!(
+            op,
+            SceneOp::Quad { order, .. } if *order == fret_core::DrawOrder(10_020)
+        )),
+        "expected payload ghost to render in the current target window",
+    );
+}

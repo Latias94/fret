@@ -79,6 +79,12 @@
     {
       "type": "wait_until",
       "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_drag_payload_ghost_visible_is", "visible": false },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
       "predicate": { "kind": "dock_drag_window_under_moving_window_source_is", "source": "platform" },
       "timeout_frames": 240
     },
