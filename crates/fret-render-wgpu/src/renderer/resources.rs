@@ -450,6 +450,7 @@ impl Renderer {
             custom_effect_v3_pyramid: v3_pyramid::CustomEffectV3PyramidState::default(),
             text_system,
             path_state: PathState::new(device),
+            #[cfg(not(target_arch = "wasm32"))]
             render_text_dump_state: super::render_text_dump::RenderTextDumpState::default(),
             svg_registry_state: svg::SvgRegistryState::new(),
             svg_raster_state: svg::SvgRasterState::default(),

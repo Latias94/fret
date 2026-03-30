@@ -1,3 +1,4 @@
+#[cfg(not(target_arch = "wasm32"))]
 use super::DebugGlyphAtlasLookup;
 use fret_core::RendererGlyphAtlasPerfSnapshot;
 use fret_render_text::FontFaceKey;
@@ -71,6 +72,7 @@ impl GlyphKey {
             .map(|kind| Self::new(font, glyph_id, size_bits, x_bin, y_bin, kind))
     }
 
+    #[cfg(any(test, not(target_arch = "wasm32")))]
     pub(super) fn is_mask(self) -> bool {
         matches!(self.kind, GlyphQuadKind::Mask)
     }
@@ -83,6 +85,7 @@ impl GlyphKey {
         matches!(self.kind, GlyphQuadKind::Subpixel)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(super) fn kind_label(self) -> &'static str {
         if self.is_mask() {
             "mask"
@@ -571,6 +574,7 @@ impl GlyphAtlas {
         self.revision
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(super) fn dimensions(&self) -> (u32, u32) {
         (self.width, self.height)
     }
@@ -609,6 +613,7 @@ impl GlyphAtlas {
         Some((entry.page, [u0, v0, u1, v1]))
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(super) fn debug_lookup_entry(
         &self,
         page: u16,
@@ -632,6 +637,7 @@ impl GlyphAtlas {
         ))
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn find_key_for_bounds(&self, page: u16, x: u32, y: u32, w: u32, h: u32) -> Option<GlyphKey> {
         self.glyphs.iter().find_map(|(key, entry)| {
             (entry.page == page && entry.x == x && entry.y == y && entry.w == w && entry.h == h)

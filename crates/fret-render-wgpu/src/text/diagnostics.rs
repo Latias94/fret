@@ -1,7 +1,6 @@
-use super::{
-    DebugGlyphAtlasLookup, GlyphInstance, TextDecoration, TextFontFaceUsage, TextLine, TextShape,
-    TextSystem,
-};
+#[cfg(not(target_arch = "wasm32"))]
+use super::DebugGlyphAtlasLookup;
+use super::{GlyphInstance, TextDecoration, TextFontFaceUsage, TextLine, TextShape, TextSystem};
 use std::{collections::HashSet, sync::Arc};
 
 fn estimate_text_shape_heap_bytes(shape: &TextShape) -> u64 {
@@ -168,18 +167,22 @@ impl TextSystem {
         self.atlas_runtime.uv_for_key(glyph.key)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn debug_mask_atlas_dims(&self) -> (u32, u32) {
         self.atlas_runtime.mask_dimensions()
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn debug_color_atlas_dims(&self) -> (u32, u32) {
         self.atlas_runtime.color_dimensions()
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn debug_subpixel_atlas_dims(&self) -> (u32, u32) {
         self.atlas_runtime.subpixel_dimensions()
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn debug_lookup_mask_glyph_atlas_entry(
         &self,
         page: u16,
@@ -191,6 +194,7 @@ impl TextSystem {
         self.atlas_runtime.debug_lookup_mask_entry(page, x, y, w, h)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn debug_lookup_color_glyph_atlas_entry(
         &self,
         page: u16,
@@ -203,6 +207,7 @@ impl TextSystem {
             .debug_lookup_color_entry(page, x, y, w, h)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn debug_lookup_subpixel_glyph_atlas_entry(
         &self,
         page: u16,

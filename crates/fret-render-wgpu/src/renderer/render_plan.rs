@@ -391,6 +391,7 @@ pub(super) struct CustomEffectV3Pass {
     /// space). When present, the renderer may restrict pyramid generation work to the scissor (and
     /// its downsampled projections) instead of building a full-viewport pyramid.
     pub(super) pyramid_build_scissor: Option<LocalScissorRect>,
+    #[cfg(not(target_arch = "wasm32"))]
     pub(super) raw_wanted: bool,
     pub(super) pyramid_wanted: bool,
     pub(super) common: CustomEffectPassCommon,

@@ -782,6 +782,7 @@ pub(super) fn append_padded_chain_final_custom_step(
                 src_pyramid: v3_sources_plan.src_raw,
                 pyramid_levels: v3_sources_plan.pyramid_levels,
                 pyramid_build_scissor: v3_sources_plan.pyramid_build_scissor,
+                #[cfg(not(target_arch = "wasm32"))]
                 raw_wanted: sources.want_raw,
                 pyramid_wanted: sources.pyramid.is_some(),
                 common: CustomEffectPassCommon {
@@ -1019,6 +1020,7 @@ pub(super) fn append_custom_effect_v3_in_place_single_scratch(
             src_pyramid,
             pyramid_levels,
             pyramid_build_scissor,
+            #[cfg(not(target_arch = "wasm32"))]
             raw_wanted: sources.want_raw,
             pyramid_wanted: sources.pyramid.is_some(),
             common: CustomEffectPassCommon {
@@ -1049,6 +1051,7 @@ pub(super) fn append_custom_effect_v3_in_place_single_scratch(
         src_pyramid,
         pyramid_levels,
         pyramid_build_scissor,
+        #[cfg(not(target_arch = "wasm32"))]
         raw_wanted: sources.want_raw,
         pyramid_wanted: sources.pyramid.is_some(),
         common: CustomEffectPassCommon {

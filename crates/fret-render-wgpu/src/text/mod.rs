@@ -49,14 +49,14 @@ use self::layout_cache_state::TextLayoutCacheState;
 use self::pin_state::TextPinState;
 pub use self::quality::TextQualitySettings;
 use self::quality::TextQualityState;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use self::types::DebugGlyphAtlasLookup;
 pub use self::types::TextFontFamilyConfig;
 pub(crate) use self::types::TextLine;
 #[cfg(test)]
 pub(crate) use self::types::subpixel_mask_to_alpha;
-pub(crate) use self::types::{
-    DebugGlyphAtlasLookup, TextAtlasPerfSnapshot, TextFontFaceUsage, TextRenderGlyphKind,
-};
 use self::types::{GlyphInstance, TextBlob, TextShape};
+pub(crate) use self::types::{TextAtlasPerfSnapshot, TextFontFaceUsage, TextRenderGlyphKind};
 
 pub struct TextSystem {
     parley_shaper: ParleyShaper,

@@ -170,7 +170,7 @@ impl Renderer {
 
             fn set_scissor(
                 pass: &mut wgpu::RenderPass<'_>,
-                ordered_draw_ix: usize,
+                _ordered_draw_ix: usize,
                 scissor: ScissorRect,
                 active_scissor: &mut Option<ScissorRect>,
                 target_origin: (u32, u32),
@@ -186,7 +186,7 @@ impl Renderer {
                     match (global, draw_ix, draw) {
                         (Some(global), _, _) => global,
                         (None, Some(draw_ix), Some(draw))
-                            if draw_ix as usize == ordered_draw_ix =>
+                            if draw_ix as usize == _ordered_draw_ix =>
                         {
                             draw
                         }

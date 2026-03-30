@@ -64,6 +64,7 @@ impl GlyphInstance {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone, Copy, serde::Serialize)]
 pub(crate) struct DebugGlyphAtlasLookup {
     font_data_id: u64,
@@ -78,6 +79,7 @@ pub(crate) struct DebugGlyphAtlasLookup {
     kind: &'static str,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl DebugGlyphAtlasLookup {
     pub(crate) fn new(
         font_data_id: u64,
