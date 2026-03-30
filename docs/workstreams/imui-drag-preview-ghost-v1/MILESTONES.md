@@ -1,6 +1,6 @@
 # imui drag preview ghost v1 - milestones
 
-Status: active progress record
+Status: closed closeout record
 
 Last updated: 2026-03-30
 
@@ -11,6 +11,14 @@ TODO board: `docs/workstreams/imui-drag-preview-ghost-v1/TODO.md`
 Upstream parity audit:
 
 - `docs/workstreams/imui-drag-preview-ghost-v1/UPSTREAM_PARITY_AUDIT_2026-03-30.md`
+
+Closeout audit:
+
+- `docs/workstreams/imui-drag-preview-ghost-v1/CLOSEOUT_AUDIT_2026-03-30.md`
+
+Successor lane:
+
+- `docs/workstreams/imui-cross-window-ghost-v1/DESIGN.md`
 
 Predecessor closeouts:
 
@@ -102,7 +110,7 @@ Completion notes:
 
 ## Phase D - Gates and explicit closeout/defer
 
-Status: In progress
+Status: Completed
 
 Goal:
 
@@ -121,10 +129,11 @@ Exit gates:
 - the lower typed drag/drop seam remains clean,
 - and any surviving gaps are clearly identified as future contract lanes instead of hidden backlog.
 
-Current status notes:
+Completion notes:
 
 - focused unit coverage, compile-surface smoke coverage, and a real `fret-imui` interaction gate
   are landed,
 - `window_overlays::render` now explicitly allows non-interactive hover/tooltip overlays to remain
   visible during pointer capture so drag ghosts can render without widening runtime contracts,
-- the remaining open artifact for this phase is a dedicated closeout audit document.
+- the dedicated closeout audit is now landed,
+- and the remaining backlog is intentionally moved to the successor lane.

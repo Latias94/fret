@@ -1,12 +1,20 @@
 # imui drag preview ghost v1 - TODO
 
-Status: active board
+Status: closed board
 
 Last updated: 2026-03-30
 
 Tracking doc: `docs/workstreams/imui-drag-preview-ghost-v1/DESIGN.md`
 
 Milestones: `docs/workstreams/imui-drag-preview-ghost-v1/MILESTONES.md`
+
+Closeout audit:
+
+- `docs/workstreams/imui-drag-preview-ghost-v1/CLOSEOUT_AUDIT_2026-03-30.md`
+
+Successor lane:
+
+- `docs/workstreams/imui-cross-window-ghost-v1/DESIGN.md`
 
 Upstream parity audit:
 
@@ -79,4 +87,4 @@ Compatibility shims are explicitly out of scope.
       multi-item aggregate preview,
       shell/docking choreography,
       native/external preview surfaces.
-- [ ] Capture a closeout audit once the first slice is shipped or intentionally deferred.
+- [x] Capture a closeout audit once the first slice is shipped or intentionally deferred.

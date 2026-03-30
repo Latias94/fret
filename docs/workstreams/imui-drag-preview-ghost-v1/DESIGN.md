@@ -1,8 +1,14 @@
 # imui drag preview ghost v1 - design
 
-Status: active workstream
+Status: Historical reference (closed closeout record; successor lane is `docs/workstreams/imui-cross-window-ghost-v1/`)
 
 Last updated: 2026-03-30
+
+Status note (2026-03-30): this document remains useful for the landed same-window source-side drag
+preview contract, but the current follow-on guidance now lives in
+`docs/workstreams/imui-drag-preview-ghost-v1/CLOSEOUT_AUDIT_2026-03-30.md` and
+`docs/workstreams/imui-cross-window-ghost-v1/DESIGN.md`. References below to active drag-preview
+planning should be read as closed for the same-window slice unless explicitly marked as deferred.
 
 Related:
 
@@ -11,6 +17,8 @@ Related:
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/DRAG_DROP_BOUNDARY_AUDIT_2026-03-29.md`
 - `docs/workstreams/imui-sortable-recipe-v1/CLOSEOUT_AUDIT_2026-03-30.md`
 - `docs/workstreams/imui-drag-preview-ghost-v1/UPSTREAM_PARITY_AUDIT_2026-03-30.md`
+- `docs/workstreams/imui-drag-preview-ghost-v1/CLOSEOUT_AUDIT_2026-03-30.md`
+- `docs/workstreams/imui-cross-window-ghost-v1/DESIGN.md`
 
 ## Purpose
 
