@@ -2881,6 +2881,7 @@ dependencies = [
  "js-sys",
  "slotmap",
  "tracing",
+ "ureq",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

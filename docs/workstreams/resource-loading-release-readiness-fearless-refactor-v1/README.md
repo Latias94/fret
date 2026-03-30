@@ -88,7 +88,9 @@ Progress update (2026-03-30):
 - `RLRR-001` is landed: wasm renderer bootstrap is now bundled-only by construction.
 - `RLRR-002` is landed: the default AI attachment preview surface no longer implies built-in URL
   asset support unless the host resolver explicitly advertises `url` capability and the request
-  can actually resolve into an image-consumable source.
+  can actually resolve into an image-consumable source; the shared image bridge now also consumes
+  resolver-provided URL references on every platform, so opt-in native hosts are no longer blocked
+  once they install a truthful URL resolver.
 - `RLRR-003` is landed as a stage-1 closure: startup bundled-font injection now re-resolves bytes
   from the shared runtime asset resolver with no silent fallback path, and the ADR/runtime wording
   now explicitly distinguishes that startup baseline from the runtime `Effect::TextAddFonts` lane.
@@ -124,7 +126,7 @@ Release consequence:
 
 - wasm could appear “bundled-only” in docs while still depending on a non-contractual code path.
 
-### 2) URL asset support is now a narrow default web capability
+### 2) URL asset support now has a truthful default web lane and an opt-in native bridge
 
 Some product surfaces already emit `AssetLocator::url(...)` requests:
 
@@ -137,15 +139,18 @@ But the current default host path still resolves through capability-gated asset 
 - `crates/fret-assets/src/file_manifest.rs`
 
 The default web host now advertises `url: true` via a first-party URL passthrough resolver, but
-that closure is intentionally narrow: it resolves URL locators as external references on web so
-browser-native image URL loading can participate in the shared resolver contract.
+that shipped closure is intentionally narrow: it resolves URL locators as external references on
+web so browser-native image URL loading can participate in the shared resolver contract. The
+shared `fret-ui-assets` image bridge now also accepts resolver-provided URL references on every
+platform, which means custom desktop/native hosts can opt in without waiting for a first-party
+desktop resolver.
 
 Release consequence:
 
 - default surfaces no longer have to lie about built-in web image URL preview support, and
-  desktop-native reference-only URL resolvers no longer accidentally look image-preview-ready just
-  because they set `url: true`; desktop native still does not ship a first-party default URL
-  resolver and first-party SVG/font URL lanes are still open.
+  desktop/native hosts that explicitly install a truthful URL resolver are no longer blocked by the
+  shared image bridge; desktop native still does not ship a first-party default URL resolver and
+  first-party SVG/font URL lanes are still open.
 
 Status note (2026-03-30):
 
@@ -153,8 +158,10 @@ Status note (2026-03-30):
   request to resolve into an actual `ImageSource` before entering the image UI path,
 - the shipped web host now installs `UrlPassthroughAssetResolver`, so that capability is truthful
   on web instead of remaining a docs-only extension point,
-- the unresolved part is now the lack of a first-party desktop/native default URL resolver plus the
-  absence of first-party SVG/font URL lanes.
+- the shared image bridge now also consumes resolver-provided URL references on native instead of
+  failing closed there,
+- the unresolved part is now the lack of a first-party desktop/native default URL resolver plus
+  the absence of first-party SVG/font URL lanes.
 
 ### 3) Font asset identity and actual renderer load path are still split
 

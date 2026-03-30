@@ -33,14 +33,19 @@ Tracking format:
     - the shipped web launch host now installs a first-party `UrlPassthroughAssetResolver`, so
       `AssetLocator::url(...)` can resolve through the general resolver contract there for
       browser-native image URL loading,
-    - native/SVG/font URL lanes remain explicitly out of scope for the current first-party default.
+    - the shared `fret-ui-assets` image bridge now also accepts resolver-provided URL references on
+      every platform, so custom native hosts can participate without desktop shipping a first-party
+      default URL resolver,
+    - native default URL support plus first-party SVG/font URL lanes remain explicitly out of scope
+      for the current shipped default.
   - Evidence:
     - `ecosystem/fret-ui-ai/src/elements/attachments.rs`
     - `ecosystem/fret-ui-assets/src/asset_resolver.rs`
+    - `ecosystem/fret-ui-assets/src/image_source.rs`
     - `crates/fret-assets/src/lib.rs`
     - `crates/fret-launch/src/assets.rs`
     - `crates/fret-launch/src/runner/web/mod.rs`
-    - `cargo nextest run -p fret-ui-ai attachment_preview`
+    - `cargo nextest run -p fret-ui-assets asset_resolver -p fret-ui-ai attachment_preview`
 
 - [x] RLRR-003 Close stage-1 drift between font asset identity and actual load path.
   - Required outcomes:
@@ -104,6 +109,9 @@ Tracking format:
   - Current landed slice:
     - `CAPABILITY_MATRIX.md` now reflects the current web decode limitation and the explicit
       `configure_caches*` naming on the `fret-ui-assets` app-integration lane,
+    - `CAPABILITY_MATRIX.md` and this release-readiness tracker now also distinguish
+      “web-only first-party default URL resolver” from “cross-platform shared image bridge that can
+      consume custom resolver URL references,”
     - this release-readiness README now records the post-closure state for wasm fonts, URL
       truthfulness, font baseline ownership, web serif limits, and the partial-cache-setup naming
       cleanup,

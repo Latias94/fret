@@ -103,6 +103,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - UI bridge helpers via `ecosystem/fret-ui-assets/src/asset_resolver.rs`, including:
       - reference-aware image resolution that prefers target-appropriate external handoff and
         falls back to bytes when the winning layer cannot provide a usable external reference,
+      - shared URL image bridging on every platform when the winning resolver returns
+        `AssetExternalReference::Url`,
       - native bundle-locator -> `SvgFileSource` bridging for reloadable file-backed SVGs
     - app-facing facade reference helpers via `ecosystem/fret/src/lib.rs`
       (`resolve_reference`, `resolve_locator_reference`)

@@ -46,7 +46,6 @@ enum ImageSourceKind {
     Bytes {
         bytes: Arc<[u8]>,
     },
-    #[cfg(target_arch = "wasm32")]
     Url {
         url: Arc<str>,
     },
@@ -85,7 +84,6 @@ impl ImageSource {
                 color_space,
             } => Some((*width, *height, rgba.clone(), *color_space)),
             ImageSourceKind::Bytes { .. } => None,
-            #[cfg(target_arch = "wasm32")]
             ImageSourceKind::Url { .. } => None,
             #[cfg(not(target_arch = "wasm32"))]
             ImageSourceKind::Path { .. } => None,
@@ -130,7 +128,6 @@ impl ImageSource {
 
     pub fn from_asset_locator(locator: &AssetLocator) -> Result<Self, AssetLoadError> {
         match locator {
-            #[cfg(target_arch = "wasm32")]
             AssetLocator::Url(url) => Ok(Self::from_url(url.as_str())),
             #[cfg(not(target_arch = "wasm32"))]
             AssetLocator::File(file) => Ok(Self::from_native_file_path(file.path.clone())),
@@ -140,7 +137,6 @@ impl ImageSource {
         }
     }
 
-    #[cfg(target_arch = "wasm32")]
     pub fn from_url(url: impl Into<Arc<str>>) -> Self {
         let url: Arc<str> = url.into();
         let id = ImageSourceId(stable_hash(&(b"url.v1", url.as_bytes())));
@@ -1058,10 +1054,7 @@ enum ImageSourceEntrySnapshot {
 fn decode_rgba8(source: &ImageSource) -> Result<DecodedRgba8, String> {
     match &source.kind {
         ImageSourceKind::Bytes { bytes } => decode_bytes_rgba8(bytes.as_ref()),
-        #[cfg(target_arch = "wasm32")]
-        ImageSourceKind::Url { .. } => {
-            Err("url image sources must be decoded via fetch".to_string())
-        }
+        ImageSourceKind::Url { url } => decode_url_rgba8(url.as_ref()),
         ImageSourceKind::Rgba8 {
             width,
             height,
@@ -1093,9 +1086,77 @@ fn decode_rgba8(source: &ImageSource) -> Result<DecodedRgba8, String> {
 }
 
 #[cfg(target_arch = "wasm32")]
+fn decode_url_rgba8(_url: &str) -> Result<DecodedRgba8, String> {
+    Err("url image sources must be decoded via fetch".to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn decode_url_rgba8(url: &str) -> Result<DecodedRgba8, String> {
+    #[cfg(feature = "image-decode")]
+    {
+        let bytes = fetch_url_bytes_blocking(url)?;
+        decode_bytes_rgba8(&bytes)
+    }
+    #[cfg(not(feature = "image-decode"))]
+    {
+        let _ = url;
+        Err("image decode disabled (enable fret-ui-assets feature `image-decode`)".to_string())
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
 async fn fetch_and_decode_rgba8(url: &str) -> Result<DecodedRgba8, String> {
     let bytes = fetch_url_bytes(url).await?;
     decode_bytes_rgba8(&bytes)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn fetch_url_bytes_blocking(url: &str) -> Result<Vec<u8>, String> {
+    use std::io::Read as _;
+    use std::time::Duration;
+
+    const MAX_IMAGE_BYTES: usize = 16 * 1024 * 1024;
+
+    if !(url.starts_with("http://") || url.starts_with("https://")) {
+        return Err("only http/https image URLs are supported".to_string());
+    }
+
+    let response = ureq::AgentBuilder::new()
+        .timeout_connect(Duration::from_secs(10))
+        .timeout_read(Duration::from_secs(15))
+        .timeout_write(Duration::from_secs(15))
+        .build()
+        .get(url)
+        .set("User-Agent", "fret-ui-assets")
+        .set("Accept", "image/*")
+        .call()
+        .map_err(|err| match err {
+            ureq::Error::Status(status, response) => {
+                format!("fetch returned HTTP {status} {}", response.status_text())
+            }
+            ureq::Error::Transport(error) => format!("request failed: {error}"),
+        })?;
+
+    let mut reader = response.into_reader();
+    let mut bytes = Vec::new();
+    let mut buf = [0u8; 16 * 1024];
+    loop {
+        let read = reader
+            .read(&mut buf)
+            .map_err(|err| format!("read failed: {err}"))?;
+        if read == 0 {
+            break;
+        }
+        bytes.extend_from_slice(&buf[..read]);
+        if bytes.len() > MAX_IMAGE_BYTES {
+            return Err(format!(
+                "image too large (>{} MiB)",
+                MAX_IMAGE_BYTES / (1024 * 1024)
+            ));
+        }
+    }
+
+    Ok(bytes)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -1208,6 +1269,18 @@ mod tests {
     };
 
     use super::*;
+
+    #[test]
+    fn image_source_from_asset_locator_supports_url_locators() {
+        let locator = AssetLocator::url("https://example.com/logo.png");
+        let source = ImageSource::from_asset_locator(&locator)
+            .expect("url asset locators should produce image sources");
+
+        assert_eq!(
+            source.id(),
+            ImageSource::from_url("https://example.com/logo.png").id()
+        );
+    }
 
     #[derive(Default)]
     struct QueuedDispatcher {

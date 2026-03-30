@@ -1702,9 +1702,8 @@ mod tests {
         assert!(resolve_attachment_preview_source_from_host(&app, &data).is_some());
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    fn attachment_preview_source_skips_native_reference_only_url_resolvers() {
+    fn attachment_preview_source_accepts_reference_only_url_resolvers() {
         use std::sync::Arc;
 
         use fret_app::App;
@@ -1754,6 +1753,6 @@ mod tests {
         let mut app = App::new();
         fret_runtime::set_asset_resolver(&mut app, Arc::new(ReferenceOnlyUrlResolver));
 
-        assert!(resolve_attachment_preview_source_from_host(&app, &data).is_none());
+        assert!(resolve_attachment_preview_source_from_host(&app, &data).is_some());
     }
 }

@@ -10,13 +10,18 @@ use crate::SvgFileSource;
 
 fn image_source_from_reference(resolved: &ResolvedAssetReference) -> Option<ImageSource> {
     match &resolved.reference {
-        #[cfg(not(target_arch = "wasm32"))]
         AssetExternalReference::FilePath(path) => {
-            Some(ImageSource::from_native_file_path(path.clone()))
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                Some(ImageSource::from_native_file_path(path.clone()))
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let _ = path;
+                None
+            }
         }
-        #[cfg(target_arch = "wasm32")]
         AssetExternalReference::Url(url) => Some(ImageSource::from_url(url.as_str())),
-        _ => None,
     }
 }
 
@@ -491,9 +496,8 @@ mod tests {
         );
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    fn resolve_image_source_from_host_rejects_reference_only_native_url_resolvers() {
+    fn resolve_image_source_from_host_accepts_reference_only_url_resolvers() {
         struct ReferenceOnlyUrlResolver;
 
         impl AssetResolver for ReferenceOnlyUrlResolver {
@@ -528,19 +532,15 @@ mod tests {
         let mut host = TestHost::default();
         fret_runtime::set_asset_resolver(&mut host, Arc::new(ReferenceOnlyUrlResolver));
 
-        let err = resolve_image_source_from_host_locator(
+        let source = resolve_image_source_from_host_locator(
             &host,
             AssetLocator::url("https://example.com/logo.png"),
         )
-        .expect_err(
-            "native image bridge should reject reference-only url resolvers until it has a native url lane",
-        );
+        .expect("reference-only url resolvers should bridge to ImageSource on every platform");
 
         assert_eq!(
-            err,
-            AssetLoadError::ReferenceOnlyLocator {
-                kind: fret_assets::AssetLocatorKind::Url,
-            }
+            source.id(),
+            ImageSource::from_url("https://example.com/logo.png").id()
         );
     }
 

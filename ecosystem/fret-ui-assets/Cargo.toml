@@ -34,6 +34,9 @@ fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", optional = true }
 image = { workspace = true, optional = true }
 tracing.workspace = true
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq.workspace = true
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"
 wasm-bindgen = "0.2"
