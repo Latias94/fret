@@ -193,7 +193,7 @@ pub mod assets {
         AssetMediaType, AssetMemoryKey, AssetRequest, AssetResolver, AssetRevision,
         FILE_ASSET_MANIFEST_KIND_V1, FileAssetManifestBundleV1, FileAssetManifestEntryV1,
         FileAssetManifestV1, ResolvedAssetBytes, ResolvedAssetReference, StaticAssetEntry,
-        asset_app_bundle_id, asset_package_bundle_id,
+        UrlPassthroughAssetResolver, asset_app_bundle_id, asset_package_bundle_id,
     };
     pub use fret_bootstrap::{
         AssetReloadPolicy, AssetStartupMode, AssetStartupPlan, AssetStartupPlanError,

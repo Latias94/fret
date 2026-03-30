@@ -27,6 +27,7 @@ pub enum AssetLoadOutcomeKind {
     StaleManifest,
     UnsupportedLocatorKind,
     ExternalReferenceUnavailable,
+    ReferenceOnlyLocator,
     ResolverUnavailable,
     AccessDenied,
     Message,
@@ -198,6 +199,9 @@ impl AssetLoadDiagnosticsStore {
                             .saturating_add(1);
                         AssetLoadOutcomeKind::ExternalReferenceUnavailable
                     }
+                    AssetLoadError::ReferenceOnlyLocator { .. } => {
+                        AssetLoadOutcomeKind::ReferenceOnlyLocator
+                    }
                     AssetLoadError::ResolverUnavailable => {
                         AssetLoadOutcomeKind::ResolverUnavailable
                     }
@@ -221,6 +225,9 @@ impl AssetLoadDiagnosticsStore {
                     None,
                     match err {
                         AssetLoadError::StaleManifestMapping { path } => Some(path.to_string()),
+                        AssetLoadError::ReferenceOnlyLocator { kind } => Some(format!(
+                            "asset locator kind {kind:?} is reference-only on this path; resolve_reference(...) instead"
+                        )),
                         AssetLoadError::Message { message } => Some(message.to_string()),
                         _ => None,
                     },
@@ -648,6 +655,7 @@ mod tests {
     use std::any::{Any, TypeId};
     use std::collections::HashMap;
 
+    use fret_assets::UrlPassthroughAssetResolver;
     use fret_assets::{AssetLocator, AssetRevision, InMemoryAssetResolver};
 
     use super::*;
@@ -864,6 +872,40 @@ mod tests {
         assert_eq!(
             snapshot.recent[0].outcome_kind,
             AssetLoadOutcomeKind::ExternalReferenceUnavailable
+        );
+    }
+
+    #[test]
+    fn diagnostics_snapshot_records_reference_only_locator_requests() {
+        let mut host = TestHost::default();
+        set_asset_resolver(&mut host, Arc::new(UrlPassthroughAssetResolver::new()));
+
+        let err =
+            resolve_asset_locator_bytes(&host, AssetLocator::url("https://example.com/logo.png"))
+                .expect_err(
+                    "url passthrough bytes lane should report a typed reference-only error",
+                );
+
+        assert_eq!(
+            err,
+            AssetLoadError::ReferenceOnlyLocator {
+                kind: AssetLocatorKind::Url,
+            }
+        );
+        let snapshot = asset_resolver(&host)
+            .expect("resolver service")
+            .diagnostics_snapshot();
+        assert_eq!(snapshot.bytes_requests, 1);
+        assert_eq!(
+            snapshot.recent[0].outcome_kind,
+            AssetLoadOutcomeKind::ReferenceOnlyLocator
+        );
+        assert_eq!(snapshot.recent[0].locator_kind, AssetLocatorKind::Url);
+        assert_eq!(
+            snapshot.recent[0].message.as_deref(),
+            Some(
+                "asset locator kind Url is reference-only on this path; resolve_reference(...) instead"
+            )
         );
     }
 

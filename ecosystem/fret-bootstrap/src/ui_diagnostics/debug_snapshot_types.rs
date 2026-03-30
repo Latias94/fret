@@ -299,6 +299,9 @@ impl UiAssetLoadDiagnosticEventV1 {
                 fret_runtime::AssetLoadOutcomeKind::ExternalReferenceUnavailable => {
                     "external_reference_unavailable"
                 }
+                fret_runtime::AssetLoadOutcomeKind::ReferenceOnlyLocator => {
+                    "reference_only_locator"
+                }
                 fret_runtime::AssetLoadOutcomeKind::ResolverUnavailable => "resolver_unavailable",
                 fret_runtime::AssetLoadOutcomeKind::AccessDenied => "access_denied",
                 fret_runtime::AssetLoadOutcomeKind::Message => "message",
@@ -348,9 +351,9 @@ impl UiAssetReloadDiagnosticsSnapshotV1 {
         Some(Self {
             epoch: epoch.map(|epoch| epoch.0),
             file_watch: support.is_some_and(|support| support.file_watch),
-            configured_backend: status
-                .as_ref()
-                .map(|status| asset_reload_backend_kind_name(status.configured_backend).to_string()),
+            configured_backend: status.as_ref().map(|status| {
+                asset_reload_backend_kind_name(status.configured_backend).to_string()
+            }),
             active_backend: status
                 .as_ref()
                 .map(|status| asset_reload_backend_kind_name(status.active_backend).to_string()),
@@ -451,7 +454,9 @@ mod debug_snapshot_types_tests {
             Some(fret_runtime::AssetReloadStatus {
                 configured_backend: fret_runtime::AssetReloadBackendKind::NativeWatcher,
                 active_backend: fret_runtime::AssetReloadBackendKind::PollMetadata,
-                fallback_reason: Some(fret_runtime::AssetReloadFallbackReason::WatcherInstallFailed),
+                fallback_reason: Some(
+                    fret_runtime::AssetReloadFallbackReason::WatcherInstallFailed,
+                ),
                 fallback_message: Some("backend unavailable".to_string()),
             }),
         )
@@ -459,7 +464,10 @@ mod debug_snapshot_types_tests {
 
         assert_eq!(snapshot.epoch, Some(7));
         assert!(snapshot.file_watch);
-        assert_eq!(snapshot.configured_backend.as_deref(), Some("native_watcher"));
+        assert_eq!(
+            snapshot.configured_backend.as_deref(),
+            Some("native_watcher")
+        );
         assert_eq!(snapshot.active_backend.as_deref(), Some("poll_metadata"));
         assert_eq!(
             snapshot.fallback_reason.as_deref(),

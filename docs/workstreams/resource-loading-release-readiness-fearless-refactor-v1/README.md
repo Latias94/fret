@@ -40,7 +40,8 @@ surfaces are truthful on every supported platform.
 The highest-risk remaining gaps are no longer “design unknowns”; they are closure problems:
 
 - wasm text startup still had a contract-vs-implementation mismatch,
-- default product surfaces can still imply URL asset support without a first-party URL resolver,
+- URL support was previously only an extension-point story and needed a truthful first-party web
+  lane,
 - font asset identity and actual renderer load path are still split,
 - bundled baseline guarantees are still incomplete for some generic families,
 - web image loading still pays a byte-fetch + Rust decode path that should be explicit in release
@@ -97,8 +98,9 @@ Progress update (2026-03-30):
   URL reference.
 - the `fret-ui-assets` app-integration surface now keeps only `configure_caches*` names, so
   release-facing docs no longer imply that a partial cache setup call is a fully wired install.
-- A first-party URL resolver is still not shipped; the remaining work is documentation and any
-  future intentional productization of that lane.
+- the shipped web host now also installs a first-party URL passthrough resolver for
+  `AssetLocator::Url(...)`, so web image previews can use the general resolver contract instead of
+  relying only on ad-hoc direct helpers.
 
 ### 1) wasm font contract drift
 
@@ -118,7 +120,7 @@ Release consequence:
 
 - wasm could appear “bundled-only” in docs while still depending on a non-contractual code path.
 
-### 2) URL asset support is not a default host capability
+### 2) URL asset support is now a narrow default web capability
 
 Some product surfaces already emit `AssetLocator::url(...)` requests:
 
@@ -130,19 +132,23 @@ But the current default host path still resolves through capability-gated asset 
 - `crates/fret-assets/src/lib.rs`
 - `crates/fret-assets/src/file_manifest.rs`
 
-Current first-party resolvers do not advertise `url: true`, so the URL lane is closer to an
-extension point than to a release-ready default.
+The default web host now advertises `url: true` via a first-party URL passthrough resolver, but
+that closure is intentionally narrow: it resolves URL locators as external references on web so
+browser-native image URL loading can participate in the shared resolver contract.
 
 Release consequence:
 
-- default surfaces can imply a portable remote-preview story that the built-in host stack does not
-  actually close.
+- default surfaces no longer have to lie about built-in web image URL preview support, but desktop
+  native still does not ship a first-party default URL resolver and first-party SVG/font URL lanes
+  are still open.
 
 Status note (2026-03-30):
 
-- the default AI attachment preview surface is now capability-gated, so this mismatch no longer
-  leaks through the shipped default surface;
-- the unresolved part is still the absence of a first-party URL-capable resolver.
+- the default AI attachment preview surface is capability-gated,
+- the shipped web host now installs `UrlPassthroughAssetResolver`, so that capability is truthful
+  on web instead of remaining a docs-only extension point,
+- the unresolved part is now the lack of a first-party desktop/native default URL resolver plus the
+  absence of first-party SVG/font URL lanes.
 
 ### 3) Font asset identity and actual renderer load path are still split
 

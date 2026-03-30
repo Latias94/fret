@@ -26,11 +26,19 @@ Tracking format:
   - Required outcomes:
     - either land a first-party URL-capable resolver path,
     - or gate/remove default surfaces that imply built-in URL preview support.
+  - Current landed slice:
+    - the default AI attachment preview surface is still capability-gated instead of blindly
+      emitting URL previews on hosts that cannot support them,
+    - the shipped web launch host now installs a first-party `UrlPassthroughAssetResolver`, so
+      `AssetLocator::url(...)` can resolve through the general resolver contract there for
+      browser-native image URL loading,
+    - native/SVG/font URL lanes remain explicitly out of scope for the current first-party default.
   - Evidence:
     - `ecosystem/fret-ui-ai/src/elements/attachments.rs`
     - `ecosystem/fret-ui-assets/src/asset_resolver.rs`
     - `crates/fret-assets/src/lib.rs`
-    - `crates/fret-assets/src/file_manifest.rs`
+    - `crates/fret-launch/src/assets.rs`
+    - `crates/fret-launch/src/runner/web/mod.rs`
     - `cargo nextest run -p fret-ui-ai attachment_preview`
 
 - [x] RLRR-003 Close stage-1 drift between font asset identity and actual load path.

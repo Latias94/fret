@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 
 mod file_manifest;
+mod url_passthrough;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use file_manifest::FileAssetManifestResolver;
@@ -29,6 +30,7 @@ pub use file_manifest::{
     AssetManifestLoadError, FILE_ASSET_MANIFEST_KIND_V1, FileAssetManifestBundleV1,
     FileAssetManifestEntryV1, FileAssetManifestV1,
 };
+pub use url_passthrough::UrlPassthroughAssetResolver;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AssetLocatorKind {
@@ -699,6 +701,10 @@ pub enum AssetLoadError {
     UnsupportedLocatorKind { kind: AssetLocatorKind },
     #[error("asset locator kind {kind:?} cannot provide an external reference handoff")]
     ExternalReferenceUnavailable { kind: AssetLocatorKind },
+    #[error(
+        "asset locator kind {kind:?} is reference-only on this path; resolve_reference(...) instead"
+    )]
+    ReferenceOnlyLocator { kind: AssetLocatorKind },
     #[error("asset not found")]
     NotFound,
     #[error("asset manifest entry points at a missing file: {path}")]

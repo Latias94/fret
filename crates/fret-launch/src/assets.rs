@@ -11,7 +11,7 @@ pub use fret_assets::{
     AssetMediaType, AssetMemoryKey, AssetRequest, AssetResolver, AssetRevision,
     FILE_ASSET_MANIFEST_KIND_V1, FileAssetManifestBundleV1, FileAssetManifestEntryV1,
     FileAssetManifestV1, ResolvedAssetBytes, ResolvedAssetReference, StaticAssetEntry,
-    asset_app_bundle_id, asset_package_bundle_id,
+    UrlPassthroughAssetResolver, asset_app_bundle_id, asset_package_bundle_id,
 };
 pub use fret_runtime::{
     AssetReloadBackendKind, AssetReloadEpoch, AssetReloadFallbackReason, AssetReloadStatus,
@@ -33,6 +33,14 @@ pub fn register_resolver(
     resolver: Arc<dyn AssetResolver>,
 ) {
     fret_runtime::register_asset_resolver(host, resolver);
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+pub(crate) fn ensure_url_passthrough_resolver(host: &mut impl fret_runtime::GlobalsHost) {
+    if capabilities(host).is_some_and(|caps| caps.url) {
+        return;
+    }
+    register_resolver(host, Arc::new(UrlPassthroughAssetResolver::new()));
 }
 
 /// Load a native/package-dev file manifest and register it as a layered resolver.
@@ -379,9 +387,15 @@ pub(crate) enum AssetReloadTarget {
 mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     use super::{AssetBundleId, AssetMount, AssetRevision, StaticAssetEntry};
-    use super::{AssetStartupMode, AssetStartupPlan};
+    use super::{AssetStartupMode, AssetStartupPlan, ensure_url_passthrough_resolver};
+    use fret_app::App;
+    use fret_assets::{
+        AssetCapabilities, AssetExternalReference, AssetLoadError, AssetLocator, AssetRequest,
+        AssetResolver, ResolvedAssetBytes, ResolvedAssetReference,
+    };
     #[cfg(not(target_arch = "wasm32"))]
     use std::path::PathBuf;
+    use std::sync::Arc;
     #[cfg(not(target_arch = "wasm32"))]
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -437,5 +451,80 @@ mod tests {
             mounts.as_slice(),
             [AssetMount::Dir { bundle, dir }] if bundle == &app_bundle && dir == &asset_dir
         ));
+    }
+
+    #[test]
+    fn ensure_url_passthrough_resolver_installs_url_capability_when_missing() {
+        let mut app = App::new();
+        ensure_url_passthrough_resolver(&mut app);
+
+        assert_eq!(
+            super::capabilities(&app),
+            Some(AssetCapabilities {
+                url: true,
+                ..AssetCapabilities::default()
+            })
+        );
+
+        let resolved = fret_runtime::resolve_asset_reference(
+            &app,
+            &AssetRequest::new(AssetLocator::url("https://example.com/logo.png")),
+        )
+        .expect("url passthrough resolver should resolve references");
+
+        assert_eq!(
+            resolved.reference,
+            AssetExternalReference::url("https://example.com/logo.png")
+        );
+    }
+
+    #[test]
+    fn ensure_url_passthrough_resolver_respects_existing_url_layers() {
+        struct ExistingUrlResolver;
+
+        impl AssetResolver for ExistingUrlResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    url: true,
+                    ..AssetCapabilities::default()
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                _request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Err(AssetLoadError::Message {
+                    message: "custom url resolver is reference-only".into(),
+                })
+            }
+
+            fn resolve_reference(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetReference, AssetLoadError> {
+                Ok(ResolvedAssetReference::new(
+                    request.locator.clone(),
+                    AssetRevision(99),
+                    AssetExternalReference::url("https://example.com/custom.png"),
+                ))
+            }
+        }
+
+        let mut app = App::new();
+        super::register_resolver(&mut app, Arc::new(ExistingUrlResolver));
+        ensure_url_passthrough_resolver(&mut app);
+
+        let resolved = fret_runtime::resolve_asset_reference(
+            &app,
+            &AssetRequest::new(AssetLocator::url("https://example.com/logo.png")),
+        )
+        .expect("existing url resolver should remain authoritative");
+
+        assert_eq!(resolved.revision, AssetRevision(99));
+        assert_eq!(
+            resolved.reference,
+            AssetExternalReference::url("https://example.com/custom.png")
+        );
     }
 }

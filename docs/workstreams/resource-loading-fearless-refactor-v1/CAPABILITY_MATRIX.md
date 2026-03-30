@@ -27,7 +27,7 @@ escape hatches.
 | Bundle assets | Yes | Yes | Yes | This is the portable default story. Use generated Rust modules, static bundle entries, or explicit resolvers. |
 | Embedded assets | Yes | Yes | Yes | Supported through static embedded entries; useful for lower-level/package-owned bytes. |
 | Raw files | Partial | No | No as a portable packaged story | On desktop, file-backed manifests/directories can mount files as logical bundle assets. Direct file-path UI helpers also exist, but they are legacy native/dev escape hatches. |
-| URLs | Custom only | Partial | No first-party story | No first-party general asset resolver currently resolves `AssetLocator::Url`. Web has a direct image URL helper, but that is not the general asset contract and does not cover SVG/fonts. |
+| URLs | Custom only | Partial | No first-party story | Web now has a first-party URL passthrough resolver for `AssetLocator::Url`, so browser-native image URL handoff can participate in the general resolver contract there. Desktop still needs a custom resolver, and first-party SVG/font URL lanes are still not shipped. |
 | File watching / hot reload | Partial | No first-party lane | No first-party lane | Desktop native can opt into automatic invalidation for builder-mounted manifests/directories through `AssetReloadPolicy`; supported desktop hosts now prefer `NativeWatcher` with metadata polling fallback, publish the shared `AssetReloadEpoch`, and set `file_watch = true`. |
 | System font scan | Yes | No | No documented first-party story yet | Desktop runners expose system font rescan/update flows. Web explicitly cannot access system font databases. |
 
@@ -85,17 +85,21 @@ escape hatches.
 ### URLs
 
 - First-party truth today:
-  - the general asset contract has `AssetLocator::Url`, but there is no first-party resolver that
-    resolves it on any target,
+  - the general asset contract has `AssetLocator::Url`,
+  - web/WASM now ships a first-party `UrlPassthroughAssetResolver` on the default launch host,
+    which resolves URL locators as external URL references instead of pretending they are already
+    byte-backed assets,
   - web/WASM exposes `ImageSource::from_url(...)` as a direct image helper, and the
     `resolve_image_source*` bridge can consume a resolver-provided URL reference there,
   - when no resolver layer returns a URL reference, web/WASM `resolve_image_source*` falls back to
     resolving bytes and feeding `ImageSource::from_resolved_asset_bytes(...)`, so the current
     first-party packaged/bundle lane is still a byte-fetch + Rust decode path rather than a
     browser-native decode lane,
-  - there is no matching first-party SVG/font URL lane.
+  - desktop/native still has no first-party default resolver for `AssetLocator::Url`,
+  - there is still no matching first-party SVG/font URL lane.
 - Guidance:
-  - treat URL loading as a custom-resolver or target-specific escape hatch,
+  - treat URL loading as a target-specific or custom-resolver escape hatch unless you are on the
+    shipped web host,
   - do not teach it as the default framework asset story.
 
 ### File watching and hot reload
@@ -177,6 +181,8 @@ escape hatches.
 - `crates/fret-assets/src/lib.rs`
 - `crates/fret-assets/src/file_manifest.rs`
 - `crates/fret-runtime/src/asset_resolver.rs`
+- `crates/fret-launch/src/assets.rs`
+- `crates/fret-launch/src/runner/web/mod.rs`
 - `ecosystem/fret/src/lib.rs`
 - `ecosystem/fret/src/app_entry.rs`
 - `apps/fretboard/src/assets.rs`
