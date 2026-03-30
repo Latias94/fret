@@ -1,5 +1,9 @@
 use super::*;
 
+use fret_ui_kit::recipes::imui_sortable::{
+    SortableInsertionSide, reorder_vec_by_key, sortable_row,
+};
+
 #[derive(Clone)]
 struct TestDragPayload {
     label: Arc<str>,
@@ -15,21 +19,6 @@ struct TestSortableItem {
 struct TestSortablePayload {
     id: Arc<str>,
     label: Arc<str>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TestSortableInsertionSide {
-    Before,
-    After,
-}
-
-impl TestSortableInsertionSide {
-    fn label(self) -> &'static str {
-        match self {
-            Self::Before => "before",
-            Self::After => "after",
-        }
-    }
 }
 
 fn test_sortable_items() -> Vec<TestSortableItem> {
@@ -57,54 +46,6 @@ fn test_sortable_order_line(items: &[TestSortableItem]) -> String {
         .join(" -> ")
 }
 
-fn apply_test_sortable_reorder(
-    items: &mut Vec<TestSortableItem>,
-    active_id: &str,
-    over_id: &str,
-    side: TestSortableInsertionSide,
-) -> bool {
-    if active_id == over_id {
-        return false;
-    }
-
-    let Some(from_index) = items.iter().position(|item| item.id.as_ref() == active_id) else {
-        return false;
-    };
-    let Some(over_index_before_remove) = items.iter().position(|item| item.id.as_ref() == over_id)
-    else {
-        return false;
-    };
-
-    let moving = items.remove(from_index);
-    let mut insert_index = items
-        .iter()
-        .position(|item| item.id.as_ref() == over_id)
-        .unwrap_or(over_index_before_remove.min(items.len()));
-    if side == TestSortableInsertionSide::After {
-        insert_index = insert_index.saturating_add(1).min(items.len());
-    }
-
-    items.insert(insert_index, moving);
-    true
-}
-
-fn test_sortable_insertion_side(
-    trigger: fret_ui_kit::imui::ResponseExt,
-    drop: &fret_ui_kit::imui::DropTargetResponse<TestSortablePayload>,
-) -> Option<TestSortableInsertionSide> {
-    let rect = trigger.core.rect?;
-    let position = drop
-        .delivered_position()
-        .or_else(|| drop.preview_position())?;
-    let split_y = rect.origin.y.0 + rect.size.height.0 * 0.5;
-
-    Some(if position.y.0 < split_y {
-        TestSortableInsertionSide::Before
-    } else {
-        TestSortableInsertionSide::After
-    })
-}
-
 fn render_test_sortable_rows(
     items: &Rc<RefCell<Vec<TestSortableItem>>>,
     preview_status: &Rc<RefCell<String>>,
@@ -126,7 +67,7 @@ fn render_test_sortable_rows(
                 Arc<str>,
                 Arc<str>,
                 Arc<str>,
-                TestSortableInsertionSide,
+                SortableInsertionSide,
             )> = None;
             let mut preview = String::new();
 
@@ -143,32 +84,30 @@ fn render_test_sortable_rows(
                         id: item.id.clone(),
                         label: item.label.clone(),
                     };
-                    let _drag = ui.drag_source(row, payload.clone());
-                    let drop = ui.drop_target::<TestSortablePayload>(row);
-                    let side = test_sortable_insertion_side(row, &drop);
+                    let sortable = sortable_row(ui, row, payload);
 
-                    if let Some(dragged) = drop.delivered_payload() {
-                        if dragged.id != item.id
-                            && let Some(side) = side
-                        {
+                    if let Some(signal) = sortable.delivered_reorder() {
+                        let dragged = signal.payload();
+                        if dragged.id != item.id {
                             pending_reorder = Some((
                                 dragged.id.clone(),
                                 dragged.label.clone(),
                                 item.id.clone(),
                                 item.label.clone(),
-                                side,
+                                signal.side(),
                             ));
                         }
-                    } else if let Some(dragged) = drop.preview_payload()
-                        && dragged.id != item.id
-                        && let Some(side) = side
-                    {
-                        preview = format!(
-                            "Preview: move {} {} {}",
-                            dragged.label,
-                            side.label(),
-                            item.label
-                        );
+                    } else if let Some(signal) = sortable.preview_reorder() {
+                        let dragged = signal.payload();
+                        let side = signal.side();
+                        if dragged.id != item.id {
+                            preview = format!(
+                                "Preview: move {} {} {}",
+                                dragged.label,
+                                side.label(),
+                                item.label
+                            );
+                        }
                     }
                 }
             });
@@ -176,11 +115,12 @@ fn render_test_sortable_rows(
             let mut delivered_message = String::new();
             let mut delivered = false;
             if let Some((active_id, active_label, over_id, over_label, side)) = pending_reorder {
-                delivered = apply_test_sortable_reorder(
+                delivered = reorder_vec_by_key(
                     &mut items.borrow_mut(),
-                    &active_id,
-                    &over_id,
+                    active_id.as_ref(),
+                    over_id.as_ref(),
                     side,
+                    |item| item.id.as_ref(),
                 );
                 if delivered {
                     delivered_message =

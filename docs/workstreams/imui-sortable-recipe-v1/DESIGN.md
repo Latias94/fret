@@ -1,6 +1,6 @@
 # imui sortable recipe v1 - design
 
-Status: proposed active workstream
+Status: active workstream (M1 frozen; first vertical row recipe landed)
 
 Last updated: 2026-03-29
 
@@ -8,6 +8,7 @@ Related:
 
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md`
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/DRAG_DROP_BOUNDARY_AUDIT_2026-03-29.md`
+- `docs/workstreams/imui-sortable-recipe-v1/SECOND_PROOF_SURFACE_DECISION_2026-03-30.md`
 - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/headless-dnd-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/headless-dnd-fearless-refactor-v1/TODO.md`
@@ -48,6 +49,18 @@ Second:
 
 So the remaining gap is not another `imui` primitive.
 The remaining gap is a reusable **recipe**.
+
+Current landed slice:
+
+- `ecosystem/fret-ui-kit::recipes::imui_sortable` now exposes
+  `sortable_row(...)`, `sortable_row_with_options(...)`, `reorder_vec_by_key(...)`, and
+  `SortableInsertionSide`,
+- the recipe packages row-level `drag_source(...)` + `drop_target::<T>(...)` wiring plus vertical
+  midpoint insertion-side derivation,
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now uses the recipe for the reorderable
+  outliner proof,
+- and `ecosystem/fret-imui/src/tests/interaction.rs` now uses the same recipe in the real pointer
+  interaction gate.
 
 ## Why this follow-on should exist
 
@@ -176,11 +189,13 @@ The asset-chip to material-slot proof should remain on the raw drag/drop seam as
 
 Expected first owner for the public reusable surface.
 
-The exact public names are intentionally not frozen yet, but the first slice should likely expose:
+The first slice is now frozen around:
 
-- a row-level integration helper for immediate list/outliner items,
-- packaged hover/preview state for before/after insertion,
-- and a clear place where apps perform the actual reorder mutation.
+- `sortable_row(...)` / `sortable_row_with_options(...)` as the row-level integration helper,
+- `SortableRowResponse::{preview_reorder, delivered_reorder}` as the packaged before/after signal
+  surface,
+- `SortableInsertionSide` as the stable insertion vocabulary,
+- and `reorder_vec_by_key(...)` as the minimal app-owned mutation helper.
 
 The recipe should feel like a thin reusable composition layer over:
 
@@ -217,3 +232,11 @@ This workstream is successful when:
 - the resulting surface is clearly owned by `ecosystem/fret-ui-kit::recipes`,
 - `fret-ui-kit::imui` remains unchanged except for bug fixes or minimal support signals,
 - and the remaining deferred items are short, explicit, and correctly owned.
+
+Current evidence:
+
+- `ecosystem/fret-ui-kit/src/recipes/imui_sortable.rs`
+- `ecosystem/fret-ui-kit/tests/imui_sortable_recipe_smoke.rs`
+- `apps/fret-examples/src/imui_editor_proof_demo.rs`
+- `ecosystem/fret-imui/src/tests/interaction.rs`
+- `docs/workstreams/imui-sortable-recipe-v1/SECOND_PROOF_SURFACE_DECISION_2026-03-30.md`

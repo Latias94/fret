@@ -3,6 +3,8 @@ pub mod catalog;
 pub mod control;
 pub mod effect_recipe;
 pub mod glass;
+#[cfg(feature = "imui")]
+pub mod imui_sortable;
 pub mod input;
 pub mod menu_list;
 pub mod pixelate;

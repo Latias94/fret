@@ -40,6 +40,9 @@ use fret_ui_kit::headless::text_assist::{
     input_owned_text_assist_expanded,
 };
 use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
+use fret_ui_kit::recipes::imui_sortable::{
+    SortableInsertionSide, reorder_vec_by_key, sortable_row,
+};
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const AUX_LOGICAL_WINDOW_ID: &str = "aux";
@@ -289,38 +292,6 @@ struct ProofOutlinerDragItem {
     label: Arc<str>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ProofOutlinerInsertionSide {
-    Before,
-    After,
-}
-
-impl ProofOutlinerInsertionSide {
-    fn label(self) -> &'static str {
-        match self {
-            Self::Before => "before",
-            Self::After => "after",
-        }
-    }
-}
-
-fn proof_outliner_insertion_side(
-    trigger: fret_ui_kit::imui::ResponseExt,
-    drop: &fret_ui_kit::imui::DropTargetResponse<ProofOutlinerDragItem>,
-) -> Option<ProofOutlinerInsertionSide> {
-    let rect = trigger.core.rect?;
-    let position = drop
-        .delivered_position()
-        .or_else(|| drop.preview_position())?;
-    let split_y = rect.origin.y.0 + rect.size.height.0 * 0.5;
-
-    Some(if position.y.0 < split_y {
-        ProofOutlinerInsertionSide::Before
-    } else {
-        ProofOutlinerInsertionSide::After
-    })
-}
-
 fn proof_outliner_order_line(items: &[ProofOutlinerItem]) -> String {
     let labels = items
         .iter()
@@ -328,37 +299,6 @@ fn proof_outliner_order_line(items: &[ProofOutlinerItem]) -> String {
         .collect::<Vec<_>>()
         .join(" -> ");
     format!("Order: {labels}")
-}
-
-fn apply_proof_outliner_reorder(
-    items: &mut Vec<ProofOutlinerItem>,
-    active_id: &str,
-    over_id: &str,
-    side: ProofOutlinerInsertionSide,
-) -> bool {
-    if active_id == over_id {
-        return false;
-    }
-
-    let Some(from_index) = items.iter().position(|item| item.id.as_ref() == active_id) else {
-        return false;
-    };
-    let Some(over_index_before_remove) = items.iter().position(|item| item.id.as_ref() == over_id)
-    else {
-        return false;
-    };
-
-    let moving = items.remove(from_index);
-    let mut insert_index = items
-        .iter()
-        .position(|item| item.id.as_ref() == over_id)
-        .unwrap_or(over_index_before_remove.min(items.len()));
-    if side == ProofOutlinerInsertionSide::After {
-        insert_index = insert_index.saturating_add(1).min(items.len());
-    }
-
-    items.insert(insert_index, moving);
-    true
 }
 
 fn editor_text_assist_readout(
@@ -2976,7 +2916,7 @@ fn render_authoring_parity_imui_group(
             Arc<str>,
             Arc<str>,
             Arc<str>,
-            ProofOutlinerInsertionSide,
+            SortableInsertionSide,
         )> = None;
         let mut preview_status: Option<String> = None;
 
@@ -3014,32 +2954,30 @@ fn render_authoring_parity_imui_group(
                         id: item.id.clone(),
                         label: item.label.clone(),
                     };
-                    let _drag = ui.drag_source(row.trigger, payload.clone());
-                    let drop = ui.drop_target::<ProofOutlinerDragItem>(row.trigger);
-                    let side = proof_outliner_insertion_side(row.trigger, &drop);
+                    let sortable = sortable_row(ui, row.trigger, payload);
 
-                    if let Some(dragged) = drop.delivered_payload() {
-                        if dragged.id != item.id
-                            && let Some(side) = side
-                        {
+                    if let Some(signal) = sortable.delivered_reorder() {
+                        let dragged = signal.payload();
+                        if dragged.id != item.id {
                             pending_reorder = Some((
                                 dragged.id.clone(),
                                 dragged.label.clone(),
                                 item.id.clone(),
                                 item.label.clone(),
-                                side,
+                                signal.side(),
                             ));
                         }
-                    } else if let Some(dragged) = drop.preview_payload()
-                        && dragged.id != item.id
-                        && let Some(side) = side
-                    {
-                        preview_status = Some(format!(
-                            "Preview: move {} {} {}",
-                            dragged.label,
-                            side.label(),
-                            item.label
-                        ));
+                    } else if let Some(signal) = sortable.preview_reorder() {
+                        let dragged = signal.payload();
+                        let side = signal.side();
+                        if dragged.id != item.id {
+                            preview_status = Some(format!(
+                                "Preview: move {} {} {}",
+                                dragged.label,
+                                side.label(),
+                                item.label
+                            ));
+                        }
                     }
                 }
             },
@@ -3051,7 +2989,9 @@ fn render_authoring_parity_imui_group(
                 .app
                 .models_mut()
                 .update(&outliner_items_model, |items| {
-                    apply_proof_outliner_reorder(items, &active_id, &over_id, side)
+                    reorder_vec_by_key(items, active_id.as_ref(), over_id.as_ref(), side, |item| {
+                        item.id.as_ref()
+                    })
                 })
                 .unwrap_or(false);
             let next_status = if moved {
@@ -3905,11 +3845,12 @@ mod tests {
             .iter()
             .cloned()
             .collect::<Vec<_>>();
-        assert!(apply_proof_outliner_reorder(
+        assert!(reorder_vec_by_key(
             &mut items,
             "camera",
             "cube",
-            ProofOutlinerInsertionSide::After
+            SortableInsertionSide::After,
+            |item| item.id.as_ref(),
         ));
         assert_eq!(
             proof_outliner_order_line(&items),
@@ -3923,11 +3864,12 @@ mod tests {
             .iter()
             .cloned()
             .collect::<Vec<_>>();
-        assert!(apply_proof_outliner_reorder(
+        assert!(reorder_vec_by_key(
             &mut items,
             "post-fx",
             "cube",
-            ProofOutlinerInsertionSide::Before
+            SortableInsertionSide::Before,
+            |item| item.id.as_ref(),
         ));
         assert_eq!(
             proof_outliner_order_line(&items),

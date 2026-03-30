@@ -8,6 +8,10 @@ Tracking doc: `docs/workstreams/imui-sortable-recipe-v1/DESIGN.md`
 
 TODO board: `docs/workstreams/imui-sortable-recipe-v1/TODO.md`
 
+Decision note:
+
+- `docs/workstreams/imui-sortable-recipe-v1/SECOND_PROOF_SURFACE_DECISION_2026-03-30.md`
+
 Predecessor closeout:
 
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md`
@@ -35,7 +39,7 @@ Exit gates:
 
 ## Phase B - Minimal sortable recipe contract
 
-Status: Not started
+Status: Completed
 
 Goal:
 
@@ -53,9 +57,15 @@ Exit gates:
 - the recipe can be explained in terms of the already-shipped `imui` drag/drop seam,
 - and any `fret-dnd` extraction is evidence-driven rather than speculative.
 
+Current landed outcome:
+
+- the first stable contract is a vertical row/list/outliner recipe,
+- `ecosystem/fret-ui-kit::recipes::imui_sortable` is the public owner,
+- and extraction into `fret-dnd` is explicitly deferred pending a second real consumer.
+
 ## Phase C - Proof-first implementation
 
-Status: Not started
+Status: In progress
 
 Goal:
 
@@ -67,6 +77,21 @@ Deliverables:
 - optional pure/data-only helper extraction into `ecosystem/fret-dnd` if justified,
 - migrated reorderable outliner proof in `apps/fret-examples/src/imui_editor_proof_demo.rs`.
 
+Current landed slice:
+
+- `ecosystem/fret-ui-kit::recipes::imui_sortable` now exposes `sortable_row(...)`,
+  `sortable_row_with_options(...)`, `SortableInsertionSide`, and `reorder_vec_by_key(...)`,
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now uses the recipe for the reorderable
+  outliner proof,
+- and `ecosystem/fret-imui/src/tests/interaction.rs` now exercises the same recipe in the real
+  pointer interaction gate.
+
+Current decision:
+
+- the workstream now explicitly treats those two surfaces as sufficient second-surface evidence for
+  the current narrow vertical-list contract,
+- so no extra first-party demo is required before v1 closeout unless the recipe contract widens.
+
 Exit gates:
 
 - the proof/demo surface is materially simpler than the current app-local reorder packaging,
@@ -75,7 +100,7 @@ Exit gates:
 
 ## Phase D - Gates and closeout
 
-Status: Not started
+Status: In progress
 
 Goal:
 
@@ -86,6 +111,12 @@ Deliverables:
 - focused recipe/unit tests,
 - a real interaction gate for a recipe-backed reorder flow,
 - closeout notes with the surviving defer list and owner handoff.
+
+Current landed slice:
+
+- recipe/unit coverage now lives in `ecosystem/fret-ui-kit/src/recipes/imui_sortable.rs`,
+- compile-surface smoke now lives in `ecosystem/fret-ui-kit/tests/imui_sortable_recipe_smoke.rs`,
+- and the existing `imui` reorder interaction gate remains green after the migration to the recipe.
 
 Exit gates:
 
