@@ -538,19 +538,20 @@ pub(crate) fn generate_ai_packet_dir_sidecars_only(
 
     let mut failed_step_slices_report: Option<AiPacketFailedStepSlicesReportV1> = None;
     if test_id.is_none()
-        && let Some(script) = anchors::try_read_script_result_v1(packet_dir) {
-            let mut report = AiPacketFailedStepSlicesReportV1 {
-                schema_version: 1,
-                status: "skipped".to_string(),
-                reason_code: Some(
-                    "tooling.ai_packet.failed_step_slices.skipped.sidecars_only".to_string(),
-                ),
-                failed_step_index: script.step_index,
-                ..Default::default()
-            };
-            report.candidate_test_ids = anchors::pick_candidate_test_ids_for_failed_step(&script);
-            failed_step_slices_report = Some(report);
-        }
+        && let Some(script) = anchors::try_read_script_result_v1(packet_dir)
+    {
+        let mut report = AiPacketFailedStepSlicesReportV1 {
+            schema_version: 1,
+            status: "skipped".to_string(),
+            reason_code: Some(
+                "tooling.ai_packet.failed_step_slices.skipped.sidecars_only".to_string(),
+            ),
+            failed_step_index: script.step_index,
+            ..Default::default()
+        };
+        report.candidate_test_ids = anchors::pick_candidate_test_ids_for_failed_step(&script);
+        failed_step_slices_report = Some(report);
+    }
 
     if include_triage {
         let payload = serde_json::json!({

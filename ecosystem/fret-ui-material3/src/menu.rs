@@ -704,7 +704,7 @@ fn roving_typeahead_prefix_arc_str_always_wrap<H: UiHost>(
             }
 
             // Always wrap: prefer the next match after current, otherwise the first.
-            
+
             matches
                 .iter()
                 .copied()

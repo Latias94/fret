@@ -390,8 +390,6 @@ impl TaskTrigger {
                             icon_size,
                         );
 
-                        
-
                         ui::h_row(move |_cx| vec![search, title, chevron])
                             .layout(LayoutRefinement::default().w_full().min_w_0())
                             .items(Items::Center)

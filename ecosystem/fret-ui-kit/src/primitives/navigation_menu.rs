@@ -763,10 +763,7 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
                     .flatten();
                 if let Some(value) = selected {
                     let mut states = trigger_states.lock().unwrap_or_else(|e| e.into_inner());
-                    let entry = states
-                        .states
-                        .entry(value)
-                        .or_default();
+                    let entry = states.states.entry(value).or_default();
                     entry.was_escape_close = true;
                     entry.was_click_close = false;
                     entry.has_pointer_move_opened = false;
@@ -1088,10 +1085,7 @@ impl NavigationMenuTrigger {
                             let mut states = trigger_states_for_escape
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
-                            let entry = states
-                                .states
-                                .entry(selected)
-                                .or_default();
+                            let entry = states.states.entry(selected).or_default();
                             entry.was_escape_close = true;
                             entry.was_click_close = false;
                             entry.has_pointer_move_opened = false;

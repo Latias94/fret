@@ -1725,6 +1725,38 @@ mod tests {
             "expected test_id={target_test_id} to appear within {max_frames} frames; present_test_ids={present:?}"
         );
     }
+
+    fn wait_until_test_id_absent(
+        rendered: &mut RenderedGalleryPage,
+        target_test_id: &str,
+        max_frames: usize,
+    ) {
+        for _ in 0..=max_frames {
+            let snapshot = rendered
+                .state
+                .ui
+                .semantics_snapshot()
+                .expect("expected semantics snapshot while waiting for test id removal");
+            if find_node_by_test_id(snapshot, target_test_id).is_none() {
+                return;
+            }
+            render_gallery_frame(rendered);
+        }
+
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after waiting for test id removal");
+        let present = snapshot
+            .nodes
+            .iter()
+            .filter_map(|node| node.test_id.as_deref())
+            .collect::<Vec<_>>();
+        panic!(
+            "expected test_id={target_test_id} to disappear within {max_frames} frames; present_test_ids={present:?}"
+        );
+    }
     #[cfg(feature = "gallery-dev")]
     fn hit_chain_at(rendered: &mut RenderedGalleryPage, position: Point) -> Vec<String> {
         let snapshot = rendered
@@ -2640,6 +2672,48 @@ mod tests {
     }
 
     #[test]
+    fn gallery_separator_menu_example_keeps_docs_copy_within_row_bounds() {
+        let mut rendered = render_gallery_page(PAGE_SEPARATOR);
+        scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-separator-menu");
+
+        let row_layout = layout_bounds_by_test_id(&rendered, "ui-gallery-separator-menu");
+        let epsilon = 1.0;
+        let expected_min_height = 39.0;
+
+        let row_left = row_layout.origin.x.0;
+        let row_top = row_layout.origin.y.0;
+        let row_right = row_left + row_layout.size.width.0;
+        let row_bottom = row_top + row_layout.size.height.0;
+
+        assert!(
+            row_layout.size.height.0 >= expected_min_height,
+            "expected Separator menu row to keep the upstream two-line height budget (~40px): row_layout={row_layout:?} expected_min_height={expected_min_height}"
+        );
+
+        for target in [
+            "ui-gallery-separator-menu-settings",
+            "ui-gallery-separator-menu-divider-primary",
+            "ui-gallery-separator-menu-account",
+            "ui-gallery-separator-menu-divider-secondary",
+            "ui-gallery-separator-menu-help",
+        ] {
+            let bounds = layout_bounds_by_test_id(&rendered, target);
+            let left = bounds.origin.x.0;
+            let top = bounds.origin.y.0;
+            let right = left + bounds.size.width.0;
+            let bottom = top + bounds.size.height.0;
+
+            assert!(
+                left >= row_left - epsilon
+                    && top >= row_top - epsilon
+                    && right <= row_right + epsilon
+                    && bottom <= row_bottom + epsilon,
+                "expected Separator menu child to stay inside the row bounds: target={target} row_layout={row_layout:?} child_bounds={bounds:?} epsilon={epsilon}"
+            );
+        }
+    }
+
+    #[test]
     fn gallery_slider_vertical_examples_keep_upstream_recipe_min_height_floor() {
         let mut rendered = render_gallery_page(PAGE_SLIDER);
         scroll_test_id_into_gallery_viewport(
@@ -3028,6 +3102,45 @@ mod tests {
         assert_notes_section_keeps_stable_height_while_scrolling_into_view(
             PAGE_TOOLTIP,
             "ui-gallery-tooltip-notes-content",
+        );
+    }
+
+    #[test]
+    fn accordion_usage_preview_stays_interactive_when_toggling_the_single_item() {
+        let mut rendered = render_gallery_page(PAGE_ACCORDION);
+        let trigger_test_id = "ui-gallery-accordion-usage-trigger";
+        let panel_test_id = "ui-gallery-accordion-usage-panel";
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, trigger_test_id);
+        wait_until_test_id_exists(&mut rendered, trigger_test_id, 12);
+        wait_until_test_id_exists(&mut rendered, panel_test_id, 12);
+
+        let trigger_bounds = visual_bounds_by_test_id(&rendered, trigger_test_id);
+        let panel_bounds = visual_bounds_by_test_id(&rendered, panel_test_id);
+        assert!(
+            panel_bounds.origin.y.0
+                >= trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 - 1.0,
+            "expected accordion usage preview panel to sit below its trigger: trigger={trigger_bounds:?} panel={panel_bounds:?}"
+        );
+
+        click_test_id_center(&mut rendered, trigger_test_id);
+        wait_until_test_id_absent(&mut rendered, panel_test_id, 32);
+
+        click_test_id_center(&mut rendered, trigger_test_id);
+        wait_until_test_id_exists(&mut rendered, panel_test_id, 24);
+
+        // Re-render a few frames to make sure the uncontrolled preview state does not snap back.
+        for _ in 0..8 {
+            render_gallery_frame(&mut rendered);
+        }
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected accordion usage semantics after reopen");
+        assert!(
+            find_node_by_test_id(snapshot, panel_test_id).is_some(),
+            "expected accordion usage preview to keep the reopened panel mounted after settling"
         );
     }
 

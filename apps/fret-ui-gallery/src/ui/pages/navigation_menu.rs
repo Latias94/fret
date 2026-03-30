@@ -12,7 +12,7 @@ pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/radix/navigation-menu.mdx`; visual/chrome reference: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/navigation-menu.tsx`; docs demo reference: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/navigation-menu-demo.tsx`.",
+        "Reference stack: shadcn Navigation Menu docs, the default registry chrome, and the default docs demo.",
         "`navigation_menu(cx, model, |cx| ..)` is the compact first-party root helper, while `NavigationMenu::new(model)` remains the explicit root builder seam.",
         "`NavigationMenuRoot/List/Item/Trigger/Content/Link/Viewport/Indicator` remain the upstream-shaped lane on the same family rather than an advanced-only escape hatch.",
         "Top-level docs-style links use contentless `NavigationMenuItem` with `href` / `target` / `rel`; add `trigger_child(...)` or `trigger_children(...)` only when you need custom trigger composition.",

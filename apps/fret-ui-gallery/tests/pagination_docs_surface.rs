@@ -3,10 +3,8 @@ fn pagination_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/pagination.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/pagination.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/radix/pagination.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/pagination.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/{base,radix}/ui/pagination.tsx",
+        "Reference stack: shadcn Pagination docs and the default registry recipe.",
+        "No direct `Pagination` primitive exists in Radix Primitives or Base UI",
         "Routing / Next.js",
         "Custom Text / Changelog",
         "explicit composable children",

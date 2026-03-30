@@ -7,13 +7,9 @@ fn slider_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/slider.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/radix/slider.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/base/slider.mdx",
-        "repo-ref/ui/apps/v4/examples/radix/slider-demo.tsx",
-        "repo-ref/ui/apps/v4/examples/radix/slider-vertical.tsx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/slider.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/radix/ui/slider.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/base/ui/slider.tsx",
+        "Reference stack: shadcn Slider docs on the Radix lane plus the matching Base UI docs.",
+        "Example axis: shadcn slider demo, range, multiple-thumbs, vertical, controlled, disabled, and RTL examples.",
+        "Recipe axis: the default shadcn registry slider plus the base and radix registry variants.",
         "The upstream docs surface intentionally splits the top-of-page preview (`[75]`) from the `Usage` code block (`[33]`), so this page mirrors those two lanes instead of normalizing them to one demo value.",
         "Slider already exposes the important authoring surface (`new`, `new_controllable`, range/step/orientation/on_value_commit), so the main parity gap here is usage clarity rather than missing composition APIs.",
         "generic composable children / `compose()` API",
@@ -182,27 +178,28 @@ fn slider_docs_diag_script_is_promoted_in_registry_and_suite() {
 }
 
 #[test]
-fn slider_vertical_upstream_axes_keep_example_height_and_recipe_floor_split() {
-    let example = include_str!("../../../repo-ref/ui/apps/v4/examples/radix/slider-vertical.tsx");
-    let radix_nova = include_str!("../../../repo-ref/ui/apps/v4/styles/radix-nova/ui/slider.tsx");
-    let new_york = include_str!("../../../repo-ref/ui/apps/v4/registry/new-york-v4/ui/slider.tsx");
+fn slider_vertical_snippet_and_page_keep_example_height_and_recipe_floor_split() {
+    let page = include_str!("../src/ui/pages/slider.rs");
+    let vertical = include_str!("../src/ui/snippets/slider/vertical.rs");
 
     assert_eq!(
-        example.matches("orientation=\"vertical\"").count(),
+        vertical
+            .matches("orientation(SliderOrientation::Vertical)")
+            .count(),
         2,
-        "upstream radix slider vertical example should keep the two-slider authoring shape",
+        "slider vertical snippet should keep the two-slider authoring shape",
     );
     assert_eq!(
-        example.matches("className=\"h-40\"").count(),
+        vertical.matches(".h_px(Px(160.0))").count(),
         2,
-        "upstream radix slider vertical example should keep caller-owned `h-40` on both sliders",
+        "slider vertical snippet should keep caller-owned `h-40`-equivalent height on both sliders",
     );
     assert!(
-        radix_nova.contains("data-vertical:min-h-40"),
-        "upstream radix-nova slider recipe should keep the docs/example lane vertical floor",
+        page.contains("Vertical sliders keep the upstream `min-h-44` floor"),
+        "slider page should keep the recipe-owned vertical floor note",
     );
     assert!(
-        new_york.contains("data-[orientation=vertical]:min-h-44"),
-        "upstream new-york-v4 slider recipe should keep the registry/default-lane vertical floor",
+        page.contains("the example still passes `h-40` in the call site"),
+        "slider page should keep the explicit example-height vs recipe-floor split",
     );
 }

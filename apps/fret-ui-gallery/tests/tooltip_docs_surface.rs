@@ -7,11 +7,7 @@ fn tooltip_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/tooltip.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/tooltip.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/radix/tooltip.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx",
-        "repo-ref/primitives/packages/react/tooltip/src/tooltip.tsx",
-        "repo-ref/base-ui/packages/react/src/tooltip/root/TooltipRoot.tsx",
+        "Reference stack: shadcn Tooltip docs, the default registry chrome, Radix Primitives tooltip semantics/lifecycle, and Base UI tooltip lifecycle.",
         "`Tooltip::new(cx, trigger, content)` already acts as the default copyable root lane",
         "`TooltipTrigger::build(...)` and `TooltipContent::build(cx, ...)` cover the typed compound-parts lane for copyable first-party snippets, while `TooltipContent::new([...])` remains the landed-content follow-up when you already own the children.",
         "Tooltip hover/focus, Escape/outside-press dismissal, scroll-close, and Radix web parity are already covered by the existing tooltip tests in `ecosystem/fret-ui-shadcn`; the remaining work here is docs/public-surface alignment rather than a `fret-ui` mechanism bug.",

@@ -509,22 +509,23 @@ pub(super) fn suggest_selectors(
 
     let role = semantics_role_label(raw_node.role).to_string();
     if let Some(name) = exported_node.label.as_deref()
-        && !(cfg.redact_text && is_redacted_string(name)) {
-            let ancestors = selector_ancestors_for(snapshot, raw_node);
-            if !ancestors.is_empty() {
-                out.push(UiSelectorV1::RoleAndPath {
-                    role: role.clone(),
-                    name: name.to_string(),
-                    ancestors,
-                    root_z_index: None,
-                });
-            }
-            out.push(UiSelectorV1::RoleAndName {
+        && !(cfg.redact_text && is_redacted_string(name))
+    {
+        let ancestors = selector_ancestors_for(snapshot, raw_node);
+        if !ancestors.is_empty() {
+            out.push(UiSelectorV1::RoleAndPath {
                 role: role.clone(),
                 name: name.to_string(),
+                ancestors,
                 root_z_index: None,
             });
         }
+        out.push(UiSelectorV1::RoleAndName {
+            role: role.clone(),
+            name: name.to_string(),
+            root_z_index: None,
+        });
+    }
 
     if let Some(element) = element {
         out.push(UiSelectorV1::GlobalElementId {

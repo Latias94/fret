@@ -22,8 +22,7 @@ pub enum YAxis {
     Right3,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum MarkerShape {
     #[default]
     Plus,
@@ -34,7 +33,6 @@ pub enum MarkerShape {
     TriangleDown,
     Circle,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct LineSeries {
@@ -1050,14 +1048,12 @@ impl CandlestickPlotModel {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum StepMode {
     Pre,
     #[default]
     Post,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct BarSeries {

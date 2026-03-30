@@ -31,7 +31,6 @@ pub enum TabCycleMode {
     Mru,
 }
 
-
 /// A small in-memory model for "editor tabs" (documents).
 ///
 /// Notes:
@@ -188,22 +187,23 @@ impl WorkspaceTabs {
         {
             let existing_is_dirty = self.is_dirty(existing_preview.as_ref());
             let existing_is_pinned = self.is_tab_pinned(existing_preview.as_ref());
-            if !existing_is_dirty && !existing_is_pinned
+            if !existing_is_dirty
+                && !existing_is_pinned
                 && let Some(ix) = self
                     .tabs
                     .iter()
                     .position(|t| t.as_ref() == existing_preview.as_ref())
-                {
-                    self.tabs.remove(ix);
-                    self.dirty.remove(&existing_preview);
-                    self.mru.retain(|t| t.as_ref() != existing_preview.as_ref());
-                    self.pinned_tab_count = self.pinned_tab_count.min(self.tabs.len());
+            {
+                self.tabs.remove(ix);
+                self.dirty.remove(&existing_preview);
+                self.mru.retain(|t| t.as_ref() != existing_preview.as_ref());
+                self.pinned_tab_count = self.pinned_tab_count.min(self.tabs.len());
 
-                    let insert_at = ix.min(self.tabs.len());
-                    self.tabs.insert(insert_at, id.clone());
-                    self.preview_tab_id = Some(id.clone());
-                    return self.activate(id);
-                }
+                let insert_at = ix.min(self.tabs.len());
+                self.tabs.insert(insert_at, id.clone());
+                self.preview_tab_id = Some(id.clone());
+                return self.activate(id);
+            }
             // If the existing preview cannot be safely replaced, treat it as committed.
             self.preview_tab_id = None;
         }
@@ -338,9 +338,10 @@ impl WorkspaceTabs {
         }
 
         if let Some(preview) = snapshot.preview
-            && state.tabs.iter().any(|t| t.as_ref() == preview.as_ref()) {
-                state.preview_tab_id = Some(preview);
-            }
+            && state.tabs.iter().any(|t| t.as_ref() == preview.as_ref())
+        {
+            state.preview_tab_id = Some(preview);
+        }
 
         // Restore MRU order best-effort: filter to known tabs and ensure active is first.
         let mut mru: Vec<Arc<str>> = Vec::new();
@@ -576,9 +577,10 @@ impl WorkspaceTabs {
         }
 
         if self.active.is_none()
-            && let Some(first) = self.tabs.first().cloned() {
-                return self.activate(first);
-            }
+            && let Some(first) = self.tabs.first().cloned()
+        {
+            return self.activate(first);
+        }
 
         let Some(active) = self.active.clone() else {
             return false;
@@ -609,9 +611,10 @@ impl WorkspaceTabs {
         }
 
         if self.active.is_none()
-            && let Some(first) = self.tabs.first().cloned() {
-                return self.activate(first);
-            }
+            && let Some(first) = self.tabs.first().cloned()
+        {
+            return self.activate(first);
+        }
 
         let Some(active) = self.active.clone() else {
             return false;
@@ -768,8 +771,7 @@ impl WorkspaceTabs {
                     return WorkspaceApplyCommandOutcome::applied(false);
                 }
 
-                let target_tabs_in_order: Vec<Arc<str>> =
-                    self.tabs[keep_from..index].to_vec();
+                let target_tabs_in_order: Vec<Arc<str>> = self.tabs[keep_from..index].to_vec();
                 if let Some(blocked) = maybe_block(
                     self,
                     WorkspaceCloseReason::CloseLeftOfActive,
@@ -802,8 +804,7 @@ impl WorkspaceTabs {
                     return WorkspaceApplyCommandOutcome::applied(false);
                 }
 
-                let target_tabs_in_order: Vec<Arc<str>> =
-                    self.tabs[keep_to..].to_vec();
+                let target_tabs_in_order: Vec<Arc<str>> = self.tabs[keep_to..].to_vec();
                 if let Some(blocked) = maybe_block(
                     self,
                     WorkspaceCloseReason::CloseRightOfActive,
@@ -918,9 +919,10 @@ impl WorkspaceTabs {
         }
 
         if self.active.is_none()
-            && let Some(first) = self.tabs.first().cloned() {
-                return self.activate(first);
-            }
+            && let Some(first) = self.tabs.first().cloned()
+        {
+            return self.activate(first);
+        }
 
         let Some(active) = self.active.clone() else {
             return false;
@@ -970,9 +972,10 @@ impl WorkspaceTabs {
         }
 
         if self.active.is_none()
-            && let Some(first) = self.tabs.first().cloned() {
-                return self.activate(first);
-            }
+            && let Some(first) = self.tabs.first().cloned()
+        {
+            return self.activate(first);
+        }
 
         let Some(active) = self.active.clone() else {
             return false;

@@ -1493,14 +1493,13 @@ mod tests {
             match &el.kind {
                 fret_ui::element::ElementKind::Container(props) => {
                     if props.layout.position == PositionStyle::Absolute
-                        && props
-                            .background
-                            .is_some_and(|bg| thumb_bgs.contains(&bg))
+                        && props.background.is_some_and(|bg| thumb_bgs.contains(&bg))
                         && props.layout.size.width == Length::Px(thumb_size)
                         && props.layout.size.height == Length::Px(thumb_size)
-                        && let fret_ui::element::InsetEdge::Px(left) = props.layout.inset.left {
-                            return Some(left);
-                        }
+                        && let fret_ui::element::InsetEdge::Px(left) = props.layout.inset.left
+                    {
+                        return Some(left);
+                    }
                     el.children
                         .iter()
                         .find_map(|c| find_thumb_left(c, thumb_bgs, thumb_size))
@@ -1606,9 +1605,7 @@ mod tests {
                         && props.border.left.0 > 0.0
                         && props.corner_radii.top_left.0 > 0.0
                         && props.background.is_some()
-                        && !props
-                            .background
-                            .is_some_and(|bg| thumb_bgs.contains(&bg))
+                        && !props.background.is_some_and(|bg| thumb_bgs.contains(&bg))
                         && (props.layout.size.width == Length::Px(w)
                             || props.layout.size.width == Length::Fill)
                         && (props.layout.size.height == Length::Px(h)

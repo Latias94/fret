@@ -408,7 +408,6 @@ pub struct ParleyShaper {
     font_db: ParleyFontDbState,
 }
 
-
 impl ParleyShaper {
     pub fn font_db_diagnostics_snapshot(&self) -> ParleyShaperFontDbDiagnosticsSnapshot {
         self.font_db.diagnostics_snapshot()

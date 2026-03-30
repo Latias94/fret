@@ -2624,10 +2624,7 @@ fn time_picker_clock_dial_drag_updates_time() {
     );
     ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), drag_to));
 
-    let after = app
-        .models()
-        .get_cloned(&time)
-        .unwrap_or(selected_time);
+    let after = app.models().get_cloned(&time).unwrap_or(selected_time);
     assert_ne!(
         after, selected_time,
         "expected dial drag to update the time model"
@@ -2896,9 +2893,10 @@ fn radio_selected_dot_is_centered_in_outline() {
                     && paint_alpha(&background.paint) > 0.5
                     && rect.size.width.0 <= 12.0
                     && rect.size.height.0 <= 12.0
-                    && dot.is_none_or(|r| rect.size.width.0 > r.size.width.0 + 1e-3) {
-                        dot = Some(*rect);
-                    }
+                    && dot.is_none_or(|r| rect.size.width.0 > r.size.width.0 + 1e-3)
+                {
+                    dot = Some(*rect);
+                }
             }
 
             if let (Some(outline), Some(dot)) = (outline, dot) {

@@ -288,9 +288,10 @@ fn prune_semantics_table(
 
     if entries.is_empty()
         && let Some(tables) = bundle.get_mut("tables").and_then(|v| v.as_object_mut())
-            && let Some(sem) = tables.get_mut("semantics") {
-                *sem = serde_json::json!({});
-            }
+        && let Some(sem) = tables.get_mut("semantics")
+    {
+        *sem = serde_json::json!({});
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

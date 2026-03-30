@@ -15,7 +15,7 @@ pub(super) fn preview_menubar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let parts = snippets::parts::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/menubar.mdx`; example references: `repo-ref/ui/apps/v4/examples/base/menubar-*.tsx`; chrome reference: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx`.",
+        "Reference stack: shadcn base Menubar docs, the matching base examples, and the default registry chrome.",
         "`MenubarTrigger::new(...).into_menu().entries_parts(MenubarContent::new(), [...])` is the default copyable docs-aligned lane, while `Menubar::new([MenubarMenu::new(...).entries([...])])` remains the compact Fret-first shorthand for app code.",
         "`MenubarGroup::new([...])`, `MenubarSub::new(...)`, `MenubarSubContent::new([...])`, `MenubarSeparator`, and `MenubarShortcut::new(...)` keep the upstream part vocabulary visible while still landing into an explicit typed `MenubarEntry` tree.",
         "`MenubarSubContent` keeps the upstream Base UI submenu default on logical `inline-end`, so RTL only needs a direction provider; submenu chevrons flip with the same logical edge.",

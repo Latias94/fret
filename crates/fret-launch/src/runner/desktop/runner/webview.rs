@@ -5,13 +5,11 @@ use fret_core::AppWindowId;
 use fret_runtime::FrameId;
 use winit::window::Window;
 
-#[derive(Debug)]
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub(super) struct RunnerWebViewState {
     #[cfg(feature = "webview-wry")]
     host: fret_webview_wry::WryWebViewHost,
 }
-
 
 #[cfg(feature = "webview-wry")]
 const WEBVIEW_STALE_SURFACE_GRACE_FRAMES: u64 = 2;

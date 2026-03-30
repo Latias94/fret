@@ -105,9 +105,7 @@ fn find_latest_labeled_bundle_dir(out_dir: &Path, label: &str) -> Option<PathBuf
     best.map(|(_, p)| p)
 }
 
-fn bundle_last_snapshot_by_frame_id(
-    bundle: &serde_json::Value,
-) -> Option<&serde_json::Value> {
+fn bundle_last_snapshot_by_frame_id(bundle: &serde_json::Value) -> Option<&serde_json::Value> {
     let windows = bundle.get("windows")?.as_array()?;
     let w = windows.first()?;
     let snaps = w.get("snapshots")?.as_array()?;

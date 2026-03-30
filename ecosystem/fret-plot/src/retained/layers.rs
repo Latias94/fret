@@ -416,20 +416,21 @@ fn nearest_valid_in_range(
         let left = center.saturating_sub(step);
         if left >= lo
             && let Some(p) = series.get(left)
-                && p.x.is_finite()
-                && p.y.is_finite()
-            {
-                return Some((left, p));
-            }
+            && p.x.is_finite()
+            && p.y.is_finite()
+        {
+            return Some((left, p));
+        }
 
         let right = center.saturating_add(step);
-        if step > 0 && right < hi
+        if step > 0
+            && right < hi
             && let Some(p) = series.get(right)
-                && p.x.is_finite()
-                && p.y.is_finite()
-            {
-                return Some((right, p));
-            }
+            && p.x.is_finite()
+            && p.y.is_finite()
+        {
+            return Some((right, p));
+        }
     }
 
     None
@@ -656,26 +657,27 @@ fn error_bars_commands(
         }
 
         if let Some(x_err) = series.x_errors.as_ref().and_then(|e| e.get(idx).copied())
-            && let Some(y_px) = transform.data_y_to_px(p.y) {
-                let x0 = p.x - x_err.neg.abs();
-                let x1 = p.x + x_err.pos.abs();
+            && let Some(y_px) = transform.data_y_to_px(p.y)
+        {
+            let x0 = p.x - x_err.neg.abs();
+            let x1 = p.x + x_err.pos.abs();
 
-                if let (Some(x0_px), Some(x1_px)) =
-                    (transform.data_x_to_px(x0), transform.data_x_to_px(x1))
-                {
-                    out.push(fret_core::PathCommand::MoveTo(Point::new(x0_px, y_px)));
-                    out.push(fret_core::PathCommand::LineTo(Point::new(x1_px, y_px)));
+            if let (Some(x0_px), Some(x1_px)) =
+                (transform.data_x_to_px(x0), transform.data_x_to_px(x1))
+            {
+                out.push(fret_core::PathCommand::MoveTo(Point::new(x0_px, y_px)));
+                out.push(fret_core::PathCommand::LineTo(Point::new(x1_px, y_px)));
 
-                    if series.show_caps && cap > 0.0 {
-                        let y0 = Px(y_px.0 - cap);
-                        let y1 = Px(y_px.0 + cap);
-                        out.push(fret_core::PathCommand::MoveTo(Point::new(x0_px, y0)));
-                        out.push(fret_core::PathCommand::LineTo(Point::new(x0_px, y1)));
-                        out.push(fret_core::PathCommand::MoveTo(Point::new(x1_px, y0)));
-                        out.push(fret_core::PathCommand::LineTo(Point::new(x1_px, y1)));
-                    }
+                if series.show_caps && cap > 0.0 {
+                    let y0 = Px(y_px.0 - cap);
+                    let y1 = Px(y_px.0 + cap);
+                    out.push(fret_core::PathCommand::MoveTo(Point::new(x0_px, y0)));
+                    out.push(fret_core::PathCommand::LineTo(Point::new(x0_px, y1)));
+                    out.push(fret_core::PathCommand::MoveTo(Point::new(x1_px, y0)));
+                    out.push(fret_core::PathCommand::LineTo(Point::new(x1_px, y1)));
                 }
             }
+        }
 
         if marker > 0.0 {
             let Some(y_px) = transform.data_y_to_px(p.y) else {

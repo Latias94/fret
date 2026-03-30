@@ -2036,12 +2036,10 @@ impl VoiceSelectorValue {
 }
 
 /// Default trigger button used in demos/recipes.
-#[derive(Clone)]
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct VoiceSelectorButton {
     test_id: Option<Arc<str>>,
 }
-
 
 impl VoiceSelectorButton {
     pub fn new() -> Self {

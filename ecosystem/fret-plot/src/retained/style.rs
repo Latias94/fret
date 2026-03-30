@@ -19,8 +19,7 @@ pub fn default_series_palette() -> [Color; 10] {
         Color::from_srgb_hex_rgb(0x59_8c_f2),
     ]
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MouseReadoutMode {
     /// Show mouse coordinates as a tooltip near the cursor.
     Tooltip,
@@ -31,9 +30,7 @@ pub enum MouseReadoutMode {
     Disabled,
 }
 
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum OverlayAnchor {
     #[default]
     TopLeft,
@@ -42,9 +39,7 @@ pub enum OverlayAnchor {
     BottomRight,
 }
 
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ReadoutSeriesPolicy {
     /// If a series is pinned, show only that series; otherwise show all visible series.
     #[default]
@@ -55,9 +50,7 @@ pub enum ReadoutSeriesPolicy {
     PinnedOrLegendHoverOrAll,
 }
 
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SeriesTooltipMode {
     /// Match ImPlot-style hover tooltips: show a series tooltip only when the pointer is close to
     /// a series item (hit-tested within `LinePlotStyle::hover_threshold`).
@@ -69,7 +62,6 @@ pub enum SeriesTooltipMode {
     /// This does not change hover emphasis or selection; it only affects tooltip selection.
     NearestAtCursor,
 }
-
 
 #[derive(Debug, Clone, Copy)]
 pub struct LinePlotStyle {

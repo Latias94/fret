@@ -390,9 +390,10 @@ impl ChartStyle {
                 continue;
             }
             if index < SHADCN_CHART_KEYS.len()
-                && let Some(c) = color(theme, SHADCN_CHART_KEYS[index]) {
-                    series_palette[index] = c;
-                }
+                && let Some(c) = color(theme, SHADCN_CHART_KEYS[index])
+            {
+                series_palette[index] = c;
+            }
         }
 
         Self {

@@ -1487,21 +1487,20 @@ impl ChartCanvas {
                 };
             }
 
-            if !shadow
-                && let Some(hit) = axis_pointer.hit {
-                    let r = self.style.hover_point_size.0.max(1.0);
-                    cx.scene.push(SceneOp::Quad {
-                        order: point_order,
-                        rect: Rect::new(
-                            Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
-                            Size::new(Px(2.0 * r), Px(2.0 * r)),
-                        ),
-                        background: Paint::Solid(self.style.hover_point_color).into(),
-                        border: Edges::all(Px(0.0)),
-                        border_paint: Paint::TRANSPARENT.into(),
-                        corner_radii: Corners::all(Px(0.0)),
-                    });
-                }
+            if !shadow && let Some(hit) = axis_pointer.hit {
+                let r = self.style.hover_point_size.0.max(1.0);
+                cx.scene.push(SceneOp::Quad {
+                    order: point_order,
+                    rect: Rect::new(
+                        Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
+                        Size::new(Px(2.0 * r), Px(2.0 * r)),
+                    ),
+                    background: Paint::Solid(self.style.hover_point_color).into(),
+                    border: Edges::all(Px(0.0)),
+                    border_paint: Paint::TRANSPARENT.into(),
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
         }
 
         if self.mode.renders_legend() {
@@ -1905,13 +1904,13 @@ impl ChartCanvas {
             let model = engine.model();
             if let Some(axis_model) = model.axes.get(&axis)
                 && let delinea::AxisScale::Category(scale) = &axis_model.scale
-                    && !scale.categories.is_empty()
-                {
-                    return DataWindow {
-                        min: -0.5,
-                        max: scale.categories.len() as f64 - 0.5,
-                    };
-                }
+                && !scale.categories.is_empty()
+            {
+                return DataWindow {
+                    min: -0.5,
+                    max: scale.categories.len() as f64 - 0.5,
+                };
+            }
 
             let mut series_cols: Vec<(delinea::DatasetId, usize)> = Vec::new();
             for series in model.series.values() {
@@ -2502,13 +2501,13 @@ impl ChartCanvas {
             let model = engine.model();
             if let Some(axis_model) = model.axes.get(&axis)
                 && let delinea::AxisScale::Category(scale) = &axis_model.scale
-                    && !scale.categories.is_empty()
-                {
-                    return Err(DataWindow {
-                        min: -0.5,
-                        max: scale.categories.len() as f64 - 0.5,
-                    });
-                }
+                && !scale.categories.is_empty()
+            {
+                return Err(DataWindow {
+                    min: -0.5,
+                    max: scale.categories.len() as f64 - 0.5,
+                });
+            }
 
             let mut series_cols: Vec<(delinea::DatasetId, usize)> = Vec::new();
             for series_id in &model.series_order {
@@ -6043,16 +6042,16 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 && let Some((fill, _metrics)) = self
                     .path_cache
                     .get(mark_path_cache_key(*mark_id, 1), path_constraints)
-                {
-                    let mut fill_color = stroke_color;
-                    fill_color.a = fill_alpha;
-                    cx.scene.push(SceneOp::Path {
-                        order: DrawOrder(base_order),
-                        origin: self.last_layout.plot.origin,
-                        path: fill,
-                        paint: fill_color.into(),
-                    });
-                }
+            {
+                let mut fill_color = stroke_color;
+                fill_color.a = fill_alpha;
+                cx.scene.push(SceneOp::Path {
+                    order: DrawOrder(base_order),
+                    origin: self.last_layout.plot.origin,
+                    path: fill,
+                    paint: fill_color.into(),
+                });
+            }
 
             let suppress_stroke = cached.source_series.is_some_and(|series_id| {
                 series_by_id
@@ -6064,14 +6063,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 && let Some((stroke, _metrics)) = self
                     .path_cache
                     .get(mark_path_cache_key(*mark_id, 0), path_constraints)
-                {
-                    cx.scene.push(SceneOp::Path {
-                        order: DrawOrder(base_order.saturating_add(1)),
-                        origin: self.last_layout.plot.origin,
-                        path: stroke,
-                        paint: stroke_color.into(),
-                    });
-                }
+            {
+                cx.scene.push(SceneOp::Path {
+                    order: DrawOrder(base_order.saturating_add(1)),
+                    origin: self.last_layout.plot.origin,
+                    path: stroke,
+                    paint: stroke_color.into(),
+                });
+            }
         }
 
         let mut point_key = KeyBuilder::new();
@@ -6267,16 +6266,16 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     && let Some((fill, _metrics)) = self
                         .path_cache
                         .get(mark_path_cache_key(*mark_id, 1), path_constraints)
-                    {
-                        let mut fill_color = stroke_color;
-                        fill_color.a = fill_alpha;
-                        cx.scene.push(SceneOp::Path {
-                            order: DrawOrder(base_order.saturating_add(highlight_bias)),
-                            origin: self.last_layout.plot.origin,
-                            path: fill,
-                            paint: fill_color.into(),
-                        });
-                    }
+                {
+                    let mut fill_color = stroke_color;
+                    fill_color.a = fill_alpha;
+                    cx.scene.push(SceneOp::Path {
+                        order: DrawOrder(base_order.saturating_add(highlight_bias)),
+                        origin: self.last_layout.plot.origin,
+                        path: fill,
+                        paint: fill_color.into(),
+                    });
+                }
 
                 let suppress_stroke = cached.source_series.is_some_and(|series_id| {
                     series_by_id
@@ -6288,14 +6287,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     && let Some((stroke, _metrics)) = self
                         .path_cache
                         .get(mark_path_cache_key(*mark_id, 0), path_constraints)
-                    {
-                        cx.scene.push(SceneOp::Path {
-                            order: DrawOrder(base_order.saturating_add(highlight_bias + 1)),
-                            origin: self.last_layout.plot.origin,
-                            path: stroke,
-                            paint: stroke_color.into(),
-                        });
-                    }
+                {
+                    cx.scene.push(SceneOp::Path {
+                        order: DrawOrder(base_order.saturating_add(highlight_bias + 1)),
+                        origin: self.last_layout.plot.origin,
+                        path: stroke,
+                        paint: stroke_color.into(),
+                    });
+                }
             }
 
             let base_point_r = self.style.scatter_point_radius.0.max(1.0);
@@ -6685,23 +6684,22 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
             }
 
-            if !shadow
-                && let Some(hit) = axis_pointer.hit {
-                    let r = self.style.hover_point_size.0.max(1.0);
-                    cx.scene.push(SceneOp::Quad {
-                        order: point_order,
-                        rect: Rect::new(
-                            Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
-                            Size::new(Px(2.0 * r), Px(2.0 * r)),
-                        ),
-                        background: fret_core::Paint::Solid(self.style.hover_point_color).into(),
+            if !shadow && let Some(hit) = axis_pointer.hit {
+                let r = self.style.hover_point_size.0.max(1.0);
+                cx.scene.push(SceneOp::Quad {
+                    order: point_order,
+                    rect: Rect::new(
+                        Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
+                        Size::new(Px(2.0 * r), Px(2.0 * r)),
+                    ),
+                    background: fret_core::Paint::Solid(self.style.hover_point_color).into(),
 
-                        border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT.into(),
+                    border: Edges::all(Px(0.0)),
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
-                        corner_radii: Corners::all(Px(0.0)),
-                    });
-                }
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
         }
 
         self.draw_legend(cx);

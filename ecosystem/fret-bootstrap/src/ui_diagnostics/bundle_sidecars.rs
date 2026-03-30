@@ -37,15 +37,16 @@ pub(super) fn write_bundle_sidecars(
     let dock_routing = bundle_index::build_dock_routing_json(&label, windows);
 
     if is_script_dump
-        && let Some(script_result) = read_script_result_v1(&service.cfg.script_result_path) {
-            let _ = write_json_compact(dir.join("script.result.json"), &script_result);
-            if let Some(script_steps) =
-                super::script_step_index::build_script_step_index_payload(&index, &script_result)
-                && let Some(obj) = index.as_object_mut()
-            {
-                obj.insert("script".to_string(), script_steps);
-            }
+        && let Some(script_result) = read_script_result_v1(&service.cfg.script_result_path)
+    {
+        let _ = write_json_compact(dir.join("script.result.json"), &script_result);
+        if let Some(script_steps) =
+            super::script_step_index::build_script_step_index_payload(&index, &script_result)
+            && let Some(obj) = index.as_object_mut()
+        {
+            obj.insert("script".to_string(), script_steps);
         }
+    }
 
     let _ = write_json_compact(dir.join("bundle.index.json"), &index);
     let _ = write_json_compact(dir.join("bundle.meta.json"), &meta);

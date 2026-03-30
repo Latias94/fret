@@ -365,15 +365,13 @@ fn wrap_panel_semantics<H: UiHost>(
     )
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ChartTooltipIndicator {
     #[default]
     Dot,
     Line,
     Dashed,
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -1353,15 +1351,13 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ChartTooltipContentKind {
     #[default]
     Default,
     FormatterKcal,
     AdvancedKcalTotal,
 }
-
 
 /// shadcn/ui v4 chart tooltip content.
 ///
@@ -2131,14 +2127,12 @@ impl ChartTooltipContent {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ChartLegendVerticalAlign {
     Top,
     #[default]
     Bottom,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct ChartLegendItem {

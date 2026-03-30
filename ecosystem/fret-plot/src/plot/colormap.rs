@@ -1,7 +1,6 @@
 use fret_core::scene::Color;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ColorMapId {
     /// A simple blue -> cyan -> green -> yellow -> red ramp (portable and predictable).
     Spectrum,
@@ -13,7 +12,6 @@ pub enum ColorMapId {
     /// Grayscale (black -> white).
     Gray,
 }
-
 
 impl ColorMapId {
     pub fn key(self) -> u8 {

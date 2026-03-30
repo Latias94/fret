@@ -44,6 +44,7 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-combobox-rtl-trigger" },
       "delta_y": -200.0,
+      "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 24.0,
       "timeout_frames": 600

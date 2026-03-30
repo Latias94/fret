@@ -3283,7 +3283,7 @@ fn form_page_and_notes_teach_rtl_as_a_fret_follow_up() {
     let notes = read("src/ui/snippets/form/notes.rs");
     assert!(
         notes.contains(
-            "There is no standalone upstream `Form` RTL component page/example in `repo-ref/ui`; Gallery keeps `RTL` as a focused Fret follow-up that validates logical text alignment and explicit horizontal field composition under `DirectionProvider(Rtl)`."
+            "There is no standalone upstream `Form` RTL component page/example; Gallery keeps `RTL` as a focused Fret follow-up that validates logical text alignment and explicit horizontal field composition under `DirectionProvider(Rtl)`."
         ),
         "src/ui/snippets/form/notes.rs should explain why the RTL section is a Fret follow-up instead of a copied upstream docs row"
     );
@@ -3655,6 +3655,7 @@ fn alert_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/alert/demo.rs",
             "src/ui/snippets/alert/destructive.rs",
             "src/ui/snippets/alert/interactive_links.rs",
+            "src/ui/snippets/alert/rich_description.rs",
             "src/ui/snippets/alert/rich_title.rs",
             "src/ui/snippets/alert/rtl.rs",
             "src/ui/snippets/alert/usage.rs",
@@ -3690,6 +3691,7 @@ fn alert_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"API Reference\", api_reference)",
             "DocSection::build(cx, \"Fret Extras\", extras)",
             "DocSection::build(cx, \"Rich Title\", rich_title)",
+            "DocSection::build(cx, \"Rich Description\", rich_description)",
             "DocSection::build(cx, \"Interactive Links\", interactive_links)",
             "DocSection::build(cx, \"Notes\", notes)",
         ],
@@ -3702,6 +3704,7 @@ fn alert_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Custom Colors\", custom_colors)",
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Rich Title\", rich_title)",
+            "DocSection::new(\"Rich Description\", rich_description)",
             "DocSection::new(\"Interactive Links\", interactive_links)",
         ],
     );
@@ -10137,6 +10140,7 @@ fn selected_alert_snippets_prefer_alert_wrapper_family() {
         "src/ui/snippets/alert/demo.rs",
         "src/ui/snippets/alert/destructive.rs",
         "src/ui/snippets/alert/interactive_links.rs",
+        "src/ui/snippets/alert/rich_description.rs",
         "src/ui/snippets/alert/rich_title.rs",
         "src/ui/snippets/alert/rtl.rs",
         "src/ui/snippets/motion_presets/fluid_tabs_demo.rs",

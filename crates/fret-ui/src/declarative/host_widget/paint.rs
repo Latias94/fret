@@ -217,30 +217,29 @@ impl ElementHostWidget {
                 let focus_visible = crate::focus_visible::is_focus_visible(cx.app, cx.window);
                 let paint_focus_chrome = focused && focus_visible;
 
-                if paint_focus_chrome
-                    && let Some(border_color) = props.focus_border_color {
-                        if let Some(dash) = props.border_dash
-                            && props.border != Edges::all(Px(0.0))
-                        {
-                            cx.scene.push(SceneOp::StrokeRRect {
-                                order: DrawOrder(1),
-                                rect: bounds,
-                                corner_radii: props.corner_radii,
-                                stroke: props.border,
-                                stroke_paint: Paint::Solid(border_color).into(),
-                                style: fret_core::scene::StrokeStyleV1 { dash: Some(dash) },
-                            });
-                        } else {
-                            cx.scene.push(SceneOp::Quad {
-                                order: DrawOrder(1),
-                                rect: bounds,
-                                background: Paint::Solid(Color::TRANSPARENT).into(),
-                                border: props.border,
-                                border_paint: Paint::Solid(border_color).into(),
-                                corner_radii: props.corner_radii,
-                            });
-                        }
+                if paint_focus_chrome && let Some(border_color) = props.focus_border_color {
+                    if let Some(dash) = props.border_dash
+                        && props.border != Edges::all(Px(0.0))
+                    {
+                        cx.scene.push(SceneOp::StrokeRRect {
+                            order: DrawOrder(1),
+                            rect: bounds,
+                            corner_radii: props.corner_radii,
+                            stroke: props.border,
+                            stroke_paint: Paint::Solid(border_color).into(),
+                            style: fret_core::scene::StrokeStyleV1 { dash: Some(dash) },
+                        });
+                    } else {
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(1),
+                            rect: bounds,
+                            background: Paint::Solid(Color::TRANSPARENT).into(),
+                            border: props.border,
+                            border_paint: Paint::Solid(border_color).into(),
+                            corner_radii: props.corner_radii,
+                        });
                     }
+                }
 
                 if let Some(ring) = props.focus_ring
                     && (paint_focus_chrome || props.focus_ring_always_paint)

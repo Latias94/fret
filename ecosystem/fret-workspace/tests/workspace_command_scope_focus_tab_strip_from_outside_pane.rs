@@ -120,14 +120,11 @@ fn render_frame(
                 |_cx, _st| vec![],
             );
 
-            let mut render_pane =
-                |cx: &mut fret_ui::ElementContext<'_, App>,
-                 pane: &fret_workspace::layout::WorkspacePaneLayout,
-                 _is_active: bool,
-                 tab_drag| {
-                    WorkspaceTabStrip::from_workspace_tabs(&pane.tabs, |id| {
-                        Arc::<str>::from(id)
-                    })
+            let mut render_pane = |cx: &mut fret_ui::ElementContext<'_, App>,
+                                   pane: &fret_workspace::layout::WorkspacePaneLayout,
+                                   _is_active: bool,
+                                   tab_drag| {
+                WorkspaceTabStrip::from_workspace_tabs(&pane.tabs, |id| Arc::<str>::from(id))
                     .pane_id(pane.id.clone())
                     .test_id_root(Arc::<str>::from(format!(
                         "pane-{}-tabstrip",
@@ -136,7 +133,7 @@ fn render_frame(
                     .tab_test_id_prefix(Arc::<str>::from(format!("pane-{}-tab", pane.id.as_ref())))
                     .tab_drag_model(tab_drag)
                     .into_element(cx)
-                };
+            };
 
             let panes = workspace_pane_tree_element_with_resize(
                 cx,

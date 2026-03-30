@@ -23,7 +23,7 @@ pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
 
     let notes = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/sheet.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/sheet.mdx`, `repo-ref/ui/apps/v4/content/docs/components/base/sheet.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx`, `repo-ref/primitives/packages/react/dialog/src/dialog.tsx`, and `repo-ref/base-ui/packages/react/src/dialog/`.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/sheet.rs`. Reference stack: shadcn Sheet docs and default registry recipe, with Radix dialog semantics and Base UI dialog ownership as the headless baseline.",
         "Preview mirrors the shadcn Sheet docs path after `Installation`: `Demo`, `Usage`, `Side`, `No Close Button`, `RTL`, and `API Reference`.",
         "Radix/Base UI semantics are already largely covered by the existing overlay, dismissal, focus-restore, and sizing tests in `ecosystem/fret-ui-shadcn/src/sheet.rs`; the remaining drift addressed here is recipe/public-surface parity rather than a `fret-ui` mechanism bug.",
         "`Usage` is the default copyable `children([...])` path, while `Parts` stays after `API Reference` as a focused advanced follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`).",

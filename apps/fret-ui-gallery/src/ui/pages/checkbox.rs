@@ -19,7 +19,7 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl_section = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/checkbox.mdx`.",
+        "Reference baseline: shadcn base Checkbox docs.",
         "`Checkbox::new(...)`, `Checkbox::new_optional(...)`, and `Checkbox::new_tristate(...)` cover the model-backed checked and mixed-state paths; all three lanes now accept the narrow checked-state bridge traits, while `Checkbox::from_checked(...)` / `from_checked_state(...)` plus `.action(...)` cover the default source-aligned snapshot/action path. `.on_click(...)` remains the lower-level command bridge when explicit command routing is genuinely needed.",
         "`Checkbox::required(true)` now maps the upstream required semantics (`aria-required`) onto the checkbox control itself; the docs path still composes field labels/descriptions externally instead of widening the checkbox to a children API.",
         "Checkbox remains a leaf control surface: labels, descriptions, and larger click targets are composed through `Field`, `FieldContent`, `FieldLabel::for_control(...)`, and `FieldLabel::wrap(...)` rather than a generic children/`compose()` API on the checkbox itself.",

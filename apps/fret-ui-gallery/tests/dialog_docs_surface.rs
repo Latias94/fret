@@ -7,12 +7,7 @@ fn dialog_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/dialog.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/dialog.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/radix/dialog.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx",
-        "repo-ref/ui/apps/v4/examples/{base,radix}/dialog-{demo,close-button,no-close-button,sticky-footer,scrollable-content,rtl}.tsx",
-        "repo-ref/primitives/packages/react/dialog/src/dialog.tsx",
-        "repo-ref/base-ui/packages/react/src/dialog/root/DialogRoot.tsx",
+        "Reference stack: shadcn/base Dialog docs and examples, the default registry recipe, Radix Primitives dialog semantics, and Base UI dialog ownership.",
         "`Dialog::children([...])` is the default copyable root path for part-based composition, and `DialogPart` is available on the curated `shadcn` facade so the default import lane stays copyable.",
         "`DialogPart::content_with(...)` plus `DialogContent::with_children(...)`, `DialogHeader::with_children(...)`, and `DialogFooter::with_children(...)` form the default copyable content lane when child parts need the current dialog scope.",
         "`Dialog::children([...])` is already the warranted composable root API here because the component owns Trigger/Portal/Overlay/Content parts and the scope-sensitive `DialogClose::from_scope()` buttons must stay inside `DialogContent`; no broader untyped JSX-style root children API is warranted beyond the typed `DialogPart` lane.",

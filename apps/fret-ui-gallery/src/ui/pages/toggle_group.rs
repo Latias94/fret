@@ -23,8 +23,8 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let stretch = snippets::flex_1_items::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Source axes for this page: `repo-ref/ui/apps/v4/content/docs/components/radix/toggle-group.mdx`, `repo-ref/ui/apps/v4/content/docs/components/base/toggle-group.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/toggle-group.tsx`, `repo-ref/primitives/packages/react/toggle-group/src/toggle-group.tsx`, and `repo-ref/base-ui/packages/react/src/toggle-group/ToggleGroup.tsx`.",
-        "The upstream docs-path examples come from `repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-group-demo.tsx`, `toggle-group-outline.tsx`, `toggle-group-sm.tsx`, `toggle-group-lg.tsx`, `toggle-group-spacing.tsx`, plus `repo-ref/ui/apps/v4/examples/radix/toggle-group-vertical.tsx`, `toggle-group-font-weight-selector.tsx`, and `toggle-group-rtl.tsx`.",
+        "Reference stack for this page: shadcn Toggle Group docs, the default registry recipe, Radix Primitives Toggle Group, and Base UI Toggle Group.",
+        "The upstream docs-path examples come from the default shadcn demo/outline/sm/lg/spacing set plus the vertical, font-weight-selector, and RTL examples.",
         "`fret_ui_kit::primitives::toggle_group` already covers the mechanism lane (single/multiple state, roving focus, and control-id focus forwarding), so the remaining parity work here is docs/recipe alignment rather than a `fret-ui` contract gap.",
         "`ToggleGroup::single(...)`, `ToggleGroup::multiple(...)`, and their uncontrolled constructors plus `.items([...])` cover the documented docs-path root surface.",
         "`toggle_group_single(...)`, `toggle_group_single_uncontrolled(...)`, `toggle_group_multiple(...)`, and `toggle_group_multiple_uncontrolled(...)` are the builder-preserving composable-children lane when callers want to assemble items inside a closure without landing early.",

@@ -468,28 +468,29 @@ impl LinkedChartGroup {
             && let Some(selection) = source_events.iter().rev().find_map(|e| match e {
                 LinkEvent::BrushSelectionChanged { selection } => Some(*selection),
                 _ => None,
-            }) {
-                let next = selection.and_then(|sel| {
-                    let x_key = source_router.axis_key(sel.x_axis)?;
-                    let y_key = source_router.axis_key(sel.y_axis)?;
-                    Some(BrushSelectionLink2D {
-                        x_axis: x_key,
-                        y_axis: y_key,
-                        x: sel.x,
-                        y: sel.y,
-                    })
-                });
+            })
+        {
+            let next = selection.and_then(|sel| {
+                let x_key = source_router.axis_key(sel.x_axis)?;
+                let y_key = source_router.axis_key(sel.y_axis)?;
+                Some(BrushSelectionLink2D {
+                    x_axis: x_key,
+                    y_axis: y_key,
+                    x: sel.x,
+                    y: sel.y,
+                })
+            });
 
-                let Ok(current) = self.brush.read(app, |_app, s| *s) else {
-                    return false;
-                };
-                if current != next {
-                    let _ = self.brush.update(app, |s, _cx| {
-                        *s = next;
-                    });
-                    changed = true;
-                }
+            let Ok(current) = self.brush.read(app, |_app, s| *s) else {
+                return false;
+            };
+            if current != next {
+                let _ = self.brush.update(app, |s, _cx| {
+                    *s = next;
+                });
+                changed = true;
             }
+        }
 
         if !changed {
             return false;

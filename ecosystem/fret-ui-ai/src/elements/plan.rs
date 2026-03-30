@@ -252,11 +252,13 @@ impl PlanHeader {
                 .and_then(|d| d.test_id.as_deref())
                 .is_some_and(|id| id.starts_with(CARD_ACTION_MARKER_PREFIX))
         });
-        if !has_action_marker && children.len() >= 2
-            && let Some(action) = children.pop() {
-                let action = CardAction::new([action]).into_element(cx);
-                children.push(action);
-            }
+        if !has_action_marker
+            && children.len() >= 2
+            && let Some(action) = children.pop()
+        {
+            let action = CardAction::new([action]).into_element(cx);
+            children.push(action);
+        }
 
         let el = CardHeader::new(children)
             .refine_style(self.chrome)

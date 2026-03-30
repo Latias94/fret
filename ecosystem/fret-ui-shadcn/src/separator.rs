@@ -86,10 +86,12 @@ impl Separator {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut element = self.inner.into_element(cx);
 
-        if self.orientation == SeparatorOrientation::Vertical && self.align_self_stretch
-            && let ElementKind::Container(props) = &mut element.kind {
-                props.layout.flex.align_self = Some(CrossAlign::Stretch);
-            }
+        if self.orientation == SeparatorOrientation::Vertical
+            && self.align_self_stretch
+            && let ElementKind::Container(props) = &mut element.kind
+        {
+            props.layout.flex.align_self = Some(CrossAlign::Stretch);
+        }
 
         element
     }

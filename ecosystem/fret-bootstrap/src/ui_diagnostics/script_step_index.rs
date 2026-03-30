@@ -78,15 +78,16 @@ fn resolve_snapshot_for_event(
     Option<&'static str>,
 ) {
     if let Some(frame_id) = frame_id
-        && let Some(info) = by_window_frame.get(&(window, frame_id)) {
-            return (
-                info.window_snapshot_seq,
-                info.timestamp_unix_ms,
-                info.semantics_source.clone(),
-                info.semantics_fingerprint,
-                Some("frame_id"),
-            );
-        }
+        && let Some(info) = by_window_frame.get(&(window, frame_id))
+    {
+        return (
+            info.window_snapshot_seq,
+            info.timestamp_unix_ms,
+            info.semantics_source.clone(),
+            info.semantics_fingerprint,
+            Some("frame_id"),
+        );
+    }
 
     let Some(unix_ms) = unix_ms else {
         return (None, None, None, None, None);

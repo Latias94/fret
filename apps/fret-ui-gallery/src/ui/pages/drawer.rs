@@ -31,7 +31,7 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
 
     let notes = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/drawer.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/drawer.mdx` and Vaul docs.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/drawer.rs`. Reference stack: shadcn Drawer docs and Vaul docs.",
         "Preview mirrors the shadcn Drawer docs path after the prose-only `About` and `Installation` sections: `Demo`, `Usage`, `Scrollable Content`, `Sides`, `Responsive Dialog`, `RTL`, and `API Reference`.",
         "`Usage` is the default copyable `children([...])` root plus `children(|cx| ...)` section path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane.",
         "`Usage` is the default copyable path; `Snap Points`, `Nested Drawers`, and `Outside Press` stay after `API Reference` as explicit Vaul/Fret follow-ups instead of being mixed into the docs path.",

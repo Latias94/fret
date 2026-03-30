@@ -226,8 +226,7 @@ impl Default for VecEditOptions {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum VecEditLayoutVariant {
     Row,
     Column,
@@ -238,7 +237,6 @@ pub enum VecEditLayoutVariant {
     #[default]
     Auto,
 }
-
 
 #[derive(Clone)]
 pub struct Vec2Edit<T> {
@@ -366,8 +364,13 @@ where
         let variant = match self.options.variant {
             VecEditLayoutVariant::Row => VecEditLayoutVariant::Row,
             VecEditLayoutVariant::Column => VecEditLayoutVariant::Column,
-            VecEditLayoutVariant::Auto => if bounds
-                .is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0) { VecEditLayoutVariant::Column } else { VecEditLayoutVariant::Row },
+            VecEditLayoutVariant::Auto => {
+                if bounds.is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0) {
+                    VecEditLayoutVariant::Column
+                } else {
+                    VecEditLayoutVariant::Row
+                }
+            }
         };
 
         let grow = variant == VecEditLayoutVariant::Row;
@@ -593,8 +596,13 @@ where
         let variant = match self.options.variant {
             VecEditLayoutVariant::Row => VecEditLayoutVariant::Row,
             VecEditLayoutVariant::Column => VecEditLayoutVariant::Column,
-            VecEditLayoutVariant::Auto => if bounds
-                .is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0) { VecEditLayoutVariant::Column } else { VecEditLayoutVariant::Row },
+            VecEditLayoutVariant::Auto => {
+                if bounds.is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0) {
+                    VecEditLayoutVariant::Column
+                } else {
+                    VecEditLayoutVariant::Row
+                }
+            }
         };
 
         let grow = variant == VecEditLayoutVariant::Row;
@@ -858,8 +866,13 @@ where
         let variant = match self.options.variant {
             VecEditLayoutVariant::Row => VecEditLayoutVariant::Row,
             VecEditLayoutVariant::Column => VecEditLayoutVariant::Column,
-            VecEditLayoutVariant::Auto => if bounds
-                .is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0) { VecEditLayoutVariant::Column } else { VecEditLayoutVariant::Row },
+            VecEditLayoutVariant::Auto => {
+                if bounds.is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0) {
+                    VecEditLayoutVariant::Column
+                } else {
+                    VecEditLayoutVariant::Row
+                }
+            }
         };
 
         let grow = variant == VecEditLayoutVariant::Row;

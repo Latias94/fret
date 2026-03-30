@@ -7,9 +7,7 @@ fn scroll_area_page_documents_wrapper_mapping_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/scroll_area.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/radix/scroll-area.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/base/scroll-area.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/scroll-area.tsx",
+        "Reference stack: shadcn Scroll Area docs, Base UI docs, and the default registry chrome.",
         "`ScrollArea::new([...])` is the default copyable wrapper lane for the docs surface.",
         "Because the Fret recipe stays layout-only, the upstream root chrome (`rounded-md border` and fixed size) maps to a caller-owned wrapper container around the scroll surface.",
         "`ScrollAreaRoot::new(ScrollAreaViewport::new([...])).scrollbar(ScrollBar::new().orientation(...))` already covers the shadcn/Radix mixed `ScrollArea` + `ScrollBar` examples without widening this family into an untyped arbitrary-children API.",

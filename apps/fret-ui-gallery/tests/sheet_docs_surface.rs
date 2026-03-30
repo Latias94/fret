@@ -7,11 +7,7 @@ fn sheet_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/sheet.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/radix/sheet.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/base/sheet.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx",
-        "repo-ref/primitives/packages/react/dialog/src/dialog.tsx",
-        "repo-ref/base-ui/packages/react/src/dialog/",
+        "Reference stack: shadcn Sheet docs and default registry recipe, with Radix dialog semantics and Base UI dialog ownership as the headless baseline.",
         "`SheetContent::new([]).with_children(cx, ...)` plus `SheetHeader::new([]).with_children(cx, ...)` / `SheetFooter::new([]).with_children(cx, ...)` is the default copyable content lane for upstream-like nested composition.",
         "Radix/Base UI semantics are already largely covered by the existing overlay, dismissal, focus-restore, and sizing tests in `ecosystem/fret-ui-shadcn/src/sheet.rs`; the remaining drift addressed here is recipe/public-surface parity rather than a `fret-ui` mechanism bug.",
         "A broader generic heterogeneous root children API is not warranted beyond `Sheet::children([...])`",

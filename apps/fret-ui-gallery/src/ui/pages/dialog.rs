@@ -33,7 +33,7 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
 
     let notes = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/dialog.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/dialog.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/dialog.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx`, `repo-ref/ui/apps/v4/examples/{base,radix}/dialog-{demo,close-button,no-close-button,sticky-footer,scrollable-content,rtl}.tsx`, `repo-ref/primitives/packages/react/dialog/src/dialog.tsx`, and `repo-ref/base-ui/packages/react/src/dialog/root/DialogRoot.tsx`.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/dialog.rs`. Reference stack: shadcn/base Dialog docs and examples, the default registry recipe, Radix Primitives dialog semantics, and Base UI dialog ownership.",
         "Preview mirrors the shadcn/base Dialog docs path after `Installation`: `Demo`, `Usage`, `Custom Close Button`, `No Close Button`, `Sticky Footer`, `Scrollable Content`, `RTL`, and `API Reference`.",
         "`Usage` is the default copyable path; `Parts` stays as the advanced adapter section for explicit `DialogTrigger` / `DialogPortal` / `DialogOverlay` ownership.",
         "`Usage` now teaches the root `children([...])` path plus deferred `content_with(...)` / `with_children(...)` composition because it is closer to upstream nested children composition and keeps `DialogClose::from_scope()` in scope for footer actions.",

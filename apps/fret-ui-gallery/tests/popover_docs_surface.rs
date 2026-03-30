@@ -7,12 +7,7 @@ fn popover_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/popover.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/popover.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/radix/popover.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/popover-demo.tsx",
-        "repo-ref/primitives/packages/react/popover/src/popover.tsx",
-        "repo-ref/base-ui/packages/react/src/popover/root/PopoverRoot.tsx",
+        "Reference stack: shadcn/base Popover docs and demo, the default registry recipe, Radix Primitives popover semantics, and Base UI popover ownership.",
         "`Popover::new(cx, trigger, content)` remains the default recipe-level entry point and already covers the upstream nested `<Popover><PopoverTrigger /><PopoverContent /></Popover>` composition plus the custom-trigger / `asChild` story, because `trigger` can be any landed or late-landed element.",
         "`PopoverTrigger::build(...)`, `PopoverContent::build(cx, ...)`, and `PopoverContent::new([...])` cover the copyable compound-parts lane plus the landed-children follow-up without adding a separate heterogeneous root `children([...])` / `compose()` API.",
         "`Popover::trigger_element(...)` and `Popover::anchor_element(...)` cover the detached-trigger, anchor-aware follow-up without widening the default shadcn docs lane.",

@@ -45,7 +45,7 @@ pub(super) fn preview_sonner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let setup = snippets::setup::render(cx);
     let extras = snippets::extras::render(cx);
     let notes = doc_layout::notes_block([
-        "Source axes: `repo-ref/ui/apps/v4/content/docs/components/base/sonner.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sonner.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/sonner-demo.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/sonner-types.tsx`, `repo-ref/primitives/packages/react/toast/src/toast.tsx`, and `repo-ref/base-ui/packages/react/src/toast/`.",
+        "Reference stack: shadcn Sonner docs, the default registry recipe, the demo/types examples, Radix Primitives Toast, and Base UI Toast.",
         "Docs path stays `Demo`, `About`, `Usage`, `Examples`, `Types`, `Description`, `Position`, and `API Reference`, with `Mounting (Fret)` and `Extras` kept as Fret-only follow-ups.",
         "The shadcn Sonner lane stays message-oriented today: a generic composable `children([...])` API is not warranted here, and this pass did not identify a missing `fret-ui` mechanism bug.",
     ]);

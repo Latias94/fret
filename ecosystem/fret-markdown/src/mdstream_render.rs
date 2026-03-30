@@ -34,9 +34,10 @@ impl MarkdownCachedState {
 
     fn snapshot_for_source(&mut self, source: &str) -> Arc<MarkdownSnapshot> {
         if self.source.as_ref() == source
-            && let Some(snapshot) = self.snapshot.as_ref() {
-                return snapshot.clone();
-            }
+            && let Some(snapshot) = self.snapshot.as_ref()
+        {
+            return snapshot.clone();
+        }
 
         self.source = Arc::from(source);
 
@@ -523,9 +524,10 @@ fn render_mdstream_block_with_events<H: UiHost>(
             let mut latex = crate::parse_math_block_body(block.display_or_raw());
             let latex_from_events = crate::latex_from_pulldown_math_events(events);
             if latex.trim().is_empty()
-                && let Some(from_events) = latex_from_events.clone() {
-                    latex = from_events;
-                }
+                && let Some(from_events) = latex_from_events.clone()
+            {
+                latex = from_events;
+            }
             let log_once = cx.slot_state(
                 || false,
                 |logged| {

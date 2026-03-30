@@ -739,9 +739,10 @@ fn resolve_material_web_dir(
         return Some(p);
     }
     if let Ok(p) = env::var("MATERIAL_WEB_DIR")
-        && !p.trim().is_empty() {
-            return Some(PathBuf::from(p));
-        }
+        && !p.trim().is_empty()
+    {
+        return Some(PathBuf::from(p));
+    }
     let default = workspace_root.join("repo-ref").join("material-web");
     if default.is_dir() {
         return Some(default);
@@ -861,9 +862,11 @@ fn should_ignore_material_web_missing_key(key: &str) -> bool {
     // Material Web also includes group keys for nested token objects (e.g. the spring specs).
     // We only inject the leaf scalars (`...damping`, `...stiffness`).
     if let Some(rest) = key.strip_prefix("md.sys.motion.spring.")
-        && !rest.ends_with(".damping") && !rest.ends_with(".stiffness") {
-            return true;
-        }
+        && !rest.ends_with(".damping")
+        && !rest.ends_with(".stiffness")
+    {
+        return true;
+    }
 
     // Material Web path tokens are structured objects; Fret doesn't import them yet.
     if key == "md.sys.motion.path" {

@@ -246,8 +246,7 @@ pub struct PlotOverlays {
     pub text: Vec<PlotText>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum PlotImageLayer {
     /// Draw below grid lines and series (grid stays visible).
     #[default]
@@ -255,7 +254,6 @@ pub enum PlotImageLayer {
     /// Draw above grid lines but below series.
     AboveGrid,
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlotImage {

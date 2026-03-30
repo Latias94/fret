@@ -10,6 +10,4 @@ use crate::ui::presenter::EdgeRouteKind;
 mod route_math_curve;
 mod route_math_tangent;
 
-pub(crate) use route_math_curve::{
-    cubic_bezier_derivative, wire_ctrl_points,
-};
+pub(crate) use route_math_curve::{cubic_bezier_derivative, wire_ctrl_points};

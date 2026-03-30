@@ -86,8 +86,8 @@ pub(crate) fn load_script_json_for_execution(
     }
 
     let (mut script_json, upgraded) =
-        crate::compat::script::upgrade_script_json_value_to_v2_if_needed(resolved.value).inspect_err(
-            |e| {
+        crate::compat::script::upgrade_script_json_value_to_v2_if_needed(resolved.value)
+            .inspect_err(|e| {
                 (policy.write_failure)(
                     script_result_path,
                     "tooling.script.upgrade_failed",
@@ -95,8 +95,7 @@ pub(crate) fn load_script_json_for_execution(
                     "tooling_error",
                     note_for_stage(&policy, "upgrade_script_json_value_to_v2_if_needed"),
                 );
-            },
-        )?;
+            })?;
 
     script_tooling::canonicalize_json_value(&mut script_json);
     Ok((script_json, upgraded))

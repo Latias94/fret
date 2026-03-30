@@ -487,13 +487,14 @@ pub fn shadcn_new_york_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) 
 
     let mut metrics: HashMap<String, f32> = HashMap::new();
     if let Some(radius) = colors.remove("radius")
-        && let Some(px) = parse_css_length_px(&radius) {
-            // Match shadcn's default border-radius recipe:
-            // lg = var(--radius), md = var(--radius) - 2px, sm = var(--radius) - 4px.
-            metrics.insert("metric.radius.lg".to_string(), px);
-            metrics.insert("metric.radius.md".to_string(), (px - 2.0).max(0.0));
-            metrics.insert("metric.radius.sm".to_string(), (px - 4.0).max(0.0));
-        }
+        && let Some(px) = parse_css_length_px(&radius)
+    {
+        // Match shadcn's default border-radius recipe:
+        // lg = var(--radius), md = var(--radius) - 2px, sm = var(--radius) - 4px.
+        metrics.insert("metric.radius.lg".to_string(), px);
+        metrics.insert("metric.radius.md".to_string(), (px - 2.0).max(0.0));
+        metrics.insert("metric.radius.sm".to_string(), (px - 4.0).max(0.0));
+    }
 
     // new-york-v4 component defaults are expressed as Tailwind classes in the upstream registry
     // (e.g. `h-9`, `px-3`, `gap-2`, `focus-visible:ring-[3px]`). Our component library consumes
@@ -753,13 +754,15 @@ pub fn shadcn_new_york_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) 
         .or_insert(10.0);
 
     if let Some(ring) = colors.get("ring").cloned()
-        && let Some(ring_50) = with_oklch_alpha(&ring, 0.5) {
-            colors.insert("ring/50".to_string(), ring_50);
-        }
+        && let Some(ring_50) = with_oklch_alpha(&ring, 0.5)
+    {
+        colors.insert("ring/50".to_string(), ring_50);
+    }
     if let Some(border) = colors.get("border").cloned()
-        && let Some(border_50) = with_oklch_alpha(&border, 0.5) {
-            colors.insert("border/50".to_string(), border_50);
-        }
+        && let Some(border_50) = with_oklch_alpha(&border, 0.5)
+    {
+        colors.insert("border/50".to_string(), border_50);
+    }
     if let Some(destructive) = colors.get("destructive").cloned() {
         if let Some(v) = with_oklch_alpha(&destructive, 0.1) {
             colors.insert("destructive/10".to_string(), v);

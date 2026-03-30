@@ -169,29 +169,30 @@ pub(crate) fn run_doctor_for_bundle_dir(
     }
 
     if opts.fix_bundle_json
-        && crate::resolve_bundle_artifact_path_no_materialize(&bundle_dir).is_none() {
-            let attempts = [bundle_dir.clone(), bundle_dir.join("_root")];
-            for dir in &attempts {
-                match crate::artifact_store::materialize_bundle_json_from_manifest_chunks_if_missing(
-                    dir,
-                ) {
-                    Ok(Some(out)) => {
-                        fixes_applied.push(format!(
-                            "materialized raw bundle.json from chunks ({})",
-                            out.display()
-                        ));
-                        break;
-                    }
-                    Ok(_) => {}
-                    Err(err) => {
-                        fixes_applied.push(format!(
-                            "attempted to materialize raw bundle.json from chunks, but failed ({})",
-                            err
-                        ));
-                    }
+        && crate::resolve_bundle_artifact_path_no_materialize(&bundle_dir).is_none()
+    {
+        let attempts = [bundle_dir.clone(), bundle_dir.join("_root")];
+        for dir in &attempts {
+            match crate::artifact_store::materialize_bundle_json_from_manifest_chunks_if_missing(
+                dir,
+            ) {
+                Ok(Some(out)) => {
+                    fixes_applied.push(format!(
+                        "materialized raw bundle.json from chunks ({})",
+                        out.display()
+                    ));
+                    break;
+                }
+                Ok(_) => {}
+                Err(err) => {
+                    fixes_applied.push(format!(
+                        "attempted to materialize raw bundle.json from chunks, but failed ({})",
+                        err
+                    ));
                 }
             }
         }
+    }
 
     if opts.fix_schema2 {
         let schema2_exists =
@@ -316,23 +317,26 @@ fn build_item(
         try_read_sidecar_from_candidates(&candidates, kind, warmup_frames);
 
     let mut notes: Vec<String> = Vec::new();
-    if status == DoctorStatus::Ok && candidates.len() > 1
+    if status == DoctorStatus::Ok
+        && candidates.len() > 1
         && let Some(path) = &resolved_path
-            && path
-                .components()
-                .any(|c| c.as_os_str().to_str() == Some("_root"))
-            {
-                notes.push("resolved from _root/".to_string());
-            }
+        && path
+            .components()
+            .any(|c| c.as_os_str().to_str() == Some("_root"))
+    {
+        notes.push("resolved from _root/".to_string());
+    }
 
-    if kind == "bundle_index" && status == DoctorStatus::Ok
-        && let Some(v) = payload {
-            let has_script = bundle_index_has_script_markers(&v);
-            let script_result = bundle_dir.join("script.result.json");
-            if script_result.is_file() && !has_script {
-                notes.push("index missing script markers (script.result.json exists; rerun `diag index` to upgrade)".to_string());
-            }
+    if kind == "bundle_index"
+        && status == DoctorStatus::Ok
+        && let Some(v) = payload
+    {
+        let has_script = bundle_index_has_script_markers(&v);
+        let script_result = bundle_dir.join("script.result.json");
+        if script_result.is_file() && !has_script {
+            notes.push("index missing script markers (script.result.json exists; rerun `diag index` to upgrade)".to_string());
         }
+    }
 
     DoctorItem {
         label,
@@ -452,10 +456,9 @@ pub(crate) fn cmd_doctor(
         })
         || bundle_dir.join("manifest.json").is_file()
         || bundle_dir.join("_root").join("manifest.json").is_file();
-    if !has_bundleish_artifact
-        && let Ok(latest) = resolve_latest_bundle_dir_path(&bundle_dir) {
-            bundle_dir = latest;
-        }
+    if !has_bundleish_artifact && let Ok(latest) = resolve_latest_bundle_dir_path(&bundle_dir) {
+        bundle_dir = latest;
+    }
 
     let opts = DoctorRunOptions {
         fix_bundle_json,
@@ -900,35 +903,39 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             }));
         }
         if schema_version == 1
-            && let Some(bytes) = bundle_artifact_bytes {
-                const SUGGEST_V2_MIN_BYTES: u64 = 64 * 1024 * 1024;
-                if bytes >= SUGGEST_V2_MIN_BYTES {
-                    warnings.push(Value::String(
+            && let Some(bytes) = bundle_artifact_bytes
+        {
+            const SUGGEST_V2_MIN_BYTES: u64 = 64 * 1024 * 1024;
+            if bytes >= SUGGEST_V2_MIN_BYTES {
+                warnings.push(Value::String(
                         "bundle uses schema v1; consider converting to schema v2 to reduce bundle size and enable semantics tables"
                             .to_string(),
                     ));
-                    repairs.push(json!({
+                repairs.push(json!({
                         "code": "suggest_bundle_v2",
                         "note": "convert to schema v2 (writes bundle.schema2.json)",
                         "command": format!("fretboard diag doctor --fix-schema2 {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
                     }));
-                }
             }
-        if schema_version == 2 && !schema2_exists && bundle_is_raw_bundle_json
-            && let Some(bytes) = bundle_artifact_bytes {
-                const SUGGEST_SCHEMA2_MIN_BYTES: u64 = 64 * 1024 * 1024;
-                if bytes >= SUGGEST_SCHEMA2_MIN_BYTES {
-                    warnings.push(Value::String(
+        }
+        if schema_version == 2
+            && !schema2_exists
+            && bundle_is_raw_bundle_json
+            && let Some(bytes) = bundle_artifact_bytes
+        {
+            const SUGGEST_SCHEMA2_MIN_BYTES: u64 = 64 * 1024 * 1024;
+            if bytes >= SUGGEST_SCHEMA2_MIN_BYTES {
+                warnings.push(Value::String(
                         "raw bundle.json is large; consider writing bundle.schema2.json to keep tooling and AI loops fast"
                             .to_string(),
                     ));
-                    repairs.push(json!({
+                repairs.push(json!({
                         "code": "suggest_bundle_schema2",
                         "note": "write a compact schema2 bundle (writes bundle.schema2.json)",
                         "command": format!("fretboard diag doctor --fix-schema2 {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
                     }));
-                }
             }
+        }
     } else if bundle_artifact.is_some() {
         warnings.push(Value::String(
             "bundle is present but schema_version could not be detected from the file prefix"

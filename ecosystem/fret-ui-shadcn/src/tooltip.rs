@@ -2302,8 +2302,7 @@ mod tests {
 
         assert_eq!(tooltip_node.role, SemanticsRole::Tooltip);
         assert!(
-            trigger_node
-                .described_by.contains(&tooltip_node.id),
+            trigger_node.described_by.contains(&tooltip_node.id),
             "trigger should be described by the tooltip content"
         );
     }
@@ -3012,8 +3011,7 @@ mod tests {
         let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element);
         if let Some(content_node) = content_node {
             assert!(
-                !trigger_node
-                    .described_by.contains(&content_node),
+                !trigger_node.described_by.contains(&content_node),
                 "expected aria-describedby to be cleared after pointerdown close"
             );
         } else {
@@ -3582,8 +3580,7 @@ mod tests {
 
         if let Some(content_1_node) = content_1_node {
             assert!(
-                !trigger_1
-                    .described_by.contains(&content_1_node),
+                !trigger_1.described_by.contains(&content_1_node),
                 "expected tooltip 1 to close (aria-describedby cleared) after tooltip 2 opens"
             );
         } else {

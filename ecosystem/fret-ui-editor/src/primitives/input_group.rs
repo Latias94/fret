@@ -559,9 +559,10 @@ pub(crate) fn editor_joined_input_frame_with_overrides<H: UiHost>(
         // clearing `pressed` solely based on hover for non-mouse pointer types.
         if !hovered
             && let Ok(mut st) = pointer_state.lock()
-                && matches!(st.last_pointer_type, Some(fret_core::PointerType::Mouse)) {
-                    st.pressed = false;
-                }
+            && matches!(st.last_pointer_type, Some(fret_core::PointerType::Mouse))
+        {
+            st.pressed = false;
+        }
 
         let pointer_state_down = pointer_state.clone();
         let on_down: OnPointerDown = Arc::new(move |host, action_cx: ActionCx, down| {

@@ -158,16 +158,17 @@ pub(super) fn write_packet_anchors_if_possible(dir: &Path) -> Result<(), String>
             .get("script")
             .and_then(|v| v.get("steps"))
             .and_then(|v| v.as_array())
-            && let Some(step) = steps.iter().find(|s| {
-                s.get("step_index")
-                    .and_then(|v| v.as_u64())
-                    .is_some_and(|v| v == step_index as u64)
-            }) {
-                anchors.failed_window = step.get("window").and_then(|v| v.as_u64());
-                anchors.failed_frame_id = step.get("frame_id").and_then(|v| v.as_u64());
-                anchors.failed_window_snapshot_seq =
-                    step.get("window_snapshot_seq").and_then(|v| v.as_u64());
-            }
+        && let Some(step) = steps.iter().find(|s| {
+            s.get("step_index")
+                .and_then(|v| v.as_u64())
+                .is_some_and(|v| v == step_index as u64)
+        })
+    {
+        anchors.failed_window = step.get("window").and_then(|v| v.as_u64());
+        anchors.failed_frame_id = step.get("frame_id").and_then(|v| v.as_u64());
+        anchors.failed_window_snapshot_seq =
+            step.get("window_snapshot_seq").and_then(|v| v.as_u64());
+    }
 
     let payload = serde_json::json!({
         "kind": "ai_packet_anchors",

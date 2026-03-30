@@ -12,8 +12,8 @@ pub(super) fn preview_progress(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/progress.rs`. Source axes: `repo-ref/ui/apps/v4/content/docs/components/radix/progress.mdx`, `repo-ref/ui/apps/v4/content/docs/components/base/progress.mdx`, and the default visual baseline `repo-ref/ui/apps/v4/registry/new-york-v4/ui/progress.tsx`.",
-        "Secondary structure references: `repo-ref/ui/apps/v4/registry/bases/radix/ui/progress.tsx`, `repo-ref/ui/apps/v4/registry/bases/base/ui/progress.tsx`, `repo-ref/primitives/packages/react/progress/src/progress.tsx`, and `repo-ref/base-ui/packages/react/src/progress/*`.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/progress.rs`. Reference stack: shadcn Progress docs on the Radix and Base UI lanes, plus the default visual baseline.",
+        "Secondary structure references: the shadcn radix/base registry variants, Radix Primitives Progress, and Base UI Progress.",
         "`Progress::from_value(...)` mirrors the upstream `value` prop for read-only snapshot usage. `Progress::new(...)`, `new_opt(...)`, and `new_values_first(...)` remain the model-backed lanes for timers, sliders, and shared state.",
         "Progress remains a leaf control on the default shadcn/Radix lane: labels and surrounding value rows are composed with `Field` / `FieldLabel` rather than widening the recipe with a generic composable children / `compose()` API.",
         "Base UI's `ProgressLabel` / `ProgressValue` children API is a useful headless reference, but it belongs to a different public surface and is not promoted on the default shadcn lane.",

@@ -858,8 +858,6 @@ fn render_folder_row<H: UiHost>(
 
     let row_test_id = folder.test_id.clone();
 
-    
-
     control_chrome_pressable_with_id_props(cx, |cx, st, _id| {
         cx.pressable_on_activate({
             let path = folder.path.clone();

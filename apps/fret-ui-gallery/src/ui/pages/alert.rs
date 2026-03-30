@@ -9,6 +9,7 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let usage = snippets::usage::render(cx);
     let basic = snippets::basic::render(cx);
     let rich_title = snippets::rich_title::render(cx);
+    let rich_description = snippets::rich_description::render(cx);
     let destructive = snippets::destructive::render(cx);
     let action = snippets::action::render(cx);
     let interactive_links = snippets::interactive_links::render(cx);
@@ -26,19 +27,21 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let extras = doc_layout::notes_block([
         "`Rich Title` demonstrates the builder-first composed title lane for attributed text.",
+        "`Rich Description` demonstrates the composed `AlertDescription` lane for paragraph + list content without pretending that shape is part of the current upstream docs path.",
         "`Interactive Links` demonstrates deterministic, diagnostics-safe composed link content inside `AlertDescription`.",
         "Those follow-ups stay after `API Reference` because they extend the copyable Fret teaching surface rather than the upstream docs path itself.",
     ]);
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs`.",
-        "Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/alert.mdx`, `repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert.tsx`, and `repo-ref/ui/apps/v4/registry/bases/radix/examples/alert-example.tsx`.",
+        "Reference stack: shadcn Alert docs on the Radix and Base UI lanes, the default registry recipe, and the action-slot example.",
         "This audit lands on the recipe/docs axis, not the runtime mechanism axis: `Alert` is a static callout and does not need new `fret-ui` substrate work.",
         "Current new-york-v4 chrome uses `line-clamp-1` for `AlertTitle`, so the base/radix docs' multiline-title examples remain a known chrome-axis difference rather than a `fret-ui` bug.",
         "Preview now mirrors the shadcn docs path after `Installation`: `Demo`, `Usage`, `Basic`, `Destructive`, `Action`, `Custom Colors`, `RTL`, and `API Reference`.",
-        "`Rich Title` and `Interactive Links` stay explicit under `Fret Extras` so composed title/description authoring remains copyable without pretending those sections are upstream docs examples.",
-        "Current chrome baseline: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert.tsx`.",
-        "Action-slot reference: `repo-ref/ui/apps/v4/registry/bases/radix/ui/alert.tsx` and `repo-ref/ui/apps/v4/registry/bases/radix/examples/alert-example.tsx`.",
+        "Current docs-aligned `Destructive` example tracks the upstream `alert-destructive` surface (`Error` + session-expired copy).",
+        "`Rich Title`, `Rich Description`, and `Interactive Links` stay explicit under `Fret Extras` so composed title/description authoring remains copyable without pretending those sections are upstream docs examples.",
+        "Current chrome baseline: the default shadcn registry `Alert` recipe.",
+        "Action-slot reference: the radix registry alert recipe and example.",
         "Keep alert copy concise and action-oriented; reserve longer guidance for Dialog or Sheet.",
         "Prefer `AlertTitle::build(...)` or `AlertTitle::new_children(...)` when the title needs attributed text or a precomposed child subtree.",
         "Prefer `AlertDescription::build(...)` or `AlertDescription::new_children(...)` when the description needs multiple paragraphs, lists, or rich text.",
@@ -86,6 +89,12 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         )
         .test_id_prefix("ui-gallery-alert-rich-title")
         .code_rust_from_file_region(snippets::rich_title::SOURCE, "example");
+    let rich_description = DocSection::build(cx, "Rich Description", rich_description)
+        .description(
+            "Composable description content using `AlertDescription::build(...)` for paragraph + list layouts.",
+        )
+        .test_id_prefix("ui-gallery-alert-rich-description")
+        .code_rust_from_file_region(snippets::rich_description::SOURCE, "example");
     let interactive_links = DocSection::build(cx, "Interactive Links", interactive_links)
         .description("A Fret-specific composed-description pattern: normal runs open safe URLs, while diagnostics still keep deterministic activation evidence.")
         .code_rust_from_file_region(snippets::interactive_links::SOURCE, "example");
@@ -112,6 +121,7 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             api_reference,
             extras,
             rich_title,
+            rich_description,
             interactive_links,
             notes,
         ],

@@ -1,10 +1,14 @@
 use fret_diag_protocol::{
     UiActionScriptV1, UiActionScriptV2, UiActionStepV1, UiActionStepV2, UiPointerKindV1,
-    UiPredicateV1, UiWindowTargetV1,
+    UiPredicateV1, UiSelectorV1, UiWindowTargetV1,
 };
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
+
+const UI_GALLERY_SCROLL_INTO_VIEW_INTERACTION_LOOKAHEAD: usize = 5;
+const UI_GALLERY_SCROLL_CONTAINERS_REQUIRING_FULLY_WITHIN_CONTAINER: &[&str] =
+    &["ui-gallery-content-scroll", "ui-gallery-content-viewport"];
 
 fn step_type_string_from_serializable<S: serde::Serialize>(step: &S) -> String {
     serde_json::to_value(step)
@@ -191,14 +195,14 @@ pub(crate) fn preflight_strict_termination_issues(
                         .enumerate()
                         .skip(capture_idx + 1)
                         .find(|(_i, step)| matches!(step, UiActionStepV1::WaitFrames { .. }))
-                    {
-                        push_issue(
+                {
+                    push_issue(
                             "script.wait_frames_after_last_capture_bundle",
                             "error",
                             "script has wait_frames after the final capture_bundle; this can stall indefinitely under occlusion/idle".to_string(),
                             Some(i as u64),
                         );
-                    }
+                }
             }
             2 => {
                 let script: UiActionScriptV2 =
@@ -311,6 +315,87 @@ fn validate_script(path: &Path) -> Result<Value, String> {
     }
 }
 
+fn selector_test_id(selector: &UiSelectorV1) -> Option<&str> {
+    match selector {
+        UiSelectorV1::TestId { id, .. } => Some(id.as_str()),
+        _ => None,
+    }
+}
+
+fn ui_gallery_scroll_container_test_id(selector: &UiSelectorV1) -> Option<&str> {
+    let id = selector_test_id(selector)?;
+    UI_GALLERY_SCROLL_CONTAINERS_REQUIRING_FULLY_WITHIN_CONTAINER
+        .contains(&id)
+        .then_some(id)
+}
+
+fn interaction_step_type_for_ui_gallery_scroll_guard(
+    step: &UiActionStepV2,
+) -> Option<&'static str> {
+    match step {
+        UiActionStepV2::Click { .. } => Some("click"),
+        UiActionStepV2::ClickStable { .. } => Some("click_stable"),
+        UiActionStepV2::Activate { .. } => Some("activate"),
+        _ => None,
+    }
+}
+
+fn lint_ui_gallery_scroll_into_view_interaction_guards_v2(script: &UiActionScriptV2) -> Vec<Value> {
+    let mut findings = Vec::new();
+
+    for (step_index, step) in script.steps.iter().enumerate() {
+        let UiActionStepV2::ScrollIntoView {
+            container,
+            target,
+            require_fully_within_container,
+            ..
+        } = step
+        else {
+            continue;
+        };
+
+        let Some(container_test_id) = ui_gallery_scroll_container_test_id(container) else {
+            continue;
+        };
+
+        if *require_fully_within_container {
+            continue;
+        }
+
+        let Some((follow_up_step_index, follow_up_step_type)) = script
+            .steps
+            .iter()
+            .enumerate()
+            .skip(step_index + 1)
+            .take(UI_GALLERY_SCROLL_INTO_VIEW_INTERACTION_LOOKAHEAD)
+            .find_map(|(i, next_step)| {
+                interaction_step_type_for_ui_gallery_scroll_guard(next_step).map(|kind| (i, kind))
+            })
+        else {
+            continue;
+        };
+
+        let mut finding = serde_json::json!({
+            "severity": "warning",
+            "code": "script.scroll_into_view_container_visibility_guard_missing",
+            "message": format!(
+                "scroll_into_view targets UI Gallery container `{container_test_id}` and is followed by `{follow_up_step_type}` within {} steps; set require_fully_within_container=true so the target cannot remain outside the content viewport while still inside the window",
+                UI_GALLERY_SCROLL_INTO_VIEW_INTERACTION_LOOKAHEAD
+            ),
+            "step_index": step_index,
+            "follow_up_step_index": follow_up_step_index,
+            "follow_up_step_type": follow_up_step_type,
+            "container_test_id": container_test_id,
+        });
+        if let Some(target_test_id) = selector_test_id(target) {
+            finding["target_test_id"] = Value::String(target_test_id.to_string());
+        }
+        findings.push(finding);
+    }
+
+    findings
+}
+
 fn lint_script(path: &Path) -> Result<Value, String> {
     let resolved = read_script_json_resolving_redirects(path)?;
     let value = resolved.value;
@@ -318,50 +403,53 @@ fn lint_script(path: &Path) -> Result<Value, String> {
     let schema_version = crate::compat::script::script_schema_version_from_value(&value);
 
     let mut findings: Vec<Value> = Vec::new();
-    let (declared_required, inferred_required, step_summary, meta_tags) = match schema_version {
-        1 => {
-            let script: UiActionScriptV1 =
-                serde_json::from_value(value).map_err(|e| e.to_string())?;
-            (
-                script
-                    .meta
-                    .as_ref()
-                    .map(|m| m.required_capabilities.clone())
-                    .unwrap_or_default(),
-                infer_required_capabilities_v1(&script),
-                summarize_steps_v1(&script),
-                script
-                    .meta
-                    .as_ref()
-                    .map(|m| m.tags.clone())
-                    .unwrap_or_default(),
-            )
-        }
-        2 => {
-            let script: UiActionScriptV2 =
-                serde_json::from_value(value).map_err(|e| e.to_string())?;
-            (
-                script
-                    .meta
-                    .as_ref()
-                    .map(|m| m.required_capabilities.clone())
-                    .unwrap_or_default(),
-                infer_required_capabilities_v2(&script),
-                summarize_steps_v2(&script),
-                script
-                    .meta
-                    .as_ref()
-                    .map(|m| m.tags.clone())
-                    .unwrap_or_default(),
-            )
-        }
-        _ => {
-            return Err(format!(
-                "unknown script schema_version (expected 1 or 2): {}",
-                schema_version
-            ));
-        }
-    };
+    let (declared_required, inferred_required, step_summary, meta_tags, extra_findings) =
+        match schema_version {
+            1 => {
+                let script: UiActionScriptV1 =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                (
+                    script
+                        .meta
+                        .as_ref()
+                        .map(|m| m.required_capabilities.clone())
+                        .unwrap_or_default(),
+                    infer_required_capabilities_v1(&script),
+                    summarize_steps_v1(&script),
+                    script
+                        .meta
+                        .as_ref()
+                        .map(|m| m.tags.clone())
+                        .unwrap_or_default(),
+                    Vec::new(),
+                )
+            }
+            2 => {
+                let script: UiActionScriptV2 =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                (
+                    script
+                        .meta
+                        .as_ref()
+                        .map(|m| m.required_capabilities.clone())
+                        .unwrap_or_default(),
+                    infer_required_capabilities_v2(&script),
+                    summarize_steps_v2(&script),
+                    script
+                        .meta
+                        .as_ref()
+                        .map(|m| m.tags.clone())
+                        .unwrap_or_default(),
+                    lint_ui_gallery_scroll_into_view_interaction_guards_v2(&script),
+                )
+            }
+            _ => {
+                return Err(format!(
+                    "unknown script schema_version (expected 1 or 2): {}",
+                    schema_version
+                ));
+            }
+        };
 
     let mut required = declared_required.clone();
     for cap in &inferred_required {
@@ -479,6 +567,8 @@ fn lint_script(path: &Path) -> Result<Value, String> {
         }));
     }
 
+    findings.extend(extra_findings);
+
     Ok(serde_json::json!({
         "path": path.display().to_string(),
         "resolved_path": resolved.write_path.display().to_string(),
@@ -535,10 +625,9 @@ pub(crate) fn resolve_script_json_redirects_from_value(
             || to.starts_with("docs/")
             || to.starts_with(".fret/");
 
-        if looks_repo_relative
-            && let Some(root) = find_repo_root_for_path(from) {
-                return root.join(to_path);
-            }
+        if looks_repo_relative && let Some(root) = find_repo_root_for_path(from) {
+            return root.join(to_path);
+        }
 
         from.parent()
             .unwrap_or_else(|| Path::new("."))
@@ -1222,6 +1311,160 @@ mod tests {
         };
         let inferred = infer_required_capabilities_v2(&script);
         assert!(inferred.iter().any(|c| c == "diag.gesture_long_press"));
+    }
+
+    #[test]
+    fn lint_warns_when_ui_gallery_scroll_into_view_is_followed_by_interaction_without_container_guard()
+     {
+        let trigger = UiSelectorV1::TestId {
+            id: "ui-gallery-avatar-dropdown-trigger-avatar".to_string(),
+            root_z_index: None,
+        };
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![
+                UiActionStepV2::ScrollIntoView {
+                    window: None,
+                    pointer_kind: None,
+                    container: UiSelectorV1::TestId {
+                        id: "ui-gallery-content-scroll".to_string(),
+                        root_z_index: None,
+                    },
+                    target: trigger.clone(),
+                    delta_x: 0.0,
+                    delta_y: -240.0,
+                    require_fully_within_container: false,
+                    require_fully_within_window: true,
+                    padding_px: 24.0,
+                    padding_insets_px: None,
+                    timeout_frames: 600,
+                },
+                UiActionStepV2::WaitUntil {
+                    window: None,
+                    predicate: UiPredicateV1::Exists {
+                        target: trigger.clone(),
+                    },
+                    timeout_frames: 120,
+                    timeout_ms: None,
+                },
+                UiActionStepV2::ClickStable {
+                    window: None,
+                    pointer_kind: None,
+                    target: trigger,
+                    button: UiMouseButtonV1::Left,
+                    click_count: 1,
+                    modifiers: None,
+                    stable_frames: 2,
+                    max_move_px: 1.0,
+                    timeout_frames: 120,
+                },
+            ],
+        };
+
+        let findings = lint_ui_gallery_scroll_into_view_interaction_guards_v2(&script);
+        assert_eq!(findings.len(), 1);
+        assert_eq!(
+            findings[0]["code"].as_str(),
+            Some("script.scroll_into_view_container_visibility_guard_missing")
+        );
+        assert_eq!(findings[0]["step_index"].as_u64(), Some(0));
+        assert_eq!(findings[0]["follow_up_step_index"].as_u64(), Some(2));
+        assert_eq!(
+            findings[0]["follow_up_step_type"].as_str(),
+            Some("click_stable")
+        );
+        assert_eq!(
+            findings[0]["container_test_id"].as_str(),
+            Some("ui-gallery-content-scroll")
+        );
+    }
+
+    #[test]
+    fn lint_does_not_warn_when_ui_gallery_scroll_into_view_requires_container_visibility() {
+        let trigger = UiSelectorV1::TestId {
+            id: "ui-gallery-select-trigger".to_string(),
+            root_z_index: None,
+        };
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![
+                UiActionStepV2::ScrollIntoView {
+                    window: None,
+                    pointer_kind: None,
+                    container: UiSelectorV1::TestId {
+                        id: "ui-gallery-content-viewport".to_string(),
+                        root_z_index: None,
+                    },
+                    target: trigger.clone(),
+                    delta_x: 0.0,
+                    delta_y: -120.0,
+                    require_fully_within_container: true,
+                    require_fully_within_window: true,
+                    padding_px: 24.0,
+                    padding_insets_px: None,
+                    timeout_frames: 600,
+                },
+                UiActionStepV2::ClickStable {
+                    window: None,
+                    pointer_kind: None,
+                    target: trigger,
+                    button: UiMouseButtonV1::Left,
+                    click_count: 1,
+                    modifiers: None,
+                    stable_frames: 2,
+                    max_move_px: 1.0,
+                    timeout_frames: 120,
+                },
+            ],
+        };
+
+        let findings = lint_ui_gallery_scroll_into_view_interaction_guards_v2(&script);
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn lint_does_not_warn_when_ui_gallery_scroll_into_view_has_no_click_like_follow_up() {
+        let target = UiSelectorV1::TestId {
+            id: "ui-gallery-navigation-menu-docs-demo".to_string(),
+            root_z_index: None,
+        };
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![
+                UiActionStepV2::ScrollIntoView {
+                    window: None,
+                    pointer_kind: None,
+                    container: UiSelectorV1::TestId {
+                        id: "ui-gallery-content-scroll".to_string(),
+                        root_z_index: None,
+                    },
+                    target: target.clone(),
+                    delta_x: 0.0,
+                    delta_y: -240.0,
+                    require_fully_within_container: false,
+                    require_fully_within_window: true,
+                    padding_px: 12.0,
+                    padding_insets_px: None,
+                    timeout_frames: 1200,
+                },
+                UiActionStepV2::WaitFrames { window: None, n: 6 },
+                UiActionStepV2::CaptureScreenshot {
+                    label: Some("ui-gallery-navigation-menu-docs-demo-closed".to_string()),
+                    timeout_frames: 240,
+                    timeout_ms: None,
+                },
+                UiActionStepV2::Assert {
+                    window: None,
+                    predicate: UiPredicateV1::Exists { target },
+                },
+            ],
+        };
+
+        let findings = lint_ui_gallery_scroll_into_view_interaction_guards_v2(&script);
+        assert!(findings.is_empty());
     }
 
     #[test]

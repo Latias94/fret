@@ -1304,7 +1304,6 @@ impl CommitFilePath {
             color: Some(fg_primary),
             ..base_props
         };
-        
 
         cx.pressable(pressable, move |cx, _st| {
             cx.pressable_on_activate({

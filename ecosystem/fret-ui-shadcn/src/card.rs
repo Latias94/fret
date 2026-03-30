@@ -1588,10 +1588,7 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            fn find_descendant_with_children(
-                root: &AnyElement,
-                child_count: usize,
-            ) -> &AnyElement {
+            fn find_descendant_with_children(root: &AnyElement, child_count: usize) -> &AnyElement {
                 let mut stack = vec![root];
                 while let Some(node) = stack.pop() {
                     if node.children.len() >= child_count {
@@ -1728,14 +1725,14 @@ mod tests {
                 while let Some(node) = stack.pop() {
                     if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind
                         && padding.bottom == pb.into()
-                            && padding.left == padding.right
-                            && matches!(
-                                padding.left,
-                                fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
-                            )
-                        {
-                            return true;
-                        }
+                        && padding.left == padding.right
+                        && matches!(
+                            padding.left,
+                            fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
+                        )
+                    {
+                        return true;
+                    }
                     for child in &node.children {
                         stack.push(child);
                     }
@@ -1774,14 +1771,14 @@ mod tests {
                 while let Some(node) = stack.pop() {
                     if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind
                         && padding.bottom == pb.into()
-                            && padding.left == padding.right
-                            && matches!(
-                                padding.left,
-                                fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
-                            )
-                        {
-                            return true;
-                        }
+                        && padding.left == padding.right
+                        && matches!(
+                            padding.left,
+                            fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
+                        )
+                    {
+                        return true;
+                    }
                     for child in &node.children {
                         stack.push(child);
                     }
@@ -1820,14 +1817,14 @@ mod tests {
                 while let Some(node) = stack.pop() {
                     if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind
                         && padding.top == pt.into()
-                            && padding.left == padding.right
-                            && matches!(
-                                padding.left,
-                                fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
-                            )
-                        {
-                            return true;
-                        }
+                        && padding.left == padding.right
+                        && matches!(
+                            padding.left,
+                            fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
+                        )
+                    {
+                        return true;
+                    }
                     for child in &node.children {
                         stack.push(child);
                     }
@@ -2180,14 +2177,12 @@ pub struct CardFooter {
     wrap: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CardFooterDirection {
     #[default]
     Row,
     Column,
 }
-
 
 impl CardFooter {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {

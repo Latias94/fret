@@ -1,10 +1,11 @@
 {
   "meta": {
     "required_capabilities": [
+      "diag.script_v2",
       "diag.screenshot_png"
     ]
   },
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
       "predicate": {
@@ -91,6 +92,7 @@
         "id": "ui-gallery-select-diag-surface"
       },
       "delta_y": -180.0,
+      "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 24.0,
       "timeout_frames": 1200

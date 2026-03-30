@@ -281,11 +281,9 @@ impl DatePickerDialog {
         default_selected: Option<Date>,
     ) -> Self {
         let open = controllable_state::use_controllable_model(cx, open, || default_open).model();
-        let month =
-            controllable_state::use_controllable_model(cx, month, || default_month).model();
+        let month = controllable_state::use_controllable_model(cx, month, || default_month).model();
         let selected =
-            controllable_state::use_controllable_model(cx, selected, || default_selected)
-                .model();
+            controllable_state::use_controllable_model(cx, selected, || default_selected).model();
         Self::new(open, month, selected)
     }
 

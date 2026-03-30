@@ -19,8 +19,8 @@ pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "The base `Table` surface should stay the low-level shadcn leaf: responsive wrapper, row/cell chrome, and a copyable parts API.",
     ]);
     let api_reference = doc_layout::notes_block([
-        "Docs source: `repo-ref/ui/apps/v4/content/docs/components/base/table.mdx`.",
-        "Visual/chrome baseline: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx` plus `repo-ref/ui/apps/v4/registry/new-york-v4/examples/table-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/table-footer.tsx`, `repo-ref/ui/apps/v4/examples/base/table-actions.tsx`, and `repo-ref/ui/apps/v4/examples/base/table-rtl.tsx`.",
+        "Reference baseline: shadcn base Table docs.",
+        "Visual/chrome baseline: the default shadcn registry table plus the demo, footer, actions, and RTL examples.",
         "`Table` still owns the responsive `w-full overflow-x-auto` wrapper outcome, while page/container sizing remains caller-owned.",
         "`table(...)`, `table_header(...)`, `table_body(...)`, `table_row(...)`, `table_head(...)`, `table_cell(...)`, and `table_caption(...)` stay the default docs-shaped lane.",
         "`TableHead` and `TableCaption` expose focused composable helpers (`table_head_children(...)` and `table_caption_children(...)`) for the upstream-shaped children pressure, while `TableCell` intentionally remains a single-child root surface.",

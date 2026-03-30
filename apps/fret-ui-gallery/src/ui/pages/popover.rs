@@ -28,7 +28,7 @@ pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
 
     let notes = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/popover.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/popover.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/popover.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/popover-demo.tsx`, `repo-ref/primitives/packages/react/popover/src/popover.tsx`, and `repo-ref/base-ui/packages/react/src/popover/root/PopoverRoot.tsx`.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/popover.rs`. Reference stack: shadcn/base Popover docs and demo, the default registry recipe, Radix Primitives popover semantics, and Base UI popover ownership.",
         "Preview mirrors the shadcn/base Popover docs path after `Installation`: `Demo`, `Usage`, `Basic`, `Align`, `With Form`, `RTL`, and `API Reference`. `Detached Trigger (Fret)`, `Open on Hover (Base UI/Fret)`, and `Inline Children (Fret)` stay as explicit follow-ups.",
         "`Demo` keeps the official new-york `popover-demo` structure with the four dimensions rows, while `Basic` / `Align` / `With Form` / `RTL` track the docs examples.",
         "`RTL` now keeps both the physical sides and the logical `inline-start` / `inline-end` cases from the upstream Base UI docs so direction-aware placement stays reviewable.",

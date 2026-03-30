@@ -296,7 +296,6 @@ impl AssetResolverLayer {
     }
 }
 
-
 #[derive(Clone)]
 pub struct AssetResolverService {
     state: Arc<AssetResolverServiceState>,

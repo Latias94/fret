@@ -633,10 +633,7 @@ pub mod composable {
             );
             props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-            let gap = self
-                .gap
-                .unwrap_or(MetricRef::Px(Px(0.0)))
-                .resolve(&theme);
+            let gap = self.gap.unwrap_or(MetricRef::Px(Px(0.0))).resolve(&theme);
             let children = self.children;
 
             cx.container(props, move |cx| {
@@ -1164,7 +1161,16 @@ pub mod composable {
                                         children.push(wrapper_el);
                                     }
 
-                                    children
+                                    vec![cx.column(
+                                        ColumnProps {
+                                            layout: LayoutStyle::default(),
+                                            gap: Px(0.0).into(),
+                                            padding: Edges::all(Px(0.0)).into(),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Stretch,
+                                        },
+                                        move |_cx| children,
+                                    )]
                                 });
 
                                 out.push(if let Some(test_id) = item_test_id {
@@ -1611,10 +1617,7 @@ impl AccordionContent {
         );
         props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-        let gap = self
-            .gap
-            .unwrap_or(MetricRef::Px(Px(0.0)))
-            .resolve(&theme);
+        let gap = self.gap.unwrap_or(MetricRef::Px(Px(0.0))).resolve(&theme);
         let children = self.children;
 
         cx.container(props, move |cx| {
@@ -2670,22 +2673,28 @@ mod tests {
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
                 let item_1 = composable_accordion::AccordionItem::new(Arc::from("item-1"))
+                    .test_id("accordion-composable-uncontrolled-item-1")
                     .trigger(
                         composable_accordion::AccordionTrigger::new(vec![cx.text("Item 1")])
-                            .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                            .refine_layout(LayoutRefinement::default().h_px(Px(40.0)))
+                            .test_id("accordion-composable-uncontrolled-trigger-1"),
                     )
-                    .content(composable_accordion::AccordionContent::new(vec![
-                        cx.text("Content 1"),
-                    ]));
+                    .content(
+                        composable_accordion::AccordionContent::new(vec![cx.text("Content 1")])
+                            .test_id("accordion-composable-uncontrolled-content-1"),
+                    );
 
                 let item_2 = composable_accordion::AccordionItem::new(Arc::from("item-2"))
+                    .test_id("accordion-composable-uncontrolled-item-2")
                     .trigger(
                         composable_accordion::AccordionTrigger::new(vec![cx.text("Item 2")])
-                            .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                            .refine_layout(LayoutRefinement::default().h_px(Px(40.0)))
+                            .test_id("accordion-composable-uncontrolled-trigger-2"),
                     )
-                    .content(composable_accordion::AccordionContent::new(vec![
-                        cx.text("Content 2"),
-                    ]));
+                    .content(
+                        composable_accordion::AccordionContent::new(vec![cx.text("Content 2")])
+                            .test_id("accordion-composable-uncontrolled-content-2"),
+                    );
 
                 let accordion = composable_accordion::AccordionRoot::single(open)
                     .collapsible(collapsible)
@@ -2743,6 +2752,47 @@ mod tests {
                     .collapsible(collapsible)
                     .items([item_1, item_2])
                     .into_element(cx);
+
+                vec![accordion]
+            });
+
+        ui.set_root(root);
+    }
+
+    fn render_accordion_frame_composable_uncontrolled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        default_value: Option<Arc<str>>,
+        collapsible: bool,
+    ) {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let item_1 = composable_accordion::AccordionItem::new(Arc::from("item-1"))
+                    .trigger(
+                        composable_accordion::AccordionTrigger::new(vec![cx.text("Item 1")])
+                            .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    )
+                    .content(composable_accordion::AccordionContent::new(vec![
+                        cx.text("Content 1"),
+                    ]));
+
+                let item_2 = composable_accordion::AccordionItem::new(Arc::from("item-2"))
+                    .trigger(
+                        composable_accordion::AccordionTrigger::new(vec![cx.text("Item 2")])
+                            .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    )
+                    .content(composable_accordion::AccordionContent::new(vec![
+                        cx.text("Content 2"),
+                    ]));
+
+                let accordion =
+                    composable_accordion::AccordionRoot::single_uncontrolled(default_value.clone())
+                        .collapsible(collapsible)
+                        .items([item_1, item_2])
+                        .into_element(cx);
 
                 vec![accordion]
             });
@@ -2840,6 +2890,31 @@ mod tests {
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
 
         render_accordion_frame_uncontrolled(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            default_value,
+            collapsible,
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_accordion_frame_composable_uncontrolled_with_semantics(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        default_value: Option<Arc<str>>,
+        collapsible: bool,
+    ) {
+        app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
+        render_accordion_frame_composable_uncontrolled(
             ui,
             app,
             services,
@@ -3497,6 +3572,185 @@ mod tests {
         }
         assert!(snapshot_has_label(&ui, "Content 2"));
         assert!(!snapshot_has_label(&ui, "Content 1"));
+    }
+
+    #[test]
+    fn accordion_single_uncontrolled_toggles_active_item_composable() {
+        fn snapshot_has_label(ui: &UiTree<App>, label: &str) -> bool {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .any(|n| n.label.as_deref() == Some(label))
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        render_accordion_frame_composable_uncontrolled_with_semantics(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("item-1")),
+            true,
+        );
+        assert!(snapshot_has_label(&ui, "Content 1"));
+
+        // Click the initially open trigger to collapse the item.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        for _ in 0..24 {
+            render_accordion_frame_composable_uncontrolled_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                Some(Arc::from("item-1")),
+                true,
+            );
+        }
+        assert!(!snapshot_has_label(&ui, "Content 1"));
+
+        // Click the same trigger again to reopen the item.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        for _ in 0..12 {
+            render_accordion_frame_composable_uncontrolled_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                Some(Arc::from("item-1")),
+                true,
+            );
+        }
+        assert!(snapshot_has_label(&ui, "Content 1"));
+
+        // The internal uncontrolled state should remain stable across later renders.
+        for _ in 0..8 {
+            render_accordion_frame_composable_uncontrolled_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                Some(Arc::from("item-1")),
+                true,
+            );
+        }
+        assert!(snapshot_has_label(&ui, "Content 1"));
+    }
+
+    #[test]
+    fn accordion_single_uncontrolled_composable_places_content_below_the_trigger() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for _ in 0..12 {
+            render_accordion_frame_composable_uncontrolled_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                Some(Arc::from("item-1")),
+                true,
+            );
+        }
+
+        let semantics = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_id = semantics
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == fret_core::SemanticsRole::Button
+                    && node.label.as_deref() == Some("item-1")
+            })
+            .expect("trigger semantics node")
+            .id;
+        let content_id = semantics
+            .nodes
+            .iter()
+            .find(|node| node.label.as_deref() == Some("Content 1"))
+            .expect("content semantics node")
+            .id;
+
+        let trigger_bounds = ui.debug_node_bounds(trigger_id).expect("trigger bounds");
+        let content_bounds = ui.debug_node_bounds(content_id).expect("content bounds");
+
+        assert!(
+            content_bounds.origin.y.0
+                >= trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 - 1.0,
+            "expected composable accordion content to be laid out below the trigger; trigger={trigger_bounds:?} content={content_bounds:?}"
+        );
     }
 
     #[test]

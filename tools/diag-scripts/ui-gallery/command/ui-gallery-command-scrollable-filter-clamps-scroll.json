@@ -2,16 +2,29 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-command-scrollable-filter-clamps-scroll",
-    "required_capabilities": ["diag.script_v2"],
-    "tags": ["ui_gallery", "shadcn", "command", "scroll", "filter"]
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "command",
+      "scroll",
+      "filter"
+    ]
   },
   "steps": [
-    { "type": "reset_diagnostics" },
+    {
+      "type": "reset_diagnostics"
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-search"
+        }
       },
       "timeout_frames": 600
     },
@@ -19,92 +32,189 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-content-scroll"
+        }
       },
       "timeout_frames": 600
     },
-
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 20 },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "command" },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "press_key",
+      "key": "escape"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "set_window_inner_size",
+      "width_px": 1280.0,
+      "height_px": 720.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 20
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "backspace"
+    },
+    {
+      "type": "type_text",
+      "text": "command"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
     {
       "type": "ensure_visible",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-command" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-command"
+      },
       "within_window": true,
       "padding_px": 8.0,
       "timeout_frames": 600
     },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-command" } },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-command"
+      }
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-command" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-command"
+        }
       },
       "timeout_frames": 600
     },
-
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-trigger.chrome" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-scrollable-trigger.chrome"
+        }
       },
       "timeout_frames": 600
     },
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-trigger.chrome" },
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-scroll"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-scrollable-trigger.chrome"
+      },
       "delta_x": 0.0,
       "delta_y": -120.0,
       "require_fully_within_window": true,
       "padding_px": 8.0,
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "require_fully_within_container": true
     },
     {
       "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-trigger.chrome" }
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-scrollable-trigger.chrome"
+      }
     },
-
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-scrollable-viewport"
+        }
       },
       "timeout_frames": 600
     },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" }, "delta_y": -480.0 },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-scrollable-viewport"
+      },
+      "delta_y": -480.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
     {
       "type": "assert",
       "predicate": {
         "kind": "semantics_scroll_not_approx_eq",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-scrollable-viewport"
+        },
         "field": "y",
         "value": 0.0,
         "eps": 0.01
       }
     },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-input" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "code editor" },
-    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-scrollable-input"
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "backspace"
+    },
+    {
+      "type": "type_text",
+      "text": "code editor"
+    },
+    {
+      "type": "wait_frames",
+      "n": 4
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "semantics_scroll_approx_eq",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-scrollable-viewport"
+        },
         "field": "y_max",
         "value": 0.0,
         "eps": 0.01
@@ -115,25 +225,43 @@
       "type": "assert",
       "predicate": {
         "kind": "semantics_scroll_approx_eq",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-scrollable-viewport"
+        },
         "field": "y",
         "value": 0.0,
         "eps": 0.01
       }
     },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" }, "delta_y": -240.0 },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-scrollable-viewport"
+      },
+      "delta_y": -240.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
     {
       "type": "assert",
       "predicate": {
         "kind": "semantics_scroll_approx_eq",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-scrollable-viewport" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-scrollable-viewport"
+        },
         "field": "y",
         "value": 0.0,
         "eps": 0.01
       }
     },
-
-    { "type": "capture_bundle", "label": "ui-gallery-command-scrollable-filter-clamps-scroll" }
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-command-scrollable-filter-clamps-scroll"
+    }
   ]
 }

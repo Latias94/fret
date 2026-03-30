@@ -28,25 +28,26 @@ fn candidate_selectors_for_node(
 
     let role = semantics_role_label(raw_node.role).to_string();
     if let Some(name) = exported_node.label.as_deref()
-        && !(cfg.redact_text && is_redacted_string(name)) {
-            // Prefer shorter paths when possible; the validated selection path will pick the
-            // shortest unique candidate.
-            let ancestors = selector_ancestors_for(snapshot, raw_node);
-            for suffix_len in 1..=ancestors.len() {
-                let suffix = ancestors[ancestors.len() - suffix_len..].to_vec();
-                out.push(UiSelectorV1::RoleAndPath {
-                    role: role.clone(),
-                    name: name.to_string(),
-                    ancestors: suffix,
-                    root_z_index: None,
-                });
-            }
-            out.push(UiSelectorV1::RoleAndName {
+        && !(cfg.redact_text && is_redacted_string(name))
+    {
+        // Prefer shorter paths when possible; the validated selection path will pick the
+        // shortest unique candidate.
+        let ancestors = selector_ancestors_for(snapshot, raw_node);
+        for suffix_len in 1..=ancestors.len() {
+            let suffix = ancestors[ancestors.len() - suffix_len..].to_vec();
+            out.push(UiSelectorV1::RoleAndPath {
                 role: role.clone(),
                 name: name.to_string(),
+                ancestors: suffix,
                 root_z_index: None,
             });
         }
+        out.push(UiSelectorV1::RoleAndName {
+            role: role.clone(),
+            name: name.to_string(),
+            root_z_index: None,
+        });
+    }
 
     if let Some(element) = element {
         out.push(UiSelectorV1::GlobalElementId {
@@ -178,9 +179,10 @@ fn eval_selector_scoped(
                     &in_scope,
                     &matches_root_z,
                     &mut matches,
-                ) {
-                    note = Some("fallback_chrome_suffix");
-                }
+                )
+            {
+                note = Some("fallback_chrome_suffix");
+            }
             if matches.is_empty() {
                 // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
                 note = Some("fallback_hidden_nodes");

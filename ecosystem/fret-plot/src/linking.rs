@@ -198,33 +198,35 @@ fn apply_snapshot_to_plot_state(
         // Only propagate optional axis bounds when the source plot provides them. This prevents a
         // plot that doesn't have a given axis enabled from clearing other members' axis state.
         if let Some(vb) = snapshot.view_bounds_y2
-            && (state.view_y2_is_auto || state.view_bounds_y2 != Some(vb)) {
-                state.view_y2_is_auto = false;
-                state.view_bounds_y2 = Some(vb);
-                changed = true;
-                should_ignore = true;
-            }
-        if let Some(vb) = snapshot.view_bounds_y3
-            && (state.view_y3_is_auto || state.view_bounds_y3 != Some(vb)) {
-                state.view_y3_is_auto = false;
-                state.view_bounds_y3 = Some(vb);
-                changed = true;
-                should_ignore = true;
-            }
-        if let Some(vb) = snapshot.view_bounds_y4
-            && (state.view_y4_is_auto || state.view_bounds_y4 != Some(vb)) {
-                state.view_y4_is_auto = false;
-                state.view_bounds_y4 = Some(vb);
-                changed = true;
-                should_ignore = true;
-            }
-    }
-    if policy.query
-        && state.query != snapshot.query {
-            state.query = snapshot.query;
+            && (state.view_y2_is_auto || state.view_bounds_y2 != Some(vb))
+        {
+            state.view_y2_is_auto = false;
+            state.view_bounds_y2 = Some(vb);
             changed = true;
             should_ignore = true;
         }
+        if let Some(vb) = snapshot.view_bounds_y3
+            && (state.view_y3_is_auto || state.view_bounds_y3 != Some(vb))
+        {
+            state.view_y3_is_auto = false;
+            state.view_bounds_y3 = Some(vb);
+            changed = true;
+            should_ignore = true;
+        }
+        if let Some(vb) = snapshot.view_bounds_y4
+            && (state.view_y4_is_auto || state.view_bounds_y4 != Some(vb))
+        {
+            state.view_y4_is_auto = false;
+            state.view_bounds_y4 = Some(vb);
+            changed = true;
+            should_ignore = true;
+        }
+    }
+    if policy.query && state.query != snapshot.query {
+        state.query = snapshot.query;
+        changed = true;
+        should_ignore = true;
+    }
     if policy.cursor_x {
         let next = snapshot.cursor.map(|c| c.x);
         if state.linked_cursor_x != next {

@@ -7,15 +7,8 @@ fn field_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/field.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/field.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/radix/field.mdx",
-        "repo-ref/ui/apps/v4/registry/bases/base/ui/field.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/radix/ui/field.tsx",
-        "repo-ref/ui/apps/v4/examples/base/field-{demo,input,textarea,select,slider,fieldset,checkbox,radio,switch,choice-card,group,rtl,responsive}.tsx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-{demo,input,textarea,select,slider,fieldset,checkbox,radio,switch,choice-card,group,rtl,responsive}.tsx",
-        "repo-ref/base-ui/packages/react/src/field/index.parts.ts",
-        "repo-ref/base-ui/packages/react/src/field/root/FieldRoot.tsx",
-        "`repo-ref/primitives` does not ship a standalone generic `Field` primitive",
+        "Reference stack: shadcn Field docs, base/radix field recipes, and the corresponding base/new-york example sets.",
+        "Headless mechanism cross-check: Base UI defines a dedicated field/label/control/description/error split, while Radix Primitives does not ship a standalone generic `Field` primitive.",
         "No extra generic root `compose()` / `asChild` / `children(...)` API is needed here",
         "docs/public-surface drift rather than a `fret-ui` mechanism bug",
         "Preview mirrors the upstream shadcn Field docs path first after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Anatomy`, `Form`, `Input`, `Textarea`, `Select`, `Slider`, `Fieldset`, `Checkbox`, `Radio`, `Switch`, `Choice Card`, `Field Group`, `RTL`, `Responsive Layout`, `Validation and Errors`, `Accessibility`, and `API Reference`.",

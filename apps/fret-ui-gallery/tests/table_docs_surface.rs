@@ -7,12 +7,8 @@ fn table_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/table.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/table.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/table-demo.tsx",
-        "repo-ref/ui/apps/v4/examples/base/table-footer.tsx",
-        "repo-ref/ui/apps/v4/examples/base/table-actions.tsx",
-        "repo-ref/ui/apps/v4/examples/base/table-rtl.tsx",
+        "Reference baseline: shadcn base Table docs.",
+        "Visual/chrome baseline: the default shadcn registry table plus the demo, footer, actions, and RTL examples.",
         "`TableHead` and `TableCaption` expose focused composable helpers (`table_head_children(...)` and `table_caption_children(...)`) for the upstream-shaped children pressure, while `TableCell` intentionally remains a single-child root surface.",
         "No broader generic root `children(...)` / `compose()` API is warranted here",
         "Unlike overlay/listbox components, this pass did not find a separate Radix/Base UI primitive contract to port for `Table`; the remaining drift was recipe/docs-surface work rather than a missing `fret-ui` mechanism.",

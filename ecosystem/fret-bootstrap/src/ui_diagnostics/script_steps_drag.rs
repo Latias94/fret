@@ -764,44 +764,46 @@ pub(super) fn handle_drag_pointer_until_step(
                 active.v2_step_state = None;
             } else {
                 // Initialize start/end positions on the first frame.
-                if state.playback.frame == 0 && state.playback.start == Point::default()
-                    && let Some(snapshot) = semantics_snapshot {
-                        if let Some(node) = select_semantics_node_with_trace(
-                            snapshot,
-                            window,
-                            element_runtime,
-                            &target,
-                            active.scope_root_for_window(window),
-                            step_index as u32,
-                            svc.cfg.redact_text,
-                            &mut active.selector_resolution_trace,
-                        ) {
-                            let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                            let mut end = Point::new(
-                                fret_core::Px(start.x.0 + delta_x),
-                                fret_core::Px(start.y.0 + delta_y),
-                            );
-                            let allow_outside_window_bounds = matches!(
-                                &state.predicate,
-                                UiPredicateV1::KnownWindowCountGe { .. }
-                                    | UiPredicateV1::KnownWindowCountIs { .. }
-                                    | UiPredicateV1::DockDragCurrentWindowIs { .. }
-                            );
-                            if !allow_outside_window_bounds {
-                                end = clamp_point_to_rect(end, window_bounds);
-                            }
-                            state.playback.start = start;
-                            state.playback.end = end;
-                        } else {
-                            *force_dump_label = Some(format!(
-                                "script-step-{step_index:04}-drag_pointer_until-no-semantics-match"
-                            ));
-                            *stop_script = true;
-                            *failure_reason = Some("drag_pointer_until_no_match".to_string());
-                            active.v2_step_state = None;
-                            output.request_redraw = true;
+                if state.playback.frame == 0
+                    && state.playback.start == Point::default()
+                    && let Some(snapshot) = semantics_snapshot
+                {
+                    if let Some(node) = select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &target,
+                        active.scope_root_for_window(window),
+                        step_index as u32,
+                        svc.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    ) {
+                        let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                        let mut end = Point::new(
+                            fret_core::Px(start.x.0 + delta_x),
+                            fret_core::Px(start.y.0 + delta_y),
+                        );
+                        let allow_outside_window_bounds = matches!(
+                            &state.predicate,
+                            UiPredicateV1::KnownWindowCountGe { .. }
+                                | UiPredicateV1::KnownWindowCountIs { .. }
+                                | UiPredicateV1::DockDragCurrentWindowIs { .. }
+                        );
+                        if !allow_outside_window_bounds {
+                            end = clamp_point_to_rect(end, window_bounds);
                         }
+                        state.playback.start = start;
+                        state.playback.end = end;
+                    } else {
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-drag_pointer_until-no-semantics-match"
+                        ));
+                        *stop_script = true;
+                        *failure_reason = Some("drag_pointer_until_no_match".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
                     }
+                }
 
                 // Wait for semantics to become available before selecting coordinates.
                 if !*stop_script

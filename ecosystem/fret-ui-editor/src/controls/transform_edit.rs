@@ -32,14 +32,12 @@ fn derived_id_source(base: Option<&Arc<str>>, suffix: &str) -> Option<Arc<str>> 
     base.map(|id| Arc::<str>::from(format!("{}.{}", id.as_ref(), suffix)))
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TransformEditLayoutVariant {
     #[default]
     Column,
     Row,
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransformEditSection {
@@ -617,64 +615,63 @@ fn section_row<H: UiHost>(
                 },
             ));
 
-            if show_link
-                && let Some((linked, test_id)) = link {
-                    let mut el = Checkbox::new(linked)
-                        .options(CheckboxOptions {
-                            a11y_label: Some(Arc::from(a11y)),
-                            focusable: true,
-                            enabled: true,
-                            ..Default::default()
-                        })
-                        .into_element(cx);
-                    if let Some(test_id) = test_id.as_ref() {
-                        el = el.test_id(test_id.clone());
-                    }
-                    out.push(cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Auto,
-                                    height: Length::Px(density.row_height),
-                                    ..Default::default()
-                                },
+            if show_link && let Some((linked, test_id)) = link {
+                let mut el = Checkbox::new(linked)
+                    .options(CheckboxOptions {
+                        a11y_label: Some(Arc::from(a11y)),
+                        focusable: true,
+                        enabled: true,
+                        ..Default::default()
+                    })
+                    .into_element(cx);
+                if let Some(test_id) = test_id.as_ref() {
+                    el = el.test_id(test_id.clone());
+                }
+                out.push(cx.flex(
+                    FlexProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Auto,
+                                height: Length::Px(density.row_height),
                                 ..Default::default()
                             },
-                            direction: Axis::Horizontal,
-                            gap: SpacingLength::Px(Px(4.0)),
-                            padding: Edges::all(Px(0.0)).into(),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Center,
-                            wrap: false,
+                            ..Default::default()
                         },
-                        move |cx| {
-                            vec![
-                                el,
-                                cx.text_props(TextProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Auto,
-                                            height: Length::Auto,
-                                            ..Default::default()
-                                        },
+                        direction: Axis::Horizontal,
+                        gap: SpacingLength::Px(Px(4.0)),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |cx| {
+                        vec![
+                            el,
+                            cx.text_props(TextProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Auto,
+                                        height: Length::Auto,
                                         ..Default::default()
                                     },
-                                    text: Arc::from("Link"),
-                                    style: Some(typography::as_control_text(TextStyle {
-                                        size: Px(11.0),
-                                        line_height: Some(density.row_height),
-                                        ..Default::default()
-                                    })),
-                                    color: Some(label_fg),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Clip,
-                                    align: TextAlign::Start,
-                                    ink_overflow: Default::default(),
-                                }),
-                            ]
-                        },
-                    ));
-                }
+                                    ..Default::default()
+                                },
+                                text: Arc::from("Link"),
+                                style: Some(typography::as_control_text(TextStyle {
+                                    size: Px(11.0),
+                                    line_height: Some(density.row_height),
+                                    ..Default::default()
+                                })),
+                                color: Some(label_fg),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                                align: TextAlign::Start,
+                                ink_overflow: Default::default(),
+                            }),
+                        ]
+                    },
+                ));
+            }
 
             out.push(content(cx));
             out

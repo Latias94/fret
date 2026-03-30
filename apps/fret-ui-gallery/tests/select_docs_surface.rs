@@ -7,11 +7,8 @@ fn select_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/select.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/radix/select.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/base/select.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/select.tsx",
-        "repo-ref/primitives/packages/react/select/src/select.tsx",
-        "repo-ref/base-ui/packages/react/src/select/",
+        "Reference stack: shadcn Select docs on the Radix and Base UI lanes.",
+        "The current visual/chrome baseline comes from the default shadcn registry recipe; semantics/headless references come from Radix Primitives Select and Base UI Select.",
         "`Select::into_element_parts(...)` plus `SelectContent::with_entries(...)` is the typed docs-parity seam for the upstream nested `SelectTrigger` / `SelectValue` / `SelectContent` children lane; a generic root `children([...])` / `compose()` API is not warranted because the option tree is already typed as `SelectEntry` (`SelectGroup` / `SelectItem` / `SelectLabel` / `SelectSeparator`).",
         "Base UI-style object values and multi-select remain separate public-surface work rather than a recipe/mechanism bug.",
         "Preview now mirrors the upstream shadcn/Base UI Select docs path first after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Align Item With Trigger`, `Groups`, `Scrollable`, `Disabled`, `Invalid`, `RTL`, and `API Reference`.",

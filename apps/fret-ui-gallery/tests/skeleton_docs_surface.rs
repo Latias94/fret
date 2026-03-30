@@ -7,10 +7,8 @@ fn skeleton_page_documents_source_axes_and_leaf_api_decision() {
     let source = include_str!("../src/ui/pages/skeleton.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/skeleton.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/radix/skeleton.mdx",
-        "repo-ref/ui/apps/v4/registry/{new-york-v4,bases/base,bases/radix}/ui/skeleton.tsx",
-        "Neither `repo-ref/primitives` nor `repo-ref/base-ui` defines a dedicated Skeleton primitive",
+        "Reference stack: shadcn Skeleton docs plus the default and base/radix registry recipes.",
+        "Neither Radix Primitives nor Base UI defines a dedicated Skeleton primitive",
         "no extra generic `compose()` or composable children API is needed here",
         "Preview mirrors the shadcn Skeleton docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`",
         "DocSection::build(cx, \"API Reference\", api_reference)",

@@ -72,8 +72,7 @@ pub(crate) fn calendar_day_grid_row_edge_target_for_key(
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum CalendarLocale {
     #[default]
     En,
@@ -193,7 +192,6 @@ impl CalendarDayButton {
         self
     }
 }
-
 
 impl CalendarLocale {
     pub(crate) fn month_name(self, month: Month) -> &'static str {

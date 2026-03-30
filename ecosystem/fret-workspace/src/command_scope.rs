@@ -180,12 +180,13 @@ impl<T> WorkspaceCommandScope<T> {
                             .flatten()
                             .or(content_fallback);
                         if let Some(last_focus) = last_focus
-                            && last_focus != target {
-                                let _ = host.models_mut().update(&focus_state_for_command, |st| {
-                                    st.return_focus_by_window_and_pane
-                                        .insert((acx.window, pane_id.clone()), last_focus);
-                                });
-                            }
+                            && last_focus != target
+                        {
+                            let _ = host.models_mut().update(&focus_state_for_command, |st| {
+                                st.return_focus_by_window_and_pane
+                                    .insert((acx.window, pane_id.clone()), last_focus);
+                            });
+                        }
 
                         host.request_focus(target);
                         let _ = host.models_mut().update(&focus_state_for_command, |st| {
@@ -359,12 +360,13 @@ impl<T> WorkspaceCommandScope<T> {
                             .flatten()
                             .or(content_fallback);
                         if let Some(last_focus) = focused
-                            && last_focus != target {
-                                let _ = host.models_mut().update(&focus_state_for_command, |st| {
-                                    st.return_focus_by_window_and_pane
-                                        .insert((acx.window, pane_id.clone()), last_focus);
-                                });
-                            }
+                            && last_focus != target
+                        {
+                            let _ = host.models_mut().update(&focus_state_for_command, |st| {
+                                st.return_focus_by_window_and_pane
+                                    .insert((acx.window, pane_id.clone()), last_focus);
+                            });
+                        }
 
                         host.request_focus(target);
                         let _ = host.models_mut().update(&focus_state_for_command, |st| {

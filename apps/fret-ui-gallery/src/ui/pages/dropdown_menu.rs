@@ -22,7 +22,7 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let parts = snippets::parts::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx`.",
+        "Reference baseline: shadcn base Dropdown Menu docs.",
         "`DropdownMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)` is now the default copyable root path, while `build_parts(...)` / `into_element_parts(...)` remain lower-level adapters for closure-driven or already-landed seams.",
         "`DropdownMenuTrigger`, `DropdownMenuPortal`, `DropdownMenuContent`, and `DropdownMenuSub*` keep the shadcn/Base UI part names available without pushing menu policy down into `fret-ui`.",
         "`DropdownMenuSubContent` keeps the upstream Base UI default submenu side (`inline-end`), so a direction provider is enough to mirror submenu opening direction while submenu chevrons also flip toward logical inline-end.",

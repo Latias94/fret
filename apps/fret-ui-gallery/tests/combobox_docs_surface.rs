@@ -7,15 +7,11 @@ fn combobox_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/combobox.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/combobox.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/radix/combobox.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/combobox.tsx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/{combobox-demo,combobox-popover,combobox-responsive}.tsx",
-        "repo-ref/base-ui/packages/react/src/combobox/index.parts.ts",
-        "repo-ref/base-ui/packages/react/src/combobox/root/AriaCombobox.tsx",
-        "`repo-ref/primitives` does not ship a standalone Radix `Combobox` primitive",
+        "Reference stack: shadcn Combobox docs and examples plus the default registry recipe.",
+        "Headless contract references: Base UI combobox parts and combobox root semantics.",
+        "Radix Primitives does not ship a standalone `Combobox` primitive",
         "`Combobox::new(value, open)` plus the direct builder chain (`.trigger(...).input(...).clear(...).content(...)`) is the default recipe root lane, while `into_element_parts(...)` stays the focused upstream-shaped patch seam on that same lane rather than a separate `compose()` story.",
-        "`Combobox::responsive(true)` remains the viewport-driven follow-up for `repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx` instead of widening the default docs path.",
+        "`Combobox::responsive(true)` remains the viewport-driven follow-up for the responsive example instead of widening the default docs path.",
         "docs/public-surface drift rather than a `fret-ui` mechanism bug",
         "No extra generic root `children(...)` / `compose()` / `asChild` API is warranted here",
         "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",

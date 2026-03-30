@@ -941,112 +941,108 @@ impl Sidebar {
             variant,
         };
 
-        if is_mobile && !matches!(collapsible, SidebarCollapsible::None)
-            && let Some(sidebar_ctx) = sidebar_ctx.clone() {
-                let open_model = sidebar_ctx.open.clone();
-                let open_mobile_model = sidebar_ctx.open_mobile.clone();
-                let is_mobile_for_toggle = sidebar_ctx.is_mobile;
+        if is_mobile
+            && !matches!(collapsible, SidebarCollapsible::None)
+            && let Some(sidebar_ctx) = sidebar_ctx.clone()
+        {
+            let open_model = sidebar_ctx.open.clone();
+            let open_mobile_model = sidebar_ctx.open_mobile.clone();
+            let is_mobile_for_toggle = sidebar_ctx.is_mobile;
 
-                let on_key_down = sidebar_toggle_key_down_handler(
-                    open_model.clone(),
-                    open_mobile_model.clone(),
-                    is_mobile_for_toggle,
+            let on_key_down = sidebar_toggle_key_down_handler(
+                open_model.clone(),
+                open_mobile_model.clone(),
+                is_mobile_for_toggle,
+            );
+            let (on_command, on_command_availability) = sidebar_toggle_command_handlers(
+                open_model,
+                open_mobile_model,
+                is_mobile_for_toggle,
+            );
+
+            let sheet_side = sidebar_sheet_side(side);
+            let (surface_props, sheet_size, sheet_bg, sheet_border) = {
+                let theme = Theme::global(&*cx.app);
+                let mut surface_props = decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(sidebar_bg(theme)))
+                        .border_1()
+                        .border_color(ColorRef::Color(sidebar_border(theme)))
+                        .merge(chrome),
+                    LayoutRefinement::default().w_full().h_full().merge(layout),
                 );
-                let (on_command, on_command_availability) = sidebar_toggle_command_handlers(
-                    open_model,
-                    open_mobile_model,
-                    is_mobile_for_toggle,
+                surface_props.layout.overflow = Overflow::Clip;
+
+                let sheet_size = sidebar_ctx.width_mobile;
+                let sheet_bg = sidebar_bg(theme);
+                let sheet_border = sidebar_border(theme);
+                (surface_props, sheet_size, sheet_bg, sheet_border)
+            };
+
+            let on_key_down_for_trigger = on_key_down.clone();
+            let on_command_for_trigger = on_command.clone();
+            let on_command_availability_for_trigger = on_command_availability.clone();
+            return Sheet::new(sidebar_ctx.open_mobile.clone())
+                .side(sheet_side)
+                .size(sheet_size)
+                .into_element(
+                    cx,
+                    |cx| {
+                        let trigger = cx.spacer(SpacerProps {
+                            min: Px(0.0),
+                            ..Default::default()
+                        });
+
+                        cx.key_add_on_key_down_capture_for(
+                            trigger.id,
+                            on_key_down_for_trigger.clone(),
+                        );
+                        cx.command_on_command_for(trigger.id, on_command_for_trigger.clone());
+                        cx.command_on_command_availability_for(
+                            trigger.id,
+                            on_command_availability_for_trigger.clone(),
+                        );
+
+                        trigger
+                    },
+                    move |cx| {
+                        let children = with_sidebar_surface_provider(cx, surface_context, |cx| {
+                            render_children(cx).into_iter().collect::<Vec<_>>()
+                        });
+                        let content_root =
+                            cx.container(ContainerProps::default(), move |_cx| children);
+
+                        cx.key_add_on_key_down_capture_for(content_root.id, on_key_down.clone());
+                        cx.command_on_command_for(content_root.id, on_command.clone());
+                        cx.command_on_command_availability_for(
+                            content_root.id,
+                            on_command_availability.clone(),
+                        );
+
+                        let surface = shadcn_layout::container_flow_fill_width(
+                            cx,
+                            surface_props,
+                            vec![content_root],
+                        );
+
+                        SheetContent::new([surface])
+                            .refine_style(
+                                ChromeRefinement::default()
+                                    .bg(ColorRef::Color(sheet_bg))
+                                    .border_color(ColorRef::Color(sheet_border))
+                                    .p(Space::N0),
+                            )
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .w_full()
+                                    .h_full()
+                                    .overflow_hidden(),
+                            )
+                            .into_element(cx)
+                    },
                 );
-
-                let sheet_side = sidebar_sheet_side(side);
-                let (surface_props, sheet_size, sheet_bg, sheet_border) = {
-                    let theme = Theme::global(&*cx.app);
-                    let mut surface_props = decl_style::container_props(
-                        theme,
-                        ChromeRefinement::default()
-                            .bg(ColorRef::Color(sidebar_bg(theme)))
-                            .border_1()
-                            .border_color(ColorRef::Color(sidebar_border(theme)))
-                            .merge(chrome),
-                        LayoutRefinement::default().w_full().h_full().merge(layout),
-                    );
-                    surface_props.layout.overflow = Overflow::Clip;
-
-                    let sheet_size = sidebar_ctx.width_mobile;
-                    let sheet_bg = sidebar_bg(theme);
-                    let sheet_border = sidebar_border(theme);
-                    (surface_props, sheet_size, sheet_bg, sheet_border)
-                };
-
-                let on_key_down_for_trigger = on_key_down.clone();
-                let on_command_for_trigger = on_command.clone();
-                let on_command_availability_for_trigger = on_command_availability.clone();
-                return Sheet::new(sidebar_ctx.open_mobile.clone())
-                    .side(sheet_side)
-                    .size(sheet_size)
-                    .into_element(
-                        cx,
-                        |cx| {
-                            let trigger = cx.spacer(SpacerProps {
-                                min: Px(0.0),
-                                ..Default::default()
-                            });
-
-                            cx.key_add_on_key_down_capture_for(
-                                trigger.id,
-                                on_key_down_for_trigger.clone(),
-                            );
-                            cx.command_on_command_for(trigger.id, on_command_for_trigger.clone());
-                            cx.command_on_command_availability_for(
-                                trigger.id,
-                                on_command_availability_for_trigger.clone(),
-                            );
-
-                            trigger
-                        },
-                        move |cx| {
-                            let children =
-                                with_sidebar_surface_provider(cx, surface_context, |cx| {
-                                    render_children(cx).into_iter().collect::<Vec<_>>()
-                                });
-                            let content_root =
-                                cx.container(ContainerProps::default(), move |_cx| children);
-
-                            cx.key_add_on_key_down_capture_for(
-                                content_root.id,
-                                on_key_down.clone(),
-                            );
-                            cx.command_on_command_for(content_root.id, on_command.clone());
-                            cx.command_on_command_availability_for(
-                                content_root.id,
-                                on_command_availability.clone(),
-                            );
-
-                            let surface = shadcn_layout::container_flow_fill_width(
-                                cx,
-                                surface_props,
-                                vec![content_root],
-                            );
-
-                            
-
-                            SheetContent::new([surface])
-                                .refine_style(
-                                    ChromeRefinement::default()
-                                        .bg(ColorRef::Color(sheet_bg))
-                                        .border_color(ColorRef::Color(sheet_border))
-                                        .p(Space::N0),
-                                )
-                                .refine_layout(
-                                    LayoutRefinement::default()
-                                        .w_full()
-                                        .h_full()
-                                        .overflow_hidden(),
-                                )
-                                .into_element(cx)
-                        },
-                    );
-            }
+        }
 
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if collapsed_override { true } else { collapsed };
@@ -1171,65 +1167,62 @@ impl Sidebar {
             variant,
         };
 
-        if is_mobile && !matches!(collapsible, SidebarCollapsible::None)
-            && let Some(sidebar_ctx) = sidebar_ctx.clone() {
-                let sheet_side = sidebar_sheet_side(side);
-                let (surface_props, sheet_size, sheet_bg, sheet_border) = {
-                    let theme = Theme::global(&*cx.app);
-                    let mut surface_props = decl_style::container_props(
-                        theme,
-                        ChromeRefinement::default()
-                            .bg(ColorRef::Color(sidebar_bg(theme)))
-                            .border_1()
-                            .border_color(ColorRef::Color(sidebar_border(theme)))
-                            .merge(chrome),
-                        LayoutRefinement::default().w_full().h_full().merge(layout),
-                    );
-                    surface_props.layout.overflow = Overflow::Clip;
+        if is_mobile
+            && !matches!(collapsible, SidebarCollapsible::None)
+            && let Some(sidebar_ctx) = sidebar_ctx.clone()
+        {
+            let sheet_side = sidebar_sheet_side(side);
+            let (surface_props, sheet_size, sheet_bg, sheet_border) = {
+                let theme = Theme::global(&*cx.app);
+                let mut surface_props = decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(sidebar_bg(theme)))
+                        .border_1()
+                        .border_color(ColorRef::Color(sidebar_border(theme)))
+                        .merge(chrome),
+                    LayoutRefinement::default().w_full().h_full().merge(layout),
+                );
+                surface_props.layout.overflow = Overflow::Clip;
 
-                    let sheet_size = sidebar_ctx.width_mobile;
-                    let sheet_bg = sidebar_bg(theme);
-                    let sheet_border = sidebar_border(theme);
-                    (surface_props, sheet_size, sheet_bg, sheet_border)
-                };
-                return Sheet::new(sidebar_ctx.open_mobile)
-                    .side(sheet_side)
-                    .size(sheet_size)
-                    .into_element(
-                        cx,
-                        |cx| {
-                            cx.spacer(SpacerProps {
-                                min: Px(0.0),
-                                ..Default::default()
-                            })
-                        },
-                        move |cx| {
-                            let surface =
-                                with_sidebar_surface_provider(cx, surface_context, |cx| {
-                                    shadcn_layout::container_flow_fill_width(
-                                        cx,
-                                        surface_props,
-                                        children,
-                                    )
-                                });
+                let sheet_size = sidebar_ctx.width_mobile;
+                let sheet_bg = sidebar_bg(theme);
+                let sheet_border = sidebar_border(theme);
+                (surface_props, sheet_size, sheet_bg, sheet_border)
+            };
+            return Sheet::new(sidebar_ctx.open_mobile)
+                .side(sheet_side)
+                .size(sheet_size)
+                .into_element(
+                    cx,
+                    |cx| {
+                        cx.spacer(SpacerProps {
+                            min: Px(0.0),
+                            ..Default::default()
+                        })
+                    },
+                    move |cx| {
+                        let surface = with_sidebar_surface_provider(cx, surface_context, |cx| {
+                            shadcn_layout::container_flow_fill_width(cx, surface_props, children)
+                        });
 
-                            SheetContent::new([surface])
-                                .refine_style(
-                                    ChromeRefinement::default()
-                                        .bg(ColorRef::Color(sheet_bg))
-                                        .border_color(ColorRef::Color(sheet_border))
-                                        .p(Space::N0),
-                                )
-                                .refine_layout(
-                                    LayoutRefinement::default()
-                                        .w_full()
-                                        .h_full()
-                                        .overflow_hidden(),
-                                )
-                                .into_element(cx)
-                        },
-                    );
-            }
+                        SheetContent::new([surface])
+                            .refine_style(
+                                ChromeRefinement::default()
+                                    .bg(ColorRef::Color(sheet_bg))
+                                    .border_color(ColorRef::Color(sheet_border))
+                                    .p(Space::N0),
+                            )
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .w_full()
+                                    .h_full()
+                                    .overflow_hidden(),
+                            )
+                            .into_element(cx)
+                    },
+                );
+        }
 
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if collapsed_override { true } else { collapsed };
@@ -3650,10 +3643,9 @@ impl SidebarMenuSubButton {
 
                 let slot_children = slot_children;
                 vec![cx.flex(row, move |cx| {
-                    if as_child
-                        && let Some(children) = slot_children {
-                            return children;
-                        }
+                    if as_child && let Some(children) = slot_children {
+                        return children;
+                    }
                     let mut out = Vec::new();
                     if let Some(icon) = icon {
                         out.push(decl_icon::icon(cx, icon));
@@ -4049,10 +4041,9 @@ impl SidebarMenuButton {
                 let label_opacity = expanded_progress;
                 let slot_children = slot_children;
                 vec![cx.flex(row, move |cx| {
-                    if as_child
-                        && let Some(children) = slot_children {
-                            return children;
-                        }
+                    if as_child && let Some(children) = slot_children {
+                        return children;
+                    }
                     let mut out = Vec::new();
                     if let Some(icon) = icon.clone() {
                         out.push(decl_icon::icon(cx, icon));
@@ -6544,9 +6535,7 @@ mod tests {
             "expected show_on_hover action to be hidden before focus"
         );
 
-        let button_element_id = (*button_element_id
-            .lock()
-            .unwrap_or_else(|e| e.into_inner()))
+        let button_element_id = (*button_element_id.lock().unwrap_or_else(|e| e.into_inner()))
             .expect("sidebar menu button element id");
         let button_node = elements::node_for_element(&mut app, window, button_element_id)
             .expect("sidebar menu button node id");

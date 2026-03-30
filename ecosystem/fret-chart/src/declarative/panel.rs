@@ -394,10 +394,11 @@ pub fn chart_canvas_panel<H: UiHost>(
     let (cache, axis_pointer, hover_point_px) =
         cx.state_for(marks_cache_slot, MarksCache::default, |cache| {
             if cache.marks_rev != marks_rev
-                && let Some(marks) = output_marks.clone() {
-                    cache.marks_rev = marks_rev;
-                    cache.marks = marks;
-                }
+                && let Some(marks) = output_marks.clone()
+            {
+                cache.marks_rev = marks_rev;
+                cache.marks = marks;
+            }
 
             if cache.output_rev != output_rev {
                 cache.output_rev = output_rev;

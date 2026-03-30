@@ -7,11 +7,8 @@ fn textarea_page_documents_source_axes_and_leaf_children_api_decision() {
     let source = include_str!("../src/ui/pages/textarea.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/textarea.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/textarea.tsx",
-        "repo-ref/ui/apps/v4/examples/base/textarea-{demo,field,disabled,invalid,button,rtl}.tsx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/textarea-{demo,disabled,with-label,with-text}.tsx",
-        "Neither `repo-ref/primitives` nor `repo-ref/base-ui` defines a dedicated Textarea primitive or compound children contract",
+        "Reference stack: shadcn Textarea docs, the default registry recipe, and the related base/new-york examples.",
+        "Neither Radix Primitives nor Base UI defines a dedicated Textarea primitive or compound children contract",
         "did not identify a missing `fret-ui` mechanism bug",
         "No extra generic `compose()` / `asChild` / children API is needed here",
         "Preview mirrors the upstream Textarea docs path first after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Field`, `Disabled`, `Invalid`, `Button`, `RTL`, and `API Reference`.",

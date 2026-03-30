@@ -16,7 +16,7 @@ pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let expand_at_bottom = diagnostics::expand_at_bottom::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/radix/scroll-area.mdx`; Base UI reference: `repo-ref/ui/apps/v4/content/docs/components/base/scroll-area.mdx`; registry chrome reference: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/scroll-area.tsx`.",
+        "Reference stack: shadcn Scroll Area docs, Base UI docs, and the default registry chrome.",
         "`ScrollArea::new([...])` is the default copyable wrapper lane for the docs surface. Because the Fret recipe stays layout-only, the upstream root chrome (`rounded-md border` and fixed size) maps to a caller-owned wrapper container around the scroll surface. `scroll_area(cx, |cx| [...])` remains the compact Fret-first shorthand instead of the primary teaching surface.",
         "`ScrollAreaRoot::new(ScrollAreaViewport::new([...])).scrollbar(ScrollBar::new().orientation(...))` already covers the shadcn/Radix mixed `ScrollArea` + `ScrollBar` examples without widening this family into an untyped arbitrary-children API.",
         "Base UI's extra `Content` / `Thumb` parts are useful headless references, but Fret keeps the viewport content wrapper and thumb as runtime-owned implementation details; the public shadcn lane does not need separate promoted parts for them today.",

@@ -230,11 +230,12 @@ pub(crate) fn cmd_latest(
     println!("{}", path.display());
 
     if let Ok((_p, session_id, source)) = resolved
-        && let Some(session_id) = session_id {
-            eprintln!(
-                "diag latest: resolved via sessions (session_id={} source={})",
-                session_id, source
-            );
-        }
+        && let Some(session_id) = session_id
+    {
+        eprintln!(
+            "diag latest: resolved via sessions (session_id={} source={})",
+            session_id, source
+        );
+    }
     Ok(())
 }

@@ -20,7 +20,7 @@ pub(super) fn preview_ai_agent_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
         "`Agent`, `AgentContent`, and `AgentTools` now expose a docs-shaped `empty().children(...)` lane, so the Rust example maps more directly to the official JSX composition without pretending this is a DOM port.",
         "We intentionally keep this surface in `fret-ui-ai`: `agent` is UI chrome, not a runtime contract, and it does not need provider-owned closure state to match the upstream outcome.",
         "The tool-definition seam stays explicit in Rust. Upstream AI SDK `Tool` maps to `AgentToolDefinition` so callers can pass JSON Schema data without hiding serialization details behind framework magic.",
-        "Upstream docs prose currently says the instructions body is markdown, but the pinned source and tests in `repo-ref/ai-elements/packages/elements/src/agent.tsx` still render plain text inside a `<p>`; Fret follows that source behavior today.",
+        "Upstream docs prose currently says the instructions body is markdown, but the pinned upstream source and tests still render plain text inside a `<p>`; Fret follows that source behavior today.",
     ])
     .test_id("ui-gallery-ai-agent-notes");
 

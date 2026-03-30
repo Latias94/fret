@@ -239,13 +239,14 @@ impl<H: UiHost> UiTree<H> {
         // Focus barriers (trap scopes / modal focus arbitration) must not rely on retained parent
         // pointers for correctness under retained/view-cache reuse. Enforce focus-barrier scope
         // using a snapshot forest built from child edges.
-        if dispatch_cx.focus_barrier_root.is_some() && self.focus.is_some()
+        if dispatch_cx.focus_barrier_root.is_some()
+            && self.focus.is_some()
             && self
                 .focus
                 .is_some_and(|n| !dispatch_cx.node_in_active_focus_layers(n))
-            {
-                self.set_focus_unchecked(None, "dispatch/window: focus barrier scope");
-            }
+        {
+            self.set_focus_unchecked(None, "dispatch/window: focus barrier scope");
+        }
 
         let to_remove: Vec<fret_core::PointerId> = self
             .captured
@@ -864,20 +865,19 @@ impl<H: UiHost> UiTree<H> {
             && let Event::InternalDrag(e) = event
             && matches!(e.kind, fret_core::InternalDragKind::Drop)
         {
-            let (drag_kind, cross_window_hover, route, route_in_active_layer) = if let Some(drag) =
-                app.drag(e.pointer_id)
-            {
-                let route = crate::internal_drag::route(app, window, drag.kind);
-                let route_in_active_layer = route.is_some_and(&node_in_active_layers);
-                (
-                    Some(drag.kind),
-                    drag.cross_window_hover,
-                    route,
-                    route_in_active_layer,
-                )
-            } else {
-                (None, false, None, false)
-            };
+            let (drag_kind, cross_window_hover, route, route_in_active_layer) =
+                if let Some(drag) = app.drag(e.pointer_id) {
+                    let route = crate::internal_drag::route(app, window, drag.kind);
+                    let route_in_active_layer = route.is_some_and(&node_in_active_layers);
+                    (
+                        Some(drag.kind),
+                        drag.cross_window_hover,
+                        route,
+                        route_in_active_layer,
+                    )
+                } else {
+                    (None, false, None, false)
+                };
             tracing::info!(
                 window = ?window,
                 pointer_id = ?e.pointer_id,

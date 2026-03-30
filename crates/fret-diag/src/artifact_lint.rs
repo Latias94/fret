@@ -357,52 +357,56 @@ pub(crate) fn lint_run_artifact_dir(
     if let (Some(a), Some(b)) = (
         manifest_script_updated,
         script_result.as_ref().map(|r| r.updated_unix_ms),
-    )
-        && a != 0 && b != 0 && a != b {
-            push_finding(
-                &mut findings,
-                ArtifactLintLevel::Warning,
-                "timestamps.script_result_summary_mismatch",
-                "manifest.script_result.updated_unix_ms does not match script.result.json updated_unix_ms",
-                serde_json::json!({
-                    "manifest_script_updated_unix_ms": a,
-                    "script_updated_unix_ms": b,
-                    "manifest_path": manifest_path.display().to_string(),
-                    "script_result_path": script_result_path.display().to_string(),
-                }),
-            );
-        }
+    ) && a != 0
+        && b != 0
+        && a != b
+    {
+        push_finding(
+            &mut findings,
+            ArtifactLintLevel::Warning,
+            "timestamps.script_result_summary_mismatch",
+            "manifest.script_result.updated_unix_ms does not match script.result.json updated_unix_ms",
+            serde_json::json!({
+                "manifest_script_updated_unix_ms": a,
+                "script_updated_unix_ms": b,
+                "manifest_path": manifest_path.display().to_string(),
+                "script_result_path": script_result_path.display().to_string(),
+            }),
+        );
+    }
 
     if let (Some(a), Some(b)) = (manifest_run_id, script_run_id)
-        && a != b {
-            push_finding(
-                &mut findings,
-                ArtifactLintLevel::Error,
-                "run_id.mismatch_manifest_vs_script_result",
-                "manifest.run_id does not match script.result.json run_id",
-                serde_json::json!({
-                    "manifest_run_id": a,
-                    "script_run_id": b,
-                    "manifest_path": manifest_path.display().to_string(),
-                    "script_result_path": script_result_path.display().to_string(),
-                }),
-            );
-        }
+        && a != b
+    {
+        push_finding(
+            &mut findings,
+            ArtifactLintLevel::Error,
+            "run_id.mismatch_manifest_vs_script_result",
+            "manifest.run_id does not match script.result.json run_id",
+            serde_json::json!({
+                "manifest_run_id": a,
+                "script_run_id": b,
+                "manifest_path": manifest_path.display().to_string(),
+                "script_result_path": script_result_path.display().to_string(),
+            }),
+        );
+    }
     if let (Some(a), Some(b)) = (dir_run_id, manifest_run_id)
-        && a != b {
-            push_finding(
-                &mut findings,
-                ArtifactLintLevel::Error,
-                "run_id.mismatch_dir_vs_manifest",
-                "artifact dir name does not match manifest.run_id",
-                serde_json::json!({
-                    "dir_run_id": a,
-                    "manifest_run_id": b,
-                    "artifact_dir": dir.display().to_string(),
-                    "manifest_path": manifest_path.display().to_string(),
-                }),
-            );
-        }
+        && a != b
+    {
+        push_finding(
+            &mut findings,
+            ArtifactLintLevel::Error,
+            "run_id.mismatch_dir_vs_manifest",
+            "artifact dir name does not match manifest.run_id",
+            serde_json::json!({
+                "dir_run_id": a,
+                "manifest_run_id": b,
+                "artifact_dir": dir.display().to_string(),
+                "manifest_path": manifest_path.display().to_string(),
+            }),
+        );
+    }
 
     if let Some(files) = manifest.get("files").and_then(|v| v.as_array()) {
         for f in files {

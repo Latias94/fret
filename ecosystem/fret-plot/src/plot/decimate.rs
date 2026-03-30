@@ -252,7 +252,10 @@ pub(crate) fn decimate_shaded_band(
                 self.max_upper,
                 self.min_lower,
                 self.max_lower,
-            ].into_iter().flatten() {
+            ]
+            .into_iter()
+            .flatten()
+            {
                 candidates.push(p);
             }
 

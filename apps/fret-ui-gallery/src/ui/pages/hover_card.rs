@@ -22,7 +22,7 @@ pub(super) fn preview_hover_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
 
     let notes = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/hover_card.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/hover-card.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/hover-card.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/hover-card.tsx`, `repo-ref/primitives/packages/react/hover-card/src/hover-card.tsx`, and `repo-ref/base-ui/packages/react/src/preview-card/root/PreviewCardRoot.tsx`.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/hover_card.rs`. Reference stack: shadcn Hover Card docs, the default registry recipe, Radix Primitives hover-card semantics, and Base UI preview-card ownership.",
         "Preview now mirrors the shadcn Hover Card docs path directly: `Demo`, `Usage`, `Trigger Delays`, `Positioning`, `Basic`, `Sides`, `RTL`, and `API Reference`. `Children (Fret)` and `Notes` stay as the explicit follow-ups.",
         "Hover card already exposes shadcn-style part names (`HoverCardTrigger`, `HoverCardContent`) plus typed builders for the copyable parts lane; the content slot already has a composable children surface, so a generic root `children([...])` API would mostly duplicate `HoverCard::new(...)`.",
         "Hover-card behavior itself is already covered by the existing Radix/web geometry, chrome, and UI Gallery interaction gates; the remaining work here is docs/public-surface alignment rather than a `fret-ui` mechanism bug.",

@@ -7,11 +7,7 @@ fn hover_card_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/hover_card.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/hover-card.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/radix/hover-card.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/hover-card.tsx",
-        "repo-ref/primitives/packages/react/hover-card/src/hover-card.tsx",
-        "repo-ref/base-ui/packages/react/src/preview-card/root/PreviewCardRoot.tsx",
+        "Reference stack: shadcn Hover Card docs, the default registry recipe, Radix Primitives hover-card semantics, and Base UI preview-card ownership.",
         "`HoverCard::new(cx, trigger, content)` remains the recipe-level entry point and already covers the upstream nested `<HoverCard><HoverCardTrigger /><HoverCardContent /></HoverCard>` composition plus the custom-trigger / `asChild` story, because `trigger` can be any landed or late-landed element.",
         "Hover-card behavior itself is already covered by the existing Radix/web geometry, chrome, and UI Gallery interaction gates; the remaining work here is docs/public-surface alignment rather than a `fret-ui` mechanism bug.",
         "Preview now mirrors the shadcn Hover Card docs path directly: `Demo`, `Usage`, `Trigger Delays`, `Positioning`, `Basic`, `Sides`, `RTL`, and `API Reference`. `Children (Fret)` and `Notes` stay as the explicit follow-ups.",

@@ -45,8 +45,7 @@ impl AxisLabelFormat {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum AxisTicks {
     #[default]
     Nice,
@@ -54,7 +53,6 @@ pub enum AxisTicks {
     Log10,
     TimeSeconds(TimeAxisFormat),
 }
-
 
 impl AxisTicks {
     pub fn key(self) -> u64 {
