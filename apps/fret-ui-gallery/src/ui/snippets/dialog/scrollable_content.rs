@@ -67,7 +67,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 vec![
                                     shadcn::DialogTitle::new("Scrollable Content").into_element(cx),
                                     shadcn::DialogDescription::new(
-                                        "Long content can scroll while the header stays in view.",
+                                        "This is a dialog with scrollable content.",
                                     )
                                     .into_element(cx),
                                 ]

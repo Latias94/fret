@@ -23,7 +23,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 vec![
                                     shadcn::DialogTitle::new("No Close Button").into_element(cx),
                                     shadcn::DialogDescription::new(
-                                        "This dialog omits explicit close controls and relies on Escape or overlay dismissal.",
+                                        "This dialog doesn't have a close button in the top-right corner.",
                                     )
                                     .into_element(cx),
                                 ]

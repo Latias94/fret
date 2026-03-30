@@ -15,7 +15,11 @@ and the `new-york-v4` registry implementation in `repo-ref/ui`.
 ## Upstream references (source of truth)
 
 - Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/dialog.mdx`
+- Radix docs page: `repo-ref/ui/apps/v4/content/docs/components/radix/dialog.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx`
+- Docs-path examples: `repo-ref/ui/apps/v4/examples/{base,radix}/dialog-{demo,close-button,no-close-button,sticky-footer,scrollable-content,rtl}.tsx`
+- Primitive source: `repo-ref/primitives/packages/react/dialog/src/dialog.tsx`
+- Additional headless reference: `repo-ref/base-ui/packages/react/src/dialog/root/DialogRoot.tsx`
 - Underlying primitive concept: Radix `@radix-ui/react-dialog` (portal + dismiss + focus management)
 
 ## Fret implementation
@@ -62,6 +66,10 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   shadcn-specific composition concerns into the lower-level mechanism contract.
 - Pass: `DialogContent::build(...)` is the typed content-side companion on that same recipe lane,
   but it is now the secondary builder-first lane rather than the default copyable path.
+- Pass: The current warranted composable root API is still the typed `DialogPart` lane rather than
+  a broader untyped JSX-style root-children surface. The dialog owns Trigger/Portal/Overlay/Content
+  parts, and `DialogClose::from_scope()` must stay inside `DialogContent`, so widening the root
+  surface would not buy enough parity to justify the extra public contract.
 
 ### Dismissal behavior
 
@@ -92,11 +100,33 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: `DialogHeader` matches upstream `gap-2` and `text-center sm:text-left` outcomes without
   adding extra padding that would double-count the `DialogContent` `gap-4` grid spacing.
 
+### Docs / public-surface alignment
+
+- Pass: Current parity drift was primarily on the first-party docs surface, not in the underlying
+  `fret-ui` dialog mechanism. Radix/Base UI-aligned modal semantics, outside-press dismissal,
+  dismissal interception, and trigger focus restore are already handled in `fret-ui-kit` /
+  `fret-ui-shadcn`.
+- Pass: UI Gallery now mirrors the shadcn/base docs path through `API Reference` before explicit
+  Fret follow-ups, and `Parts` remains the focused advanced ownership lane instead of replacing the
+  default docs path.
+- Pass: Docs-path snippets now keep the primary `Save changes` action as a normal action button in
+  the demo/RTL examples rather than teaching it as an implicit close affordance.
+- Pass: Docs-path examples now track upstream copy and width caps more closely for `Demo`,
+  `Custom Close Button`, `No Close Button`, `Sticky Footer`, `Scrollable Content`, and `RTL`.
+- Pass: The gallery page records the current children-API decision explicitly so future parity work
+  does not reopen the “generic root children API” question without new evidence.
+- Pass: Base UI-style detached trigger handles are now available through `DialogHandle`, and the
+  gallery teaches them as a focused follow-up lane (`Detached Trigger`) rather than widening the
+  default docs path or the root children API.
+
 ## Validation
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn dialog::tests`
 - `cargo test -p fret-ui-shadcn --lib dialog::tests::dialog_content_build_accepts_builder_first_sections_surface -- --exact`
+- `cargo test -p fret-ui-shadcn --lib dialog::tests::dialog_handle_detached_trigger_restores_focus_to_activated_trigger -- --exact`
+- `cargo test -p fret-ui-gallery dialog -- --nocapture`
+- `cargo test -p fret-ui-gallery --test dialog_docs_surface -- --nocapture`
 - Contract test: `dialog_disable_pointer_dismissal_alias_maps_overlay_closable`
 - Contract test: `dialog_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `dialog_open_change_events_complete_without_animation`
@@ -109,6 +139,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_dialog_open_geometry_matches_fret`).
 - Gallery diag gate: `tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-default-close-click.json`
+- Gallery docs-surface gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-order-smoke.json`
+- Gallery detached-trigger gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json`
 
 ## Authoring note: `from_scope()`
 
@@ -162,7 +194,7 @@ style than the raw closure root.
 
 ## Follow-ups (recommended)
 
-- Consider porting Base UI-style detached trigger handles (`Dialog.createHandle()` / detached
-  trigger focus-restore ownership) if the dialog authoring surface needs to mirror the richer
-  Base UI docs lane beyond the current shadcn page parity target.
+- Payload-bearing detached trigger follow-ups and richer Base UI store features remain open, but
+  `DialogHandle` now covers detached trigger association plus focus restore without widening the
+  default shadcn/docs lane.
 - Consider exposing optional per-surface motion variants if recipes need diverging durations/easing.
