@@ -30,7 +30,7 @@ pub enum AssetLoadOutcomeKind {
     ReferenceOnlyLocator,
     ResolverUnavailable,
     AccessDenied,
-    Message,
+    Io,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,6 +59,7 @@ pub struct AssetLoadDiagnosticsSnapshot {
     pub reference_requests: u64,
     pub missing_bundle_asset_requests: u64,
     pub stale_manifest_requests: u64,
+    pub io_requests: u64,
     pub unsupported_file_requests: u64,
     pub unsupported_url_requests: u64,
     pub external_reference_unavailable_requests: u64,
@@ -206,7 +207,10 @@ impl AssetLoadDiagnosticsStore {
                         AssetLoadOutcomeKind::ResolverUnavailable
                     }
                     AssetLoadError::AccessDenied => AssetLoadOutcomeKind::AccessDenied,
-                    AssetLoadError::Message { .. } => AssetLoadOutcomeKind::Message,
+                    AssetLoadError::Io { .. } => {
+                        state.snapshot.io_requests = state.snapshot.io_requests.saturating_add(1);
+                        AssetLoadOutcomeKind::Io
+                    }
                 };
 
                 if matches!(err, AssetLoadError::NotFound)
@@ -228,7 +232,11 @@ impl AssetLoadDiagnosticsStore {
                         AssetLoadError::ReferenceOnlyLocator { kind } => Some(format!(
                             "asset locator kind {kind:?} is reference-only on this path; resolve_reference(...) instead"
                         )),
-                        AssetLoadError::Message { message } => Some(message.to_string()),
+                        AssetLoadError::Io {
+                            operation,
+                            path,
+                            message,
+                        } => Some(format!("{operation} {path}: {message}")),
                         _ => None,
                     },
                 )
@@ -906,6 +914,64 @@ mod tests {
             Some(
                 "asset locator kind Url is reference-only on this path; resolve_reference(...) instead"
             )
+        );
+    }
+
+    #[test]
+    fn diagnostics_snapshot_counts_typed_io_requests() {
+        let mut host = TestHost::default();
+
+        struct IoResolver;
+
+        impl AssetResolver for IoResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    memory: false,
+                    embedded: false,
+                    bundle_asset: true,
+                    file: false,
+                    url: false,
+                    file_watch: false,
+                    system_font_scan: false,
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Err(AssetLoadError::Io {
+                    operation: fret_assets::AssetIoOperation::Read,
+                    path: format!("/tmp/dev-assets/{}", debug_asset_locator(&request.locator))
+                        .into(),
+                    message: "device reset".into(),
+                })
+            }
+        }
+
+        set_asset_resolver(&mut host, Arc::new(IoResolver));
+
+        let err =
+            resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect_err("typed io failures should surface through the shared asset contract");
+
+        assert_eq!(
+            err,
+            AssetLoadError::Io {
+                operation: fret_assets::AssetIoOperation::Read,
+                path: "/tmp/dev-assets/bundle:app:images/logo.png".into(),
+                message: "device reset".into(),
+            }
+        );
+        let snapshot = asset_resolver(&host)
+            .expect("resolver service")
+            .diagnostics_snapshot();
+        assert_eq!(snapshot.io_requests, 1);
+        assert_eq!(snapshot.bytes_requests, 1);
+        assert_eq!(snapshot.recent[0].outcome_kind, AssetLoadOutcomeKind::Io);
+        assert_eq!(
+            snapshot.recent[0].message.as_deref(),
+            Some("read /tmp/dev-assets/bundle:app:images/logo.png: device reset")
         );
     }
 

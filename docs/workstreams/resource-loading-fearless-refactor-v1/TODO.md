@@ -639,8 +639,13 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `crates/fret-assets/src/file_manifest.rs` now reports a typed runtime
       `AssetLoadError::StaleManifestMapping` when a file-backed manifest entry still resolves the
       logical bundle/key mapping but its mapped host file path is gone.
+    - the shared asset contract no longer uses a generic `AssetLoadError::Message` bucket; runtime
+      manifest file-read failures now surface as typed `AssetLoadError::Io { operation, path,
+      message }`.
     - `crates/fret-runtime/src/asset_resolver.rs` now keeps `stale_manifest_requests` and
-      `stale_manifest` recent outcomes distinct from true missing bundle assets.
+      `stale_manifest` recent outcomes distinct from true missing bundle assets, and it now also
+      publishes typed `io_requests` / `io` outcomes instead of routing those failures through a
+      string-only bucket.
     - `crates/fret-diag/src/stats/resource_loading.rs` plus
       `crates/fret-diag/src/registry/checks/builtin_post_run/resource_loading.rs` now add
       post-run `fretboard diag` gates for:

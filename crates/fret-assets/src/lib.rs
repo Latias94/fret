@@ -693,6 +693,25 @@ impl AssetResolver for InMemoryAssetResolver {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, Serialize, Deserialize)]
+pub enum AssetIoOperation {
+    Read,
+}
+
+impl AssetIoOperation {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Read => "read",
+        }
+    }
+}
+
+impl std::fmt::Display for AssetIoOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize, Deserialize)]
 pub enum AssetLoadError {
     #[error("asset resolver is not installed on this host")]
@@ -711,8 +730,12 @@ pub enum AssetLoadError {
     StaleManifestMapping { path: SmolStr },
     #[error("asset access denied")]
     AccessDenied,
-    #[error("asset load failed: {message}")]
-    Message { message: SmolStr },
+    #[error("asset {operation} failed for {path}: {message}")]
+    Io {
+        operation: AssetIoOperation,
+        path: SmolStr,
+        message: SmolStr,
+    },
 }
 
 #[cfg(test)]

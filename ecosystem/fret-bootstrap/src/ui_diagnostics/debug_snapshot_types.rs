@@ -228,6 +228,8 @@ pub struct UiAssetLoadDiagnosticsSnapshotV1 {
     pub missing_bundle_asset_requests: u64,
     #[serde(default)]
     pub stale_manifest_requests: u64,
+    #[serde(default)]
+    pub io_requests: u64,
     pub unsupported_file_requests: u64,
     pub unsupported_url_requests: u64,
     pub external_reference_unavailable_requests: u64,
@@ -244,6 +246,7 @@ impl UiAssetLoadDiagnosticsSnapshotV1 {
             reference_requests: snapshot.reference_requests,
             missing_bundle_asset_requests: snapshot.missing_bundle_asset_requests,
             stale_manifest_requests: snapshot.stale_manifest_requests,
+            io_requests: snapshot.io_requests,
             unsupported_file_requests: snapshot.unsupported_file_requests,
             unsupported_url_requests: snapshot.unsupported_url_requests,
             external_reference_unavailable_requests: snapshot
@@ -306,7 +309,7 @@ impl UiAssetLoadDiagnosticEventV1 {
                 }
                 fret_runtime::AssetLoadOutcomeKind::ResolverUnavailable => "resolver_unavailable",
                 fret_runtime::AssetLoadOutcomeKind::AccessDenied => "access_denied",
-                fret_runtime::AssetLoadOutcomeKind::Message => "message",
+                fret_runtime::AssetLoadOutcomeKind::Io => "io",
             }
             .to_string(),
             revision: event.revision.map(|revision| revision.0),

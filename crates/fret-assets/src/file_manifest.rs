@@ -12,8 +12,8 @@ use smol_str::SmolStr;
 use crate::{AssetBundleId, AssetKey, AssetMediaType};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::{
-    AssetCapabilities, AssetExternalReference, AssetLoadError, AssetLocator, AssetRequest,
-    AssetResolver, AssetRevision, ResolvedAssetBytes, ResolvedAssetReference,
+    AssetCapabilities, AssetExternalReference, AssetIoOperation, AssetLoadError, AssetLocator,
+    AssetRequest, AssetResolver, AssetRevision, ResolvedAssetBytes, ResolvedAssetReference,
 };
 
 pub const FILE_ASSET_MANIFEST_KIND_V1: &str = "fret_file_asset_manifest";
@@ -460,7 +460,9 @@ fn map_fs_read_error_for_manifest_entry(path: &Path, source: std::io::Error) -> 
             path: path.to_string_lossy().into_owned().into(),
         },
         ErrorKind::PermissionDenied => AssetLoadError::AccessDenied,
-        _ => AssetLoadError::Message {
+        _ => AssetLoadError::Io {
+            operation: AssetIoOperation::Read,
+            path: path.to_string_lossy().into_owned().into(),
             message: source.to_string().into(),
         },
     }
@@ -496,6 +498,22 @@ mod tests {
 
     fn app_bundle() -> AssetBundleId {
         AssetBundleId::app("demo-app")
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn manifest_entry_io_failures_stay_typed() {
+        let path = Path::new("/tmp/dev-assets/icons/search.svg");
+        let err = map_fs_read_error_for_manifest_entry(path, std::io::Error::other("i/o exploded"));
+
+        assert_eq!(
+            err,
+            AssetLoadError::Io {
+                operation: AssetIoOperation::Read,
+                path: "/tmp/dev-assets/icons/search.svg".into(),
+                message: "i/o exploded".into(),
+            }
+        );
     }
 
     #[test]

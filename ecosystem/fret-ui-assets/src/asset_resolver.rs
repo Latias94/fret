@@ -459,7 +459,9 @@ mod tests {
             &host,
             AssetLocator::url("https://example.com/icon.svg"),
         )
-        .expect_err("svg file bridge should reject URL references until svg URL lanes are explicit");
+        .expect_err(
+            "svg file bridge should reject URL references until svg URL lanes are explicit",
+        );
 
         assert_eq!(
             err,

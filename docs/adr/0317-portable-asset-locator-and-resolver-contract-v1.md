@@ -206,8 +206,9 @@ The v1 meaning is:
   because the runtime did resolve the logical mapping and found a stale development/package-dev
   manifest contract instead of a truly missing logical asset.
 - `AccessDenied`: the host or platform denied access.
-- `Message`: bounded escape hatch for resolver-specific failures until richer typed diagnostics are
-  added.
+- `Io`: host I/O failed after a runtime locator/path mapping was established. The variant must
+  carry the operation, path, and a bounded diagnostic message instead of collapsing the failure
+  into an untyped string bucket.
 
 Startup/build-time artifact errors (for example manifest parse/validation/read/write failures) are
 not the same contract. Those belong to dedicated artifact/tooling error surfaces such as

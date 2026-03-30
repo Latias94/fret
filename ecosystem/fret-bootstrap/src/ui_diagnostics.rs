@@ -2803,6 +2803,7 @@ mod tests {
                     reference_requests: 1,
                     missing_bundle_asset_requests: 2,
                     stale_manifest_requests: 1,
+                    io_requests: 0,
                     unsupported_file_requests: 1,
                     unsupported_url_requests: 0,
                     external_reference_unavailable_requests: 1,
