@@ -236,11 +236,9 @@ pub(super) fn handle_pointer_move_step(
 
     if let Some(mut session) = active.pointer_session.clone() {
         let allow_cross_window_migration = dock_drag_active(app);
-        let resolved_target_window = svc.resolve_window_target_for_active_step(
-            window,
-            anchor_window,
-            target_window_spec.as_ref(),
-        );
+        let resolved_target_window = target_window_spec.as_ref().and_then(|target| {
+            svc.resolve_window_target_for_active_step(window, anchor_window, Some(target))
+        });
 
         match resolved_target_window {
             Some(target_window) => {
@@ -328,12 +326,8 @@ pub(super) fn handle_pointer_move_step(
                     *failure_reason = Some("window_target_unresolved".to_string());
                     output.request_redraw = true;
                 } else if session.window != window {
-                    // The script migrated away from the window that owns the pointer session.
-                    *handoff_to = Some(session.window);
-                    output
-                        .effects
-                        .push(Effect::RequestAnimationFrame(session.window));
-                    output.request_redraw = true;
+                    // Keep the script migratable and deliver the move back into the session's
+                    // owning window through runner-level diagnostics injection below.
                 }
             }
         }
@@ -404,22 +398,41 @@ pub(super) fn handle_pointer_move_step(
                 let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
                 let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
                 let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+                let delivery_window = session.window;
+                let targeted_delivery = delivery_window != window;
+                let final_segment = state.frame == state.steps;
 
-                output.events.push(Event::Pointer(PointerEvent::Move {
+                let pointer_move = Event::Pointer(PointerEvent::Move {
                     pointer_id,
                     position,
                     buttons: pressed_buttons,
                     modifiers: session.modifiers,
                     pointer_type,
-                }));
-                output
-                    .events
-                    .push(Event::InternalDrag(fret_core::InternalDragEvent {
-                        pointer_id,
-                        position,
-                        kind: fret_core::InternalDragKind::Over,
-                        modifiers: session.modifiers,
-                    }));
+                });
+                let internal_drag = Event::InternalDrag(fret_core::InternalDragEvent {
+                    pointer_id,
+                    position,
+                    kind: fret_core::InternalDragKind::Over,
+                    modifiers: session.modifiers,
+                });
+
+                if targeted_delivery {
+                    output.effects.push(Effect::DiagInjectEvent {
+                        window: delivery_window,
+                        event: pointer_move,
+                    });
+                    output.effects.push(Effect::DiagInjectEvent {
+                        window: delivery_window,
+                        event: internal_drag,
+                    });
+                    output.effects.push(Effect::Redraw(delivery_window));
+                    output
+                        .effects
+                        .push(Effect::RequestAnimationFrame(delivery_window));
+                } else {
+                    output.events.push(pointer_move);
+                    output.events.push(internal_drag);
+                }
 
                 session.position = position;
                 active.pointer_session = Some(session);
@@ -428,47 +441,30 @@ pub(super) fn handle_pointer_move_step(
                     .is_some_and(|t| match t {
                         CursorOverrideTarget::ScreenPhysical => true,
                         CursorOverrideTarget::WindowClientPhysical(w)
-                        | CursorOverrideTarget::WindowClientLogical(w) => w != window,
+                        | CursorOverrideTarget::WindowClientLogical(w) => w != delivery_window,
                     });
                 if !preserve_explicit_cursor_override {
                     let _ = write_cursor_override_window_client_logical(
                         &svc.cfg.out_dir,
-                        window,
+                        delivery_window,
                         position.x.0,
                         position.y.0,
                     );
                 }
 
-                state.frame = state.frame.saturating_add(1);
-                active.v2_step_state = Some(V2StepState::PointerMove(state));
                 active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
-                output.request_redraw = true;
-            } else {
-                session.position = state.end;
-                active.pointer_session = Some(session);
-                let preserve_explicit_cursor_override = active
-                    .last_explicit_cursor_override
-                    .is_some_and(|t| match t {
-                        CursorOverrideTarget::ScreenPhysical => true,
-                        CursorOverrideTarget::WindowClientPhysical(w)
-                        | CursorOverrideTarget::WindowClientLogical(w) => w != window,
-                    });
-                if !preserve_explicit_cursor_override {
-                    let _ = write_cursor_override_window_client_logical(
-                        &svc.cfg.out_dir,
-                        window,
-                        state.end.x.0,
-                        state.end.y.0,
-                    );
+                if final_segment {
+                    active.v2_step_state = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    if svc.cfg.script_auto_dump {
+                        *force_dump_label =
+                            Some(format!("script-step-{step_index:04}-pointer_move"));
+                    }
+                } else {
+                    state.frame = state.frame.saturating_add(1);
+                    active.v2_step_state = Some(V2StepState::PointerMove(state));
                 }
-
-                active.v2_step_state = None;
-                active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
-                active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
-                if svc.cfg.script_auto_dump {
-                    *force_dump_label = Some(format!("script-step-{step_index:04}-pointer_move"));
-                }
             }
         }
     } else {

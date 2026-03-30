@@ -1,0 +1,64 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo (debug): large transparent payload single-move probe",
+    "tags": ["docking", "multiwindow", "large", "transparent_payload", "debug", "probe"],
+    "required_capabilities": ["diag.script_v2", "diag.multi_window"],
+    "env_defaults": {
+      "FRET_DOCK_ARB_PRESET": "large",
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1",
+      "FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD": "1"
+    },
+    "target_hints": [
+      "Uses a single-frame pointer_move after pointer_down to test whether drag activation itself succeeds.",
+      "If this passes while the 12-step variant stalls, the bug is in multi-frame pointer_move migration after drag activation."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "window": { "kind": "first_seen" }, "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "platform_ui_window_hover_detection_is", "quality": "reliable" },
+      "timeout_frames": 240
+    },
+
+    { "type": "set_window_outer_position", "window": { "kind": "first_seen" }, "x_px": 120.0, "y_px": 120.0 },
+    { "type": "set_window_inner_size", "window": { "kind": "first_seen" }, "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-extra-0" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_pointer",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "delta_x": 2400.0,
+      "delta_y": 0.0,
+      "steps": 140
+    },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_ge", "n": 2 }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 30 },
+
+    { "type": "raise_window", "window": { "kind": "last_seen" } },
+    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 200.0, "y_px": 200.0 },
+    { "type": "set_window_inner_size", "window": { "kind": "last_seen" }, "width_px": 1200.0, "height_px": 800.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "set_cursor_in_window_logical", "window": { "kind": "first_seen" }, "x_px": 320.0, "y_px": 320.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "raise_window", "window": { "kind": "last_seen" } },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "pointer_down", "window": { "kind": "last_seen" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+    { "type": "pointer_move", "delta_x": 20.0, "delta_y": 0.0, "steps": 1 },
+    { "type": "wait_until", "window": { "kind": "last_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    { "type": "capture_bundle", "label": "probe.after-single-pointer-move" }
+  ]
+}

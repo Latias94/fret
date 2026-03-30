@@ -58,7 +58,7 @@
       "timeout_frames": 240
     },
     { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" } },
-    { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.extra.7" } },
+    { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.extra#7" } },
 
     { "type": "capture_bundle", "label": "docking-arbitration-demo-tab-overflow-menu-select-row-1-activates" }
   ]

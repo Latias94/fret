@@ -1239,6 +1239,29 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         );
                     }
                 }
+                Effect::DiagInjectEvent {
+                    window: target,
+                    event,
+                } => {
+                    if target == self.app_window {
+                        fret_runtime::with_injected_event_scope(|| {
+                            self.driver.handle_event(
+                                WinitEventContext {
+                                    app: &mut self.app,
+                                    services: &mut gfx.renderer,
+                                    window: self.app_window,
+                                    state,
+                                },
+                                &event,
+                            );
+                        });
+                        self.request_redraw_with_reason(
+                            window,
+                            fret_runtime::RunnerFrameDriveReason::EffectRedraw,
+                        );
+                        self.raf_windows.request(target);
+                    }
+                }
                 Effect::IncomingOpenReadAll {
                     window: target_window,
                     token,
