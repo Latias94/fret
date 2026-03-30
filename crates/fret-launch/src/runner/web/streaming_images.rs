@@ -177,8 +177,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let needs_replace =
             entry.uploaded.size != (width, height) || entry.uploaded.color_space != color_space;
-        let mut applied_upload_bytes: Option<u64> = None;
-        if needs_replace {
+        let applied_upload_bytes = if needs_replace {
             let is_full_update = rect.x == 0 && rect.y == 0 && rect.w == width && rect.h == height;
             if !is_full_update {
                 tracing::warn!(
@@ -203,26 +202,27 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         .saturating_mul(height as usize)
                         .saturating_mul(4)
             {
-                applied_upload_bytes = Some(
+                let applied_upload_bytes =
                     super::super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(
                         fret_core::RectPx::full(width, height),
                         width.saturating_mul(4),
+                    );
+                (
+                    fret_render::upload_rgba8_image(
+                        &gfx.ctx.device,
+                        &gfx.ctx.queue,
+                        (width, height),
+                        bytes,
+                        color_space,
                     ),
-                );
-                fret_render::upload_rgba8_image(
-                    &gfx.ctx.device,
-                    &gfx.ctx.queue,
-                    (width, height),
-                    bytes,
-                    color_space,
+                    applied_upload_bytes,
                 )
             } else {
-                applied_upload_bytes = Some(
+                let applied_upload_bytes =
                     super::super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(
                         fret_core::RectPx::full(width, height),
                         bytes_per_row,
-                    ),
-                );
+                    );
                 let uploaded = fret_render::create_rgba8_image_storage(
                     &gfx.ctx.device,
                     (width, height),
@@ -235,8 +235,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     bytes_per_row,
                     bytes,
                 );
-                uploaded
+                (uploaded, applied_upload_bytes)
             };
+            let (uploaded, applied_upload_bytes) = uploaded;
 
             let view = uploaded
                 .texture
@@ -264,6 +265,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             entry.uploaded = uploaded;
             entry.alpha_mode = alpha_mode;
             entry.nv12_planes = None;
+            applied_upload_bytes
         } else {
             entry.uploaded.write_region(
                 &gfx.ctx.queue,
@@ -272,15 +274,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 bytes_per_row,
                 bytes,
             );
-            applied_upload_bytes = Some(
-                super::super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(
-                    rect,
-                    bytes_per_row,
-                ),
-            );
-        }
-
-        let applied_upload_bytes = applied_upload_bytes.unwrap_or(0);
+            super::super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(
+                rect,
+                bytes_per_row,
+            )
+        };
         stats.upload_bytes_applied = stats
             .upload_bytes_applied
             .saturating_add(applied_upload_bytes);

@@ -296,6 +296,7 @@ pub fn publish_renderer_text_stack_key_if_changed(
 }
 
 #[doc(hidden)]
+#[cfg(any(test, not(target_arch = "wasm32")))]
 pub fn publish_system_font_rescan_state(
     app: &mut impl GlobalsHost,
     in_flight: bool,
@@ -328,6 +329,7 @@ pub fn publish_bundled_font_baseline_snapshot(
 }
 
 #[doc(hidden)]
+#[cfg(any(test, not(target_arch = "wasm32")))]
 pub fn sync_renderer_font_families_from_globals(
     app: &mut impl GlobalsHost,
     renderer: &mut impl RendererFontEnvironmentHost,

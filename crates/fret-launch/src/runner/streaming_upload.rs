@@ -259,6 +259,7 @@ impl Default for StreamingUploadQueue {
 }
 
 impl StreamingUploadQueue {
+    #[cfg(any(test, not(target_arch = "wasm32")))]
     pub fn has_pending(&self) -> bool {
         !self.pending.is_empty()
     }

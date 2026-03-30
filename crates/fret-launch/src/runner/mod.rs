@@ -19,6 +19,7 @@ pub mod yuv;
 #[doc(hidden)]
 pub mod yuv_gpu;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub use native_external_import::*;
 pub use viewport_overlay_immediate_3d::*;
 pub use viewport_target::*;

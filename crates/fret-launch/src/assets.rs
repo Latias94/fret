@@ -166,6 +166,9 @@ impl AssetReloadPolicy {
     }
 }
 
+// WASM/web currently carries the startup-plan shape for parity and builder reuse even though only
+// native consumes these mount specs today.
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 #[derive(Debug, Clone)]
 enum AssetStartupBundleTarget {
     App,
@@ -182,6 +185,8 @@ impl AssetStartupBundleTarget {
     }
 }
 
+// WASM/web currently stores these specs without consuming them into runner mounts.
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 #[derive(Debug, Clone)]
 enum AssetStartupMountSpec {
     Manifest {

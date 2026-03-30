@@ -15,10 +15,7 @@ use winit::event_loop::ActiveEventLoop;
 use winit::platform::web::WindowExtWeb;
 use winit::window::Window;
 
-use crate::runner::common::{
-    scheduling,
-    slot_restore::{self, SlotPairOwner, with_slot_pair_restored},
-};
+use crate::runner::common::slot_restore::{self, SlotPairOwner, with_slot_pair_restored};
 
 use super::super::{
     EngineFrameUpdate, RenderTargetUpdate, WinitEventContext, WinitRenderContext,

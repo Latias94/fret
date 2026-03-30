@@ -13,6 +13,7 @@ impl AnimationFrameRequests {
         self.windows.insert(window)
     }
 
+    #[cfg(any(test, not(target_arch = "wasm32")))]
     pub(crate) fn clear(&mut self) {
         self.windows.clear();
     }
