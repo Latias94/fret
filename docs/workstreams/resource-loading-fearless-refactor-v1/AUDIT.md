@@ -103,6 +103,8 @@ Correct direction:
 - system font discovery stays a capability layer on top, not the source of baseline identity.
 - font assets should participate in the same truthful resource-loading contract used by the rest of
   the runtime.
+- SVG text should stay on the truthful "rejected until shared" baseline until the staged bridge in
+  `SVG_TEXT_FONT_ENVIRONMENT_PLAN.md` lands.
 
 Current deletion posture:
 

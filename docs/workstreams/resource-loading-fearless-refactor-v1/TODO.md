@@ -374,8 +374,19 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `docs/workstreams/resource-loading-fearless-refactor-v1/README.md`
     - `cargo nextest run -p fret-render-wgpu svg::tests`
 
-- [ ] RESLOAD-svg-420 Plan the long-term shared SVG-text font environment path.
-  - The SVG renderer should not permanently own an unrelated `fontdb` universe.
+- [x] RESLOAD-svg-420 Plan the long-term shared SVG-text font environment path.
+  - Current landed slice:
+    - `docs/workstreams/resource-loading-fearless-refactor-v1/SVG_TEXT_FONT_ENVIRONMENT_PLAN.md`
+      now documents the long-term contract in staged form:
+      - publish a real renderer font inventory,
+      - build any future `usvg` bridge only from that shared inventory,
+      - keep SVG `<text>` rejected until deterministic tests exist,
+      - and treat any eventual `usvg fontdb` bridge as an implementation detail instead of a
+        second host font universe.
+  - Evidence:
+    - `docs/workstreams/resource-loading-fearless-refactor-v1/SVG_TEXT_FONT_ENVIRONMENT_PLAN.md`
+    - `crates/fret-runtime/src/effect.rs`
+    - `crates/fret-launch/src/runner/font_catalog.rs`
 
 - [~] RESLOAD-img-430 Move image loading onto the shared locator/resolver contract while preserving
       the existing async/UI invalidation ergonomics.

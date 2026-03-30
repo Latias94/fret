@@ -609,6 +609,8 @@ Current landed slice:
 - the first-party SVG raster pipeline now enforces the short-term rule in code by rejecting
   text-bearing SVGs through `SvgRenderError::TextNodesUnsupported`
 - outline/icon/illustration SVGs remain supported
+- the staged long-term bridge plan now lives in
+  `docs/workstreams/resource-loading-fearless-refactor-v1/SVG_TEXT_FONT_ENVIRONMENT_PLAN.md`
 
 The short-term restriction is acceptable.
 The current silent divergence is not.

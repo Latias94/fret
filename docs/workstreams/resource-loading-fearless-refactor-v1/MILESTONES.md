@@ -70,7 +70,9 @@ Status note (2026-03-30):
 
 - image loading and the current SVG bridge now both sit on the shared locator/resolver contract,
 - the first-party SVG raster path no longer silently loads system fonts for SVG `<text>`,
-- text-bearing SVGs are now explicitly rejected until a shared text/font environment exists.
+- text-bearing SVGs are now explicitly rejected until a shared text/font environment exists, and
+- that long-term bridge is now documented in
+  `docs/workstreams/resource-loading-fearless-refactor-v1/SVG_TEXT_FONT_ENVIRONMENT_PLAN.md`.
 
 Exit criteria:
 
