@@ -299,11 +299,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_asset_load_missing_bundle_assets_max(
-            bundle_path.as_path(),
-            max_allowed,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_asset_load_missing_bundle_assets_max_streaming(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_asset_load_missing_bundle_assets_max(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(max_allowed) = check_asset_load_stale_manifest_max {
         ensure_check_supported_in_stats_mode(
@@ -312,11 +320,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_asset_load_stale_manifest_max(
-            bundle_path.as_path(),
-            max_allowed,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_asset_load_stale_manifest_max_streaming(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_asset_load_stale_manifest_max(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(max_allowed) = check_asset_load_unsupported_file_max {
         ensure_check_supported_in_stats_mode(
@@ -325,11 +341,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_asset_load_unsupported_file_max(
-            bundle_path.as_path(),
-            max_allowed,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_asset_load_unsupported_file_max_streaming(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_asset_load_unsupported_file_max(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(max_allowed) = check_asset_load_unsupported_url_max {
         ensure_check_supported_in_stats_mode(
@@ -338,11 +362,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_asset_load_unsupported_url_max(
-            bundle_path.as_path(),
-            max_allowed,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_asset_load_unsupported_url_max_streaming(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_asset_load_unsupported_url_max(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(max_allowed) = check_asset_load_external_reference_unavailable_max {
         ensure_check_supported_in_stats_mode(
@@ -351,11 +383,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_asset_load_external_reference_unavailable_max(
-            bundle_path.as_path(),
-            max_allowed,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_asset_load_external_reference_unavailable_max_streaming(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_asset_load_external_reference_unavailable_max(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(max_allowed) = check_asset_load_io_max {
         ensure_check_supported_in_stats_mode(
@@ -364,11 +404,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_asset_load_io_max(
-            bundle_path.as_path(),
-            max_allowed,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_asset_load_io_max_streaming(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_asset_load_io_max(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(max_allowed) = check_asset_load_revision_changes_max {
         ensure_check_supported_in_stats_mode(
@@ -377,11 +425,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_asset_load_revision_changes_max(
-            bundle_path.as_path(),
-            max_allowed,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_asset_load_revision_changes_max_streaming(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_asset_load_revision_changes_max(
+                bundle_path.as_path(),
+                max_allowed,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(expected_source) = check_bundled_font_baseline_source.as_deref() {
         ensure_check_supported_in_stats_mode(
@@ -390,11 +446,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_bundled_font_baseline_source(
-            bundle_path.as_path(),
-            expected_source,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_bundled_font_baseline_source_streaming(
+                bundle_path.as_path(),
+                expected_source,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_bundled_font_baseline_source(
+                bundle_path.as_path(),
+                expected_source,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(min_required) = check_asset_reload_epoch_min {
         ensure_check_supported_in_stats_mode(
@@ -403,11 +467,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_asset_reload_epoch_min(
-            bundle_path.as_path(),
-            min_required,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_asset_reload_epoch_min_streaming(
+                bundle_path.as_path(),
+                min_required,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_asset_reload_epoch_min(
+                bundle_path.as_path(),
+                min_required,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(expected_backend) = check_asset_reload_configured_backend.as_deref() {
         ensure_check_supported_in_stats_mode(
@@ -416,11 +488,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_asset_reload_configured_backend(
-            bundle_path.as_path(),
-            expected_backend,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_asset_reload_configured_backend_streaming(
+                bundle_path.as_path(),
+                expected_backend,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_asset_reload_configured_backend(
+                bundle_path.as_path(),
+                expected_backend,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(expected_backend) = check_asset_reload_active_backend.as_deref() {
         ensure_check_supported_in_stats_mode(
@@ -429,11 +509,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_asset_reload_active_backend(
-            bundle_path.as_path(),
-            expected_backend,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_asset_reload_active_backend_streaming(
+                bundle_path.as_path(),
+                expected_backend,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_asset_reload_active_backend(
+                bundle_path.as_path(),
+                expected_backend,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(expected_reason) = check_asset_reload_fallback_reason.as_deref() {
         ensure_check_supported_in_stats_mode(
@@ -442,11 +530,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_asset_reload_fallback_reason(
-            bundle_path.as_path(),
-            expected_reason,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_asset_reload_fallback_reason_streaming(
+                bundle_path.as_path(),
+                expected_reason,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_asset_reload_fallback_reason(
+                bundle_path.as_path(),
+                expected_reason,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(test_id) = check_pixels_changed_test_id.as_deref() {
         ensure_check_supported_in_stats_mode(

@@ -237,6 +237,13 @@ Progress update:
   - `resolve_latest_bundle_dir_for_out_dir` now routes script-result hint parsing and latest-marker/scan fallback through dedicated helpers,
   - `resolve_session_out_dir_for_base_dir` now routes session-root vs base-dir selection through a dedicated mode helper plus direct-resolution builder,
   - helper-level regression coverage now locks existing-run-dir projection, missing-artifact filtering, base/session latest-bundle reuse, relative/absolute hint fallback behavior, and session-root marker preference without invoking the full command.
+- `diag_stats` has now landed another stats-lite seam around resource-loading checks:
+  - when stats are derived from `frames.index`, the resource-loading family now streams
+    `debug.resource_loading` snapshots from the bundle instead of materializing the full JSON,
+  - asset-load counter gates, bundled-font baseline-source validation, and asset-reload epoch /
+    string checks now share that bounded streaming path,
+  - targeted regression coverage now locks streaming-lane parity plus stats-lite support
+    registration for this family.
 - The next decision point in this area is no longer whether `cmd_triage`, the ensured-artifact
   helper, or required-bundle ensured commands still need basic orchestration seams; those slices are
   now landed. The same is now true for the shared generated-artifact materialization tail. The higher-ROI follow-up remains the deeper

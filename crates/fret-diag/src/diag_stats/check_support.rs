@@ -57,6 +57,66 @@ pub(crate) const STATS_LITE_SUPPORTED_CHECKS: &[StatsLiteCheckSupport] = &[
         note: "uses frames.index.json window aggregates (idle streak tail/max)",
     },
     StatsLiteCheckSupport {
+        check_name: "check-asset-load-missing-bundle-assets-max",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.asset_load counters only",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-asset-load-stale-manifest-max",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.asset_load counters only",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-asset-load-unsupported-file-max",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.asset_load counters only",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-asset-load-unsupported-url-max",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.asset_load counters only",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-asset-load-external-reference-unavailable-max",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.asset_load counters only",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-asset-load-io-max",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.asset_load counters only",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-asset-load-revision-changes-max",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.asset_load counters only",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-bundled-font-baseline-source",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.font_environment only",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-asset-reload-epoch-min",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.asset_reload only",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-asset-reload-configured-backend",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.asset_reload only",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-asset-reload-active-backend",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.asset_reload only",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-asset-reload-fallback-reason",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.resource_loading.asset_reload only",
+    },
+    StatsLiteCheckSupport {
         check_name: "check-pixels-changed",
         kind: StatsLiteCheckKind::OutDirOnly,
         note: "uses out-dir artifacts",
@@ -176,6 +236,8 @@ mod tests {
         assert!(stats_lite_support_for("check-retained-vlist-keep-alive-reuse-min").is_some());
         assert!(stats_lite_support_for("check-retained-vlist-attach-detach-max").is_some());
         assert!(stats_lite_support_for("check-view-cache-reuse-min").is_some());
+        assert!(stats_lite_support_for("check-asset-load-io-max").is_some());
+        assert!(stats_lite_support_for("check-asset-reload-epoch-min").is_some());
         assert!(stats_lite_support_for("check-wheel-scroll").is_some());
         assert!(stats_lite_support_for("check-pixels-unchanged").is_some());
         assert!(stats_lite_support_for("check-drag-cache-root-paint-only").is_some());
@@ -190,6 +252,18 @@ mod tests {
             "check-stale-paint",
             "check-stale-scene",
             "check-idle-no-paint-min",
+            "check-asset-load-missing-bundle-assets-max",
+            "check-asset-load-stale-manifest-max",
+            "check-asset-load-unsupported-file-max",
+            "check-asset-load-unsupported-url-max",
+            "check-asset-load-external-reference-unavailable-max",
+            "check-asset-load-io-max",
+            "check-asset-load-revision-changes-max",
+            "check-bundled-font-baseline-source",
+            "check-asset-reload-epoch-min",
+            "check-asset-reload-configured-backend",
+            "check-asset-reload-active-backend",
+            "check-asset-reload-fallback-reason",
             "check-pixels-changed",
             "check-pixels-unchanged",
             "check-semantics-changed-repainted",

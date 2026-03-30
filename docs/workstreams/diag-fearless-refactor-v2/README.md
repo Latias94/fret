@@ -244,6 +244,10 @@ The workstream already has a first end-to-end aggregate path in-tree:
   exist in the active artifacts root:
   - `regression.summary.json`,
   - `regression.index.json`.
+- `fretboard diag stats` now keeps the resource-loading gate family usable in stats-lite mode:
+  - frames-index-backed lanes still stay lightweight when possible,
+  - resource-loading checks now fall back to streaming `debug.resource_loading` snapshots instead
+    of materializing the full bundle JSON.
 
 This means the current question is no longer whether aggregate summaries are useful, but how
 presentation surfaces should reuse them without creating a second diagnostics model.
@@ -271,5 +275,4 @@ Current emphasis after the latest `diag_suite` / `diag_run` landings:
   not jump ahead of it.
 
 See `TODO.md` and `MILESTONES.md` for the staged plan.
-
 

@@ -1,5 +1,6 @@
 use super::*;
 use crate::util::{now_unix_ms, write_json_value};
+use serde::de::{DeserializeSeed, IgnoredAny, IntoDeserializer, MapAccess, SeqAccess, Visitor};
 
 struct ResourceLoadingCounterGateSpec {
     kind: &'static str,
@@ -14,6 +15,41 @@ struct ResourceLoadingStringGateSpec {
     evidence_file: &'static str,
     field_pointer: &'static str,
 }
+
+#[derive(Debug, Clone)]
+struct ResourceLoadingSnapshotObservation {
+    window_id: u64,
+    tick_id: Option<u64>,
+    frame_id: u64,
+    resource_loading: Option<ResourceLoadingLite>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct ResourceLoadingLite {
+    counter: Option<u64>,
+    font_environment: Option<FontEnvironmentLite>,
+    asset_reload: Option<AssetReloadLite>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct FontEnvironmentLite {
+    bundled_baseline_source: Option<String>,
+    bundled_profile_name: Option<String>,
+    bundled_asset_bundle: Option<String>,
+    bundled_asset_keys: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct AssetReloadLite {
+    epoch: Option<u64>,
+    file_watch: Option<bool>,
+    configured_backend: Option<String>,
+    active_backend: Option<String>,
+    fallback_reason: Option<String>,
+    fallback_message: Option<String>,
+}
+
+type ResourceLoadingStreamCallback<'a> = Box<dyn FnMut(ResourceLoadingSnapshotObservation) + 'a>;
 
 const ASSET_LOAD_MISSING_BUNDLE_ASSETS_MAX: ResourceLoadingCounterGateSpec =
     ResourceLoadingCounterGateSpec {
@@ -300,6 +336,598 @@ fn optional_string_matches(observed: Option<&str>, expected: &str) -> bool {
     }
 }
 
+fn parse_resource_loading_lite(
+    value: &serde_json::Value,
+    counter_field: Option<&str>,
+) -> Option<ResourceLoadingLite> {
+    let object = value.as_object()?;
+
+    let counter = counter_field.and_then(|field| {
+        object
+            .get("asset_load")
+            .and_then(|v| v.get(field))
+            .and_then(|v| v.as_u64())
+    });
+
+    let font_environment = object
+        .get("font_environment")
+        .and_then(|v| v.as_object())
+        .map(|font_environment| FontEnvironmentLite {
+            bundled_baseline_source: font_environment
+                .get("bundled_baseline_source")
+                .and_then(|v| v.as_str())
+                .map(ToOwned::to_owned),
+            bundled_profile_name: font_environment
+                .get("bundled_profile_name")
+                .and_then(|v| v.as_str())
+                .map(ToOwned::to_owned),
+            bundled_asset_bundle: font_environment
+                .get("bundled_asset_bundle")
+                .and_then(|v| v.as_str())
+                .map(ToOwned::to_owned),
+            bundled_asset_keys: font_environment
+                .get("bundled_asset_keys")
+                .and_then(|v| v.as_array())
+                .map(|keys| {
+                    keys.iter()
+                        .filter_map(|value| value.as_str().map(ToOwned::to_owned))
+                        .collect()
+                }),
+        });
+
+    let asset_reload = object
+        .get("asset_reload")
+        .and_then(|v| v.as_object())
+        .map(|asset_reload| AssetReloadLite {
+            epoch: asset_reload.get("epoch").and_then(|v| v.as_u64()),
+            file_watch: asset_reload.get("file_watch").and_then(|v| v.as_bool()),
+            configured_backend: asset_reload
+                .get("configured_backend")
+                .and_then(|v| v.as_str())
+                .map(ToOwned::to_owned),
+            active_backend: asset_reload
+                .get("active_backend")
+                .and_then(|v| v.as_str())
+                .map(ToOwned::to_owned),
+            fallback_reason: asset_reload
+                .get("fallback_reason")
+                .and_then(|v| v.as_str())
+                .map(ToOwned::to_owned),
+            fallback_message: asset_reload
+                .get("fallback_message")
+                .and_then(|v| v.as_str())
+                .map(ToOwned::to_owned),
+        });
+
+    Some(ResourceLoadingLite {
+        counter,
+        font_environment,
+        asset_reload,
+    })
+}
+
+fn for_each_resource_loading_snapshot_streaming<'a>(
+    bundle_path: &Path,
+    warmup_frames: u64,
+    counter_field: Option<&'static str>,
+    on_snapshot: impl FnMut(ResourceLoadingSnapshotObservation) + 'a,
+) -> Result<u64, String> {
+    #[derive(Default)]
+    struct WalkState {
+        saw_windows_field: bool,
+        windows_total: u64,
+    }
+
+    struct RootSeed<'a> {
+        warmup_frames: u64,
+        counter_field: Option<&'static str>,
+        callback: std::rc::Rc<std::cell::RefCell<ResourceLoadingStreamCallback<'a>>>,
+        state: std::rc::Rc<std::cell::RefCell<WalkState>>,
+    }
+
+    impl<'de, 'a> DeserializeSeed<'de> for RootSeed<'a> {
+        type Value = ();
+
+        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_map(RootVisitor {
+                warmup_frames: self.warmup_frames,
+                counter_field: self.counter_field,
+                callback: self.callback,
+                state: self.state,
+            })
+        }
+    }
+
+    struct RootVisitor<'a> {
+        warmup_frames: u64,
+        counter_field: Option<&'static str>,
+        callback: std::rc::Rc<std::cell::RefCell<ResourceLoadingStreamCallback<'a>>>,
+        state: std::rc::Rc<std::cell::RefCell<WalkState>>,
+    }
+
+    impl<'de, 'a> Visitor<'de> for RootVisitor<'a> {
+        type Value = ();
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "bundle artifact object")
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            while let Some(key) = map.next_key::<String>()? {
+                match key.as_str() {
+                    "windows" => {
+                        self.state.borrow_mut().saw_windows_field = true;
+                        map.next_value_seed(WindowsSeed {
+                            warmup_frames: self.warmup_frames,
+                            counter_field: self.counter_field,
+                            callback: self.callback.clone(),
+                            state: self.state.clone(),
+                        })?;
+                    }
+                    _ => {
+                        map.next_value::<IgnoredAny>()?;
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
+
+    struct WindowsSeed<'a> {
+        warmup_frames: u64,
+        counter_field: Option<&'static str>,
+        callback: std::rc::Rc<std::cell::RefCell<ResourceLoadingStreamCallback<'a>>>,
+        state: std::rc::Rc<std::cell::RefCell<WalkState>>,
+    }
+
+    impl<'de, 'a> DeserializeSeed<'de> for WindowsSeed<'a> {
+        type Value = ();
+
+        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_seq(WindowsVisitor {
+                warmup_frames: self.warmup_frames,
+                counter_field: self.counter_field,
+                callback: self.callback,
+                state: self.state,
+            })
+        }
+    }
+
+    struct WindowsVisitor<'a> {
+        warmup_frames: u64,
+        counter_field: Option<&'static str>,
+        callback: std::rc::Rc<std::cell::RefCell<ResourceLoadingStreamCallback<'a>>>,
+        state: std::rc::Rc<std::cell::RefCell<WalkState>>,
+    }
+
+    impl<'de, 'a> Visitor<'de> for WindowsVisitor<'a> {
+        type Value = ();
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "windows array")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<(), A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            while seq
+                .next_element_seed(WindowSeed {
+                    warmup_frames: self.warmup_frames,
+                    counter_field: self.counter_field,
+                    callback: self.callback.clone(),
+                    state: self.state.clone(),
+                })?
+                .is_some()
+            {}
+            Ok(())
+        }
+    }
+
+    struct WindowSeed<'a> {
+        warmup_frames: u64,
+        counter_field: Option<&'static str>,
+        callback: std::rc::Rc<std::cell::RefCell<ResourceLoadingStreamCallback<'a>>>,
+        state: std::rc::Rc<std::cell::RefCell<WalkState>>,
+    }
+
+    impl<'de, 'a> DeserializeSeed<'de> for WindowSeed<'a> {
+        type Value = ();
+
+        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_map(WindowVisitor {
+                warmup_frames: self.warmup_frames,
+                counter_field: self.counter_field,
+                callback: self.callback,
+                state: self.state,
+            })
+        }
+    }
+
+    struct WindowVisitor<'a> {
+        warmup_frames: u64,
+        counter_field: Option<&'static str>,
+        callback: std::rc::Rc<std::cell::RefCell<ResourceLoadingStreamCallback<'a>>>,
+        state: std::rc::Rc<std::cell::RefCell<WalkState>>,
+    }
+
+    impl<'de, 'a> Visitor<'de> for WindowVisitor<'a> {
+        type Value = ();
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "window object")
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            let mut window_id: u64 = 0;
+            let mut saw_window_id = false;
+            let mut deferred_snapshots: Option<serde_json::Value> = None;
+
+            while let Some(key) = map.next_key::<String>()? {
+                match key.as_str() {
+                    "window" | "window_id" | "windowId" => {
+                        saw_window_id = true;
+                        window_id = map.next_value::<Option<u64>>()?.unwrap_or(0);
+                    }
+                    "snapshots" => {
+                        if saw_window_id {
+                            map.next_value_seed(SnapshotsSeed {
+                                warmup_frames: self.warmup_frames,
+                                counter_field: self.counter_field,
+                                callback: self.callback.clone(),
+                                window_id,
+                            })?;
+                        } else {
+                            deferred_snapshots = Some(map.next_value::<serde_json::Value>()?);
+                        }
+                    }
+                    _ => {
+                        map.next_value::<IgnoredAny>()?;
+                    }
+                }
+            }
+
+            if let Some(deferred_snapshots) = deferred_snapshots {
+                SnapshotsSeed {
+                    warmup_frames: self.warmup_frames,
+                    counter_field: self.counter_field,
+                    callback: self.callback.clone(),
+                    window_id,
+                }
+                .deserialize(deferred_snapshots.into_deserializer())
+                .map_err(serde::de::Error::custom)?;
+            }
+
+            let mut state = self.state.borrow_mut();
+            state.windows_total = state.windows_total.saturating_add(1);
+            Ok(())
+        }
+    }
+
+    struct SnapshotsSeed<'a> {
+        warmup_frames: u64,
+        counter_field: Option<&'static str>,
+        callback: std::rc::Rc<std::cell::RefCell<ResourceLoadingStreamCallback<'a>>>,
+        window_id: u64,
+    }
+
+    impl<'de, 'a> DeserializeSeed<'de> for SnapshotsSeed<'a> {
+        type Value = ();
+
+        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_seq(SnapshotsVisitor {
+                warmup_frames: self.warmup_frames,
+                counter_field: self.counter_field,
+                callback: self.callback,
+                window_id: self.window_id,
+            })
+        }
+    }
+
+    struct SnapshotsVisitor<'a> {
+        warmup_frames: u64,
+        counter_field: Option<&'static str>,
+        callback: std::rc::Rc<std::cell::RefCell<ResourceLoadingStreamCallback<'a>>>,
+        window_id: u64,
+    }
+
+    impl<'de, 'a> Visitor<'de> for SnapshotsVisitor<'a> {
+        type Value = ();
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "snapshots array")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<(), A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            while seq
+                .next_element_seed(SnapshotSeed {
+                    warmup_frames: self.warmup_frames,
+                    counter_field: self.counter_field,
+                    callback: self.callback.clone(),
+                    window_id: self.window_id,
+                })?
+                .is_some()
+            {}
+            Ok(())
+        }
+    }
+
+    struct SnapshotSeed<'a> {
+        warmup_frames: u64,
+        counter_field: Option<&'static str>,
+        callback: std::rc::Rc<std::cell::RefCell<ResourceLoadingStreamCallback<'a>>>,
+        window_id: u64,
+    }
+
+    impl<'de, 'a> DeserializeSeed<'de> for SnapshotSeed<'a> {
+        type Value = ();
+
+        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_map(SnapshotVisitor {
+                warmup_frames: self.warmup_frames,
+                counter_field: self.counter_field,
+                callback: self.callback,
+                window_id: self.window_id,
+            })
+        }
+    }
+
+    struct SnapshotVisitor<'a> {
+        warmup_frames: u64,
+        counter_field: Option<&'static str>,
+        callback: std::rc::Rc<std::cell::RefCell<ResourceLoadingStreamCallback<'a>>>,
+        window_id: u64,
+    }
+
+    impl<'de, 'a> Visitor<'de> for SnapshotVisitor<'a> {
+        type Value = ();
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "snapshot object")
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            let mut tick_id: Option<u64> = None;
+            let mut frame_id: u64 = 0;
+            let mut resource_loading: Option<ResourceLoadingLite> = None;
+
+            while let Some(key) = map.next_key::<String>()? {
+                match key.as_str() {
+                    "tick_id" | "tickId" => {
+                        tick_id = map.next_value::<Option<u64>>()?;
+                    }
+                    "frame_id" | "frameId" => {
+                        frame_id = map.next_value::<Option<u64>>()?.unwrap_or(0);
+                    }
+                    "debug" => {
+                        map.next_value_seed(DebugSeed {
+                            counter_field: self.counter_field,
+                            resource_loading: &mut resource_loading,
+                        })?;
+                    }
+                    _ => {
+                        map.next_value::<IgnoredAny>()?;
+                    }
+                }
+            }
+
+            if frame_id < self.warmup_frames {
+                return Ok(());
+            }
+
+            (self.callback.borrow_mut())(ResourceLoadingSnapshotObservation {
+                window_id: self.window_id,
+                tick_id,
+                frame_id,
+                resource_loading,
+            });
+
+            Ok(())
+        }
+    }
+
+    struct DebugSeed<'a> {
+        counter_field: Option<&'static str>,
+        resource_loading: &'a mut Option<ResourceLoadingLite>,
+    }
+
+    impl<'de> DeserializeSeed<'de> for DebugSeed<'_> {
+        type Value = ();
+
+        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_map(DebugVisitor {
+                counter_field: self.counter_field,
+                resource_loading: self.resource_loading,
+            })
+        }
+    }
+
+    struct DebugVisitor<'a> {
+        counter_field: Option<&'static str>,
+        resource_loading: &'a mut Option<ResourceLoadingLite>,
+    }
+
+    impl<'de> Visitor<'de> for DebugVisitor<'_> {
+        type Value = ();
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "debug object")
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            while let Some(key) = map.next_key::<String>()? {
+                match key.as_str() {
+                    "resource_loading" => {
+                        let value = map.next_value::<serde_json::Value>()?;
+                        *self.resource_loading =
+                            parse_resource_loading_lite(&value, self.counter_field);
+                    }
+                    _ => {
+                        map.next_value::<IgnoredAny>()?;
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
+
+    let callback = std::rc::Rc::new(std::cell::RefCell::new(
+        Box::new(on_snapshot) as ResourceLoadingStreamCallback<'a>
+    ));
+    let state = std::rc::Rc::new(std::cell::RefCell::new(WalkState::default()));
+
+    crate::json_stream::with_bundle_json_deserializer(bundle_path, |de| {
+        RootSeed {
+            warmup_frames,
+            counter_field,
+            callback: callback.clone(),
+            state: state.clone(),
+        }
+        .deserialize(de)
+    })?;
+
+    let state = state.borrow();
+    if !state.saw_windows_field {
+        return Err("invalid bundle artifact: missing windows".to_string());
+    }
+    Ok(state.windows_total)
+}
+
+fn counter_observation(
+    window_id: u64,
+    tick_id: Option<u64>,
+    frame_id: u64,
+    value: u64,
+) -> serde_json::Value {
+    serde_json::json!({
+        "window": window_id,
+        "tick_id": tick_id,
+        "frame_id": frame_id,
+        "value": value,
+    })
+}
+
+fn font_environment_observation(
+    window_id: u64,
+    tick_id: Option<u64>,
+    frame_id: u64,
+    font_environment: &FontEnvironmentLite,
+) -> serde_json::Value {
+    serde_json::json!({
+        "window": window_id,
+        "tick_id": tick_id,
+        "frame_id": frame_id,
+        "bundled_baseline_source": font_environment
+            .bundled_baseline_source
+            .clone()
+            .unwrap_or_default(),
+        "bundled_profile_name": font_environment.bundled_profile_name.clone(),
+        "bundled_asset_bundle": font_environment.bundled_asset_bundle.clone(),
+        "bundled_asset_keys": font_environment.bundled_asset_keys.clone(),
+    })
+}
+
+fn asset_reload_observation_from_lite(
+    window_id: u64,
+    tick_id: Option<u64>,
+    frame_id: u64,
+    asset_reload: Option<&AssetReloadLite>,
+) -> serde_json::Value {
+    let mut observation = serde_json::Map::from_iter([
+        (
+            "window".to_string(),
+            serde_json::Value::Number(window_id.into()),
+        ),
+        (
+            "tick_id".to_string(),
+            tick_id.map_or(serde_json::Value::Null, serde_json::Value::from),
+        ),
+        (
+            "frame_id".to_string(),
+            serde_json::Value::Number(frame_id.into()),
+        ),
+        (
+            "asset_reload_present".to_string(),
+            serde_json::Value::Bool(asset_reload.is_some()),
+        ),
+    ]);
+
+    if let Some(asset_reload) = asset_reload {
+        for (field, value) in [
+            ("epoch", asset_reload.epoch.map(serde_json::Value::from)),
+            (
+                "file_watch",
+                asset_reload.file_watch.map(serde_json::Value::from),
+            ),
+            (
+                "configured_backend",
+                asset_reload
+                    .configured_backend
+                    .clone()
+                    .map(serde_json::Value::String),
+            ),
+            (
+                "active_backend",
+                asset_reload
+                    .active_backend
+                    .clone()
+                    .map(serde_json::Value::String),
+            ),
+            (
+                "fallback_reason",
+                asset_reload
+                    .fallback_reason
+                    .clone()
+                    .map(serde_json::Value::String),
+            ),
+            (
+                "fallback_message",
+                asset_reload
+                    .fallback_message
+                    .clone()
+                    .map(serde_json::Value::String),
+            ),
+        ] {
+            observation.insert(field.to_string(), value.unwrap_or(serde_json::Value::Null));
+        }
+    }
+
+    serde_json::Value::Object(observation)
+}
+
 fn asset_reload_observation(
     window_id: u64,
     snapshot: &serde_json::Value,
@@ -350,6 +978,625 @@ fn asset_reload_observation(
     }
 
     serde_json::Value::Object(observation)
+}
+
+pub(crate) fn check_bundle_for_asset_load_missing_bundle_assets_max_streaming(
+    bundle_path: &Path,
+    max_allowed: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_resource_loading_counter_max_streaming(
+        bundle_path,
+        &ASSET_LOAD_MISSING_BUNDLE_ASSETS_MAX,
+        max_allowed,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_asset_load_stale_manifest_max_streaming(
+    bundle_path: &Path,
+    max_allowed: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_resource_loading_counter_max_streaming(
+        bundle_path,
+        &ASSET_LOAD_STALE_MANIFEST_MAX,
+        max_allowed,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_asset_load_unsupported_file_max_streaming(
+    bundle_path: &Path,
+    max_allowed: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_resource_loading_counter_max_streaming(
+        bundle_path,
+        &ASSET_LOAD_UNSUPPORTED_FILE_MAX,
+        max_allowed,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_asset_load_unsupported_url_max_streaming(
+    bundle_path: &Path,
+    max_allowed: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_resource_loading_counter_max_streaming(
+        bundle_path,
+        &ASSET_LOAD_UNSUPPORTED_URL_MAX,
+        max_allowed,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_asset_load_external_reference_unavailable_max_streaming(
+    bundle_path: &Path,
+    max_allowed: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_resource_loading_counter_max_streaming(
+        bundle_path,
+        &ASSET_LOAD_EXTERNAL_REFERENCE_UNAVAILABLE_MAX,
+        max_allowed,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_asset_load_io_max_streaming(
+    bundle_path: &Path,
+    max_allowed: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_resource_loading_counter_max_streaming(
+        bundle_path,
+        &ASSET_LOAD_IO_MAX,
+        max_allowed,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_asset_load_revision_changes_max_streaming(
+    bundle_path: &Path,
+    max_allowed: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_resource_loading_counter_max_streaming(
+        bundle_path,
+        &ASSET_LOAD_REVISION_CHANGES_MAX,
+        max_allowed,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_bundled_font_baseline_source_streaming(
+    bundle_path: &Path,
+    expected_source: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    #[derive(Default)]
+    struct Scan {
+        examined_snapshots: u64,
+        resource_loading_snapshots: u64,
+        font_environment_snapshots: u64,
+        matched: bool,
+        last_observed: Option<serde_json::Value>,
+    }
+
+    let scan = std::rc::Rc::new(std::cell::RefCell::new(Scan::default()));
+    let scan_ref = scan.clone();
+    let expected_source_owned = expected_source.to_string();
+    let windows_total = for_each_resource_loading_snapshot_streaming(
+        bundle_path,
+        warmup_frames,
+        None,
+        move |obs| {
+            let mut scan = scan_ref.borrow_mut();
+            scan.examined_snapshots = scan.examined_snapshots.saturating_add(1);
+
+            let Some(resource_loading) = obs.resource_loading.as_ref() else {
+                return;
+            };
+            scan.resource_loading_snapshots = scan.resource_loading_snapshots.saturating_add(1);
+
+            let Some(font_environment) = resource_loading.font_environment.as_ref() else {
+                return;
+            };
+            scan.font_environment_snapshots = scan.font_environment_snapshots.saturating_add(1);
+            scan.last_observed = Some(font_environment_observation(
+                obs.window_id,
+                obs.tick_id,
+                obs.frame_id,
+                font_environment,
+            ));
+            if font_environment
+                .bundled_baseline_source
+                .as_deref()
+                .unwrap_or_default()
+                == expected_source_owned.as_str()
+            {
+                scan.matched = true;
+            }
+        },
+    )?;
+    if windows_total == 0 {
+        return Ok(());
+    }
+
+    let scan = scan.borrow();
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.bundled_font_baseline_source.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "bundled_font_baseline_source",
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": scan.examined_snapshots,
+        "resource_loading_snapshots": scan.resource_loading_snapshots,
+        "font_environment_snapshots": scan.font_environment_snapshots,
+        "matched": scan.matched,
+        "last_observed": scan.last_observed,
+        "expected": {
+            "field_pointer": "debug.resource_loading.font_environment.bundled_baseline_source",
+            "value": expected_source,
+        }
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if scan.resource_loading_snapshots == 0 {
+        return Err(format!(
+            "bundled_font_baseline_source gate requires debug.resource_loading snapshots after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={})\n  bundle: {}\n  evidence: {}",
+            scan.examined_snapshots,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if scan.font_environment_snapshots == 0 {
+        return Err(format!(
+            "bundled_font_baseline_source gate requires debug.resource_loading.font_environment after warmup, but none were observed (warmup_frames={warmup_frames}, resource_loading_snapshots={})\n  bundle: {}\n  evidence: {}",
+            scan.resource_loading_snapshots,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if scan.matched {
+        return Ok(());
+    }
+
+    Err(format!(
+        "bundled_font_baseline_source gate failed (expected source={expected_source})\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(crate) fn check_bundle_for_asset_reload_epoch_min_streaming(
+    bundle_path: &Path,
+    min_required: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    #[derive(Default)]
+    struct Scan {
+        examined_snapshots: u64,
+        resource_loading_snapshots: u64,
+        asset_reload_snapshots: u64,
+        epoch_snapshots: u64,
+        max_observed: Option<u64>,
+        last_observed: Option<serde_json::Value>,
+    }
+
+    let scan = std::rc::Rc::new(std::cell::RefCell::new(Scan::default()));
+    let scan_ref = scan.clone();
+    let windows_total = for_each_resource_loading_snapshot_streaming(
+        bundle_path,
+        warmup_frames,
+        None,
+        move |obs| {
+            let mut scan = scan_ref.borrow_mut();
+            scan.examined_snapshots = scan.examined_snapshots.saturating_add(1);
+
+            let Some(resource_loading) = obs.resource_loading.as_ref() else {
+                return;
+            };
+            scan.resource_loading_snapshots = scan.resource_loading_snapshots.saturating_add(1);
+
+            let Some(asset_reload) = resource_loading.asset_reload.as_ref() else {
+                scan.last_observed = Some(asset_reload_observation_from_lite(
+                    obs.window_id,
+                    obs.tick_id,
+                    obs.frame_id,
+                    None,
+                ));
+                return;
+            };
+
+            scan.asset_reload_snapshots = scan.asset_reload_snapshots.saturating_add(1);
+            scan.last_observed = Some(asset_reload_observation_from_lite(
+                obs.window_id,
+                obs.tick_id,
+                obs.frame_id,
+                Some(asset_reload),
+            ));
+
+            if let Some(epoch) = asset_reload.epoch {
+                scan.epoch_snapshots = scan.epoch_snapshots.saturating_add(1);
+                scan.max_observed = Some(scan.max_observed.map_or(epoch, |prev| prev.max(epoch)));
+            }
+        },
+    )?;
+    if windows_total == 0 {
+        return Ok(());
+    }
+
+    let scan = scan.borrow();
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.asset_reload_epoch_min.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "asset_reload_epoch_min",
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": scan.examined_snapshots,
+        "resource_loading_snapshots": scan.resource_loading_snapshots,
+        "asset_reload_snapshots": scan.asset_reload_snapshots,
+        "epoch_snapshots": scan.epoch_snapshots,
+        "max_observed": scan.max_observed,
+        "last_observed": scan.last_observed,
+        "expected": {
+            "field_pointer": "debug.resource_loading.asset_reload.epoch",
+            "min_required": min_required,
+        }
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if scan.resource_loading_snapshots == 0 {
+        return Err(format!(
+            "asset_reload_epoch_min gate requires debug.resource_loading snapshots after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={})\n  bundle: {}\n  evidence: {}",
+            scan.examined_snapshots,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if scan.asset_reload_snapshots == 0 {
+        return Err(format!(
+            "asset_reload_epoch_min gate requires debug.resource_loading.asset_reload after warmup, but none were observed (warmup_frames={warmup_frames}, resource_loading_snapshots={})\n  bundle: {}\n  evidence: {}",
+            scan.resource_loading_snapshots,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if scan.epoch_snapshots == 0 {
+        return Err(format!(
+            "asset_reload_epoch_min gate requires debug.resource_loading.asset_reload.epoch after warmup, but none were observed (warmup_frames={warmup_frames}, asset_reload_snapshots={})\n  bundle: {}\n  evidence: {}",
+            scan.asset_reload_snapshots,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if scan.max_observed.unwrap_or(0) >= min_required {
+        return Ok(());
+    }
+
+    Err(format!(
+        "asset_reload_epoch_min gate failed (expected debug.resource_loading.asset_reload.epoch >= {min_required}, observed max={})\n  bundle: {}\n  evidence: {}",
+        scan.max_observed.unwrap_or(0),
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(crate) fn check_bundle_for_asset_reload_configured_backend_streaming(
+    bundle_path: &Path,
+    expected_backend: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_asset_reload_string_field_streaming(
+        bundle_path,
+        &ASSET_RELOAD_CONFIGURED_BACKEND,
+        expected_backend,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_asset_reload_active_backend_streaming(
+    bundle_path: &Path,
+    expected_backend: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_asset_reload_string_field_streaming(
+        bundle_path,
+        &ASSET_RELOAD_ACTIVE_BACKEND,
+        expected_backend,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_asset_reload_fallback_reason_streaming(
+    bundle_path: &Path,
+    expected_reason: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_asset_reload_string_field_streaming(
+        bundle_path,
+        &ASSET_RELOAD_FALLBACK_REASON,
+        expected_reason,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_resource_loading_counter_max_streaming(
+    bundle_path: &Path,
+    spec: &'static ResourceLoadingCounterGateSpec,
+    max_allowed: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    #[derive(Default)]
+    struct Scan {
+        examined_snapshots: u64,
+        resource_loading_snapshots: u64,
+        metric_snapshots: u64,
+        max_observed: Option<u64>,
+        last_observed: Option<serde_json::Value>,
+    }
+
+    let scan = std::rc::Rc::new(std::cell::RefCell::new(Scan::default()));
+    let scan_ref = scan.clone();
+    let windows_total = for_each_resource_loading_snapshot_streaming(
+        bundle_path,
+        warmup_frames,
+        Some(spec.counter_field),
+        move |obs| {
+            let mut scan = scan_ref.borrow_mut();
+            scan.examined_snapshots = scan.examined_snapshots.saturating_add(1);
+
+            let Some(resource_loading) = obs.resource_loading.as_ref() else {
+                return;
+            };
+            scan.resource_loading_snapshots = scan.resource_loading_snapshots.saturating_add(1);
+
+            let Some(counter) = resource_loading.counter else {
+                return;
+            };
+            scan.metric_snapshots = scan.metric_snapshots.saturating_add(1);
+            scan.max_observed = Some(scan.max_observed.map_or(counter, |prev| prev.max(counter)));
+            scan.last_observed = Some(counter_observation(
+                obs.window_id,
+                obs.tick_id,
+                obs.frame_id,
+                counter,
+            ));
+        },
+    )?;
+    if windows_total == 0 {
+        return Ok(());
+    }
+
+    let scan = scan.borrow();
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join(spec.evidence_file);
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": spec.kind,
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": scan.examined_snapshots,
+        "resource_loading_snapshots": scan.resource_loading_snapshots,
+        "metric_snapshots": scan.metric_snapshots,
+        "max_allowed": max_allowed,
+        "max_observed": scan.max_observed,
+        "last_observed": scan.last_observed,
+        "expected": {
+            "counter_pointer": spec.counter_pointer,
+            "max_allowed": max_allowed,
+        }
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if scan.resource_loading_snapshots == 0 {
+        return Err(format!(
+            "{} gate requires debug.resource_loading snapshots after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={})\n  bundle: {}\n  evidence: {}",
+            spec.kind,
+            scan.examined_snapshots,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if scan.metric_snapshots == 0 {
+        return Err(format!(
+            "{} gate requires {} after warmup, but no matching metric snapshots were observed (warmup_frames={warmup_frames}, resource_loading_snapshots={})\n  bundle: {}\n  evidence: {}",
+            spec.kind,
+            spec.counter_pointer,
+            scan.resource_loading_snapshots,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if scan.max_observed.unwrap_or(0) <= max_allowed {
+        return Ok(());
+    }
+
+    Err(format!(
+        "{} gate failed (expected {} <= {}, observed max={})\n  bundle: {}\n  evidence: {}",
+        spec.kind,
+        spec.counter_pointer,
+        max_allowed,
+        scan.max_observed.unwrap_or(0),
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+fn check_bundle_for_asset_reload_string_field_streaming(
+    bundle_path: &Path,
+    spec: &'static ResourceLoadingStringGateSpec,
+    expected_value: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    #[derive(Default)]
+    struct Scan {
+        examined_snapshots: u64,
+        resource_loading_snapshots: u64,
+        asset_reload_snapshots: u64,
+        field_snapshots: u64,
+        matched: bool,
+        last_observed: Option<serde_json::Value>,
+    }
+
+    let expected_absent = optional_string_expectation_is_absent(expected_value);
+    let expected_value_owned = expected_value.to_string();
+    let scan = std::rc::Rc::new(std::cell::RefCell::new(Scan::default()));
+    let scan_ref = scan.clone();
+    let windows_total = for_each_resource_loading_snapshot_streaming(
+        bundle_path,
+        warmup_frames,
+        None,
+        move |obs| {
+            let mut scan = scan_ref.borrow_mut();
+            scan.examined_snapshots = scan.examined_snapshots.saturating_add(1);
+
+            let Some(resource_loading) = obs.resource_loading.as_ref() else {
+                return;
+            };
+            scan.resource_loading_snapshots = scan.resource_loading_snapshots.saturating_add(1);
+
+            let Some(asset_reload) = resource_loading.asset_reload.as_ref() else {
+                scan.last_observed = Some(asset_reload_observation_from_lite(
+                    obs.window_id,
+                    obs.tick_id,
+                    obs.frame_id,
+                    None,
+                ));
+                if expected_absent {
+                    scan.matched = true;
+                }
+                return;
+            };
+
+            scan.asset_reload_snapshots = scan.asset_reload_snapshots.saturating_add(1);
+            scan.last_observed = Some(asset_reload_observation_from_lite(
+                obs.window_id,
+                obs.tick_id,
+                obs.frame_id,
+                Some(asset_reload),
+            ));
+
+            let observed = match spec.field_name {
+                "configured_backend" => asset_reload.configured_backend.as_deref(),
+                "active_backend" => asset_reload.active_backend.as_deref(),
+                "fallback_reason" => asset_reload.fallback_reason.as_deref(),
+                _ => None,
+            };
+
+            if observed.is_some() {
+                scan.field_snapshots = scan.field_snapshots.saturating_add(1);
+            }
+            if optional_string_matches(observed, expected_value_owned.as_str()) {
+                scan.matched = true;
+            }
+        },
+    )?;
+    if windows_total == 0 {
+        return Ok(());
+    }
+
+    let scan = scan.borrow();
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join(spec.evidence_file);
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": spec.kind,
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": scan.examined_snapshots,
+        "resource_loading_snapshots": scan.resource_loading_snapshots,
+        "asset_reload_snapshots": scan.asset_reload_snapshots,
+        "field_snapshots": scan.field_snapshots,
+        "matched": scan.matched,
+        "last_observed": scan.last_observed,
+        "expected": {
+            "field_pointer": spec.field_pointer,
+            "value": optional_string_expectation_label(expected_value),
+            "value_kind": if expected_absent { "absent" } else { "equals" },
+        }
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if scan.resource_loading_snapshots == 0 {
+        return Err(format!(
+            "{} gate requires debug.resource_loading snapshots after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={})\n  bundle: {}\n  evidence: {}",
+            spec.kind,
+            scan.examined_snapshots,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if !expected_absent && scan.asset_reload_snapshots == 0 {
+        return Err(format!(
+            "{} gate requires debug.resource_loading.asset_reload after warmup, but none were observed (warmup_frames={warmup_frames}, resource_loading_snapshots={})\n  bundle: {}\n  evidence: {}",
+            spec.kind,
+            scan.resource_loading_snapshots,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if !expected_absent && scan.field_snapshots == 0 {
+        return Err(format!(
+            "{} gate requires {} after warmup, but no matching field snapshots were observed (warmup_frames={warmup_frames}, asset_reload_snapshots={})\n  bundle: {}\n  evidence: {}",
+            spec.kind,
+            spec.field_pointer,
+            scan.asset_reload_snapshots,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if scan.matched {
+        return Ok(());
+    }
+
+    Err(format!(
+        "{} gate failed (expected {} = {})\n  bundle: {}\n  evidence: {}",
+        spec.kind,
+        spec.field_pointer,
+        if expected_absent {
+            "absent".to_string()
+        } else {
+            expected_value.to_string()
+        },
+        bundle_path.display(),
+        evidence_path.display()
+    ))
 }
 
 fn check_bundle_for_resource_loading_counter_max_json(

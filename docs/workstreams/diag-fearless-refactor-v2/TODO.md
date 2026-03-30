@@ -62,8 +62,9 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - fifteenth landing: `diag_suite` now routes per-script lint execution plus passed-script post-run preparation through `SuiteScriptLintRequest` and `SuiteScriptPostRunPreparationRequest`, so bundle waits, bundle doctor application, lint/report wiring, and post-run default-check planning reuse one seam
     - sixteenth landing: `diag_suite` now routes per-script result finalization through `SuiteScriptStageFinalizeRequest` and `SuiteScriptSuccessFinalizeRequest`, so stage branching, success-row emission, and stop-demo teardown reuse dedicated helpers instead of sharing one inline tail
     - seventeenth landing: `diag_suite` now routes the remaining per-script success tail through `SuiteScriptSuccessTailRequest`, so lint-failure exit, post-run apply, and success finalize orchestration reuse one helper seam instead of re-expanding the last success-only block inline
+    - eighteenth landing: `diag_stats` now routes the resource-loading check family through a dedicated streaming-bundle path when stats-lite runs from `frames.index`, so asset-load counters, bundled-font baseline-source validation, and asset-reload epoch/string gates no longer force full bundle materialization and the streaming lane now has direct regression coverage
     - audit note: the remaining `diag_suite` holdouts are now mostly one-time setup and session-root-adjacent helpers, so further slicing here has lower ROI than the next command hotspot
-    - next focus: keep `diag_suite` parked unless a new high-ROI holdout appears; the active seam work has moved to `diag_run`
+    - next focus: keep `diag_suite` parked unless a new high-ROI holdout appears; check-family follow-up should now prefer remaining stats-lite support gaps in `diag_stats` or contract-driven guardrails over more suite slicing
   - [ ] suite/campaign resolution,
     - first landing: `diag_suite` now uses `ResolvedSuiteRunInputs` for suite input normalization and env/default resolution
     - second landing: `diag_campaign` now uses a shared invocation builder for per-item `diag_suite::SuiteCmdContext` handoff
