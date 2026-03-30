@@ -1914,6 +1914,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 viewport_size: surface.size(),
                             },
                         );
+                        crate::runner::font_catalog::publish_renderer_svg_text_bridge_diagnostics(
+                            &mut self.app,
+                            renderer,
+                        );
                         if render_text_diag_enabled {
                             let diagnostics = renderer.text_diagnostics_snapshot(self.frame_id);
                             let trace = renderer.text_font_trace_snapshot(self.frame_id);

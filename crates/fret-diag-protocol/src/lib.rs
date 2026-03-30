@@ -1962,6 +1962,26 @@ pub enum UiPredicateV1 {
     RendererFontSourceAssetKeySeen {
         asset_key: String,
     },
+    /// True when `debug.resource_loading.svg_text_bridge.selection_misses.len() >= min`.
+    SvgTextBridgeSelectionMissesGe {
+        min: u64,
+    },
+    /// True when `debug.resource_loading.svg_text_bridge.missing_glyphs.len() >= min`.
+    SvgTextBridgeMissingGlyphsGe {
+        min: u64,
+    },
+    /// True when `debug.resource_loading.svg_text_bridge` reports a clean bridge result.
+    ///
+    /// A clean result means there were no font-selection misses and no missing glyph records.
+    SvgTextBridgeDiagnosticsCleanIs {
+        clean: bool,
+    },
+    /// True when `debug.resource_loading.svg_text_bridge.fallback_records[*]` contains the given
+    /// `(from_family, to_family)` pair.
+    SvgTextBridgeFallbackSeen {
+        from_family: String,
+        to_family: String,
+    },
     /// True when `debug.resource_loading.asset_reload.epoch >= min`.
     ///
     /// This is intended for hot-reload / invalidation flows that want to observe the shared

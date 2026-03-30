@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::BTreeSet;
 
 pub(in crate::renderer) struct SvgRasterGpu<'a> {
     pub(in crate::renderer) device: &'a wgpu::Device,
@@ -122,11 +123,48 @@ struct SvgRasterOccupancy {
     atlas_capacity_px: u64,
 }
 
+#[derive(Default)]
+struct SvgTextBridgeDiagnosticsAggregate {
+    selection_misses: BTreeSet<crate::svg::SvgTextFontSelectionMiss>,
+    fallback_records: BTreeSet<crate::svg::SvgTextFontFallbackRecord>,
+    missing_glyphs: BTreeSet<crate::svg::SvgTextMissingGlyphRecord>,
+}
+
+impl SvgTextBridgeDiagnosticsAggregate {
+    fn clear(&mut self) {
+        self.selection_misses.clear();
+        self.fallback_records.clear();
+        self.missing_glyphs.clear();
+    }
+
+    fn observe(&mut self, diagnostics: &crate::svg::SvgTextBridgeDiagnostics) {
+        self.selection_misses
+            .extend(diagnostics.selection_misses.iter().cloned());
+        self.fallback_records
+            .extend(diagnostics.fallback_records.iter().cloned());
+        self.missing_glyphs
+            .extend(diagnostics.missing_glyphs.iter().cloned());
+    }
+
+    fn to_snapshot(&self, revision: u64) -> crate::SvgTextBridgeDiagnosticsSnapshot {
+        crate::svg::SvgTextBridgeDiagnostics {
+            selection_misses: self.selection_misses.iter().cloned().collect(),
+            fallback_records: self.fallback_records.iter().cloned().collect(),
+            missing_glyphs: self.missing_glyphs.iter().cloned().collect(),
+        }
+        .to_snapshot(revision)
+    }
+}
+
 pub(super) struct SvgRasterState {
     pub(super) rasters: HashMap<SvgRasterKey, SvgRasterEntry>,
     pub(super) mask_atlas_pages: Vec<Option<SvgMaskAtlasPage>>,
     pub(super) mask_atlas_free: Vec<usize>,
     pub(super) text_bridge: Option<SvgTextFontBridgeState>,
+    text_bridge_frame_observed: bool,
+    text_bridge_frame_diagnostics: SvgTextBridgeDiagnosticsAggregate,
+    text_bridge_last_observed_revision: u64,
+    text_bridge_last_snapshot: Option<crate::SvgTextBridgeDiagnosticsSnapshot>,
     pub(super) raster_bytes: u64,
     pub(super) mask_atlas_bytes: u64,
     pub(super) raster_budget_bytes: u64,
@@ -143,6 +181,10 @@ impl Default for SvgRasterState {
             mask_atlas_pages: Vec::new(),
             mask_atlas_free: Vec::new(),
             text_bridge: None,
+            text_bridge_frame_observed: false,
+            text_bridge_frame_diagnostics: SvgTextBridgeDiagnosticsAggregate::default(),
+            text_bridge_last_observed_revision: 0,
+            text_bridge_last_snapshot: None,
             raster_bytes: 0,
             mask_atlas_bytes: 0,
             raster_budget_bytes: 64 * 1024 * 1024,
@@ -160,6 +202,47 @@ pub(super) struct SvgTextFontBridgeState {
 }
 
 impl SvgRasterState {
+    pub(super) fn begin_text_bridge_diagnostics_frame(&mut self) {
+        self.text_bridge_frame_observed = false;
+        self.text_bridge_frame_diagnostics.clear();
+    }
+
+    pub(super) fn note_text_bridge_diagnostics(
+        &mut self,
+        diagnostics: &crate::svg::SvgTextBridgeDiagnostics,
+    ) {
+        self.text_bridge_frame_observed = true;
+        self.text_bridge_frame_diagnostics.observe(diagnostics);
+    }
+
+    pub(super) fn commit_text_bridge_diagnostics_frame(&mut self) {
+        if !self.text_bridge_frame_observed {
+            return;
+        }
+
+        self.text_bridge_last_observed_revision =
+            self.text_bridge_last_observed_revision.saturating_add(1);
+        self.text_bridge_last_snapshot = Some(
+            self.text_bridge_frame_diagnostics
+                .to_snapshot(self.text_bridge_last_observed_revision),
+        );
+        self.text_bridge_frame_observed = false;
+        self.text_bridge_frame_diagnostics.clear();
+    }
+
+    pub(super) fn invalidate_text_bridge_environment(&mut self) {
+        self.text_bridge = None;
+        self.text_bridge_frame_observed = false;
+        self.text_bridge_frame_diagnostics.clear();
+        self.text_bridge_last_snapshot = None;
+    }
+
+    pub(super) fn svg_text_bridge_diagnostics_snapshot(
+        &self,
+    ) -> Option<&crate::SvgTextBridgeDiagnosticsSnapshot> {
+        self.text_bridge_last_snapshot.as_ref()
+    }
+
     pub(super) fn take_rasters_for_svg(&mut self, svg: fret_core::SvgId) -> Vec<SvgRasterEntry> {
         let keys_to_remove: Vec<_> = self
             .rasters
@@ -430,6 +513,9 @@ mod tests {
             queue: &ctx.queue,
         };
 
+        renderer
+            .svg_raster_state
+            .begin_text_bridge_diagnostics_frame();
         let raster = renderer.ensure_svg_raster(
             &gpu,
             svg,
@@ -438,11 +524,21 @@ mod tests {
             SvgRasterKind::Rgba,
             fret_core::SvgFit::Contain,
         );
+        renderer
+            .svg_raster_state
+            .commit_text_bridge_diagnostics_frame();
 
         assert!(
             raster.is_some(),
             "expected renderer SVG raster path to allow text when the bridge diagnostics are clean"
         );
+        let snapshot = renderer
+            .svg_text_bridge_diagnostics_snapshot()
+            .expect("clean text SVG should publish a bridge snapshot");
+        assert!(snapshot.is_clean());
+        assert_eq!(snapshot.revision, 1);
+        assert!(snapshot.selection_misses.is_empty());
+        assert!(snapshot.missing_glyphs.is_empty());
     }
 
     #[test]
@@ -457,6 +553,9 @@ mod tests {
             queue: &ctx.queue,
         };
 
+        renderer
+            .svg_raster_state
+            .begin_text_bridge_diagnostics_frame();
         let raster = renderer.ensure_svg_raster(
             &gpu,
             svg,
@@ -465,10 +564,51 @@ mod tests {
             SvgRasterKind::Rgba,
             fret_core::SvgFit::Contain,
         );
+        renderer
+            .svg_raster_state
+            .commit_text_bridge_diagnostics_frame();
 
         assert!(
             raster.is_none(),
             "expected renderer SVG raster path to keep rejecting text when bridge diagnostics report unresolved glyphs"
         );
+        let snapshot = renderer
+            .svg_text_bridge_diagnostics_snapshot()
+            .expect("failed text SVG should still publish a bridge snapshot");
+        assert!(!snapshot.is_clean());
+        assert_eq!(snapshot.revision, 1);
+        assert_eq!(snapshot.missing_glyphs.len(), 1);
+    }
+
+    #[test]
+    fn svg_text_bridge_snapshot_clears_when_text_environment_changes() {
+        let (ctx, mut renderer) = bundled_only_svg_text_renderer();
+        let svg = renderer.register_svg(
+            br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 24"><text x="4" y="18" font-family="Inter" font-size="16">Fret</text></svg>"#,
+        );
+        let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(24.0)));
+        let gpu = SvgRasterGpu {
+            device: &ctx.device,
+            queue: &ctx.queue,
+        };
+
+        renderer
+            .svg_raster_state
+            .begin_text_bridge_diagnostics_frame();
+        let _ = renderer.ensure_svg_raster(
+            &gpu,
+            svg,
+            rect,
+            1.0,
+            SvgRasterKind::Rgba,
+            fret_core::SvgFit::Contain,
+        );
+        renderer
+            .svg_raster_state
+            .commit_text_bridge_diagnostics_frame();
+
+        assert!(renderer.svg_text_bridge_diagnostics_snapshot().is_some());
+        assert!(renderer.set_text_locale(Some("zh-CN")));
+        assert!(renderer.svg_text_bridge_diagnostics_snapshot().is_none());
     }
 }

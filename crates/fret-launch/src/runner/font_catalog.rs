@@ -251,6 +251,63 @@ fn publish_renderer_font_environment_sources(
     )
 }
 
+fn runtime_svg_text_bridge_diagnostics_snapshot_from_renderer(
+    snapshot: Option<&fret_render::SvgTextBridgeDiagnosticsSnapshot>,
+) -> fret_runtime::RendererSvgTextBridgeDiagnosticsSnapshot {
+    let Some(snapshot) = snapshot else {
+        return fret_runtime::RendererSvgTextBridgeDiagnosticsSnapshot::default();
+    };
+
+    fret_runtime::RendererSvgTextBridgeDiagnosticsSnapshot {
+        revision: Some(snapshot.revision),
+        selection_misses: snapshot
+            .selection_misses
+            .iter()
+            .map(
+                |record| fret_runtime::RendererSvgTextFontSelectionMissRecord {
+                    requested_families: record.requested_families.clone(),
+                    weight: record.weight,
+                    style: record.style.clone(),
+                    stretch: record.stretch.clone(),
+                },
+            )
+            .collect(),
+        fallback_records: snapshot
+            .fallback_records
+            .iter()
+            .map(|record| fret_runtime::RendererSvgTextFontFallbackRecord {
+                text: record.text.clone(),
+                from_family: record.from_family.clone(),
+                to_family: record.to_family.clone(),
+            })
+            .collect(),
+        missing_glyphs: snapshot
+            .missing_glyphs
+            .iter()
+            .map(|record| fret_runtime::RendererSvgTextMissingGlyphRecord {
+                text: record.text.clone(),
+                resolved_family: record.resolved_family.clone(),
+            })
+            .collect(),
+    }
+}
+
+#[doc(hidden)]
+pub fn publish_renderer_svg_text_bridge_diagnostics(
+    app: &mut impl GlobalsHost,
+    renderer: &fret_render::Renderer,
+) {
+    let snapshot = renderer.svg_text_bridge_diagnostics_snapshot();
+    let runtime_snapshot =
+        runtime_svg_text_bridge_diagnostics_snapshot_from_renderer(snapshot.as_ref());
+    app.with_global_mut_untracked(
+        fret_runtime::RendererSvgTextBridgeDiagnosticsSnapshot::default,
+        |slot, _app| {
+            *slot = runtime_snapshot;
+        },
+    );
+}
+
 fn bundled_profile_font_assets_from_runtime_assets(
     app: &impl GlobalsHost,
     profile: &fret_fonts::BundledFontProfile,
@@ -665,6 +722,49 @@ mod tests {
                 text_font_stack_key: Some(42),
                 sources: Vec::new(),
             }
+        );
+    }
+
+    #[test]
+    fn renderer_svg_text_bridge_snapshot_mapping_keeps_structured_records() {
+        let renderer_snapshot = fret_render::SvgTextBridgeDiagnosticsSnapshot {
+            revision: 5,
+            selection_misses: vec![fret_render::SvgTextFontSelectionMissSnapshot {
+                requested_families: vec!["Inter Missing".to_string()],
+                weight: 400,
+                style: "normal".to_string(),
+                stretch: "normal".to_string(),
+            }],
+            fallback_records: vec![fret_render::SvgTextFontFallbackRecordSnapshot {
+                text: "中".to_string(),
+                from_family: "Inter".to_string(),
+                to_family: "Noto Sans CJK SC".to_string(),
+            }],
+            missing_glyphs: vec![fret_render::SvgTextMissingGlyphRecordSnapshot {
+                text: "\u{0378}".to_string(),
+                resolved_family: "Inter".to_string(),
+            }],
+        };
+
+        let runtime_snapshot =
+            runtime_svg_text_bridge_diagnostics_snapshot_from_renderer(Some(&renderer_snapshot));
+
+        assert_eq!(runtime_snapshot.revision, Some(5));
+        assert_eq!(runtime_snapshot.selection_misses.len(), 1);
+        assert_eq!(runtime_snapshot.fallback_records.len(), 1);
+        assert_eq!(runtime_snapshot.missing_glyphs.len(), 1);
+        assert_eq!(
+            runtime_snapshot.selection_misses[0].requested_families,
+            vec!["Inter Missing".to_string()]
+        );
+        assert_eq!(
+            runtime_snapshot.fallback_records[0].to_family,
+            "Noto Sans CJK SC"
+        );
+        assert_eq!(runtime_snapshot.missing_glyphs[0].resolved_family, "Inter");
+        assert_eq!(
+            runtime_svg_text_bridge_diagnostics_snapshot_from_renderer(None),
+            fret_runtime::RendererSvgTextBridgeDiagnosticsSnapshot::default()
         );
     }
 

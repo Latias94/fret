@@ -313,7 +313,6 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - local iOS target evidence now exists:
       - `cargo check -p fret-launch --target aarch64-apple-ios`
   - Remaining:
-    - wire the renderer-local SVG bridge seed into the actual SVG raster/cache invalidation path
     - add stable Android target evidence once the local/CI environment provides NDK clang
       toolchains
     - add mobile-specific diagnostics or startup gates beyond shared native runner wiring
@@ -326,7 +325,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `inject_font_blobs_and_refresh_catalog_refreshes_only_when_fonts_were_added`,
       `publish_renderer_font_environment_sets_key_after_locale_application`)
     - `crates/fret-render-text/src/{parley_font_db.rs,parley_shaper.rs}`
-    - `crates/fret-render-wgpu/src/{renderer/config.rs,text/fonts.rs,text/tests.rs}`
+    - `crates/fret-render-wgpu/src/{renderer/config.rs,renderer/svg/{mod.rs,raster.rs},text/fonts.rs,text/tests.rs}`
     - `ecosystem/fret-bootstrap/src/ui_diagnostics/{debug_snapshot_impl.rs,debug_snapshot_predicates.rs,debug_snapshot_types.rs}`
     - `cargo nextest run -p fret-launch`
     - `cargo nextest run -p fret-bootstrap --features 'ui-app-driver diagnostics' debug_snapshot_types_tests::font_environment_snapshot_from_runtime_keeps_renderer_font_sources`
@@ -446,7 +445,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       current text policy instead of host/system discovery.
     - focused coverage now locks the bundled-only bridge seed to export `Inter`,
       `JetBrains Mono`, and matching generic mappings.
-    - `crates/fret-render-wgpu/src/svg.rs` now also records renderer-local bridge diagnostics for
+    - `crates/fret-render-wgpu/src/svg.rs` now also records structured bridge diagnostics for
       explicit font-family selection misses, fallback hops, and post-layout missing glyphs.
     - focused SVG bridge diagnostics tests now run on the bundled-only lane by forcing
       `FRET_TEXT_SYSTEM_FONTS=0`, so the expected fallback/missing-glyph outcomes are no longer
@@ -454,17 +453,27 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - the renderer-owned shipped SVG raster path now consumes that bridge for text-bearing SVGs,
       but only allows parses whose bridge diagnostics are clean; unresolved SVG text still fails
       closed.
+    - `fret-launch` now publishes the renderer-owned bridge snapshot into
+      `fret_runtime::RendererSvgTextBridgeDiagnosticsSnapshot`.
+    - `fret-bootstrap` now exports that state under `debug.resource_loading.svg_text_bridge`, and
+      resource-loading predicates can now assert:
+      - selection misses,
+      - missing glyphs,
+      - clean-vs-dirty bridge results,
+      - fallback hops.
   - Remaining:
-    - export bridge diagnostics beyond renderer-local gating into shared resource-loading
-      diagnostics/predicate surfaces
     - decide whether the low-level `SvgRenderer::render_*_fit_mode(...)` surface should stay
       text-free permanently or grow an explicit bridge-backed sibling API
     - broaden deterministic end-to-end SVG-text gates beyond the current bundled-only subset
   - Evidence:
+    - `crates/fret-runtime/src/font_catalog.rs`
+    - `crates/fret-launch/src/runner/{font_catalog.rs,desktop/runner/app_handler.rs,web/render_loop.rs}`
+    - `crates/fret-diag-protocol/src/lib.rs`
     - `crates/fret-render-text/src/{parley_font_db.rs,parley_shaper.rs,lib.rs}`
-    - `crates/fret-render-wgpu/src/{renderer/config.rs,renderer/svg/{mod.rs,prepare.rs},svg.rs,text/fonts.rs,text/tests.rs}`
+    - `crates/fret-render-wgpu/src/{renderer/config.rs,renderer/svg/{mod.rs,prepare.rs,raster.rs},svg.rs,text/fonts.rs,text/tests.rs}`
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/{debug_snapshot_impl.rs,debug_snapshot_predicates.rs,debug_snapshot_types.rs}`
     - `cargo nextest run -p fret-render-wgpu text::tests::svg_text_font_db_uses_current_collection_fonts_and_generic_mappings`
-    - `cargo nextest run -p fret-render-wgpu svg::tests`
+    - `cargo nextest run -p fret-render-wgpu -p fret-launch -p fret-bootstrap -p fret-diag-protocol`
 
 - [~] RESLOAD-img-430 Move image loading onto the shared locator/resolver contract while preserving
       the existing async/UI invalidation ergonomics.

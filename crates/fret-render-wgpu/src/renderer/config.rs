@@ -4,6 +4,10 @@ use crate::{SystemFontRescanResult, SystemFontRescanSeed};
 use std::sync::OnceLock;
 
 impl Renderer {
+    fn invalidate_svg_text_bridge_environment(&mut self) {
+        self.svg_raster_state.invalidate_text_bridge_environment();
+    }
+
     pub fn begin_text_diagnostics_frame(&mut self) {
         self.text_system.begin_frame_diagnostics();
     }
@@ -27,6 +31,14 @@ impl Renderer {
         frame_id: fret_core::FrameId,
     ) -> fret_core::RendererTextPerfSnapshot {
         self.text_system.diagnostics_snapshot(frame_id)
+    }
+
+    pub fn svg_text_bridge_diagnostics_snapshot(
+        &self,
+    ) -> Option<crate::SvgTextBridgeDiagnosticsSnapshot> {
+        self.svg_raster_state
+            .svg_text_bridge_diagnostics_snapshot()
+            .cloned()
     }
 
     pub fn set_perf_enabled(&mut self, enabled: bool) {
@@ -422,7 +434,11 @@ impl Renderer {
     }
 
     pub fn set_text_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
-        self.text_system.set_font_families(config)
+        let changed = self.text_system.set_font_families(config);
+        if changed {
+            self.invalidate_svg_text_bridge_environment();
+        }
+        changed
     }
 
     pub fn set_text_quality_settings(&mut self, settings: TextQualitySettings) -> bool {
@@ -430,7 +446,11 @@ impl Renderer {
     }
 
     pub fn set_text_locale(&mut self, locale_bcp47: Option<&str>) -> bool {
-        self.text_system.set_text_locale(locale_bcp47)
+        let changed = self.text_system.set_text_locale(locale_bcp47);
+        if changed {
+            self.invalidate_svg_text_bridge_environment();
+        }
+        changed
     }
 
     /// Returns a sorted list of available font family names (best-effort).
@@ -451,7 +471,11 @@ impl Renderer {
     ///
     /// Returns the number of newly loaded faces.
     pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
-        self.text_system.add_fonts(fonts)
+        let added = self.text_system.add_fonts(fonts);
+        if added > 0 {
+            self.invalidate_svg_text_bridge_environment();
+        }
+        added
     }
 
     pub fn system_font_rescan_seed(&self) -> Option<SystemFontRescanSeed> {
@@ -459,11 +483,19 @@ impl Renderer {
     }
 
     pub fn apply_system_font_rescan_result(&mut self, result: SystemFontRescanResult) -> bool {
-        self.text_system.apply_system_font_rescan_result(result)
+        let changed = self.text_system.apply_system_font_rescan_result(result);
+        if changed {
+            self.invalidate_svg_text_bridge_environment();
+        }
+        changed
     }
 
     pub fn rescan_system_fonts(&mut self) -> bool {
-        self.text_system.rescan_system_fonts()
+        let changed = self.text_system.rescan_system_fonts();
+        if changed {
+            self.invalidate_svg_text_bridge_environment();
+        }
+        changed
     }
 
     pub fn text_font_stack_key(&self) -> u64 {

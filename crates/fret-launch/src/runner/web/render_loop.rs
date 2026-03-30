@@ -533,6 +533,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 viewport_size: gfx.surface_state.size(),
             },
         );
+        crate::runner::font_catalog::publish_renderer_svg_text_bridge_diagnostics(
+            &mut self.app,
+            &gfx.renderer,
+        );
         if render_text_diag_enabled {
             let diagnostics = gfx.renderer.text_diagnostics_snapshot(self.frame_id);
             let trace = gfx.renderer.text_font_trace_snapshot(self.frame_id);

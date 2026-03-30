@@ -99,11 +99,18 @@ impl UiTreeDebugSnapshotV1 {
                     .map(|key| key.0),
                 app.global::<fret_runtime::SystemFontRescanState>().copied(),
             );
-            (asset_load.is_some() || asset_reload.is_some() || font_environment.is_some())
+            let svg_text_bridge = UiSvgTextBridgeDiagnosticsSnapshotV1::from_runtime(
+                app.global::<fret_runtime::RendererSvgTextBridgeDiagnosticsSnapshot>(),
+            );
+            (asset_load.is_some()
+                || asset_reload.is_some()
+                || font_environment.is_some()
+                || svg_text_bridge.is_some())
                 .then_some(UiResourceLoadingDiagnosticsSnapshotV1 {
                     asset_load,
                     asset_reload,
                     font_environment,
+                    svg_text_bridge,
                 })
         };
 

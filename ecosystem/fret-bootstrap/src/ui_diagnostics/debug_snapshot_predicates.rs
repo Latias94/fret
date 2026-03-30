@@ -152,6 +152,36 @@ fn eval_resource_loading_predicate_from_debug_snapshot(
                 .iter()
                 .any(|source| source.asset_key.as_deref() == Some(asset_key.as_str())),
         ),
+        UiPredicateV1::SvgTextBridgeSelectionMissesGe { min } => Some(
+            resource_loading
+                .svg_text_bridge
+                .as_ref()?
+                .selection_misses
+                .len() as u64
+                >= *min,
+        ),
+        UiPredicateV1::SvgTextBridgeMissingGlyphsGe { min } => Some(
+            resource_loading
+                .svg_text_bridge
+                .as_ref()?
+                .missing_glyphs
+                .len() as u64
+                >= *min,
+        ),
+        UiPredicateV1::SvgTextBridgeDiagnosticsCleanIs { clean } => {
+            Some(resource_loading.svg_text_bridge.as_ref()?.is_clean() == *clean)
+        }
+        UiPredicateV1::SvgTextBridgeFallbackSeen {
+            from_family,
+            to_family,
+        } => Some(
+            resource_loading
+                .svg_text_bridge
+                .as_ref()?
+                .fallback_records
+                .iter()
+                .any(|record| record.from_family == *from_family && record.to_family == *to_family),
+        ),
         UiPredicateV1::AssetReloadEpochGe { min } => {
             Some(resource_loading.asset_reload.as_ref()?.epoch.unwrap_or(0) >= *min)
         }

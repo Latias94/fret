@@ -37,6 +37,44 @@ pub struct UploadedRgbaImage {
     pub size_px: (u32, u32),
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SvgTextBridgeDiagnosticsSnapshot {
+    pub revision: u64,
+    #[serde(default)]
+    pub selection_misses: Vec<SvgTextFontSelectionMissSnapshot>,
+    #[serde(default)]
+    pub fallback_records: Vec<SvgTextFontFallbackRecordSnapshot>,
+    #[serde(default)]
+    pub missing_glyphs: Vec<SvgTextMissingGlyphRecordSnapshot>,
+}
+
+impl SvgTextBridgeDiagnosticsSnapshot {
+    pub fn is_clean(&self) -> bool {
+        self.selection_misses.is_empty() && self.missing_glyphs.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+pub struct SvgTextFontSelectionMissSnapshot {
+    pub requested_families: Vec<String>,
+    pub weight: u16,
+    pub style: String,
+    pub stretch: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+pub struct SvgTextFontFallbackRecordSnapshot {
+    pub text: String,
+    pub from_family: String,
+    pub to_family: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+pub struct SvgTextMissingGlyphRecordSnapshot {
+    pub text: String,
+    pub resolved_family: String,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct SvgTextBridgeDiagnostics {
     pub selection_misses: Vec<SvgTextFontSelectionMiss>,
@@ -47,6 +85,27 @@ pub(crate) struct SvgTextBridgeDiagnostics {
 impl SvgTextBridgeDiagnostics {
     pub(crate) fn is_clean(&self) -> bool {
         self.selection_misses.is_empty() && self.missing_glyphs.is_empty()
+    }
+
+    pub(crate) fn to_snapshot(&self, revision: u64) -> SvgTextBridgeDiagnosticsSnapshot {
+        SvgTextBridgeDiagnosticsSnapshot {
+            revision,
+            selection_misses: self
+                .selection_misses
+                .iter()
+                .map(SvgTextFontSelectionMissSnapshot::from)
+                .collect(),
+            fallback_records: self
+                .fallback_records
+                .iter()
+                .map(SvgTextFontFallbackRecordSnapshot::from)
+                .collect(),
+            missing_glyphs: self
+                .missing_glyphs
+                .iter()
+                .map(SvgTextMissingGlyphRecordSnapshot::from)
+                .collect(),
+        }
     }
 }
 
@@ -69,6 +128,36 @@ pub(crate) struct SvgTextFontFallbackRecord {
 pub(crate) struct SvgTextMissingGlyphRecord {
     pub text: String,
     pub resolved_family: String,
+}
+
+impl From<&SvgTextFontSelectionMiss> for SvgTextFontSelectionMissSnapshot {
+    fn from(value: &SvgTextFontSelectionMiss) -> Self {
+        Self {
+            requested_families: value.requested_families.clone(),
+            weight: value.weight,
+            style: value.style.to_string(),
+            stretch: value.stretch.to_string(),
+        }
+    }
+}
+
+impl From<&SvgTextFontFallbackRecord> for SvgTextFontFallbackRecordSnapshot {
+    fn from(value: &SvgTextFontFallbackRecord) -> Self {
+        Self {
+            text: value.text.clone(),
+            from_family: value.from_family.clone(),
+            to_family: value.to_family.clone(),
+        }
+    }
+}
+
+impl From<&SvgTextMissingGlyphRecord> for SvgTextMissingGlyphRecordSnapshot {
+    fn from(value: &SvgTextMissingGlyphRecord) -> Self {
+        Self {
+            text: value.text.clone(),
+            resolved_family: value.resolved_family.clone(),
+        }
+    }
 }
 
 struct SvgBridgeParseOutcome {

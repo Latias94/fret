@@ -2884,6 +2884,24 @@ mod tests {
                     system_font_rescan_in_flight: Some(false),
                     system_font_rescan_pending: Some(false),
                 }),
+                svg_text_bridge: Some(UiSvgTextBridgeDiagnosticsSnapshotV1 {
+                    revision: 3,
+                    selection_misses: vec![UiSvgTextFontSelectionMissRecordV1 {
+                        requested_families: vec!["Inter Missing".to_string()],
+                        weight: 400,
+                        style: "normal".to_string(),
+                        stretch: "normal".to_string(),
+                    }],
+                    fallback_records: vec![UiSvgTextFontFallbackRecordV1 {
+                        text: "中".to_string(),
+                        from_family: "Inter".to_string(),
+                        to_family: "Noto Sans CJK SC".to_string(),
+                    }],
+                    missing_glyphs: vec![UiSvgTextMissingGlyphRecordV1 {
+                        text: "\u{0378}".to_string(),
+                        resolved_family: "Inter".to_string(),
+                    }],
+                }),
             }),
             ..Default::default()
         };
@@ -3028,6 +3046,37 @@ mod tests {
                 &debug,
                 &UiPredicateV1::RendererFontSourceAssetKeySeen {
                     asset_key: "fonts/inter-regular.ttf".to_string(),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::SvgTextBridgeSelectionMissesGe { min: 1 },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::SvgTextBridgeMissingGlyphsGe { min: 1 },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::SvgTextBridgeDiagnosticsCleanIs { clean: false },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::SvgTextBridgeFallbackSeen {
+                    from_family: "Inter".to_string(),
+                    to_family: "Noto Sans CJK SC".to_string(),
                 },
             ),
             Some(true)

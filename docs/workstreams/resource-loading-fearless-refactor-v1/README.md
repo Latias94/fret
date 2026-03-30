@@ -246,11 +246,17 @@ This workstream takes a fearless posture:
     when watcher installation fails,
   - it only tracks builder-mounted file manifests/directories,
   - and wasm/mobile still have no first-party automatic reload story today.
-- SVG text still does not have a fully surfaced shared diagnostics story, but the first-party
-  renderer-owned SVG raster path now only admits text-bearing assets when a bridge-backed parse is
-  diagnostics-clean against the current approved text environment; unresolved text still fails
-  closed instead of silently loading system fonts in a separate font universe, and the remaining
-  SVG-text work is tracked under the SVG workstream items.
+- SVG text now also has a shared diagnostics/export lane:
+  - `fret-launch` publishes the renderer's most recently observed bridge snapshot into the shared
+    runtime globals,
+  - `fret-bootstrap` exports it under `debug.resource_loading.svg_text_bridge`,
+  - and `UiPredicateV1` can now gate selection misses, missing glyphs, clean-vs-dirty outcomes,
+    and explicit fallback hops without scraping logs.
+  - the first-party renderer-owned SVG raster path still only admits text-bearing assets when that
+    bridge-backed parse is diagnostics-clean against the current approved text environment;
+    unresolved text still fails closed instead of silently loading system fonts in a separate font
+    universe, and the remaining SVG-text work is now mostly broader deterministic gates and
+    supported-scope promotion.
 
 ## Current incorrect logic (must be corrected, not preserved)
 
@@ -339,7 +345,7 @@ So the framework now guarantees one deterministic bundled baseline on web and on
 runner path before platform-specific augmentation, but mobile-specific diagnostics and Android CI
 toolchain evidence are still missing.
 
-### 5) SVG text now has a narrow diagnostics-gated lane, but still lacks a shared exported contract
+### 5) SVG text now has a narrow diagnostics-gated lane with a shared exported contract
 
 The first-party SVG raster path no longer builds its own `usvg fontdb` or loads system fonts.
 Instead, the renderer-owned path only admits text-bearing SVGs when the bridge-backed parse is
@@ -351,16 +357,23 @@ keep the old text-free baseline:
 
 That closes the silent divergence bug without reopening host-font guessing, because Fret no longer
 pretends arbitrary SVG `<text>` is portable across hosts when it is actually resolved in a
-separate font universe.
+separate font universe. The bridge outcome is now also exported through the shared diagnostics
+surface:
+
+- `fret_runtime::RendererSvgTextBridgeDiagnosticsSnapshot`
+- `debug.resource_loading.svg_text_bridge`
+- resource-loading predicates in `UiPredicateV1`
 
 The remaining architectural gap is still real:
 
 - the backend now has a renderer-owned bridge seed that can export a `usvg fontdb` from the
   current approved text collection,
-- but the shipped SVG raster path still does not consume that bridge or key raster invalidation
-  off the shared font-environment revision,
-- so the current truthful baseline is “outline-only SVGs for first-party UI rendering,”
-- and long-term shared-font support still needs end-to-end raster wiring plus deterministic gates.
+- the shipped SVG raster path now does consume that bridge and invalidates text-bearing raster
+  identity through the current text font stack key,
+- the low-level direct SVG helpers still intentionally keep the text-free baseline unless a caller
+  opts into the explicit bridge-backed path,
+- and long-term shared-font support still needs broader deterministic wasm/mobile/runtime-font
+  gates plus an explicit supported-scope decision for advanced SVG text cases.
 
 ### 6) SVG file loading is sync filesystem I/O with epoch polling
 

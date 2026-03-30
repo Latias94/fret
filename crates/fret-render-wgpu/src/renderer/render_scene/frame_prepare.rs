@@ -56,6 +56,7 @@ impl Renderer {
         }
         self.intermediate_state.record_frame();
         self.bump_svg_raster_epoch();
+        self.svg_raster_state.begin_text_bridge_diagnostics_frame();
 
         let svg_prepare_start = self.svg_raster_state.perf_enabled.then(Instant::now);
         let perf_svg_prepare_start = perf_enabled.then(Instant::now);
@@ -68,6 +69,7 @@ impl Renderer {
             let _guard = svg_prepare_span.enter();
             self.prepare_svg_ops(device, queue, scene, scale_factor);
         }
+        self.svg_raster_state.commit_text_bridge_diagnostics_frame();
         if perf_enabled {
             let counters = crate::upload_counters::take_upload_counters();
             frame_perf.svg_uploads = frame_perf.svg_uploads.saturating_add(counters.svg_uploads);

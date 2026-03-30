@@ -10,8 +10,9 @@ Current truthful baseline:
 - the low-level `SvgRenderer::render_*_fit_mode(...)` helpers still reject text-bearing SVG assets
   unless they are explicitly fed from the bridge,
 - outline/icon/illustration SVGs remain supported,
-- broader SVG text support is still deferred until shared diagnostics/export and deterministic
-  gates exist.
+- shared diagnostics/export now exist under `debug.resource_loading.svg_text_bridge`,
+- and broader SVG text support is still deferred until deterministic end-to-end gates and
+  supported-scope decisions exist.
 
 This document defines that long-term path.
 
@@ -37,14 +38,14 @@ That gap now has a first landed slice:
 - and the renderer-owned SVG raster path now consumes that bridge for text-bearing SVGs only when
   the bridge diagnostics are clean.
 
-What is still missing is the end-to-end raster wiring:
+What is still missing now is the promotion/hardening layer:
 
-- bridge diagnostics are still renderer-local and not yet exported through the shared
-  resource-loading diagnostics surface,
 - low-level direct `svg.rs` helpers still reject `<text>` unless explicitly bridged,
-- and deterministic SVG-text gates beyond the current bundled-only subset do not exist yet.
+- deterministic SVG-text gates beyond the current bundled-only subset do not exist yet,
+- and advanced SVG text scope (`textPath`, broader shaping parity, cross-platform golden outputs)
+  is still intentionally unresolved.
 
-That is why SVG text support must still stay narrow and diagnostics-gated for now.
+That is why SVG text support must still stay narrow, diagnostics-gated, and fail-closed for now.
 
 ## Non-negotiable contract rules
 
@@ -75,7 +76,7 @@ Status note (2026-03-30):
     same inventory under `debug.resource_loading.font_environment.renderer_font_*`.
 - remaining gap:
   - the current snapshot intentionally stays identity/fingerprint-first at runtime-global scope,
-    while the actual SVG bridge rehydration now lives renderer-locally.
+    while the actual SVG bridge rehydration still lives renderer-locally.
 
 Add a runtime-visible snapshot that answers:
 
@@ -121,7 +122,7 @@ Status note (2026-03-30):
     with the renderer text environment before shipped `<text>` support is turned on,
   - generic sans/serif/monospace mapping in the bridge now follows the renderer's current text
     policy instead of host/system discovery,
-  - `crates/fret-render-wgpu/src/svg.rs` now also has renderer-local structured diagnostics for
+  - `crates/fret-render-wgpu/src/svg.rs` now also has structured diagnostics for
     bridge-backed SVG text parses, recording:
     - explicit font-family selection misses,
     - successful fallback hops, and
@@ -129,9 +130,13 @@ Status note (2026-03-30):
   - focused renderer coverage now locks both the bridge seed and those diagnostics to a
     bundled-only environment so host system-font drift cannot change the expected outcome,
   - the renderer-owned shipped SVG raster path now consumes that bridge for text-bearing SVGs, but
-    only admits parses whose bridge diagnostics are clean.
+    only admits parses whose bridge diagnostics are clean,
+  - `fret-launch` now publishes the most recently observed bridge snapshot into
+    `fret_runtime::RendererSvgTextBridgeDiagnosticsSnapshot`,
+  - `fret-bootstrap` now exports that state under `debug.resource_loading.svg_text_bridge`, and
+    resource-loading predicates can now assert clean-vs-dirty bridge outcomes, selection misses,
+    missing glyphs, and fallback hops.
 - remaining gap:
-  - bridge diagnostics are not yet surfaced beyond renderer-local gating,
   - the low-level `render_*_fit_mode(...)` SVG helpers still keep the text-free baseline,
   - `textPath` / advanced shaping cases remain out of scope,
   - and broader deterministic runtime/mobile/web gates are still missing.
@@ -156,9 +161,10 @@ Status note (2026-03-30):
   - the renderer-owned SVG raster path now supports ordinary text-bearing SVGs when the bridge
     parse is diagnostics-clean,
   - unresolved font-family or missing-glyph cases still fail closed,
-  - focused renderer tests now cover both admitted and rejected paths under the bundled-only gate.
+  - focused renderer tests now cover both admitted and rejected paths under the bundled-only gate,
+  - and the shared diagnostics surface now preserves the last observed bridge result for scripts
+    and bundles even after subsequent raster-cache hits.
 - remaining gap:
-  - diagnostics are not yet exported to the shared resource-loading snapshot/predicate surfaces,
   - the low-level direct SVG helpers still keep the old text-free contract,
   - and the admitted subset is still intentionally narrow.
 
@@ -206,17 +212,17 @@ This plan does not aim to:
 1. Add the runtime/global font-inventory snapshot described in Stage 1.
 2. Thread successful font injection (`install_default_bundled_font_baseline`,
    `TextAddFontAssets`, `TextAddFonts`) through that snapshot.
-3. Wire the existing SVG font-bridge seed into the actual SVG raster/cache invalidation path in
-   `fret-render-wgpu`.
-4. Add diagnostics/tests before enabling any text-bearing SVG support.
-5. Keep unresolved text-bearing SVGs fail-closed until bridge diagnostics can be surfaced through
-   the shared diagnostics vocabulary.
+3. Keep the renderer-owned bridge snapshot aligned with the shared diagnostics vocabulary as new
+   SVG text cases are admitted.
+4. Add broader deterministic wasm/mobile/runtime-font gates before widening supported scope.
+5. Keep unresolved text-bearing SVGs fail-closed until a stronger cross-platform parity story
+   exists for any newly admitted SVG text features.
 
 Progress note:
 
 - items 1 through 5 now have first landed slices,
-- the remaining work is no longer "make shipped SVG text possible at all", but "promote the
-  renderer-local diagnostics-gated slice into a fully surfaced shared contract".
+- the remaining work is no longer "make shipped SVG text possible at all", but "broaden the now
+  shared-contract diagnostics-gated slice with deterministic cross-platform evidence".
 
 ## Evidence anchors
 

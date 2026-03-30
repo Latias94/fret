@@ -129,7 +129,9 @@ pub use font_bootstrap::{
 pub use font_catalog::{
     BundledFontBaselineSnapshot, BundledFontBaselineSource, FontCatalog, FontCatalogEntry,
     FontCatalogMetadata, FontVariableAxisInfo, RendererFontEnvironmentSnapshot,
-    RendererFontSourceLane, RendererFontSourceRecord, SystemFontRescanState, TextFontStackKey,
+    RendererFontSourceLane, RendererFontSourceRecord, RendererSvgTextBridgeDiagnosticsSnapshot,
+    RendererSvgTextFontFallbackRecord, RendererSvgTextFontSelectionMissRecord,
+    RendererSvgTextMissingGlyphRecord, SystemFontRescanState, TextFontStackKey,
 };
 pub use font_catalog_cache::FontCatalogCache;
 pub use fret_core::FrameId;

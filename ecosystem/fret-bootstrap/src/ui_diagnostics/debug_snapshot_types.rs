@@ -216,6 +216,8 @@ pub struct UiResourceLoadingDiagnosticsSnapshotV1 {
     pub asset_reload: Option<UiAssetReloadDiagnosticsSnapshotV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_environment: Option<UiFontEnvironmentDiagnosticsSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub svg_text_bridge: Option<UiSvgTextBridgeDiagnosticsSnapshotV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -382,6 +384,99 @@ fn asset_reload_fallback_reason_name(
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiSvgTextBridgeDiagnosticsSnapshotV1 {
+    pub revision: u64,
+    #[serde(default)]
+    pub selection_misses: Vec<UiSvgTextFontSelectionMissRecordV1>,
+    #[serde(default)]
+    pub fallback_records: Vec<UiSvgTextFontFallbackRecordV1>,
+    #[serde(default)]
+    pub missing_glyphs: Vec<UiSvgTextMissingGlyphRecordV1>,
+}
+
+impl UiSvgTextBridgeDiagnosticsSnapshotV1 {
+    pub(super) fn from_runtime(
+        snapshot: Option<&fret_runtime::RendererSvgTextBridgeDiagnosticsSnapshot>,
+    ) -> Option<Self> {
+        let snapshot = snapshot?;
+        let revision = snapshot.revision?;
+        Some(Self {
+            revision,
+            selection_misses: snapshot
+                .selection_misses
+                .iter()
+                .map(UiSvgTextFontSelectionMissRecordV1::from_runtime)
+                .collect(),
+            fallback_records: snapshot
+                .fallback_records
+                .iter()
+                .map(UiSvgTextFontFallbackRecordV1::from_runtime)
+                .collect(),
+            missing_glyphs: snapshot
+                .missing_glyphs
+                .iter()
+                .map(UiSvgTextMissingGlyphRecordV1::from_runtime)
+                .collect(),
+        })
+    }
+
+    pub fn is_clean(&self) -> bool {
+        self.selection_misses.is_empty() && self.missing_glyphs.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UiSvgTextFontSelectionMissRecordV1 {
+    pub requested_families: Vec<String>,
+    pub weight: u16,
+    pub style: String,
+    pub stretch: String,
+}
+
+impl UiSvgTextFontSelectionMissRecordV1 {
+    fn from_runtime(record: &fret_runtime::RendererSvgTextFontSelectionMissRecord) -> Self {
+        Self {
+            requested_families: record.requested_families.clone(),
+            weight: record.weight,
+            style: record.style.clone(),
+            stretch: record.stretch.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UiSvgTextFontFallbackRecordV1 {
+    pub text: String,
+    pub from_family: String,
+    pub to_family: String,
+}
+
+impl UiSvgTextFontFallbackRecordV1 {
+    fn from_runtime(record: &fret_runtime::RendererSvgTextFontFallbackRecord) -> Self {
+        Self {
+            text: record.text.clone(),
+            from_family: record.from_family.clone(),
+            to_family: record.to_family.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UiSvgTextMissingGlyphRecordV1 {
+    pub text: String,
+    pub resolved_family: String,
+}
+
+impl UiSvgTextMissingGlyphRecordV1 {
+    fn from_runtime(record: &fret_runtime::RendererSvgTextMissingGlyphRecord) -> Self {
+        Self {
+            text: record.text.clone(),
+            resolved_family: record.resolved_family.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiFontEnvironmentDiagnosticsSnapshotV1 {
     pub bundled_baseline_source: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -529,7 +624,10 @@ impl UiFontEnvironmentDiagnosticsSnapshotV1 {
 
 #[cfg(test)]
 mod debug_snapshot_types_tests {
-    use super::{UiAssetReloadDiagnosticsSnapshotV1, UiFontEnvironmentDiagnosticsSnapshotV1};
+    use super::{
+        UiAssetReloadDiagnosticsSnapshotV1, UiFontEnvironmentDiagnosticsSnapshotV1,
+        UiSvgTextBridgeDiagnosticsSnapshotV1,
+    };
 
     #[test]
     fn asset_reload_snapshot_from_runtime_keeps_backend_and_fallback_details() {
@@ -632,6 +730,43 @@ mod debug_snapshot_types_tests {
         assert!(snapshot.renderer_font_sources[1].asset_bundle.is_none());
         assert_eq!(snapshot.text_font_stack_key, Some(99));
         assert_eq!(snapshot.system_font_rescan_pending, Some(true));
+    }
+
+    #[test]
+    fn svg_text_bridge_snapshot_from_runtime_keeps_structured_records() {
+        let snapshot = UiSvgTextBridgeDiagnosticsSnapshotV1::from_runtime(Some(
+            &fret_runtime::RendererSvgTextBridgeDiagnosticsSnapshot {
+                revision: Some(7),
+                selection_misses: vec![fret_runtime::RendererSvgTextFontSelectionMissRecord {
+                    requested_families: vec!["Inter Missing".to_string()],
+                    weight: 400,
+                    style: "normal".to_string(),
+                    stretch: "normal".to_string(),
+                }],
+                fallback_records: vec![fret_runtime::RendererSvgTextFontFallbackRecord {
+                    text: "中".to_string(),
+                    from_family: "Inter".to_string(),
+                    to_family: "Noto Sans CJK SC".to_string(),
+                }],
+                missing_glyphs: vec![fret_runtime::RendererSvgTextMissingGlyphRecord {
+                    text: "\u{0378}".to_string(),
+                    resolved_family: "Inter".to_string(),
+                }],
+            },
+        ))
+        .expect("svg text bridge snapshot");
+
+        assert_eq!(snapshot.revision, 7);
+        assert_eq!(snapshot.selection_misses.len(), 1);
+        assert_eq!(snapshot.fallback_records.len(), 1);
+        assert_eq!(snapshot.missing_glyphs.len(), 1);
+        assert!(!snapshot.is_clean());
+        assert_eq!(
+            snapshot.selection_misses[0].requested_families,
+            vec!["Inter Missing".to_string()]
+        );
+        assert_eq!(snapshot.fallback_records[0].to_family, "Noto Sans CJK SC");
+        assert_eq!(snapshot.missing_glyphs[0].resolved_family, "Inter");
     }
 }
 

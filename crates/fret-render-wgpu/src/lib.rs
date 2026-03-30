@@ -54,7 +54,9 @@ pub use renderer::{EffectDegradationCounters, EffectDegradationSnapshot};
 pub use renderer::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 pub use surface::SurfaceState;
 pub use svg::{
-    SvgAlphaMask, SvgRgbaImage, UploadedAlphaMask, UploadedRgbaImage, upload_alpha_mask,
+    SvgAlphaMask, SvgRgbaImage, SvgTextBridgeDiagnosticsSnapshot,
+    SvgTextFontFallbackRecordSnapshot, SvgTextFontSelectionMissSnapshot,
+    SvgTextMissingGlyphRecordSnapshot, UploadedAlphaMask, UploadedRgbaImage, upload_alpha_mask,
     upload_rgba_image,
 };
 pub use targets::RenderTargetDescriptor;

@@ -16,6 +16,7 @@ impl Renderer {
         };
 
         if needs_rebuild {
+            self.svg_raster_state.invalidate_text_bridge_environment();
             let fontdb = Arc::new(self.text_system.build_svg_text_font_db());
             self.svg_raster_state.text_bridge = Some(super::SvgTextFontBridgeState {
                 font_stack_key,
@@ -104,6 +105,8 @@ impl Renderer {
                             bridge_font_db.as_ref(),
                         )
                         .ok()?;
+                    self.svg_raster_state
+                        .note_text_bridge_diagnostics(&diagnostics);
                     if !diagnostics.is_clean() {
                         return None;
                     }
@@ -199,6 +202,8 @@ impl Renderer {
                             bridge_font_db.as_ref(),
                         )
                         .ok()?;
+                    self.svg_raster_state
+                        .note_text_bridge_diagnostics(&diagnostics);
                     if !diagnostics.is_clean() {
                         return None;
                     }

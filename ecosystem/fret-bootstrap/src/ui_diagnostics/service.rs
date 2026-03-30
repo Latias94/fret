@@ -464,6 +464,10 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::AssetLoadRecentOutcomeSeen { .. }
                 | UiPredicateV1::AssetLoadRecentRevisionTransitionSeen { .. }
                 | UiPredicateV1::BundledFontBaselineSourceIs { .. }
+                | UiPredicateV1::SvgTextBridgeSelectionMissesGe { .. }
+                | UiPredicateV1::SvgTextBridgeMissingGlyphsGe { .. }
+                | UiPredicateV1::SvgTextBridgeDiagnosticsCleanIs { .. }
+                | UiPredicateV1::SvgTextBridgeFallbackSeen { .. }
                 | UiPredicateV1::AssetReloadEpochGe { .. }
                 | UiPredicateV1::AssetReloadConfiguredBackendIs { .. }
                 | UiPredicateV1::AssetReloadActiveBackendIs { .. }

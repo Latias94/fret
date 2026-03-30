@@ -231,6 +231,44 @@ impl RendererFontEnvironmentSnapshot {
     }
 }
 
+/// Best-effort snapshot of the most recently observed shipped SVG text bridge diagnostics.
+///
+/// This is populated by the runner from the renderer-owned bridge path. `revision == None` means
+/// no text-bearing shipped SVG parse has been observed in the current renderer environment yet.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RendererSvgTextBridgeDiagnosticsSnapshot {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<u64>,
+    #[serde(default)]
+    pub selection_misses: Vec<RendererSvgTextFontSelectionMissRecord>,
+    #[serde(default)]
+    pub fallback_records: Vec<RendererSvgTextFontFallbackRecord>,
+    #[serde(default)]
+    pub missing_glyphs: Vec<RendererSvgTextMissingGlyphRecord>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RendererSvgTextFontSelectionMissRecord {
+    pub requested_families: Vec<String>,
+    pub weight: u16,
+    pub style: String,
+    pub stretch: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RendererSvgTextFontFallbackRecord {
+    pub text: String,
+    pub from_family: String,
+    pub to_family: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RendererSvgTextMissingGlyphRecord {
+    pub text: String,
+    pub resolved_family: String,
+}
+
 /// Stable key representing the current effective text font stack / fallback configuration.
 ///
 /// Runners should update this whenever the renderer text backend changes in a way that can affect
