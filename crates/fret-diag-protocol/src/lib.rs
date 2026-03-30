@@ -1943,6 +1943,25 @@ pub enum UiPredicateV1 {
     BundledFontBaselineSourceIs {
         source: String,
     },
+    /// True when `debug.resource_loading.font_environment.renderer_font_environment_revision >= min`.
+    RendererFontEnvironmentRevisionGe {
+        min: u64,
+    },
+    /// True when `debug.resource_loading.font_environment.renderer_font_sources[*].source_lane`
+    /// contains `lane`.
+    ///
+    /// Supported values currently mirror the debug snapshot surface:
+    /// - `bundled_startup`
+    /// - `asset_request`
+    /// - `raw_runtime_bytes`
+    RendererFontSourceLaneSeen {
+        lane: String,
+    },
+    /// True when `debug.resource_loading.font_environment.renderer_font_sources[*].asset_key`
+    /// contains `asset_key`.
+    RendererFontSourceAssetKeySeen {
+        asset_key: String,
+    },
     /// True when `debug.resource_loading.asset_reload.epoch >= min`.
     ///
     /// This is intended for hot-reload / invalidation flows that want to observe the shared

@@ -957,6 +957,9 @@ fn eval_predicate(
         | UiPredicateV1::AssetLoadRecentOutcomeSeen { .. }
         | UiPredicateV1::AssetLoadRecentRevisionTransitionSeen { .. }
         | UiPredicateV1::BundledFontBaselineSourceIs { .. }
+        | UiPredicateV1::RendererFontEnvironmentRevisionGe { .. }
+        | UiPredicateV1::RendererFontSourceLaneSeen { .. }
+        | UiPredicateV1::RendererFontSourceAssetKeySeen { .. }
         | UiPredicateV1::AssetReloadEpochGe { .. }
         | UiPredicateV1::AssetReloadConfiguredBackendIs { .. }
         | UiPredicateV1::AssetReloadActiveBackendIs { .. }

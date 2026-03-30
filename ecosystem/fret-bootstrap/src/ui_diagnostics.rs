@@ -2858,7 +2858,28 @@ mod tests {
                     font_catalog_revision: Some(3),
                     font_catalog_family_count: Some(12),
                     renderer_font_environment_revision: Some(2),
-                    renderer_font_sources: vec![],
+                    renderer_font_sources: vec![
+                        UiRendererFontSourceSnapshotV1 {
+                            source_lane: "bundled_startup".to_string(),
+                            byte_hash_hex: "0000000000001234".to_string(),
+                            byte_len: 4096,
+                            added_face_count: 1,
+                            asset_locator_kind: Some("bundle_asset".to_string()),
+                            asset_bundle: Some("pkg:fret-fonts".to_string()),
+                            asset_key: Some("fonts/inter-regular.ttf".to_string()),
+                            asset_kind_hint: Some("font".to_string()),
+                        },
+                        UiRendererFontSourceSnapshotV1 {
+                            source_lane: "raw_runtime_bytes".to_string(),
+                            byte_hash_hex: "0000000000005678".to_string(),
+                            byte_len: 2048,
+                            added_face_count: 2,
+                            asset_locator_kind: None,
+                            asset_bundle: None,
+                            asset_key: None,
+                            asset_kind_hint: None,
+                        },
+                    ],
                     text_font_stack_key: Some(7),
                     system_font_rescan_in_flight: Some(false),
                     system_font_rescan_pending: Some(false),
@@ -2973,6 +2994,40 @@ mod tests {
                 &debug,
                 &UiPredicateV1::BundledFontBaselineSourceIs {
                     source: "bundled_profile".to_string(),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::RendererFontEnvironmentRevisionGe { min: 2 },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::RendererFontSourceLaneSeen {
+                    lane: "bundled_startup".to_string(),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::RendererFontSourceLaneSeen {
+                    lane: "asset_request".to_string(),
+                },
+            ),
+            Some(false)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::RendererFontSourceAssetKeySeen {
+                    asset_key: "fonts/inter-regular.ttf".to_string(),
                 },
             ),
             Some(true)

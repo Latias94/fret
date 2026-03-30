@@ -128,6 +128,30 @@ fn eval_resource_loading_predicate_from_debug_snapshot(
                 .bundled_baseline_source
                 == *source,
         ),
+        UiPredicateV1::RendererFontEnvironmentRevisionGe { min } => Some(
+            resource_loading
+                .font_environment
+                .as_ref()?
+                .renderer_font_environment_revision
+                .unwrap_or(0)
+                >= *min,
+        ),
+        UiPredicateV1::RendererFontSourceLaneSeen { lane } => Some(
+            resource_loading
+                .font_environment
+                .as_ref()?
+                .renderer_font_sources
+                .iter()
+                .any(|source| source.source_lane == *lane),
+        ),
+        UiPredicateV1::RendererFontSourceAssetKeySeen { asset_key } => Some(
+            resource_loading
+                .font_environment
+                .as_ref()?
+                .renderer_font_sources
+                .iter()
+                .any(|source| source.asset_key.as_deref() == Some(asset_key.as_str())),
+        ),
         UiPredicateV1::AssetReloadEpochGe { min } => {
             Some(resource_loading.asset_reload.as_ref()?.epoch.unwrap_or(0) >= *min)
         }

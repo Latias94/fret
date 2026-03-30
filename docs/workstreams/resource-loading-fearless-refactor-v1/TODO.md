@@ -301,6 +301,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `fret-bootstrap` diagnostics now export that renderer inventory through
       `debug.resource_loading.font_environment.renderer_font_*`, so diagnostics bundles can see
       the same revision/source records the future SVG-text bridge will depend on.
+    - `UiPredicateV1` resource-loading gates can now also assert renderer-font inventory revision,
+      source lane, and asset key, so scripted diagnostics can fail on provenance regressions
+      without hand-reading debug snapshots.
     - native intentionally keeps `FontFamilyDefaultsPolicy::None`, so system-font augmentation
       remains an additive capability instead of redefining the baseline identity.
     - local iOS target evidence now exists:
@@ -313,12 +316,13 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - add mobile-specific diagnostics or startup gates beyond shared native runner wiring
   - Evidence:
     - `crates/fret-runtime/src/font_catalog.rs`
+    - `crates/fret-diag-protocol/src/lib.rs`
     - `crates/fret-launch/src/runner/font_catalog.rs`
       (`install_default_bundled_font_baseline_adds_fonts_and_publishes_snapshot`,
       `inject_font_asset_batch_and_refresh_catalog_records_asset_sources`,
       `inject_font_blobs_and_refresh_catalog_refreshes_only_when_fonts_were_added`,
       `publish_renderer_font_environment_sets_key_after_locale_application`)
-    - `ecosystem/fret-bootstrap/src/ui_diagnostics/{debug_snapshot_impl.rs,debug_snapshot_types.rs}`
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/{debug_snapshot_impl.rs,debug_snapshot_predicates.rs,debug_snapshot_types.rs}`
     - `cargo nextest run -p fret-launch`
     - `cargo nextest run -p fret-bootstrap --features 'ui-app-driver diagnostics' debug_snapshot_types_tests::font_environment_snapshot_from_runtime_keeps_renderer_font_sources`
     - `cargo check -p fret-bootstrap --features 'ui-app-driver diagnostics'`

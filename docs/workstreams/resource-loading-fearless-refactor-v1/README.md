@@ -216,7 +216,9 @@ This workstream takes a fearless posture:
     runtime-only paths,
   - and bootstrap diagnostics now expose that state under
     `debug.resource_loading.font_environment.renderer_font_*` so future SVG-text work can depend on
-    one runtime-visible source of truth instead of reconstructing it from logs or family names.
+    one runtime-visible source of truth instead of reconstructing it from logs or family names,
+  - and resource-loading predicates can now gate that inventory by revision, source lane, and
+    asset key instead of treating it as screenshot-only debug data.
 - Accepted ADR coverage now exists for both:
   - icon ownership/package composition (`docs/adr/0065-icon-system-and-asset-packaging.md`),
   - the general portable locator/resolver contract
