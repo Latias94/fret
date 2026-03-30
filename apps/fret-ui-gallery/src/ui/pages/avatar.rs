@@ -130,7 +130,7 @@ fn avatar_api_reference(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     )
     .into_element(cx);
     let notes = doc_layout::notes_block([
-        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/avatar.mdx`.",
+        "Reference baseline: shadcn base Avatar docs.",
         "`className`-style upstream customization maps to `refine_style(...)` / `refine_layout(...)` in Fret; page/container width negotiation remains caller-owned.",
         "`Avatar::empty().children([..])`, `AvatarGroup::empty().children([..])`, and `AvatarGroupCount::empty().children([..])` keep the composable children lane aligned with the typed family without reintroducing slot-merge-only copy.",
         "`AvatarBadge` stays the icon/content child lane, and `avatar_sized(...)` remains the preferred helper when size-dependent parts should inherit scope before landing.",

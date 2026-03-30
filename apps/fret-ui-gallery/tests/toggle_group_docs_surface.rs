@@ -7,11 +7,8 @@ fn toggle_group_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/toggle_group.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/radix/toggle-group.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/base/toggle-group.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/toggle-group.tsx",
-        "repo-ref/primitives/packages/react/toggle-group/src/toggle-group.tsx",
-        "repo-ref/base-ui/packages/react/src/toggle-group/ToggleGroup.tsx",
+        "Reference stack for this page: shadcn Toggle Group docs, the default registry recipe, Radix Primitives Toggle Group, and Base UI Toggle Group.",
+        "The upstream docs-path examples come from the default shadcn demo/outline/sm/lg/spacing set plus the vertical, font-weight-selector, and RTL examples.",
         "toggle-group-demo.tsx",
         "toggle-group-outline.tsx",
         "toggle-group-sm.tsx",

@@ -7,16 +7,10 @@ fn spinner_page_documents_source_axes_and_leaf_api_decision() {
     let source = include_str!("../src/ui/pages/spinner.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/radix/spinner.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/spinner.tsx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-{demo,custom,size,button,badge,input-group,empty}.tsx",
-        "repo-ref/ui/apps/v4/examples/base/spinner-rtl.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/radix/ui/spinner.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/base/ui/spinner.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/radix/examples/spinner-example.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/base/examples/spinner-example.tsx",
+        "Reference stack: shadcn Spinner docs, the default registry recipe, the demo/custom/size/button/badge/input-group/empty examples, and the RTL example.",
+        "Secondary shadcn recipe references: the base and radix registry variants plus their spinner examples all keep Spinner as a leaf `svg` recipe plus host-owned slot composition.",
         "leaf `svg` recipe plus host-owned slot composition",
-        "Neither `repo-ref/primitives` nor `repo-ref/base-ui` defines a dedicated Spinner primitive",
+        "Neither Radix Primitives nor Base UI defines a dedicated Spinner primitive",
         "did not identify a missing `fret-ui` mechanism bug",
         "no extra generic `compose()` or composable children API is needed here",
         "Preview mirrors the shadcn Spinner docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`",

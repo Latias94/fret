@@ -43,7 +43,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .into_element(cx);
 
     // Mirror the upstream docs pattern: consolidate multiple reasoning parts into one panel.
-    // Source reference: `repo-ref/ai-elements/apps/docs/content/components/(chatbot)/reasoning.mdx`.
+    // Source reference: upstream reasoning docs page.
     let reasoning_text = [
         "Reasoning content is markdown.",
         "- Opens automatically when streaming starts.",

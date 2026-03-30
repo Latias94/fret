@@ -7,11 +7,7 @@ fn separator_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/separator.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/separator.mdx",
-        "repo-ref/ui/apps/v4/registry/bases/base/ui/separator.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/radix/ui/separator.tsx",
-        "repo-ref/primitives/packages/react/separator/src/separator.tsx",
-        "repo-ref/base-ui/packages/react/src/separator/Separator.tsx",
+        "Reference stack: shadcn base Separator docs, the base/radix registry recipe variants, Radix Primitives Separator, and Base UI Separator.",
         "`fret_ui_kit::primitives::separator::Separator` owns the mechanism layer",
         "`Separator::new()`, `Separator::orientation(...)`, and `Separator::decorative(...)` cover the public surface Fret needs",
         "Fret keeps the Radix-aligned `.decorative(...)` knob on the shadcn lane",

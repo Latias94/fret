@@ -22,8 +22,8 @@ pub(super) fn preview_skeleton(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Existing layout + reduced-motion tests already cover runtime parity, so this page is docs/public-surface parity work rather than a mechanism-layer fix.",
     ]);
     let notes = doc_layout::notes_block([
-        "Upstream docs/source axes: `repo-ref/ui/apps/v4/content/docs/components/base/skeleton.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/skeleton.mdx`, and `repo-ref/ui/apps/v4/registry/{new-york-v4,bases/base,bases/radix}/ui/skeleton.tsx`.",
-        "Neither `repo-ref/primitives` nor `repo-ref/base-ui` defines a dedicated Skeleton primitive, so there is no missing mechanism contract to port into `fret-ui` or `fret-ui-kit` here.",
+        "Reference stack: shadcn Skeleton docs plus the default and base/radix registry recipes.",
+        "Neither Radix Primitives nor Base UI defines a dedicated Skeleton primitive, so there is no missing mechanism contract to port into `fret-ui` or `fret-ui-kit` here.",
         "Preview mirrors the shadcn Skeleton docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Examples` (`Avatar`, `Card`, `Text`, `Form`, `Table`), `RTL`, then Fret-only `API Reference` and `Notes`.",
         "Examples stay split into dedicated copyable sections so each code tab remains self-contained instead of hiding width, aspect-ratio, or rounded-shape ownership in page-local helpers.",
         "Existing `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/skeleton.rs` and `ecosystem/fret-ui-shadcn/tests/reduced_motion_continuous_frames.rs` already cover layout + motion parity; the remaining work here is docs/public-surface alignment.",

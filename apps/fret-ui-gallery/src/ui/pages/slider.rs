@@ -16,9 +16,9 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let label = snippets::label::render(cx);
     let extras = snippets::extras::render(cx);
     let api_reference = doc_layout::notes_block([
-        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/radix/slider.mdx`. Base UI reference: `repo-ref/ui/apps/v4/content/docs/components/base/slider.mdx`.",
-        "Docs example axis: `repo-ref/ui/apps/v4/examples/radix/slider-demo.tsx`, `repo-ref/ui/apps/v4/examples/radix/slider-range.tsx`, `repo-ref/ui/apps/v4/examples/radix/slider-multiple.tsx`, `repo-ref/ui/apps/v4/examples/radix/slider-vertical.tsx`, `repo-ref/ui/apps/v4/examples/radix/slider-controlled.tsx`, `repo-ref/ui/apps/v4/examples/radix/slider-disabled.tsx`, and `repo-ref/ui/apps/v4/examples/radix/slider-rtl.tsx`.",
-        "Registry source axis: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/slider.tsx`, `repo-ref/ui/apps/v4/registry/bases/radix/ui/slider.tsx`, and `repo-ref/ui/apps/v4/registry/bases/base/ui/slider.tsx`.",
+        "Reference stack: shadcn Slider docs on the Radix lane plus the matching Base UI docs.",
+        "Example axis: shadcn slider demo, range, multiple-thumbs, vertical, controlled, disabled, and RTL examples.",
+        "Recipe axis: the default shadcn registry slider plus the base and radix registry variants.",
         "The upstream docs surface intentionally splits the top-of-page preview (`[75]`) from the `Usage` code block (`[33]`), so this page mirrors those two lanes instead of normalizing them to one demo value.",
         "Slider already exposes the important authoring surface (`new`, `new_controllable`, range/step/orientation/on_value_commit), so the main parity gap here is usage clarity rather than missing composition APIs.",
         "`slider(model)` is the default controlled helper for first-party teaching surfaces, while `new_controllable(...)` stays available when the example needs a default-value bridge or element-owned state.",

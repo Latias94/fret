@@ -11,9 +11,9 @@ pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
     let notes = snippets::notes::render(cx);
     let about = doc_layout::notes_block([
-        "Docs sources: `repo-ref/ui/apps/v4/content/docs/components/base/resizable.mdx` and `repo-ref/ui/apps/v4/content/docs/components/radix/resizable.mdx`.",
-        "The current visual/chrome baseline comes from `repo-ref/ui/apps/v4/registry/new-york-v4/ui/resizable.tsx`, with parallel headless baselines in `repo-ref/ui/apps/v4/registry/bases/radix/ui/resizable.tsx` and `repo-ref/ui/apps/v4/registry/bases/base/ui/resizable.tsx`.",
-        "Unlike `slider` or `progress`, there is no direct `resizable` primitive in `repo-ref/primitives` or `repo-ref/base-ui`; those repos still inform general headless/mechanism decisions, but the concrete source axis here is shadcn plus the runtime panel-group contract.",
+        "Reference stack: shadcn Resizable docs on the Base UI and Radix lanes.",
+        "The current visual/chrome baseline comes from the default shadcn registry recipe, with parallel headless baselines in the base and radix registry variants.",
+        "Unlike `slider` or `progress`, there is no direct `Resizable` primitive in Radix Primitives or Base UI; those libraries still inform general headless/mechanism decisions, but the concrete source axis here is shadcn plus the runtime panel-group contract.",
         "This page is docs/public-surface parity work, not a mechanism-layer gap: drag routing, hit-testing, focusable splitter semantics, and min-size clamping already live in `fret-ui`.",
     ]);
     let api_reference = doc_layout::notes_block([

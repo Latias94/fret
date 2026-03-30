@@ -7,14 +7,7 @@ fn collapsible_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/collapsible.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/collapsible.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/collapsible.tsx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/collapsible-demo.tsx",
-        "repo-ref/ui/apps/v4/examples/base/{collapsible-basic,collapsible-settings,collapsible-file-tree,collapsible-rtl}.tsx",
-        "repo-ref/primitives/packages/react/collapsible/src/collapsible.tsx",
-        "repo-ref/base-ui/packages/react/src/collapsible/root/CollapsibleRoot.tsx",
-        "repo-ref/base-ui/packages/react/src/collapsible/trigger/CollapsibleTrigger.tsx",
-        "repo-ref/base-ui/packages/react/src/collapsible/panel/CollapsiblePanel.tsx",
+        "Reference stack: shadcn Collapsible docs and examples, the default registry recipe, Radix Primitives collapsible semantics, and Base UI collapsible ownership.",
         "`shadcn::Collapsible` remains the compact Fret-first builder for the common trigger/content lane, while `shadcn::CollapsibleRoot`, `shadcn::CollapsibleTriggerPart`, and `shadcn::CollapsibleContentPart` cover the copyable composable children lane on the curated facade.",
         "A broader generic `Collapsible::children([...])` / `compose()` root API is not currently warranted here",
         "docs/public-surface alignment rather than a `fret-ui` mechanism bug",

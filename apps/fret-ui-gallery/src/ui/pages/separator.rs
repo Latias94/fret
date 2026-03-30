@@ -13,7 +13,7 @@ pub(super) fn preview_separator(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Docs path: `repo-ref/ui/apps/v4/content/docs/components/base/separator.mdx`; recipe sources: `repo-ref/ui/apps/v4/registry/bases/base/ui/separator.tsx` and `repo-ref/ui/apps/v4/registry/bases/radix/ui/separator.tsx`; headless references: `repo-ref/primitives/packages/react/separator/src/separator.tsx` and `repo-ref/base-ui/packages/react/src/separator/Separator.tsx`.",
+        "Reference stack: shadcn base Separator docs, the base/radix registry recipe variants, Radix Primitives Separator, and Base UI Separator.",
         "`fret_ui_kit::primitives::separator::Separator` owns the mechanism layer: orientation, separator semantics, and decorative hiding. `fret_ui_shadcn::Separator` owns the recipe defaults (`shrink-0`, 1px rule chrome, and the vertical self-stretch mapping).",
         "`Separator::new()`, `Separator::orientation(...)`, and `Separator::decorative(...)` cover the public surface Fret needs for shadcn/Radix/Base UI parity. Fret keeps the Radix-aligned `.decorative(...)` knob on the shadcn lane even though the current Base UI docs axis does not surface that prop explicitly.",
         "Vertical recipe parity maps upstream `data-vertical:self-stretch` to `align-self: stretch` plus auto cross-axis sizing, so surrounding row height remains caller-owned while the separator still stretches correctly in docs-style flex rows.",

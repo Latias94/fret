@@ -7,13 +7,9 @@ fn resizable_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/resizable.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/resizable.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/radix/resizable.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/resizable.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/radix/ui/resizable.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/base/ui/resizable.tsx",
-        "repo-ref/primitives",
-        "repo-ref/base-ui",
+        "Reference stack: shadcn Resizable docs on the Base UI and Radix lanes.",
+        "The current visual/chrome baseline comes from the default shadcn registry recipe, with parallel headless baselines in the base and radix registry variants.",
+        "Unlike `slider` or `progress`, there is no direct `Resizable` primitive in Radix Primitives or Base UI; those libraries still inform general headless/mechanism decisions, but the concrete source axis here is shadcn plus the runtime panel-group contract.",
         "`resizable_panel_group(cx, model, |cx| ..)` is already the composable children-equivalent lane for Fret",
         "A generic composable children / `compose()` API is not warranted here",
         "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`.",

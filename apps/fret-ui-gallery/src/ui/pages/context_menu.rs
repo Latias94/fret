@@ -24,7 +24,7 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`RTL` remains a separate top-level docs section after `Examples`, matching the upstream page structure instead of being folded into the example group.",
     ]);
     let api_reference = doc_layout::notes_block([
-        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/context-menu.mdx`.",
+        "Reference baseline: shadcn base Context Menu docs.",
         "`ContextMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)` is the default copyable root path; `build(...)`, `build_parts(...)`, and `into_element_parts(...)` stay as narrower adapter seams for already-landed or closure-owned roots.",
         "`ContextMenuTrigger`, `ContextMenuPortal`, `ContextMenuContent`, and `ContextMenuSub*` keep the shadcn/Base UI part names available without moving menu policy into `fret-ui`.",
         "Trigger chrome stays caller-owned, while explicit panel sizing stays on `ContextMenuContent::{min_width,submenu_min_width}(...)`.",

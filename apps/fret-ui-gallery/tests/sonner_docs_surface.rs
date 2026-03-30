@@ -7,12 +7,7 @@ fn sonner_page_keeps_docs_path_and_scope_decisions() {
     let source = include_str!("../src/ui/pages/sonner.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/sonner.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/sonner.tsx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/sonner-demo.tsx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/sonner-types.tsx",
-        "repo-ref/primitives/packages/react/toast/src/toast.tsx",
-        "repo-ref/base-ui/packages/react/src/toast/",
+        "Reference stack: shadcn Sonner docs, the default registry recipe, the demo/types examples, Radix Primitives Toast, and Base UI Toast.",
         "Docs path stays `Demo`, `About`, `Usage`, `Examples`, `Types`, `Description`, `Position`, and `API Reference`",
         "generic composable `children([...])` API is not warranted here",
         "this pass did not identify a missing `fret-ui` mechanism bug",

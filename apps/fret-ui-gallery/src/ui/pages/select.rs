@@ -30,8 +30,8 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Docs sources: `repo-ref/ui/apps/v4/content/docs/components/radix/select.mdx` and `repo-ref/ui/apps/v4/content/docs/components/base/select.mdx`.",
-        "The current visual/chrome baseline comes from `repo-ref/ui/apps/v4/registry/new-york-v4/ui/select.tsx`; semantics/headless references come from `repo-ref/primitives/packages/react/select/src/select.tsx` and `repo-ref/base-ui/packages/react/src/select/`.",
+        "Reference stack: shadcn Select docs on the Radix and Base UI lanes.",
+        "The current visual/chrome baseline comes from the default shadcn registry recipe; semantics/headless references come from Radix Primitives Select and Base UI Select.",
         "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) stay the default copyable root story.",
         "`Select::required(true)` now forwards required semantics to the trigger combobox node; this stays root-owned and does not require a broader generic children API.",
         "`Select::into_element_parts(...)` plus `SelectContent::with_entries(...)` is the typed docs-parity seam for the upstream nested `SelectTrigger` / `SelectValue` / `SelectContent` children lane; a generic root `children([...])` / `compose()` API is not warranted because the option tree is already typed as `SelectEntry` (`SelectGroup` / `SelectItem` / `SelectLabel` / `SelectSeparator`).",

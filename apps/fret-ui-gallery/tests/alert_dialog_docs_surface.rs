@@ -7,12 +7,7 @@ fn alert_dialog_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/alert_dialog.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx",
-        "repo-ref/ui/apps/v4/examples/{base,radix}/alert-dialog-{basic,small,media,small-media,destructive,rtl}.tsx",
-        "repo-ref/primitives/packages/react/alert-dialog/src/alert-dialog.tsx",
-        "repo-ref/base-ui/packages/react/src/alert-dialog/root/AlertDialogRoot.tsx",
+        "Reference stack: shadcn Alert Dialog docs and examples, the default registry recipe, Radix Primitives alert-dialog semantics, and Base UI alert-dialog ownership.",
         "`AlertDialog::children([...])` is the default copyable root path for part-based composition, and `AlertDialogPart` is available on the curated `shadcn` facade so the default import lane stays copyable.",
         "`AlertDialogPart::content_with(...)` plus `AlertDialogContent::with_children(...)`, `AlertDialogHeader::with_children(...)`, and `AlertDialogFooter::with_children(...)` form the default copyable content lane when child parts need the current alert-dialog scope.",
         "`AlertDialog::children([...])` is already the warranted composable root API here because the component owns Trigger/Portal/Overlay/Content parts and the scope-sensitive `from_scope(...)` buttons must stay inside `AlertDialogContent`; no broader untyped JSX-style root children API is warranted beyond the typed `AlertDialogPart` lane.",

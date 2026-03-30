@@ -3283,7 +3283,7 @@ fn form_page_and_notes_teach_rtl_as_a_fret_follow_up() {
     let notes = read("src/ui/snippets/form/notes.rs");
     assert!(
         notes.contains(
-            "There is no standalone upstream `Form` RTL component page/example in `repo-ref/ui`; Gallery keeps `RTL` as a focused Fret follow-up that validates logical text alignment and explicit horizontal field composition under `DirectionProvider(Rtl)`."
+            "There is no standalone upstream `Form` RTL component page/example; Gallery keeps `RTL` as a focused Fret follow-up that validates logical text alignment and explicit horizontal field composition under `DirectionProvider(Rtl)`."
         ),
         "src/ui/snippets/form/notes.rs should explain why the RTL section is a Fret follow-up instead of a copied upstream docs row"
     );

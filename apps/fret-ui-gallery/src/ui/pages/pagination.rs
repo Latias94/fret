@@ -15,8 +15,8 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let compact_builder = snippets::compact_builder::render(cx);
 
     let notes = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/pagination.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/pagination.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/pagination.mdx`, and `repo-ref/ui/apps/v4/registry/new-york-v4/ui/pagination.tsx`.",
-        "No direct `Pagination` primitive exists under `repo-ref/primitives` or `repo-ref/base-ui`; the closest secondary references are the shadcn base/radix registry copies in `repo-ref/ui/apps/v4/registry/bases/{base,radix}/ui/pagination.tsx`, and they confirm the same nav/list/link recipe shape rather than a missing mechanism layer.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/pagination.rs`. Reference stack: shadcn Pagination docs and the default registry recipe.",
+        "No direct `Pagination` primitive exists in Radix Primitives or Base UI; the closest secondary references are the shadcn base/radix registry copies, and they confirm the same nav/list/link recipe shape rather than a missing mechanism layer.",
         "`Usage` now teaches the upstream-shaped parts lane directly: `Pagination`, `PaginationContent`, `PaginationItem`, and `PaginationLink` already support explicit composable children without needing an extra generic `compose()` API.",
         "`Routing / Next.js` is the Fret app-layer equivalent of the upstream Next.js section: keep link semantics on `PaginationLink`, but bind navigation via `.action(...)` instead of a DOM-only `href` swap.",
         "`Custom Text / Changelog` maps the upstream changelog update onto the existing `.text(...)` support on `PaginationPrevious` / `PaginationNext`.",

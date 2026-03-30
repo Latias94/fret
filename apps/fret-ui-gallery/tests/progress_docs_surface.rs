@@ -7,13 +7,8 @@ fn progress_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/progress.rs");
 
     for needle in [
-        "repo-ref/ui/apps/v4/content/docs/components/radix/progress.mdx",
-        "repo-ref/ui/apps/v4/content/docs/components/base/progress.mdx",
-        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/progress.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/radix/ui/progress.tsx",
-        "repo-ref/ui/apps/v4/registry/bases/base/ui/progress.tsx",
-        "repo-ref/primitives/packages/react/progress/src/progress.tsx",
-        "repo-ref/base-ui/packages/react/src/progress/*",
+        "Reference stack: shadcn Progress docs on the Radix and Base UI lanes, plus the default visual baseline.",
+        "Secondary structure references: the shadcn radix/base registry variants, Radix Primitives Progress, and Base UI Progress.",
         "generic composable children / `compose()` API",
         "Base UI's `ProgressLabel` / `ProgressValue` children API",
         "`mirror_in_rtl(true)`",

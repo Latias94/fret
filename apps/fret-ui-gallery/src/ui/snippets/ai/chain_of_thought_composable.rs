@@ -51,7 +51,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ])
                     .children([ui_ai::ChainOfThoughtSearchResults::new([
                         ui_ai::ChainOfThoughtSearchResult::new("docs.ai-elements.dev").into_element(cx),
-                        ui_ai::ChainOfThoughtSearchResult::new("repo-ref/ui").into_element(cx),
+                        ui_ai::ChainOfThoughtSearchResult::new("shadcn-registry").into_element(cx),
                     ])
                     .into_element(cx)])
                     .into_element(cx),

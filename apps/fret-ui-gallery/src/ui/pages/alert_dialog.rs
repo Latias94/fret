@@ -36,7 +36,7 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
 
     let notes = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx`, `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx`, `repo-ref/ui/apps/v4/examples/{base,radix}/alert-dialog-{basic,small,media,small-media,destructive,rtl}.tsx`, `repo-ref/primitives/packages/react/alert-dialog/src/alert-dialog.tsx`, and `repo-ref/base-ui/packages/react/src/alert-dialog/root/AlertDialogRoot.tsx`.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`. Reference stack: shadcn Alert Dialog docs and examples, the default registry recipe, Radix Primitives alert-dialog semantics, and Base UI alert-dialog ownership.",
         "Preview mirrors the shadcn docs path after skipping `Installation`: `Demo`, `Usage`, `Basic`, `Small`, `Media`, `Small with Media`, `Destructive`, `RTL`, and `API Reference`.",
         "Example copy now follows the docs-page examples (`Show Dialog`, `Share Project`, dual-example RTL) rather than the registry-base example labels such as `Default (Media)`.",
         "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
