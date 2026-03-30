@@ -2640,6 +2640,48 @@ mod tests {
     }
 
     #[test]
+    fn gallery_separator_menu_example_keeps_docs_copy_within_row_bounds() {
+        let mut rendered = render_gallery_page(PAGE_SEPARATOR);
+        scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-separator-menu");
+
+        let row_layout = layout_bounds_by_test_id(&rendered, "ui-gallery-separator-menu");
+        let epsilon = 1.0;
+        let expected_min_height = 39.0;
+
+        let row_left = row_layout.origin.x.0;
+        let row_top = row_layout.origin.y.0;
+        let row_right = row_left + row_layout.size.width.0;
+        let row_bottom = row_top + row_layout.size.height.0;
+
+        assert!(
+            row_layout.size.height.0 >= expected_min_height,
+            "expected Separator menu row to keep the upstream two-line height budget (~40px): row_layout={row_layout:?} expected_min_height={expected_min_height}"
+        );
+
+        for target in [
+            "ui-gallery-separator-menu-settings",
+            "ui-gallery-separator-menu-divider-primary",
+            "ui-gallery-separator-menu-account",
+            "ui-gallery-separator-menu-divider-secondary",
+            "ui-gallery-separator-menu-help",
+        ] {
+            let bounds = layout_bounds_by_test_id(&rendered, target);
+            let left = bounds.origin.x.0;
+            let top = bounds.origin.y.0;
+            let right = left + bounds.size.width.0;
+            let bottom = top + bounds.size.height.0;
+
+            assert!(
+                left >= row_left - epsilon
+                    && top >= row_top - epsilon
+                    && right <= row_right + epsilon
+                    && bottom <= row_bottom + epsilon,
+                "expected Separator menu child to stay inside the row bounds: target={target} row_layout={row_layout:?} child_bounds={bounds:?} epsilon={epsilon}"
+            );
+        }
+    }
+
+    #[test]
     fn gallery_slider_vertical_examples_keep_upstream_recipe_min_height_floor() {
         let mut rendered = render_gallery_page(PAGE_SLIDER);
         scroll_test_id_into_gallery_viewport(
