@@ -261,16 +261,29 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return true;
         }
 
+        let settings = self
+            .app
+            .global::<fret_runtime::DockingInteractionSettings>()
+            .copied()
+            .unwrap_or_default();
+        let want_transparent_payload = settings.transparent_payload_during_follow
+            || env_flag_is_true("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD");
+        let diag_pointer_input_isolation_active = self.diag_pointer_input_isolation_active();
+
         // Scripted diagnostics drive cursor position via overrides. Tear-off follow intentionally
         // moves OS windows to keep a real cursor "inside" the moving window; during scripted runs
         // this causes the runner to chase synthetic cursor updates and can prevent docking-back
         // gestures from ever reaching a stable overlap/hover state.
         //
-        // When a recent diagnostics cursor/button override was observed, stop following and let
-        // cursor-based hover/drop routing drive the interaction deterministically.
-        if self.diag_pointer_input_isolation_active() && self.dock_tearoff_follow.is_some() {
-            self.stop_dock_tearoff_follow(Instant::now(), false);
-            return true;
+        // Preserve transparent payload state when explicitly requested, but freeze the actual
+        // follow motion so overlap diagnostics can still observe peek-behind behavior without
+        // chasing the synthetic cursor.
+        if diag_pointer_input_isolation_active && !want_transparent_payload {
+            if self.dock_tearoff_follow.is_some() {
+                self.stop_dock_tearoff_follow(Instant::now(), false);
+                return true;
+            }
+            return false;
         }
 
         if self.dock_tearoff_follow.is_none()
@@ -280,13 +293,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let grab_offset = drag
                 .cursor_grab_offset
                 .unwrap_or(Point::new(Px(40.0), Px(20.0)));
-            let settings = self
-                .app
-                .global::<fret_runtime::DockingInteractionSettings>()
-                .copied()
-                .unwrap_or_default();
-            let want_transparent_payload = settings.transparent_payload_during_follow
-                || env_flag_is_true("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD");
 
             // Transparent payload is primarily an ImGui-style "peek behind moving window" aid. It
             // only makes sense to force-follow OS windows that are already dock-floating (tear-off
@@ -357,14 +363,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         //
         // This is conservatively disabled by default (see `DockingInteractionSettings`), and can
         // be forced on via env var for quick experimentation.
-        let settings = self
-            .app
-            .global::<fret_runtime::DockingInteractionSettings>()
-            .copied()
-            .unwrap_or_default();
-        let want_transparent_payload = settings.transparent_payload_during_follow
-            || env_flag_is_true("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD");
-
         if want_transparent_payload != transparent_payload_applied {
             let opacity = if want_transparent_payload {
                 fret_runtime::WindowOpacity::from_f32(settings.transparent_payload_alpha)

@@ -250,6 +250,17 @@ impl<D: super::WinitAppDriver> super::WinitRunner<D> {
             return false;
         };
         let updated = svc.poll(self);
+        if updated && let Some(window) = svc.last_window {
+            // Scripted pointer-session steps target a specific window in client coordinates. Wake
+            // that window explicitly when the override changes so secondary dock tear-off windows
+            // do not stop producing frames after a single injected step.
+            if self.request_window_redraw_with_reason(
+                window,
+                fret_runtime::RunnerFrameDriveReason::EffectRedraw,
+            ) {
+                self.raf_windows.request(window);
+            }
+        }
         self.diag_cursor_screen_pos_override = Some(svc);
         if updated {
             self.diag_last_cursor_override_tick = Some(self.tick_id);

@@ -1310,6 +1310,18 @@ pub(super) fn finalize_drive_script_for_window(
         }
     }
 
+    if output.request_redraw
+        && !output
+            .effects
+            .iter()
+            .any(|effect| matches!(effect, Effect::Redraw(w) if *w == window))
+    {
+        // Script-driven pointer/session steps can otherwise stall on secondary windows that stop
+        // receiving callbacks after a single injected frame. Keep the platform wake-up explicit so
+        // diagnostics does not depend on backend-specific `request_redraw` timing.
+        output.effects.push(Effect::Redraw(window));
+    }
+
     if stop_script {
         push_script_event_log(
             &mut active,
