@@ -1,0 +1,120 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-typography-full-scroll-blank-space",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "typography", "scroll", "regression"],
+    "target_hints": [
+      "Repro: open Typography, scroll to the notes section, then keep wheel-scrolling to the bottom; there should be no large blank space past the final notes block."
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_BISECT": "0"
+    }
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 980.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "typography",
+      "clear_before_type": true,
+      "timeout_frames": 900
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-typography" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-typography" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-typography" } },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-typography" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-typography-notes-content" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-typography-notes-content" },
+      "delta_y": -240.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "padding_px": 32.0,
+      "padding_insets_px": {
+        "left_px": 24.0,
+        "top_px": 24.0,
+        "right_px": 24.0,
+        "bottom_px": 96.0
+      },
+      "timeout_frames": 1800
+    },
+    { "type": "wait_frames", "n": 8 },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" } },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" }, "delta_y": -20000.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" }, "delta_y": -20000.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" }, "delta_y": -20000.0 },
+    { "type": "wait_frames", "n": 8 },
+
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-typography-full-scroll-blank-space" },
+    { "type": "capture_screenshot", "label": "ui-gallery-typography-full-scroll-blank-space" },
+    { "type": "capture_bundle", "label": "ui-gallery-typography-full-scroll-blank-space" }
+  ]
+}

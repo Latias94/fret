@@ -181,7 +181,7 @@ fn render_doc_page_raw(
         .fold(Px(0.0), |a, b| Px(a.0.max(b.0)));
     let page_max_w = Px(Px(760.0).0.max(max_section_w.0));
 
-    let body = ui::v_flex(move |cx| {
+    ui::v_flex(move |cx| {
         let mut out: Vec<AnyElement> = Vec::with_capacity(sections.len() + 1);
         if let Some(intro) = intro {
             out.push(muted_full_width(cx, intro).into_element(cx));
@@ -196,17 +196,15 @@ fn render_doc_page_raw(
     .gap(Space::N6)
     .items_start()
     .layout(
+        // Center the doc column via auto margins instead of an extra horizontal flex wrapper.
+        // The wrapper shape can over-inflate ancestor heights for long scrollable docs pages.
         LayoutRefinement::default()
             .w_full()
             .min_w_0()
-            .max_w(page_max_w),
+            .max_w(page_max_w)
+            .mx_auto(),
     )
-    .into_element(cx);
-
-    ui::h_flex(move |_cx| [body])
-        .layout(LayoutRefinement::default().w_full().min_w_0())
-        .justify_center()
-        .into_element(cx)
+    .into_element(cx)
 }
 
 #[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
