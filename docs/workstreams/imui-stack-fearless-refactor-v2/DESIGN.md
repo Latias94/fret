@@ -261,7 +261,11 @@ Generic audit status (2026-03-31):
 - not a justification to reopen broad generic helper growth,
 - and the first concrete redundancy found in this lane is built-in sample wrappers under
   `fret_ui_kit::imui::adapters`, which should not remain in the public module once the seam
-  contract itself is stable.
+  contract itself is stable,
+- while the remaining large root file (`ecosystem/fret-ui-kit/src/imui.rs`) is still the
+  coordination surface for options, responses, `ImUiFacade`, and `UiWriterImUiFacadeExt`; the
+  behavior-heavy code is already split into dedicated submodules, so another root-file split would
+  mostly increase navigation churn rather than sharpen ownership.
 
 ## Dear ImGui comparison stance
 

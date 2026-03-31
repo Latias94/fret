@@ -72,8 +72,8 @@ Clarification (2026-03-31):
 - [x] Delete stale doc claims that still describe already-shipped generic helpers as missing.
 - [x] Decide whether any remaining `fret-ui-kit::imui` helper has become redundant after proof/demo
       migration.
-- [ ] Split remaining large `fret-ui-kit::imui` files only when the split sharpens ownership or
-      reviewability.
+- [x] Do not split the remaining `fret-ui-kit::imui` root surface yet because the current split
+      already matches ownership better than another coordination-layer shuffle would.
 - [ ] Keep official generic/editor adapters on `&mut impl fret_authoring::UiWriter<H>` and avoid
       concrete `ImUi` coupling.
 
@@ -90,6 +90,11 @@ Generic audit result (2026-03-31):
 - The only clearly redundant first-party helper path found in this audit was the built-in sample
   wrapper pair in `fret_ui_kit::imui::adapters`; those examples should live in tests or external
   crates, while the public module stays contract-only (`AdapterSignal*` + `report_adapter_signal`).
+- `ecosystem/fret-ui-kit/src/imui.rs` still acts as the coordination surface for options,
+  responses, `ImUiFacade`, and `UiWriterImUiFacadeExt`, while behavior-heavy logic already lives in
+  dedicated submodules (`combo_controls`, `drag_drop`, `popup_overlay`, `tooltip_overlay`, etc.).
+  Splitting the root file again in this lane would mostly move tightly coupled coordination code
+  across files without improving owner clarity.
 
 ## M4 - Gates and evidence closure
 
