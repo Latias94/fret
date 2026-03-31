@@ -111,7 +111,7 @@ Planned additions (M2):
   `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
 - Controls overlay supports B-layer command injection:
   `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
-- MiniMap supports B-layer navigation wiring via `NodeGraphViewQueue`:
+- MiniMap supports B-layer navigation wiring via `NodeGraphController`:
   `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 - Toolbars participate in overlay hit-testing (passthrough) and focus routing:
   `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_toolbars_conformance.rs`

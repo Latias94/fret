@@ -13,9 +13,7 @@ use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::controller::NodeGraphController;
 use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
-use crate::ui::view_queue::{
-    NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
-};
+use crate::ui::view_queue::NodeGraphSetViewportOptions;
 use crate::ui::{NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphStyle};
 
 use super::OverlayPlacement;
@@ -35,11 +33,6 @@ pub enum NodeGraphMiniMapNavigationBinding {
     Default,
     /// Disables navigation (no viewport updates).
     Disabled,
-    /// Sends viewport updates through a UI-side view queue.
-    ///
-    /// This is useful for B-layer controlled integrations that want the canvas to consume a
-    /// message surface rather than allowing widgets to mutate the view model directly.
-    ViewQueue(Model<NodeGraphViewQueue>),
     /// Routes viewport updates through `NodeGraphController`, treating any attached queue as an
     /// internal transport detail.
     Controller(NodeGraphController),
@@ -111,12 +104,6 @@ impl NodeGraphMiniMapOverlay {
 
     pub fn with_bindings(mut self, bindings: NodeGraphMiniMapBindings) -> Self {
         self.bindings = bindings;
-        self
-    }
-
-    #[cfg_attr(not(test), allow(dead_code))]
-    pub(crate) fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
-        self.bindings.navigation = NodeGraphMiniMapNavigationBinding::ViewQueue(queue);
         self
     }
 
@@ -291,15 +278,6 @@ impl NodeGraphMiniMapOverlay {
 
         match &self.bindings.navigation {
             NodeGraphMiniMapNavigationBinding::Disabled => {}
-            NodeGraphMiniMapNavigationBinding::ViewQueue(queue) => {
-                let _ = queue.update(host, |q, _cx| {
-                    q.push(NodeGraphViewRequest::SetViewport {
-                        pan,
-                        zoom: z,
-                        options: NodeGraphSetViewportOptions::default(),
-                    });
-                });
-            }
             NodeGraphMiniMapNavigationBinding::Controller(controller) => {
                 if controller.set_viewport_with_options(
                     host,

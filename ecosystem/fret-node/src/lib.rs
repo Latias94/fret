@@ -50,6 +50,7 @@ mod surface_policy_tests {
     const ADVANCED_RS: &str = include_str!("advanced.rs");
     const COMPAT_RETAINED_RS: &str = include_str!("ui/declarative/compat_retained.rs");
     const UI_ADVANCED_RS: &str = include_str!("ui/advanced.rs");
+    const MINIMAP_RS: &str = include_str!("ui/overlays/minimap.rs");
     const WORKFLOW_NODE_GRAPH_DEMO_RS: &str = include_str!(
         "../../../apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs"
     );
@@ -106,5 +107,13 @@ mod surface_policy_tests {
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphViewQueue"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("bind_controller_view_queue_transport"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("use fret_node::ui::advanced::{"));
+    }
+
+    #[test]
+    fn minimap_navigation_surface_stays_controller_or_default_only() {
+        assert!(!MINIMAP_RS.contains("NodeGraphMiniMapNavigationBinding::ViewQueue"));
+        assert!(!MINIMAP_RS.contains("ViewQueue(Model<NodeGraphViewQueue>)"));
+        assert!(!MINIMAP_RS.contains("pub(crate) fn with_view_queue("));
+        assert!(MINIMAP_RS.contains("NodeGraphMiniMapNavigationBinding::Controller(controller)"));
     }
 }

@@ -157,10 +157,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `NodeGraphBlackboardOverlay::with_edit_queue`
     (`ecosystem/fret-node/src/ui/overlays/blackboard.rs`): remain as fallback bindings for retained-only
     compatibility harnesses that still do not own a store/controller, but are no longer public API.
-  - `NodeGraphMiniMapOverlay::with_view_queue` / `NodeGraphMiniMapNavigationBinding::ViewQueue`
-    (`ecosystem/fret-node/src/ui/overlays/minimap.rs`): still needed because the minimap keeps an
-    explicit queue-driven navigation mode internally, but the direct retained queue-binding method is now
-    crate-private.
+  - `NodeGraphMiniMapOverlay`
+    (`ecosystem/fret-node/src/ui/overlays/minimap.rs`): now only teaches `Default`, `Disabled`,
+    or `Controller` navigation; queue-owned viewport transport must flow through a controller if an
+    integration still needs it.
 
 - **Most likely next shrink targets**
   - Raw queue / viewport transport still exported from `ecosystem/fret-node/src/ui/advanced.rs`
@@ -183,6 +183,8 @@ Execution companion: `design.md` (surface map + next worktree order).
         to `fret_node::ui::advanced::*` (`node_graph_domain_demo`).
   - [x] Stop teaching raw view queues in the workflow gallery snippet; use
         `NodeGraphSurfaceBinding::*_action_host(...)` instead.
+  - [x] Delete the minimap-specific `ViewQueue` navigation mode; queue transport now flows through
+        `NodeGraphController` when explicitly needed.
   - [x] Clear in-tree uses of root queue/helper aliases (apps, gallery snippet, crate-internal retained/tests).
   - [x] Skip the external compatibility/deprecation phase and remove the old root aliases directly.
 

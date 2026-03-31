@@ -260,7 +260,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [x] **MiniMap**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/MiniMap/MiniMap.tsx`
-  - fret-node: `NodeGraphMiniMapOverlay` (derived-internals driven) + B-layer navigation wiring via `NodeGraphViewQueue`
+  - fret-node: `NodeGraphMiniMapOverlay` (derived-internals driven) + B-layer navigation wiring via `NodeGraphController`
   - Contract: `docs/node-graph-addons-minimap-controls.md`
   - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 

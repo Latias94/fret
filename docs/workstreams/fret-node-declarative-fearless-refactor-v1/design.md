@@ -66,7 +66,6 @@ they should not read like public downstream authoring APIs.
 - `NodeGraphPortalHost::with_edit_queue`
 - `NodeGraphOverlayHost::with_edit_queue`
 - `NodeGraphBlackboardOverlay::with_edit_queue`
-- `NodeGraphMiniMapOverlay::with_view_queue`
 
 These methods are crate-private on purpose.
 
