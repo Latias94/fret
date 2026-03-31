@@ -67,16 +67,14 @@ Template advantages:
 
 ## 3) Non-shadcn Example Landed
 
-Landed examples (non-shadcn) in code:
+Historical note:
 
-- `button_adapter(...)`
-- `checkbox_model_adapter(...)`
-
-File:
-
-- `ecosystem/fret-ui-kit/src/imui/adapters.rs`
-
-These examples intentionally wrap existing canonical immediate helpers and only add seam reporting.
+- Early versions of this seam note pointed at built-in sample wrappers in
+  `ecosystem/fret-ui-kit/src/imui/adapters.rs`.
+- That public sample pair was later deleted so the module could remain contract-only.
+- The current external-style examples now live in test scaffolds instead:
+  - `ecosystem/fret-ui-kit/tests/imui_adapter_seam_smoke.rs`
+  - `ecosystem/fret-ui-kit/tests/imui_external_adapter_example.rs`
 
 ---
 

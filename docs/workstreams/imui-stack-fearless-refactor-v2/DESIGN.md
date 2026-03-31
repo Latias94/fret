@@ -258,7 +258,10 @@ Generic audit status (2026-03-31):
   `table`, `virtual_list`, `separator_text`, `collapsing_header`, `tree_node`, tooltip helpers,
   typed drag/drop seams, and floating surface helpers,
 - so M3 is primarily a docs/source-of-truth cleanup step before any code deletion decision,
-- not a justification to reopen broad generic helper growth.
+- not a justification to reopen broad generic helper growth,
+- and the first concrete redundancy found in this lane is built-in sample wrappers under
+  `fret_ui_kit::imui::adapters`, which should not remain in the public module once the seam
+  contract itself is stable.
 
 ## Dear ImGui comparison stance
 

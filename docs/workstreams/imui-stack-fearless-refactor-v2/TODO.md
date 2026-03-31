@@ -70,7 +70,7 @@ Clarification (2026-03-31):
 
 - [x] Re-audit `fret-ui-kit::imui` shipped nouns against the current code, not stale docs.
 - [x] Delete stale doc claims that still describe already-shipped generic helpers as missing.
-- [ ] Decide whether any remaining `fret-ui-kit::imui` helper has become redundant after proof/demo
+- [x] Decide whether any remaining `fret-ui-kit::imui` helper has become redundant after proof/demo
       migration.
 - [ ] Split remaining large `fret-ui-kit::imui` files only when the split sharpens ownership or
       reviewability.
@@ -87,6 +87,9 @@ Generic audit result (2026-03-31):
   and opening paragraphs still read like a live gap board.
 - Historical `imui-authoring-vocabulary-closure-v1` notes should remain as archive evidence, but
   must now read as closed historical gap snapshots rather than current missing-surface claims.
+- The only clearly redundant first-party helper path found in this audit was the built-in sample
+  wrapper pair in `fret_ui_kit::imui::adapters`; those examples should live in tests or external
+  crates, while the public module stays contract-only (`AdapterSignal*` + `report_adapter_signal`).
 
 ## M4 - Gates and evidence closure
 

@@ -2,15 +2,14 @@
 //!
 //! These types provide a minimal, explicit contract for delegating canonical component behavior
 //! while reporting interaction signals back to immediate-mode adapters.
-
-use std::hash::Hash;
-use std::sync::Arc;
+//!
+//! This module intentionally exposes only the seam contract. Example wrapper functions should live
+//! in tests or external crates so they do not become an accidental second public helper family.
 
 use fret_core::Rect;
-use fret_runtime::Model;
-use fret_ui::{GlobalElementId, UiHost};
+use fret_ui::GlobalElementId;
 
-use super::{ResponseExt, UiWriterImUiFacadeExt};
+use super::ResponseExt;
 
 /// Optional metadata reported by adapter seams for focus/geometry choreography.
 #[derive(Debug, Clone, Copy, Default)]
@@ -53,29 +52,4 @@ pub fn report_adapter_signal(
         });
     }
     response
-}
-
-/// Non-shadcn example adapter: wraps the canonical `button` helper and emits seam signals.
-pub fn button_adapter<H: UiHost, K: Hash>(
-    ui: &mut impl UiWriterImUiFacadeExt<H>,
-    identity_key: K,
-    label: impl Into<Arc<str>>,
-    mut options: AdapterSeamOptions<'_>,
-) -> ResponseExt {
-    let label = label.into();
-    let response = ui.push_id(identity_key, |ui| ui.button(label.clone()));
-    report_adapter_signal(response, &mut options)
-}
-
-/// Non-shadcn example adapter: wraps the canonical `checkbox_model` helper and emits seam signals.
-pub fn checkbox_model_adapter<H: UiHost, K: Hash>(
-    ui: &mut impl UiWriterImUiFacadeExt<H>,
-    identity_key: K,
-    label: impl Into<Arc<str>>,
-    model: &Model<bool>,
-    mut options: AdapterSeamOptions<'_>,
-) -> ResponseExt {
-    let label = label.into();
-    let response = ui.push_id(identity_key, |ui| ui.checkbox_model(label.clone(), model));
-    report_adapter_signal(response, &mut options)
 }
