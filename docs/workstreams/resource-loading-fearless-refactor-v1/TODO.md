@@ -188,9 +188,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - emitted/embedded/mobile-bundled asset lookup by logical key.
   - Current landed slice:
     - `fret-launch::assets::{AssetStartupPlan, AssetStartupMode}` plus
-      `WinitAppBuilder::{with_asset_manifest, with_asset_dir, with_bundle_asset_entries,
-      with_embedded_asset_entries, with_asset_startup}` now define the lowest-level native startup
-      contract directly on the runner-facing builder surface,
+      `WinitAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries,
+      with_asset_startup}` now define the lowest-level native startup contract directly on the
+      runner-facing builder surface,
     - `fret::assets::{AssetStartupPlan, AssetStartupMode}` now gives the `fret` facade one named
       startup policy object for selecting development vs packaged publication on the builder path,
     - `fret-bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` now re-exports the same
@@ -775,11 +775,13 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - `ecosystem/fret-bootstrap::BootstrapBuilder` now keeps file-backed startup on the canonical
       `with_asset_startup(...) + AssetStartupPlan::{development_dir,development_manifest}(...)`
-      path instead of duplicating native/package-dev one-off helpers for
-      `with_asset_dir(...)` / `with_asset_manifest(...)`.
+      path instead of duplicating native/package-dev dir/manifest one-off helpers.
     - `ecosystem/fret::FretApp` and `UiAppBuilder` now keep app-facing file-backed startup on that
       same `asset_startup(...) + AssetStartupPlan::{development_dir,development_manifest}(...)`
-      contract and no longer advertise separate `asset_dir(...)` / `asset_manifest(...)` helpers.
+      contract and no longer advertise separate dir/manifest helpers.
+    - `crates/fret-launch::WinitAppBuilder` now keeps low-level native startup on
+      `with_asset_startup(...) + AssetStartupPlan::{development_dir,development_manifest}(...)`
+      and no longer advertises separate dir/manifest helpers.
     - first-party usage docs now teach that bootstrap lane as one named startup contract instead of
       advertising duplicate builder helpers.
   - Remaining:

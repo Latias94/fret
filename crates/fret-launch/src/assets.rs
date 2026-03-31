@@ -499,10 +499,10 @@ mod tests {
 
             fn resolve_bytes(
                 &self,
-                _request: &AssetRequest,
+                request: &AssetRequest,
             ) -> Result<ResolvedAssetBytes, AssetLoadError> {
-                Err(AssetLoadError::Message {
-                    message: "custom url resolver is reference-only".into(),
+                Err(AssetLoadError::ReferenceOnlyLocator {
+                    kind: request.locator.kind(),
                 })
             }
 

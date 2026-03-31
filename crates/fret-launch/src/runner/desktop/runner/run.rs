@@ -254,22 +254,14 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
 
     /// Enable development asset reload polling for file-backed builder mounts.
     ///
-    /// This only applies to native file-backed assets mounted through `with_asset_manifest(...)`,
-    /// `with_asset_dir(...)`, or the development lane of `with_asset_startup(...)`.
+    /// This only applies to native file-backed assets selected by the development lane of
+    /// `with_asset_startup(...)`.
     pub fn with_asset_reload_policy(mut self, policy: crate::assets::AssetReloadPolicy) -> Self {
         self.asset_reload_policy = Some(policy);
         self
     }
 
-    /// Register a native/package-dev asset manifest on the builder path.
-    ///
-    /// This loads the manifest eagerly so failures stay on the build/configure path instead of
-    /// surfacing later during `run()`.
-    pub fn with_asset_manifest(
-        self,
-        manifest_path: impl AsRef<std::path::Path>,
-    ) -> Result<Self, RunnerError> {
-        let manifest_path = manifest_path.as_ref().to_path_buf();
+    fn mount_asset_manifest(self, manifest_path: std::path::PathBuf) -> Result<Self, RunnerError> {
         let resolver = std::sync::Arc::new(
             crate::assets::FileAssetManifestResolver::from_manifest_path(&manifest_path)?,
         );
@@ -284,17 +276,11 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
         Ok(builder)
     }
 
-    /// Scan a native/package-dev directory and mount it as one logical bundle on the builder path.
-    ///
-    /// This eagerly validates the directory so failures stay on the build/configure path instead
-    /// of surfacing later during `run()`. Prefer [`with_asset_manifest`](Self::with_asset_manifest)
-    /// when you want an explicit manifest artifact that tooling can emit, review, or package.
-    pub fn with_asset_dir(
+    fn mount_asset_dir(
         self,
-        bundle: impl Into<fret_assets::AssetBundleId>,
-        dir: impl AsRef<std::path::Path>,
+        bundle: fret_assets::AssetBundleId,
+        dir: std::path::PathBuf,
     ) -> Result<Self, RunnerError> {
-        let dir = dir.as_ref().to_path_buf();
         let resolver = std::sync::Arc::new(
             crate::assets::FileAssetManifestResolver::from_bundle_dir(bundle, &dir)?,
         );
@@ -433,8 +419,8 @@ fn apply_asset_mount<D: super::WinitAppDriver + 'static>(
     mount: crate::assets::AssetMount,
 ) -> Result<WinitAppBuilder<D>, RunnerError> {
     match mount {
-        crate::assets::AssetMount::Dir { bundle, dir } => builder.with_asset_dir(bundle, dir),
-        crate::assets::AssetMount::Manifest { path } => builder.with_asset_manifest(path),
+        crate::assets::AssetMount::Dir { bundle, dir } => builder.mount_asset_dir(bundle, dir),
+        crate::assets::AssetMount::Manifest { path } => builder.mount_asset_manifest(path),
         crate::assets::AssetMount::BundleEntries { bundle, entries } => {
             Ok(builder.with_bundle_asset_entries(bundle, entries))
         }
@@ -829,23 +815,29 @@ mod tests {
     }
 
     #[test]
-    fn winit_app_builder_asset_manifest_fails_early_for_missing_files() {
+    fn winit_app_builder_asset_startup_fails_early_for_missing_manifest_files() {
         let missing =
             std::env::temp_dir().join("definitely-missing-fret-launch-assets.manifest.json");
-        let err = match WinitAppBuilder::new(App::new(), TestDriver).with_asset_manifest(&missing) {
-            Ok(_) => panic!("missing manifest should fail on launch builder path"),
+        let err = match WinitAppBuilder::new(App::new(), TestDriver).with_asset_startup(
+            AssetBundleId::app("launch-missing-asset-startup-manifest"),
+            crate::assets::AssetStartupMode::Development,
+            crate::assets::AssetStartupPlan::new().development_manifest(&missing),
+        ) {
+            Ok(_) => panic!("missing manifest should fail on launch startup path"),
             Err(err) => err,
         };
         assert!(matches!(err, RunnerError::AssetManifest(_)));
     }
 
     #[test]
-    fn winit_app_builder_asset_dir_fails_early_for_missing_directories() {
+    fn winit_app_builder_asset_startup_fails_early_for_missing_directories() {
         let missing = std::env::temp_dir().join("definitely-missing-fret-launch-assets-dir");
-        let err = match WinitAppBuilder::new(App::new(), TestDriver)
-            .with_asset_dir(AssetBundleId::app("launch-missing-asset-dir"), &missing)
-        {
-            Ok(_) => panic!("missing asset dir should fail on launch builder path"),
+        let err = match WinitAppBuilder::new(App::new(), TestDriver).with_asset_startup(
+            AssetBundleId::app("launch-missing-asset-startup-dir"),
+            crate::assets::AssetStartupMode::Development,
+            crate::assets::AssetStartupPlan::new().development_dir(&missing),
+        ) {
+            Ok(_) => panic!("missing asset dir should fail on launch startup path"),
             Err(err) => err,
         };
         assert!(matches!(err, RunnerError::AssetManifest(_)));
@@ -868,7 +860,7 @@ mod tests {
     }
 
     #[test]
-    fn winit_app_builder_asset_dir_registers_bundle_assets() {
+    fn winit_app_builder_asset_startup_development_bundle_dir_registers_bundle_assets() {
         let asset_dir = make_temp_dir("winit-app-builder-asset-dir").join("assets");
         std::fs::create_dir_all(asset_dir.join("images")).expect("create images dir");
         std::fs::write(asset_dir.join("images/logo.png"), b"launch-asset-dir")
@@ -876,8 +868,13 @@ mod tests {
 
         let bundle = AssetBundleId::app("launch-asset-dir-bundle");
         let builder = WinitAppBuilder::new(App::new(), TestDriver)
-            .with_asset_dir(bundle.clone(), &asset_dir)
-            .expect("existing asset directory should load on launch builder path");
+            .with_asset_startup(
+                bundle.clone(),
+                crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new()
+                    .development_bundle_dir_if_native(bundle.clone(), &asset_dir),
+            )
+            .expect("existing asset directory should load on launch startup path");
 
         let resolved = resolve_asset_locator_bytes(
             &builder.app,

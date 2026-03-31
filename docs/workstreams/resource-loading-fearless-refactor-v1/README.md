@@ -89,9 +89,8 @@ This workstream takes a fearless posture:
     `development_manifest(...)` without re-teaching path-first branching or duplicate builder
     helpers in app code.
   - `fret-launch::assets::{AssetStartupPlan, AssetStartupMode}` plus
-    `WinitAppBuilder::{with_asset_manifest, with_asset_dir, with_bundle_asset_entries,
-    with_embedded_asset_entries, with_asset_startup}` now make that same contract explicit on the
-    lowest-level native startup surface.
+    `WinitAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries, with_asset_startup}`
+    now make that same contract explicit on the lowest-level native startup surface.
   - `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` now re-export the launch-owned
     contract, and `BootstrapBuilder::with_asset_startup(...)` now keeps file-backed startup on the
     same named development-vs-packaged plan surface, including packaged bytes through
