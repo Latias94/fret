@@ -379,6 +379,26 @@ pub fn inject_font_asset_batch_and_refresh_catalog(
 }
 
 #[doc(hidden)]
+pub fn inject_font_asset_requests_and_refresh_catalog(
+    app: &mut impl GlobalsHost,
+    renderer: &mut (impl RendererFontEnvironmentHost + FontBlobInjectionHost),
+    requests: impl IntoIterator<Item = AssetRequest>,
+    source_lane: fret_runtime::RendererFontSourceLane,
+    policy: FontFamilyDefaultsPolicy,
+) -> usize {
+    let batch = resolve_font_asset_requests(app, requests);
+    for failure in &batch.failures {
+        tracing::warn!(
+            locator = ?failure.request.locator,
+            error = ?failure.error,
+            "font asset request failed during runtime injection"
+        );
+    }
+
+    inject_font_asset_batch_and_refresh_catalog(app, renderer, batch, source_lane, policy)
+}
+
+#[doc(hidden)]
 pub fn inject_font_blobs_and_refresh_catalog(
     app: &mut impl GlobalsHost,
     renderer: &mut (impl RendererFontEnvironmentHost + FontBlobInjectionHost),
@@ -601,6 +621,7 @@ pub fn initialize_startup_font_environment(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_assets::{AssetKindHint, AssetLocator};
     use fret_runtime::fret_i18n::{I18nService, LocaleId};
     use std::any::{Any, TypeId};
     use std::collections::HashMap;
@@ -1274,6 +1295,60 @@ mod tests {
             &mut app,
             &mut renderer,
             batch,
+            fret_runtime::RendererFontSourceLane::AssetRequest,
+            FontFamilyDefaultsPolicy::None,
+        );
+
+        assert_eq!(added, 1);
+        assert_eq!(renderer.steps, vec!["entries", "families", "locale"]);
+        assert_eq!(
+            app.global::<fret_runtime::RendererFontEnvironmentSnapshot>()
+                .cloned()
+                .expect("renderer font environment snapshot"),
+            fret_runtime::RendererFontEnvironmentSnapshot {
+                revision: 1,
+                text_font_stack_key: Some(42),
+                sources: vec![fret_runtime::RendererFontSourceRecord::asset_request(
+                    face.asset_request(),
+                    hash_font_blob(face.bytes),
+                    face.bytes.len() as u64,
+                    1,
+                )],
+            }
+        );
+    }
+
+    #[test]
+    fn inject_font_asset_requests_and_refresh_catalog_keeps_successes_when_some_requests_fail() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer {
+            entries: vec![FontCatalogEntry {
+                family: "Inter".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let face = fret_fonts::default_profile()
+            .faces
+            .first()
+            .copied()
+            .expect("default bundled profile should expose at least one face");
+
+        fret_runtime::register_bundle_asset_entries(
+            &mut app,
+            fret_fonts::bundled_asset_bundle(),
+            fret_fonts::default_profile().asset_entries(),
+        );
+
+        let missing_request = AssetRequest::new(AssetLocator::bundle(
+            fret_fonts::bundled_asset_bundle(),
+            "fonts/missing-font.ttf",
+        ))
+        .with_kind_hint(AssetKindHint::Font);
+        let added = inject_font_asset_requests_and_refresh_catalog(
+            &mut app,
+            &mut renderer,
+            [face.asset_request(), missing_request],
             fret_runtime::RendererFontSourceLane::AssetRequest,
             FontFamilyDefaultsPolicy::None,
         );

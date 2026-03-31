@@ -279,22 +279,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     self.request_sink_redraw(window);
                 }
                 Effect::TextAddFontAssets { requests } => {
-                    let batch = super::super::font_catalog::resolve_font_asset_requests(
-                        &self.app, requests,
-                    );
-                    for failure in &batch.failures {
-                        tracing::warn!(
-                            locator = ?failure.request.locator,
-                            error = ?failure.error,
-                            "font asset request failed during runtime injection"
-                        );
-                    }
-
                     let added =
-                        super::super::font_catalog::inject_font_asset_batch_and_refresh_catalog(
+                        super::super::font_catalog::inject_font_asset_requests_and_refresh_catalog(
                         &mut self.app,
                         &mut gfx.renderer,
-                        batch,
+                        requests,
                         fret_runtime::RendererFontSourceLane::AssetRequest,
                         fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
                     );
