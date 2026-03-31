@@ -30,15 +30,15 @@ Tracking format:
     - the default AI attachment preview surface is still capability-gated instead of blindly
       emitting URL previews on hosts that cannot support them, and it now also requires the URL
       request to resolve into an actual image source before entering the image preview path,
-    - the shipped web launch host now installs a first-party `UrlPassthroughAssetResolver`, so
-      `AssetLocator::url(...)` can resolve through the general resolver contract there for
-      browser-native image URL loading,
+    - the shipped desktop and web launch hosts now install a first-party
+      `UrlPassthroughAssetResolver`, so `AssetLocator::url(...)` can resolve through the general
+      resolver contract there for image URL loading without pretending that locators are already
+      byte-backed assets,
     - the shared `fret-ui-assets` image bridge now also accepts resolver-provided URL references on
-      every platform, so custom native hosts can participate without desktop shipping a first-party
-      default URL resolver, and the non-wasm fetch + Rust decode lane is now covered by a focused
-      local-HTTP regression test,
-    - native default URL support plus first-party SVG/font URL lanes remain explicitly out of scope
-      for the current shipped default.
+      every platform, so custom hosts can participate through the same contract, and the non-wasm
+      fetch + Rust decode lane is now covered by a focused local-HTTP regression test,
+    - first-party SVG/font URL lanes remain explicitly out of scope for the current shipped
+      default.
   - Evidence:
     - `ecosystem/fret-ui-ai/src/elements/attachments.rs`
     - `ecosystem/fret-ui-assets/src/asset_resolver.rs`
@@ -46,8 +46,10 @@ Tracking format:
     - `crates/fret-assets/src/lib.rs`
     - `crates/fret-launch/src/assets.rs`
     - `crates/fret-launch/src/runner/web/mod.rs`
+    - `crates/fret-launch/src/runner/desktop/runner/run.rs`
     - `cargo nextest run -p fret-ui-assets asset_resolver -p fret-ui-ai attachment_preview`
     - `cargo nextest run -p fret-ui-assets --features 'ui image-decode' image_source_url_fetch_drives_decode_and_gpu_ready_bumps_signal_model`
+    - `cargo nextest run -p fret-launch winit_runner_new_installs_default_url_passthrough_resolver`
 
 - [x] RLRR-003 Close stage-1 drift between font asset identity and actual load path.
   - Required outcomes:
@@ -117,9 +119,9 @@ Tracking format:
   - Current landed slice:
     - `CAPABILITY_MATRIX.md` now reflects the current web decode limitation and the explicit
       `configure_caches*` naming on the `fret-ui-assets` app-integration lane,
-    - `CAPABILITY_MATRIX.md` and this release-readiness tracker now also distinguish
-      “web-only first-party default URL resolver” from “cross-platform shared image bridge that can
-      consume custom resolver URL references,”
+    - `CAPABILITY_MATRIX.md` and this release-readiness tracker now distinguish
+      “desktop/web first-party default image URL resolver” from “cross-platform shared image
+      bridge that can consume custom resolver URL references,”
     - typed runtime I/O asset-load failures now also stay visible in the diagnostics/gate surface
       as `debug.resource_loading.asset_load.io_requests`, so release verification can fail on
       unexpected file-read regressions without scraping free-form strings,

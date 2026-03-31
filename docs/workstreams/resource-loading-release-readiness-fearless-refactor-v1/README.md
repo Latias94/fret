@@ -128,7 +128,7 @@ Release consequence:
 
 - wasm could appear “bundled-only” in docs while still depending on a non-contractual code path.
 
-### 2) URL asset support now has a truthful default web lane and an opt-in native bridge
+### 2) URL asset support now has a truthful default desktop/web image lane
 
 Some product surfaces already emit `AssetLocator::url(...)` requests:
 
@@ -140,30 +140,29 @@ But the current default host path still resolves through capability-gated asset 
 - `crates/fret-assets/src/lib.rs`
 - `crates/fret-assets/src/file_manifest.rs`
 
-The default web host now advertises `url: true` via a first-party URL passthrough resolver, but
-that shipped closure is intentionally narrow: it resolves URL locators as external references on
-web so browser-native image URL loading can participate in the shared resolver contract. The
-shared `fret-ui-assets` image bridge now also accepts resolver-provided URL references on every
-platform, which means custom desktop/native hosts can opt in without waiting for a first-party
-desktop resolver.
+The shipped desktop and web launch hosts now advertise `url: true` via a first-party URL
+passthrough resolver, but that shipped closure is intentionally narrow: it resolves URL locators
+as external references so image URL loading can participate in the shared resolver contract
+without pretending the framework already owns a universal URL-bytes pipeline. The shared
+`fret-ui-assets` image bridge also accepts resolver-provided URL references on every platform, so
+custom hosts can still opt in through the same contract.
 
 Release consequence:
 
-- default surfaces no longer have to lie about built-in web image URL preview support, and
-  desktop/native hosts that explicitly install a truthful URL resolver are no longer blocked by the
-  shared image bridge; desktop native still does not ship a first-party default URL resolver and
+- default surfaces no longer have to lie about built-in desktop/web image URL preview support on
+  the shipped launch hosts, and custom hosts are no longer blocked by the shared image bridge;
   first-party SVG/font URL lanes are still open.
 
 Status note (2026-03-30):
 
 - the default AI attachment preview surface is capability-gated and now also requires the URL
   request to resolve into an actual `ImageSource` before entering the image UI path,
-- the shipped web host now installs `UrlPassthroughAssetResolver`, so that capability is truthful
-  on web instead of remaining a docs-only extension point,
-- the shared image bridge now also consumes resolver-provided URL references on native instead of
-  failing closed there,
-- the unresolved part is now the lack of a first-party desktop/native default URL resolver plus
-  the absence of first-party SVG/font URL lanes.
+- the shipped desktop and web launch hosts now install `UrlPassthroughAssetResolver`, so that
+  capability is truthful on both default hosts instead of remaining a docs-only or custom-only
+  extension point,
+- the shared image bridge now consumes resolver-provided URL references on every platform instead
+  of failing closed on native,
+- the unresolved part is now the absence of first-party SVG/font URL lanes.
 
 ### 3) Font asset identity and actual renderer load path are still split
 

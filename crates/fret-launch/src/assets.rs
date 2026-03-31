@@ -1,8 +1,6 @@
 use std::path::PathBuf;
-use std::time::Duration;
-
-#[cfg(any(target_arch = "wasm32", test))]
 use std::sync::Arc;
+use std::time::Duration;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use fret_assets::FileAssetManifestResolver;
@@ -27,10 +25,7 @@ pub use fret_runtime::set_asset_resolver as set_primary_resolver;
 /// Add an additional resolver layer without replacing earlier registrations.
 pub use fret_runtime::register_asset_resolver as register_resolver;
 
-#[cfg(any(target_arch = "wasm32", test))]
-pub(crate) fn ensure_default_web_url_passthrough_resolver(
-    host: &mut impl fret_runtime::GlobalsHost,
-) {
+pub(crate) fn ensure_default_url_passthrough_resolver(host: &mut impl fret_runtime::GlobalsHost) {
     if capabilities(host).is_some_and(|caps| caps.url) {
         return;
     }
@@ -343,7 +338,7 @@ pub(crate) enum AssetReloadTarget {
 mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     use super::{AssetBundleId, AssetMount, AssetRevision, StaticAssetEntry};
-    use super::{AssetStartupMode, AssetStartupPlan, ensure_default_web_url_passthrough_resolver};
+    use super::{AssetStartupMode, AssetStartupPlan, ensure_default_url_passthrough_resolver};
     use fret_app::App;
     use fret_assets::{
         AssetCapabilities, AssetExternalReference, AssetLoadError, AssetLocator, AssetRequest,
@@ -410,9 +405,9 @@ mod tests {
     }
 
     #[test]
-    fn ensure_default_web_url_passthrough_resolver_installs_url_capability_when_missing() {
+    fn ensure_default_url_passthrough_resolver_installs_url_capability_when_missing() {
         let mut app = App::new();
-        ensure_default_web_url_passthrough_resolver(&mut app);
+        ensure_default_url_passthrough_resolver(&mut app);
 
         assert_eq!(
             super::capabilities(&app),
@@ -435,7 +430,7 @@ mod tests {
     }
 
     #[test]
-    fn ensure_default_web_url_passthrough_resolver_respects_existing_url_layers() {
+    fn ensure_default_url_passthrough_resolver_respects_existing_url_layers() {
         struct ExistingUrlResolver;
 
         impl AssetResolver for ExistingUrlResolver {
@@ -469,7 +464,7 @@ mod tests {
 
         let mut app = App::new();
         super::register_resolver(&mut app, Arc::new(ExistingUrlResolver));
-        ensure_default_web_url_passthrough_resolver(&mut app);
+        ensure_default_url_passthrough_resolver(&mut app);
 
         let resolved = fret_runtime::resolve_asset_reference(
             &app,

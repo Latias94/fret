@@ -68,6 +68,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let dispatcher = DesktopDispatcher::new(caps.exec);
         app.set_global::<fret_runtime::DispatcherHandle>(dispatcher.handle());
+        crate::assets::ensure_default_url_passthrough_resolver(&mut app);
 
         let mut runner = Self {
             config,
@@ -747,10 +748,14 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use fret_app::App;
-    use fret_assets::{AssetBundleId, AssetLocator, AssetRevision, StaticAssetEntry};
+    use fret_assets::{
+        AssetBundleId, AssetCapabilities, AssetExternalReference, AssetLocator, AssetRequest,
+        AssetRevision, StaticAssetEntry,
+    };
     use fret_core::AppWindowId;
-    use fret_runtime::resolve_asset_locator_bytes;
+    use fret_runtime::{asset_capabilities, resolve_asset_locator_bytes, resolve_asset_reference};
 
+    use super::super::{WinitRunner, WinitRunnerConfig};
     use super::WinitAppBuilder;
     use crate::{RunnerError, WinitAppDriver};
 
@@ -812,6 +817,30 @@ mod tests {
         )
         .expect("selected packaged lane should register bundle asset entries");
         assert_eq!(resolved.bytes.as_ref(), b"builder-bytes");
+    }
+
+    #[test]
+    fn winit_runner_new_installs_default_url_passthrough_resolver() {
+        let runner = WinitRunner::new(WinitRunnerConfig::default(), App::new(), TestDriver);
+
+        assert_eq!(
+            asset_capabilities(&runner.app),
+            Some(AssetCapabilities {
+                url: true,
+                ..AssetCapabilities::default()
+            })
+        );
+
+        let resolved = resolve_asset_reference(
+            &runner.app,
+            &AssetRequest::new(AssetLocator::url("https://example.com/logo.png")),
+        )
+        .expect("desktop launch runner should install the default URL passthrough resolver");
+
+        assert_eq!(
+            resolved.reference,
+            AssetExternalReference::url("https://example.com/logo.png")
+        );
     }
 
     #[test]
