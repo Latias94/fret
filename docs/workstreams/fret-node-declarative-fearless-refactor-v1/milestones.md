@@ -168,7 +168,7 @@ points rather than direct graph mutation.
   - The declarative path now dispatches committed edits through `NodeGraphController` and syncs
     graph / view models back from store.
   - `ecosystem/fret-node/src/ui/controller.rs` now provides a first minimal `NodeGraphController`
-    facade over store + optional view queue.
+    facade over store.
   - The controller now also exposes XyFlow-style connection queries via
     `node_connections` / `port_connections`, so app code can query node/handle adjacency
     without reaching into store lookups directly.
@@ -177,13 +177,13 @@ points rather than direct graph mutation.
   - Retained glue now starts consuming controller-owned viewport transport instead of teaching raw
     queue mutation first: `NodeGraphCanvas::with_controller`, `NodeGraphMiniMapOverlay::with_controller`,
     and the gallery workflow snippet controls now route common viewport actions through the binding-first facade.
-  - Those helpers now have a real store fallback when no `view_queue` exists, and still route
-    through queued `SetViewport` requests when a queue is present.
-  - The controller now also owns an optional edit transport and queue-aware submission helpers
-    (`submit_transaction*`, `submit_transaction_and_sync_*`), so app-facing code no longer needs to
-    choose between raw queue mutation and direct store dispatch first.
+  - Those helpers now write through the store-backed controller surface directly; queued viewport
+    transport remains a crate-internal retained compatibility detail instead of controller state.
+  - Transaction submission helpers (`submit_transaction*`, `submit_transaction_and_sync_*`) are now
+    pure store-backed controller operations; raw edit transport remains crate-internal retained
+    compatibility plumbing instead of a controller concern.
   - Retained edit glue now also converges on the controller-first path:
-    `NodeGraphCanvas::with_controller` carries optional edit/view queues,
+    `NodeGraphCanvas::with_controller` now binds store-backed controller state only,
     `NodeGraphPortalHost::with_controller` and `NodeGraphOverlayHost::new(...).with_controller(...)` prefer
     controller-owned transaction submission, `NodeGraphBlackboardOverlay::new(...).with_controller(...)`
     now gives retained symbol actions the same controller-first path, and `compat_retained` now

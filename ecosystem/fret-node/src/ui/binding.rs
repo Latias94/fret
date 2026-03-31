@@ -289,7 +289,7 @@ impl NodeGraphSurfaceBinding {
         host: &mut H,
         applied: bool,
     ) -> bool {
-        if applied && self.controller.transport_view_queue().is_none() {
+        if applied {
             let _ = self
                 .controller
                 .sync_view_state_model_from_store(host, &self.view_state);
@@ -302,7 +302,7 @@ impl NodeGraphSurfaceBinding {
         host: &mut dyn UiActionHost,
         applied: bool,
     ) -> bool {
-        if applied && self.controller.transport_view_queue().is_none() {
+        if applied {
             let _ = self
                 .controller
                 .sync_view_state_model_from_store_action_host(host, &self.view_state);

@@ -180,14 +180,6 @@ impl NodeGraphController {
         zoom: f32,
         options: NodeGraphSetViewportOptions,
     ) -> bool {
-        if let Some(queue) = self.view_queue.as_ref() {
-            return models
-                .update(queue, |queue| {
-                    queue.push_set_viewport_with_options(pan, zoom, options);
-                })
-                .is_ok();
-        }
-
         let (current_pan, current_zoom) = self.viewport_in_models(models);
         let pan = normalize_requested_pan(current_pan, pan);
         let zoom = normalize_requested_zoom(current_zoom, zoom, options.min_zoom, options.max_zoom);
@@ -220,18 +212,11 @@ impl NodeGraphController {
 
     fn fit_view_nodes_in_models(
         &self,
-        models: &mut ModelStore,
-        nodes: Vec<NodeId>,
-        options: NodeGraphFitViewOptions,
+        _models: &mut ModelStore,
+        _nodes: Vec<NodeId>,
+        _options: NodeGraphFitViewOptions,
     ) -> bool {
-        let Some(queue) = self.view_queue.as_ref() else {
-            return false;
-        };
-        models
-            .update(queue, |queue| {
-                queue.push_frame_nodes_with_options(nodes, options);
-            })
-            .is_ok()
+        false
     }
 
     fn fit_view_nodes_in_bounds_in_models(

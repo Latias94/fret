@@ -17,7 +17,6 @@ use crate::core::{Graph, GraphId};
 use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::commands::CMD_NODE_GRAPH_ZOOM_IN;
-use crate::ui::view_queue::{NodeGraphViewQueue, NodeGraphViewRequest};
 use crate::ui::{
     NodeGraphController, NodeGraphControlsBindings, NodeGraphControlsCommandBinding,
     NodeGraphControlsOverlay, NodeGraphEditor, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
@@ -707,7 +706,7 @@ fn minimap_drag_updates_view_state_and_store_when_attached() {
 }
 
 #[test]
-fn minimap_supports_controller_navigation_binding_without_teaching_raw_queue() {
+fn minimap_supports_controller_navigation_binding_without_transport_state_on_controller() {
     let mut host = TestUiHostImpl::default();
     let mut services = NullServices::default();
     let mut ui = UiTree::<TestUiHostImpl>::default();
@@ -721,12 +720,11 @@ fn minimap_supports_controller_navigation_binding_without_teaching_raw_queue() {
 
     let graph_value = Graph::new(GraphId::new());
     let (graph, view) = insert_graph_view(&mut host, graph_value.clone());
-    let queue = host.models.insert(NodeGraphViewQueue::default());
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
     ));
-    let controller = NodeGraphController::new(store).bind_view_queue_transport(queue.clone());
+    let controller = NodeGraphController::new(store.clone());
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let mut snap = NodeGraphInternalsSnapshot::default();
@@ -793,22 +791,23 @@ fn minimap_supports_controller_navigation_binding_without_teaching_raw_queue() {
         }),
     );
 
+    let (view_pan, store_pan) = (
+        view.read_ref(&host, |s| s.pan)
+            .ok()
+            .expect("view state pan"),
+        store
+            .read_ref(&host, |s| s.view_state().pan)
+            .ok()
+            .expect("store pan"),
+    );
+    assert_eq!(view_pan, store_pan);
+    assert_ne!(view_pan.x, 0.0);
+
     let pan_x = view
         .read_ref(&host, |s| s.pan.x)
         .ok()
         .expect("view state pan");
-    assert_eq!(pan_x, 0.0);
-
-    let pending = queue
-        .read_ref(&host, |q| q.pending.clone())
-        .ok()
-        .expect("queue");
-    assert!(
-        pending
-            .iter()
-            .any(|req| matches!(req, NodeGraphViewRequest::SetViewport { .. })),
-        "expected controller-backed minimap navigation to enqueue a viewport request"
-    );
+    assert_eq!(pan_x, view_pan.x);
 }
 
 #[test]

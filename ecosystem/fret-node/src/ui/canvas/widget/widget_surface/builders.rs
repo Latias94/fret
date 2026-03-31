@@ -85,10 +85,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
         self.store = Some(controller.store());
         self.store_rev = None;
-        self.edit_queue = controller.transport_edit_queue();
-        self.edit_queue_key = None;
-        self.view_queue = controller.transport_view_queue();
-        self.view_queue_key = None;
         self
     }
 

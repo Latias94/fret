@@ -179,8 +179,8 @@ convergence slices.
 
 - The controller now covers the first query / transaction / viewport / selection helpers, including
   XyFlow-style node/handle connection lookups; retained canvas / minimap glue can also bind through
-  the controller now, while raw queue ownership, richer edit commands, and callback layering are
-  still open.
+  the controller now, while richer edit commands, fit-view ergonomics without explicit bounds, and
+  callback layering are still open.
 - Evidence:
   - `ecosystem/fret-node/src/ui/controller.rs`
   - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md` (`M3`)
@@ -402,8 +402,8 @@ Concretely:
 
 - prefer declarative composition at the app boundary,
 - prefer binding-first declarative integration (`NodeGraphSurfaceBinding` + `node_graph_surface(...)`),
-- prefer controller-driven commands and treat raw edit/view queues as transport or compatibility
-  seams,
+- prefer controller-driven commands and treat raw edit/view queues as crate-internal transport or
+  compatibility seams,
 - do not author directly against retained `NodeGraphCanvas` unless you are working inside
   `fret-node` internals, tests, or temporary compatibility harnesses.
 
@@ -582,4 +582,3 @@ Canonical runnable targets:
 | layering | `python tools/check_layering.py` | catches accidental boundary drift while the surface is still moving |
 
 The TODO tracker defines the next gate additions still required for full transaction-safe declarative parity.
-

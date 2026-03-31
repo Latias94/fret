@@ -123,7 +123,8 @@ Execution companion: `design.md` (surface map + next worktree order).
       teaching clarity, instead of growing more parallel constructor names.
   - Progress: retained edit glue now prefers controller-owned submission helpers when a controller is
     available:
-    - `NodeGraphCanvas::with_controller` now carries both store + optional edit/view queues.
+    - `NodeGraphCanvas::with_controller` now carries store-backed controller state only; explicit
+      queue transport stays on crate-private retained seams.
     - `NodeGraphPortalHost::with_controller` submits transactions through the controller before
       falling back to raw queue transport.
     - `NodeGraphOverlayHost::new(...).with_controller(...)` and `compat_retained` now teach

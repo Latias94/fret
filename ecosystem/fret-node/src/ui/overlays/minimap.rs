@@ -33,8 +33,7 @@ pub enum NodeGraphMiniMapNavigationBinding {
     Default,
     /// Disables navigation (no viewport updates).
     Disabled,
-    /// Routes viewport updates through `NodeGraphController`, treating any attached queue as an
-    /// internal transport detail.
+    /// Routes viewport updates through `NodeGraphController`.
     Controller(NodeGraphController),
 }
 
@@ -284,8 +283,7 @@ impl NodeGraphMiniMapOverlay {
                     pan,
                     z,
                     NodeGraphSetViewportOptions::default(),
-                ) && controller.transport_view_queue().is_none()
-                {
+                ) {
                     let _ = controller.sync_view_state_model_from_store(host, &self.view_state);
                 }
             }

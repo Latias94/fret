@@ -11,8 +11,7 @@ use crate::runtime::lookups::{ConnectionSide, HandleConnection};
 use crate::runtime::store::{DispatchError, DispatchOutcome, NodeGraphStore};
 use crate::runtime::utils::{get_connected_edges, get_incomers, get_outgoers};
 
-use super::edit_queue::NodeGraphEditQueue;
-use super::view_queue::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue};
+use super::view_queue::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};
 use super::viewport_helper::pan_for_center;
 
 #[path = "controller_queries.rs"]
@@ -51,39 +50,15 @@ pub struct NodeGraphNodeConnectionsQuery {
 #[derive(Debug, Clone)]
 pub struct NodeGraphController {
     store: Model<NodeGraphStore>,
-    edit_queue: Option<Model<NodeGraphEditQueue>>,
-    view_queue: Option<Model<NodeGraphViewQueue>>,
 }
 
 impl NodeGraphController {
     pub fn new(store: Model<NodeGraphStore>) -> Self {
-        Self {
-            store,
-            edit_queue: None,
-            view_queue: None,
-        }
-    }
-
-    pub(crate) fn bind_edit_queue_transport(mut self, queue: Model<NodeGraphEditQueue>) -> Self {
-        self.edit_queue = Some(queue);
-        self
-    }
-
-    pub(crate) fn bind_view_queue_transport(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
-        self.view_queue = Some(queue);
-        self
+        Self { store }
     }
 
     pub fn store(&self) -> Model<NodeGraphStore> {
         self.store.clone()
-    }
-
-    pub(crate) fn transport_edit_queue(&self) -> Option<Model<NodeGraphEditQueue>> {
-        self.edit_queue.clone()
-    }
-
-    pub(crate) fn transport_view_queue(&self) -> Option<Model<NodeGraphViewQueue>> {
-        self.view_queue.clone()
     }
 }
 
@@ -119,11 +94,7 @@ mod tests {
     use crate::runtime::lookups::{ConnectionSide, HandleConnection};
     use crate::runtime::store::NodeGraphStore;
     use crate::ui::NodeGraphSurfaceBinding;
-    use crate::ui::edit_queue::NodeGraphEditQueue;
-    use crate::ui::view_queue::{
-        NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue,
-        NodeGraphViewRequest,
-    };
+    use crate::ui::view_queue::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};
 
     #[derive(Default)]
     struct TestUiHostImpl {
@@ -701,42 +672,6 @@ mod tests {
     }
 
     #[test]
-    fn controller_set_viewport_uses_queue_when_present() {
-        let mut host = TestUiHostImpl::default();
-        let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
-        let store = host.models.insert(NodeGraphStore::new(
-            graph_value,
-            NodeGraphViewState::default(),
-        ));
-        let queue = host.models.insert(NodeGraphViewQueue::default());
-        let controller =
-            NodeGraphController::new(store.clone()).bind_view_queue_transport(queue.clone());
-
-        assert!(controller.set_viewport_with_options(
-            &mut host,
-            CanvasPoint { x: 10.0, y: 20.0 },
-            1.5,
-            NodeGraphSetViewportOptions {
-                duration_ms: Some(0),
-                ..NodeGraphSetViewportOptions::default()
-            },
-        ));
-
-        let pending = queue
-            .read_ref(&host, |queue| queue.pending.clone())
-            .ok()
-            .unwrap_or_default();
-        assert_eq!(pending.len(), 1);
-        let NodeGraphViewRequest::SetViewport { pan, zoom, .. } = pending[0].clone() else {
-            panic!("expected queued SetViewport request");
-        };
-        assert_eq!(pan, CanvasPoint { x: 10.0, y: 20.0 });
-        assert!((zoom - 1.5).abs() <= 1.0e-6);
-
-        assert_eq!(controller.viewport(&host), (CanvasPoint::default(), 1.0));
-    }
-
-    #[test]
     fn controller_set_viewport_falls_back_to_store_without_queue() {
         let mut host = TestUiHostImpl::default();
         let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
@@ -827,7 +762,7 @@ mod tests {
     }
 
     #[test]
-    fn controller_set_center_in_bounds_uses_bound_queue_and_current_zoom_when_omitted() {
+    fn controller_set_center_in_bounds_uses_current_zoom_when_omitted() {
         let mut host = TestUiHostImpl::default();
         let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
         let mut store_view = NodeGraphViewState::default();
@@ -835,8 +770,7 @@ mod tests {
         let store = host
             .models
             .insert(NodeGraphStore::new(graph_value, store_view));
-        let queue = host.models.insert(NodeGraphViewQueue::default());
-        let controller = NodeGraphController::new(store).bind_view_queue_transport(queue.clone());
+        let controller = NodeGraphController::new(store);
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -853,30 +787,21 @@ mod tests {
             },
         ));
 
-        let pending = queue
-            .read_ref(&host, |queue| queue.pending.clone())
-            .ok()
-            .unwrap_or_default();
-        assert_eq!(pending.len(), 1);
-
-        let NodeGraphViewRequest::SetViewport { pan, zoom, .. } = pending[0].clone() else {
-            panic!("expected queued SetViewport request");
-        };
+        let (pan, zoom) = controller.viewport(&host);
         assert!((zoom - 2.0).abs() <= 1.0e-6);
         assert!((pan.x - (800.0 / 4.0 - 10.0)).abs() <= 1.0e-6);
         assert!((pan.y - (600.0 / 4.0 - 20.0)).abs() <= 1.0e-6);
     }
 
     #[test]
-    fn controller_set_center_in_bounds_honors_explicit_zoom_override_when_queue_bound() {
+    fn controller_set_center_in_bounds_honors_explicit_zoom_override() {
         let mut host = TestUiHostImpl::default();
         let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
         ));
-        let queue = host.models.insert(NodeGraphViewQueue::default());
-        let controller = NodeGraphController::new(store).bind_view_queue_transport(queue.clone());
+        let controller = NodeGraphController::new(store);
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -893,15 +818,7 @@ mod tests {
             },
         ));
 
-        let pending = queue
-            .read_ref(&host, |queue| queue.pending.clone())
-            .ok()
-            .unwrap_or_default();
-        assert_eq!(pending.len(), 1);
-
-        let NodeGraphViewRequest::SetViewport { pan, zoom, .. } = pending[0].clone() else {
-            panic!("expected queued SetViewport request");
-        };
+        let (pan, zoom) = controller.viewport(&host);
         assert!((zoom - 4.0).abs() <= 1.0e-6);
         assert!((pan.x - (800.0 / 8.0 - 10.0)).abs() <= 1.0e-6);
         assert!((pan.y - (600.0 / 8.0 - 20.0)).abs() <= 1.0e-6);
@@ -1068,95 +985,6 @@ mod tests {
     }
 
     #[test]
-    fn controller_fit_view_nodes_in_bounds_uses_queue_when_present() {
-        let mut host = TestUiHostImpl::default();
-        let mut graph = Graph::new(GraphId::new());
-        let node_a = NodeId::new();
-        let node_b = NodeId::new();
-        graph.nodes.insert(
-            node_a,
-            test_node_with_size(
-                CanvasPoint { x: 0.0, y: 0.0 },
-                Some(CanvasSize {
-                    width: 100.0,
-                    height: 100.0,
-                }),
-                Vec::new(),
-            ),
-        );
-        graph.nodes.insert(
-            node_b,
-            test_node_with_size(
-                CanvasPoint { x: 200.0, y: 0.0 },
-                Some(CanvasSize {
-                    width: 100.0,
-                    height: 100.0,
-                }),
-                Vec::new(),
-            ),
-        );
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph, NodeGraphViewState::default()));
-        let queue = host.models.insert(NodeGraphViewQueue::default());
-        let controller = NodeGraphController::new(store).bind_view_queue_transport(queue.clone());
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(800.0), Px(600.0)),
-        );
-        let options = NodeGraphFitViewOptions {
-            min_zoom: Some(CONTROLLER_FIT_VIEW_MIN_ZOOM),
-            max_zoom: Some(CONTROLLER_FIT_VIEW_MAX_ZOOM),
-            padding: Some(0.0),
-            duration_ms: Some(0),
-            ..NodeGraphFitViewOptions::default()
-        };
-
-        assert!(controller.fit_view_nodes_in_bounds_with_options(
-            &mut host,
-            bounds,
-            vec![node_a, node_b],
-            options.clone(),
-        ));
-
-        let pending = queue
-            .read_ref(&host, |queue| queue.pending.clone())
-            .ok()
-            .unwrap_or_default();
-        assert_eq!(pending.len(), 1);
-        let NodeGraphViewRequest::SetViewport { pan, zoom, .. } = pending[0].clone() else {
-            panic!("expected queued SetViewport request");
-        };
-
-        let expected = compute_fit_view_target(
-            &[
-                FitViewNodeInfo {
-                    pos: CanvasPoint { x: 0.0, y: 0.0 },
-                    size_px: (100.0, 100.0),
-                },
-                FitViewNodeInfo {
-                    pos: CanvasPoint { x: 200.0, y: 0.0 },
-                    size_px: (100.0, 100.0),
-                },
-            ],
-            FitViewComputeOptions {
-                viewport_width_px: 800.0,
-                viewport_height_px: 600.0,
-                node_origin: (0.0, 0.0),
-                padding: options.padding.unwrap_or(0.0),
-                margin_px_fallback: CONTROLLER_FIT_VIEW_MARGIN_PX_FALLBACK,
-                min_zoom: CONTROLLER_FIT_VIEW_MIN_ZOOM,
-                max_zoom: CONTROLLER_FIT_VIEW_MAX_ZOOM,
-            },
-        )
-        .expect("fit-view target");
-
-        assert!((pan.x - expected.0.x).abs() <= 1.0e-6);
-        assert!((pan.y - expected.0.y).abs() <= 1.0e-6);
-        assert!((zoom - expected.1).abs() <= 1.0e-6);
-    }
-
-    #[test]
     fn controller_queries_use_store_lookups() {
         let mut host = TestUiHostImpl::default();
         let (mut graph, node_a, a_out, node_b, b_in) = make_test_graph_two_nodes_with_ports();
@@ -1307,16 +1135,14 @@ mod tests {
     }
 
     #[test]
-    fn controller_submit_transaction_uses_edit_queue_when_present() {
+    fn controller_submit_transaction_dispatches_to_store() {
         let mut host = TestUiHostImpl::default();
         let (graph_value, node_a, _node_b) = make_test_graph_two_nodes();
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
         ));
-        let edits = host.models.insert(NodeGraphEditQueue::default());
-        let controller =
-            NodeGraphController::new(store.clone()).bind_edit_queue_transport(edits.clone());
+        let controller = NodeGraphController::new(store.clone());
         let tx = GraphTransaction {
             label: Some("Move Node".to_string()),
             ops: vec![GraphOp::SetNodePos {
@@ -1328,13 +1154,6 @@ mod tests {
 
         controller.submit_transaction(&mut host, &tx).unwrap();
 
-        let queued = edits
-            .read_ref(&host, |queue| queue.pending.clone())
-            .ok()
-            .unwrap_or_default();
-        assert_eq!(queued.len(), 1);
-        assert_eq!(queued[0].label.as_deref(), Some("Move Node"));
-
         let store_pos = store
             .read_ref(&host, |store| {
                 store.graph().nodes.get(&node_a).map(|node| node.pos)
@@ -1342,7 +1161,7 @@ mod tests {
             .ok()
             .flatten()
             .expect("store node pos");
-        assert_eq!(store_pos, CanvasPoint { x: 0.0, y: 0.0 });
+        assert_eq!(store_pos, CanvasPoint { x: 42.0, y: 24.0 });
     }
 
     #[test]

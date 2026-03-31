@@ -41,9 +41,7 @@ impl NodeGraphController {
         tx: &GraphTransaction,
     ) -> Result<(), NodeGraphControllerError> {
         self.submit_transaction_in_models(host.models_mut(), tx)?;
-        if self.edit_queue.is_none() {
-            let _ = self.sync_models_from_store_in_models(host.models_mut(), graph, view_state);
-        }
+        let _ = self.sync_models_from_store_in_models(host.models_mut(), graph, view_state);
         Ok(())
     }
 
@@ -54,9 +52,7 @@ impl NodeGraphController {
         tx: &GraphTransaction,
     ) -> Result<(), NodeGraphControllerError> {
         self.submit_transaction_in_models(host.models_mut(), tx)?;
-        if self.edit_queue.is_none() {
-            let _ = self.sync_graph_model_from_store_in_models(host.models_mut(), graph);
-        }
+        let _ = self.sync_graph_model_from_store_in_models(host.models_mut(), graph);
         Ok(())
     }
 
@@ -387,13 +383,6 @@ impl NodeGraphController {
         models: &mut ModelStore,
         tx: &GraphTransaction,
     ) -> Result<(), NodeGraphControllerError> {
-        if let Some(queue) = self.edit_queue.as_ref() {
-            return match models.update(queue, |edit_queue| edit_queue.push(tx.clone())) {
-                Ok(()) => Ok(()),
-                Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
-            };
-        }
-
         self.dispatch_transaction_in_models(models, tx).map(|_| ())
     }
 
