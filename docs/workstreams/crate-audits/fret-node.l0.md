@@ -102,7 +102,7 @@ Evidence anchors:
 ## 6) Code quality findings (Rust best practices)
 
 - Warnings hygiene: ecosystem warnings exist in baseline across the repo; consider “zero warnings for `fret-node`” as an L1+ goal once the major refactor slices settle.
-- Surface clarity: `ui/mod.rs` re-exports a wide set of types (useful for discoverability), but increases the risk of downstream code depending on non-teaching surfaces; keep the “advanced transport” namespace strategy consistent (`ui::advanced::*`).
+- Surface clarity: `ui/mod.rs` re-exports a wide set of types (useful for discoverability), but increases the risk of downstream code depending on non-teaching surfaces; keep raw transport crate-internal instead of reintroducing a public queue facade.
 
 Evidence anchors:
 
@@ -112,7 +112,7 @@ Evidence anchors:
 ## 7) Recommended refactor steps (small, gated)
 
 1. Publish a single “golden path” integration contract:
-   - prefer `NodeGraphSurfaceBinding` + `node_graph_surface`, treat raw store/queue seams as advanced/compat only - gate: `cargo nextest run -p fret-node --features compat-retained-canvas`
+   - prefer `NodeGraphSurfaceBinding` + `node_graph_surface`, treat raw store seams as advanced and raw queue seams as internal/compat only - gate: `cargo nextest run -p fret-node --features compat-retained-canvas`
 2. Continue shrinking `paint_only.rs` by responsibility-based submodules:
    - keep pointer session reducers, pointer move, keydown, and portal hosting in separate files under `ui/declarative/paint_only/` — gate: existing `nextest` coverage for the declarative module.
 3. Collapse `NodeGraphSurfaceProps` to one canonical runtime binding input:

@@ -1,6 +1,6 @@
 # `fret-node` Fearless Refactor (v1) - Design Map
 
-Status: execution-oriented companion (last updated 2026-03-07)
+Status: execution-oriented companion (last updated 2026-03-31)
 Scope: `ecosystem/fret-node` only
 
 This file is the shortest possible answer to:
@@ -45,36 +45,28 @@ focused on the editor-grade substrate + transaction-safe interaction model, and 
 layer techniques only when they directly serve the node editor’s contracts (portals, overlays,
 anchoring, diagnostics).
 
-### Advanced transport surface
-
-Only use these when an integration intentionally owns raw edit transport and accepts the retained /
-compatibility mental model.
-
-- `fret_node::ui::advanced::NodeGraphEditQueue`
-- `fret_node::ui::advanced::bind_controller_edit_queue_transport(...)`
-  - explicit advanced helper for binding a controller to raw edit transport,
-  - not part of the default app-facing controller story.
-
 ### Crate-internal retained compatibility seams
 
 These still exist because retained conformance coverage and compatibility glue still need them, but
 they should not read like public downstream authoring APIs.
 
 - `NodeGraphCanvas::with_view_queue`
+- `NodeGraphController::bind_edit_queue_transport`
+- `NodeGraphEditQueue`
 - `NodeGraphPortalHost::with_edit_queue`
 - `NodeGraphOverlayHost::with_edit_queue`
 - `NodeGraphBlackboardOverlay::with_edit_queue`
 
-These methods are crate-private on purpose.
+These methods/types are crate-private on purpose.
 
 ### Deleted or demoted surfaces already landed
 
 These are no longer part of the recommended public story.
 
 - Root `fret_node::ui::*` queue/helper aliases are removed.
+- Public `fret_node::ui::advanced::*` edit transport is removed.
 - `NodeGraphViewportHelper` is removed.
-- Queue-bound controller construction is only available through the explicit
-  `bind_controller_*_transport(...)` advanced helpers.
+- Raw edit/view queue transport is crate-internal only.
 - Direct public retained queue-binding methods are demoted to crate-private compatibility seams.
 - Unused direct `NodeGraphCanvas::with_edit_queue(...)` is removed outright.
 
@@ -102,16 +94,14 @@ Use this when a retained-only harness still needs the legacy canvas / overlay st
 4. Let retained internals fall back to crate-private queue seams only where the compatibility path
    still needs them.
 
-### Recipe C - advanced transport-owned integration
+### Recipe C - retained transport compatibility internals
 
-Use this only when the integration intentionally owns queue transport.
+This is not a downstream recipe. It exists only for in-tree retained compatibility harnesses and
+focused tests that still need queue transport while the retained stack is being collapsed.
 
-1. Import `fret_node::ui::advanced::*` explicitly.
-2. Bind raw edit queues via `bind_controller_edit_queue_transport(...)` if controller ergonomics
-   are still useful.
-3. Keep viewport authoring on `NodeGraphController` / `NodeGraphSurfaceBinding` instead of exposing
-   a second raw queue story.
-4. Do not teach this recipe as the default downstream path in examples or cookbook docs.
+1. Keep raw edit/view queues inside `fret-node` internals.
+2. Bind them only through crate-private retained/controller glue.
+3. Do not re-export or teach this path in examples, cookbook docs, or app-facing guides.
 
 ## Next worktree order
 

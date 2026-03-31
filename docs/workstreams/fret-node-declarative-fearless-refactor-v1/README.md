@@ -1,6 +1,6 @@
 # Workstream: `fret-node` Fearless Refactor (v1)
 
-Status: Reframed and active (last updated 2026-03-07)
+Status: Reframed and active (last updated 2026-03-31)
 Quick navigation:
 
 - `design.md` - current surface map + next worktree order
@@ -266,20 +266,19 @@ For retained composition, the preferred teaching posture is now controller-first
 widget posture is `new(...)` plus optional `with_controller(...)`. Raw queue binding on retained
 widgets now stay crate-internal for compatibility harnesses, focused retained tests, and temporary
 migration glue.
-Queue-first APIs such as `NodeGraphEditQueue` should now be treated as advanced transport seams
-rather than the default app-facing integration surface. Raw view-queue transport is now crate-
-internal, and the temporary `NodeGraphViewportHelper` facade is deleted, so app-facing composition
+Queue-first APIs such as `NodeGraphEditQueue` are no longer public app-facing seams. Raw edit/view
+transport is crate-internal only, and the temporary `NodeGraphViewportHelper` facade is deleted, so
+app-facing composition
 should call
 `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*,`
 `fit_view_nodes_in_bounds*}` directly, while declarative action hooks should prefer
 `NodeGraphSurfaceBinding::{set_viewport_action_host, fit_view_nodes_in_bounds_action_host}` over
 owning raw transport queues.
 
-`fret_node::ui::advanced::*` is now the explicit namespace for retained edit-transport seams, and
-root `fret_node::ui::*` no longer re-exports the raw queue/helper surfaces. Retained-backed
-samples and crate-internal retained/test callers now use `advanced::*` or explicit module paths
-directly, while viewport option types stay on the root `ui::*` surface without exposing the raw
-view queue itself.
+`fret_node::ui::advanced::*` is now deleted, and root `fret_node::ui::*` no longer exposes the raw
+queue/helper surfaces. First-party demos stay controller/binding-first, while retained/test callers
+use explicit crate-internal module paths as needed; viewport option types still stay on the root
+`ui::*` surface without exposing the raw view queue itself.
 Because this repo does not need a public compatibility window, the old root queue/helper aliases are
 removed outright instead of going through a deprecation cycle.
 Current controller-facing XyFlow mapping (review helper, not a final contract):
@@ -583,5 +582,4 @@ Canonical runnable targets:
 | layering | `python tools/check_layering.py` | catches accidental boundary drift while the surface is still moving |
 
 The TODO tracker defines the next gate additions still required for full transaction-safe declarative parity.
-
 

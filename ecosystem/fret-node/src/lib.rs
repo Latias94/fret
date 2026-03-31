@@ -49,9 +49,12 @@ mod surface_policy_tests {
     const APP_RS: &str = include_str!("app.rs");
     const ADVANCED_RS: &str = include_str!("advanced.rs");
     const COMPAT_RETAINED_RS: &str = include_str!("ui/declarative/compat_retained.rs");
-    const UI_ADVANCED_RS: &str = include_str!("ui/advanced.rs");
     const UI_MOD_RS: &str = include_str!("ui/mod.rs");
     const MINIMAP_RS: &str = include_str!("ui/overlays/minimap.rs");
+    const NODE_GRAPH_DOMAIN_DEMO_RS: &str =
+        include_str!("../../../apps/fret-examples/src/node_graph_domain_demo.rs");
+    const NODE_GRAPH_LEGACY_DEMO_RS: &str =
+        include_str!("../../../apps/fret-examples/src/node_graph_legacy_demo.rs");
     const WORKFLOW_NODE_GRAPH_DEMO_RS: &str = include_str!(
         "../../../apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs"
     );
@@ -89,14 +92,12 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn advanced_transport_surface_stays_edit_queue_only() {
-        assert!(UI_ADVANCED_RS.contains("pub use super::edit_queue::NodeGraphEditQueue;"));
-        assert!(UI_ADVANCED_RS.contains("pub fn bind_controller_edit_queue_transport("));
-        assert!(!UI_ADVANCED_RS.contains("pub trait NodeGraphControllerTransportExt"));
-        assert!(!UI_ADVANCED_RS.contains("NodeGraphViewportHelper"));
-        assert!(!UI_ADVANCED_RS.contains("NodeGraphViewQueue"));
-        assert!(!UI_ADVANCED_RS.contains("NodeGraphViewRequest"));
-        assert!(!UI_ADVANCED_RS.contains("bind_controller_view_queue_transport"));
+    fn raw_transport_surface_stays_crate_internal() {
+        assert!(!UI_MOD_RS.contains("pub mod advanced;"));
+        assert!(!UI_MOD_RS.contains("pub mod edit_queue;"));
+        assert!(!UI_MOD_RS.contains("NodeGraphEditQueue"));
+        assert!(!UI_MOD_RS.contains("bind_controller_edit_queue_transport"));
+        assert!(!UI_MOD_RS.contains("NodeGraphViewQueue"));
     }
 
     #[test]
@@ -118,6 +119,18 @@ mod surface_policy_tests {
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphViewQueue"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("bind_controller_view_queue_transport"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("use fret_node::ui::advanced::{"));
+    }
+
+    #[test]
+    fn first_party_demos_stay_controller_first_for_edit_commits() {
+        for source in [NODE_GRAPH_DOMAIN_DEMO_RS, NODE_GRAPH_LEGACY_DEMO_RS] {
+            assert!(!source.contains("NodeGraphEditQueue"));
+            assert!(!source.contains("bind_controller_edit_queue_transport"));
+            assert!(!source.contains("use fret_node::ui::advanced::{"));
+        }
+        assert!(NODE_GRAPH_DOMAIN_DEMO_RS.contains("let controller = NodeGraphController::new("));
+        assert!(NODE_GRAPH_LEGACY_DEMO_RS.contains("submit_transaction_and_sync_graph_model("));
+        assert!(NODE_GRAPH_LEGACY_DEMO_RS.contains("replace_document_and_sync_models("));
     }
 
     #[test]

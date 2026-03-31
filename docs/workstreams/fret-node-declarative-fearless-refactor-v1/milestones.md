@@ -190,12 +190,12 @@ points rather than direct graph mutation.
     takes a controller binding directly instead of exposing public queue transport props.
   - The temporary `NodeGraphViewportHelper` façade is now deleted; controller-first app-facing
     composition calls `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*,`
-    `fit_view_nodes_in_bounds*}` directly, and raw queue ownership stays an explicit advanced
-    transport choice.
-  - Raw edit transport now lives under the explicit `fret_node::ui::advanced::*` namespace, while
-    raw view-queue transport is crate-internal; root `fret_node::ui::*` now re-exports viewport
-    option types but not the underlying queue/request machinery.
-  - The retained-backed domain demo now imports its raw queue seam from `advanced::*`, while the
+    `fit_view_nodes_in_bounds*}` directly, and raw queue ownership stays a crate-internal
+    compatibility detail rather than a public app-facing choice.
+  - Raw edit/view transport is now crate-internal; root `fret_node::ui::*` re-exports viewport
+    option types but not the underlying queue/request machinery, and the temporary public
+    `fret_node::ui::advanced::*` edit seam is deleted.
+  - The retained-backed domain demo and legacy demo no longer own raw edit queues, while the
     workflow gallery snippet no longer owns a raw `NodeGraphViewQueue` at all and instead uses
     `NodeGraphSurfaceBinding::{set_viewport_action_host, fit_view_nodes_in_bounds_action_host}`.
   - Crate-internal retained/test callers now also use explicit module paths instead of the old root
@@ -261,7 +261,7 @@ points rather than direct graph mutation.
   - `apps/fret-examples/src/node_graph_legacy_demo.rs` now also routes retained canvas / rename
     overlay / blackboard / portal / minimap glue through the controller-first path and no longer
     keeps a demo-owned `NodeGraphEditQueue`, so the legacy demo stops teaching raw edit queue
-    mutation or queue ownership for those core surfaces.
+    mutation, reset, or queue ownership for those core surfaces.
   - Feature-gated retained coverage now also includes a blackboard controller-first gate proving
     symbol creation prefers controller/store commit over raw queue transport.
   - `NodeGraphController` now also owns undo/redo sync helpers for the default store-backed

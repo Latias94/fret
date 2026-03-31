@@ -50,7 +50,6 @@ use fret_node::runtime::store::NodeGraphStore;
 use fret_node::schema::{
     NodeKindMigrateError, NodeKindMigrator, NodeRegistry, NodeSchema, PortDecl,
 };
-use fret_node::ui::advanced::{NodeGraphEditQueue, bind_controller_edit_queue_transport};
 use fret_node::ui::canvas::RejectNonFiniteTx;
 use fret_node::ui::declarative::NodeGraphSurfaceBinding;
 use fret_node::ui::presenter::{
@@ -74,9 +73,9 @@ use fret_node::ui::{
 #[derive(Clone)]
 struct NodeGraphDemoModels {
     store: fret_runtime::Model<NodeGraphStore>,
+    controller: fret_node::ui::NodeGraphController,
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
-    edits: fret_runtime::Model<NodeGraphEditQueue>,
     overlays: fret_runtime::Model<NodeGraphOverlayState>,
     group_rename_text: fret_runtime::Model<String>,
 }
@@ -1611,10 +1610,10 @@ impl NodeGraphDemoDriver {
 
         let graph = models.graph.clone();
         let view = models.view.clone();
-        let edits = models.edits.clone();
         let overlays = models.overlays.clone();
         let group_rename_text = models.group_rename_text.clone();
         let store = models.store.clone();
+        let controller = models.controller.clone();
         let mut style = NodeGraphStyle::from_theme(Theme::global(app));
         let mut background = style.background_style();
         if let Some(style_state) = app.global::<Arc<NodeGraphDemoStyleState>>().cloned() {
@@ -1711,10 +1710,6 @@ impl NodeGraphDemoDriver {
             Vec::new()
         };
 
-        let controller = bind_controller_edit_queue_transport(
-            fret_node::ui::NodeGraphController::new(store.clone()),
-            edits.clone(),
-        );
         let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_controller(controller.clone())
             .with_middleware(RejectNonFiniteTx)
@@ -2439,8 +2434,8 @@ fn handle_command(
             ops,
         };
         let _ = models
-            .edits
-            .update(app, |q: &mut NodeGraphEditQueue, _cx| q.push(tx));
+            .controller
+            .submit_transaction_and_sync_graph_model(app, &models.graph, &tx);
         return;
     }
 
@@ -2477,9 +2472,6 @@ fn handle_command(
         });
 
         let _ = models
-            .edits
-            .update(app, |q, _cx| *q = NodeGraphEditQueue::default());
-        let _ = models
             .overlays
             .update(app, |o, _cx| *o = NodeGraphOverlayState::default());
 
@@ -2488,12 +2480,13 @@ fn handle_command(
 
         // Keep the standalone graph/view models in sync with the store so declarative surfaces
         // that are not store-backed (e.g. paint-only skeleton) observe demo commands.
-        let binding = NodeGraphSurfaceBinding::from_models(
-            models.graph.clone(),
-            models.view.clone(),
-            fret_node::ui::NodeGraphController::new(models.store.clone()),
+        let _ = models.controller.replace_document_and_sync_models(
+            app,
+            &models.graph,
+            &models.view,
+            next_graph,
+            next_view,
         );
-        let _ = binding.replace_document(app, next_graph, next_view);
 
         app.request_redraw(window);
         return;
@@ -2528,7 +2521,6 @@ fn render(
             .render_root("node-graph-demo-declarative", move |cx| {
                 cx.observe_model(&models.graph, Invalidation::Layout);
                 cx.observe_model(&models.view, Invalidation::Paint);
-                cx.observe_model(&models.edits, Invalidation::Paint);
                 cx.observe_model(&models.overlays, Invalidation::Paint);
 
                 let surface = match mode {
@@ -2539,9 +2531,7 @@ fn render(
                                 models.graph.clone(),
                                 models.view.clone(),
                             );
-                        surface_props.controller = Some(fret_node::ui::NodeGraphController::new(
-                            models.store.clone(),
-                        ));
+                        surface_props.controller = Some(models.controller.clone());
                         surface_props.overlays = Some(models.overlays.clone());
                         surface_props.internals = internals;
                         surface_props.test_id =
@@ -2552,12 +2542,10 @@ fn render(
                         )
                     }
                     NodeGraphDemoDeclarativeMode::PaintOnly => {
-                        let controller =
-                            fret_node::ui::NodeGraphController::new(models.store.clone());
                         let binding = NodeGraphSurfaceBinding::from_models(
                             models.graph.clone(),
                             models.view.clone(),
-                            controller,
+                            models.controller.clone(),
                         );
                         let props = binding.surface_props();
                         fret_node::ui::declarative::node_graph_surface(cx, props)
@@ -2770,14 +2758,14 @@ pub fn run() -> anyhow::Result<()> {
     let graph = app.models_mut().insert(store_value.graph().clone());
     let view = app.models_mut().insert(store_value.view_state().clone());
     let store = app.models_mut().insert(store_value);
-    let edits = app.models_mut().insert(NodeGraphEditQueue::default());
+    let controller = fret_node::ui::NodeGraphController::new(store.clone());
     let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
     let group_rename_text = app.models_mut().insert(String::new());
     app.set_global(NodeGraphDemoModels {
         store,
+        controller,
         graph,
         view,
-        edits,
         overlays,
         group_rename_text,
     });

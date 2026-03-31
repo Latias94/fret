@@ -113,8 +113,10 @@ Execution companion: `design.md` (surface map + next worktree order).
       an internal detail of the controller.
   - Progress: retained canvas / minimap composition can now bind through `NodeGraphController`, so
     new app/UI glue no longer needs to teach raw queue mutation first.
-- [ ] Decide whether `edit_queue` stays public, becomes controller-owned, or is limited to internal
+- [x] Decide whether `edit_queue` stays public, becomes controller-owned, or is limited to internal
       composition seams.
+  - Decision: raw edit transport is now crate-internal only; first-party demos no longer own
+    `NodeGraphEditQueue`, and controller-first submission is the only taught app-facing path.
 - [x] Collapse the remaining legacy-demo-only raw `edit_queue` command hotkey (`Bump Float Value`)
       into controller-owned submission helpers so example code stops teaching ad-hoc queue mutation.
 - [x] Normalize retained controller binding APIs toward `new + with_*` composition where it improves
@@ -132,8 +134,8 @@ Execution companion: `design.md` (surface map + next worktree order).
       queue fallback remains crate-internal for compatibility harnesses and focused retained tests.
     - `apps/fret-examples/src/node_graph_legacy_demo.rs` now uses the same controller-first canvas /
       overlay / blackboard / portal / minimap wiring and no longer keeps a demo-owned
-      `NodeGraphEditQueue`; remaining queue ownership is limited to generic compatibility transport
-      seams that still need explicit queue binding.
+      `NodeGraphEditQueue`; remaining queue ownership is limited to crate-internal compatibility
+      transport seams that still need explicit queue binding.
 - [x] Land the first XyFlow-style connection-query mapping on the controller surface:
   - `NodeGraphController::node_connections`
   - `NodeGraphController::port_connections` (XyFlow `getHandleConnections` analogue)
@@ -162,24 +164,19 @@ Execution companion: `design.md` (surface map + next worktree order).
     or `Controller` navigation; queue-owned viewport transport must flow through a controller if an
     integration still needs it.
 
-- **Most likely next shrink targets**
-  - Raw edit transport still exported from `ecosystem/fret-node/src/ui/advanced.rs`
-    (`NodeGraphEditQueue`, `bind_controller_edit_queue_transport(...)`): now explicit and bounded,
-    but still a likely future shrink target once controller-first edit coverage is complete.
-
 - **Landable follow-ups from this audit**
   - [x] Delete `NodeGraphViewportHelper`; viewport authoring now stays on controller/binding
         surfaces.
-  - [x] Move raw edit transport into the explicit `fret_node::ui::advanced::*` namespace and keep
-        raw view transport crate-internal.
+  - [x] Remove the temporary public `fret_node::ui::advanced::*` edit seam; raw edit/view
+        transport now stay crate-internal.
   - [x] Make raw view-queue transport crate-internal; root `ui::*` now only re-exports viewport
         option types.
   - [x] Demote retained widget / overlay queue binding methods to crate-private compatibility seams.
   - [x] Remove root `fret_node::ui::*` queue/helper re-exports from the public surface.
-  - [x] Add one short README/workstream note that queue APIs are advanced retained transport seams, not
-        the default app-facing integration surface.
-  - [x] Migrate retained-only examples / docs that still import queue types from root `fret_node::ui::*`
-        to `fret_node::ui::advanced::*` (`node_graph_domain_demo`).
+  - [x] Add one short README/workstream note that raw queue APIs are crate-internal compatibility
+        seams, not the default app-facing integration surface.
+  - [x] Clear first-party demo uses of raw edit transport (`node_graph_domain_demo`,
+        `node_graph_legacy_demo`).
   - [x] Stop teaching raw view queues in the workflow gallery snippet; use
         `NodeGraphSurfaceBinding::*_action_host(...)` instead.
   - [x] Delete the minimap-specific `ViewQueue` navigation mode; queue transport now flows through

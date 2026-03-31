@@ -6,14 +6,13 @@
 //! `compat-retained-canvas` so downstream authors can adopt declarative UI without enabling
 //! `fret-ui/unstable-retained-bridge`.
 
-pub mod advanced;
 pub mod binding;
 pub mod canvas;
 pub mod commands;
 pub mod controller;
 pub mod declarative;
 pub mod edge_types;
-pub mod edit_queue;
+mod edit_queue;
 pub mod geometry_overrides;
 pub mod internals;
 pub mod measured;
