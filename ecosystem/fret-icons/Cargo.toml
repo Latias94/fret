@@ -13,5 +13,5 @@ description = "Shared icon surface and icon primitives for Fret UI ecosystems."
 [dependencies]
 
 [dev-dependencies]
-fret-icons-lucide = { path = "../fret-icons-lucide" }
-fret-icons-radix = { path = "../fret-icons-radix" }
+fret-icons-lucide = { version = "0.1.0", path = "../fret-icons-lucide" }
+fret-icons-radix = { version = "0.1.0", path = "../fret-icons-radix" }

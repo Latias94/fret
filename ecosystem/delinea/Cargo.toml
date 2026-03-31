@@ -8,9 +8,10 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Headless chart engine and interaction contracts for Fret chart ecosystems."
 
 [dependencies]
-fret-core = { path = "../../crates/fret-core" }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
 serde = { workspace = true, optional = true, features = ["rc"] }
 thiserror = { workspace = true }
 time = { workspace = true }

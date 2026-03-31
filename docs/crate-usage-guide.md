@@ -285,8 +285,6 @@ authoring vocabulary through a hidden umbrella import.
 | Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
 | Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector_layout(...)`, raw `cx.data().selector(...)`, `cx.data().query(...)`) plus explicit `fret::selector::*` / `fret::query::*` secondary lanes. |
 | Add routing integration | `["router"]` | Exposes the explicit app-level router extension surface (`fret::router::*`). |
-| Add docking integration | `["docking"]` | Exposes the explicit docking surface (`fret::docking::{core::*, ...}`). |
-| Add editor theming integration | `["editor"]` | Keeps installed `fret-ui-editor` presets resilient to `FretApp` shadcn auto-theme resets; widgets still come from `fret-ui-editor`. |
 | Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
 | Add image/SVG caches | `["ui-assets"]` | Wires UI asset caches + budgets (compile/runtime cost). |
 | Enable layered `.fret/*` config | `["config-files"]` | Filesystem side effects; opt-in for embed/minimal builds. |
@@ -325,15 +323,13 @@ Notes:
 - `config-files` is opt-in because it reads layered `.fret/*` files (settings/keymap/menubar).
 - `ui-assets` is opt-in because it wires caches/budgets and can increase compile + runtime cost.
 - `icons` / `preload-icon-svgs` are opt-in (GPU-time tradeoff; apps can install custom packs).
-- `editor` is an app-integration feature only: it teaches `FretApp`'s shadcn auto-theme middleware
-  to replay any installed `fret-ui-editor` preset after host theme resets. Reusable editor
-  controls, layout primitives, and presets still live in `fret-ui-editor`.
 - `devloop` and `tracing` are kept only as advanced/maintainer aliases on `fret`; prefer the
   owning crates (`fret-launch/dev-state`, `fret-bootstrap/tracing`) for new integrations.
+- Docking and editor-theming ecosystems should be used from their owning crates
+  (`fret-docking`, `fret-ui-editor`) instead of expecting `fret` root feature proxies.
 - Design-system- or domain-specific crates that do not form a stable `fret` root story
   (for example Material 3 or AI UI ecosystems) should be used as direct crate dependencies
-  instead of expecting `fret` root feature proxies, even though `fret` keeps compatibility aliases
-  for discoverability.
+  instead of expecting `fret` root feature proxies.
 
 ### `fret-framework`
 
@@ -728,11 +724,11 @@ advanced retained/manual-assembly seams they require.
 
 Notes:
 
-- On the default `fret` path, enable `fret`'s `docking` feature and prefer the explicit
-  `fret::docking::*` seam.
-- Use `fret::docking::core::*` for dock graph/contracts (`DockNode`, `DockOp`, `PanelKey`, layout
-  shapes) and `fret::docking::{DockManager, DockPanelRegistry, handle_dock_op, ...}` for the UI +
-  runtime adoption helpers.
+- Prefer depending on `fret-docking` directly for docking adoption instead of expecting a `fret`
+  root feature proxy.
+- Use `fret_core::{DockNode, DockOp, PanelKey, ...}` / `fret_core::dock::*` for dock
+  graph/contracts and `fret_docking::{DockManager, DockPanelRegistry, handle_dock_op, ...}` for
+  the UI + runtime adoption helpers.
 - Keep docking explicit at the app boundary: panel registry, docking policy, and `dock_op` driver
   wiring stay app-owned/advanced instead of becoming part of `fret::app::prelude::*`.
 - Prefer teaching docking as an opt-in editor-grade capability, not as part of the small-app

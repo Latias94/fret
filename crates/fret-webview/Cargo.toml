@@ -8,13 +8,14 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Portable webview contracts and runtime integration surface for Fret."
 
 [features]
 default = []
 
 [dependencies]
-fret-core = { path = "../fret-core" }
-fret-runtime = { path = "../fret-runtime" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
+fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
 
 [dev-dependencies]
 slotmap.workspace = true

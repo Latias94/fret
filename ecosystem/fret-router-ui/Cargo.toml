@@ -14,9 +14,9 @@ description = "Thin UI adoption layer for fret-router with router stores, links,
 default = []
 
 [dependencies]
-fret-app = { path = "../../crates/fret-app" }
-fret-core = { path = "../../crates/fret-core" }
-fret-ui = { path = "../../crates/fret-ui" }
-fret-runtime = { path = "../../crates/fret-runtime" }
-fret-router = { path = "../fret-router" }
-fret-ui-kit = { path = "../fret-ui-kit" }
+fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui" }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
+fret-router = { version = "0.1.0", path = "../fret-router" }
+fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit" }

@@ -3,9 +3,9 @@
 ## Status summary
 
 - `M0` Baseline and blocker identification: **Completed**
-- `M1` Publish blocker removal: **In progress**
-- `M2` Closure slimming: **In progress**
-- `M3` Release candidate freeze: **Not started**
+- `M1` Publish blocker removal: **Completed**
+- `M2` Closure slimming: **Completed**
+- `M3` Release candidate freeze: **Completed**
 
 ## M0 — Baseline and blocker identification
 
@@ -30,7 +30,7 @@
 
 ## M1 — Publish blocker removal
 
-**Status:** In progress
+**Status:** Completed
 
 **Current landed slice**
 
@@ -40,11 +40,6 @@
 - verified `fret` with router feature enabled and confirmed its direct deps no longer include
   `publish = false` crates.
 
-**Remaining to close M1**
-
-- extend the same publishability audit from `fret` to the rest of the selected release lane,
-- decide whether any additional optional facade lanes should be cut before Wave 2 closure slimming.
-
 **Evidence**
 
 - `ecosystem/fret/src/lib.rs`
@@ -53,7 +48,7 @@
 
 ## M2 — Closure slimming
 
-**Status:** In progress
+**Status:** Completed
 
 **Current landed slice**
 
@@ -75,15 +70,13 @@
 - Wave 2 now treats `fret-bootstrap` as a feature-first app-kit crate rather than splitting every
   optional integration into its own published bridge.
 - `fret` root no longer teaches maintainer/niche lanes as first-class release surfaces:
-  `devloop`, `tracing`, `material3`, and `ui-ai` now stay documented as compatibility/advanced
-  aliases while first-party usage stays on the owning crates.
-
-**Remaining to close**
-
-- `fret-bootstrap` feature fan-out is documented clearly enough that users can distinguish
-  onboarding defaults from opt-in integrations,
-- the `fret` optional feature matrix maps cleanly to publishable, intentional extension seams
-  without multiplying bootstrap bridge crates.
+  `devloop` and `tracing` now stay documented as advanced aliases, while `material3` and `ui-ai`
+  were removed from the root feature matrix entirely so those ecosystems stay on their owning
+  crates.
+- `fret` root no longer proxies editor theming replay through an `editor` feature; editor policy
+  now stays entirely on `fret-ui-editor`, and first-party examples depend on that crate directly.
+- `fret` root no longer proxies docking through a `docking` feature; first-party examples and the
+  cookbook now depend on `fret-docking` directly, matching the owning policy crate boundary.
 
 **Evidence**
 
@@ -99,17 +92,36 @@
 - `ecosystem/fret/README.md`
 - `ecosystem/fret/src/lib.rs`
 - `apps/fret-examples/Cargo.toml`
+- `apps/fret-cookbook/Cargo.toml`
 - `cargo check -p fret-bootstrap --features ui-app-command-palette-shadcn`
 - `cargo check -p fret-bootstrap --features diagnostics`
 - `cargo check -p fret-bootstrap --features diagnostics-canvas`
 - `cargo check -p fret-bootstrap --features diagnostics-ws`
+- `cargo check -p fret-examples`
+- `cargo check -p fret-cookbook --features cookbook-docking`
 
 ## M3 — Release candidate freeze
 
-**Status:** Not started
+**Status:** Completed
 
-**What should close**
+**Current landed slice**
 
-- the first public release crate set is explicit and documented,
-- docs teach only that set as the recommended path,
-- tooling-only crates are explicitly out of the minimal library release.
+- `release-plz.toml` now includes obvious support-closure crates that were missing from the publish
+  whitelist (`fret-assets`, `fret-router-ui`, `fret-webview`, `fret-webview-wry`,
+  `fret-window-style-profiles`).
+- `fret-node` was removed from the current release-plz scope because it is not part of the first
+  public teaching surface or required support closure.
+- `fret-chart` and `delinea` are now intentionally part of the publish closure because the
+  supported `fret-ui-shadcn/chart` lane remains publishable.
+- `docs/release/v0.1.0-publish-order.txt` is now regenerated from the current `release-plz.toml`
+  state.
+- `python3 tools/release_closure_check.py --config release-plz.toml` now reports zero internal
+  dependency issues and zero metadata warnings.
+
+**Evidence**
+
+- `release-plz.toml`
+- `docs/release/v0.1.0-publish-order.txt`
+- `docs/release/release-plz-adoption-analysis.md`
+- `docs/release/v0.1.0-release-checklist.md`
+- `python3 tools/release_closure_check.py --config release-plz.toml`

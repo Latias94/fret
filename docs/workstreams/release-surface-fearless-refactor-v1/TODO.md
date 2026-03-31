@@ -91,26 +91,32 @@ Tracking format:
       directly where they actually need dev-state hooks
     - `fret/devloop` and `fret/tracing` are kept only as advanced/maintainer aliases with explicit
       comments instead of being taught as part of the primary root story
-    - `fret/material3` and `fret/ui-ai` are kept only as compatibility aliases for discoverability;
-      direct owning crates remain the recommended surface until they form a stable `fret` root
-      teaching surface
+    - `fret/material3` and `fret/ui-ai` were removed from the root feature matrix; direct owning
+      crates are now the only recommended and supported surface until a stable `fret` root story
+      exists
+    - `fret/editor` was removed from the root feature matrix; editor-themed apps now depend on
+      `fret-ui-editor` directly and install their own preset replay policy
+    - `fret/docking` was removed from the root feature matrix; docking demos and cookbook samples
+      now depend on `fret-docking` directly
     - `fret` root now distinguishes between taught app-facing lanes and non-primary aliases
   - Evidence:
     - `ecosystem/fret/Cargo.toml`
     - `ecosystem/fret/README.md`
     - `ecosystem/fret/src/lib.rs`
     - `apps/fret-examples/Cargo.toml`
+    - `apps/fret-cookbook/Cargo.toml`
     - `apps/fret-ui-gallery/Cargo.toml`
     - `docs/crate-usage-guide.md`
     - `cargo check -p fret`
     - `cargo check -p fret --features state`
     - `cargo check -p fret-examples`
+    - `cargo check -p fret-cookbook --features cookbook-docking`
     - `python3 tools/check_layering.py`
 
 ## Wave 3 — Release candidate set
 
-- [ ] RELFACE-release-200 Freeze the Wave 1/Wave 2 release set.
-  - Candidate user-facing set:
+- [x] RELFACE-release-200 Freeze the Wave 1/Wave 2 release set.
+  - Frozen user-facing set:
     - `fret`
     - `fret-framework`
     - `fret-bootstrap`
@@ -118,12 +124,27 @@ Tracking format:
     - `fret-ui-shadcn`
     - `fret-selector`
     - `fret-query`
+  - Current progress:
+    - `release-plz.toml` now includes obvious support-closure crates that the selected set needs
+    - `fret-node` is no longer in the current publish scope
+    - `fret-chart` and `delinea` are intentionally included because the supported
+      `fret-ui-shadcn/chart` lane stays publishable
+    - `python3 tools/release_closure_check.py --config release-plz.toml` now reports
+      `internal dependency issues: 0`
 
-- [ ] RELFACE-release-210 Confirm tooling-only crates stay out of the minimal library release set.
+- [x] RELFACE-release-210 Confirm tooling-only crates stay out of the minimal library release set.
   - Current non-goal set:
     - `fretboard`
     - `fret-diag`
     - repo-owned harness apps
+  - Current progress:
+    - `fret-node` is now excluded from `release-plz.toml`
+    - `apps/*` crates remain `publish = false`
 
-- [ ] RELFACE-release-220 Update release docs/checklists to reflect the selected crate set instead
+- [x] RELFACE-release-220 Update release docs/checklists to reflect the selected crate set instead
       of workspace-wide assumptions.
+  - Current progress:
+    - `docs/release/release-plz-adoption-analysis.md` now distinguishes entry set vs publish
+      closure
+    - `docs/release/v0.1.0-release-checklist.md` now tracks the zero-blocker closure state
+    - `docs/release/v0.1.0-publish-order.txt` now matches the current config

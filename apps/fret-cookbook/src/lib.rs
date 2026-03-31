@@ -791,13 +791,12 @@ mod authoring_surface_policy_tests {
         assert!(CUSTOM_V1_EXAMPLE.contains(".toggle_bool::<act::ToggleEnabled>()"));
 
         assert!(DOCKING_EXAMPLE.contains("use fret::{"));
+        assert!(DOCKING_EXAMPLE.contains("use fret_docking::{"));
         assert!(DOCKING_EXAMPLE.contains("advanced::prelude::*"));
         assert!(DOCKING_EXAMPLE.contains("integration::InstallIntoApp"));
-        assert!(DOCKING_EXAMPLE.contains("docking::{"));
-        assert!(!DOCKING_EXAMPLE.contains("use fret_docking::{"));
         assert!(DOCKING_EXAMPLE.contains("DockPanelFactory<KernelApp>"));
         assert!(DOCKING_EXAMPLE.contains("DockPanelRegistryBuilder::new()"));
-        assert!(DOCKING_EXAMPLE.contains("docking::handle_dock_op"));
+        assert!(DOCKING_EXAMPLE.contains("handle_dock_op(app, op)"));
         assert!(DOCKING_EXAMPLE.contains("impl InstallIntoApp for DockingBasicsBundle"));
         assert!(
             DOCKING_EXAMPLE

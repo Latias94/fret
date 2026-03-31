@@ -8,14 +8,15 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Wry-backed host implementation for Fret's portable webview surface."
 
 [features]
 default = []
 inspector = ["wry/devtools"]
 
 [dependencies]
-fret-core = { path = "../fret-core" }
-fret-webview = { path = "../fret-webview" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
+fret-webview = { version = "0.1.0", path = "../fret-webview" }
 tracing.workspace = true
 serde_json.workspace = true
 wry = { version = "0.53.3", package = "lb-wry" }

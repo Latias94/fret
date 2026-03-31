@@ -95,11 +95,12 @@ Enable the explicit router extension surface (optional):
 fret = { path = "../fret", features = ["router"] }
 ```
 
-Enable the explicit docking surface (optional):
+For editor-grade docking workflows, depend on `fret-docking` directly:
 
 ```toml
 [dependencies]
-fret = { path = "../fret", features = ["docking"] }
+fret = { path = "../fret" }
+fret-docking = { path = "../fret-docking" }
 ```
 
 If your crate lives under `apps/` in this repository:
@@ -203,8 +204,6 @@ The same ordered builder surface now also includes compile-time/static entries t
   app-lane query invalidation), plus the explicit `fret::selector::*` / `fret::query::*`
   secondary lanes when app code needs state helper nouns.
 - `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
-- `docking`: enable the explicit advanced docking surface (`fret::docking::{core::*, DockManager, handle_dock_op, ...}`).
-- `editor`: keep installed `fret-ui-editor` presets resilient to `FretApp` shadcn theme resets.
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
 - `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).
@@ -217,11 +216,10 @@ The same ordered builder surface now also includes compile-time/static entries t
 - `preload-icon-svgs`: pre-register SVG icons on GPU ready.
 - `command-palette`: enable the command palette wiring in the golden-path driver, including the
   default shadcn overlay bridge.
-- `material3`, `ui-ai`: compatibility aliases kept for discoverability; prefer direct dependencies
-  on `fret-ui-material3` / `fret-ui-ai` until `fret` grows a stable root authoring story for them.
 
 Design-system- or domain-specific ecosystems that do not form a stable `fret` root authoring
-story should stay as direct crate dependencies instead of root feature proxies.
+story should stay as direct crate dependencies instead of root feature proxies. Today that
+includes `fret-ui-material3` and `fret-ui-ai`.
 
 ## Web / wasm
 
@@ -274,9 +272,10 @@ now live explicitly under `fret::advanced` instead of the default inherent build
 
 Optional ecosystems also stay explicit. For example, the router integration lives under
 `fret::router`; wire it with `FretApp::setup(fret::router::app::install)` instead of expecting it
-to appear in `fret::app::prelude::*`. Docking similarly lives under `fret::docking` so advanced
-apps can opt into panel registries, dock ops, and retained-host wiring without turning docking into
-part of the default app prelude. The default design-system surface is similarly curated under
+to appear in `fret::app::prelude::*`. Docking and editor theming similarly stay on their owning
+crates (`fret-docking`, `fret-ui-editor`) so advanced apps opt into those ecosystems explicitly
+instead of learning extra `fret` root feature proxies. The default design-system surface is
+similarly curated under
 `fret::shadcn`: keep component names at `shadcn::Button` / `shadcn::Card`, use
 `shadcn::app::install(...)` for app wiring plus environment-aware host-theme syncing,
 `shadcn::themes::apply_shadcn_new_york(...)` for explicit one-shot/fixed presets, and
@@ -308,9 +307,9 @@ The same explicit-lane rule applies to optional state helpers: keep grouped
 `cx.data().query*` plus `handle.read_layout(cx)` as the default query story. Import
 `DepsBuilder` / `QueryKey`-style nouns from `fret::selector::*` / `fret::query::*` only when app
 code actually needs to spell them.
-Editor-themed apps can also opt into `fret`'s `editor` feature to make
-installed `fret-ui-editor` presets survive the default `FretApp` shadcn auto-theme replay; the
-actual editor widgets and presets still live in `fret-ui-editor`.
+Editor-themed apps should depend on `fret-ui-editor` directly and install the desired preset in
+their own app setup. That keeps editor policy on the owning crate instead of teaching `fret` root
+feature aliases for app-specific theme replay.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.

@@ -25,8 +25,11 @@ Non-goals:
 - `fret-bootstrap` is feature-first: recommended bootstrap integrations stay on that crate unless
   they become a genuinely separate authoring surface that users should learn independently.
 - `fret` root features should stay limited to lanes that form a real app-facing teaching surface;
-  maintainer conveniences and niche design-system/domain crates should stay on direct owning
-  crates, even if `fret` keeps a few commented compatibility aliases for discoverability.
+  maintainer conveniences should stay as commented advanced aliases, and heavier
+  editor/design-system/policy ecosystems should stay on direct owning crates instead of root
+  feature proxies.
+- release-plz scope is allowed to be broader than the taught entry set, but only for actual support
+  closure crates; app-only and deferred ecosystem surfaces should stay out.
 
 ## First landed slice
 
@@ -42,6 +45,28 @@ Non-goals:
   on its chart-specific gallery lanes.
 - `fret-bootstrap` is now explicitly feature-first: command palette shadcn defaults and
   diagnostics WS stay on explicit bootstrap features instead of multiplying bridge crates.
+- `fret` now keeps only app-facing and maintainer-oriented lanes on its root feature matrix:
+  `devloop` / `tracing` stay as advanced aliases, while Material 3, AI UI, docking, and editor
+  policy now stay on owning crates instead of `fret` root features.
+
+## Wave 3 freeze
+
+- Frozen user-facing entry set:
+  - `fret`
+  - `fret-framework`
+  - `fret-bootstrap`
+  - `fret-ui-kit`
+  - `fret-ui-shadcn`
+  - `fret-selector`
+  - `fret-query`
+- Frozen publish closure:
+  - `release-plz.toml` is the source of truth for the crates.io whitelist.
+  - The current closure intentionally includes `fret-chart` and `delinea` because the published
+    `fret-ui-shadcn/chart` lane remains supported, but they are not part of the primary teaching
+    surface.
+  - `python3 tools/release_closure_check.py --config release-plz.toml` now reports
+    `internal dependency issues: 0`.
+  - `docs/release/v0.1.0-publish-order.txt` is synced to the current 49-crate publish order.
 
 ## Documents
 
