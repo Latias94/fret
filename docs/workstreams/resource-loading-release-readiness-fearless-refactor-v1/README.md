@@ -76,8 +76,8 @@ Out of scope:
    hatches, not default-path promises.
 3. The framework-owned bundled baseline identity must not drift away from the actual renderer
    bootstrap path.
-4. Bundled generic-family guarantees must be explicit, especially when a profile does not provide
-   `serif`.
+4. Bundled generic-family guarantees must be explicit, including whether the shipped startup
+   profile really provides `serif`.
 5. Release-facing docs must state when web image loading still falls back to byte fetch + Rust
    decode instead of browser-native decode.
 
@@ -97,8 +97,9 @@ Progress update (2026-03-30):
 - the first-party runtime bundled-font top-up lane now also has an explicit asset-identity effect
   (`Effect::TextAddFontAssets`), so framework-owned post-startup injections no longer need to
   masquerade as user-provided raw bytes.
-- `RLRR-004` is landed as an explicit denial: the default bundled profiles now say plainly that
-  `serif` is not guaranteed on Web/WASM unless the app bundles it.
+- `RLRR-004` is landed as a shipped closure: the default bundled profiles now include a bundled
+  `UiSerif` family on the shipped bootstrap lane, so first-party web/wasm startup can honestly
+  guarantee `serif` alongside `sans` and `monospace`.
 - `RLRR-005` is landed as an explicit limitation note: `fret-ui-assets` now documents that web
   logical-asset image loading still falls back to bytes + Rust decode unless a resolver provides a
   URL reference.
@@ -181,16 +182,18 @@ Status note (2026-03-30):
 - `Effect::TextAddFonts` remains the runtime/user-provided raw-byte lane,
 - full asset-pipeline unification is still future work rather than an implied current guarantee.
 
-### 4) Web serif guarantees are still open
+### 4) Web serif guarantee is now shipped on the bundled startup lane
 
-The default bundled profiles currently guarantee `sans` and `monospace`, not `serif`:
+The shipped bundled profiles now include a dedicated bundled `UiSerif` family on the bootstrap
+lane:
 
 - `crates/fret-fonts/src/profiles.rs`
 - `crates/fret-runtime/src/font_bootstrap.rs`
 
 Release consequence:
 
-- generic `serif` behavior is not something the framework can honestly promise on wasm/web today.
+- first-party web/wasm startup can now honestly promise bundled `serif` coverage on the shipped
+  bootstrap path instead of documenting it as an open limitation.
 
 ### 5) Web image decode still needs an explicit release note
 

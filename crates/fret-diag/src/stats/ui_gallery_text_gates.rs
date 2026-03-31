@@ -1386,7 +1386,7 @@ mod tests {
                                     "Noto Color Emoji"
                                 ],
                                 "default_ui_sans_candidates": ["Inter"],
-                                "default_ui_serif_candidates": ["Source Serif 4"],
+                                "default_ui_serif_candidates": ["Roboto Slab"],
                                 "default_ui_mono_candidates": ["JetBrains Mono"],
                                 "default_common_fallback_families": [
                                     "Inter",
@@ -1398,14 +1398,14 @@ mod tests {
                                     "name": "default",
                                     "expected_family_names": [
                                         "Inter",
-                                        "Source Serif 4",
+                                        "Roboto Slab",
                                         "JetBrains Mono",
                                         "Noto Sans CJK SC",
                                         "Noto Sans Arabic",
                                         "Noto Color Emoji"
                                     ],
                                     "ui_sans_families": ["Inter"],
-                                    "ui_serif_families": ["Source Serif 4"],
+                                    "ui_serif_families": ["Roboto Slab"],
                                     "ui_mono_families": ["JetBrains Mono"],
                                     "common_fallback_families": [
                                         "Noto Sans CJK SC",
@@ -1495,7 +1495,7 @@ mod tests {
                                     "Noto Color Emoji"
                                 ],
                                 "default_ui_sans_candidates": ["Inter"],
-                                "default_ui_serif_candidates": ["Source Serif 4"],
+                                "default_ui_serif_candidates": ["Roboto Slab"],
                                 "default_ui_mono_candidates": ["JetBrains Mono"],
                                 "default_common_fallback_families": [
                                     "Inter",
@@ -1507,14 +1507,14 @@ mod tests {
                                     "name": "default",
                                     "expected_family_names": [
                                         "Inter",
-                                        "Source Serif 4",
+                                        "Roboto Slab",
                                         "JetBrains Mono",
                                         "Noto Sans CJK SC",
                                         "Noto Sans Arabic",
                                         "Noto Color Emoji"
                                     ],
                                     "ui_sans_families": ["Inter"],
-                                    "ui_serif_families": ["Source Serif 4"],
+                                    "ui_serif_families": ["Roboto Slab"],
                                     "ui_mono_families": ["JetBrains Mono"],
                                     "common_fallback_families": [
                                         "Noto Sans CJK SC",

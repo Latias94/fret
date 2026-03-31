@@ -105,6 +105,7 @@ Baseline contract for Web/WASM:
 Minimum requirement for the shipped `fret_fonts::default_profile()` (v1):
 
 - one **UI sans** font (or subset) suitable for labels and UI controls,
+- one **UI serif** font (or subset) suitable for deterministic document/article typography,
 - one **monospace** font (or subset) for developer tooling / code-like surfaces,
 - optional: an **emoji/color** fallback font for deterministic emoji rendering,
 - optional: a **CJK** fallback font for "no tofu" baseline in East Asian UIs.
@@ -116,7 +117,7 @@ This ADR does not mandate which exact font families are bundled; it mandates the
 To keep WASM payload size controllable while still supporting real apps, `fret-fonts` is expected to expose bundles as
 separate feature flags:
 
-- **Bootstrap**: small UI sans + monospace baseline (recommended default for web demos and starter templates).
+- **Bootstrap**: small UI sans + UI serif + monospace baseline (recommended default for web demos and starter templates).
 - **Emoji**: a color emoji font bundle (opt-in; can be large).
 - **CJK lite**: a small subset to cover common simplified Chinese UI strings (opt-in; can be medium).
 

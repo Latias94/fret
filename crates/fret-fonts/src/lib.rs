@@ -7,9 +7,9 @@
 //! - Framework-owned startup baselines should publish bundled asset identity through the shared
 //!   runtime asset contract and resolve startup bytes from that identity before renderer
 //!   injection.
-//! - The shipped bootstrap/default profiles currently guarantee `sans` and `monospace`, but they
-//!   do not guarantee `serif`; app shells that need deterministic serif typography on Web/WASM
-//!   must bundle and register serif-capable fonts explicitly.
+//! - The shipped bootstrap/default profiles now guarantee `sans`, `serif`, and `monospace`
+//!   whenever the bootstrap font features are enabled; the intentionally minimal mono-only build
+//!   still avoids promising `sans`/`serif`.
 
 use fret_assets::{
     AssetBundleId, AssetKindHint, AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry,

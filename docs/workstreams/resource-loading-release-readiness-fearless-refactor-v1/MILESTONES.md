@@ -62,7 +62,7 @@ Exit criteria:
 
 Deliverables:
 
-- web `serif` guarantee is either shipped or explicitly denied,
+- web `serif` guarantee is shipped on the default bundled startup lane,
 - the web image decode tradeoff is explicitly documented,
 - release-facing cache/setup guidance no longer keeps misleading partial-install naming on default
   product surfaces,

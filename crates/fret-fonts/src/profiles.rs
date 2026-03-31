@@ -7,6 +7,8 @@ pub(crate) const BOOTSTRAP_EXPECTED_FAMILIES: &[&str] = &[
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     "Inter",
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+    "Roboto Slab",
+    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     "JetBrains Mono",
     "Fira Mono",
 ];
@@ -19,20 +21,28 @@ pub(crate) const DEFAULT_EXPECTED_FAMILIES: &[&str] = &[
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     "Inter",
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+    "Roboto Slab",
+    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     "JetBrains Mono",
     "Fira Mono",
 ];
 
 #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-const BOOTSTRAP_GUARANTEED_GENERIC_FAMILIES: &[BundledGenericFamily] =
-    &[BundledGenericFamily::Sans, BundledGenericFamily::Monospace];
+const BOOTSTRAP_GUARANTEED_GENERIC_FAMILIES: &[BundledGenericFamily] = &[
+    BundledGenericFamily::Sans,
+    BundledGenericFamily::Serif,
+    BundledGenericFamily::Monospace,
+];
 #[cfg(not(any(feature = "bootstrap-subset", feature = "bootstrap-full")))]
 const BOOTSTRAP_GUARANTEED_GENERIC_FAMILIES: &[BundledGenericFamily] =
     &[BundledGenericFamily::Monospace];
 
 #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-const DEFAULT_GUARANTEED_GENERIC_FAMILIES: &[BundledGenericFamily] =
-    &[BundledGenericFamily::Sans, BundledGenericFamily::Monospace];
+const DEFAULT_GUARANTEED_GENERIC_FAMILIES: &[BundledGenericFamily] = &[
+    BundledGenericFamily::Sans,
+    BundledGenericFamily::Serif,
+    BundledGenericFamily::Monospace,
+];
 #[cfg(not(any(feature = "bootstrap-subset", feature = "bootstrap-full")))]
 const DEFAULT_GUARANTEED_GENERIC_FAMILIES: &[BundledGenericFamily] =
     &[BundledGenericFamily::Monospace];
@@ -40,12 +50,16 @@ const DEFAULT_GUARANTEED_GENERIC_FAMILIES: &[BundledGenericFamily] =
 const BOOTSTRAP_PROVIDED_ROLES: &[BundledFontRole] = &[
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     BundledFontRole::UiSans,
+    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+    BundledFontRole::UiSerif,
     BundledFontRole::UiMonospace,
 ];
 
 pub(crate) const DEFAULT_PROVIDED_ROLES: &[BundledFontRole] = &[
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     BundledFontRole::UiSans,
+    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+    BundledFontRole::UiSerif,
     BundledFontRole::UiMonospace,
     #[cfg(feature = "emoji")]
     BundledFontRole::EmojiFallback,
@@ -57,7 +71,10 @@ const BOOTSTRAP_UI_SANS_FAMILIES: &[&str] = &[
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     "Inter",
 ];
-const BOOTSTRAP_UI_SERIF_FAMILIES: &[&str] = &[];
+const BOOTSTRAP_UI_SERIF_FAMILIES: &[&str] = &[
+    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+    "Roboto Slab",
+];
 const BOOTSTRAP_UI_MONO_FAMILIES: &[&str] = &[
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     "JetBrains Mono",
@@ -68,7 +85,10 @@ const DEFAULT_UI_SANS_FAMILIES: &[&str] = &[
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     "Inter",
 ];
-const DEFAULT_UI_SERIF_FAMILIES: &[&str] = &[];
+const DEFAULT_UI_SERIF_FAMILIES: &[&str] = &[
+    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+    "Roboto Slab",
+];
 const DEFAULT_UI_MONO_FAMILIES: &[&str] = &[
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     "JetBrains Mono",

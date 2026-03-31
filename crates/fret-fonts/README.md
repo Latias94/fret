@@ -5,15 +5,14 @@ are not available.
 
 Status note:
 
-- The shipped `bootstrap_profile()` and `default_profile()` currently guarantee `sans` and
-  `monospace`.
-- They do not guarantee `serif`.
-- If your Web/WASM app needs deterministic article/markdown/document serif typography, you must
-  bundle and register serif-capable fonts explicitly instead of relying on the default profile.
+- The shipped `bootstrap_profile()` and `default_profile()` now guarantee `sans`, `serif`, and
+  `monospace` whenever `bootstrap-subset` or `bootstrap-full` is enabled.
+- The intentionally minimal mono-only build still avoids promising `sans` / `serif`.
 
 ## Contents
 
 - Inter (roman + italic) — OFL 1.1 (`assets/Inter-OFL.txt`)
+- Roboto Slab Variable — Apache 2.0 (`assets/RobotoSlab-LICENSE.txt`)
 - JetBrains Mono (roman + italic) — OFL 1.1 (`assets/JetBrainsMono-OFL.txt`)
 - Fira Mono (subset) — OFL 1.1 (`assets/FiraMono-LICENSE`)
 - Noto Color Emoji — OFL 1.1 (`assets/NotoEmoji-LICENSE.txt`) (optional; `emoji` feature)

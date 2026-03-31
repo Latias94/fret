@@ -328,26 +328,56 @@ fn bundled_profile_matrix_covers_ui_and_monospace_contracts() {
     }
 }
 
+#[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+#[test]
+fn bundled_profile_matrix_covers_serif_contract() {
+    for profile in [crate::bootstrap_profile(), crate::default_profile()] {
+        assert_role_families_cover_codepoints(profile, BundledFontRole::UiSerif, &['A', 'm']);
+    }
+}
+
 #[test]
 fn bootstrap_profile_declares_expected_generic_guarantees() {
     let profile = crate::bootstrap_profile();
     assert!(profile.guarantees_generic_family(BundledGenericFamily::Monospace));
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     assert!(profile.guarantees_generic_family(BundledGenericFamily::Sans));
+    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+    assert!(profile.guarantees_generic_family(BundledGenericFamily::Serif));
     #[cfg(not(any(feature = "bootstrap-subset", feature = "bootstrap-full")))]
     assert!(!profile.guarantees_generic_family(BundledGenericFamily::Sans));
+    #[cfg(not(any(feature = "bootstrap-subset", feature = "bootstrap-full")))]
     assert!(!profile.guarantees_generic_family(BundledGenericFamily::Serif));
 }
 
+#[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
 #[test]
-fn default_profile_explicitly_does_not_guarantee_serif() {
+fn default_profile_guarantees_serif_when_bootstrap_fonts_are_enabled() {
     let profile = crate::default_profile();
-    assert!(profile.ui_serif_families.is_empty());
-    assert!(!profile.guarantees_generic_family(BundledGenericFamily::Serif));
+    assert_eq!(profile.ui_serif_families, &["Roboto Slab"]);
+    assert!(profile.guarantees_generic_family(BundledGenericFamily::Serif));
 }
 
+#[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
 #[test]
-fn bundled_profile_matrix_explicitly_omits_serif_contract() {
+fn bundled_profile_matrix_guarantees_serif_when_bootstrap_fonts_are_enabled() {
+    for profile in [crate::bootstrap_profile(), crate::default_profile()] {
+        assert!(
+            !profile.ui_serif_families.is_empty(),
+            "expected bundled serif families in profile {}",
+            profile.name
+        );
+        assert!(
+            profile.guarantees_generic_family(BundledGenericFamily::Serif),
+            "expected profile {} to guarantee serif when bootstrap fonts are enabled",
+            profile.name
+        );
+    }
+}
+
+#[cfg(not(any(feature = "bootstrap-subset", feature = "bootstrap-full")))]
+#[test]
+fn bundled_profile_matrix_explicitly_omits_serif_contract_without_bootstrap_fonts() {
     for profile in [crate::bootstrap_profile(), crate::default_profile()] {
         assert!(
             profile.ui_serif_families.is_empty(),
@@ -356,7 +386,7 @@ fn bundled_profile_matrix_explicitly_omits_serif_contract() {
         );
         assert!(
             !profile.guarantees_generic_family(BundledGenericFamily::Serif),
-            "expected profile {} to explicitly avoid guaranteeing serif",
+            "expected profile {} to avoid guaranteeing serif without bootstrap fonts",
             profile.name
         );
     }

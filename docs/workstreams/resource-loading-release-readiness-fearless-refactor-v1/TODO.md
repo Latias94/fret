@@ -81,14 +81,17 @@ Tracking format:
 
 - [x] RLRR-004 Decide and document the web `serif` guarantee boundary.
   - Required outcomes:
-    - either add a bundled serif guarantee to the shipped profile,
-    - or explicitly state that `serif` is not guaranteed on web in the release-facing docs.
+    - ship a bundled serif guarantee on the default bundled startup lane,
+    - update the release-facing docs to reflect that shipped guarantee.
   - Evidence:
     - `crates/fret-fonts/src/profiles.rs`
     - `crates/fret-runtime/src/font_bootstrap.rs`
     - `crates/fret-fonts/src/lib.rs`
     - `crates/fret-fonts/README.md`
     - `crates/fret-fonts/src/tests.rs`
+  - Chosen closure:
+    - the shipped bootstrap/default profile now includes a bundled `UiSerif` family, so the
+      release-facing story is “shipped guarantee” instead of “explicit denial”.
 
 - [x] RLRR-005 Publish the current web image decode limitation.
   - Required outcomes:

@@ -6,6 +6,8 @@ const FONT_OTF_MEDIA_TYPE: &str = "font/otf";
 
 #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
 const ROLE_UI_SANS: &[BundledFontRole] = &[BundledFontRole::UiSans];
+#[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+const ROLE_UI_SERIF: &[BundledFontRole] = &[BundledFontRole::UiSerif];
 const ROLE_UI_MONO: &[BundledFontRole] = &[BundledFontRole::UiMonospace];
 #[cfg(feature = "emoji")]
 const ROLE_EMOJI: &[BundledFontRole] = &[BundledFontRole::EmojiFallback];
@@ -43,6 +45,12 @@ const INTER_ITALIC_ASSET_KEY: &str = "fonts/Inter-italic.ttf";
 const INTER_ITALIC_BYTES: &[u8] = include_bytes!("../assets/Inter-italic-subset.ttf");
 #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
 const INTER_ITALIC_ASSET_KEY: &str = "fonts/Inter-italic-subset.ttf";
+
+#[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+const ROBOTO_SLAB_VARIABLE_BYTES: &[u8] =
+    include_bytes!("../assets/RobotoSlab-VariableFont_wght.ttf");
+#[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+const ROBOTO_SLAB_VARIABLE_ASSET_KEY: &str = "fonts/RobotoSlab-VariableFont_wght.ttf";
 
 #[cfg(feature = "bootstrap-full")]
 const JETBRAINS_MONO_ROMAN_BYTES: &[u8] = include_bytes!("../assets/JetBrainsMono-roman.ttf");
@@ -91,6 +99,15 @@ pub(crate) const INTER_ITALIC_FACE: BundledFontFaceSpec = BundledFontFaceSpec {
 };
 
 #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+pub(crate) const ROBOTO_SLAB_VARIABLE_FACE: BundledFontFaceSpec = BundledFontFaceSpec {
+    family: "Roboto Slab",
+    roles: ROLE_UI_SERIF,
+    asset_key: ROBOTO_SLAB_VARIABLE_ASSET_KEY,
+    media_type: FONT_TTF_MEDIA_TYPE,
+    bytes: ROBOTO_SLAB_VARIABLE_BYTES,
+};
+
+#[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
 pub(crate) const JETBRAINS_MONO_ROMAN_FACE: BundledFontFaceSpec = BundledFontFaceSpec {
     family: "JetBrains Mono",
     roles: ROLE_UI_MONO,
@@ -132,6 +149,8 @@ pub(crate) const BOOTSTRAP_FACES: &[BundledFontFaceSpec] = &[
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     INTER_ITALIC_FACE,
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+    ROBOTO_SLAB_VARIABLE_FACE,
+    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     JETBRAINS_MONO_ROMAN_FACE,
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     JETBRAINS_MONO_ITALIC_FACE,
@@ -147,6 +166,8 @@ pub(crate) const DEFAULT_FACES: &[BundledFontFaceSpec] = &[
     INTER_ROMAN_FACE,
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     INTER_ITALIC_FACE,
+    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
+    ROBOTO_SLAB_VARIABLE_FACE,
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     JETBRAINS_MONO_ROMAN_FACE,
     #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
