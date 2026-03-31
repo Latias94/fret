@@ -74,6 +74,8 @@
   a separate bridge crate.
 - Wave 2 now treats `fret-bootstrap` as a feature-first app-kit crate rather than splitting every
   optional integration into its own published bridge.
+- `fret` root no longer proxies maintainer/niche lanes that lacked a real authoring story:
+  `devloop`, `tracing`, `material3`, and `ui-ai` now stay on their owning crates.
 
 **Remaining to close**
 
@@ -93,6 +95,9 @@
 - `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`
 - `ecosystem/fret/Cargo.toml`
+- `ecosystem/fret/README.md`
+- `ecosystem/fret/src/lib.rs`
+- `apps/fret-examples/Cargo.toml`
 - `cargo check -p fret-bootstrap --features ui-app-command-palette-shadcn`
 - `cargo check -p fret-bootstrap --features diagnostics`
 - `cargo check -p fret-bootstrap --features diagnostics-canvas`

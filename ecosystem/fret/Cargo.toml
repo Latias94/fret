@@ -71,17 +71,11 @@ desktop = [
     "fret-bootstrap/ui-app-driver",
 ]
 
-# Dev-only iteration helpers (fast restart state restore, etc).
-devloop = ["fret-launch/dev-state"]
-
 # Common app/dev conveniences (still optional; users can disable for minimal builds).
 diagnostics = ["fret-bootstrap/diagnostics"]
-tracing = ["fret-bootstrap/tracing"]
 
 # Ecosystem integrations.
 shadcn = ["dep:fret-ui-shadcn"]
-material3 = ["dep:fret-ui-material3"]
-ui-ai = ["dep:fret-ui-ai"]
 ui-assets = ["fret-bootstrap/ui-assets"]
 icons = [
     "fret-bootstrap/icons-lucide",
@@ -109,9 +103,7 @@ fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
 fret-router = { version = "0.1.0", path = "../fret-router", optional = true }
 fret-router-ui = { version = "0.1.0", path = "../fret-router-ui", optional = true }
 fret-selector = { version = "0.1.0", path = "../fret-selector", optional = true }
-fret-ui-ai = { version = "0.1.0", path = "../fret-ui-ai", optional = true }
 fret-ui-editor = { version = "0.1.0", path = "../fret-ui-editor", optional = true }
-fret-ui-material3 = { version = "0.1.0", path = "../fret-ui-material3", optional = true }
 fret-ui-shadcn = { version = "0.1.0", path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit" }
 time.workspace = true

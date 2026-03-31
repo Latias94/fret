@@ -100,6 +100,8 @@ Decision:
   recommended best-practice bootstrap bundle,
 - only extract a new crate when the integration is a genuinely separate authoring surface that we
   expect users to depend on and learn independently,
+- keep `fret` root features limited to app-facing lanes that we are willing to teach; maintainer
+  conveniences and niche design-system/domain crates should stay on direct owning crates,
 - do not hide them behind more root-level facade shortcuts.
 
 ## Wave plan

@@ -628,15 +628,6 @@ pub mod advanced {
         pub use crate::view::view_record_engine_frame;
     }
 
-    /// Dev-only helpers (hotpatch/dev-state) for iteration workflows.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "devloop"))]
-    pub mod dev {
-        pub use fret_launch::dev_state::{
-            DevStateExport, DevStateHook, DevStateHooks, DevStateSnapshot,
-            DevStateWindowKeyRegistry,
-        };
-    }
-
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     /// Low-level interop helpers kept off the default crate root.
     pub mod interop {
@@ -3686,18 +3677,6 @@ mod authoring_surface_policy_tests {
         assert!(advanced_surface.contains("view_init_window,"));
         assert!(advanced_surface.contains("view_view"));
         assert!(advanced_surface.contains("view_record_engine_frame"));
-    }
-
-    #[test]
-    fn advanced_surface_quarantines_devloop_helpers_off_root() {
-        let root_header = root_surface_header_source();
-        let advanced_surface = advanced_prelude_source();
-
-        assert!(!root_header.contains("pub mod dev {"));
-        assert!(advanced_surface.contains("pub mod dev {"));
-        assert!(advanced_surface.contains("DevStateExport, DevStateHook, DevStateHooks,"));
-        assert!(advanced_surface.contains("DevStateSnapshot,"));
-        assert!(advanced_surface.contains("DevStateWindowKeyRegistry,"));
     }
 
     #[test]

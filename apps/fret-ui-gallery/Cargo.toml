@@ -24,7 +24,6 @@ gallery-chart = [
 gallery-dev = [
     "gallery-ai",
     "gallery-chart",
-    "fret/ui-ai",
     "gallery-web-ime-harness",
     "dep:fret-ui-magic",
     "dep:fret-code-editor-view",

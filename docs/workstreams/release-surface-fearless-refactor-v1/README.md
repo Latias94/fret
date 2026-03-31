@@ -24,6 +24,9 @@ Non-goals:
 - Tooling stays tooling: `fretboard` and `fret-diag` are not part of the minimal library release.
 - `fret-bootstrap` is feature-first: recommended bootstrap integrations stay on that crate unless
   they become a genuinely separate authoring surface that users should learn independently.
+- `fret` root features should stay limited to lanes that form a real app-facing teaching surface;
+  maintainer conveniences and niche design-system/domain crates should stay on direct owning
+  crates.
 
 ## First landed slice
 

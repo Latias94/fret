@@ -214,6 +214,9 @@ The same ordered builder surface now also includes compile-time/static entries t
 - `command-palette`: enable the command palette wiring in the golden-path driver, including the
   default shadcn overlay bridge.
 
+Design-system- or domain-specific ecosystems that do not form a stable `fret` root authoring
+story should stay as direct crate dependencies instead of root feature proxies.
+
 ## Web / wasm
 
 `fret` is desktop-first. For web demos in this repository, use tooling:

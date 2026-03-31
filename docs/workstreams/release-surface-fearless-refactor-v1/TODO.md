@@ -84,8 +84,27 @@ Tracking format:
     - `cargo check -p fret-bootstrap --features ui-app-command-palette-shadcn`
     - `cargo check -p fret --features command-palette`
 
-- [ ] RELFACE-fret-120 Re-audit the `fret` optional feature matrix after Wave 2 and cut anything
+- [x] RELFACE-fret-120 Re-audit the `fret` optional feature matrix after Wave 2 and cut anything
       that still feels like an internal repo convenience instead of a real public contract.
+  - Landed slice:
+    - removed `fret/devloop`; first-party examples already use `fret-launch/dev-state` directly
+      where they actually need dev-state hooks
+    - removed `fret/tracing`; bootstrap tracing stays on `fret-bootstrap/tracing` instead of
+      widening the `fret` root story for a maintainer-oriented toggle
+    - removed `fret/material3` and `fret/ui-ai`; those ecosystems stay on direct owning crates
+      until they form a stable `fret` root teaching surface
+    - `fret` root now keeps only app-facing lanes that are documented and intentionally taught
+  - Evidence:
+    - `ecosystem/fret/Cargo.toml`
+    - `ecosystem/fret/README.md`
+    - `ecosystem/fret/src/lib.rs`
+    - `apps/fret-examples/Cargo.toml`
+    - `apps/fret-ui-gallery/Cargo.toml`
+    - `docs/crate-usage-guide.md`
+    - `cargo check -p fret`
+    - `cargo check -p fret --features state`
+    - `cargo check -p fret-examples`
+    - `python3 tools/check_layering.py`
 
 ## Wave 3 — Release candidate set
 
