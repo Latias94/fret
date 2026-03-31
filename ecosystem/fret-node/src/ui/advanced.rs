@@ -9,9 +9,6 @@ use fret_runtime::Model;
 use super::controller::NodeGraphController;
 
 pub use super::edit_queue::NodeGraphEditQueue;
-pub use super::view_queue::{
-    NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
-};
 
 /// Advanced helper that binds a controller to a raw edit-queue transport.
 ///
@@ -22,15 +19,4 @@ pub fn bind_controller_edit_queue_transport(
     queue: Model<NodeGraphEditQueue>,
 ) -> NodeGraphController {
     controller.bind_edit_queue_transport(queue)
-}
-
-/// Advanced helper that binds a controller to a raw view-queue transport.
-///
-/// This keeps queue-owned viewport transport explicit without requiring a public extension trait on
-/// the controller surface.
-pub fn bind_controller_view_queue_transport(
-    controller: NodeGraphController,
-    queue: Model<NodeGraphViewQueue>,
-) -> NodeGraphController {
-    controller.bind_view_queue_transport(queue)
 }

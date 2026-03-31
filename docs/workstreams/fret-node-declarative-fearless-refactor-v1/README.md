@@ -234,7 +234,7 @@ The final reference architecture should let app authors ask for one clear surfac
 A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs` as
 `NodeGraphController`:
 
-- it wraps `NodeGraphStore` and optional `NodeGraphViewQueue`,
+- it wraps `NodeGraphStore` plus an optional private viewport-transport seam,
 - it provides common query helpers and transaction-safe commit helpers,
 - it now includes the first bounds-aware viewport helpers (`set_center_in_bounds*`,
   `fit_view_nodes_in_bounds*`) so paint-only / fallback hosts can drive viewport state without
@@ -266,18 +266,20 @@ For retained composition, the preferred teaching posture is now controller-first
 widget posture is `new(...)` plus optional `with_controller(...)`. Raw queue binding on retained
 widgets now stay crate-internal for compatibility harnesses, focused retained tests, and temporary
 migration glue.
-Queue-first APIs such as `NodeGraphEditQueue` and `NodeGraphViewQueue` should now be treated as
-advanced transport seams rather than the default app-facing integration surface. The temporary
-`NodeGraphViewportHelper` facade is now deleted, so app-facing composition should call
+Queue-first APIs such as `NodeGraphEditQueue` should now be treated as advanced transport seams
+rather than the default app-facing integration surface. Raw view-queue transport is now crate-
+internal, and the temporary `NodeGraphViewportHelper` facade is deleted, so app-facing composition
+should call
 `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*,`
 `fit_view_nodes_in_bounds*}` directly, while declarative action hooks should prefer
 `NodeGraphSurfaceBinding::{set_viewport_action_host, fit_view_nodes_in_bounds_action_host}` over
 owning raw transport queues.
 
-`fret_node::ui::advanced::*` is now the explicit namespace for those retained transport seams,
-including queue-bound controller construction via `bind_controller_*_transport(...)`, and
-root `fret_node::ui::*` no longer re-exports the raw queue/helper surfaces. Retained-backed samples
-and crate-internal retained/test callers now use `advanced::*` or explicit module paths directly.
+`fret_node::ui::advanced::*` is now the explicit namespace for retained edit-transport seams, and
+root `fret_node::ui::*` no longer re-exports the raw queue/helper surfaces. Retained-backed
+samples and crate-internal retained/test callers now use `advanced::*` or explicit module paths
+directly, while viewport option types stay on the root `ui::*` surface without exposing the raw
+view queue itself.
 Because this repo does not need a public compatibility window, the old root queue/helper aliases are
 removed outright instead of going through a deprecation cycle.
 Current controller-facing XyFlow mapping (review helper, not a final contract):
@@ -581,7 +583,5 @@ Canonical runnable targets:
 | layering | `python tools/check_layering.py` | catches accidental boundary drift while the surface is still moving |
 
 The TODO tracker defines the next gate additions still required for full transaction-safe declarative parity.
-
-
 
 

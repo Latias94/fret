@@ -163,18 +163,17 @@ Execution companion: `design.md` (surface map + next worktree order).
     integration still needs it.
 
 - **Most likely next shrink targets**
-  - Raw queue / viewport transport still exported from `ecosystem/fret-node/src/ui/advanced.rs`
-    (`NodeGraphEditQueue`, `NodeGraphViewQueue`, `NodeGraphViewRequest`, viewport request option types):
-    now explicit and bounded, but still a likely future shrink target once controller-first coverage is complete.
-  - `fret_node::ui::advanced::{bind_controller_edit_queue_transport, bind_controller_view_queue_transport}`
-    (`ecosystem/fret-node/src/ui/advanced.rs`): keep only as thin advanced helpers, not as a
-    separate controller extension vocabulary.
+  - Raw edit transport still exported from `ecosystem/fret-node/src/ui/advanced.rs`
+    (`NodeGraphEditQueue`, `bind_controller_edit_queue_transport(...)`): now explicit and bounded,
+    but still a likely future shrink target once controller-first edit coverage is complete.
 
 - **Landable follow-ups from this audit**
-  - [x] Delete `NodeGraphViewportHelper`; queue-owned integrations either bind a controller
-        explicitly or push `NodeGraphViewRequest` values directly.
-  - [x] Move raw queue / viewport transport into the explicit `fret_node::ui::advanced::*`
-        namespace.
+  - [x] Delete `NodeGraphViewportHelper`; viewport authoring now stays on controller/binding
+        surfaces.
+  - [x] Move raw edit transport into the explicit `fret_node::ui::advanced::*` namespace and keep
+        raw view transport crate-internal.
+  - [x] Make raw view-queue transport crate-internal; root `ui::*` now only re-exports viewport
+        option types.
   - [x] Demote retained widget / overlay queue binding methods to crate-private compatibility seams.
   - [x] Remove root `fret_node::ui::*` queue/helper re-exports from the public surface.
   - [x] Add one short README/workstream note that queue APIs are advanced retained transport seams, not

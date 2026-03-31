@@ -47,14 +47,12 @@ anchoring, diagnostics).
 
 ### Advanced transport surface
 
-Only use these when an integration intentionally owns raw queue transport and accepts the retained /
+Only use these when an integration intentionally owns raw edit transport and accepts the retained /
 compatibility mental model.
 
 - `fret_node::ui::advanced::NodeGraphEditQueue`
-- `fret_node::ui::advanced::NodeGraphViewQueue`
-- `fret_node::ui::advanced::NodeGraphViewRequest`
-- `fret_node::ui::advanced::{bind_controller_edit_queue_transport, bind_controller_view_queue_transport}`
-  - explicit advanced helpers for binding a controller to raw edit/view transport queues,
+- `fret_node::ui::advanced::bind_controller_edit_queue_transport(...)`
+  - explicit advanced helper for binding a controller to raw edit transport,
   - not part of the default app-facing controller story.
 
 ### Crate-internal retained compatibility seams
@@ -109,10 +107,10 @@ Use this when a retained-only harness still needs the legacy canvas / overlay st
 Use this only when the integration intentionally owns queue transport.
 
 1. Import `fret_node::ui::advanced::*` explicitly.
-2. Bind raw queues via the explicit `bind_controller_*_transport(...)` helpers if controller
-   ergonomics are still useful.
-3. Push raw `NodeGraphViewRequest` items directly only when queue-model viewport ownership is the
-   point of the integration.
+2. Bind raw edit queues via `bind_controller_edit_queue_transport(...)` if controller ergonomics
+   are still useful.
+3. Keep viewport authoring on `NodeGraphController` / `NodeGraphSurfaceBinding` instead of exposing
+   a second raw queue story.
 4. Do not teach this recipe as the default downstream path in examples or cookbook docs.
 
 ## Next worktree order

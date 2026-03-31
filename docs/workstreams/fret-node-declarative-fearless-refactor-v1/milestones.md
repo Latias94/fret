@@ -192,11 +192,9 @@ points rather than direct graph mutation.
     composition calls `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*,`
     `fit_view_nodes_in_bounds*}` directly, and raw queue ownership stays an explicit advanced
     transport choice.
-  - Raw queue / viewport transport exports now live under the explicit `fret_node::ui::advanced::*`
-    namespace; queue-bound controller construction now uses thin `bind_controller_*_transport(...)`
-    helpers there instead of a separate public extension trait, and the old root `fret_node::ui::*`
-    queue/helper aliases are removed from the
-    public surface.
+  - Raw edit transport now lives under the explicit `fret_node::ui::advanced::*` namespace, while
+    raw view-queue transport is crate-internal; root `fret_node::ui::*` now re-exports viewport
+    option types but not the underlying queue/request machinery.
   - The retained-backed domain demo now imports its raw queue seam from `advanced::*`, while the
     workflow gallery snippet no longer owns a raw `NodeGraphViewQueue` at all and instead uses
     `NodeGraphSurfaceBinding::{set_viewport_action_host, fit_view_nodes_in_bounds_action_host}`.
