@@ -1,12 +1,24 @@
 # imui cross-window ghost v1 - TODO
 
-Status: active board
+Status: closed board
 
 Last updated: 2026-03-30
 
 Tracking doc: `docs/workstreams/imui-cross-window-ghost-v1/DESIGN.md`
 
 Milestones: `docs/workstreams/imui-cross-window-ghost-v1/MILESTONES.md`
+
+Closeout audit:
+
+- `docs/workstreams/imui-cross-window-ghost-v1/CLOSEOUT_AUDIT_2026-03-30.md`
+
+Successor lane:
+
+- `docs/workstreams/imui-shell-ghost-choreography-v1/DESIGN.md`
+
+Contract freeze:
+
+- `docs/workstreams/imui-cross-window-ghost-v1/M1_CONTRACT_FREEZE_2026-03-30.md`
 
 Predecessor closeout:
 
@@ -29,33 +41,42 @@ Compatibility shims are explicitly out of scope.
 
 ## M1 - Freeze the contract questions before code
 
-- [ ] Decide whether the next public generic surface should remain recipe-owned or stop at
+- [x] Decide whether the next public generic surface should remain recipe-owned or stop at
       same-window while shell layers own transfer choreography.
-- [ ] Decide which window owns ghost rendering when the pointer is over another Fret window.
-- [ ] Decide how the source window hides, keeps, or hands off its ghost during cross-window hover.
-- [ ] Decide whether the hovered window needs a transferred preview descriptor or whether source
+- [x] Decide which window owns ghost rendering when the pointer is over another Fret window.
+- [x] Decide how the source window hides, keeps, or hands off its ghost during cross-window hover.
+- [x] Decide whether the hovered window needs a transferred preview descriptor or whether source
       ownership can remain authoritative.
-- [ ] Decide the fallback rule for single-window / unreliable cross-window hover environments.
+- [x] Decide the fallback rule for single-window / unreliable cross-window hover environments.
+- [x] Capture the accepted decision record in
+      `docs/workstreams/imui-cross-window-ghost-v1/M1_CONTRACT_FREEZE_2026-03-30.md`.
 
 ## M2 - Lock the first proof surface and smallest gate
 
-- [ ] Choose the smallest first-party multi-window proof surface.
-      Current preference: `apps/fret-examples/src/imui_editor_proof_demo.rs`.
-- [ ] Decide whether the first proof should use the existing main/aux window pair before any
+- [x] Choose the smallest first-party multi-window proof surface.
+      Result: `apps/fret-examples/src/imui_editor_proof_demo.rs`.
+- [x] Decide whether the first proof should use the existing main/aux window pair before any
       docking-specific surface.
-- [ ] Define one regression gate that can prove ghost ownership across windows without relying on
+      Result: yes; the generic slice lands on the existing main/aux proof first.
+- [x] Define one regression gate that can prove ghost ownership across windows without relying on
       screenshots alone.
-- [ ] Record the minimum evidence anchors for source window, hovered window, and no-duplicate rule.
+      Landed as
+      `ecosystem/fret-imui/src/tests/interaction.rs::tests::interaction::cross_window_drag_preview_ghost_transfers_between_windows`.
+- [x] Record the minimum evidence anchors for source window, hovered window, and no-duplicate rule.
+      Anchors:
+      `apps/fret-examples/src/imui_editor_proof_demo.rs`,
+      `ecosystem/fret-ui-kit/src/recipes/imui_drag_preview.rs`,
+      `ecosystem/fret-imui/src/tests/interaction.rs`.
 
 ## M3 - Implementation and explicit defers
 
-- [ ] Land only the smallest mechanism delta that is proven necessary by the proof surface.
-- [ ] Keep shell choreography out of `fret-ui-kit::imui`.
-- [ ] Keep any generic recipe surface narrow and explicit if it survives the proof.
-- [ ] Record explicit deferred items after the first landed slice:
+- [x] Land only the smallest mechanism delta that is proven necessary by the proof surface.
+- [x] Keep shell choreography out of `fret-ui-kit::imui`.
+- [x] Keep any generic recipe surface narrow and explicit if it survives the proof.
+- [x] Record explicit deferred items after the first landed slice:
       docking tear-out choreography,
       aggregate previews,
       native/external preview surfaces,
       richer descriptor transport.
-- [ ] Capture a closeout audit once the first cross-window slice is shipped or intentionally
+- [x] Capture a closeout audit once the first cross-window slice is shipped or intentionally
       deferred.

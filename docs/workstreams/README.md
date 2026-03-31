@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-03-30
+Catalog updated: 2026-03-31
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -16,8 +16,8 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 188
-- Standalone markdown files: 44 (see `docs/workstreams/standalone/README.md`)
+- Dedicated directories: 191
+- Standalone markdown files: 45 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
 ## Promotion Rule
@@ -78,6 +78,13 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
   - `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
 
+- Closed authoring-vocabulary closure / closeout record:
+  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/DESIGN.md`
+  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/TODO.md`
+  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/MILESTONES.md`
+  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/GAP_AUDIT_2026-03-31.md`
+  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/CLOSEOUT_AUDIT_2026-03-31.md`
+
 - Closed editor-grade helper closure / closeout record:
   - `docs/workstreams/imui-editor-grade-surface-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-grade-surface-closure-v1/TODO.md`
@@ -100,10 +107,27 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-drag-preview-ghost-v1/UPSTREAM_PARITY_AUDIT_2026-03-30.md`
   - `docs/workstreams/imui-drag-preview-ghost-v1/CLOSEOUT_AUDIT_2026-03-30.md`
 
-- Active cross-window ghost / shell choreography follow-on:
+- Closed generic cross-window ghost baseline / closeout record:
   - `docs/workstreams/imui-cross-window-ghost-v1/DESIGN.md`
   - `docs/workstreams/imui-cross-window-ghost-v1/TODO.md`
   - `docs/workstreams/imui-cross-window-ghost-v1/MILESTONES.md`
+  - `docs/workstreams/imui-cross-window-ghost-v1/M1_CONTRACT_FREEZE_2026-03-30.md`
+  - `docs/workstreams/imui-cross-window-ghost-v1/CLOSEOUT_AUDIT_2026-03-30.md`
+
+- Closed shell-aware ghost choreography follow-on / closeout record:
+  - `docs/workstreams/imui-shell-ghost-choreography-v1/DESIGN.md`
+  - `docs/workstreams/imui-shell-ghost-choreography-v1/TODO.md`
+  - `docs/workstreams/imui-shell-ghost-choreography-v1/MILESTONES.md`
+  - `docs/workstreams/imui-shell-ghost-choreography-v1/M1_CONTRACT_FREEZE_2026-03-30.md`
+  - `docs/workstreams/imui-shell-ghost-choreography-v1/CLOSEOUT_AUDIT_2026-03-30.md`
+
+- Closed transparent moving-window payload overlap follow-on / closeout record:
+  - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/DESIGN.md`
+  - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/TODO.md`
+  - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/MILESTONES.md`
+  - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/M1_CONTRACT_FREEZE_2026-03-30.md`
+  - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/M2_LAUNCHED_PROOF_READ_2026-03-30.md`
+  - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/CLOSEOUT_AUDIT_2026-03-30.md`
 
 Historical archive directories retained for rationale/audit history only:
 
@@ -123,10 +147,21 @@ Historical companion/audit notes retained under `standalone/`:
 Rule:
 
 - Prefer the completed stack-reset docs for baseline API/ownership guidance.
+- Prefer the authoring-vocabulary closeout docs for the shipped generic immediate helper surface
+  after the editor/ghost closures.
 - Prefer the editor-grade closeout docs for what landed and what was intentionally deferred.
 - Prefer the sortable recipe closeout docs for the shipped v1 row-level recipe boundary.
 - Prefer the drag preview ghost closeout docs for the shipped same-window source-side preview boundary.
-- Prefer the cross-window ghost lane for the active multi-window choreography contract work.
+- Prefer the cross-window ghost closeout docs for the shipped generic multi-window transfer
+  baseline.
+- Prefer the shell ghost choreography closeout docs for the current docking-owned shell ghost owner
+  split and first-shell-rule proof.
+- Prefer the transparent payload z-order closeout docs for the diagnostics/runtime closure of the
+  transparent moving-window overlap lane.
+- Prefer the M1 freeze record in the shell ghost choreography lane for the docking-first owner
+  split and proof baseline.
+- Prefer the M1 freeze record in the cross-window closeout lane for the generic owner split and
+  fallback baseline.
 - Read the older `imui-*` files only as archive evidence, parity notes, or migration history.
 - Treat any old symbol names in those archive files as historical unless explicitly marked as retained.
 
@@ -216,14 +251,17 @@ Rule:
 - `docs/workstreams/image-support-v1/` — first 2026-02-09, latest 2026-02-11, 2 markdown docs
 - `docs/workstreams/imui-authoring-facade-v1/` — first 2026-02-03, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
 - `docs/workstreams/imui-authoring-facade-v2/` — first 2026-02-03, latest 2026-03-02, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
-- `docs/workstreams/imui-cross-window-ghost-v1/` — first n/a, latest n/a, 3 markdown docs (active follow-on for cross-window ghost ownership and shell choreography)
+- `docs/workstreams/imui-authoring-vocabulary-closure-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped generic immediate helper vocabulary relative to Dear ImGui/egui after the editor-grade and ghost closeouts)
+- `docs/workstreams/imui-cross-window-ghost-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped generic cross-window ghost baseline; M1 contract freeze accepted)
 - `docs/workstreams/imui-drag-preview-ghost-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped same-window source-side drag preview ghost)
 - `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 6 markdown docs (closed closeout record; sortable recipe follow-on lives in `docs/workstreams/imui-sortable-recipe-v1/`)
+- `docs/workstreams/imui-shell-ghost-choreography-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped docking-owned shell ghost choreography follow-on)
+- `docs/workstreams/imui-shell-transparent-payload-zorder-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the transparent moving-window payload overlap diagnostics/runtime lane)
 - `docs/workstreams/imui-sortable-recipe-v1/` — first 2026-03-29, latest 2026-03-30, 5 markdown docs (closed closeout record for the shipped v1 row-level sortable recipe)
-- `docs/workstreams/imui-stack-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-27, 3 markdown docs (baseline immediate-mode source of truth; editor-grade closeout lives in `docs/workstreams/imui-editor-grade-surface-closure-v1/`, and sortable recipe closeout lives in `docs/workstreams/imui-sortable-recipe-v1/`)
+- `docs/workstreams/imui-stack-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-27, 3 markdown docs (baseline immediate-mode source of truth; current remaining gap closure lives in `docs/workstreams/imui-authoring-vocabulary-closure-v1/`, and prior closeouts live in `docs/workstreams/imui-editor-grade-surface-closure-v1/` and `docs/workstreams/imui-sortable-recipe-v1/`)
 - `docs/workstreams/input-dispatch-v2/` — first 2026-01-22, latest 2026-02-14, 3 markdown docs
 - `docs/workstreams/into-element-surface-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-20, 6 markdown docs
 - `docs/workstreams/launcher-utility-windows-v1/` — first 2026-03-03, latest 2026-03-03, 4 markdown docs

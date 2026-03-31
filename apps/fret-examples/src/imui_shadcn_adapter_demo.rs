@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::{FretApp, advanced::prelude::*};
+use fret_core::Px;
 use fret_ui_shadcn::facade as shadcn;
 
 struct ImUiShadcnAdapterView;
@@ -40,12 +41,20 @@ impl View for ImUiShadcnAdapterView {
         let mode_label: Arc<str> = mode.unwrap_or_else(|| Arc::from("none"));
 
         fret_imui::imui_vstack(cx.elements(), |ui| {
-            use fret_ui_kit::imui::{InputTextOptions, SliderOptions, UiWriterImUiFacadeExt as _};
+            use fret_ui_kit::imui::{
+                InputTextOptions, SliderOptions, TableColumn, TableOptions,
+                UiWriterImUiFacadeExt as _, VirtualListMeasureMode, VirtualListOptions,
+            };
 
             let select_items = [
                 Arc::<str>::from("Alpha"),
                 Arc::<str>::from("Beta"),
                 Arc::<str>::from("Gamma"),
+            ];
+            let table_columns = [
+                TableColumn::fill("Field"),
+                TableColumn::px("Value", Px(160.0)),
+                TableColumn::px("Source", Px(100.0)),
             ];
 
             let summary_card = {
@@ -99,11 +108,12 @@ impl View for ImUiShadcnAdapterView {
                 },
             );
 
-            let _ = ui.select_model_with_options(
+            let _ = ui.combo_model_with_options(
+                "imui-shadcn-demo.mode.popup",
                 "Mode",
                 mode_state.model(),
                 &select_items,
-                fret_ui_kit::imui::SelectOptions {
+                fret_ui_kit::imui::ComboModelOptions {
                     test_id: Some(Arc::from("imui-shadcn-demo.mode")),
                     ..Default::default()
                 },
@@ -114,6 +124,64 @@ impl View for ImUiShadcnAdapterView {
                 InputTextOptions {
                     placeholder: Some(Arc::from("Type some text...")),
                     ..Default::default()
+                },
+            );
+
+            ui.separator_text("Inspector snapshot");
+            ui.table_with_options(
+                "imui-shadcn-demo.table",
+                &table_columns,
+                TableOptions {
+                    striped: true,
+                    test_id: Some(Arc::from("imui-shadcn-demo.table")),
+                    ..Default::default()
+                },
+                |table| {
+                    table.row("count", |row| {
+                        row.cell_text("Count");
+                        row.cell_text(Arc::<str>::from(format!("{count}")));
+                        row.cell_text("State");
+                    });
+                    table.row("enabled", |row| {
+                        row.cell_text("Enabled");
+                        row.cell_text(Arc::<str>::from(format!("{enabled}")));
+                        row.cell_text("Toggle");
+                    });
+                    table.row("value", |row| {
+                        row.cell_text("Value");
+                        row.cell_text(Arc::<str>::from(format!("{value:.1}")));
+                        row.cell_text("Slider");
+                    });
+                    table.row("mode", |row| {
+                        row.cell_text("Mode");
+                        row.cell_text(mode_label.clone());
+                        row.cell_text("Combo");
+                    });
+                    table.row("draft", |row| {
+                        row.cell_text("Draft");
+                        row.cell_text(Arc::<str>::from(draft.clone()));
+                        row.cell_text("Input");
+                    });
+                },
+            );
+
+            ui.separator_text("Virtualized recent entries");
+            let _ = ui.virtual_list_with_options(
+                "imui-shadcn-demo.virtual-list",
+                256,
+                VirtualListOptions {
+                    viewport_height: Px(156.0),
+                    estimate_row_height: Px(28.0),
+                    overscan: 2,
+                    gap: Px(2.0),
+                    measure_mode: VirtualListMeasureMode::Fixed,
+                    test_id: Some(Arc::from("imui-shadcn-demo.virtual-list")),
+                    ..Default::default()
+                },
+                |index| index as fret_ui::ItemKey,
+                |ui, index| {
+                    let selected = (count as usize % 16) == (index % 16);
+                    let _ = ui.selectable(format!("Recent entry #{index:03}"), selected);
                 },
             );
         })

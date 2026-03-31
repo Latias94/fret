@@ -154,6 +154,12 @@ fn eval_predicate_without_semantics(
         UiPredicateV1::DockDragActiveIs { active } => {
             Some(dock_drag_runtime.is_some_and(|drag| drag.dragging) == *active)
         }
+        UiPredicateV1::DockDragPayloadGhostVisibleIs { visible } => Some(
+            match docking.and_then(|d| d.dock_drag) {
+                Some(drag) => (drag.dragging && drag.payload_ghost_visible) == *visible,
+                None => !*visible,
+            },
+        ),
         UiPredicateV1::DockDragTransparentPayloadAppliedIs { applied } => Some(
             dock_drag_runtime
                 .is_some_and(|drag| drag.dragging && drag.transparent_payload_applied == *applied)
@@ -1313,6 +1319,12 @@ fn eval_predicate(
         UiPredicateV1::DockDragActiveIs { active } => {
             let dragging = dock_drag_runtime.is_some_and(|drag| drag.dragging);
             dragging == *active
+        }
+        UiPredicateV1::DockDragPayloadGhostVisibleIs { visible } => {
+            match docking.and_then(|d| d.dock_drag) {
+                Some(drag) => (drag.dragging && drag.payload_ghost_visible) == *visible,
+                None => !*visible,
+            }
         }
         UiPredicateV1::DockDragTransparentPayloadAppliedIs { applied } => {
             if let Some(drag) = dock_drag_runtime {

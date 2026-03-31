@@ -377,8 +377,11 @@ impl UiDiagnosticsService {
         devtools_request_redraw: bool,
     ) -> UiScriptFrameOutput {
         let mut output = UiScriptFrameOutput::default();
-        output.request_redraw =
-            self.cfg.script_keepalive || devtools_request_redraw || !self.active_scripts.is_empty();
+        // Do not keep the *non-active* window in a self-sustaining redraw loop just because some
+        // other window owns the active script. In multi-window docking diagnostics this can starve
+        // the source window of callbacks, leaving the runner stuck in an endless
+        // `nudge_preferred` cycle while the wrong window keeps repainting.
+        output.request_redraw = self.cfg.script_keepalive || devtools_request_redraw;
 
         let heartbeat = if self.active_scripts.len() == 1 {
             self.active_scripts

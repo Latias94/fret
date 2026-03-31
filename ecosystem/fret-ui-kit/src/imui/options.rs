@@ -178,6 +178,52 @@ impl Default for MenuItemOptions {
 }
 
 #[derive(Debug, Clone)]
+pub struct SelectableOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub selected: bool,
+    pub close_popup: Option<fret_runtime::Model<bool>>,
+    pub a11y_label: Option<Arc<str>>,
+    pub a11y_role: Option<SemanticsRole>,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for SelectableOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            selected: false,
+            close_popup: None,
+            a11y_label: None,
+            a11y_role: Some(SemanticsRole::ListBoxOption),
+            test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ComboOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+    pub popup: PopupMenuOptions,
+}
+
+impl Default for ComboOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            test_id: None,
+            popup: PopupMenuOptions::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ButtonOptions {
     pub enabled: bool,
     pub focusable: bool,
@@ -295,31 +341,23 @@ impl Default for SliderOptions {
 }
 
 #[derive(Debug, Clone)]
-pub struct SelectOptions {
+pub struct ComboModelOptions {
     pub enabled: bool,
     pub focusable: bool,
     pub a11y_label: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
-    /// Optional stable popup scope id override.
-    ///
-    /// When set, `select_model_with_options` will use this id for its internal popup scope instead of
-    /// deriving one from `test_id`/`label`. This is useful to avoid accidental collisions (e.g.
-    /// multiple selects with the same label) and to keep popup store growth bounded when call sites
-    /// generate dynamic labels.
-    pub popup_scope_id: Option<Arc<str>>,
     pub placeholder: Option<Arc<str>>,
     pub popup: PopupMenuOptions,
 }
 
-impl Default for SelectOptions {
+impl Default for ComboModelOptions {
     fn default() -> Self {
         Self {
             enabled: true,
             focusable: true,
             a11y_label: None,
             test_id: None,
-            popup_scope_id: None,
-            placeholder: Some(Arc::from("Select?")),
+            placeholder: Some(Arc::from("Select...")),
             popup: PopupMenuOptions::default(),
         }
     }
@@ -382,6 +420,156 @@ impl Default for GridOptions {
             row_items: crate::Items::Center,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TableColumnWidth {
+    Px(Px),
+    Fill(f32),
+}
+
+impl TableColumnWidth {
+    pub fn px(width: Px) -> Self {
+        Self::Px(width)
+    }
+
+    pub fn fill(weight: f32) -> Self {
+        Self::Fill(weight)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TableColumn {
+    pub header: Option<Arc<str>>,
+    pub width: TableColumnWidth,
+}
+
+impl TableColumn {
+    pub fn px(header: impl Into<Arc<str>>, width: Px) -> Self {
+        Self {
+            header: Some(header.into()),
+            width: TableColumnWidth::Px(width),
+        }
+    }
+
+    pub fn fill(header: impl Into<Arc<str>>) -> Self {
+        Self {
+            header: Some(header.into()),
+            width: TableColumnWidth::Fill(1.0),
+        }
+    }
+
+    pub fn weighted(header: impl Into<Arc<str>>, weight: f32) -> Self {
+        Self {
+            header: Some(header.into()),
+            width: TableColumnWidth::Fill(weight),
+        }
+    }
+
+    pub fn unlabeled(width: TableColumnWidth) -> Self {
+        Self {
+            header: None,
+            width,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TableOptions {
+    pub show_header: bool,
+    pub striped: bool,
+    pub clip_cells: bool,
+    pub column_gap: crate::MetricRef,
+    pub row_gap: crate::MetricRef,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for TableOptions {
+    fn default() -> Self {
+        Self {
+            show_header: true,
+            striped: false,
+            clip_cells: true,
+            column_gap: crate::MetricRef::space(crate::Space::N0),
+            row_gap: crate::MetricRef::space(crate::Space::N0),
+            test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct TableRowOptions {
+    pub test_id: Option<Arc<str>>,
+}
+
+#[derive(Clone)]
+pub struct VirtualListOptions {
+    /// Bounded viewport height for the virtualized list surface.
+    pub viewport_height: Px,
+    /// Estimated row height used by the runtime virtualizer.
+    pub estimate_row_height: Px,
+    /// Overscan row count per side.
+    pub overscan: usize,
+    /// Caller-provided revision bump when item identities or row-height inputs change.
+    pub items_revision: u64,
+    /// Runtime measure mode.
+    pub measure_mode: fret_ui::element::VirtualListMeasureMode,
+    /// Runtime key-cache policy.
+    pub key_cache: fret_ui::element::VirtualListKeyCacheMode,
+    /// Number of off-window rows a retained host may keep alive.
+    pub keep_alive: usize,
+    /// Inter-row gap owned by the runtime virtualizer.
+    pub gap: Px,
+    /// Virtualizer scroll-margin offset.
+    pub scroll_margin: Px,
+    /// Optional known row-height callback used when `measure_mode == Known`.
+    pub known_row_height_at: Option<Arc<dyn Fn(usize) -> Px + Send + Sync>>,
+    /// Optional external scroll handle.
+    pub handle: Option<fret_ui::scroll::VirtualListScrollHandle>,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for VirtualListOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VirtualListOptions")
+            .field("viewport_height", &self.viewport_height)
+            .field("estimate_row_height", &self.estimate_row_height)
+            .field("overscan", &self.overscan)
+            .field("items_revision", &self.items_revision)
+            .field("measure_mode", &self.measure_mode)
+            .field("key_cache", &self.key_cache)
+            .field("keep_alive", &self.keep_alive)
+            .field("gap", &self.gap)
+            .field("scroll_margin", &self.scroll_margin)
+            .field("known_row_height_at", &self.known_row_height_at.is_some())
+            .field("handle", &self.handle.is_some())
+            .field("test_id", &self.test_id)
+            .finish()
+    }
+}
+
+impl Default for VirtualListOptions {
+    fn default() -> Self {
+        Self {
+            viewport_height: Px(240.0),
+            estimate_row_height: Px(28.0),
+            overscan: 6,
+            items_revision: 0,
+            measure_mode: fret_ui::element::VirtualListMeasureMode::Measured,
+            key_cache: fret_ui::element::VirtualListKeyCacheMode::AllKeys,
+            keep_alive: 0,
+            gap: Px(0.0),
+            scroll_margin: Px(0.0),
+            known_row_height_at: None,
+            handle: None,
+            test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SeparatorTextOptions {
+    pub test_id: Option<Arc<str>>,
 }
 
 #[derive(Debug, Clone)]

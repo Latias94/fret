@@ -227,5 +227,343 @@ fn container_helpers_layout_horizontal_vertical_grid_and_scroll() {
     );
     assert!(scroll_child.y.0 > grid_c.y.0);
 }
+
+#[test]
+fn table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(240.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let columns = [
+        TableColumn::fill("Name"),
+        TableColumn::px("Status", Px(96.0)),
+        TableColumn::px("Owner", Px(88.0)),
+    ];
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-layout",
+        |cx| {
+            crate::imui(cx, |ui| {
+                ui.table_with_options(
+                    "imui-table-layout",
+                    &columns,
+                    TableOptions {
+                        striped: true,
+                        test_id: Some(Arc::from("imui-table-layout")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text(
+                                "Extremely long inspector label that should remain clipped inside the first fill column",
+                            );
+                            row.cell_text("Ready");
+                            row.cell_text("Alice");
+                        });
+                        table.row("beta", |row| {
+                            row.cell_text("Short");
+                            row.cell_text("Busy");
+                            row.cell_text("Bob");
+                        });
+                    },
+                );
+            })
+        },
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let header_status = bounds_for_test_id(&ui, "imui-table-layout.header.cell.1");
+    let row0_status = bounds_for_test_id(&ui, "imui-table-layout.row.0.cell.1");
+    let row1_status = bounds_for_test_id(&ui, "imui-table-layout.row.1.cell.1");
+    let header_owner = bounds_for_test_id(&ui, "imui-table-layout.header.cell.2");
+    let row0_owner = bounds_for_test_id(&ui, "imui-table-layout.row.0.cell.2");
+    let row1_owner = bounds_for_test_id(&ui, "imui-table-layout.row.1.cell.2");
+
+    let assert_close = |label: &str, a: f32, b: f32| {
+        assert!((a - b).abs() <= 0.5, "{label} drifted: left={a}, right={b}");
+    };
+
+    assert_close(
+        "status x header vs row0",
+        header_status.origin.x.0,
+        row0_status.origin.x.0,
+    );
+    assert_close(
+        "status x header vs row1",
+        header_status.origin.x.0,
+        row1_status.origin.x.0,
+    );
+    assert_close(
+        "status width header vs row0",
+        header_status.size.width.0,
+        row0_status.size.width.0,
+    );
+    assert_close(
+        "status width header vs row1",
+        header_status.size.width.0,
+        row1_status.size.width.0,
+    );
+
+    assert_close(
+        "owner x header vs row0",
+        header_owner.origin.x.0,
+        row0_owner.origin.x.0,
+    );
+    assert_close(
+        "owner x header vs row1",
+        header_owner.origin.x.0,
+        row1_owner.origin.x.0,
+    );
+    assert_close(
+        "owner width header vs row0",
+        header_owner.size.width.0,
+        row0_owner.size.width.0,
+    );
+    assert_close(
+        "owner width header vs row1",
+        header_owner.size.width.0,
+        row1_owner.size.width.0,
+    );
+}
+
+#[test]
+fn virtual_list_helper_mounts_small_render_window_and_scrolls_to_target_row() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let scroll = VirtualListScrollHandle::new();
+    let rendered_range = Rc::new(Cell::new(None::<(usize, usize)>));
+
+    let rendered_out = rendered_range.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-virtual-list",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let response = ui.virtual_list_with_options(
+                    "imui-virtual-list",
+                    100,
+                    VirtualListOptions {
+                        viewport_height: Px(60.0),
+                        estimate_row_height: Px(20.0),
+                        overscan: 0,
+                        measure_mode: VirtualListMeasureMode::Fixed,
+                        handle: Some(scroll.clone()),
+                        test_id: Some(Arc::from("imui-virtual-list")),
+                        ..Default::default()
+                    },
+                    |index| index as fret_ui::ItemKey,
+                    |ui, index| {
+                        let _ = ui.selectable(format!("Row {index}"), false);
+                    },
+                );
+                rendered_out.set(response.rendered_range());
+            })
+        },
+    );
+
+    app.advance_frame();
+
+    let rendered_out = rendered_range.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-virtual-list",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let response = ui.virtual_list_with_options(
+                    "imui-virtual-list",
+                    100,
+                    VirtualListOptions {
+                        viewport_height: Px(60.0),
+                        estimate_row_height: Px(20.0),
+                        overscan: 0,
+                        measure_mode: VirtualListMeasureMode::Fixed,
+                        handle: Some(scroll.clone()),
+                        test_id: Some(Arc::from("imui-virtual-list")),
+                        ..Default::default()
+                    },
+                    |index| index as fret_ui::ItemKey,
+                    |ui, index| {
+                        let _ = ui.selectable(format!("Row {index}"), false);
+                    },
+                );
+                rendered_out.set(response.rendered_range());
+            })
+        },
+    );
+
+    let range0 = rendered_range.get().expect("initial rendered range");
+    assert_eq!(range0.0, 0);
+    assert!(
+        range0.1 <= 3,
+        "initial rendered range too large: {range0:?}"
+    );
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-virtual-list.row.0",
+    ));
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-virtual-list.row.50",
+    ));
+
+    scroll.scroll_to_item(50, fret_ui::ScrollStrategy::Start);
+    app.advance_frame();
+
+    let rendered_out = rendered_range.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-virtual-list",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let response = ui.virtual_list_with_options(
+                    "imui-virtual-list",
+                    100,
+                    VirtualListOptions {
+                        viewport_height: Px(60.0),
+                        estimate_row_height: Px(20.0),
+                        overscan: 0,
+                        measure_mode: VirtualListMeasureMode::Fixed,
+                        handle: Some(scroll.clone()),
+                        test_id: Some(Arc::from("imui-virtual-list")),
+                        ..Default::default()
+                    },
+                    |index| index as fret_ui::ItemKey,
+                    |ui, index| {
+                        let _ = ui.selectable(format!("Row {index}"), index == 50);
+                    },
+                );
+                rendered_out.set(response.rendered_range());
+            })
+        },
+    );
+
+    let range1 = rendered_range.get().expect("scrolled rendered range");
+    assert!(
+        range1.0 <= 50 && 50 <= range1.1,
+        "target row not in range: {range1:?}"
+    );
+    assert!(range1.1.saturating_sub(range1.0) <= 3);
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-virtual-list.row.50",
+    ));
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-virtual-list.row.0",
+    ));
+}
+
+#[test]
+fn separator_text_helper_renders_label_with_trailing_rule() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(180.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-separator-text",
+        |cx| {
+            crate::imui(cx, |ui| {
+                ui.menu_item_with_options(
+                    "Above",
+                    MenuItemOptions {
+                        test_id: Some(Arc::from("imui-separator-text.above")),
+                        ..Default::default()
+                    },
+                );
+                ui.separator_text_with_options(
+                    "Section",
+                    fret_ui_kit::imui::SeparatorTextOptions {
+                        test_id: Some(Arc::from("imui-separator-text.section")),
+                    },
+                );
+                ui.menu_item_with_options(
+                    "Below",
+                    MenuItemOptions {
+                        test_id: Some(Arc::from("imui-separator-text.below")),
+                        ..Default::default()
+                    },
+                );
+            })
+        },
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let section = bounds_for_test_id(&ui, "imui-separator-text.section");
+    let label = bounds_for_test_id(&ui, "imui-separator-text.section.label");
+    let line = bounds_for_test_id(&ui, "imui-separator-text.section.line");
+
+    assert!(section.size.width.0 > 200.0);
+    assert!(label.origin.x.0 >= section.origin.x.0);
+    assert!(line.origin.x.0 >= label.origin.x.0 + label.size.width.0);
+    assert!(line.size.width.0 > 40.0);
+    assert!(line.origin.x.0 + line.size.width.0 <= section.origin.x.0 + section.size.width.0 + 1.0);
+}
 // Note: `for_each_keyed` is exercised indirectly by downstream ecosystem crates. The core
 // smoke tests above focus on interaction correctness (`clicked` / `changed`).

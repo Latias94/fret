@@ -40,6 +40,7 @@ pub mod font_catalog;
 pub mod font_catalog_cache;
 #[cfg(test)]
 mod font_config_tests;
+mod injected_event_scope;
 pub mod input;
 pub mod interaction_diagnostics;
 pub mod keymap;
@@ -148,6 +149,7 @@ pub use fret_core::{
 };
 pub use fret_core::{IncomingOpenDataEvent, IncomingOpenItem, ShareItem, ShareSheetOutcome};
 pub use fret_i18n;
+pub use injected_event_scope::{in_injected_event_scope, with_injected_event_scope};
 pub use input::{
     DefaultAction, DefaultActionSet, InputContext, InputDispatchPhase, KeyChord, Platform,
     TextBoundaryMode, format_chord, format_sequence,

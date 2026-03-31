@@ -403,6 +403,8 @@ pub struct UiDockDragDiagnosticsV1 {
     pub dragging: bool,
     pub cross_window_hover: bool,
     #[serde(default)]
+    pub payload_ghost_visible: bool,
+    #[serde(default)]
     pub transparent_payload_applied: bool,
     #[serde(default)]
     pub transparent_payload_hit_test_passthrough_applied: bool,
@@ -456,6 +458,7 @@ impl UiDockDragDiagnosticsV1 {
             kind: dock_drag_kind_label(snapshot.kind).to_string(),
             dragging: snapshot.dragging,
             cross_window_hover: snapshot.cross_window_hover,
+            payload_ghost_visible: snapshot.payload_ghost_visible,
             transparent_payload_applied: snapshot.transparent_payload_applied,
             transparent_payload_hit_test_passthrough_applied: snapshot
                 .transparent_payload_hit_test_passthrough_applied,

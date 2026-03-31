@@ -60,6 +60,12 @@ pub(super) struct PaintDockParams<'a> {
     pub(super) tab_overflow_menu: Option<TabOverflowMenuState>,
 }
 
+pub(super) struct DockDragGhostPaint {
+    pub(super) position: Point,
+    pub(super) grab_offset: Point,
+    pub(super) title: PreparedTabTitle,
+}
+
 pub(super) fn paint_dock(
     theme: fret_ui::ThemeSnapshot,
     dock: &DockManager,
@@ -585,6 +591,59 @@ pub(super) fn paint_split_handles(
             );
         }
     }
+}
+
+pub(super) fn paint_drag_payload_ghost(
+    theme: fret_ui::ThemeSnapshot,
+    ghost: Option<DockDragGhostPaint>,
+    close_glyph_present: bool,
+    scene: &mut Scene,
+) {
+    let Some(ghost) = ghost else {
+        return;
+    };
+
+    let width = dock_tab_width_for_title(
+        theme.clone(),
+        ghost.title.metrics.size.width,
+        close_glyph_present,
+    );
+    let rect = Rect::new(
+        Point::new(
+            Px(ghost.position.x.0 - ghost.grab_offset.x.0),
+            Px(ghost.position.y.0 - ghost.grab_offset.y.0),
+        ),
+        Size::new(width, DOCK_TAB_H),
+    );
+
+    let card = theme.color_token("card");
+    let border = theme.color_token("border");
+    let fg = theme.color_token("foreground");
+    let radius_sm = theme.metric_token("metric.radius.sm");
+    let clip = tab_title_clip_rect(theme.clone(), rect, close_glyph_present);
+
+    scene.push(SceneOp::Quad {
+        order: fret_core::DrawOrder(10_020),
+        rect,
+        background: fret_core::Paint::Solid(Color { a: 0.94, ..card }).into(),
+        border: Edges::all(Px(1.0)),
+        border_paint: fret_core::Paint::Solid(Color { a: 0.88, ..border }).into(),
+        corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
+    });
+
+    let inner_y =
+        rect.origin.y.0 + ((rect.size.height.0 - ghost.title.metrics.size.height.0) * 0.5);
+    let text_y = Px(inner_y + ghost.title.metrics.baseline.0);
+    scene.push(SceneOp::PushClipRect { rect: clip });
+    scene.push(SceneOp::Text {
+        order: fret_core::DrawOrder(10_021),
+        origin: Point::new(clip.origin.x, text_y),
+        text: ghost.title.blob,
+        paint: (Color { a: 0.96, ..fg }).into(),
+        outline: None,
+        shadow: None,
+    });
+    scene.push(SceneOp::PopClip);
 }
 
 #[allow(clippy::too_many_arguments)]

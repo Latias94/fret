@@ -52,9 +52,24 @@ It complements (but does not replace) ADRs:
 
 ## P1 - Authoring surfaces (imui convergence)
 
-- Track the fearless v2 consolidation of immediate-style authoring in:
-  - `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md`
-  - `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2-todo.md`
+- Baseline source of truth for the in-tree `imui` stack:
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+- The high-frequency immediate authoring vocabulary closure is now closed in:
+  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/DESIGN.md`
+  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/TODO.md`
+  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/MILESTONES.md`
+  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/GAP_AUDIT_2026-03-31.md`
+  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/CLOSEOUT_AUDIT_2026-03-31.md`
+- Treat the editor helper, sortable recipe, and ghost lanes as closeout evidence, not as active
+  generic `imui` backlog:
+  - `docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md`
+  - `docs/workstreams/imui-sortable-recipe-v1/CLOSEOUT_AUDIT_2026-03-30.md`
+  - `docs/workstreams/imui-shell-ghost-choreography-v1/CLOSEOUT_AUDIT_2026-03-30.md`
+  - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/CLOSEOUT_AUDIT_2026-03-30.md`
+- Current immediate-mode follow-up should only reopen a new lane when there is new evidence for a
+  real missing noun, a boundary mistake, or a regression against the shipped gates.
 - Keep official ecosystem `imui` adapters accepting `&mut impl fret_authoring::UiWriter<H>` to avoid concrete `ImUi` coupling.
 
 ## P0 - IME / Text Input

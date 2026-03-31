@@ -117,6 +117,8 @@ fn source_response_for<H: UiHost>(
         active: true,
         cross_window: drag.cross_window_hover,
         position: Some(drag.position),
+        pointer_id: Some(pointer_id),
+        session_id: Some(drag.session_id),
     }
 }
 

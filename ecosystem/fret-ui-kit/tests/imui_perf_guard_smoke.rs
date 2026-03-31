@@ -1,11 +1,15 @@
 #![cfg(feature = "imui")]
 
 #[test]
-fn select_wrapper_does_not_materialize_items_vec_each_frame() {
-    let source = include_str!("../src/imui.rs");
+fn combo_model_wrapper_does_not_materialize_items_vec_each_frame() {
+    let source = include_str!("../src/imui/combo_model_controls.rs");
     assert!(
         !source.contains("let items: Vec<Arc<str>> = items.to_vec();"),
-        "select_model_with_options should keep items borrowed instead of cloning into Vec each frame"
+        "combo_model_with_options should keep items borrowed instead of cloning into Vec each frame"
+    );
+    assert!(
+        source.contains("combo_with_options("),
+        "combo_model_with_options should reuse the canonical combo helper instead of duplicating popup trigger flow"
     );
 }
 
@@ -41,5 +45,18 @@ fn popup_menu_uses_environment_viewport_bounds_for_popper_outer_bounds() {
     assert!(
         !source.contains("popper_content_layout_sized(cx.bounds"),
         "imui popup menu should not use cx.bounds as the popper outer bounds (bypasses environment query deps)"
+    );
+}
+
+#[test]
+fn imui_virtual_list_wrapper_reuses_runtime_virtual_list_substrate() {
+    let source = include_str!("../src/imui/virtual_list_controls.rs");
+    assert!(
+        source.contains("virtual_list_keyed_with_layout("),
+        "imui virtual_list should stay a thin wrapper over the runtime keyed virtual list substrate"
+    );
+    assert!(
+        source.contains("slot_state(VirtualListScrollHandle::new"),
+        "imui virtual_list should keep a stable default VirtualListScrollHandle when the caller does not provide one"
     );
 }

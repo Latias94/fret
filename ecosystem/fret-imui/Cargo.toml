@@ -23,6 +23,7 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui-kit = { path = "../fret-ui-kit", features = ["imui"] }
+slotmap.workspace = true
 
 [lints.clippy]
 arc_with_non_send_sync = "allow"

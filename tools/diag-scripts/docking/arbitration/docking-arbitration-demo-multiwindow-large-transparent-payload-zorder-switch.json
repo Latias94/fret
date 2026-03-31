@@ -116,7 +116,7 @@
       "window": { "kind": "first_seen" },
       "predicate": {
         "kind": "dock_graph_signature_is",
-        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.extra.0]),tabs([demo.viewport.extra.1])]),split(h,[tabs([demo.viewport.extra.2]),tabs([demo.viewport.extra.3]),tabs([demo.viewport.extra.4]),tabs([demo.viewport.extra.5])]),split(h,[tabs([demo.viewport.extra.6]),tabs([demo.viewport.extra.7]),tabs([demo.viewport.extra.8]),tabs([demo.viewport.extra.9])]),tabs([demo.controls])]);floatings=[])"
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.extra#0]),tabs([demo.viewport.extra#1])]),split(h,[tabs([demo.viewport.extra#2]),tabs([demo.viewport.extra#3]),tabs([demo.viewport.extra#4]),tabs([demo.viewport.extra#5])]),split(h,[tabs([demo.viewport.extra#6]),tabs([demo.viewport.extra#7]),tabs([demo.viewport.extra#8]),tabs([demo.viewport.extra#9])]),tabs([demo.controls])]);floatings=[])"
       }
     },
     {

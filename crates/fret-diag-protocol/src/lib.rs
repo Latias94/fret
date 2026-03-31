@@ -2212,6 +2212,14 @@ pub enum UiPredicateV1 {
     DockDragActiveIs {
         active: bool,
     },
+    /// True when the latest docking diagnostics report that the shell-local dock payload ghost is
+    /// visible in the evaluated window.
+    ///
+    /// This is intended to gate shell choreography: once a real `moving_window` takes ownership
+    /// of drag feedback, the in-window payload ghost should no longer paint.
+    DockDragPayloadGhostVisibleIs {
+        visible: bool,
+    },
     /// True when the latest docking diagnostics report a dock drag session with an ImGui-style
     /// "transparent payload" applied to the moving window (e.g. reduced opacity and/or
     /// click-through hit-test passthrough while the dock-floating window follows the cursor).

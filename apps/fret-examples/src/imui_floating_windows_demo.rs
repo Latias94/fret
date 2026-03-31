@@ -186,11 +186,12 @@ impl View for ImUiFloatingWindowsView {
                                 Arc::<str>::from("Beta"),
                                 Arc::<str>::from("Gamma"),
                             ];
-                            let _ = ui.select_model_with_options(
+                            let _ = ui.combo_model_with_options(
+                                "imui-float-demo.select.popup",
                                 "Mode",
                                 select_mode_state.model(),
                                 &select_items,
-                                fret_ui_kit::imui::SelectOptions {
+                                fret_ui_kit::imui::ComboModelOptions {
                                     test_id: Some(Arc::from("imui-float-demo.select")),
                                     ..Default::default()
                                 },

@@ -7,7 +7,7 @@ use crate::{
     IncomingOpenToken, ShareSheetToken, TimerToken,
 };
 use fret_core::{
-    AlphaMode, AppWindowId, CursorIcon, Edges, ExternalDropReadLimits, FileDialogOptions,
+    AlphaMode, AppWindowId, CursorIcon, Edges, Event, ExternalDropReadLimits, FileDialogOptions,
     ImageColorInfo, ImageId, Rect, RectPx, WindowAnchor,
 };
 
@@ -215,6 +215,14 @@ pub enum Effect {
     DiagIncomingOpenInject {
         window: AppWindowId,
         items: Vec<DiagIncomingOpenItem>,
+    },
+    /// Diagnostics-only synthetic event injection (best-effort).
+    ///
+    /// This lets tooling deliver an already-constructed runtime event to a specific window even
+    /// when that window is not the one currently producing render callbacks.
+    DiagInjectEvent {
+        window: AppWindowId,
+        event: Event,
     },
     /// Diagnostics-only clipboard override to simulate mobile privacy/user-activation denial paths.
     ///

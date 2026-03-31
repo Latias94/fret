@@ -3,7 +3,8 @@
 use std::rc::Rc;
 
 use fret_authoring::Response;
-use fret_core::{Point, Rect, Size};
+use fret_core::{Point, PointerId, Rect, Size};
+use fret_runtime::DragSessionId;
 use fret_ui::GlobalElementId;
 
 /// A richer interaction result intended for immediate-mode facade helpers.
@@ -25,6 +26,8 @@ pub struct DragSourceResponse {
     pub active: bool,
     pub cross_window: bool,
     pub position: Option<Point>,
+    pub pointer_id: Option<PointerId>,
+    pub session_id: Option<DragSessionId>,
 }
 
 /// ImGui-style hovered query flags for `ResponseExt` convenience helpers.
@@ -229,6 +232,19 @@ pub struct DisclosureResponse {
     pub toggled: bool,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ComboResponse {
+    pub trigger: ResponseExt,
+    pub open: bool,
+    pub toggled: bool,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct VirtualListResponse {
+    pub handle: fret_ui::scroll::VirtualListScrollHandle,
+    pub rendered_range: Option<(usize, usize)>,
+}
+
 impl DisclosureResponse {
     pub fn id(self) -> Option<GlobalElementId> {
         self.trigger.id
@@ -251,6 +267,46 @@ impl DisclosureResponse {
     }
 }
 
+impl ComboResponse {
+    pub fn id(self) -> Option<GlobalElementId> {
+        self.trigger.id
+    }
+
+    pub fn open(self) -> bool {
+        self.open
+    }
+
+    pub fn toggled(self) -> bool {
+        self.toggled
+    }
+
+    pub fn opened(self) -> bool {
+        self.toggled && self.open
+    }
+
+    pub fn closed(self) -> bool {
+        self.toggled && !self.open
+    }
+
+    pub fn clicked(self) -> bool {
+        self.trigger.clicked()
+    }
+
+    pub fn hovered_like_imgui(self) -> bool {
+        self.trigger.hovered_like_imgui()
+    }
+}
+
+impl VirtualListResponse {
+    pub fn handle(&self) -> fret_ui::scroll::VirtualListScrollHandle {
+        self.handle.clone()
+    }
+
+    pub fn rendered_range(&self) -> Option<(usize, usize)> {
+        self.rendered_range
+    }
+}
+
 impl DragSourceResponse {
     pub fn active(self) -> bool {
         self.active
@@ -262,6 +318,14 @@ impl DragSourceResponse {
 
     pub fn position(self) -> Option<Point> {
         self.position
+    }
+
+    pub fn pointer_id(self) -> Option<PointerId> {
+        self.pointer_id
+    }
+
+    pub fn session_id(self) -> Option<DragSessionId> {
+        self.session_id
     }
 }
 

@@ -202,16 +202,18 @@ impl UiDiagnosticsService {
     }
 
     pub fn with_script_injection_scope<R>(f: impl FnOnce() -> R) -> R {
-        SCRIPT_INJECTION_SCOPE.with(|cell| {
-            let prev = cell.replace(true);
-            let out = f();
-            cell.set(prev);
-            out
+        fret_runtime::with_injected_event_scope(|| {
+            SCRIPT_INJECTION_SCOPE.with(|cell| {
+                let prev = cell.replace(true);
+                let out = f();
+                cell.set(prev);
+                out
+            })
         })
     }
 
     fn in_script_injection_scope() -> bool {
-        SCRIPT_INJECTION_SCOPE.with(|cell| cell.get())
+        SCRIPT_INJECTION_SCOPE.with(|cell| cell.get()) || fret_runtime::in_injected_event_scope()
     }
 
     fn any_script_running(&self) -> bool {
@@ -297,12 +299,14 @@ impl UiDiagnosticsService {
             UiWindowTargetV1::FirstSeenOther => self
                 .known_windows
                 .iter()
-                .copied().find(|w| *w != current_window),
+                .copied()
+                .find(|w| *w != current_window),
             UiWindowTargetV1::LastSeen => last_seen,
             UiWindowTargetV1::LastSeenOther => self
                 .known_windows
                 .iter()
-                .copied().rfind(|w| *w != current_window),
+                .copied()
+                .rfind(|w| *w != current_window),
             UiWindowTargetV1::WindowFfi { window } => {
                 let want = AppWindowId::from(KeyData::from_ffi(window));
                 self.known_windows.contains(&want).then_some(want)
@@ -438,6 +442,7 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::DockDragMovingWindowIs { .. }
                 | UiPredicateV1::DockDragWindowUnderMovingWindowIs { .. }
                 | UiPredicateV1::DockDragActiveIs { .. }
+                | UiPredicateV1::DockDragPayloadGhostVisibleIs { .. }
                 | UiPredicateV1::DockDragTransparentPayloadAppliedIs { .. }
                 | UiPredicateV1::DockDragTransparentPayloadHitTestPassthroughAppliedIs { .. }
                 | UiPredicateV1::DockDragWindowUnderCursorSourceIs { .. }
@@ -598,12 +603,15 @@ impl UiDiagnosticsService {
                 return Some(active.anchor_window);
             }
 
-            // `wait_frames` is often used as a short "yield" between runner-level window ops
-            // (raise/move) and subsequent assertions. During cross-window drags, the drag source
-            // window can become fully occluded and starved of redraw callbacks; honoring an
-            // explicit `wait_frames.window` target keeps scripts deterministic without requiring
-            // the occluded window to tick.
+            // `wait_frames` / `wait_ms` are often used as short "yield" steps between runner-level
+            // window ops (raise/move) and subsequent assertions. When those steps do not name an
+            // explicit target window, keep them migratable even if a pointer session is active:
+            // cross-window drag choreography can intentionally raise a different OS window and then
+            // wait for a couple of frames there. Pinning the generic yield to the drag source
+            // window would deadlock if that source becomes occluded and stops receiving redraws.
             match step {
+                UiActionStepV2::WaitFrames { window: None, .. }
+                | UiActionStepV2::WaitMs { window: None, .. } => return None,
                 UiActionStepV2::WaitFrames {
                     window: Some(UiWindowTargetV1::FirstSeen),
                     ..
@@ -639,6 +647,13 @@ impl UiDiagnosticsService {
                 step,
                 UiActionStepV2::MovePointer { .. } | UiActionStepV2::MovePointerSweep { .. }
             ) {
+                return None;
+            }
+
+            // A captured `pointer_move` without an explicit window target should stay migratable.
+            // The owning pointer session still carries the true delivery window; pinning the whole
+            // script here can deadlock if that source window is temporarily starved of frames.
+            if matches!(step, UiActionStepV2::PointerMove { window: None, .. }) {
                 return None;
             }
 
@@ -966,8 +981,7 @@ impl UiDiagnosticsService {
             // sequences), keep the script alive by migrating it to a remaining window instead of
             // silently dropping it and letting tooling time out.
             let fallback = if active.anchor_window != window
-                && self
-                    .known_windows.contains(&active.anchor_window)
+                && self.known_windows.contains(&active.anchor_window)
             {
                 Some(active.anchor_window)
             } else {
@@ -1589,6 +1603,117 @@ impl UiDiagnosticsService {
         }
         self.last_script_run_id = id;
         id
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn app_window(ffi: u64) -> AppWindowId {
+        AppWindowId::from(KeyData::from_ffi(ffi))
+    }
+
+    fn active_script_for_step(step: UiActionStepV2) -> ActiveScript {
+        ActiveScript {
+            steps: vec![step],
+            run_id: 1,
+            anchor_window: app_window(1),
+            started_unix_ms: 0,
+            next_step: 0,
+            base_ref: None,
+            event_log: Vec::new(),
+            event_log_dropped: 0,
+            event_log_active_step: None,
+            last_injected_step: None,
+            last_injected_pointer_source_step: None,
+            last_injected_pointer_source_test_id: None,
+            wait_frames_remaining: 0,
+            wait_ms_deadline_unix_ms: None,
+            wait_until: None,
+            wait_shortcut_routing_trace: None,
+            wait_command_dispatch_trace: None,
+            wait_overlay_placement_trace: None,
+            screenshot_wait: None,
+            v2_step_state: None,
+            pointer_session: Some(V2PointerSessionState {
+                window: app_window(2),
+                button: UiMouseButtonV1::Left,
+                pointer_type: fret_core::PointerType::Mouse,
+                modifiers: Modifiers::default(),
+                position: Point::default(),
+            }),
+            pending_cancel_cross_window_drag: None,
+            last_reported_step: None,
+            last_reported_unix_ms: 0,
+            selector_resolution_trace: Vec::new(),
+            hit_test_trace: Vec::new(),
+            click_stable_trace: Vec::new(),
+            bounds_stable_trace: Vec::new(),
+            focus_trace: Vec::new(),
+            last_clipboard_write_completion: None,
+            shortcut_routing_trace: Vec::new(),
+            last_shortcut_routing_seq: 0,
+            command_dispatch_trace: Vec::new(),
+            last_command_dispatch_seq: 0,
+            overlay_placement_trace: Vec::new(),
+            web_ime_trace: Vec::new(),
+            ime_event_trace: Vec::new(),
+            last_explicit_cursor_override: None,
+            last_explicit_cursor_override_pos: None,
+        }
+    }
+
+    #[test]
+    fn preferred_window_wait_frames_without_window_stays_migratable_during_pointer_session() {
+        let active = active_script_for_step(UiActionStepV2::WaitFrames { window: None, n: 2 });
+
+        assert_eq!(
+            UiDiagnosticsService::preferred_window_for_active_script(&active),
+            None
+        );
+    }
+
+    #[test]
+    fn preferred_window_wait_ms_without_window_stays_migratable_during_pointer_session() {
+        let active = active_script_for_step(UiActionStepV2::WaitMs {
+            window: None,
+            n_ms: 16,
+        });
+
+        assert_eq!(
+            UiDiagnosticsService::preferred_window_for_active_script(&active),
+            None
+        );
+    }
+
+    #[test]
+    fn preferred_window_pointer_move_without_window_stays_migratable_during_pointer_session() {
+        let active = active_script_for_step(UiActionStepV2::PointerMove {
+            window: None,
+            pointer_kind: None,
+            delta_x: 12.0,
+            delta_y: 0.0,
+            steps: 1,
+        });
+
+        assert_eq!(
+            UiDiagnosticsService::preferred_window_for_active_script(&active),
+            None
+        );
+    }
+
+    #[test]
+    fn preferred_window_wait_frames_first_seen_still_honors_explicit_target() {
+        let active = active_script_for_step(UiActionStepV2::WaitFrames {
+            window: Some(UiWindowTargetV1::FirstSeen),
+            n: 2,
+        });
+
+        assert_eq!(
+            UiDiagnosticsService::preferred_window_for_active_script(&active),
+            Some(app_window(1))
+        );
     }
 }
 

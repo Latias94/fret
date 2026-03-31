@@ -542,6 +542,18 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                             );
                         }
                     }
+                    Effect::DiagInjectEvent { window, event } => {
+                        fret_runtime::with_injected_event_scope(|| {
+                            self.deliver_window_event_now(window, &event);
+                        });
+                        if self.windows.contains_key(window) {
+                            let _ = self.request_window_redraw_with_reason(
+                                window,
+                                fret_runtime::RunnerFrameDriveReason::EffectRedraw,
+                            );
+                            self.raf_windows.request(window);
+                        }
+                    }
                     Effect::SetTimer { .. } => {
                         self.schedule_timer(now, &effect);
                     }

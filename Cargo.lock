@@ -2392,6 +2392,7 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
+ "slotmap",
 ]
 
 [[package]]
