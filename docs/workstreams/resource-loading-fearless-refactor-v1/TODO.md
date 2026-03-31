@@ -195,9 +195,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       startup policy object for selecting development vs packaged publication on the builder path,
     - `fret-bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` now re-exports the same
       launch-owned contract and keeps bootstrap startup on `BootstrapBuilder::with_asset_startup(...)`
-      plus `AssetStartupPlan::{development_dir,development_manifest}(...)`, with
-      `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)` reserved for explicit
-      builder-local packaged bytes,
+      plus `AssetStartupPlan::{development_dir,development_manifest,packaged_entries,
+      packaged_bundle_entries,packaged_embedded_entries}(...)`,
     - `FretApp::asset_startup(...)` lowers that policy onto the default app-facing startup
       surface while preserving fail-early builder semantics,
     - `UiAppBuilder::with_asset_startup(...)` keeps the same policy available on the explicit

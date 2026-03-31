@@ -97,8 +97,8 @@ This workstream takes a fearless posture:
     lowest-level native startup surface.
   - `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` now re-export the launch-owned
     contract, and `BootstrapBuilder::with_asset_startup(...)` now keeps file-backed startup on the
-    same named development-vs-packaged plan surface while `with_bundle_asset_entries(...)` /
-    `with_embedded_asset_entries(...)` remain the explicit direct packaged-byte builder lane.
+    same named development-vs-packaged plan surface, including packaged bytes through
+    `AssetStartupPlan::{packaged_entries,packaged_bundle_entries,packaged_embedded_entries}(...)`.
   - `fret-runtime` now also exposes one generic invalidation contract for asset-consuming code:
     - `AssetReloadEpoch`,
     - `AssetReloadSupport`,

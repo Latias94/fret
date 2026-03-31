@@ -2953,6 +2953,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`BootstrapBuilder::with_asset_startup(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupPlan::development_dir(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupPlan::development_manifest(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupPlan::packaged_bundle_entries(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupPlan::packaged_embedded_entries(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("the bootstrap crate also exposes the matching"));
         assert!(CRATE_USAGE_GUIDE.contains(
             "`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`"

@@ -193,8 +193,8 @@ When you are on `fret-bootstrap` directly instead of `fret`, use the same startu
 `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
 `BootstrapBuilder::with_asset_startup(...)`; keep file-backed native/package-dev inputs on
 `AssetStartupPlan::development_dir(...)` / `AssetStartupPlan::development_manifest(...)`, and use
-`with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)` only when you intentionally
-want direct packaged-byte registration on the builder path.
+`AssetStartupPlan::packaged_entries(...)`, `AssetStartupPlan::packaged_bundle_entries(...)`, or
+`AssetStartupPlan::packaged_embedded_entries(...)` for packaged/web/mobile-friendly bytes.
 On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is the first-party
 generated-manifest convenience path when you want one directory to become one logical bundle
 without teaching raw repo-relative paths in app/widget code.
@@ -558,8 +558,9 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
   `BootstrapBuilder::with_asset_startup(...)`. Keep native/package-dev file-backed inputs on
   `AssetStartupPlan::development_dir(...)` / `AssetStartupPlan::development_manifest(...)`, and
-  keep `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)` for direct packaged
-  bytes when you intentionally want builder-local registration instead of one named startup plan.
+  keep packaged bytes on `AssetStartupPlan::packaged_entries(...)`,
+  `AssetStartupPlan::packaged_bundle_entries(...)`, or
+  `AssetStartupPlan::packaged_embedded_entries(...)`.
 - **Direct app wiring:** use `fret_ui_assets::app::configure_caches(...)` or
   `fret_ui_assets::app::configure_caches_with_budgets(...)`; keep
   `fret_ui_assets::advanced::{configure_caches_with_ui_services(...), configure_caches_with_ui_services_and_budgets(...)}`

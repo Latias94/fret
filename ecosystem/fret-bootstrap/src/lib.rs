@@ -397,30 +397,6 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self
     }
 
-    /// Register static bundle-scoped entries on the builder path.
-    pub fn with_bundle_asset_entries(
-        self,
-        bundle: impl Into<fret_assets::AssetBundleId>,
-        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
-    ) -> Self {
-        Self {
-            inner: self.inner.with_bundle_asset_entries(bundle, entries),
-            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
-        }
-    }
-
-    /// Register static embedded entries on the builder path.
-    pub fn with_embedded_asset_entries(
-        self,
-        owner: impl Into<fret_assets::AssetBundleId>,
-        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
-    ) -> Self {
-        Self {
-            inner: self.inner.with_embedded_asset_entries(owner, entries),
-            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
-        }
-    }
-
     /// Apply one explicit development-vs-packaged startup plan on the builder path.
     pub fn with_asset_startup(
         self,
@@ -829,6 +805,7 @@ mod fn_driver_builder_tests {
 
     use super::{AssetStartupMode, AssetStartupPlan, BootstrapBuilder, BootstrapError};
 
+
     struct DriverState;
     struct WindowState;
 
@@ -909,6 +886,17 @@ mod fn_driver_builder_tests {
                 )]),
         )
         .expect("packaged asset startup plan should load on bootstrap builder path");
+    }
+
+    #[test]
+    fn bootstrap_builder_keeps_asset_startup_as_single_asset_mount_surface() {
+        let lib_rs = include_str!("lib.rs");
+        let bundle_entries_helper = ["pub fn ", "with_bundle_asset_entries("].concat();
+        let embedded_entries_helper = ["pub fn ", "with_embedded_asset_entries("].concat();
+        let startup_helper = ["pub fn ", "with_asset_startup("].concat();
+        assert!(!lib_rs.contains(&bundle_entries_helper));
+        assert!(!lib_rs.contains(&embedded_entries_helper));
+        assert!(lib_rs.contains(&startup_helper));
     }
 
     #[test]
