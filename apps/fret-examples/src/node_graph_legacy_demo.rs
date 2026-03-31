@@ -50,7 +50,7 @@ use fret_node::runtime::store::NodeGraphStore;
 use fret_node::schema::{
     NodeKindMigrateError, NodeKindMigrator, NodeRegistry, NodeSchema, PortDecl,
 };
-use fret_node::ui::advanced::{NodeGraphControllerTransportExt as _, NodeGraphEditQueue};
+use fret_node::ui::advanced::{NodeGraphEditQueue, bind_controller_edit_queue_transport};
 use fret_node::ui::canvas::RejectNonFiniteTx;
 use fret_node::ui::declarative::NodeGraphSurfaceBinding;
 use fret_node::ui::presenter::{
@@ -1711,8 +1711,10 @@ impl NodeGraphDemoDriver {
             Vec::new()
         };
 
-        let controller = fret_node::ui::NodeGraphController::new(store.clone())
-            .bind_edit_queue_transport(edits.clone());
+        let controller = bind_controller_edit_queue_transport(
+            fret_node::ui::NodeGraphController::new(store.clone()),
+            edits.clone(),
+        );
         let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_controller(controller.clone())
             .with_middleware(RejectNonFiniteTx)

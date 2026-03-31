@@ -26,7 +26,7 @@ use fret_node::runtime::changes::NodeGraphChanges;
 use fret_node::runtime::events::ViewChange;
 use fret_node::runtime::store::NodeGraphStore;
 use fret_node::types::TypeDesc;
-use fret_node::ui::advanced::{NodeGraphControllerTransportExt as _, NodeGraphEditQueue};
+use fret_node::ui::advanced::{NodeGraphEditQueue, bind_controller_edit_queue_transport};
 use fret_node::ui::canvas::RejectNonFiniteTx;
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
@@ -1103,8 +1103,10 @@ pub fn run() -> anyhow::Result<()> {
     let view = app.models_mut().insert(store_value.view_state().clone());
     let store = app.models_mut().insert(store_value);
     let edits = app.models_mut().insert(NodeGraphEditQueue::default());
-    let controller =
-        NodeGraphController::new(store.clone()).bind_edit_queue_transport(edits.clone());
+    let controller = bind_controller_edit_queue_transport(
+        NodeGraphController::new(store.clone()),
+        edits.clone(),
+    );
     let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
     let group_rename_text = app.models_mut().insert(String::new());
     app.set_global(NodeGraphDemoModels {

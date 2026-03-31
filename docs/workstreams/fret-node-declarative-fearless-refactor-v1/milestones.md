@@ -194,7 +194,9 @@ points rather than direct graph mutation.
     `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*, fit_view_nodes_in_bounds*}`
     directly without a second wrapper surface.
   - Raw queue / viewport transport exports now live under the explicit `fret_node::ui::advanced::*`
-    namespace; queue-bound controller construction is also demoted behind `NodeGraphControllerTransportExt`, and the old root `fret_node::ui::*` queue/helper aliases are removed from the
+    namespace; queue-bound controller construction now uses thin `bind_controller_*_transport(...)`
+    helpers there instead of a separate public extension trait, and the old root `fret_node::ui::*`
+    queue/helper aliases are removed from the
     public surface.
   - The retained-backed domain demo and the workflow gallery snippet now also import those raw queue
     surfaces from `advanced::*`, so the sample code no longer teaches root `ui::*` queue imports.

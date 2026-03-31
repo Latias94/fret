@@ -166,9 +166,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Raw queue / viewport transport still exported from `ecosystem/fret-node/src/ui/advanced.rs`
     (`NodeGraphEditQueue`, `NodeGraphViewQueue`, `NodeGraphViewRequest`, viewport request option types):
     now explicit and bounded, but still a likely future shrink target once controller-first coverage is complete.
-  - `fret_node::ui::advanced::NodeGraphControllerTransportExt::{bind_edit_queue_transport, bind_view_queue_transport}`
-    (`ecosystem/fret-node/src/ui/advanced.rs`): probably keep, but document as advanced transport
-    binding rather than the default integration recipe.
+  - `fret_node::ui::advanced::{bind_controller_edit_queue_transport, bind_controller_view_queue_transport}`
+    (`ecosystem/fret-node/src/ui/advanced.rs`): keep only as thin advanced helpers, not as a
+    separate controller extension vocabulary.
 
 - **Landable follow-ups from this audit**
   - [x] Demote `NodeGraphViewportHelper` to `fret_node::ui::advanced::*` only and delete the

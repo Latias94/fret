@@ -14,7 +14,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     use fret_icons::IconId;
     use fret_node::io::NodeGraphViewState;
     use fret_node::runtime::store::NodeGraphStore;
-    use fret_node::ui::advanced::{NodeGraphControllerTransportExt as _, NodeGraphViewQueue};
+    use fret_node::ui::advanced::{NodeGraphViewQueue, bind_controller_view_queue_transport};
     use fret_node::ui::{
         NodeGraphCanvas, NodeGraphController, NodeGraphEditor, NodeGraphSurfaceBinding,
     };
@@ -293,8 +293,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 graph_value,
                 NodeGraphViewState::default(),
             ));
-            let controller =
-                NodeGraphController::new(store).bind_view_queue_transport(view_queue.clone());
+            let controller = bind_controller_view_queue_transport(
+                NodeGraphController::new(store),
+                view_queue.clone(),
+            );
             let surface = DemoSurfaceState {
                 binding: NodeGraphSurfaceBinding::from_models(
                     graph.clone(),

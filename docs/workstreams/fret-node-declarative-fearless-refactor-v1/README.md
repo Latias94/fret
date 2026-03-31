@@ -275,7 +275,7 @@ transport-first constructor for retained-only integrations that still own the ra
 directly, while controller-first integrations no longer wrap the controller in a second helper
 surface.
 `fret_node::ui::advanced::*` is now the explicit namespace for those retained transport seams,
-including queue-bound controller construction via `NodeGraphControllerTransportExt`, and
+including queue-bound controller construction via `bind_controller_*_transport(...)`, and
 root `fret_node::ui::*` no longer re-exports the raw queue/helper surfaces. Retained-backed samples
 and crate-internal retained/test callers now use `advanced::*` or explicit module paths directly.
 Because this repo does not need a public compatibility window, the old root queue/helper aliases are
@@ -581,7 +581,6 @@ Canonical runnable targets:
 | layering | `python tools/check_layering.py` | catches accidental boundary drift while the surface is still moving |
 
 The TODO tracker defines the next gate additions still required for full transaction-safe declarative parity.
-
 
 
 

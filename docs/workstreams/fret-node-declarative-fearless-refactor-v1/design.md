@@ -56,8 +56,8 @@ compatibility mental model.
 - `fret_node::ui::advanced::NodeGraphViewportHelper`
   - queue-model helper only,
   - not a second controller-like app-facing facade.
-- `fret_node::ui::advanced::NodeGraphControllerTransportExt`
-  - explicit advanced trait for binding a controller to raw edit/view transport queues,
+- `fret_node::ui::advanced::{bind_controller_edit_queue_transport, bind_controller_view_queue_transport}`
+  - explicit advanced helpers for binding a controller to raw edit/view transport queues,
   - not part of the default app-facing controller story.
 
 ### Crate-internal retained compatibility seams
@@ -111,7 +111,8 @@ Use this when a retained-only harness still needs the legacy canvas / overlay st
 Use this only when the integration intentionally owns queue transport.
 
 1. Import `fret_node::ui::advanced::*` explicitly.
-2. Bind raw queues via `NodeGraphControllerTransportExt` if controller ergonomics are still useful.
+2. Bind raw queues via the explicit `bind_controller_*_transport(...)` helpers if controller
+   ergonomics are still useful.
 3. Use `NodeGraphViewportHelper::new(view_state, view_queue)` only when queue-model viewport
    ownership is the point of the integration.
 4. Do not teach this recipe as the default downstream path in examples or cookbook docs.

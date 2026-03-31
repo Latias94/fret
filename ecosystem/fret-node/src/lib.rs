@@ -49,6 +49,7 @@ mod surface_policy_tests {
     const APP_RS: &str = include_str!("app.rs");
     const ADVANCED_RS: &str = include_str!("advanced.rs");
     const COMPAT_RETAINED_RS: &str = include_str!("ui/declarative/compat_retained.rs");
+    const UI_ADVANCED_RS: &str = include_str!("ui/advanced.rs");
 
     fn public_surface() -> &'static str {
         LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
@@ -80,5 +81,14 @@ mod surface_policy_tests {
             COMPAT_RETAINED_RS
                 .contains("keeps retained authoring out of the downstream API surface")
         );
+    }
+
+    #[test]
+    fn advanced_transport_surface_keeps_queue_types_but_not_controller_trait_alias() {
+        assert!(UI_ADVANCED_RS.contains("pub use super::edit_queue::NodeGraphEditQueue;"));
+        assert!(UI_ADVANCED_RS.contains("pub use super::view_queue::{"));
+        assert!(UI_ADVANCED_RS.contains("pub fn bind_controller_edit_queue_transport("));
+        assert!(UI_ADVANCED_RS.contains("pub fn bind_controller_view_queue_transport("));
+        assert!(!UI_ADVANCED_RS.contains("pub trait NodeGraphControllerTransportExt"));
     }
 }

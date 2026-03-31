@@ -14,21 +14,24 @@ pub use super::view_queue::{
 };
 pub use super::viewport_helper::NodeGraphViewportHelper;
 
-/// Advanced transport binding helpers for `NodeGraphController`.
+/// Advanced helper that binds a controller to a raw edit-queue transport.
 ///
-/// Import this trait explicitly when a retained-only integration wants controller ergonomics while
-/// still routing commits or viewport changes through raw transport queues.
-pub trait NodeGraphControllerTransportExt: Sized {
-    fn bind_edit_queue_transport(self, queue: Model<NodeGraphEditQueue>) -> Self;
-    fn bind_view_queue_transport(self, queue: Model<NodeGraphViewQueue>) -> Self;
+/// This stays under `ui::advanced` on purpose: normal app-facing composition should dispatch
+/// directly through the controller/store path instead of teaching queue-owned transport.
+pub fn bind_controller_edit_queue_transport(
+    controller: NodeGraphController,
+    queue: Model<NodeGraphEditQueue>,
+) -> NodeGraphController {
+    controller.bind_edit_queue_transport(queue)
 }
 
-impl NodeGraphControllerTransportExt for NodeGraphController {
-    fn bind_edit_queue_transport(self, queue: Model<NodeGraphEditQueue>) -> Self {
-        NodeGraphController::bind_edit_queue_transport(self, queue)
-    }
-
-    fn bind_view_queue_transport(self, queue: Model<NodeGraphViewQueue>) -> Self {
-        NodeGraphController::bind_view_queue_transport(self, queue)
-    }
+/// Advanced helper that binds a controller to a raw view-queue transport.
+///
+/// This keeps queue-owned viewport transport explicit without requiring a public extension trait on
+/// the controller surface.
+pub fn bind_controller_view_queue_transport(
+    controller: NodeGraphController,
+    queue: Model<NodeGraphViewQueue>,
+) -> NodeGraphController {
+    controller.bind_view_queue_transport(queue)
 }
