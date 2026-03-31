@@ -171,8 +171,8 @@ Execution companion: `design.md` (surface map + next worktree order).
     separate controller extension vocabulary.
 
 - **Landable follow-ups from this audit**
-  - [x] Demote `NodeGraphViewportHelper` to `fret_node::ui::advanced::*` only and delete the
-        controller-first constructor.
+  - [x] Delete `NodeGraphViewportHelper`; queue-owned integrations either bind a controller
+        explicitly or push `NodeGraphViewRequest` values directly.
   - [x] Move raw queue / viewport transport into the explicit `fret_node::ui::advanced::*`
         namespace.
   - [x] Demote retained widget / overlay queue binding methods to crate-private compatibility seams.

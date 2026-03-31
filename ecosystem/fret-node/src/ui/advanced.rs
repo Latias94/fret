@@ -12,7 +12,6 @@ pub use super::edit_queue::NodeGraphEditQueue;
 pub use super::view_queue::{
     NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
 };
-pub use super::viewport_helper::NodeGraphViewportHelper;
 
 /// Advanced helper that binds a controller to a raw edit-queue transport.
 ///

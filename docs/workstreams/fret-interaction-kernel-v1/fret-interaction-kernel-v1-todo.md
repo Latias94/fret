@@ -42,9 +42,9 @@ This is a working checklist for the `fret-interaction` kernel workstream.
 - [x] Ensure viewport mapping helpers remain canonical in `fret-canvas` (no competing viewport math
   types introduced in `fret-interaction`).
 - [x] Ensure existing conformance tests still pass:
-  - `viewport_helper_conformance`
+  - `controller_set_center_in_bounds_uses_bound_queue_and_current_zoom_when_omitted`
   - `viewport_animation_conformance`
-  - Evidence: `cargo nextest run -p fret-node viewport_helper_conformance viewport_animation_conformance threshold_zoom_conformance translate_extent_conformance`
+  - Evidence: `cargo nextest run -p fret-node controller_set_center_in_bounds_uses_bound_queue_and_current_zoom_when_omitted viewport_animation_conformance threshold_zoom_conformance translate_extent_conformance`
 - [x] Keep XyFlow parity knobs in `fret-node` (kernel only supplies primitives).
 
 ## M3 — Docking/multi-window integration

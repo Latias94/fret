@@ -87,12 +87,13 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn advanced_transport_surface_keeps_queue_types_but_not_controller_trait_alias() {
+    fn advanced_transport_surface_keeps_queue_types_but_not_extra_viewport_facades() {
         assert!(UI_ADVANCED_RS.contains("pub use super::edit_queue::NodeGraphEditQueue;"));
         assert!(UI_ADVANCED_RS.contains("pub use super::view_queue::{"));
         assert!(UI_ADVANCED_RS.contains("pub fn bind_controller_edit_queue_transport("));
         assert!(UI_ADVANCED_RS.contains("pub fn bind_controller_view_queue_transport("));
         assert!(!UI_ADVANCED_RS.contains("pub trait NodeGraphControllerTransportExt"));
+        assert!(!UI_ADVANCED_RS.contains("NodeGraphViewportHelper"));
     }
 
     #[test]

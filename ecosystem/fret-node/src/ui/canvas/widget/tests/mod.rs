@@ -112,7 +112,6 @@ mod theme_style_invalidation_conformance;
 mod threshold_zoom_conformance;
 mod translate_extent_conformance;
 mod viewport_animation_conformance;
-mod viewport_helper_conformance;
 mod z_order_conformance;
 
 use harness::{

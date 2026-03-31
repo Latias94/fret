@@ -63,8 +63,9 @@ Fret equivalents:
 
 - `ecosystem/fret-canvas/src/view/pan_zoom.rs`: `PanZoom2D` model (pan + zoom).
 - `ecosystem/fret-canvas/src/view/constraints.rs`: `fit_view_to_canvas_rect(...)`.
-- `ecosystem/fret-node/src/ui/viewport_helper.rs`: `NodeGraphViewportHelper` (set viewport, fit view,
-  set center), which is intentionally close to XYFlow’s `useReactFlow()` helper semantics.
+- `ecosystem/fret-node/src/ui/controller.rs` + `controller_viewport.rs`:
+  `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*, fit_view_nodes_in_bounds*}`
+  provide the authoritative viewport surface for node-editor integrations.
 
 ### 2) Background patterns (lines/dots/cross)
 

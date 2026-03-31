@@ -53,9 +53,6 @@ compatibility mental model.
 - `fret_node::ui::advanced::NodeGraphEditQueue`
 - `fret_node::ui::advanced::NodeGraphViewQueue`
 - `fret_node::ui::advanced::NodeGraphViewRequest`
-- `fret_node::ui::advanced::NodeGraphViewportHelper`
-  - queue-model helper only,
-  - not a second controller-like app-facing facade.
 - `fret_node::ui::advanced::{bind_controller_edit_queue_transport, bind_controller_view_queue_transport}`
   - explicit advanced helpers for binding a controller to raw edit/view transport queues,
   - not part of the default app-facing controller story.
@@ -78,7 +75,7 @@ These methods are crate-private on purpose.
 These are no longer part of the recommended public story.
 
 - Root `fret_node::ui::*` queue/helper aliases are removed.
-- `NodeGraphViewportHelper::from_controller(...)` is removed.
+- `NodeGraphViewportHelper` is removed.
 - Queue-bound controller construction is only available through the explicit
   `bind_controller_*_transport(...)` advanced helpers.
 - Direct public retained queue-binding methods are demoted to crate-private compatibility seams.
@@ -115,8 +112,8 @@ Use this only when the integration intentionally owns queue transport.
 1. Import `fret_node::ui::advanced::*` explicitly.
 2. Bind raw queues via the explicit `bind_controller_*_transport(...)` helpers if controller
    ergonomics are still useful.
-3. Use `NodeGraphViewportHelper::new(view_state, view_queue)` only when queue-model viewport
-   ownership is the point of the integration.
+3. Push raw `NodeGraphViewRequest` items directly only when queue-model viewport ownership is the
+   point of the integration.
 4. Do not teach this recipe as the default downstream path in examples or cookbook docs.
 
 ## Next worktree order

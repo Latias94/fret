@@ -188,11 +188,10 @@ points rather than direct graph mutation.
     controller-owned transaction submission, `NodeGraphBlackboardOverlay::new(...).with_controller(...)`
     now gives retained symbol actions the same controller-first path, and `compat_retained` now
     takes a controller binding directly instead of exposing public queue transport props.
-  - `NodeGraphViewportHelper` is now bounded to the explicit advanced transport seam only:
-    `NodeGraphViewportHelper::new(view_state, view_queue)` remains available for retained-only
-    integrations, while controller-first app-facing composition now calls
-    `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*, fit_view_nodes_in_bounds*}`
-    directly without a second wrapper surface.
+  - The temporary `NodeGraphViewportHelper` façade is now deleted; controller-first app-facing
+    composition calls `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*,`
+    `fit_view_nodes_in_bounds*}` directly, and raw queue ownership stays an explicit advanced
+    transport choice.
   - Raw queue / viewport transport exports now live under the explicit `fret_node::ui::advanced::*`
     namespace; queue-bound controller construction now uses thin `bind_controller_*_transport(...)`
     helpers there instead of a separate public extension trait, and the old root `fret_node::ui::*`

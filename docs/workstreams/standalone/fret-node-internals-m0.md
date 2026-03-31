@@ -313,7 +313,7 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/set_viewport_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/translate_extent_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/viewport_animation_conformance.rs`
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/viewport_helper_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/controller.rs` (`controller_set_center_in_bounds_uses_bound_queue_and_current_zoom_when_omitted`)
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/color_mode_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/selection_mode_conformance.rs`
