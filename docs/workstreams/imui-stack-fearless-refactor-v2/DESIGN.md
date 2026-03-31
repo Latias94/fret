@@ -62,8 +62,8 @@ Current observed drift:
     immediate adapter layer, notably `FieldStatusBadge` and `GradientEditor`,
   - and `PropertyRow` still needs an explicit boundary decision.
 - proof-surface drift:
-  - `imui_editor_proof_demo` still drops below `fret_ui_editor::imui` and calls declarative editor
-    components directly on the immediate side for some rows.
+  - before this lane's proof/demo migration, `imui_editor_proof_demo` dropped below
+    `fret_ui_editor::imui` for some immediate authoring parity rows.
 - reviewability drift:
   - `fret-ui-kit::imui` is split by concern compared with the v1 stack reset, but several files
     still package multiple ownership seams together and should only be further split when it
@@ -182,6 +182,17 @@ remain a one-hop forwarder, the official immediate surface should expose it ther
 If a surface should remain declarative-only, this lane must say so explicitly and remove
 ambiguity.
 
+Current decision (2026-03-31):
+
+- `PropertyRow` stays declarative-only.
+- Rationale:
+  - it is the foundational row primitive already consumed by `PropertyGrid`,
+    `PropertyGridVirtualized`, and `GradientEditor`,
+  - most proof-surface `PropertyRow` usage lives inside nested declarative row closures where a
+    `UiWriter` adapter would not remove the direct `.into_element(cx)` path,
+  - promoting a `property_row(...)` adapter would widen the public immediate surface without
+    materially reducing the real proof/demo boundary drift.
+
 ### 4) First-party immediate examples are part of the contract story
 
 The proof surface is not just demo fluff.
@@ -207,14 +218,31 @@ This lane does not preserve legacy helper names or keep duplicate authoring path
 - add `field_status_badge(...)` in `fret-ui-editor::imui`,
 - add `gradient_editor(...)` in `fret-ui-editor::imui`,
 - decide `property_row(...)` explicitly:
-  - either promote it as a thin adapter,
-  - or keep it declarative-only and document why.
+  - current decision: keep it declarative-only,
+  - and treat proof/demo direct `PropertyRow::new().into_element(...)` cleanup as a separate
+    proof-surface migration task rather than as evidence that a new public adapter is required.
+
+Audit status (2026-03-31):
+
+- top-level editor control/composite nouns are closed in `fret-ui-editor::imui`,
+- remaining non-adapted exports are subordinate declarative pieces and support types rather than
+  missing top-level immediate nouns,
+- no additional editor adapter promotions are justified in this lane beyond
+  `FieldStatusBadge` and `GradientEditor`.
 
 ### C. Proof/demo cleanup
 
 - update `imui_editor_proof_demo` to use promoted immediate editor adapters on the immediate side,
 - keep the declarative side-by-side column as declarative proof only,
 - remove ad hoc immediate-side direct `.into_element(cx)` calls where the adapter is official.
+
+Current status (2026-03-31):
+
+- the authoring parity immediate column now routes promoted editor nouns through
+  `fret_ui_editor::imui`,
+- the declarative comparison column remains explicit on purpose,
+- and the main `InspectorPanel` subtree still uses declarative editor controls directly because it
+  is a declarative proof surface, not an immediate adapter authoring column.
 
 ### D. Narrow owner-driven cleanup inside `fret-ui-kit::imui`
 

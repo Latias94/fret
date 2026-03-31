@@ -276,6 +276,7 @@ struct AuthoringParitySharedStateReadout {
     blend_line: String,
     enabled_line: String,
     shading_line: String,
+    gradient_line: String,
 }
 
 #[derive(Clone)]
@@ -663,6 +664,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
     let parity_slider_model = authoring_parity_slider_model(cx);
     let parity_enabled_model = authoring_parity_enabled_model(cx);
     let parity_shading_model = authoring_parity_shading_model(cx);
+    let parity_gradient_angle_model = authoring_parity_gradient_angle_model(cx);
+    let parity_gradient_stops_model = authoring_parity_gradient_stops_model(cx);
+    let parity_gradient_next_id_model = authoring_parity_gradient_next_id_model(cx);
 
     #[cfg(debug_assertions)]
     {
@@ -758,6 +762,12 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                     let parity_slider_model_for_surface = parity_slider_model.clone();
                     let parity_enabled_model_for_surface = parity_enabled_model.clone();
                     let parity_shading_model_for_surface = parity_shading_model.clone();
+                    let parity_gradient_angle_model_for_surface =
+                        parity_gradient_angle_model.clone();
+                    let parity_gradient_stops_model_for_surface =
+                        parity_gradient_stops_model.clone();
+                    let parity_gradient_next_id_model_for_surface =
+                        parity_gradient_next_id_model.clone();
                     ui.mount(move |cx| {
                         vec![render_authoring_parity_surface(
                             cx,
@@ -766,6 +776,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                             parity_slider_model_for_surface.clone(),
                             parity_enabled_model_for_surface.clone(),
                             parity_shading_model_for_surface.clone(),
+                            parity_gradient_angle_model_for_surface.clone(),
+                            parity_gradient_stops_model_for_surface.clone(),
+                            parity_gradient_next_id_model_for_surface.clone(),
                         )
                         .into_element(cx)]
                     });
@@ -780,6 +793,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                     let parity_slider_model_for_state = parity_slider_model.clone();
                     let parity_enabled_model_for_state = parity_enabled_model.clone();
                     let parity_shading_model_for_state = parity_shading_model.clone();
+                    let parity_gradient_angle_model_for_state = parity_gradient_angle_model.clone();
+                    let parity_gradient_stops_model_for_state = parity_gradient_stops_model.clone();
                     ui.mount(move |cx| {
                         vec![render_authoring_parity_shared_state(
                             cx,
@@ -788,6 +803,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                             parity_slider_model_for_state.clone(),
                             parity_enabled_model_for_state.clone(),
                             parity_shading_model_for_state.clone(),
+                            parity_gradient_angle_model_for_state.clone(),
+                            parity_gradient_stops_model_for_state.clone(),
                         )
                         .into_element(cx)]
                     });
@@ -2298,6 +2315,9 @@ fn render_authoring_parity_surface(
     slider_model: Model<f64>,
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
+    gradient_angle_model: Model<f64>,
+    gradient_stops_model: Model<Vec<GradientDemoStop>>,
+    gradient_next_id_model: Model<u64>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let shading_items = authoring_parity_shading_items();
 
@@ -2310,6 +2330,9 @@ fn render_authoring_parity_surface(
                 let slider_model = slider_model.clone();
                 let enabled_model = enabled_model.clone();
                 let shading_model = shading_model.clone();
+                let gradient_angle_model = gradient_angle_model.clone();
+                let gradient_stops_model = gradient_stops_model.clone();
+                let gradient_next_id_model = gradient_next_id_model.clone();
                 move |cx, out| {
                     out.push(
                         render_authoring_parity_declarative_group(
@@ -2319,6 +2342,9 @@ fn render_authoring_parity_surface(
                             slider_model,
                             enabled_model,
                             shading_model,
+                            gradient_angle_model,
+                            gradient_stops_model,
+                            gradient_next_id_model,
                             shading_items,
                         )
                         .into_element(cx),
@@ -2340,6 +2366,9 @@ fn render_authoring_parity_surface(
                         slider_model,
                         enabled_model,
                         shading_model,
+                        gradient_angle_model,
+                        gradient_stops_model,
+                        gradient_next_id_model,
                         shading_items,
                     )
                     .into_element(cx),
@@ -2361,6 +2390,8 @@ fn render_authoring_parity_shared_state(
     slider_model: Model<f64>,
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
+    gradient_angle_model: Model<f64>,
+    gradient_stops_model: Model<Vec<GradientDemoStop>>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let shared = cx.data().selector_model_paint(
         (
@@ -2369,23 +2400,32 @@ fn render_authoring_parity_shared_state(
             &slider_model,
             &enabled_model,
             &shading_model,
+            &gradient_angle_model,
+            &gradient_stops_model,
         ),
-        |(name, value, blend, enabled, shading)| AuthoringParitySharedStateReadout {
-            name_line: if name.trim().is_empty() {
-                "shared name: <empty>".to_string()
-            } else {
-                format!("shared name: {name}")
-            },
-            value_line: format!("shared value: {value:.3}"),
-            blend_line: format!("shared blend: {:.0}%", blend * 100.0),
-            enabled_line: format!("shared enabled: {enabled}"),
-            shading_line: match shading.as_deref() {
-                Some("lit") => "shared mode: lit (Lit)".to_string(),
-                Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
-                Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
-                Some(other) => format!("shared mode: {other}"),
-                None => "shared mode: <none>".to_string(),
-            },
+        |(name, value, blend, enabled, shading, gradient_angle, gradient_stops)| {
+            AuthoringParitySharedStateReadout {
+                name_line: if name.trim().is_empty() {
+                    "shared name: <empty>".to_string()
+                } else {
+                    format!("shared name: {name}")
+                },
+                value_line: format!("shared value: {value:.3}"),
+                blend_line: format!("shared blend: {:.0}%", blend * 100.0),
+                enabled_line: format!("shared enabled: {enabled}"),
+                shading_line: match shading.as_deref() {
+                    Some("lit") => "shared mode: lit (Lit)".to_string(),
+                    Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
+                    Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
+                    Some(other) => format!("shared mode: {other}"),
+                    None => "shared mode: <none>".to_string(),
+                },
+                gradient_line: format!(
+                    "shared gradient: {} stops @ {:.0}°",
+                    gradient_stops.len(),
+                    gradient_angle
+                ),
+            }
         },
     );
     let name_line = shared.name_line;
@@ -2393,6 +2433,7 @@ fn render_authoring_parity_shared_state(
     let blend_line = shared.blend_line;
     let enabled_line = shared.enabled_line;
     let shading_line = shared.shading_line;
+    let gradient_line = shared.gradient_line;
 
     fret_ui_kit::ui::v_flex_build(move |cx, out| {
         let name_line_row = name_line.clone();
@@ -2430,6 +2471,10 @@ fn render_authoring_parity_shared_state(
             .gap(fret_ui_kit::Space::N3)
             .into_element(cx),
         );
+        out.push(
+            cx.text(gradient_line)
+                .test_id("imui-editor-proof.authoring.shared.gradient"),
+        );
     })
     .gap(fret_ui_kit::Space::N1)
     .into_element(cx)
@@ -2442,6 +2487,9 @@ fn render_authoring_parity_declarative_group(
     slider_model: Model<f64>,
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
+    gradient_angle_model: Model<f64>,
+    gradient_stops_model: Model<Vec<GradientDemoStop>>,
+    gradient_next_id_model: Model<u64>,
     shading_items: Arc<[EnumSelectItem]>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let value_presentation = authoring_parity_value_presentation();
@@ -2462,118 +2510,141 @@ fn render_authoring_parity_declarative_group(
             cx,
             |_cx| None,
             move |cx| {
-                vec![PropertyGrid::new().into_element(cx, move |cx, row_cx| {
-                    let mut rows = Vec::new();
+                vec![
+                    PropertyGrid::new().into_element(cx, move |cx, row_cx| {
+                        let mut rows = Vec::new();
 
-                    rows.push(row_cx.row_with(
-                        cx,
-                        PropertyRow::new().options(row_cx.row_options.clone()),
-                        |cx| cx.text("Name"),
-                        |cx| {
-                            TextField::new(name_model.clone())
-                                .options(TextFieldOptions {
-                                    clear_button: true,
-                                    selection_behavior:
-                                        EditorTextSelectionBehavior::SelectAllOnFocus,
-                                    test_id: Some(Arc::from(
-                                        "imui-editor-proof.authoring.declarative.name",
+                        rows.push(row_cx.row_with(
+                            cx,
+                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            |cx| cx.text("Name"),
+                            |cx| {
+                                TextField::new(name_model.clone())
+                                    .options(TextFieldOptions {
+                                        clear_button: true,
+                                        selection_behavior:
+                                            EditorTextSelectionBehavior::SelectAllOnFocus,
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.authoring.declarative.name",
+                                        )),
+                                        clear_test_id: Some(Arc::from(
+                                            "imui-editor-proof.authoring.declarative.name.clear",
+                                        )),
+                                        ..Default::default()
+                                    })
+                                    .into_element(cx)
+                            },
+                            |_cx| None,
+                        ));
+
+                        rows.push(row_cx.row_with(
+                            cx,
+                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            |cx| cx.text("Value"),
+                            |cx| {
+                                DragValue::from_presentation(
+                                    drag_value_model.clone(),
+                                    value_presentation.clone(),
+                                )
+                                .options(fret_ui_editor::controls::DragValueOptions {
+                                    id_source: Some(Arc::from(
+                                        "authoring-parity.declarative.drag-value",
                                     )),
-                                    clear_test_id: Some(Arc::from(
-                                        "imui-editor-proof.authoring.declarative.name.clear",
+                                    test_id: Some(Arc::from(
+                                        "imui-editor-proof.authoring.declarative.value",
                                     )),
                                     ..Default::default()
                                 })
                                 .into_element(cx)
-                        },
-                        |_cx| None,
-                    ));
+                            },
+                            |_cx| None,
+                        ));
 
-                    rows.push(row_cx.row_with(
-                        cx,
-                        PropertyRow::new().options(row_cx.row_options.clone()),
-                        |cx| cx.text("Value"),
-                        |cx| {
-                            DragValue::from_presentation(
-                                drag_value_model.clone(),
-                                value_presentation.clone(),
-                            )
-                            .options(fret_ui_editor::controls::DragValueOptions {
-                                id_source: Some(Arc::from(
-                                    "authoring-parity.declarative.drag-value",
-                                )),
-                                test_id: Some(Arc::from(
-                                    "imui-editor-proof.authoring.declarative.value",
-                                )),
-                                ..Default::default()
-                            })
-                            .into_element(cx)
-                        },
-                        |_cx| None,
-                    ));
-
-                    rows.push(row_cx.row_with(
-                        cx,
-                        PropertyRow::new().options(row_cx.row_options.clone()),
-                        |cx| cx.text("Blend"),
-                        |cx| {
-                            Slider::from_presentation(
-                                slider_model.clone(),
-                                0.0,
-                                1.0,
-                                blend_presentation.clone(),
-                            )
-                            .options(authoring_parity_blend_slider_options(
-                                "authoring-parity.declarative.slider",
-                                "imui-editor-proof.authoring.declarative.blend",
-                            ))
-                            .into_element(cx)
-                        },
-                        |_cx| None,
-                    ));
-
-                    rows.push(row_cx.row_with(
-                        cx,
-                        PropertyRow::new().options(row_cx.row_options.clone()),
-                        |cx| cx.text("Enabled"),
-                        |cx| {
-                            Checkbox::new(enabled_model.clone())
-                                .options(fret_ui_editor::controls::CheckboxOptions {
-                                    test_id: Some(Arc::from(
-                                        "imui-editor-proof.authoring.declarative.enabled",
-                                    )),
-                                    ..Default::default()
-                                })
+                        rows.push(row_cx.row_with(
+                            cx,
+                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            |cx| cx.text("Blend"),
+                            |cx| {
+                                Slider::from_presentation(
+                                    slider_model.clone(),
+                                    0.0,
+                                    1.0,
+                                    blend_presentation.clone(),
+                                )
+                                .options(authoring_parity_blend_slider_options(
+                                    "authoring-parity.declarative.slider",
+                                    "imui-editor-proof.authoring.declarative.blend",
+                                ))
                                 .into_element(cx)
-                        },
-                        |_cx| None,
-                    ));
+                            },
+                            |cx| {
+                                Some(
+                                    FieldStatusBadge::new(FieldStatus::Dirty)
+                                        .into_element(cx)
+                                        .test_id(
+                                            "imui-editor-proof.authoring.declarative.blend.status",
+                                        ),
+                                )
+                            },
+                        ));
 
-                    rows.push(row_cx.row_with(
+                        rows.push(row_cx.row_with(
+                            cx,
+                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            |cx| cx.text("Enabled"),
+                            |cx| {
+                                Checkbox::new(enabled_model.clone())
+                                    .options(fret_ui_editor::controls::CheckboxOptions {
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.authoring.declarative.enabled",
+                                        )),
+                                        ..Default::default()
+                                    })
+                                    .into_element(cx)
+                            },
+                            |_cx| None,
+                        ));
+
+                        rows.push(row_cx.row_with(
+                            cx,
+                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            |cx| cx.text("Mode"),
+                            |cx| {
+                                EnumSelect::new(shading_model.clone(), shading_items.clone())
+                                    .options(EnumSelectOptions {
+                                        id_source: Some(Arc::from(
+                                            "authoring-parity.declarative.mode",
+                                        )),
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.authoring.declarative.mode",
+                                        )),
+                                        list_test_id: Some(Arc::from(
+                                            "imui-editor-proof.authoring.declarative.mode.list",
+                                        )),
+                                        search_test_id: Some(Arc::from(
+                                            "imui-editor-proof.authoring.declarative.mode.search",
+                                        )),
+                                        ..Default::default()
+                                    })
+                                    .into_element(cx)
+                            },
+                            |_cx| None,
+                        ));
+
+                        rows
+                    }),
+                    cx.text("Gradient editor")
+                        .test_id("imui-editor-proof.authoring.declarative.gradient.label"),
+                    build_authoring_parity_gradient_editor(
                         cx,
-                        PropertyRow::new().options(row_cx.row_options.clone()),
-                        |cx| cx.text("Mode"),
-                        |cx| {
-                            EnumSelect::new(shading_model.clone(), shading_items.clone())
-                                .options(EnumSelectOptions {
-                                    id_source: Some(Arc::from("authoring-parity.declarative.mode")),
-                                    test_id: Some(Arc::from(
-                                        "imui-editor-proof.authoring.declarative.mode",
-                                    )),
-                                    list_test_id: Some(Arc::from(
-                                        "imui-editor-proof.authoring.declarative.mode.list",
-                                    )),
-                                    search_test_id: Some(Arc::from(
-                                        "imui-editor-proof.authoring.declarative.mode.search",
-                                    )),
-                                    ..Default::default()
-                                })
-                                .into_element(cx)
-                        },
-                        |_cx| None,
-                    ));
-
-                    rows
-                })]
+                        gradient_angle_model.clone(),
+                        gradient_stops_model.clone(),
+                        gradient_next_id_model.clone(),
+                        "authoring-parity.declarative.gradient",
+                        "imui-editor-proof.authoring.declarative.gradient",
+                    )
+                    .into_element(cx),
+                ]
             },
         )
 }
@@ -2585,6 +2656,9 @@ fn render_authoring_parity_imui_group(
     slider_model: Model<f64>,
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
+    gradient_angle_model: Model<f64>,
+    gradient_stops_model: Model<Vec<GradientDemoStop>>,
+    gradient_next_id_model: Model<u64>,
     shading_items: Arc<[EnumSelectItem]>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let value_presentation = authoring_parity_value_presentation();
@@ -2668,8 +2742,9 @@ fn render_authoring_parity_imui_group(
                             },
                         ));
 
-                        rows.push(row_cx.row(
+                        rows.push(row_cx.row_with(
                             cx,
+                            PropertyRow::new().options(row_cx.row_options.clone()),
                             |cx| cx.text("Blend"),
                             |cx| {
                                 let blend_presentation = blend_presentation.clone();
@@ -2691,6 +2766,18 @@ fn render_authoring_parity_imui_group(
                                     );
                                 })
                                 .into_element(cx)
+                            },
+                            |cx| {
+                                Some(
+                                    render_authoring_parity_imui_host(cx, move |ui| {
+                                        editor_imui::field_status_badge(
+                                            ui,
+                                            FieldStatusBadge::new(FieldStatus::Dirty),
+                                        );
+                                    })
+                                    .into_element(cx)
+                                    .test_id("imui-editor-proof.authoring.imui.blend.status"),
+                                )
                             },
                         ));
 
@@ -2751,6 +2838,17 @@ fn render_authoring_parity_imui_group(
 
                         rows
                     });
+
+                    ui.text("Gradient editor");
+                    let gradient_editor = build_authoring_parity_gradient_editor(
+                        ui.cx_mut(),
+                        gradient_angle_model.clone(),
+                        gradient_stops_model.clone(),
+                        gradient_next_id_model.clone(),
+                        "authoring-parity.imui.gradient",
+                        "imui-editor-proof.authoring.imui.gradient",
+                    );
+                    editor_imui::gradient_editor(ui, gradient_editor);
                 });
                 out
             },
@@ -3086,6 +3184,82 @@ fn render_authoring_parity_imui_group(
         ui.text(outliner_order);
         ui.text(format!("Status: {visible_outliner_status}"));
     })
+}
+
+fn build_authoring_parity_gradient_editor(
+    cx: &mut UiCx<'_>,
+    angle_model: Model<f64>,
+    stops_model: Model<Vec<GradientDemoStop>>,
+    next_id_model: Model<u64>,
+    id_source: &'static str,
+    test_id_prefix: &'static str,
+) -> GradientEditor {
+    let stops: Vec<GradientDemoStop> = cx.data().selector_model_paint(&stops_model, |stops| stops);
+
+    let on_remove: fret_ui_editor::composites::OnGradientStopAction = Arc::new({
+        let stops_model = stops_model.clone();
+        move |host, action_cx, stop_id| {
+            let _ = host
+                .models_mut()
+                .update(&stops_model, |stops| stops.retain(|s| s.id != stop_id));
+            host.request_redraw(action_cx.window);
+        }
+    });
+
+    let on_add: fret_ui_editor::composites::OnGradientAction = Arc::new({
+        let stops_model = stops_model.clone();
+        move |host, action_cx| {
+            let id = host
+                .models_mut()
+                .update(&next_id_model, |v| {
+                    let out = *v;
+                    *v = v.saturating_add(1);
+                    out
+                })
+                .unwrap_or(1);
+
+            let position = host.models_mut().insert(0.5_f64);
+            let color = host.models_mut().insert(Color {
+                r: 0.85,
+                g: 0.85,
+                b: 0.85,
+                a: 1.0,
+            });
+            let stop = GradientDemoStop {
+                id,
+                position,
+                color,
+            };
+
+            let _ = host
+                .models_mut()
+                .update(&stops_model, |stops| stops.push(stop));
+            host.request_redraw(action_cx.window);
+        }
+    });
+
+    let bindings: Arc<[GradientStopBinding]> = stops
+        .into_iter()
+        .map(|s| GradientStopBinding {
+            id: s.id,
+            position: s.position,
+            color: s.color,
+            remove: Some(on_remove.clone()),
+        })
+        .collect::<Vec<_>>()
+        .into();
+
+    GradientEditor::new(bindings)
+        .angle_degrees(Some(angle_model))
+        .on_add_stop(Some(on_add))
+        .options(GradientEditorOptions {
+            id_source: Some(Arc::from(id_source)),
+            test_id: Some(Arc::from(test_id_prefix)),
+            preview_test_id: Some(Arc::<str>::from(format!("{test_id_prefix}.preview"))),
+            stops_test_id: Some(Arc::<str>::from(format!("{test_id_prefix}.stops"))),
+            add_stop_test_id: Some(Arc::<str>::from(format!("{test_id_prefix}.add-stop"))),
+            ..Default::default()
+        })
 }
 
 fn render_authoring_parity_imui_host<H, F>(
@@ -3524,6 +3698,58 @@ fn authoring_parity_shading_model<H: UiHost>(
                 .models_mut()
                 .insert(Some::<Arc<str>>(Arc::from("lit")))
         },
+    )
+}
+
+fn authoring_parity_gradient_angle_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.gradient_angle",
+        |cx| cx.app.models_mut().insert(90.0_f64),
+    )
+}
+
+fn authoring_parity_gradient_stops_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<Vec<GradientDemoStop>> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.gradient_stops",
+        |cx| {
+            let stop_0_pos = cx.app.models_mut().insert(0.0_f64);
+            let stop_0_color = cx.app.models_mut().insert(Color {
+                a: 1.0,
+                ..Color::from_srgb_hex_rgb(0x14_b8_a6)
+            });
+            let stop_1_pos = cx.app.models_mut().insert(1.0_f64);
+            let stop_1_color = cx.app.models_mut().insert(Color {
+                a: 1.0,
+                ..Color::from_srgb_hex_rgb(0xf9_73_16)
+            });
+
+            cx.app.models_mut().insert(vec![
+                GradientDemoStop {
+                    id: 1,
+                    position: stop_0_pos,
+                    color: stop_0_color,
+                },
+                GradientDemoStop {
+                    id: 2,
+                    position: stop_1_pos,
+                    color: stop_1_color,
+                },
+            ])
+        },
+    )
+}
+
+fn authoring_parity_gradient_next_id_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<u64> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.gradient_next_id",
+        |cx| cx.app.models_mut().insert(3_u64),
     )
 }
 

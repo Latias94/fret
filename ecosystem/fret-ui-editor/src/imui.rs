@@ -9,12 +9,13 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::composites::{
-    InspectorPanel, InspectorPanelCx, PropertyGrid, PropertyGridRowCx, PropertyGridVirtualized,
-    PropertyGridVirtualizedRowCx, PropertyGroup,
+    GradientEditor, InspectorPanel, InspectorPanelCx, PropertyGrid, PropertyGridRowCx,
+    PropertyGridVirtualized, PropertyGridVirtualizedRowCx, PropertyGroup,
 };
 use crate::controls::{
-    AxisDragValue, Checkbox, ColorEdit, DragValue, EnumSelect, IconButton, MiniSearchBox,
-    NumericInput, Slider, TextAssistField, TextField, TransformEdit, Vec2Edit, Vec3Edit, Vec4Edit,
+    AxisDragValue, Checkbox, ColorEdit, DragValue, EnumSelect, FieldStatusBadge, IconButton,
+    MiniSearchBox, NumericInput, Slider, TextAssistField, TextField, TransformEdit, Vec2Edit,
+    Vec3Edit, Vec4Edit,
 };
 use crate::primitives::DragValueScalar;
 
@@ -109,6 +110,15 @@ pub fn icon_button<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: Icon
     add_editor_element(ui, move |cx| control.into_element(cx));
 }
 
+/// Adds a `FieldStatusBadge` control to an immediate-style authoring surface.
+#[track_caller]
+pub fn field_status_badge<H: UiHost + 'static>(
+    ui: &mut impl UiWriter<H>,
+    control: FieldStatusBadge,
+) {
+    add_editor_element(ui, move |cx| control.into_element(cx));
+}
+
 /// Adds a `Vec2Edit` control to an immediate-style authoring surface.
 #[track_caller]
 pub fn vec2_edit<H, T>(ui: &mut impl UiWriter<H>, control: Vec2Edit<T>)
@@ -166,6 +176,12 @@ pub fn property_grid<H: UiHost + 'static>(
     rows: impl FnOnce(&mut ElementContext<'_, H>, PropertyGridRowCx) -> Vec<AnyElement>,
 ) {
     add_editor_element(ui, move |cx| composite.into_element(cx, rows));
+}
+
+/// Adds a `GradientEditor` composite to an immediate-style authoring surface.
+#[track_caller]
+pub fn gradient_editor<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, composite: GradientEditor) {
+    add_editor_element(ui, move |cx| composite.into_element(cx));
 }
 
 /// Adds a `PropertyGridVirtualized` composite to an immediate-style authoring surface.

@@ -30,12 +30,14 @@ fn imui_module_stays_a_thin_into_element_adapter_layer() {
         "pub fn mini_search_box<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: MiniSearchBox) {",
         "pub fn text_assist_field<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: TextAssistField) {",
         "pub fn icon_button<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: IconButton) {",
+        "pub fn field_status_badge<H: UiHost + 'static>(",
         "pub fn vec2_edit<H, T>(ui: &mut impl UiWriter<H>, control: Vec2Edit<T>)",
         "pub fn vec3_edit<H, T>(ui: &mut impl UiWriter<H>, control: Vec3Edit<T>)",
         "pub fn vec4_edit<H, T>(ui: &mut impl UiWriter<H>, control: Vec4Edit<T>)",
         "pub fn transform_edit<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: TransformEdit) {",
         "pub fn property_group<H: UiHost + 'static>(",
         "pub fn property_grid<H: UiHost + 'static>(",
+        "pub fn gradient_editor<H: UiHost + 'static>(",
         "pub fn property_grid_virtualized<H: UiHost + 'static>(",
         "pub fn inspector_panel<H: UiHost + 'static>(",
     ];
@@ -72,7 +74,7 @@ fn imui_module_stays_a_thin_into_element_adapter_layer() {
             IMUI_RS,
             "add_editor_element(ui, move |cx| control.into_element(cx));",
         ),
-        15,
+        16,
         "imui.rs should keep each promoted control adapter as a one-hop `into_element` forwarder",
     );
 
@@ -96,6 +98,15 @@ fn imui_module_stays_a_thin_into_element_adapter_layer() {
         ),
         1,
         "property_grid should stay a one-hop `into_element` forwarder",
+    );
+
+    assert_eq!(
+        count_occurrences(
+            &normalized,
+            &normalize_ws("add_editor_element(ui, move |cx| composite.into_element(cx));"),
+        ),
+        1,
+        "gradient_editor should stay a one-hop `into_element` forwarder",
     );
 
     assert_eq!(

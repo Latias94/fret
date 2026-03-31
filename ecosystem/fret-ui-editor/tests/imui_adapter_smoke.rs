@@ -10,19 +10,19 @@ use fret_ui::UiHost;
 use fret_ui_kit::headless::text_assist::TextAssistItem;
 
 use fret_ui_editor::composites::{
-    InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGridOptions,
-    PropertyGridVirtualized, PropertyGridVirtualizedOptions, PropertyGroup, PropertyGroupOptions,
-    PropertyRow,
+    GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
+    InspectorPanelOptions, PropertyGrid, PropertyGridOptions, PropertyGridVirtualized,
+    PropertyGridVirtualizedOptions, PropertyGroup, PropertyGroupOptions, PropertyRow,
 };
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
     ColorEdit, ColorEditOptions, DragValue, DragValueOptions, DragValueOutcome, EnumSelect,
-    EnumSelectItem, EnumSelectOptions, IconButton, IconButtonOptions, MiniSearchBox,
-    MiniSearchBoxOptions, NumericInput, NumericInputOptions, NumericPresentation,
-    NumericValueConstraints, Slider, SliderOptions, TextAssistField, TextAssistFieldOptions,
-    TextAssistFieldSurface, TextField, TextFieldOptions, TransformEdit, TransformEditAxisOutcome,
-    TransformEditOptions, TransformEditPresentations, Vec2Edit, Vec3Edit, Vec4Edit,
-    VecEditAxisOutcome, VecEditOptions,
+    EnumSelectItem, EnumSelectOptions, FieldStatus, FieldStatusBadge, FieldStatusBadgeOptions,
+    IconButton, IconButtonOptions, MiniSearchBox, MiniSearchBoxOptions, NumericInput,
+    NumericInputOptions, NumericPresentation, NumericValueConstraints, Slider, SliderOptions,
+    TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField, TextFieldOptions,
+    TransformEdit, TransformEditAxisOutcome, TransformEditOptions, TransformEditPresentations,
+    Vec2Edit, Vec3Edit, Vec4Edit, VecEditAxisOutcome, VecEditOptions,
 };
 use fret_ui_editor::imui;
 
@@ -189,6 +189,11 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
         ),
     );
 
+    imui::field_status_badge(
+        ui,
+        FieldStatusBadge::new(FieldStatus::Mixed).options(FieldStatusBadgeOptions::default()),
+    );
+
     imui::vec2_edit(
         ui,
         Vec2Edit::from_presentation(
@@ -329,6 +334,25 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
         move |cx, row_cx| vec![row_cx.row(cx, |cx| cx.text("Name"), |cx| cx.text("Cube"))],
     );
 
+    let gradient_stops: Arc<[GradientStopBinding]> = vec![GradientStopBinding {
+        id: 1,
+        position: value_model.clone(),
+        color: color_model.clone(),
+        remove: None,
+    }]
+    .into();
+
+    imui::gradient_editor(
+        ui,
+        GradientEditor::new(gradient_stops)
+            .angle_degrees(Some(value_model.clone()))
+            .options(GradientEditorOptions {
+                id_source: Some(Arc::from("tests.gradient_editor")),
+                test_id: Some(Arc::from("tests.gradient_editor")),
+                ..Default::default()
+            }),
+    );
+
     imui::property_grid_virtualized(
         ui,
         PropertyGridVirtualized::new().options(PropertyGridVirtualizedOptions {
@@ -378,6 +402,7 @@ fn editor_imui_adapter_option_defaults_compile() {
     let _ = MiniSearchBoxOptions::default();
     let _ = TextAssistFieldOptions::default();
     let _ = IconButtonOptions::default();
+    let _ = FieldStatusBadgeOptions::default();
     let _ = SliderOptions::default();
     let _ = CheckboxOptions::default();
     let _ = EnumSelectOptions::default();
@@ -385,6 +410,7 @@ fn editor_imui_adapter_option_defaults_compile() {
     let _ = TransformEditOptions::default();
     let _ = PropertyGroupOptions::default();
     let _ = PropertyGridOptions::default();
+    let _ = GradientEditorOptions::default();
     let _ = PropertyGridVirtualizedOptions::default();
     let _ = InspectorPanelOptions::default();
 }

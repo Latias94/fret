@@ -593,6 +593,17 @@ mod authoring_surface_policy_tests {
         }
     }
 
+    fn source_slice<'a>(src: &'a str, start_marker: &str, end_marker: &str) -> &'a str {
+        let start = src
+            .find(start_marker)
+            .unwrap_or_else(|| panic!("missing start marker: {start_marker}"));
+        let end = src[start..]
+            .find(end_marker)
+            .map(|offset| start + offset)
+            .unwrap_or_else(|| panic!("missing end marker: {end_marker}"));
+        &src[start..end]
+    }
+
     #[test]
     fn migrated_examples_use_the_explicit_advanced_surface() {
         for src in [
@@ -987,6 +998,47 @@ mod authoring_surface_policy_tests {
             1,
             "only the proof-local compact readout leaf helper should keep an AnyElement return"
         );
+    }
+
+    #[test]
+    fn imui_editor_proof_authoring_immediate_column_uses_official_editor_adapters() {
+        let imui_group = source_slice(
+            IMUI_EDITOR_PROOF_DEMO,
+            "fn render_authoring_parity_imui_group(",
+            "fn build_authoring_parity_gradient_editor(",
+        );
+        let normalized = imui_group.split_whitespace().collect::<String>();
+
+        for marker in [
+            "render_authoring_parity_imui_host(cx, move |ui| {",
+            "editor_imui::property_group(",
+            "editor_imui::property_grid(",
+            "editor_imui::text_field(",
+            "editor_imui::drag_value(",
+            "editor_imui::slider(",
+            "editor_imui::field_status_badge(",
+            "editor_imui::checkbox(",
+            "editor_imui::enum_select(",
+            "let gradient_editor = build_authoring_parity_gradient_editor(",
+            "editor_imui::gradient_editor(ui, gradient_editor);",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "authoring parity immediate column should route editor controls through official adapters: {marker}"
+            );
+        }
+
+        for marker in [
+            "FieldStatusBadge::new(FieldStatus::Dirty).into_element(cx)",
+            "GradientEditor::new(",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "authoring parity immediate column should not bypass the adapter layer: {marker}"
+            );
+        }
     }
 
     #[test]
