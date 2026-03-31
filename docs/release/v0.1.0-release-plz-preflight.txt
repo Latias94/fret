@@ -8,13 +8,18 @@ Commands run:
 - `release-plz update --config release-plz.toml --allow-dirty --repo-url https://github.com/Latias94/fret --package fret-a11y-accesskit`
 - `release-plz update --config release-plz.toml --allow-dirty --repo-url https://github.com/Latias94/fret --package fret-a11y-accesskit --no-changelog`
 - `release-plz update --config release-plz.toml --allow-dirty --repo-url https://github.com/Latias94/fret`
+- `python3 tools/prepare_release_plz_checkout_overrides.py`
+- `release-plz update --config release-plz.toml --repo-url https://github.com/Latias94/fret --package fret-a11y-accesskit`
+- `release-plz update --config release-plz.toml --repo-url https://github.com/Latias94/fret --package fret-app`
 
 Observed status:
 
 - `fret-assets` package-scoped planning passed and reported `next version is 0.1.0`.
-- Full-workspace planning failed.
 - `fret-a11y-accesskit` package-scoped planning failed.
 - `fret-a11y-accesskit --no-changelog` failed the same way, so the blocker is not limited to changelog generation.
+- After installing the checkout override helper, `fret-a11y-accesskit` package-scoped planning passed.
+- After installing the checkout override helper, `fret-app` package-scoped planning passed.
+- Full-workspace planning still needs follow-up validation with the managed override list in place.
 
 Common failure surface:
 
@@ -25,14 +30,22 @@ Common failure surface:
   - `Your local changes to the following files would be overwritten by checkout:`
   - `ecosystem/fret-ui-shadcn/src/slider.rs`
 
-Interpretation:
+Root cause:
 
 - The current repository working tree did not have `ecosystem/fret-ui-shadcn/src/slider.rs` modified when this was tested.
 - The checkout conflict therefore appears inside the temporary clone/worktree that `release-plz` uses while computing package differences.
-- This is a real release-planning blocker for any workflow that relies on `release-plz update` beyond the minimal `fret-assets` probe.
+- `git_cmd` checks out entire historical commits while computing package diffs, not only the package path under inspection.
+- Several historical shadcn source blobs carry CRLF content even though the repo enforces `*.rs text eol=lf`, so those files appear as EOL-only dirty changes during checkout recovery.
+- Confirmed historical offenders:
+  - `ecosystem/fret-ui-shadcn/src/slider.rs` at `ede40b3c88bfc34f86fe4bb4021e74cebf095017`
+  - `ecosystem/fret-ui-shadcn/src/context_menu.rs` at `d027f2070ce3e50c86a659180b9be434aa6b06a7`
+  - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` at `d027f2070ce3e50c86a659180b9be434aa6b06a7`
+  - `ecosystem/fret-ui-shadcn/src/menubar.rs` at `d027f2070ce3e50c86a659180b9be434aa6b06a7`
+  - `ecosystem/fret-ui-shadcn/src/tabs.rs` at `7c9029de7a97b2af1b4fbcbb5c80c725a3e24b6d`
 
 Current operator guidance:
 
 - Treat `release_closure_check.py` plus wave-specific `cargo publish --dry-run` as the authoritative local publish-readiness gates for now.
-- Keep `release-plz update --package fret-assets` as the smallest passing planning smoke test.
-- Do not treat the current `release-plz update` failure as evidence that the release scope or publish order is wrong; the observed blocker is the temp checkout recovery path around `fret-a11y-accesskit`.
+- Run `python3 tools/prepare_release_plz_checkout_overrides.py` before local `release-plz update` commands.
+- Keep `release-plz update --package fret-assets`, `release-plz update --package fret-a11y-accesskit`, and `release-plz update --package fret-app` as the currently validated planning smoke tests.
+- Do not treat the raw `release-plz update` failure surface as evidence that the release scope or publish order is wrong; the observed blocker is the history checkout recovery path.
