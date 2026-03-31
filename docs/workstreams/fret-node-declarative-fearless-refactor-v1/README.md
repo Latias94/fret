@@ -234,7 +234,7 @@ The final reference architecture should let app authors ask for one clear surfac
 A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs` as
 `NodeGraphController`:
 
-- it wraps `NodeGraphStore` plus an optional private viewport-transport seam,
+- it wraps `NodeGraphStore`,
 - it provides common query helpers and transaction-safe commit helpers,
 - it now includes the first bounds-aware viewport helpers (`set_center_in_bounds*`,
   `fit_view_nodes_in_bounds*`) so paint-only / fallback hosts can drive viewport state without
@@ -270,8 +270,8 @@ Queue-first APIs such as `NodeGraphEditQueue` are no longer public app-facing se
 transport is crate-internal only, and the temporary `NodeGraphViewportHelper` facade is deleted, so
 app-facing composition
 should call
-`NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*,`
-`fit_view_nodes_in_bounds*}` directly, while declarative action hooks should prefer
+`NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes_in_bounds*}` directly,
+while declarative action hooks should prefer
 `NodeGraphSurfaceBinding::{set_viewport_action_host, fit_view_nodes_in_bounds_action_host}` over
 owning raw transport queues.
 
@@ -291,7 +291,7 @@ Current controller-facing XyFlow mapping (review helper, not a final contract):
   - current Fret surface: `NodeGraphController::set_viewport*`, `set_center_in_bounds*`
 - fit view:
   - XyFlow mental model: `fitView`, `fitBounds`
-  - current Fret surface: `NodeGraphController::fit_view_nodes*`, `fit_view_nodes_in_bounds*`
+  - current Fret surface: `NodeGraphController::fit_view_nodes_in_bounds*`
 - node / handle connections:
   - XyFlow mental model: `getNodeConnections`, `getHandleConnections`
   - current Fret surface: `NodeGraphController::node_connections`, `port_connections`
@@ -414,7 +414,7 @@ For new editor surfaces, teach and copy this shape first:
 1. create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`,
 2. render `node_graph_surface(cx, binding.surface_props())` for the default surface props,
 3. use the binding itself for common app-facing helpers (`viewport`, `graph_snapshot`,
-   `view_state_snapshot`, `set_viewport`, `fit_view_nodes`, `replace_document`,
+   `view_state_snapshot`, `set_viewport`, `fit_view_nodes_in_bounds`, `replace_document`,
    `replace_graph`, `replace_view_state`, `set_selection`, `outgoers`, `incomers`,
    `connected_edges`, `port_connections`, `node_connections`, `undo`, `redo`),
 4. drop to `binding.controller()` only for advanced helpers or retained/compat composition,

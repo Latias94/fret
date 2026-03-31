@@ -49,7 +49,9 @@ mod surface_policy_tests {
     const APP_RS: &str = include_str!("app.rs");
     const ADVANCED_RS: &str = include_str!("advanced.rs");
     const COMPAT_RETAINED_RS: &str = include_str!("ui/declarative/compat_retained.rs");
+    const UI_BINDING_RS: &str = include_str!("ui/binding.rs");
     const UI_CONTROLLER_RS: &str = include_str!("ui/controller.rs");
+    const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
     const UI_MOD_RS: &str = include_str!("ui/mod.rs");
     const MINIMAP_RS: &str = include_str!("ui/overlays/minimap.rs");
     const NODE_GRAPH_DOMAIN_DEMO_RS: &str =
@@ -109,6 +111,19 @@ mod surface_policy_tests {
         assert!(!UI_CONTROLLER_RS.contains("bind_view_queue_transport"));
         assert!(!UI_CONTROLLER_RS.contains("transport_edit_queue"));
         assert!(!UI_CONTROLLER_RS.contains("transport_view_queue"));
+    }
+
+    #[test]
+    fn fit_view_surface_stays_bounds_first() {
+        assert!(!UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_view_nodes("));
+        assert!(!UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_view_nodes_action_host("));
+        assert!(!UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_view_nodes_with_options("));
+        assert!(
+            !UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_view_nodes_with_options_action_host(")
+        );
+        assert!(!UI_BINDING_RS.contains("pub fn fit_view_nodes("));
+        assert!(UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_view_nodes_in_bounds<"));
+        assert!(UI_BINDING_RS.contains("pub fn fit_view_nodes_in_bounds<"));
     }
 
     #[test]

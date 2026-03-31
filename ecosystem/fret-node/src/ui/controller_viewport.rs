@@ -91,40 +91,6 @@ impl NodeGraphController {
         self.set_center_in_bounds_in_models(host.models_mut(), bounds, center, zoom, options)
     }
 
-    pub fn fit_view_nodes<H: UiHost>(&self, host: &mut H, nodes: Vec<NodeId>) -> bool {
-        self.fit_view_nodes_with_options(host, nodes, NodeGraphFitViewOptions::default())
-    }
-
-    pub fn fit_view_nodes_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        nodes: Vec<NodeId>,
-    ) -> bool {
-        self.fit_view_nodes_with_options_action_host(
-            host,
-            nodes,
-            NodeGraphFitViewOptions::default(),
-        )
-    }
-
-    pub fn fit_view_nodes_with_options<H: UiHost>(
-        &self,
-        host: &mut H,
-        nodes: Vec<NodeId>,
-        options: NodeGraphFitViewOptions,
-    ) -> bool {
-        self.fit_view_nodes_in_models(host.models_mut(), nodes, options)
-    }
-
-    pub fn fit_view_nodes_with_options_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        nodes: Vec<NodeId>,
-        options: NodeGraphFitViewOptions,
-    ) -> bool {
-        self.fit_view_nodes_in_models(host.models_mut(), nodes, options)
-    }
-
     pub fn fit_view_nodes_in_bounds<H: UiHost>(
         &self,
         host: &mut H,
@@ -208,15 +174,6 @@ impl NodeGraphController {
         );
         let pan = pan_for_center(bounds, center, zoom);
         self.set_viewport_in_models(models, pan, zoom, options)
-    }
-
-    fn fit_view_nodes_in_models(
-        &self,
-        _models: &mut ModelStore,
-        _nodes: Vec<NodeId>,
-        _options: NodeGraphFitViewOptions,
-    ) -> bool {
-        false
     }
 
     fn fit_view_nodes_in_bounds_in_models(

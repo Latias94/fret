@@ -26,7 +26,7 @@ something else.
 - `NodeGraphController`
   - owns the recommended app-facing runtime facade,
   - owns viewport operations directly (`set_viewport*`, `set_center_in_bounds*`,
-    `fit_view_nodes*`, `fit_view_nodes_in_bounds*`),
+    `fit_view_nodes_in_bounds*`),
   - owns transaction-safe graph commits and query helpers.
 - `node_graph_surface(...)`
   - remains the recommended lightweight declarative authoring surface,

@@ -190,12 +190,6 @@ impl NodeGraphSurfaceBinding {
         self.sync_view_state_after_viewport_update_action_host(host, applied)
     }
 
-    /// Fits the viewport to the given node ids through the bound controller.
-    pub fn fit_view_nodes<H: UiHost>(&self, host: &mut H, nodes: Vec<NodeId>) -> bool {
-        let applied = self.controller.fit_view_nodes(host, nodes);
-        self.sync_view_state_after_viewport_update(host, applied)
-    }
-
     /// Fits the viewport to the given nodes inside explicit bounds.
     pub fn fit_view_nodes_in_bounds<H: UiHost>(
         &self,

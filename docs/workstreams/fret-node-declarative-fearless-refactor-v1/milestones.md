@@ -189,7 +189,7 @@ points rather than direct graph mutation.
     now gives retained symbol actions the same controller-first path, and `compat_retained` now
     takes a controller binding directly instead of exposing public queue transport props.
   - The temporary `NodeGraphViewportHelper` façade is now deleted; controller-first app-facing
-    composition calls `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*,`
+    composition calls `NodeGraphController::{set_viewport*, set_center_in_bounds*,`
     `fit_view_nodes_in_bounds*}` directly, and raw queue ownership stays a crate-internal
     compatibility detail rather than a public app-facing choice.
   - Raw edit/view transport is now crate-internal; root `fret_node::ui::*` re-exports viewport

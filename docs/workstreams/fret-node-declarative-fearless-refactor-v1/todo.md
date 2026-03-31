@@ -89,8 +89,8 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Extend the controller surface with the first bounds-aware viewport helpers:
   - `set_center_in_bounds` / `set_center_in_bounds_with_options`
   - `fit_view_nodes_in_bounds` / `fit_view_nodes_in_bounds_with_options`
-  - store fallback when no `view_queue` exists, while still routing through queued `SetViewport`
-    requests when a queue is present
+  - public fit-view now stays bounds-aware only; queue-driven unbounded fit-view helpers are
+    removed instead of surviving as misleading no-op facade surface
 - [x] Start routing declarative viewport interactions through controller/store-backed view-state
       replacement when a controller/store exists:
   - keyboard zoom
