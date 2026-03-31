@@ -272,14 +272,7 @@ def collect_internal_issues(
 
 
 def topo_sort(order_graph: dict[str, set[str]]) -> tuple[list[str], list[str]]:
-    indegree = {name: 0 for name in order_graph}
-    reverse_graph: dict[str, set[str]] = defaultdict(set)
-
-    for name, deps in order_graph.items():
-        for dep in deps:
-            indegree[name] += 1
-            reverse_graph[dep].add(name)
-
+    indegree, reverse_graph = build_topology(order_graph)
     queue = deque(sorted([name for name, deg in indegree.items() if deg == 0]))
     order: list[str] = []
 
@@ -293,6 +286,36 @@ def topo_sort(order_graph: dict[str, set[str]]) -> tuple[list[str], list[str]]:
 
     remaining = sorted([name for name, deg in indegree.items() if deg > 0])
     return order, remaining
+
+
+def build_topology(order_graph: dict[str, set[str]]) -> tuple[dict[str, int], dict[str, set[str]]]:
+    indegree = {name: 0 for name in order_graph}
+    reverse_graph: dict[str, set[str]] = defaultdict(set)
+
+    for name, deps in order_graph.items():
+        for dep in deps:
+            indegree[name] += 1
+            reverse_graph[dep].add(name)
+
+    return indegree, reverse_graph
+
+
+def topo_waves(order_graph: dict[str, set[str]]) -> tuple[list[list[str]], list[str]]:
+    indegree, reverse_graph = build_topology(order_graph)
+    remaining = set(order_graph)
+    waves: list[list[str]] = []
+
+    while True:
+        wave = sorted(name for name in remaining if indegree[name] == 0)
+        if not wave:
+            break
+        waves.append(wave)
+        for name in wave:
+            remaining.remove(name)
+            for nxt in sorted(reverse_graph[name]):
+                indegree[nxt] -= 1
+
+    return waves, sorted(remaining)
 
 
 def collect_metadata_warnings(release_scope: list[str], manifests: dict[str, Path]) -> list[str]:
@@ -332,6 +355,26 @@ def write_order_file(order: list[str], path: Path, include_commands: bool) -> No
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def write_waves_file(waves: list[list[str]], path: Path) -> None:
+    lines = [
+        "# Release publish waves",
+        "",
+        "Wave 1 can be dry-run locally before any earlier Fret crates exist on crates.io.",
+        "Each later wave assumes all earlier waves are already visible on crates.io.",
+        "",
+    ]
+
+    for idx, wave in enumerate(waves, start=1):
+        crate_label = "crate" if len(wave) == 1 else "crates"
+        lines.append(f"## Wave {idx} ({len(wave)} {crate_label})")
+        for crate in wave:
+            lines.append(f"- {crate}")
+        lines.append("")
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Check release-plz publish scope closure and print deterministic publish order."
@@ -359,6 +402,15 @@ def main() -> int:
         "--print-publish-commands",
         action="store_true",
         help="Print `cargo publish -p <crate>` commands in publish order.",
+    )
+    parser.add_argument(
+        "--write-waves",
+        help="Write computed publish waves to a file.",
+    )
+    parser.add_argument(
+        "--print-publish-waves",
+        action="store_true",
+        help="Print publish waves grouped by dependency layer.",
     )
     args = parser.parse_args()
 
@@ -396,6 +448,7 @@ def main() -> int:
         workspace_versions=workspace_versions,
     )
     order, cycle_nodes = topo_sort(order_graph)
+    waves, wave_cycle_nodes = topo_waves(order_graph)
     metadata_warnings = collect_metadata_warnings(release_scope, manifests)
 
     # Version-line guard: all releasable crates must share the same (major, minor) compatibility line.
@@ -430,6 +483,8 @@ def main() -> int:
         "compat_line_keys": [f"{k[0]}.{k[1]}" for k in compat_line_keys],
         "publish_order_count": len(order),
         "publish_order": order,
+        "publish_wave_count": len(waves),
+        "publish_waves": waves,
         "cycle_nodes": cycle_nodes,
         "metadata_warning_count": len(metadata_warnings),
         "metadata_warnings": metadata_warnings,
@@ -438,6 +493,9 @@ def main() -> int:
     if args.write_order:
         order_path = (root / args.write_order).resolve()
         write_order_file(order, order_path, include_commands=args.print_publish_commands)
+    if args.write_waves:
+        waves_path = (root / args.write_waves).resolve()
+        write_waves_file(waves, waves_path)
 
     if args.json:
         print(json.dumps(summary, indent=2))
@@ -469,15 +527,28 @@ def main() -> int:
             print(f"[release-closure] publish order: {len(order)} crates")
             for idx, crate in enumerate(order, start=1):
                 print(f"  {idx:02d}. {crate}")
+            print(f"[release-closure] publish waves: {len(waves)}")
+            if waves:
+                print(f"  wave 1: {', '.join(waves[0])}")
 
         if args.print_publish_commands:
             print("[release-closure] publish commands")
             for crate in order:
                 print(f"  cargo publish -p {crate}")
+        if args.print_publish_waves:
+            print("[release-closure] publish waves detail")
+            for idx, wave in enumerate(waves, start=1):
+                crate_label = "crate" if len(wave) == 1 else "crates"
+                print(f"  wave {idx} ({len(wave)} {crate_label})")
+                for crate in wave:
+                    print(f"    - {crate}")
 
         print(f"[release-closure] metadata warnings: {len(metadata_warnings)}")
         for warning in metadata_warnings:
             print(f"  - {warning}")
+
+    if wave_cycle_nodes != cycle_nodes:
+        raise SystemExit("internal error: publish wave cycle detection drifted from publish order detection")
 
     has_blocking_errors = bool(
         missing_release_crates or missing_manifests or issues or cycle_nodes or version_line_issues
