@@ -6,17 +6,18 @@ This note records the pre-`imui-stack-fearless-refactor-v1` authoring consolidat
 It remains useful as rationale and implementation history, but it is no longer the canonical API or
 ownership guide.
 
-Current source of truth:
+Current active execution surface:
 
-- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
 
-Do not extend this document with new API guidance; record new decisions in the active stack-reset
-workstream instead.
+Do not extend this document with new API guidance; record new decisions in
+`docs/workstreams/imui-stack-fearless-refactor-v2/` instead.
 
 Status: Implemented (in-tree; workstream note; not an ADR)
-Last updated: 2026-03-02
+Last updated: 2026-03-31
 
 This document describes a fearless refactor of the `imui` authoring surface after v1.
 

@@ -9,8 +9,12 @@ Upstream sources:
 - imgui-rs: https://github.com/imgui-rs/imgui-rs
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-Status: Baseline (historical reference; superseded by v2)
-Last updated: 2026-02-09
+Status: Historical reference (superseded by `docs/workstreams/imui-stack-fearless-refactor-v2/`)
+Last updated: 2026-03-31
+
+Status note (2026-03-31): this document remains useful as the earliest authoring-facade baseline,
+but the current shipped `imui` ownership story and fearless execution plan now live in
+`docs/workstreams/imui-stack-fearless-refactor-v2/`.
 
 This document proposes an **immediate-mode authoring facade** for Fret that feels closer to `egui` / Dear ImGui (and
 to `repo-ref/dear-imgui-rs`), while remaining aligned with Fret’s core runtime direction:
@@ -24,6 +28,7 @@ Tracking:
 - TODO tracker: `docs/workstreams/imui-authoring-facade-v1/imui-authoring-facade-v1-todo.md`
 - Fearless v2 plan: `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md`
 - Fearless v2 tracker: `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2-todo.md`
+- Current active execution surface: `docs/workstreams/imui-stack-fearless-refactor-v2/`
 - Architecture baseline: `docs/architecture.md` (declarative mount + retained semantics)
 - Authoring ergonomics notes: `docs/ui-ergonomics-and-interop.md`, `docs/workstreams/authoring-ergonomics-fluent-builder/authoring-ergonomics-fluent-builder.md`
 - Docking/multi-window direction: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`, `docs/workstreams/docking-multiviewport-arbitration-v1/docking-multiviewport-arbitration-v1.md`

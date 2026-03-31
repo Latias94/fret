@@ -1,19 +1,25 @@
 # imui Ecosystem Facade v1 Performance Guide
 
-Status: Draft (living guide)
-Last updated: 2026-03-27
+Status: Historical companion guide (not the active execution surface)
+Last updated: 2026-03-31
+
+Status note (2026-03-31): this guide remains useful as a compact performance companion for the
+generic immediate helper layer, but the current shipped `imui` execution plan now lives in
+`docs/workstreams/imui-stack-fearless-refactor-v2/`.
 
 This guide documents practical performance rules for the immediate-mode ecosystem facade
 (`fret_ui_kit::imui`) while keeping `fret-imui` policy-light.
 
 Related:
 
-- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
 - `docs/adr/0042-virtualization-and-large-lists.md`
 - `docs/adr/0070-virtualization-contract.md`
 
-Use this guide as a performance companion to the active `imui` stack reset.
+Use this guide as a historical performance companion to the `imui` stack reset and follow-on
+cleanup lane.
 Older `imui-ecosystem-facade-v*` workstreams are historical archive notes rather than current API guidance.
 
 ---

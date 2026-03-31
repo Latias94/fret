@@ -1,7 +1,11 @@
 # imui + shadcn Adapter Alignment v1
 
-Status: Draft
-Last updated: 2026-02-06
+Status: Historical companion note (adapter guidance; not the active execution surface)
+Last updated: 2026-03-31
+
+Status note (2026-03-31): this note remains useful as an early adapter-pattern companion, but the
+current shipped `imui` execution surface and boundary cleanup plan now live in
+`docs/workstreams/imui-stack-fearless-refactor-v2/`.
 
 ## 1) Why this exists
 

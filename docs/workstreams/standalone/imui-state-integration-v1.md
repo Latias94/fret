@@ -1,18 +1,23 @@
 # imui + State Integration v1 (Service-First)
 
-Status: Draft (guidance note)
-Last updated: 2026-03-27
+Status: Historical companion note (service-first guidance; not the active execution surface)
+Last updated: 2026-03-31
+
+Status note (2026-03-31): this note remains useful for the service-first integration pattern, but
+current `imui` ownership, canonical API naming, and active execution planning now live in
+`docs/workstreams/imui-stack-fearless-refactor-v2/`.
 
 Related:
 
 - `docs/workstreams/state-management-v1/state-management-v1.md`
 - `docs/workstreams/state-management-v1/state-management-v1-extension-contract.md`
 - `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
 - `docs/integrating-tokio-and-reqwest.md`
 
 This note only covers the service-first state integration pattern.
-Current `imui` ownership and canonical API naming live in the active stack-reset workstream above.
+Current `imui` ownership and canonical API naming live in the v2 workstream above.
 
 This note defines the recommended way to combine immediate-mode authoring (`imui`) with
 `fret-selector` and `fret-query`.

@@ -1,17 +1,19 @@
 # Immediate-Mode Authoring Facade ("imui") v1 — TODO Tracker
 
-Status: Active (workstream tracker)
-Last updated: 2026-02-03
+Status: Historical tracker (superseded by `docs/workstreams/imui-stack-fearless-refactor-v2/`)
+Last updated: 2026-03-31
 
 This is the checkbox tracker companion to:
 
 - `docs/workstreams/imui-authoring-facade-v1/imui-authoring-facade-v1.md`
 
-Note (2026-02-03): v1 is treated as feature-complete enough for internal demos. We plan a fearless v2 consolidation
-refactor (authoring surface convergence with ADR 0160 / `ui()` / `UiBuilder<T>`). New work should be tracked in:
+Status note (2026-03-31): this tracker is kept as historical evidence only. The current in-tree
+`imui` execution plan and new cleanup work now live in:
 
-- `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md`
-- `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2-todo.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
 
 Legend:
 

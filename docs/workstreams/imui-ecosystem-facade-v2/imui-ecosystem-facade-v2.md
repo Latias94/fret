@@ -6,11 +6,12 @@ This note records the pre-`imui-stack-fearless-refactor-v1` stabilization plan.
 It remains useful as design history, but it is no longer the canonical guide for the surviving
 `imui` stack shape.
 
-Current source of truth:
+Current active execution surface:
 
-- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
 
 Canonical name mapping for historical references across the v2 note set:
 
@@ -25,7 +26,7 @@ Canonical name mapping for historical references across the v2 note set:
 Do not extend the v2 note set with new API guidance.
 
 Status: Historical archive note (pre-reset planning record; not an ADR)
-Last updated: 2026-03-27
+Last updated: 2026-03-31
 
 This workstream starts after `imui` ecosystem facade v1 is functionally complete.
 

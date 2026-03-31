@@ -7,11 +7,12 @@ Some evidence lines below intentionally reference historical names and pre-reset
 (`begin_disabled`, `window_ex`, `window_open_ex`, `floating_area_show_ex`).
 They are retained as audit history, not as current API guidance.
 
-Current source of truth:
+Current active execution surface:
 
-- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
 
 Canonical name mapping for historical references in this tracker:
 

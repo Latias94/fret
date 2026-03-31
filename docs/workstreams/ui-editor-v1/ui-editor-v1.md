@@ -25,7 +25,7 @@ Primary constraints / references:
 
 - Runtime contract boundary: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - Unified authoring surface: `docs/adr/0160-unified-authoring-builder-surface-v1.md`
-- imui is an authoring frontend (not a second runtime): `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
+- imui is an authoring frontend (not a second runtime): `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
 - Capability gaps vs egui/imgui (workstream note): `docs/workstreams/standalone/ui-editor-egui-imgui-gap-v1.md`
 
 ## Scope

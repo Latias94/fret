@@ -7,11 +7,12 @@ Names mentioned below may reflect the old public surface (`floating_window`, `fl
 `floating_window_resizable`, `floating_area_drag_surface_ex`, etc.) and should be read as
 historical evidence, not current API guidance.
 
-Current source of truth:
+Current active execution surface:
 
-- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
 
 Canonical name mapping for historical references in this tracker:
 
@@ -24,7 +25,8 @@ Canonical name mapping for historical references in this tracker:
 - `menu_item_checkbox_ex` -> `menu_item_checkbox_with_options(...)`
 - `menu_item_radio_ex` -> `menu_item_radio_with_options(...)`
 
-Do not add new migration work here; use the active stack-reset workstream instead.
+Do not add new migration work here; use `docs/workstreams/imui-stack-fearless-refactor-v2/`
+instead.
 
 Status: Historical archive note
 Last updated: 2026-03-27

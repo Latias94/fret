@@ -6,11 +6,12 @@ This note records a pre-`imui-stack-fearless-refactor-v1` facade stage.
 Names mentioned below may reflect the old public surface (`select_model_ex`, older floating/window
 helpers, etc.) and should be read as historical evidence, not current API guidance.
 
-Current source of truth:
+Current active execution surface:
 
-- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
 
 Canonical name mapping for historical references in this note:
 
@@ -19,7 +20,7 @@ Canonical name mapping for historical references in this note:
   `floating_area_with_options(...)`, `floating_area_drag_surface(...)`
 
 Status: Historical archive note (pre-reset M3 record)
-Last updated: 2026-03-27
+Last updated: 2026-03-31
 
 This note captures the v2 M3 polish scope for popup/select choreography and floating coexistence.
 

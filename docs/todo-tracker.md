@@ -53,15 +53,14 @@ It complements (but does not replace) ADRs:
 ## P1 - Authoring surfaces (imui convergence)
 
 - Baseline source of truth for the in-tree `imui` stack:
-  - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
-  - `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
-  - `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
-- The high-frequency immediate authoring vocabulary closure is now closed in:
-  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/DESIGN.md`
-  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/TODO.md`
-  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/MILESTONES.md`
-  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/GAP_AUDIT_2026-03-31.md`
-  - `docs/workstreams/imui-authoring-vocabulary-closure-v1/CLOSEOUT_AUDIT_2026-03-31.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
+- Treat `docs/workstreams/imui-stack-fearless-refactor-v1/` as the completed stack-reset baseline,
+  not the current active execution surface.
+- Treat `docs/workstreams/imui-authoring-vocabulary-closure-v1/` as historical closeout evidence
+  unless a specific note there is re-stated in the v2 baseline audit.
 - Treat the editor helper, sortable recipe, and ghost lanes as closeout evidence, not as active
   generic `imui` backlog:
   - `docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md`

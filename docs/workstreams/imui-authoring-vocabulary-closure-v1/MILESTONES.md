@@ -1,5 +1,11 @@
 # imui authoring vocabulary closure v1 - milestones
 
+Status: Historical milestone ladder (partially superseded by `docs/workstreams/imui-stack-fearless-refactor-v2/`)
+
+Status note (2026-03-31): this file remains useful for the historical execution order that led into
+the shipped helper surface, but the active milestone ladder now lives in
+`docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`.
+
 This workstream is intentionally staged from smallest high-value authoring noun to broader dense
 list/data helpers.
 

@@ -7,11 +7,12 @@ It is still useful as a design record, but it should not be read as the current 
 surface. In particular, names such as `begin_disabled`, `window_ex`, `window_open_ex`, and
 `floating_area_show_ex` were deleted by the fearless refactor rather than preserved.
 
-Current source of truth:
+Current active execution surface:
 
-- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
 
 Canonical name mapping for historical references in this note:
 
@@ -33,7 +34,7 @@ Upstream sources:
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Historical archive note (pre-reset workstream record; not an ADR)
-Last updated: 2026-03-27
+Last updated: 2026-03-31
 
 This workstream starts after `imui` ecosystem facade v2 is locked and complete.
 
@@ -47,7 +48,7 @@ v2 outcome (baseline for v3):
 
 Related:
 
-- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md` (current stack-reset source of truth)
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md` (current active execution surface)
 - `docs/workstreams/imui-ecosystem-facade-v2/imui-ecosystem-facade-v2.md`
 - `docs/workstreams/imui-ecosystem-facade-v2/imui-ecosystem-facade-v2-todo.md`
 - `docs/workstreams/imui-ecosystem-facade-v2/imui-ecosystem-facade-v2-m5-readiness-review.md`

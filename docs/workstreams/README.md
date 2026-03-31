@@ -73,12 +73,18 @@ those files, keep historical names when they are the evidence.
 
 Current source of truth for the in-tree immediate-mode stack:
 
-- Completed stack reset / closeout record:
+- Active execution surface for the current fearless pass:
+  - `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
+  - `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
+
+- Completed stack reset / baseline closeout record:
   - `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
   - `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
   - `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
 
-- Closed authoring-vocabulary closure / closeout record:
+- Historical authoring-vocabulary closure / closeout record:
   - `docs/workstreams/imui-authoring-vocabulary-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-authoring-vocabulary-closure-v1/TODO.md`
   - `docs/workstreams/imui-authoring-vocabulary-closure-v1/MILESTONES.md`
@@ -146,9 +152,12 @@ Historical companion/audit notes retained under `standalone/`:
 
 Rule:
 
-- Prefer the completed stack-reset docs for baseline API/ownership guidance.
-- Prefer the authoring-vocabulary closeout docs for the shipped generic immediate helper surface
-  after the editor/ghost closures.
+- Prefer the v2 workstream for the current execution plan, current gap statement, and delete-ready
+  refactor posture.
+- Prefer the completed stack-reset docs for baseline API/ownership guidance and the first fearless
+  cleanup pass.
+- Prefer the authoring-vocabulary closeout docs only as historical evidence for what the repo once
+  considered missing before the current baseline audit.
 - Prefer the editor-grade closeout docs for what landed and what was intentionally deferred.
 - Prefer the sortable recipe closeout docs for the shipped v1 row-level recipe boundary.
 - Prefer the drag preview ghost closeout docs for the shipped same-window source-side preview boundary.
@@ -249,19 +258,20 @@ Rule:
 - `docs/workstreams/hotpatch-devloop-alignment-v1/` — first 2026-02-15, latest 2026-03-01, 4 markdown docs
 - `docs/workstreams/image-source-view-cache-v1/` — first 2026-02-13, latest 2026-02-13, 3 markdown docs
 - `docs/workstreams/image-support-v1/` — first 2026-02-09, latest 2026-02-11, 2 markdown docs
-- `docs/workstreams/imui-authoring-facade-v1/` — first 2026-02-03, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
-- `docs/workstreams/imui-authoring-facade-v2/` — first 2026-02-03, latest 2026-03-02, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
+- `docs/workstreams/imui-authoring-facade-v1/` — first 2026-02-03, latest 2026-02-16, 2 markdown docs (historical archive; current active execution surface is `docs/workstreams/imui-stack-fearless-refactor-v2/`)
+- `docs/workstreams/imui-authoring-facade-v2/` — first 2026-02-03, latest 2026-03-02, 2 markdown docs (historical archive; current active execution surface is `docs/workstreams/imui-stack-fearless-refactor-v2/`)
 - `docs/workstreams/imui-authoring-vocabulary-closure-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped generic immediate helper vocabulary relative to Dear ImGui/egui after the editor-grade and ghost closeouts)
 - `docs/workstreams/imui-cross-window-ghost-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped generic cross-window ghost baseline; M1 contract freeze accepted)
 - `docs/workstreams/imui-drag-preview-ghost-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped same-window source-side drag preview ghost)
-- `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
-- `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
-- `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; current source of truth is `docs/workstreams/imui-stack-fearless-refactor-v1/`)
+- `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; current active execution surface is `docs/workstreams/imui-stack-fearless-refactor-v2/`)
+- `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; current active execution surface is `docs/workstreams/imui-stack-fearless-refactor-v2/`)
+- `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; current active execution surface is `docs/workstreams/imui-stack-fearless-refactor-v2/`)
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 6 markdown docs (closed closeout record; sortable recipe follow-on lives in `docs/workstreams/imui-sortable-recipe-v1/`)
 - `docs/workstreams/imui-shell-ghost-choreography-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped docking-owned shell ghost choreography follow-on)
 - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the transparent moving-window payload overlap diagnostics/runtime lane)
 - `docs/workstreams/imui-sortable-recipe-v1/` — first 2026-03-29, latest 2026-03-30, 5 markdown docs (closed closeout record for the shipped v1 row-level sortable recipe)
-- `docs/workstreams/imui-stack-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-27, 3 markdown docs (baseline immediate-mode source of truth; current remaining gap closure lives in `docs/workstreams/imui-authoring-vocabulary-closure-v1/`, and prior closeouts live in `docs/workstreams/imui-editor-grade-surface-closure-v1/` and `docs/workstreams/imui-sortable-recipe-v1/`)
+- `docs/workstreams/imui-stack-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-27, 3 markdown docs (completed stack-reset baseline; current active execution surface is `docs/workstreams/imui-stack-fearless-refactor-v2/`)
+- `docs/workstreams/imui-stack-fearless-refactor-v2/` — first n/a, latest n/a, 4 markdown docs (current active execution surface for the immediate-mode doc reset, editor adapter closure, and proof-surface cleanup lane)
 - `docs/workstreams/input-dispatch-v2/` — first 2026-01-22, latest 2026-02-14, 3 markdown docs
 - `docs/workstreams/into-element-surface-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-20, 6 markdown docs
 - `docs/workstreams/launcher-utility-windows-v1/` — first 2026-03-03, latest 2026-03-03, 4 markdown docs

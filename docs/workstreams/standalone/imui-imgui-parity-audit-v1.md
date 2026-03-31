@@ -16,11 +16,12 @@ deleted by the fearless refactor rather than kept as compatibility aliases:
 
 Do not use the historical names below as current API guidance.
 
-For the current canonical `imui` ownership story and API reset, use:
+For the current canonical `imui` ownership story and active execution plan, use:
 
-- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/TODO.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
 
 ## Upstream references (non-normative)
 
@@ -31,7 +32,12 @@ Upstream sources:
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Historical archive note (audit record; not an ADR)
-Last updated: 2026-03-27
+Last updated: 2026-03-31
+
+Status note (2026-03-31): this note remains useful as a pre-v2 parity audit, but the current
+shipped guidance and delete-ready execution plan now live in
+`docs/workstreams/imui-stack-fearless-refactor-v2/`. References below that imply the v1 stack reset
+is still the active source of truth should be read as historical.
 
 This document records a *behavior-focused* audit of Fret's immediate-mode ecosystem facade
 (`ecosystem/fret-ui-kit::imui` + `ecosystem/fret-imui`) against Dear ImGui (C++).
@@ -50,7 +56,7 @@ ImGui reference snapshot (local, not committed):
 
 Related workstreams:
 
-- `docs/workstreams/imui-stack-fearless-refactor-v1/DESIGN.md` (current source of truth for the stack reset)
+- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md` (current active execution surface)
 - `docs/workstreams/imui-ecosystem-facade-v3/imui-ecosystem-facade-v3.md` (tracks parity-related work at the ecosystem facade layer)
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md` (docking + multi-viewport parity; runner/platform owned)
 

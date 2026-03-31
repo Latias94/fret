@@ -12,9 +12,18 @@ Upstream sources:
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
-Status: Active workstream
+Status: Historical reference (partially superseded by `docs/workstreams/imui-stack-fearless-refactor-v2/`)
 
 Last updated: 2026-03-31
+
+Status note (2026-03-31): this document remains useful for the narrow post-v1 vocabulary audit,
+but the current shipped guidance and next execution plan now live in
+`docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`,
+`docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`, and
+`docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`.
+Statements below that describe `selectable`, `combo`, `table`, `virtual_list`, `separator_text`,
+tooltip/tree, or typed drag/drop as missing should be read as historical unless explicitly
+restated in the v2 baseline audit.
 
 ## Purpose
 

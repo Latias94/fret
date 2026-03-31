@@ -1,5 +1,11 @@
 # imui authoring vocabulary closure v1 - TODO
 
+Status: Historical tracker (partially superseded by `docs/workstreams/imui-stack-fearless-refactor-v2/`)
+
+Status note (2026-03-31): read this file as the narrow historical gap board that existed before the
+v2 baseline audit. The current execution board now lives in
+`docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`.
+
 Last updated: 2026-03-31.
 
 This tracker is workstream-local.
