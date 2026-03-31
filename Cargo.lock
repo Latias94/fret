@@ -1778,7 +1778,6 @@ dependencies = [
  "fret-app",
  "fret-assets",
  "fret-bootstrap",
- "fret-bootstrap-shadcn",
  "fret-core",
  "fret-docking",
  "fret-framework",
@@ -1857,10 +1856,10 @@ dependencies = [
  "blake3",
  "fret-app",
  "fret-assets",
- "fret-bootstrap-diag-ws",
  "fret-canvas",
  "fret-core",
  "fret-diag-protocol",
+ "fret-diag-ws",
  "fret-i18n",
  "fret-i18n-fluent",
  "fret-icons",
@@ -1873,6 +1872,7 @@ dependencies = [
  "fret-ui-app",
  "fret-ui-assets",
  "fret-ui-kit",
+ "fret-ui-shadcn",
  "fret-window-style-profiles",
  "serde",
  "serde_json",
@@ -1883,25 +1883,6 @@ dependencies = [
  "tracing-subscriber",
  "tracing-tracy",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "fret-bootstrap-diag-ws"
-version = "0.1.0"
-dependencies = [
- "fret-diag-protocol",
- "fret-diag-ws",
-]
-
-[[package]]
-name = "fret-bootstrap-shadcn"
-version = "0.1.0"
-dependencies = [
- "fret-app",
- "fret-bootstrap",
- "fret-ui",
- "fret-ui-kit",
- "fret-ui-shadcn",
 ]
 
 [[package]]

@@ -96,7 +96,10 @@ The next heavy closures are mostly caused by:
 
 Decision:
 
-- prefer feature-gating or extracting those heavy integrations,
+- prefer feature-gating first, especially on `fret-bootstrap` where the crate itself represents the
+  recommended best-practice bootstrap bundle,
+- only extract a new crate when the integration is a genuinely separate authoring surface that we
+  expect users to depend on and learn independently,
 - do not hide them behind more root-level facade shortcuts.
 
 ## Wave plan

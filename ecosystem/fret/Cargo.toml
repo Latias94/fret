@@ -91,8 +91,7 @@ icons = [
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
 command-palette = [
     "shadcn",
-    "dep:fret-bootstrap-shadcn",
-    "fret-bootstrap/ui-app-command-palette",
+    "fret-bootstrap/ui-app-command-palette-shadcn",
 ]
 
 [dependencies]
@@ -104,7 +103,6 @@ fret-framework = { version = "0.1.0", path = "../../crates/fret-framework", pack
 # Golden-path wiring and optional ecosystem integrations.
 fret-assets = { version = "0.1.0", path = "../../crates/fret-assets" }
 fret-bootstrap = { version = "0.1.0", path = "../fret-bootstrap", default-features = false }
-fret-bootstrap-shadcn = { version = "0.1.0", path = "../fret-bootstrap-shadcn", optional = true }
 fret-docking = { version = "0.1.0", path = "../fret-docking", optional = true }
 fret-icons = { version = "0.1.0", path = "../fret-icons" }
 fret-query = { version = "0.1.0", path = "../fret-query", optional = true }

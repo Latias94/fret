@@ -46,16 +46,17 @@ Recommended mental model:
   - command dispatch handling,
   - per-window open/query models,
   - command gating snapshots.
-- Default recipe UI is intentionally not owned here.
-- Use `fret-bootstrap-shadcn` when you want the default shadcn `CommandDialog` overlay on top of
-  that capability.
+- `fret-bootstrap/ui-app-command-palette-shadcn` adds the default shadcn `CommandDialog` overlay
+  on top of that capability.
+- Custom design systems should stay on `ui-app-command-palette` and supply an app-owned overlay
+  renderer.
 
 ## Diagnostics boundary
 
 - `fret-bootstrap/diagnostics` owns the diagnostics service and bundle/script orchestration.
 - retained canvas cache exporters are opt-in on `fret-bootstrap/diagnostics-canvas`.
-- the devtools WebSocket transport bridge is intentionally not owned here; use
-  `fret-bootstrap/diagnostics-ws`, which routes through `fret-bootstrap-diag-ws`.
+- `fret-bootstrap/diagnostics-ws` is the explicit opt-in lane for the devtools WebSocket
+  transport.
 
 ## Minimal examples
 

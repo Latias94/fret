@@ -63,21 +63,24 @@
   `executor-integration` feature instead of pulling `fret-executor` into the default closure.
 - `fret-ui-gallery` now opts into that feature only on `gallery-chart` / `gallery-dev`.
 - `fret-bootstrap` no longer binds command palette capability directly to `fret-ui-shadcn`;
-  default shadcn command palette UI now lives in `fret-bootstrap-shadcn`.
-- `fret`'s `command-palette` feature now pulls in that bridge explicitly, keeping the app-facing
-  authoring story unchanged while making the crate boundary honest.
+  the default shadcn command palette UI now sits on explicit
+  `fret-bootstrap/ui-app-command-palette-shadcn`.
+- `fret`'s `command-palette` feature now maps directly to that explicit bootstrap feature.
 - `fret-bootstrap/diagnostics` no longer pulls an unused `fret-query` edge into the diagnostics
   closure.
 - retained canvas cache diagnostics now sit behind explicit
   `fret-bootstrap/diagnostics-canvas` instead of bloating the base diagnostics lane.
-- devtools WS transport now sits behind thin `fret-bootstrap-diag-ws` instead of making
-  `fret-bootstrap` depend on `fret-diag-ws` directly.
+- devtools WS transport now stays on explicit `fret-bootstrap/diagnostics-ws` instead of requiring
+  a separate bridge crate.
+- Wave 2 now treats `fret-bootstrap` as a feature-first app-kit crate rather than splitting every
+  optional integration into its own published bridge.
 
 **Remaining to close**
 
-- `fret-bootstrap` feature fan-out is rebalanced so onboarding defaults stay smaller and more
-  predictable,
-- the `fret` optional feature matrix maps cleanly to publishable, intentional extension seams.
+- `fret-bootstrap` feature fan-out is documented clearly enough that users can distinguish
+  onboarding defaults from opt-in integrations,
+- the `fret` optional feature matrix maps cleanly to publishable, intentional extension seams
+  without multiplying bootstrap bridge crates.
 
 **Evidence**
 
@@ -86,11 +89,11 @@
 - `ecosystem/fret-ui-shadcn/src/sonner.rs`
 - `apps/fret-ui-gallery/Cargo.toml`
 - `ecosystem/fret-bootstrap/Cargo.toml`
+- `ecosystem/fret-bootstrap/src/lib.rs`
 - `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`
-- `ecosystem/fret-bootstrap-diag-ws/src/lib.rs`
-- `ecosystem/fret-bootstrap-shadcn/src/lib.rs`
 - `ecosystem/fret/Cargo.toml`
+- `cargo check -p fret-bootstrap --features ui-app-command-palette-shadcn`
 - `cargo check -p fret-bootstrap --features diagnostics`
 - `cargo check -p fret-bootstrap --features diagnostics-canvas`
 - `cargo check -p fret-bootstrap --features diagnostics-ws`

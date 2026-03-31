@@ -51,29 +51,28 @@ Tracking format:
     - `cargo tree -p fret-ui-shadcn -e normal`
     - `python3 tools/check_layering.py`
 
-- [~] RELFACE-bootstrap-110 Audit `fret-bootstrap` feature fan-out and separate true onboarding
+- [x] RELFACE-bootstrap-110 Audit `fret-bootstrap` feature fan-out and separate true onboarding
       defaults from maintainer/advanced integrations.
   - Landed slice:
     - `fret-bootstrap/ui-app-command-palette` now keeps only the driver capability surface
       (toggle + gating + per-window models)
-    - shadcn-specific command palette UI moved into a thin `fret-bootstrap-shadcn` bridge crate
-    - `fret`'s `command-palette` feature now explicitly depends on that bridge instead of relying
-      on a hidden `fret-bootstrap -> fret-ui-shadcn` edge
+    - shadcn-specific command palette UI now stays on explicit
+      `fret-bootstrap/ui-app-command-palette-shadcn`
+    - `fret`'s `command-palette` feature now maps directly to that bootstrap feature instead of
+      relying on a separate bridge crate
     - `fret-bootstrap/diagnostics` no longer pulls the unused `fret-query` dependency into its
       closure
     - retained canvas cache diagnostics now sit behind explicit
       `fret-bootstrap/diagnostics-canvas`
-    - devtools WS transport now sits behind thin `fret-bootstrap-diag-ws` instead of making
-      `fret-bootstrap` depend on `fret-diag-ws` directly
-  - Remaining suspects:
-    - optional icon packs
-    - ui-assets integration
+    - devtools WS transport now stays on explicit `fret-bootstrap/diagnostics-ws` instead of
+      requiring a separate bridge crate
+    - bootstrap release posture is now feature-first: recommended bootstrap integrations stay on
+      `fret-bootstrap` unless they become a truly separate authoring surface
   - Evidence:
     - `ecosystem/fret-bootstrap/Cargo.toml`
+    - `ecosystem/fret-bootstrap/src/lib.rs`
     - `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
     - `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`
-    - `ecosystem/fret-bootstrap-diag-ws/src/lib.rs`
-    - `ecosystem/fret-bootstrap-shadcn/src/lib.rs`
     - `ecosystem/fret/Cargo.toml`
     - `ecosystem/fret/src/lib.rs`
     - `cargo check -p fret-bootstrap --features diagnostics`
@@ -82,7 +81,7 @@ Tracking format:
     - `cargo check -p fret-bootstrap --features diagnostics-ws`
     - `cargo tree -p fret-bootstrap --features diagnostics-ws -e normal`
     - `cargo check -p fret-bootstrap --features ui-app-command-palette`
-    - `cargo check -p fret-bootstrap-shadcn`
+    - `cargo check -p fret-bootstrap --features ui-app-command-palette-shadcn`
     - `cargo check -p fret --features command-palette`
 
 - [ ] RELFACE-fret-120 Re-audit the `fret` optional feature matrix after Wave 2 and cut anything
@@ -95,8 +94,6 @@ Tracking format:
     - `fret`
     - `fret-framework`
     - `fret-bootstrap`
-    - `fret-bootstrap-shadcn`
-    - `fret-bootstrap-diag-ws`
     - `fret-ui-kit`
     - `fret-ui-shadcn`
     - `fret-selector`

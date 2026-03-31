@@ -101,6 +101,51 @@ pub mod assets {
     pub use fret_launch::assets::*;
 }
 
+/// Install the default shadcn command palette overlay on a bootstrap UI driver.
+#[cfg(feature = "ui-app-command-palette-shadcn")]
+pub fn with_shadcn_command_palette<S>(
+    driver: ui_app_driver::UiAppDriver<S>,
+) -> ui_app_driver::UiAppDriver<S> {
+    driver.command_palette_overlay(render_shadcn_command_palette_overlay)
+}
+
+/// Render the default shadcn command palette overlay.
+#[cfg(feature = "ui-app-command-palette-shadcn")]
+pub fn render_shadcn_command_palette_overlay(
+    cx: &mut fret_ui::ElementContext<'_, App>,
+    overlay: ui_app_driver::CommandPaletteOverlayCx,
+    out: &mut ui_app_driver::ViewElements,
+) {
+    use fret_ui_shadcn::facade as shadcn;
+
+    let entries: Vec<shadcn::CommandEntry> = if overlay.open {
+        fret_ui_kit::command::command_catalog_entries_from_host_commands_with_options(
+            cx,
+            fret_ui_kit::command::CommandCatalogOptions::default(),
+        )
+        .into_iter()
+        .map(Into::into)
+        .collect()
+    } else {
+        Vec::new()
+    };
+
+    let dialog = shadcn::CommandDialog::new(overlay.models.open, overlay.models.query, Vec::new())
+        .entries(entries)
+        .a11y_label("Command palette")
+        .into_element(cx, |cx| {
+            cx.interactivity_gate_props(
+                fret_ui::element::InteractivityGateProps {
+                    present: false,
+                    interactive: false,
+                    ..Default::default()
+                },
+                |_| vec![],
+            )
+        });
+    out.push(dialog);
+}
+
 /// Apply `SettingsFileV1` to an `App` and runner config.
 ///
 /// This is a convenience helper for the common pattern:

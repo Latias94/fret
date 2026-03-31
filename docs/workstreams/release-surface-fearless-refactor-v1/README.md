@@ -22,6 +22,8 @@ Non-goals:
 - Advanced/manual assembly should still center on `fret-framework` + `fret-bootstrap`.
 - Component/policy authors should still center on `fret-ui-kit` and `fret-ui-shadcn`.
 - Tooling stays tooling: `fretboard` and `fret-diag` are not part of the minimal library release.
+- `fret-bootstrap` is feature-first: recommended bootstrap integrations stay on that crate unless
+  they become a genuinely separate authoring surface that users should learn independently.
 
 ## First landed slice
 
@@ -35,6 +37,8 @@ Non-goals:
 - `fret-ui-shadcn` no longer pulls `fret-chart` into its default closure.
 - chart recipes now sit behind an explicit `chart` feature, with `fret-ui-gallery` opting in only
   on its chart-specific gallery lanes.
+- `fret-bootstrap` is now explicitly feature-first: command palette shadcn defaults and
+  diagnostics WS stay on explicit bootstrap features instead of multiplying bridge crates.
 
 ## Documents
 

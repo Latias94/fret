@@ -600,7 +600,7 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 **Command palette note:** `fret-bootstrap/ui-app-command-palette` keeps the app-driver capability
 layer only. If you want the default shadcn `CommandDialog` presentation on top of that capability,
-pair it with `fret-bootstrap-shadcn` or use `fret`'s `command-palette` feature.
+enable `fret-bootstrap/ui-app-command-palette-shadcn` or use `fret`'s `command-palette` feature.
 
 **Diagnostics note:** `fret-bootstrap/diagnostics` now keeps the generic diagnostics/export path
 leaner. Enable `fret-bootstrap/diagnostics-canvas` only when you need retained canvas cache stats
@@ -609,40 +609,6 @@ WebSocket transport bridge.
 
 Note: dev hotpatch is an internal maintainer workflow today and is not part of the user-facing
 onboarding path.
-
-### `fret-bootstrap-shadcn`
-
-**What it is:** a thin bridge crate that binds `fret-bootstrap` command palette capability to the
-default shadcn `CommandDialog` recipe.
-
-**Use it when:** you are on `fret-bootstrap` directly and want the default shadcn command palette
-UI without inlining your own overlay renderer into `UiAppDriver`.
-
-**Recommended integration:**
-
-- **Apps using `fret`:** prefer `fret`'s `command-palette` feature; it already installs this
-  bridge for the golden-path authoring surface.
-- **Apps using `fret-bootstrap` directly:** call
-  `fret_bootstrap_shadcn::with_shadcn_command_palette(driver)` after enabling
-  `fret-bootstrap/ui-app-command-palette`.
-- **Apps with custom design systems:** stay on `fret-bootstrap/ui-app-command-palette` and supply
-  an app-owned `UiAppDriver::command_palette_overlay(...)` renderer instead of depending on this
-  shadcn-specific bridge.
-
-### `fret-bootstrap-diag-ws`
-
-**What it is:** a thin bridge crate that binds `fret-bootstrap` diagnostics to the
-`fret-diag-ws` transport client.
-
-**Use it when:** you need the devtools WebSocket transport lane for diagnostics-enabled bootstrap
-apps.
-
-**Recommended integration:**
-
-- **Apps using `fret-bootstrap` directly:** prefer `fret-bootstrap/diagnostics-ws`; it already
-  pulls this bridge in for the bootstrap diagnostics lane.
-- **Apps using `fret` only:** this is not part of the default app-creation baseline; keep it off
-  unless your tooling/dev loop explicitly needs the devtools WS transport.
 
 ### `fret-executor`
 
