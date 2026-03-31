@@ -18,8 +18,10 @@ use std::sync::{Arc, Mutex};
 use fret_assets::{AssetLoadError, AssetLocator, ResolvedAssetBytes};
 use fret_core::{AppWindowId, ImageColorSpace, ImageId};
 use fret_executor::{Inbox, InboxConfig, InboxDrainer};
+#[cfg(not(target_arch = "wasm32"))]
+use fret_runtime::AssetReloadEpoch;
 use fret_runtime::{
-    AssetReloadEpoch, DispatchPriority, DispatcherHandle, EffectSink, GlobalsHost, InboxDrainHost,
+    DispatchPriority, DispatcherHandle, EffectSink, GlobalsHost, InboxDrainHost,
     InboxDrainRegistry, TimeHost,
 };
 #[cfg(feature = "ui")]
@@ -236,6 +238,9 @@ fn request_key_for_source_with_epoch(
 }
 
 fn reload_epoch_for_source<H: GlobalsHost>(host: &H, source: &ImageSource) -> u64 {
+    #[cfg(target_arch = "wasm32")]
+    let _ = host;
+
     match &source.kind {
         #[cfg(not(target_arch = "wasm32"))]
         ImageSourceKind::Path { .. } => host.global::<AssetReloadEpoch>().map(|v| v.0).unwrap_or(0),
@@ -429,7 +434,7 @@ impl ImageSourceLoader {
             let sender = self.runtime.inbox.sender();
             let wake_dispatcher = self.runtime.dispatcher.clone();
             wasm_bindgen_futures::spawn_local(async move {
-                let result = fetch_and_decode_rgba8(url.as_ref()).await;
+                let result = decode_browser_url_rgba8(url.as_ref()).await;
                 let _ = sender.send(ImageSourceMsg {
                     request,
                     window,
@@ -1087,7 +1092,7 @@ fn decode_rgba8(source: &ImageSource) -> Result<DecodedRgba8, String> {
 
 #[cfg(target_arch = "wasm32")]
 fn decode_url_rgba8(_url: &str) -> Result<DecodedRgba8, String> {
-    Err("url image sources must be decoded via fetch".to_string())
+    Err("url image sources must be decoded via the browser image pipeline".to_string())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -1102,12 +1107,6 @@ fn decode_url_rgba8(url: &str) -> Result<DecodedRgba8, String> {
         let _ = url;
         Err("image decode disabled (enable fret-ui-assets feature `image-decode`)".to_string())
     }
-}
-
-#[cfg(target_arch = "wasm32")]
-async fn fetch_and_decode_rgba8(url: &str) -> Result<DecodedRgba8, String> {
-    let bytes = fetch_url_bytes(url).await?;
-    decode_bytes_rgba8(&bytes)
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "image-decode"))]
@@ -1160,35 +1159,71 @@ fn fetch_url_bytes_blocking(url: &str) -> Result<Vec<u8>, String> {
 }
 
 #[cfg(target_arch = "wasm32")]
-async fn fetch_url_bytes(url: &str) -> Result<Vec<u8>, String> {
+async fn decode_browser_url_rgba8(url: &str) -> Result<DecodedRgba8, String> {
     use wasm_bindgen_futures::JsFuture;
+
+    let image = web_sys::HtmlImageElement::new()
+        .map_err(|err| format!("HtmlImageElement::new failed: {err:?}"))?;
+    image.set_cross_origin(Some("anonymous"));
+    image.set_src(url);
+
+    JsFuture::from(image.decode())
+        .await
+        .map_err(|err| format!("image decode failed: {err:?}"))?;
+
+    let width = image.natural_width();
+    let height = image.natural_height();
+    if width == 0 || height == 0 {
+        return Err("decoded image reported zero dimensions".to_string());
+    }
 
     let Some(window) = web_sys::window() else {
         return Err("missing web_sys::window".to_string());
     };
+    let Some(document) = window.document() else {
+        return Err("missing window.document".to_string());
+    };
 
-    let resp_value = JsFuture::from(window.fetch_with_str(url))
-        .await
-        .map_err(|e| format!("fetch failed: {e:?}"))?;
-    let resp: web_sys::Response = resp_value
-        .dyn_into()
-        .map_err(|_| "fetch did not return a Response".to_string())?;
-    if !resp.ok() {
+    let canvas = document
+        .create_element("canvas")
+        .map_err(|err| format!("create canvas element failed: {err:?}"))?
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .map_err(|_| "created canvas had unexpected type".to_string())?;
+    canvas.set_width(width);
+    canvas.set_height(height);
+
+    let context = canvas
+        .get_context("2d")
+        .map_err(|err| format!("get_context('2d') failed: {err:?}"))?
+        .ok_or_else(|| "2d canvas context unavailable".to_string())?
+        .dyn_into::<web_sys::CanvasRenderingContext2d>()
+        .map_err(|_| "2d canvas context had unexpected type".to_string())?;
+
+    context
+        .draw_image_with_html_image_element(&image, 0.0, 0.0)
+        .map_err(|err| format!("draw_image failed: {err:?}"))?;
+
+    let rgba = context
+        .get_image_data(0.0, 0.0, width as f64, height as f64)
+        .map_err(|err| format!("get_image_data failed: {err:?}"))?
+        .data()
+        .0;
+    let expected_len = (width as usize)
+        .checked_mul(height as usize)
+        .and_then(|px| px.checked_mul(4))
+        .ok_or_else(|| "decoded image dimensions overflowed rgba size".to_string())?;
+    if rgba.len() != expected_len {
         return Err(format!(
-            "fetch returned HTTP {} {}",
-            resp.status(),
-            resp.status_text()
+            "unexpected browser image buffer length: expected {expected_len}, got {}",
+            rgba.len()
         ));
     }
 
-    let buf = JsFuture::from(
-        resp.array_buffer()
-            .map_err(|e| format!("array_buffer() failed: {e:?}"))?,
-    )
-    .await
-    .map_err(|e| format!("await array_buffer failed: {e:?}"))?;
-    let array = js_sys::Uint8Array::new(&buf);
-    Ok(array.to_vec())
+    Ok(DecodedRgba8 {
+        width,
+        height,
+        rgba: Arc::from(rgba),
+    })
 }
 
 fn decode_bytes_rgba8(bytes: &[u8]) -> Result<DecodedRgba8, String> {

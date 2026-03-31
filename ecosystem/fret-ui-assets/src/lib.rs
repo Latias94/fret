@@ -12,11 +12,13 @@
 //!   resolver-provided `AssetExternalReference::Url` on every platform.
 //! - The shipped desktop host still does not install a first-party default URL resolver; desktop
 //!   apps must opt in with a custom resolver if they want URL assets.
-//! - Web/WASM only gets a browser-native URL lane when the winning resolver layer returns
-//!   `AssetExternalReference::Url`.
-//! - Otherwise the current first-party web path falls back to resolving bytes and decoding from
-//!   `ResolvedAssetBytes`, which can cost more CPU and memory than a browser-native decode path on
-//!   image-heavy surfaces.
+//! - On Web/WASM, any `ImageSource::Url` now uses the browser's image loader/decoder before
+//!   readback into RGBA for GPU upload, so direct URL helpers and resolver-provided URL
+//!   references avoid the old `fetch bytes + Rust decode` lane.
+//! - The remaining first-party web limitation is the bytes-resolved logical-asset path:
+//!   when no resolver layer returns `AssetExternalReference::Url`, the UI asset bridge still falls
+//!   back to `ResolvedAssetBytes` and Rust-side decode, which can cost more CPU and memory than a
+//!   browser-native decode path on image-heavy surfaces.
 
 pub mod asset_resolver;
 pub mod image_asset_cache;

@@ -91,14 +91,14 @@ escape hatches.
     which resolves URL locators as external URL references instead of pretending they are already
     byte-backed assets,
   - `resolve_image_source*` can now consume a resolver-provided URL reference on every platform:
-    web/WASM keeps the browser-native URL handoff, while non-wasm targets fetch bytes off-thread
-    and decode through the shared Rust image pipeline,
+    web/WASM now routes `ImageSource::Url` through the browser image pipeline, while non-wasm
+    targets fetch bytes off-thread and decode through the shared Rust image pipeline,
   - native image preview surfaces should not treat `AssetCapabilities { url: true, .. }` as a
     blanket promise that the host ships default URL support; resolver truthfulness still depends on
     whether the host actually installs a URL-capable resolver,
   - when no resolver layer returns a URL reference, web/WASM `resolve_image_source*` falls back to
     resolving bytes and feeding `ImageSource::from_resolved_asset_bytes(...)`, so the current
-    first-party packaged/bundle lane is still a byte-fetch + Rust decode path rather than a
+    first-party packaged/bundle lane is still a bytes-resolved Rust decode path rather than a
     browser-native decode lane,
   - desktop/native still has no first-party default resolver for `AssetLocator::Url`,
   - there is still no matching first-party SVG/font URL lane.

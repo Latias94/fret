@@ -44,8 +44,9 @@ The highest-risk remaining gaps are no longer “design unknowns”; they are cl
   lane,
 - font asset identity and actual renderer load path are still split,
 - bundled baseline guarantees are still incomplete for some generic families,
-- web image loading still pays a byte-fetch + Rust decode path that should be explicit in release
-  notes and capability docs.
+- web logical-asset image loading can still pay a byte-resolution + Rust decode path when no URL
+  reference survives through the resolver stack, and that limitation should stay explicit in
+  release notes and capability docs.
 
 This workstream exists to close or explicitly defer those gaps before release.
 
@@ -78,8 +79,8 @@ Out of scope:
    bootstrap path.
 4. Bundled generic-family guarantees must be explicit, including whether the shipped startup
    profile really provides `serif`.
-5. Release-facing docs must state when web image loading still falls back to byte fetch + Rust
-   decode instead of browser-native decode.
+5. Release-facing docs must state when web image loading still falls back to bytes-resolved
+   Rust-side decode instead of a browser-native decode path.
 
 ## Current release-risk findings
 
@@ -100,9 +101,9 @@ Progress update (2026-03-30):
 - `RLRR-004` is landed as a shipped closure: the default bundled profiles now include a bundled
   `UiSerif` family on the shipped bootstrap lane, so first-party web/wasm startup can honestly
   guarantee `serif` alongside `sans` and `monospace`.
-- `RLRR-005` is landed as an explicit limitation note: `fret-ui-assets` now documents that web
-  logical-asset image loading still falls back to bytes + Rust decode unless a resolver provides a
-  URL reference.
+- `RLRR-005` is landed as a narrowed limitation note: web `ImageSource::Url` loads now use the
+  browser image pipeline directly, while bytes-resolved logical asset loads still fall back to
+  Rust-side decode when no resolver-provided URL reference survives.
 - the `fret-ui-assets` app-integration surface now keeps only `configure_caches*` names, so
   release-facing docs no longer imply that a partial cache setup call is a fully wired install.
 - the shipped web host now also installs a first-party URL passthrough resolver for
@@ -195,18 +196,22 @@ Release consequence:
 - first-party web/wasm startup can now honestly promise bundled `serif` coverage on the shipped
   bootstrap path instead of documenting it as an open limitation.
 
-### 5) Web image decode still needs an explicit release note
+### 5) Web bytes-resolved image decode still needs an explicit release note
 
-The current web image path resolves asset bytes and decodes through the Rust-side pipeline rather
-than a browser-native decode lane:
+The current remaining web limitation is now narrower than before:
+
+- `ImageSource::from_url(...)` and resolver-provided `AssetExternalReference::Url` now go through
+  the browser image pipeline directly on wasm/web,
+- but bytes-resolved logical asset loads still decode through the Rust-side pipeline instead of a
+  browser-native decode lane:
 
 - `ecosystem/fret-ui-assets/src/asset_resolver.rs`
 - `ecosystem/fret-ui-assets/src/image_source.rs`
 
 Release consequence:
 
-- long tables, attachment-heavy UIs, and lower-memory devices may pay higher CPU and memory costs
-  than a browser-native decode path would.
+- packaged/bundle-driven image-heavy surfaces on web can still pay higher CPU and memory costs
+  than a browser-native decode path would when they resolve to bytes instead of URL references.
 
 ## First execution slice
 

@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
-use fret_assets::AssetExternalReference;
-use fret_assets::{AssetLoadError, AssetLocator, AssetRequest};
+use fret_assets::{AssetExternalReference, AssetLoadError};
+use fret_assets::{AssetLocator, AssetRequest};
 use fret_runtime::AssetReloadEpoch;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
@@ -18,7 +18,6 @@ use crate::image_source::{
     ImageSource, ImageSourceOptions, ImageSourceState, register_asset_key_for_source,
     with_image_source_loader,
 };
-#[cfg(not(target_arch = "wasm32"))]
 pub trait ImageSourceElementContextExt {
     fn use_image_source_state(&mut self, source: &ImageSource) -> ImageSourceState;
 

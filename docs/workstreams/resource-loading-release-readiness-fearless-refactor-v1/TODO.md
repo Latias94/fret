@@ -95,7 +95,7 @@ Tracking format:
 
 - [x] RLRR-005 Publish the current web image decode limitation.
   - Required outcomes:
-    - document the current “fetch bytes + Rust decode” path,
+    - document the remaining bytes-resolved web decode path,
     - state its release tradeoff,
     - decide whether a browser-native decode follow-on is release-blocking or post-release.
   - Evidence:
@@ -103,6 +103,9 @@ Tracking format:
     - `ecosystem/fret-ui-assets/src/image_source.rs`
     - `ecosystem/fret-ui-assets/src/lib.rs`
     - `docs/workstreams/resource-loading-fearless-refactor-v1/CAPABILITY_MATRIX.md`
+  - Chosen closure:
+    - web `ImageSource::Url` loads now use the browser image pipeline directly, while the
+      remaining release-facing limitation is the bytes-resolved logical asset lane.
 
 ## P1 release hardening
 

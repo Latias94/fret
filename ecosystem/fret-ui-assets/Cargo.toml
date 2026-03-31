@@ -41,7 +41,7 @@ ureq.workspace = true
 js-sys = "0.3"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["Window", "Response"] }
+web-sys = { version = "0.3", features = ["CanvasRenderingContext2d", "Document", "Element", "HtmlCanvasElement", "HtmlImageElement", "ImageData", "Window"] }
 
 [dev-dependencies]
 slotmap.workspace = true
