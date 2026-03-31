@@ -5,11 +5,14 @@ Status: Historical tracker (partially superseded by `docs/workstreams/imui-stack
 Status note (2026-03-31): read this file as the narrow historical gap board that existed before the
 v2 baseline audit. The current execution board now lives in
 `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`.
+All gap headings and "required outcomes" below are historical records of what this lane used to
+track; they are not current repo gap claims anymore. The final shipped state for this lane is
+captured in `docs/workstreams/imui-authoring-vocabulary-closure-v1/CLOSEOUT_AUDIT_2026-03-31.md`.
 
 Last updated: 2026-03-31.
 
 This tracker is workstream-local.
-It exists to close the remaining high-frequency immediate authoring vocabulary gaps after the
+It recorded the remaining high-frequency immediate authoring vocabulary gaps that existed after the
 stack reset, editor-grade helper closure, sortable recipe closure, and ghost closeouts.
 
 ## Fearless refactor rule
@@ -47,7 +50,7 @@ Primary evidence:
 - `docs/workstreams/imui-shell-ghost-choreography-v1/`
 - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/`
 
-## Tracker
+## Historical tracker
 
 ### P0 - `selectable` family in `fret-ui-kit::imui`
 

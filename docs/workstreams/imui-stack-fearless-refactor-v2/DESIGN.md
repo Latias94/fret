@@ -251,6 +251,15 @@ Current status (2026-03-31):
 - delete redundant helpers or lower-layer escape hatches only when the canonical surface is
   already proven.
 
+Generic audit status (2026-03-31):
+
+- the generic helper audit confirms that `fret-ui-kit::imui` already ships the vocabulary that
+  older notes historically framed as missing, including `selectable`, `combo`, `combo_model`,
+  `table`, `virtual_list`, `separator_text`, `collapsing_header`, `tree_node`, tooltip helpers,
+  typed drag/drop seams, and floating surface helpers,
+- so M3 is primarily a docs/source-of-truth cleanup step before any code deletion decision,
+- not a justification to reopen broad generic helper growth.
+
 ## Dear ImGui comparison stance
 
 Dear ImGui remains an outcome reference for:

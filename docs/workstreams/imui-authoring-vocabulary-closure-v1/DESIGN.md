@@ -24,6 +24,9 @@ but the current shipped guidance and next execution plan now live in
 Statements below that describe `selectable`, `combo`, `table`, `virtual_list`, `separator_text`,
 tooltip/tree, or typed drag/drop as missing should be read as historical unless explicitly
 restated in the v2 baseline audit.
+This file should now be read together with
+`docs/workstreams/imui-authoring-vocabulary-closure-v1/CLOSEOUT_AUDIT_2026-03-31.md`, which
+captures the final shipped outcome for the nouns this lane originally proposed.
 
 ## Purpose
 
@@ -37,7 +40,7 @@ The repo already closed:
 - the same-window and cross-window ghost baselines,
 - and the shell-aware docking ghost / transparent overlap follow-ons.
 
-What remains relative to Dear ImGui and egui is narrower:
+What remained relative to Dear ImGui and egui at the time of this lane was narrower:
 
 - a handful of high-frequency immediate authoring nouns are still missing or underpowered,
 - so dense editor lists, pickers, and data panes still require more bespoke glue than they should.
@@ -68,7 +71,7 @@ Today the stack already covers:
 - typed drag/drop seams,
 - and editor composites/adapters.
 
-But compared with the everyday Dear ImGui / egui authoring loop, it still lacks a few high-traffic
+But compared with the everyday Dear ImGui / egui authoring loop at that point, it still lacked a few high-traffic
 surfaces:
 
 - a generic `selectable` row/item family,

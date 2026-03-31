@@ -68,14 +68,25 @@ Clarification (2026-03-31):
 
 ## M3 - Generic surface and ownership cleanup
 
-- [ ] Re-audit `fret-ui-kit::imui` shipped nouns against the current code, not stale docs.
-- [ ] Delete stale doc claims that still describe already-shipped generic helpers as missing.
+- [x] Re-audit `fret-ui-kit::imui` shipped nouns against the current code, not stale docs.
+- [x] Delete stale doc claims that still describe already-shipped generic helpers as missing.
 - [ ] Decide whether any remaining `fret-ui-kit::imui` helper has become redundant after proof/demo
       migration.
 - [ ] Split remaining large `fret-ui-kit::imui` files only when the split sharpens ownership or
       reviewability.
 - [ ] Keep official generic/editor adapters on `&mut impl fret_authoring::UiWriter<H>` and avoid
       concrete `ImUi` coupling.
+
+Generic audit result (2026-03-31):
+
+- `fret-ui-kit::imui` already ships the generic vocabulary that older notes historically opened as
+  gaps: `selectable`, `combo`, `combo_model`, `table`, `virtual_list`, `separator_text`,
+  `collapsing_header`, `tree_node`, tooltip helpers, typed `drag_source` / `drop_target`, and the
+  floating surface family (`floating_layer`, `floating_area`, `window_with_options`).
+- The main doc cleanup need was not current v2 drift; it was older historical notes whose headings
+  and opening paragraphs still read like a live gap board.
+- Historical `imui-authoring-vocabulary-closure-v1` notes should remain as archive evidence, but
+  must now read as closed historical gap snapshots rather than current missing-surface claims.
 
 ## M4 - Gates and evidence closure
 
