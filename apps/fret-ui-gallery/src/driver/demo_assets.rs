@@ -6,6 +6,8 @@ pub(crate) const UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY: &str = "shared/media-previ
 pub(crate) const UI_GALLERY_CARD_EVENT_COVER_KEY: &str = "card/event-cover.jpg";
 pub(crate) const UI_GALLERY_ASPECT_RATIO_LANDSCAPE_KEY: &str = "aspect-ratio/landscape.jpg";
 pub(crate) const UI_GALLERY_ASPECT_RATIO_PORTRAIT_KEY: &str = "aspect-ratio/portrait.jpg";
+pub(crate) const UI_GALLERY_PROFILE_SQUARE_KEY: &str = "shared/profile-square.jpg";
+pub(crate) const UI_GALLERY_IMAGE_OBJECT_FIT_SAMPLING_KEY: &str = "image-object-fit/sampling.png";
 #[cfg(any(test, feature = "gallery-dev"))]
 pub(crate) const UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_KEY: &str = "ai/attachments/landscape.jpg";
 #[cfg(any(test, feature = "gallery-dev"))]
@@ -19,6 +21,10 @@ const UI_GALLERY_ASPECT_RATIO_LANDSCAPE_BYTES: &[u8] =
     include_bytes!("../../../../assets/textures/aspect-ratio-landscape.jpg");
 const UI_GALLERY_ASPECT_RATIO_PORTRAIT_BYTES: &[u8] =
     include_bytes!("../../../../assets/textures/aspect-ratio-portrait.jpg");
+const UI_GALLERY_PROFILE_SQUARE_BYTES: &[u8] =
+    include_bytes!("../../../../assets/textures/avatar-square.jpg");
+const UI_GALLERY_IMAGE_OBJECT_FIT_SAMPLING_BYTES: &[u8] =
+    include_bytes!("../../../../assets/textures/image-object-fit-sampling.png");
 #[cfg(any(test, feature = "gallery-dev"))]
 const UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_BYTES: &[u8] =
     include_bytes!("../../../../assets/textures/aspect-ratio-landscape.jpg");
@@ -26,33 +32,6 @@ const UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_BYTES: &[u8] =
 const UI_GALLERY_AI_ATTACHMENT_PORTRAIT_BYTES: &[u8] =
     include_bytes!("../../../../assets/textures/aspect-ratio-portrait.jpg");
 #[cfg(not(any(test, feature = "gallery-dev")))]
-const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 4] = [
-    StaticAssetEntry::new(
-        UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY,
-        AssetRevision(1),
-        UI_GALLERY_SHARED_MEDIA_PREVIEW_BYTES,
-    )
-    .with_media_type("image/jpeg"),
-    StaticAssetEntry::new(
-        UI_GALLERY_CARD_EVENT_COVER_KEY,
-        AssetRevision(1),
-        UI_GALLERY_CARD_EVENT_COVER_BYTES,
-    )
-    .with_media_type("image/jpeg"),
-    StaticAssetEntry::new(
-        UI_GALLERY_ASPECT_RATIO_LANDSCAPE_KEY,
-        AssetRevision(1),
-        UI_GALLERY_ASPECT_RATIO_LANDSCAPE_BYTES,
-    )
-    .with_media_type("image/jpeg"),
-    StaticAssetEntry::new(
-        UI_GALLERY_ASPECT_RATIO_PORTRAIT_KEY,
-        AssetRevision(1),
-        UI_GALLERY_ASPECT_RATIO_PORTRAIT_BYTES,
-    )
-    .with_media_type("image/jpeg"),
-];
-#[cfg(any(test, feature = "gallery-dev"))]
 const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 6] = [
     StaticAssetEntry::new(
         UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY,
@@ -78,6 +57,57 @@ const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 6] = [
         UI_GALLERY_ASPECT_RATIO_PORTRAIT_BYTES,
     )
     .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_PROFILE_SQUARE_KEY,
+        AssetRevision(1),
+        UI_GALLERY_PROFILE_SQUARE_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_IMAGE_OBJECT_FIT_SAMPLING_KEY,
+        AssetRevision(1),
+        UI_GALLERY_IMAGE_OBJECT_FIT_SAMPLING_BYTES,
+    )
+    .with_media_type("image/png"),
+];
+#[cfg(any(test, feature = "gallery-dev"))]
+const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 8] = [
+    StaticAssetEntry::new(
+        UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY,
+        AssetRevision(1),
+        UI_GALLERY_SHARED_MEDIA_PREVIEW_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_CARD_EVENT_COVER_KEY,
+        AssetRevision(1),
+        UI_GALLERY_CARD_EVENT_COVER_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_ASPECT_RATIO_LANDSCAPE_KEY,
+        AssetRevision(1),
+        UI_GALLERY_ASPECT_RATIO_LANDSCAPE_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_ASPECT_RATIO_PORTRAIT_KEY,
+        AssetRevision(1),
+        UI_GALLERY_ASPECT_RATIO_PORTRAIT_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_PROFILE_SQUARE_KEY,
+        AssetRevision(1),
+        UI_GALLERY_PROFILE_SQUARE_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_IMAGE_OBJECT_FIT_SAMPLING_KEY,
+        AssetRevision(1),
+        UI_GALLERY_IMAGE_OBJECT_FIT_SAMPLING_BYTES,
+    )
+    .with_media_type("image/png"),
     StaticAssetEntry::new(
         UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_KEY,
         AssetRevision(1),
@@ -114,6 +144,16 @@ pub(crate) fn ui_gallery_aspect_ratio_landscape_request() -> AssetRequest {
 #[allow(dead_code)]
 pub(crate) fn ui_gallery_aspect_ratio_portrait_request() -> AssetRequest {
     ui_gallery_demo_bundle_request(UI_GALLERY_ASPECT_RATIO_PORTRAIT_KEY)
+}
+
+#[allow(dead_code)]
+pub(crate) fn ui_gallery_profile_square_request() -> AssetRequest {
+    ui_gallery_demo_bundle_request(UI_GALLERY_PROFILE_SQUARE_KEY)
+}
+
+#[allow(dead_code)]
+pub(crate) fn ui_gallery_image_object_fit_sampling_request() -> AssetRequest {
+    ui_gallery_demo_bundle_request(UI_GALLERY_IMAGE_OBJECT_FIT_SAMPLING_KEY)
 }
 
 #[cfg(any(test, feature = "gallery-dev"))]
@@ -240,6 +280,52 @@ mod tests {
                 .as_ref()
                 .map(|media_type| media_type.as_str()),
             Some("image/jpeg")
+        );
+    }
+
+    #[test]
+    fn install_gallery_demo_asset_bundle_registers_profile_square_locator() {
+        let mut app = App::new();
+
+        install_gallery_demo_asset_bundle(&mut app);
+
+        let resolved = fret_runtime::resolve_asset_bytes(&app, &ui_gallery_profile_square_request())
+            .expect("expected profile square preview asset to resolve");
+        assert_eq!(resolved.locator, ui_gallery_profile_square_request().locator);
+        assert_eq!(resolved.revision, AssetRevision(1));
+        assert_eq!(resolved.bytes.as_ref(), UI_GALLERY_PROFILE_SQUARE_BYTES);
+        assert_eq!(
+            resolved
+                .media_type
+                .as_ref()
+                .map(|media_type| media_type.as_str()),
+            Some("image/jpeg")
+        );
+    }
+
+    #[test]
+    fn install_gallery_demo_asset_bundle_registers_sampling_locator() {
+        let mut app = App::new();
+
+        install_gallery_demo_asset_bundle(&mut app);
+
+        let resolved = fret_runtime::resolve_asset_bytes(
+            &app,
+            &ui_gallery_image_object_fit_sampling_request(),
+        )
+        .expect("expected image object-fit sampling asset to resolve");
+        assert_eq!(
+            resolved.locator,
+            ui_gallery_image_object_fit_sampling_request().locator
+        );
+        assert_eq!(resolved.revision, AssetRevision(1));
+        assert_eq!(resolved.bytes.as_ref(), UI_GALLERY_IMAGE_OBJECT_FIT_SAMPLING_BYTES);
+        assert_eq!(
+            resolved
+                .media_type
+                .as_ref()
+                .map(|media_type| media_type.as_str()),
+            Some("image/png")
         );
     }
 

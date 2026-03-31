@@ -2,62 +2,9 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_core::{ImageColorSpace, ImageId, Px};
+use fret_core::Px;
 use fret_ui::Theme;
-use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::OnceLock;
-
-fn rtl_landscape_source() -> &'static ImageSource {
-    static SOURCE: OnceLock<ImageSource> = OnceLock::new();
-    SOURCE.get_or_init(|| {
-        ImageSource::rgba8(
-            640,
-            360,
-            rtl_preview_rgba8(640, 360, [112, 172, 242]),
-            ImageColorSpace::Srgb,
-        )
-    })
-}
-
-fn rtl_landscape_image_id<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
-    cx.use_image_source_state(rtl_landscape_source()).image
-}
-
-fn rtl_preview_rgba8(width: u32, height: u32, accent: [u8; 3]) -> Vec<u8> {
-    let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
-    let width_f = (width.saturating_sub(1)).max(1) as f32;
-    let height_f = (height.saturating_sub(1)).max(1) as f32;
-
-    for y in 0..height {
-        for x in 0..width {
-            let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
-            let fx = x as f32 / width_f;
-            let fy = y as f32 / height_f;
-            let stripe = (((fx * 8.0) - (fy * 5.0)).sin() * 0.5 + 0.5) * 20.0;
-
-            let r = (18.0 + 46.0 * (1.0 - fy) + accent[0] as f32 * (0.34 + 0.34 * fx) + stripe)
-                .min(255.0);
-            let g =
-                (24.0 + 40.0 * fx + accent[1] as f32 * (0.28 + 0.32 * (1.0 - fy)) + stripe * 0.7)
-                    .min(255.0);
-            let b = (34.0 + 58.0 * fy + accent[2] as f32 * (0.24 + 0.34 * (1.0 - fx))).min(255.0);
-
-            let (r, g, b) = if x < 8 || y < 8 || x + 8 >= width || y + 8 >= height {
-                (236.0, 239.0, 244.0)
-            } else {
-                (r, g, b)
-            };
-
-            out[idx] = r as u8;
-            out[idx + 1] = g as u8;
-            out[idx + 2] = b as u8;
-            out[idx + 3] = 255;
-        }
-    }
-
-    out
-}
 
 fn rtl_image<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -67,8 +14,9 @@ fn rtl_image<H: UiHost>(
     let model_image_id = demo_image
         .as_ref()
         .and_then(|model| cx.watch_model(model).layout().cloned().flatten());
-    let image_id = model_image_id.or_else(|| rtl_landscape_image_id(cx));
-    let loading = demo_image.is_none() || model_image_id.is_none();
+    let asset_image = super::images::landscape_image_state(cx);
+    let image_id = model_image_id.or(asset_image.image);
+    let loading = model_image_id.is_none() && asset_image.loading;
 
     shadcn::MediaImage::maybe(image_id)
         .loading(loading)

@@ -723,11 +723,16 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - UI Gallery `AI Image`, `AI Queue`, and `AI Chain of Thought` now resolve their preview media
       from the shared gallery demo asset bundle instead of synthesizing inline RGBA sources inside
       each snippet.
-    - UI Gallery `Aspect Ratio` and `Hover Card` no longer depend on per-window
-      `Model<Option<ImageId>>` demo-image bootstrapping; the old startup-time
-      `Effect::ImageRegisterRgba8` fallback chain was removed from the gallery driver.
-    - UI Gallery `Avatar` snippets and `Card / Meeting Notes` now reuse the shared gallery demo
-      asset bundle instead of synthesizing local RGBA avatar buffers.
+    - UI Gallery `Aspect Ratio` now resolves landscape/portrait/square teaching media through
+      gallery-owned logical bundle requests, so the snippet family no longer synthesizes per-file
+      RGBA previews while still avoiding the old per-window
+      `Model<Option<ImageId>>` bootstrap lane.
+    - UI Gallery `Avatar`, `Card`, and `Hover Card` now reuse gallery-owned logical bundle
+      requests for their shipped demo images instead of synthesizing local RGBA buffers inside each
+      helper module.
+    - UI Gallery `Image Object Fit` now resolves its square/wide/tall/sampling teaching media from
+      the gallery demo asset bundle, and the sampling demo ships an explicit tiny PNG asset rather
+      than constructing pixels inline.
     - Public guidance now links the transitive icon-pack + package-bundle composition story back to
       one ecosystem-owned installer surface instead of teaching apps to replay low-level icon or
       asset registration manually.
@@ -748,6 +753,11 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `apps/fret-ui-gallery/src/ui/snippets/ai/queue_demo.rs`
     - `apps/fret-ui-gallery/src/ui/snippets/ai/chain_of_thought_demo.rs`
     - `apps/fret-ui-gallery/src/driver/demo_assets.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/aspect_ratio/images.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/aspect_ratio/demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/avatar/mod.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/card/mod.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/image_object_fit/mod.rs`
     - `docs/crate-usage-guide.md`
     - `docs/component-author-guide.md`
     - `docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`
@@ -757,10 +767,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       (`todo_template_mounts_generated_assets_when_ui_assets_are_enabled`,
       `simple_todo_template_mounts_generated_assets_when_ui_assets_are_enabled`)
   - Remaining:
-    - continue migrating UI Gallery snippets/pages that still rely on inline demo image buffers
-      when the intent is to teach shipped asset ownership rather than deterministic in-memory
-      rendering, now focusing on the remaining pure image-fit/aspect-ratio/avatar-style demos after
-      the AI/media/file-preview surfaces moved to gallery-owned bundle requests,
+    - audit remaining first-party docs/examples outside the newly cleaned UI Gallery surfaces so
+      shipped-media teaching stays on logical bundle requests and only truly deterministic harnesses
+      keep inline image construction,
     - audit shadcn ecosystem recipes that ship icons/images so package-owned installers stay the
       default app integration story,
       and keep first-party docs/examples aligned when new ecosystem bundles are added.
