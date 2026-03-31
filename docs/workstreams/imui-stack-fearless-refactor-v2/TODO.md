@@ -6,6 +6,9 @@ Milestones: `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
 
 Baseline audit: `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
 
+Teaching-surface audit:
+`docs/workstreams/imui-stack-fearless-refactor-v2/TEACHING_SURFACE_AUDIT_2026-03-31.md`
+
 This board assumes a workspace-wide breaking migration.
 Compatibility shims are explicitly out of scope.
 
@@ -117,10 +120,24 @@ Generic audit result (2026-03-31):
 
 ## M5 - Delete-ready closeout
 
-- [ ] Verify docs and proof surfaces no longer teach bypasses or stale gap statements.
-- [ ] Verify each surviving helper family has one clear owner.
+- [x] Verify docs and proof surfaces no longer teach bypasses or stale gap statements.
+- [x] Verify each surviving helper family has one clear owner.
 - [ ] Capture a final audit of:
       - what survived,
       - what was newly promoted,
       - what remains intentionally declarative-only,
       - and what was deleted.
+
+Teaching-surface audit result (2026-03-31):
+
+- Active first-party `imui` teaching surfaces now lock the current facade imports and official
+  adapter entrypoints in source-policy tests under `apps/fret-examples` and `apps/fret-cookbook`.
+- No active example or cookbook surface reintroduces deleted historical names such as
+  `select_model_ex`, `window_ex`, `window_open_ex`, `floating_area_show_ex`, or
+  `begin_disabled`, and none of them teach the contract-only `fret_ui_kit::imui::adapters`
+  module.
+- The surviving owner split is now explicit in code and docs:
+  generic immediate teaching uses `fret_ui_kit::imui::UiWriterImUiFacadeExt`,
+  editor-owned nouns use `fret_ui_editor::imui`,
+  and `imui_node_graph_demo` remains explicitly labeled as a retained-bridge compatibility example
+  rather than the default downstream authoring path.

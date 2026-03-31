@@ -163,6 +163,45 @@ mod authoring_surface_policy_tests {
         assert!(!normalized.contains(".setup_with("));
     }
 
+    fn assert_current_imui_teaching_surface(
+        name: &str,
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{name} should keep teaching the current imui facade surface: {marker}"
+            );
+        }
+        for marker in [
+            "select_model_ex(",
+            "window_ex(",
+            "window_open_ex(",
+            "floating_area_show_ex(",
+            "begin_disabled(",
+            "button_adapter(",
+            "checkbox_model_adapter(",
+            "fret_ui_kit::imui::adapters",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{name} reintroduced a deleted or non-teaching imui surface: {marker}"
+            );
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{name} reintroduced a forbidden imui teaching marker: {marker}"
+            );
+        }
+    }
+
     fn assert_advanced_helpers_prefer_uicx(
         src: &str,
         required_markers: &[&str],
@@ -638,6 +677,19 @@ mod authoring_surface_policy_tests {
             assert!(!src.contains("centered_page_background_ui("));
             assert!(!src.contains("centered_page_muted_ui("));
         }
+    }
+
+    #[test]
+    fn cookbook_imui_example_keeps_current_facade_teaching_surface() {
+        assert_current_imui_teaching_surface(
+            "imui_action_basics",
+            IMUI_ACTION_EXAMPLE,
+            &[
+                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "ui.action_button_with_options(",
+            ],
+            &[],
+        );
     }
 
     #[test]

@@ -435,6 +435,45 @@ mod authoring_surface_policy_tests {
         assert!(!normalized.contains(".setup(move|"));
     }
 
+    fn assert_current_imui_teaching_surface(
+        name: &str,
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{name} should keep teaching the current imui facade surface: {marker}"
+            );
+        }
+        for marker in [
+            "select_model_ex(",
+            "window_ex(",
+            "window_open_ex(",
+            "floating_area_show_ex(",
+            "begin_disabled(",
+            "button_adapter(",
+            "checkbox_model_adapter(",
+            "fret_ui_kit::imui::adapters",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{name} reintroduced a deleted or non-teaching imui surface: {marker}"
+            );
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{name} reintroduced a forbidden imui teaching marker: {marker}"
+            );
+        }
+    }
+
     fn assert_prefers_grouped_data_surface(src: &str) {
         assert!(
             src.contains("cx.data().selector_layout(")
@@ -1039,6 +1078,81 @@ mod authoring_surface_policy_tests {
                 "authoring parity immediate column should not bypass the adapter layer: {marker}"
             );
         }
+    }
+
+    #[test]
+    fn first_party_imui_examples_keep_current_facade_teaching_surface() {
+        assert_current_imui_teaching_surface(
+            "imui_hello_demo",
+            IMUI_HELLO_DEMO,
+            &[
+                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
+                "ui.checkbox_model(\"Enabled\", enabled_state.model())",
+            ],
+            &[],
+        );
+
+        assert_current_imui_teaching_surface(
+            "imui_floating_windows_demo",
+            IMUI_FLOATING_WINDOWS_DEMO,
+            &[
+                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
+                "ui.window_with_options(",
+                "ui.combo_model_with_options(",
+            ],
+            &[],
+        );
+
+        assert_current_imui_teaching_surface(
+            "imui_response_signals_demo",
+            IMUI_RESPONSE_SIGNALS_DEMO,
+            &[
+                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
+                "click.secondary_clicked()",
+                "drag.drag_started()",
+                "trigger.context_menu_requested()",
+            ],
+            &[],
+        );
+
+        assert_current_imui_teaching_surface(
+            "imui_shadcn_adapter_demo",
+            IMUI_SHADCN_ADAPTER_DEMO,
+            &[
+                "UiWriterImUiFacadeExt as _",
+                "ui.combo_model_with_options(",
+                "ui.separator_text(\"Inspector snapshot\")",
+                "ui.table_with_options(",
+                "ui.virtual_list_with_options(",
+            ],
+            &[],
+        );
+
+        assert_current_imui_teaching_surface(
+            "imui_node_graph_demo",
+            IMUI_NODE_GRAPH_DEMO,
+            &[
+                "compatibility-oriented and should not be treated as the default downstream",
+                "Prefer the declarative node-graph surfaces for normal downstream guidance.",
+                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+            ],
+            &[],
+        );
+
+        assert_current_imui_teaching_surface(
+            "imui_editor_proof_demo",
+            IMUI_EDITOR_PROOF_DEMO,
+            &[
+                "use fret_ui_editor::imui as editor_imui;",
+                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "editor_imui::property_grid(",
+                "editor_imui::gradient_editor(",
+            ],
+            &[],
+        );
     }
 
     #[test]

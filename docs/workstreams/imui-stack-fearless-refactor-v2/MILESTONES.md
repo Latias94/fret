@@ -6,13 +6,16 @@ TODO board: `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
 
 Baseline audit: `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
 
+Teaching-surface audit:
+`docs/workstreams/imui-stack-fearless-refactor-v2/TEACHING_SURFACE_AUDIT_2026-03-31.md`
+
 This file is forward-looking only.
 Earlier `imui` closure lanes remain valuable as audit history, but the milestones below describe
 the recommended execution order for the next fearless pass.
 
 ## Phase A - Documentation reset and execution-surface handoff
 
-Status: In progress
+Status: Completed
 
 Goal:
 
@@ -34,7 +37,7 @@ Exit gates:
 
 ## Phase B - Editor adapter closure freeze
 
-Status: Planned
+Status: Completed
 
 Goal:
 
@@ -61,7 +64,7 @@ Exit gates:
 
 ## Phase C - Proof/demo migration
 
-Status: Planned
+Status: Completed
 
 Goal:
 
@@ -84,7 +87,7 @@ Exit gates:
 
 ## Phase D - Delete-ready cleanup and closeout
 
-Status: Planned
+Status: In progress
 
 Goal:
 
@@ -96,12 +99,16 @@ Deliverables:
 
 - updated docs/evidence after the code-moving phase,
 - no stale missing-gap statements for already-shipped helpers,
+- source-policy gates that keep active first-party `imui` teaching surfaces on the current facade
+  and adapter story,
 - one final audit capturing survived/promoted/declarative-only/deleted outcomes.
 
 Exit gates:
 
 - the codebase can delete overlap confidently without reopening ownership questions,
 - the remaining `imui` surfaces have one clear owner each,
+- active first-party teaching surfaces do not resurrect deleted names or contract-only seam
+  modules,
 - and this lane can become the historical closeout record for the next follow-on only if fresh
   evidence appears.
 
