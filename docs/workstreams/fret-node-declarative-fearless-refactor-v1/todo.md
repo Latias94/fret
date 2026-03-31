@@ -2829,8 +2829,10 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Exact naming for the controller/instance facade.
   - Landed naming: `NodeGraphSurfaceBinding` is the instance-style app-facing bundle, while
     `NodeGraphController` remains the imperative runtime facade / advanced escape hatch.
-- [ ] Whether `edit_queue` and `view_queue` remain public long-term or collapse behind the
+- [x] Whether `edit_queue` and `view_queue` remain public long-term or collapse behind the
       controller surface.
+  - Landed decision: raw edit/view queue transport is crate-internal only; the public teaching
+    surface is `NodeGraphController` plus `NodeGraphSurfaceBinding`.
 - [ ] Whether diff-first controlled sync earns a public helper after the full-replace-first path
       proves insufficient.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
