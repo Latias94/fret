@@ -752,7 +752,7 @@ fn slider_f32_model_reports_changed_once_after_pointer_input() {
 }
 
 #[test]
-fn select_model_reports_changed_once_after_option_pick() {
+fn combo_model_reports_changed_once_after_option_pick() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -784,11 +784,12 @@ fn select_model_reports_changed_once_after_option_pick() {
         |cx| {
             crate::imui(cx, |ui| {
                 changed_out.set(
-                    ui.select_model_with_options(
+                    ui.combo_model_with_options(
+                        "imui-select-popup",
                         "Mode",
                         &model,
                         &items,
-                        SelectOptions {
+                        ComboModelOptions {
                             test_id: Some(Arc::from("imui-select")),
                             ..Default::default()
                         },
@@ -819,11 +820,12 @@ fn select_model_reports_changed_once_after_option_pick() {
         |cx| {
             crate::imui(cx, |ui| {
                 changed_out.set(
-                    ui.select_model_with_options(
+                    ui.combo_model_with_options(
+                        "imui-select-popup",
                         "Mode",
                         &model,
                         &items,
-                        SelectOptions {
+                        ComboModelOptions {
                             test_id: Some(Arc::from("imui-select")),
                             ..Default::default()
                         },
@@ -867,11 +869,12 @@ fn select_model_reports_changed_once_after_option_pick() {
         |cx| {
             crate::imui(cx, |ui| {
                 changed_out.set(
-                    ui.select_model_with_options(
+                    ui.combo_model_with_options(
+                        "imui-select-popup",
                         "Mode",
                         &model,
                         &items,
-                        SelectOptions {
+                        ComboModelOptions {
                             test_id: Some(Arc::from("imui-select")),
                             ..Default::default()
                         },
@@ -898,11 +901,12 @@ fn select_model_reports_changed_once_after_option_pick() {
         |cx| {
             crate::imui(cx, |ui| {
                 changed_out.set(
-                    ui.select_model_with_options(
+                    ui.combo_model_with_options(
+                        "imui-select-popup",
                         "Mode",
                         &model,
                         &items,
-                        SelectOptions {
+                        ComboModelOptions {
                             test_id: Some(Arc::from("imui-select")),
                             ..Default::default()
                         },
@@ -926,7 +930,7 @@ fn select_model_reports_changed_once_after_option_pick() {
 }
 
 #[test]
-fn select_popup_escape_closes_and_restores_trigger_focus() {
+fn combo_model_popup_escape_closes_and_restores_trigger_focus() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -952,11 +956,12 @@ fn select_popup_escape_closes_and_restores_trigger_focus() {
         "imui-select-escape",
         |cx| {
             crate::imui(cx, |ui| {
-                let _ = ui.select_model_with_options(
+                let _ = ui.combo_model_with_options(
+                    "imui-select-escape-popup",
                     "Mode",
                     &model,
                     &items,
-                    SelectOptions {
+                    ComboModelOptions {
                         test_id: Some(Arc::from("imui-select-escape")),
                         ..Default::default()
                     },
@@ -986,11 +991,12 @@ fn select_popup_escape_closes_and_restores_trigger_focus() {
         "imui-select-escape",
         |cx| {
             crate::imui(cx, |ui| {
-                let _ = ui.select_model_with_options(
+                let _ = ui.combo_model_with_options(
+                    "imui-select-escape-popup",
                     "Mode",
                     &model,
                     &items,
-                    SelectOptions {
+                    ComboModelOptions {
                         test_id: Some(Arc::from("imui-select-escape")),
                         ..Default::default()
                     },
@@ -1024,11 +1030,12 @@ fn select_popup_escape_closes_and_restores_trigger_focus() {
         "imui-select-escape",
         |cx| {
             crate::imui(cx, |ui| {
-                let _ = ui.select_model_with_options(
+                let _ = ui.combo_model_with_options(
+                    "imui-select-escape-popup",
                     "Mode",
                     &model,
                     &items,
-                    SelectOptions {
+                    ComboModelOptions {
                         test_id: Some(Arc::from("imui-select-escape")),
                         ..Default::default()
                     },
@@ -1047,7 +1054,7 @@ fn select_popup_escape_closes_and_restores_trigger_focus() {
 }
 
 #[test]
-fn select_popup_scope_override_controls_popup_test_id() {
+fn combo_model_popup_scope_override_controls_popup_test_id() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -1073,13 +1080,13 @@ fn select_popup_scope_override_controls_popup_test_id() {
         "imui-select-scope",
         |cx| {
             crate::imui(cx, |ui| {
-                let _ = ui.select_model_with_options(
+                let _ = ui.combo_model_with_options(
+                    "imui-select-popup-scope-override",
                     "Mode",
                     &model,
                     &items,
-                    SelectOptions {
+                    ComboModelOptions {
                         test_id: Some(Arc::from("imui-select-scope")),
-                        popup_scope_id: Some(Arc::from("imui-select-popup-scope-override")),
                         ..Default::default()
                     },
                 );
@@ -1106,13 +1113,13 @@ fn select_popup_scope_override_controls_popup_test_id() {
         "imui-select-scope",
         |cx| {
             crate::imui(cx, |ui| {
-                let _ = ui.select_model_with_options(
+                let _ = ui.combo_model_with_options(
+                    "imui-select-popup-scope-override",
                     "Mode",
                     &model,
                     &items,
-                    SelectOptions {
+                    ComboModelOptions {
                         test_id: Some(Arc::from("imui-select-scope")),
-                        popup_scope_id: Some(Arc::from("imui-select-popup-scope-override")),
                         ..Default::default()
                     },
                 );
@@ -1133,5 +1140,507 @@ fn select_popup_scope_override_controls_popup_test_id() {
         &mut services,
         bounds,
         "imui-popup-imui-select-popup-imui-select-scope",
+    ));
+}
+
+#[test]
+fn combo_popup_escape_closes_and_restores_trigger_focus() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let open = Rc::new(Cell::new(false));
+    let opened = Rc::new(Cell::new(false));
+    let closed = Rc::new(Cell::new(false));
+
+    let open_out = open.clone();
+    let opened_out = opened.clone();
+    let closed_out = closed.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-generic",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let resp = ui.combo_with_options(
+                    "imui-combo-generic-popup",
+                    "Mode",
+                    "Alpha",
+                    ComboOptions {
+                        test_id: Some(Arc::from("imui-combo-generic")),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        let _ = ui.selectable_with_options(
+                            "Alpha",
+                            SelectableOptions {
+                                test_id: Some(Arc::from("imui-combo-generic.option.0")),
+                                ..Default::default()
+                            },
+                        );
+                    },
+                );
+                open_out.set(resp.open());
+                opened_out.set(resp.opened());
+                closed_out.set(resp.closed());
+            })
+        },
+    );
+    assert!(!open.get());
+    assert!(!opened.get());
+    assert!(!closed.get());
+
+    let trigger = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-generic",
+    );
+    click_at(&mut ui, &mut app, &mut services, trigger);
+    let focus_before_open = ui.focus();
+    assert!(focus_before_open.is_some());
+
+    app.advance_frame();
+    let open_out = open.clone();
+    let opened_out = opened.clone();
+    let closed_out = closed.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-generic",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let resp = ui.combo_with_options(
+                    "imui-combo-generic-popup",
+                    "Mode",
+                    "Alpha",
+                    ComboOptions {
+                        test_id: Some(Arc::from("imui-combo-generic")),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        let _ = ui.selectable_with_options(
+                            "Alpha",
+                            SelectableOptions {
+                                test_id: Some(Arc::from("imui-combo-generic.option.0")),
+                                ..Default::default()
+                            },
+                        );
+                    },
+                );
+                open_out.set(resp.open());
+                opened_out.set(resp.opened());
+                closed_out.set(resp.closed());
+            })
+        },
+    );
+    assert!(open.get());
+    assert!(opened.get());
+    assert!(!closed.get());
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-generic.option.0",
+    ));
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::Escape,
+        Modifiers::default(),
+    );
+
+    app.advance_frame();
+    let open_out = open.clone();
+    let opened_out = opened.clone();
+    let closed_out = closed.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-generic",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let resp = ui.combo_with_options(
+                    "imui-combo-generic-popup",
+                    "Mode",
+                    "Alpha",
+                    ComboOptions {
+                        test_id: Some(Arc::from("imui-combo-generic")),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        let _ = ui.selectable_with_options(
+                            "Alpha",
+                            SelectableOptions {
+                                test_id: Some(Arc::from("imui-combo-generic.option.0")),
+                                ..Default::default()
+                            },
+                        );
+                    },
+                );
+                open_out.set(resp.open());
+                opened_out.set(resp.opened());
+                closed_out.set(resp.closed());
+            })
+        },
+    );
+    assert!(!open.get());
+    assert!(!opened.get());
+    assert!(closed.get());
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-generic.option.0",
+    ));
+    assert_eq!(ui.focus(), focus_before_open);
+}
+
+#[test]
+fn combo_can_commit_selection_with_selectable_rows() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let selected_model = app.models_mut().insert(None::<Arc<str>>);
+    let items = ["Alpha", "Beta"];
+    let selected = Rc::new(RefCell::new(None::<Arc<str>>));
+
+    let selected_out = selected.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-selectable",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let current = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&selected_model)
+                    .unwrap_or(None);
+                let preview = current
+                    .clone()
+                    .unwrap_or_else(|| Arc::<str>::from("Select..."));
+                let current_for_rows = current.clone();
+                let model_for_rows = selected_model.clone();
+                let _ = ui.combo_with_options(
+                    "imui-combo-selectable-popup",
+                    "Mode",
+                    preview,
+                    ComboOptions {
+                        test_id: Some(Arc::from("imui-combo-selectable")),
+                        ..Default::default()
+                    },
+                    move |ui| {
+                        for (index, item) in items.iter().enumerate() {
+                            let is_selected = current_for_rows
+                                .as_ref()
+                                .is_some_and(|value| value.as_ref() == *item);
+                            let row = ui.selectable_with_options(
+                                *item,
+                                SelectableOptions {
+                                    selected: is_selected,
+                                    test_id: Some(Arc::from(format!(
+                                        "imui-combo-selectable.option.{index}"
+                                    ))),
+                                    ..Default::default()
+                                },
+                            );
+                            if row.clicked() {
+                                let next = Some(Arc::<str>::from(*item));
+                                let _ = ui
+                                    .cx_mut()
+                                    .app
+                                    .models_mut()
+                                    .update(&model_for_rows, |value| *value = next.clone());
+                                ui.close_popup("imui-combo-selectable-popup");
+                            }
+                        }
+                    },
+                );
+                let now = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&selected_model)
+                    .unwrap_or(None);
+                selected_out.replace(now);
+            })
+        },
+    );
+    assert!(selected.borrow().is_none());
+
+    let trigger = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-selectable",
+    );
+    click_at(&mut ui, &mut app, &mut services, trigger);
+
+    app.advance_frame();
+    let selected_out = selected.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-selectable",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let current = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&selected_model)
+                    .unwrap_or(None);
+                let preview = current
+                    .clone()
+                    .unwrap_or_else(|| Arc::<str>::from("Select..."));
+                let current_for_rows = current.clone();
+                let model_for_rows = selected_model.clone();
+                let _ = ui.combo_with_options(
+                    "imui-combo-selectable-popup",
+                    "Mode",
+                    preview,
+                    ComboOptions {
+                        test_id: Some(Arc::from("imui-combo-selectable")),
+                        ..Default::default()
+                    },
+                    move |ui| {
+                        for (index, item) in items.iter().enumerate() {
+                            let is_selected = current_for_rows
+                                .as_ref()
+                                .is_some_and(|value| value.as_ref() == *item);
+                            let row = ui.selectable_with_options(
+                                *item,
+                                SelectableOptions {
+                                    selected: is_selected,
+                                    test_id: Some(Arc::from(format!(
+                                        "imui-combo-selectable.option.{index}"
+                                    ))),
+                                    ..Default::default()
+                                },
+                            );
+                            if row.clicked() {
+                                let next = Some(Arc::<str>::from(*item));
+                                let _ = ui
+                                    .cx_mut()
+                                    .app
+                                    .models_mut()
+                                    .update(&model_for_rows, |value| *value = next.clone());
+                                ui.close_popup("imui-combo-selectable-popup");
+                            }
+                        }
+                    },
+                );
+                let now = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&selected_model)
+                    .unwrap_or(None);
+                selected_out.replace(now);
+            })
+        },
+    );
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-selectable.option.0",
+    ));
+
+    let first_option = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-selectable.option.0",
+    );
+    click_at(&mut ui, &mut app, &mut services, first_option);
+
+    app.advance_frame();
+    let selected_out = selected.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-selectable",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let current = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&selected_model)
+                    .unwrap_or(None);
+                let preview = current
+                    .clone()
+                    .unwrap_or_else(|| Arc::<str>::from("Select..."));
+                let current_for_rows = current.clone();
+                let model_for_rows = selected_model.clone();
+                let _ = ui.combo_with_options(
+                    "imui-combo-selectable-popup",
+                    "Mode",
+                    preview,
+                    ComboOptions {
+                        test_id: Some(Arc::from("imui-combo-selectable")),
+                        ..Default::default()
+                    },
+                    move |ui| {
+                        for (index, item) in items.iter().enumerate() {
+                            let is_selected = current_for_rows
+                                .as_ref()
+                                .is_some_and(|value| value.as_ref() == *item);
+                            let row = ui.selectable_with_options(
+                                *item,
+                                SelectableOptions {
+                                    selected: is_selected,
+                                    test_id: Some(Arc::from(format!(
+                                        "imui-combo-selectable.option.{index}"
+                                    ))),
+                                    ..Default::default()
+                                },
+                            );
+                            if row.clicked() {
+                                let next = Some(Arc::<str>::from(*item));
+                                let _ = ui
+                                    .cx_mut()
+                                    .app
+                                    .models_mut()
+                                    .update(&model_for_rows, |value| *value = next.clone());
+                                ui.close_popup("imui-combo-selectable-popup");
+                            }
+                        }
+                    },
+                );
+                let now = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&selected_model)
+                    .unwrap_or(None);
+                selected_out.replace(now);
+            })
+        },
+    );
+    assert_eq!(selected.borrow().as_deref(), Some("Alpha"));
+
+    app.advance_frame();
+    let selected_out = selected.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-selectable",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let current = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&selected_model)
+                    .unwrap_or(None);
+                let preview = current
+                    .clone()
+                    .unwrap_or_else(|| Arc::<str>::from("Select..."));
+                let current_for_rows = current.clone();
+                let model_for_rows = selected_model.clone();
+                let _ = ui.combo_with_options(
+                    "imui-combo-selectable-popup",
+                    "Mode",
+                    preview,
+                    ComboOptions {
+                        test_id: Some(Arc::from("imui-combo-selectable")),
+                        ..Default::default()
+                    },
+                    move |ui| {
+                        for (index, item) in items.iter().enumerate() {
+                            let is_selected = current_for_rows
+                                .as_ref()
+                                .is_some_and(|value| value.as_ref() == *item);
+                            let row = ui.selectable_with_options(
+                                *item,
+                                SelectableOptions {
+                                    selected: is_selected,
+                                    test_id: Some(Arc::from(format!(
+                                        "imui-combo-selectable.option.{index}"
+                                    ))),
+                                    ..Default::default()
+                                },
+                            );
+                            if row.clicked() {
+                                let next = Some(Arc::<str>::from(*item));
+                                let _ = ui
+                                    .cx_mut()
+                                    .app
+                                    .models_mut()
+                                    .update(&model_for_rows, |value| *value = next.clone());
+                                ui.close_popup("imui-combo-selectable-popup");
+                            }
+                        }
+                    },
+                );
+                let now = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&selected_model)
+                    .unwrap_or(None);
+                selected_out.replace(now);
+            })
+        },
+    );
+    assert_eq!(selected.borrow().as_deref(), Some("Alpha"));
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-selectable.option.0",
     ));
 }

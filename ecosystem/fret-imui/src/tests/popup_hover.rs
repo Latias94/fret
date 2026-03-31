@@ -1704,13 +1704,13 @@ fn drop_popup_scope_closes_and_forgets_internal_state() {
         "imui-drop-popup-scope",
         |cx| {
             crate::imui(cx, |ui| {
-                let _ = ui.select_model_with_options(
+                let _ = ui.combo_model_with_options(
+                    popup_scope_id.as_ref(),
                     "Mode",
                     &model,
                     &items,
-                    SelectOptions {
+                    ComboModelOptions {
                         test_id: Some(Arc::from("imui-drop-popup-trigger")),
-                        popup_scope_id: Some(popup_scope_id.clone()),
                         ..Default::default()
                     },
                 );
@@ -1737,13 +1737,13 @@ fn drop_popup_scope_closes_and_forgets_internal_state() {
         "imui-drop-popup-scope",
         |cx| {
             crate::imui(cx, |ui| {
-                let _ = ui.select_model_with_options(
+                let _ = ui.combo_model_with_options(
+                    popup_scope_id.as_ref(),
                     "Mode",
                     &model,
                     &items,
-                    SelectOptions {
+                    ComboModelOptions {
                         test_id: Some(Arc::from("imui-drop-popup-trigger")),
-                        popup_scope_id: Some(popup_scope_id.clone()),
                         ..Default::default()
                     },
                 );
@@ -1769,13 +1769,13 @@ fn drop_popup_scope_closes_and_forgets_internal_state() {
         |cx| {
             crate::imui(cx, |ui| {
                 ui.drop_popup_scope(popup_scope_id.as_ref());
-                let _ = ui.select_model_with_options(
+                let _ = ui.combo_model_with_options(
+                    popup_scope_id.as_ref(),
                     "Mode",
                     &model,
                     &items,
-                    SelectOptions {
+                    ComboModelOptions {
                         test_id: Some(Arc::from("imui-drop-popup-trigger")),
-                        popup_scope_id: Some(popup_scope_id.clone()),
                         ..Default::default()
                     },
                 );

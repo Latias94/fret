@@ -27,6 +27,8 @@ use crate::IntoUiElement;
 pub mod adapters;
 mod boolean_controls;
 mod button_controls;
+mod combo_controls;
+mod combo_model_controls;
 mod containers;
 mod disclosure_controls;
 mod drag_drop;
@@ -39,10 +41,13 @@ mod options;
 mod popup_overlay;
 mod popup_store;
 mod response;
-mod select_controls;
+mod selectable_controls;
+mod separator_text_controls;
 mod slider_controls;
+mod table_controls;
 mod text_controls;
 mod tooltip_overlay;
+mod virtual_list_controls;
 
 use containers::{
     grid_container_element, horizontal_container_element, scroll_container_element,
@@ -55,6 +60,8 @@ use floating_surface::{
     float_window_resize_kind_for_element, floating_area_drag_surface_element,
 };
 use floating_surface::{floating_area_element, floating_layer_element};
+pub use fret_ui::element::{VirtualListKeyCacheMode, VirtualListMeasureMode};
+pub use fret_ui::scroll::VirtualListScrollHandle;
 use interaction_runtime::{
     DisabledScopeGuard, active_item_model_for_window, clear_active_item_on_left_pointer_up,
     context_menu_anchor_model_for, disabled_alpha_for, disabled_scope_depth_for,
@@ -67,16 +74,19 @@ use interaction_runtime::{
     prepare_pressable_drag_on_pointer_down, sanitize_response_for_enabled,
 };
 pub use options::{
-    ButtonOptions, CollapsingHeaderOptions, DragSourceOptions, DropTargetOptions, GridOptions,
-    HorizontalOptions, InputTextOptions, MenuItemOptions, PopupMenuOptions, PopupModalOptions,
-    ScrollOptions, SelectOptions, SliderOptions, SwitchOptions, TextAreaOptions, TooltipOptions,
-    TreeNodeOptions, VerticalOptions,
+    ButtonOptions, CollapsingHeaderOptions, ComboModelOptions, ComboOptions, DragSourceOptions,
+    DropTargetOptions, GridOptions, HorizontalOptions, InputTextOptions, MenuItemOptions,
+    PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectableOptions, SeparatorTextOptions,
+    SliderOptions, SwitchOptions, TableColumn, TableColumnWidth, TableOptions, TableRowOptions,
+    TextAreaOptions, TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
 };
 use popup_store::{drop_popup_scope_for_id, with_popup_store_for_id};
 pub use response::{
-    DisclosureResponse, DragResponse, DragSourceResponse, DropTargetResponse, FloatingAreaResponse,
-    FloatingWindowResponse, ImUiHoveredFlags, ResponseExt,
+    ComboResponse, DisclosureResponse, DragResponse, DragSourceResponse, DropTargetResponse,
+    FloatingAreaResponse, FloatingWindowResponse, ImUiHoveredFlags, ResponseExt,
+    VirtualListResponse,
 };
+pub use table_controls::{ImUiTable, ImUiTableRow};
 
 /// Extension trait bridging `fret-ui-kit` authoring (`UiBuilder<T>`) into an immediate-mode output.
 pub trait UiWriterUiKitExt<H: UiHost>: UiWriter<H> {
@@ -483,6 +493,71 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         self.add(element);
     }
 
+    pub fn table(
+        &mut self,
+        id: &str,
+        columns: &[TableColumn],
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
+    ) {
+        self.table_with_options(id, columns, TableOptions::default(), f);
+    }
+
+    pub fn table_with_options(
+        &mut self,
+        id: &str,
+        columns: &[TableColumn],
+        options: TableOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element = self.with_cx_mut(|cx| {
+            table_controls::table_element(cx, id, columns, build_focus, options, f)
+        });
+        self.add(element);
+    }
+
+    pub fn virtual_list<K, R>(
+        &mut self,
+        id: &str,
+        len: usize,
+        key_at: K,
+        row: R,
+    ) -> VirtualListResponse
+    where
+        K: FnMut(usize) -> fret_ui::ItemKey,
+        R: for<'cx2, 'a2> FnMut(&mut ImUiFacade<'cx2, 'a2, H>, usize),
+    {
+        self.virtual_list_with_options(id, len, VirtualListOptions::default(), key_at, row)
+    }
+
+    pub fn virtual_list_with_options<K, R>(
+        &mut self,
+        id: &str,
+        len: usize,
+        options: VirtualListOptions,
+        key_at: K,
+        row: R,
+    ) -> VirtualListResponse
+    where
+        K: FnMut(usize) -> fret_ui::ItemKey,
+        R: for<'cx2, 'a2> FnMut(&mut ImUiFacade<'cx2, 'a2, H>, usize),
+    {
+        let build_focus = self.build_focus.clone();
+        let (element, response) = self.with_cx_mut(|cx| {
+            virtual_list_controls::virtual_list_element(
+                cx,
+                id,
+                len,
+                build_focus,
+                options,
+                key_at,
+                row,
+            )
+        });
+        self.add(element);
+        response
+    }
+
     pub fn scroll(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
         self.scroll_with_options(ScrollOptions::default(), f);
     }
@@ -637,6 +712,56 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         resp
     }
 
+    pub fn selectable(&mut self, label: impl Into<Arc<str>>, selected: bool) -> ResponseExt {
+        self.selectable_with_options(
+            label,
+            SelectableOptions {
+                selected,
+                ..Default::default()
+            },
+        )
+    }
+
+    pub fn selectable_with_options(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        options: SelectableOptions,
+    ) -> ResponseExt {
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let focusable = enabled && options.focusable;
+        let resp =
+            <Self as UiWriterImUiFacadeExt<H>>::selectable_with_options(self, label, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn combo(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        preview: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> ComboResponse {
+        self.combo_with_options(id, label, preview, ComboOptions::default(), f)
+    }
+
+    pub fn combo_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        preview: impl Into<Arc<str>>,
+        options: ComboOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> ComboResponse {
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let focusable = enabled && options.focusable;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::combo_with_options(
+            self, id, label, preview, options, f,
+        );
+        self.record_focusable(resp.id(), focusable);
+        resp
+    }
+
     pub fn collapsing_header(
         &mut self,
         id: &str,
@@ -764,26 +889,28 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         resp
     }
 
-    pub fn select_model(
+    pub fn combo_model(
         &mut self,
+        id: &str,
         label: impl Into<Arc<str>>,
         model: &fret_runtime::Model<Option<Arc<str>>>,
         items: &[Arc<str>],
     ) -> ResponseExt {
-        self.select_model_with_options(label, model, items, SelectOptions::default())
+        self.combo_model_with_options(id, label, model, items, ComboModelOptions::default())
     }
 
-    pub fn select_model_with_options(
+    pub fn combo_model_with_options(
         &mut self,
+        id: &str,
         label: impl Into<Arc<str>>,
         model: &fret_runtime::Model<Option<Arc<str>>>,
         items: &[Arc<str>],
-        options: SelectOptions,
+        options: ComboModelOptions,
     ) -> ResponseExt {
         let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
         let focusable = enabled && options.focusable;
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::select_model_with_options(
-            self, label, model, items, options,
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::combo_model_with_options(
+            self, id, label, model, items, options,
         );
         self.record_focusable(resp.id, focusable);
         resp
@@ -924,6 +1051,18 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         self.add(element);
     }
 
+    fn separator_text(&mut self, label: impl Into<Arc<str>>) {
+        self.separator_text_with_options(label, SeparatorTextOptions::default());
+    }
+
+    fn separator_text_with_options(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        options: SeparatorTextOptions,
+    ) {
+        separator_text_controls::separator_text_with_options(self, label.into(), options);
+    }
+
     fn horizontal(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
         self.horizontal_with_options(HorizontalOptions::default(), f);
     }
@@ -961,6 +1100,54 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     ) {
         let element = self.with_cx_mut(|cx| grid_container_element(cx, None, options, f));
         self.add(element);
+    }
+
+    fn table(
+        &mut self,
+        id: &str,
+        columns: &[TableColumn],
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
+    ) {
+        self.table_with_options(id, columns, TableOptions::default(), f);
+    }
+
+    fn table_with_options(
+        &mut self,
+        id: &str,
+        columns: &[TableColumn],
+        options: TableOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
+    ) {
+        let element =
+            self.with_cx_mut(|cx| table_controls::table_element(cx, id, columns, None, options, f));
+        self.add(element);
+    }
+
+    fn virtual_list<K, R>(&mut self, id: &str, len: usize, key_at: K, row: R) -> VirtualListResponse
+    where
+        K: FnMut(usize) -> fret_ui::ItemKey,
+        R: for<'cx2, 'a2> FnMut(&mut ImUiFacade<'cx2, 'a2, H>, usize),
+    {
+        self.virtual_list_with_options(id, len, VirtualListOptions::default(), key_at, row)
+    }
+
+    fn virtual_list_with_options<K, R>(
+        &mut self,
+        id: &str,
+        len: usize,
+        options: VirtualListOptions,
+        key_at: K,
+        row: R,
+    ) -> VirtualListResponse
+    where
+        K: FnMut(usize) -> fret_ui::ItemKey,
+        R: for<'cx2, 'a2> FnMut(&mut ImUiFacade<'cx2, 'a2, H>, usize),
+    {
+        let (element, response) = self.with_cx_mut(|cx| {
+            virtual_list_controls::virtual_list_element(cx, id, len, None, options, key_at, row)
+        });
+        self.add(element);
+        response
     }
 
     fn scroll(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
@@ -1278,6 +1465,45 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         menu_controls::menu_item_action_with_options(self, label.into(), action.into(), options)
     }
 
+    fn selectable(&mut self, label: impl Into<Arc<str>>, selected: bool) -> ResponseExt {
+        self.selectable_with_options(
+            label,
+            SelectableOptions {
+                selected,
+                ..Default::default()
+            },
+        )
+    }
+
+    fn selectable_with_options(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        options: SelectableOptions,
+    ) -> ResponseExt {
+        selectable_controls::selectable_with_options(self, label.into(), options)
+    }
+
+    fn combo(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        preview: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> ComboResponse {
+        self.combo_with_options(id, label, preview, ComboOptions::default(), f)
+    }
+
+    fn combo_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        preview: impl Into<Arc<str>>,
+        options: ComboOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> ComboResponse {
+        combo_controls::combo_with_options(self, id, label.into(), preview.into(), options, f)
+    }
+
     fn begin_popup_context_menu(
         &mut self,
         id: &str,
@@ -1368,23 +1594,32 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         slider_controls::slider_f32_model_with_options(self, label.into(), model, options)
     }
 
-    fn select_model(
+    fn combo_model(
         &mut self,
+        id: &str,
         label: impl Into<Arc<str>>,
         model: &fret_runtime::Model<Option<Arc<str>>>,
         items: &[Arc<str>],
     ) -> ResponseExt {
-        self.select_model_with_options(label, model, items, SelectOptions::default())
+        self.combo_model_with_options(id, label, model, items, ComboModelOptions::default())
     }
 
-    fn select_model_with_options(
+    fn combo_model_with_options(
         &mut self,
+        id: &str,
         label: impl Into<Arc<str>>,
         model: &fret_runtime::Model<Option<Arc<str>>>,
         items: &[Arc<str>],
-        options: SelectOptions,
+        options: ComboModelOptions,
     ) -> ResponseExt {
-        select_controls::select_model_with_options(self, label.into(), model, items, options)
+        combo_model_controls::combo_model_with_options(
+            self,
+            id,
+            label.into(),
+            model,
+            items,
+            options,
+        )
     }
 
     fn input_text_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {

@@ -232,6 +232,19 @@ pub struct DisclosureResponse {
     pub toggled: bool,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ComboResponse {
+    pub trigger: ResponseExt,
+    pub open: bool,
+    pub toggled: bool,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct VirtualListResponse {
+    pub handle: fret_ui::scroll::VirtualListScrollHandle,
+    pub rendered_range: Option<(usize, usize)>,
+}
+
 impl DisclosureResponse {
     pub fn id(self) -> Option<GlobalElementId> {
         self.trigger.id
@@ -251,6 +264,46 @@ impl DisclosureResponse {
 
     pub fn hovered_like_imgui(self) -> bool {
         self.trigger.hovered_like_imgui()
+    }
+}
+
+impl ComboResponse {
+    pub fn id(self) -> Option<GlobalElementId> {
+        self.trigger.id
+    }
+
+    pub fn open(self) -> bool {
+        self.open
+    }
+
+    pub fn toggled(self) -> bool {
+        self.toggled
+    }
+
+    pub fn opened(self) -> bool {
+        self.toggled && self.open
+    }
+
+    pub fn closed(self) -> bool {
+        self.toggled && !self.open
+    }
+
+    pub fn clicked(self) -> bool {
+        self.trigger.clicked()
+    }
+
+    pub fn hovered_like_imgui(self) -> bool {
+        self.trigger.hovered_like_imgui()
+    }
+}
+
+impl VirtualListResponse {
+    pub fn handle(&self) -> fret_ui::scroll::VirtualListScrollHandle {
+        self.handle.clone()
+    }
+
+    pub fn rendered_range(&self) -> Option<(usize, usize)> {
+        self.rendered_range
     }
 }
 

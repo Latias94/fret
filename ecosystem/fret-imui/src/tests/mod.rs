@@ -24,10 +24,11 @@ use fret_ui::{ElementContext, GlobalElementId, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 use fret_ui_kit::imui::{
-    FloatingAreaOptions, FloatingWindowOptions, FloatingWindowResizeOptions, GridOptions,
-    HorizontalOptions, ImUiHoveredFlags, InputTextOptions, MenuItemOptions, PopupMenuOptions,
-    PopupModalOptions, ScrollOptions, SelectOptions, SliderOptions, SwitchOptions, VerticalOptions,
-    WindowOptions,
+    ComboModelOptions, ComboOptions, FloatingAreaOptions, FloatingWindowOptions,
+    FloatingWindowResizeOptions, GridOptions, HorizontalOptions, ImUiHoveredFlags,
+    InputTextOptions, MenuItemOptions, PopupMenuOptions, PopupModalOptions, ScrollOptions,
+    SelectableOptions, SliderOptions, SwitchOptions, TableColumn, TableOptions, VerticalOptions,
+    VirtualListMeasureMode, VirtualListOptions, VirtualListScrollHandle, WindowOptions,
 };
 use fret_ui_kit::{OverlayPresence, OverlayRequest};
 
