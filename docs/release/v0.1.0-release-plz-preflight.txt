@@ -1,0 +1,38 @@
+# Fret v0.1.0 release-plz preflight
+
+Date verified: 2026-03-31.
+
+Commands run:
+
+- `release-plz update --config release-plz.toml --allow-dirty --repo-url https://github.com/Latias94/fret --package fret-assets`
+- `release-plz update --config release-plz.toml --allow-dirty --repo-url https://github.com/Latias94/fret --package fret-a11y-accesskit`
+- `release-plz update --config release-plz.toml --allow-dirty --repo-url https://github.com/Latias94/fret --package fret-a11y-accesskit --no-changelog`
+- `release-plz update --config release-plz.toml --allow-dirty --repo-url https://github.com/Latias94/fret`
+
+Observed status:
+
+- `fret-assets` package-scoped planning passed and reported `next version is 0.1.0`.
+- Full-workspace planning failed.
+- `fret-a11y-accesskit` package-scoped planning failed.
+- `fret-a11y-accesskit --no-changelog` failed the same way, so the blocker is not limited to changelog generation.
+
+Common failure surface:
+
+- `release-plz` reports `failed to retrieve difference of package fret-a11y-accesskit`.
+- The nested cause is `can't checkout to head after calculating diff`.
+- The underlying git error is:
+  - `error while running git ... ["checkout", "main"]`
+  - `Your local changes to the following files would be overwritten by checkout:`
+  - `ecosystem/fret-ui-shadcn/src/slider.rs`
+
+Interpretation:
+
+- The current repository working tree did not have `ecosystem/fret-ui-shadcn/src/slider.rs` modified when this was tested.
+- The checkout conflict therefore appears inside the temporary clone/worktree that `release-plz` uses while computing package differences.
+- This is a real release-planning blocker for any workflow that relies on `release-plz update` beyond the minimal `fret-assets` probe.
+
+Current operator guidance:
+
+- Treat `release_closure_check.py` plus wave-specific `cargo publish --dry-run` as the authoritative local publish-readiness gates for now.
+- Keep `release-plz update --package fret-assets` as the smallest passing planning smoke test.
+- Do not treat the current `release-plz update` failure as evidence that the release scope or publish order is wrong; the observed blocker is the temp checkout recovery path around `fret-a11y-accesskit`.
