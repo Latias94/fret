@@ -19,7 +19,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let border = cx.with_theme(|theme| theme.color_token("border"));
     let image = image_id.map(|id| {
         ui_ai::Image::new(id)
-            .alt("Example self-contained demo image")
+            .alt("Example bundled demo asset image")
             .refine_style(
                 ChromeRefinement::default()
                     .rounded(Radius::Lg)
@@ -44,7 +44,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Image (AI Elements): self-contained demo image presentation surface."),
+            cx.text("Image (AI Elements): presentation surface backed by the shared gallery demo asset bundle."),
             status_line,
             cx.container(props, move |cx| {
                 vec![

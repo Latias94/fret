@@ -1,101 +1,30 @@
 pub const SOURCE: &str = include_str!("attachments_grid.rs");
 
 // region: example
+use super::{attachment_landscape_image_id, attachment_portrait_image_id};
 use fret::{UiChild, UiCx};
-use fret_core::{ImageColorSpace, ImageId, Px};
+use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui::Theme;
 use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui_ai as ui_ai;
-use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::prelude::*;
-use std::sync::{Arc, OnceLock};
-
-fn attachment_preview_rgba8(width: u32, height: u32, accent: [u8; 3]) -> Vec<u8> {
-    let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
-    let width_f = (width.saturating_sub(1)).max(1) as f32;
-    let height_f = (height.saturating_sub(1)).max(1) as f32;
-
-    for y in 0..height {
-        for x in 0..width {
-            let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
-            let fx = x as f32 / width_f;
-            let fy = y as f32 / height_f;
-
-            let mut r =
-                (20.0 + 40.0 * (1.0 - fy) + (accent[0] as f32) * (0.28 + 0.42 * fx)).min(255.0);
-            let mut g =
-                (28.0 + 44.0 * fx + (accent[1] as f32) * (0.25 + 0.38 * (1.0 - fy))).min(255.0);
-            let mut b =
-                (36.0 + 52.0 * fy + (accent[2] as f32) * (0.30 + 0.40 * (1.0 - fx))).min(255.0);
-
-            if x < 6 || y < 6 || x + 6 >= width || y + 6 >= height {
-                r = 236.0;
-                g = 239.0;
-                b = 244.0;
-            } else if y > height / 4 && y < (height * 3) / 4 && x > width / 5 && x < (width * 4) / 5
-            {
-                r = (r + 26.0).min(255.0);
-                g = (g + 22.0).min(255.0);
-                b = (b + 16.0).min(255.0);
-            }
-
-            out[idx] = r as u8;
-            out[idx + 1] = g as u8;
-            out[idx + 2] = b as u8;
-            out[idx + 3] = 255;
-        }
-    }
-
-    out
-}
-
-fn landscape_source() -> &'static ImageSource {
-    static SOURCE: OnceLock<ImageSource> = OnceLock::new();
-    SOURCE.get_or_init(|| {
-        ImageSource::rgba8(
-            320,
-            180,
-            attachment_preview_rgba8(320, 180, [116, 174, 230]),
-            ImageColorSpace::Srgb,
-        )
-    })
-}
-
-fn portrait_source() -> &'static ImageSource {
-    static SOURCE: OnceLock<ImageSource> = OnceLock::new();
-    SOURCE.get_or_init(|| {
-        ImageSource::rgba8(
-            180,
-            320,
-            attachment_preview_rgba8(180, 320, [228, 126, 172]),
-            ImageColorSpace::Srgb,
-        )
-    })
-}
-
-fn landscape_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
-    cx.use_image_source_state(landscape_source()).image
-}
-
-fn portrait_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
-    cx.use_image_source_state(portrait_source()).image
-}
+use std::sync::Arc;
 
 fn demo_items(cx: &mut UiCx<'_>) -> Vec<ui_ai::AttachmentData> {
     let mut image_one = ui_ai::AttachmentFileData::new("att-image")
         .filename("mountain-landscape.jpg")
         .media_type("image/jpeg");
-    if let Some(preview) = landscape_image_id(cx) {
+    if let Some(preview) = attachment_landscape_image_id(cx) {
         image_one = image_one.preview_image(preview);
     }
 
     let mut image_two = ui_ai::AttachmentFileData::new("att-image-2")
         .filename("ocean-portrait.jpg")
         .media_type("image/jpeg");
-    if let Some(preview) = portrait_image_id(cx) {
+    if let Some(preview) = attachment_portrait_image_id(cx) {
         image_two = image_two.preview_image(preview);
     }
 

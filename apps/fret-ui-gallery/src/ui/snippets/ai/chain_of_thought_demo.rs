@@ -15,7 +15,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let image = shared_preview_image_id(cx)
         .map(|id| {
             ui_ai::Image::new(id)
-                .alt("Example self-contained demo image")
+                .alt("Example bundled demo asset image")
                 .refine_style(
                     ChromeRefinement::default()
                         .border_1()

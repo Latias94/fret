@@ -1,44 +1,30 @@
 use fret::UiCx;
-use fret_core::{ImageColorSpace, ImageId};
-use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
-use std::sync::OnceLock;
+use fret_core::ImageId;
+use fret_ui_assets::ui::ImageSourceElementContextExt as _;
+
+use crate::driver::demo_assets;
 
 pub(crate) fn shared_preview_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
-    cx.use_image_source_state(shared_preview_source()).image
+    cx.use_image_source_state_from_asset_request(
+        &demo_assets::ui_gallery_shared_media_preview_request(),
+    )
+    .image
 }
 
-fn shared_preview_source() -> &'static ImageSource {
-    static SOURCE: OnceLock<ImageSource> = OnceLock::new();
-    SOURCE.get_or_init(|| {
-        ImageSource::rgba8(
-            320,
-            320,
-            shared_preview_rgba8(320, 320),
-            ImageColorSpace::Srgb,
-        )
-    })
+#[cfg(any(test, feature = "gallery-dev"))]
+pub(crate) fn attachment_landscape_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
+    cx.use_image_source_state_from_asset_request(
+        &demo_assets::ui_gallery_ai_attachment_landscape_request(),
+    )
+    .image
 }
 
-fn shared_preview_rgba8(width: u32, height: u32) -> Vec<u8> {
-    let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
-    let width_f = (width.saturating_sub(1)).max(1) as f32;
-    let height_f = (height.saturating_sub(1)).max(1) as f32;
-
-    for y in 0..height {
-        for x in 0..width {
-            let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
-            let fx = x as f32 / width_f;
-            let fy = y as f32 / height_f;
-            let glow = (((fx * 6.0) + (fy * 4.0)).sin() * 0.5 + 0.5) * 26.0;
-
-            out[idx] = (26.0 + 58.0 * (1.0 - fy) + 108.0 * fx + glow).min(255.0) as u8;
-            out[idx + 1] = (34.0 + 68.0 * fy + 88.0 * (1.0 - fx) + glow * 0.65).min(255.0) as u8;
-            out[idx + 2] = (58.0 + 126.0 * (1.0 - fy) + 72.0 * fx + glow * 0.45).min(255.0) as u8;
-            out[idx + 3] = 255;
-        }
-    }
-
-    out
+#[cfg(any(test, feature = "gallery-dev"))]
+pub(crate) fn attachment_portrait_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
+    cx.use_image_source_state_from_asset_request(
+        &demo_assets::ui_gallery_ai_attachment_portrait_request(),
+    )
+    .image
 }
 
 #[cfg(feature = "gallery-dev")]
@@ -201,3 +187,37 @@ pub mod workflow_node_graph_demo;
 pub mod workflow_panel_demo;
 #[cfg(feature = "gallery-dev")]
 pub mod workflow_toolbar_demo;
+
+#[cfg(all(test, feature = "gallery-dev"))]
+mod tests {
+    const MODULE_SOURCE: &str = include_str!("mod.rs");
+    const ATTACHMENTS_USAGE_SOURCE: &str = include_str!("attachments_usage.rs");
+    const ATTACHMENTS_GRID_SOURCE: &str = include_str!("attachments_grid.rs");
+    const ATTACHMENTS_INLINE_SOURCE: &str = include_str!("attachments_inline.rs");
+    const ATTACHMENTS_LIST_SOURCE: &str = include_str!("attachments_list.rs");
+
+    #[test]
+    fn ai_gallery_preview_helpers_resolve_gallery_demo_assets_via_asset_requests() {
+        assert!(MODULE_SOURCE.contains("use_image_source_state_from_asset_request"));
+        assert!(MODULE_SOURCE.contains("ui_gallery_shared_media_preview_request"));
+        assert!(MODULE_SOURCE.contains("ui_gallery_ai_attachment_landscape_request"));
+        assert!(MODULE_SOURCE.contains("ui_gallery_ai_attachment_portrait_request"));
+        assert!(!MODULE_SOURCE.contains("ImageSource::rgba8("));
+    }
+
+    #[test]
+    fn ai_gallery_preview_snippets_do_not_synthesize_inline_rgba_demo_images() {
+        assert!(ATTACHMENTS_USAGE_SOURCE.contains("attachment_landscape_image_id(cx)"));
+        assert!(!ATTACHMENTS_USAGE_SOURCE.contains("ImageSource::rgba8("));
+
+        assert!(ATTACHMENTS_GRID_SOURCE.contains("attachment_landscape_image_id(cx)"));
+        assert!(ATTACHMENTS_GRID_SOURCE.contains("attachment_portrait_image_id(cx)"));
+        assert!(!ATTACHMENTS_GRID_SOURCE.contains("ImageSource::rgba8("));
+
+        assert!(ATTACHMENTS_INLINE_SOURCE.contains("attachment_landscape_image_id(cx)"));
+        assert!(!ATTACHMENTS_INLINE_SOURCE.contains("ImageSource::rgba8("));
+
+        assert!(ATTACHMENTS_LIST_SOURCE.contains("attachment_landscape_image_id(cx)"));
+        assert!(!ATTACHMENTS_LIST_SOURCE.contains("ImageSource::rgba8("));
+    }
+}

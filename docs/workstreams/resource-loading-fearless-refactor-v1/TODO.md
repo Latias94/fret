@@ -758,7 +758,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Remaining:
     - continue migrating UI Gallery snippets/pages that still rely on inline demo image buffers
       when the intent is to teach shipped asset ownership rather than deterministic in-memory
-      rendering, prioritizing AI/media/file-preview surfaces over pure image-fit/aspect-ratio demos,
+      rendering, now focusing on the remaining pure image-fit/aspect-ratio/avatar-style demos after
+      the AI/media/file-preview surfaces moved to gallery-owned bundle requests,
     - audit shadcn ecosystem recipes that ship icons/images so package-owned installers stay the
       default app integration story,
       and keep first-party docs/examples aligned when new ecosystem bundles are added.
