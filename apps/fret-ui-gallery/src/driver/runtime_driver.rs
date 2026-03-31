@@ -729,10 +729,10 @@ impl UiGalleryDriver {
                 app.push_effect(Effect::FileDialogOpen {
                     window,
                     options: FileDialogOptions {
-                        title: Some("Load fonts".to_string()),
+                        title: Some("Import local font files".to_string()),
                         multiple: true,
                         filters: vec![FileDialogFilter {
-                            name: "Font files".to_string(),
+                            name: "Local font files".to_string(),
                             extensions: fret_fonts::SUPPORTED_USER_FONT_IMPORT_EXTENSIONS
                                 .iter()
                                 .map(|ext| (*ext).to_string())
@@ -742,7 +742,7 @@ impl UiGalleryDriver {
                 });
 
                 let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("code_editor.load_fonts");
+                    *v = Arc::<str>::from("code_editor.import_local_fonts");
                 });
             }
             CMD_INPUT_PICTURE_BROWSE => {
@@ -1880,42 +1880,51 @@ impl WinitAppDriver for UiGalleryDriver {
                 if fonts.is_empty() {
                     let description = match (rejected_files, data.errors.len()) {
                         (0, 0) => {
-                            "No supported TTF/OTF/TTC font bytes found in selection.".to_string()
+                            "No supported TTF/OTF/TTC font files were found in the local selection."
+                                .to_string()
                         }
                         (rejected, 0) => {
-                            format!("No supported fonts loaded ({rejected} rejected).")
+                            format!(
+                                "No supported local font files were imported ({rejected} rejected)."
+                            )
                         }
                         (0, read_errors) => {
-                            format!("No fonts loaded ({read_errors} read errors).")
+                            format!(
+                                "No local font files were imported ({read_errors} read errors)."
+                            )
                         }
                         (rejected, read_errors) => format!(
-                            "No supported fonts loaded ({rejected} rejected, {read_errors} read errors)."
+                            "No supported local font files were imported ({rejected} rejected, {read_errors} read errors)."
                         ),
                     };
                     sonner.toast_error_message(
                         &mut host,
                         window,
-                        "Load fonts failed",
+                        "Import local fonts failed",
                         shadcn::ToastMessageOptions::new().description(description),
                     );
                 } else {
                     host.push_effect(Effect::TextAddFontBytes { fonts });
                     let description = match (rejected_files, data.errors.len()) {
-                        (0, 0) => "Fonts added to TextSystem.".to_string(),
+                        (0, 0) => {
+                            "Local font files imported into the runtime TextSystem.".to_string()
+                        }
                         (rejected, 0) => format!(
-                            "Fonts added to TextSystem ({accepted_fonts} accepted, {rejected} rejected)."
+                            "Local font files imported into the runtime TextSystem ({accepted_fonts} accepted, {rejected} rejected)."
                         ),
                         (0, read_errors) => {
-                            format!("Fonts added to TextSystem ({read_errors} read errors).")
+                            format!(
+                                "Local font files imported into the runtime TextSystem ({read_errors} read errors)."
+                            )
                         }
                         (rejected, read_errors) => format!(
-                            "Fonts added to TextSystem ({accepted_fonts} accepted, {rejected} rejected, {read_errors} read errors)."
+                            "Local font files imported into the runtime TextSystem ({accepted_fonts} accepted, {rejected} rejected, {read_errors} read errors)."
                         ),
                     };
                     sonner.toast_success_message(
                         &mut host,
                         window,
-                        "Fonts loaded",
+                        "Local fonts imported",
                         shadcn::ToastMessageOptions::new().description(description),
                     );
                 }
@@ -1928,7 +1937,7 @@ impl WinitAppDriver for UiGalleryDriver {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
                 let title = match state.pending_file_dialog.take() {
-                    Some(UiGalleryFileDialogKind::LoadFonts) => "Load fonts canceled",
+                    Some(UiGalleryFileDialogKind::LoadFonts) => "Import local fonts canceled",
                     Some(UiGalleryFileDialogKind::InputPicture) => "Choose file canceled",
                     None => "File dialog canceled",
                 };

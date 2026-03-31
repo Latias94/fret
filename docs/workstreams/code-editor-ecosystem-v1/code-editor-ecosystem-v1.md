@@ -122,8 +122,8 @@ Recent changes (2026-02-01):
 - Web IME: treat the mount element as either wrapper or overlay; do not clobber overlay positioning when applying “mount-owned” styles.
 - A11y: promote `TextInputRegion` to `SemanticsRole::TextField` and allow publishing value/selection/composition ranges (ADR 0071).
 - A11y: wire `SetTextSelection` into the code editor via `TextInputRegion` (best-effort, windowed value).
-- Web: enable a default CJK demo font bundle (`cjk-lite` subset) to reduce “tofu” in IME/editor harnesses (still limited; use “Load fonts…” for full coverage).
-- UI Gallery: add a code-editor “Load fonts…” action (file dialog → `Effect::TextAddFontBytes`) and a soft-wrap toggle for wrap-boundary regression checks.
+- Web: enable a default CJK demo font bundle (`cjk-lite` subset) to reduce “tofu” in IME/editor harnesses (still limited; use “Import local fonts…” for full coverage).
+- UI Gallery: add a code-editor “Import local fonts…” action (file dialog → `Effect::TextAddFontBytes`) and a soft-wrap toggle for wrap-boundary regression checks.
 - Desktop: update Windows taskbar visibility wiring for winit 0.31 platform attributes.
 
 This document is an implementation-focused tracker for building an editor-grade **code editor ecosystem** for Fret.
@@ -192,7 +192,7 @@ P0 (correctness and contracts):
 - Web: document and enforce the default font story for editor-grade surfaces (monospace + CJK + emoji).
   - Baseline: `TextFontFamilyConfig` + `common_fallback` seeded via `FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates`.
   - Web default: ship a small `cjk-lite` subset + optional emoji bundle; accept that glyph coverage is limited and "tofu" is expected outside the subset.
-  - Escape hatch: UI Gallery “Load fonts…” (`Effect::TextAddFontBytes`) for full CJK coverage when validating IME/editor behavior.
+  - Escape hatch: UI Gallery “Import local fonts…” (`Effect::TextAddFontBytes`) for full CJK coverage when validating IME/editor behavior.
   - Diagnostics: surface `TextFontStackKey` + `TextFontFamilyConfig` + `FontCatalog` in the UI Gallery web IME harness panel to make tofu causes debuggable.
   - Runner: load bundled default fonts during web renderer adoption (not via a delayed `TextAddFontBytes` effect) to reduce “first frame” tofu.
   - Evidence: `crates/fret-runtime/src/font_bootstrap.rs` (curated defaults), `crates/fret-render-wgpu/src/text/mod.rs` (`cjk_fallback_*` tests).

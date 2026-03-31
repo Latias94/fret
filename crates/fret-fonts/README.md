@@ -67,7 +67,7 @@ For a general-purpose app shell:
 
 - Web/WASM: keep `bootstrap-subset` + `cjk-lite` on by default, and gate `emoji` behind an explicit
   feature or user setting (WASM size impact is significant).
-- Native: either rely on system UI fonts (plus user-loaded fonts) or use `bootstrap-full` for a
+- Native: either rely on system UI fonts (plus explicitly user-imported local fonts) or use `bootstrap-full` for a
   deterministic demo experience.
 
 For future expansion, prefer feature-gated bundles (e.g. CJK subsets) rather than growing the

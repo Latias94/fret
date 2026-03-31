@@ -80,7 +80,7 @@ pub(super) fn build_header(
                     }).gap(Space::N2).items_center().into_element(cx),
                 doc_layout::wrap_controls_row(cx, theme, Space::N2, move |cx| {
                     vec![
-                        shadcn::Button::new("Load fonts…")
+                        shadcn::Button::new("Import local fonts…")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
                             .action(CMD_CODE_EDITOR_LOAD_FONTS)

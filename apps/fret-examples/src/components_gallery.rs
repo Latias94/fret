@@ -749,7 +749,7 @@ impl ComponentsGalleryDriver {
                                                                 )
                                                                 .items(items)
                                                                 .into_element(cx),
-                                                                shadcn::Button::new("Load fonts...")
+                                                                shadcn::Button::new("Import local fonts...")
                                                                     .variant(
                                                                         shadcn::ButtonVariant::Outline,
                                                                     )
@@ -1682,10 +1682,10 @@ fn handle_command(
         app.push_effect(Effect::FileDialogOpen {
             window,
             options: FileDialogOptions {
-                title: Some("Load fonts".to_string()),
+                title: Some("Import local font files".to_string()),
                 multiple: true,
                 filters: vec![FileDialogFilter {
-                    name: "Fonts".to_string(),
+                    name: "Local font files".to_string(),
                     extensions: fret_fonts::SUPPORTED_USER_FONT_IMPORT_EXTENSIONS
                         .iter()
                         .map(|ext| (*ext).to_string())
@@ -1695,7 +1695,7 @@ fn handle_command(
         });
 
         let _ = app.models_mut().update(&state.last_action, |v| {
-            *v = Arc::<str>::from("fonts.load: opening file dialog...");
+            *v = Arc::<str>::from("fonts.import_local: opening file dialog...");
         });
         return;
     }
@@ -1736,7 +1736,7 @@ fn handle_event(
             });
 
             let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("fonts.load: reading selected files...");
+                *v = Arc::<str>::from("fonts.import_local: reading selected files...");
             });
             return;
         }
@@ -1761,7 +1761,7 @@ fn handle_event(
 
             let msg: Arc<str> = Arc::from(
                 format!(
-                    "fonts.load: accepted_fonts={} rejected_files={} read_errors={}",
+                    "fonts.import_local: accepted_fonts={} rejected_files={} read_errors={}",
                     accepted_fonts,
                     rejected_files,
                     data.errors.len()
@@ -1776,7 +1776,7 @@ fn handle_event(
                 state.awaiting_font_dialog = false;
                 state.pending_font_dialog = None;
                 let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("fonts.load: canceled");
+                    *v = Arc::<str>::from("fonts.import_local: canceled");
                 });
                 return;
             }

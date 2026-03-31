@@ -191,7 +191,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                         let header_handle_controls_off = header_handle_controls.clone();
                         let header_handle_controls_on = header_handle_controls.clone();
                         vec![
-                            shadcn::Button::new("Load fonts…")
+                            shadcn::Button::new("Import local fonts…")
                                 .variant(shadcn::ButtonVariant::Outline)
                                 .size(shadcn::ButtonSize::Sm)
                                 .action(CMD_CODE_EDITOR_LOAD_FONTS)
