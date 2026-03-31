@@ -1,7 +1,13 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 
 use fret_app::App;
+use fret_assets::{
+    AssetBundleId, AssetCapabilities, AssetKindHint, AssetLoadError, AssetLocator, AssetRequest,
+    AssetResolver, AssetRevision, ResolvedAssetBytes,
+};
 use fret_core::AppWindowId;
 use fret_runtime::{Effect, TimerToken};
 use fret_ui::{Theme, ThemeConfig};
@@ -11,6 +17,172 @@ use crate::HotLiterals;
 #[derive(Debug, Clone, Default)]
 struct FontsManifest {
     fonts: Vec<PathBuf>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct DevReloadFontAssetBatch {
+    resolved: Vec<ResolvedAssetBytes>,
+    requests: Vec<AssetRequest>,
+    errors: Vec<String>,
+}
+
+#[derive(Debug, Default)]
+struct DevReloadFontAssetResolver {
+    entries: RwLock<HashMap<AssetLocator, ResolvedAssetBytes>>,
+}
+
+impl DevReloadFontAssetResolver {
+    fn replace_entries(&self, entries: impl IntoIterator<Item = ResolvedAssetBytes>) {
+        let next = entries
+            .into_iter()
+            .map(|resolved| (resolved.locator.clone(), resolved))
+            .collect::<HashMap<_, _>>();
+        *self
+            .entries
+            .write()
+            .expect("poisoned DevReloadFontAssetResolver entries lock") = next;
+    }
+}
+
+impl AssetResolver for DevReloadFontAssetResolver {
+    fn capabilities(&self) -> AssetCapabilities {
+        AssetCapabilities {
+            memory: false,
+            embedded: false,
+            bundle_asset: true,
+            file: false,
+            url: false,
+            file_watch: false,
+            system_font_scan: false,
+        }
+    }
+
+    fn resolve_bytes(&self, request: &AssetRequest) -> Result<ResolvedAssetBytes, AssetLoadError> {
+        if !matches!(request.locator, AssetLocator::BundleAsset(_)) {
+            return Err(AssetLoadError::UnsupportedLocatorKind {
+                kind: request.locator.kind(),
+            });
+        }
+
+        self.entries
+            .read()
+            .expect("poisoned DevReloadFontAssetResolver entries lock")
+            .get(&request.locator)
+            .cloned()
+            .ok_or(AssetLoadError::NotFound)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct DevReloadFontAssetLayer {
+    installed: bool,
+    resolver: Arc<DevReloadFontAssetResolver>,
+}
+
+impl Default for DevReloadFontAssetLayer {
+    fn default() -> Self {
+        Self {
+            installed: false,
+            resolver: Arc::new(DevReloadFontAssetResolver::default()),
+        }
+    }
+}
+
+fn dev_reload_font_bundle() -> AssetBundleId {
+    AssetBundleId::package("fret-bootstrap-dev-reload-fonts")
+}
+
+fn ensure_dev_reload_font_asset_layer(app: &mut App) -> Arc<DevReloadFontAssetResolver> {
+    let mut resolver = None;
+    app.with_global_mut(DevReloadFontAssetLayer::default, |layer, app| {
+        if !layer.installed {
+            fret_runtime::register_asset_resolver(app, layer.resolver.clone());
+            layer.installed = true;
+        }
+        resolver = Some(layer.resolver.clone());
+    });
+    resolver.expect("dev reload font asset layer must install a resolver")
+}
+
+fn stable_dev_reload_font_asset_revision(path: &Path, bytes: &[u8]) -> AssetRevision {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(path.to_string_lossy().as_bytes());
+    hasher.update(bytes);
+    let hash = hasher.finalize();
+    let mut revision_bytes = [0u8; 8];
+    revision_bytes.copy_from_slice(&hash.as_bytes()[..8]);
+    let revision = u64::from_le_bytes(revision_bytes);
+    AssetRevision(if revision == 0 { 1 } else { revision })
+}
+
+fn dev_reload_font_asset_key(path: &Path) -> String {
+    let hash = blake3::hash(path.to_string_lossy().as_bytes())
+        .to_hex()
+        .to_string();
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("font");
+    let sanitized = file_name
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '_') {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>();
+    format!("dev-reload/{}-{}", &hash[..12], sanitized)
+}
+
+fn dev_reload_font_media_type(path: &Path) -> Option<&'static str> {
+    match path.extension().and_then(|ext| ext.to_str()) {
+        Some(ext) if ext.eq_ignore_ascii_case("ttf") => Some("font/ttf"),
+        Some(ext) if ext.eq_ignore_ascii_case("otf") => Some("font/otf"),
+        Some(ext) if ext.eq_ignore_ascii_case("ttc") => Some("font/collection"),
+        Some(ext) if ext.eq_ignore_ascii_case("woff") => Some("font/woff"),
+        Some(ext) if ext.eq_ignore_ascii_case("woff2") => Some("font/woff2"),
+        _ => None,
+    }
+}
+
+fn build_dev_reload_font_asset_batch(
+    root: &Path,
+    manifest: FontsManifest,
+) -> DevReloadFontAssetBatch {
+    let mut batch = DevReloadFontAssetBatch::default();
+
+    for path in manifest.fonts {
+        let abs = if path.is_absolute() {
+            path
+        } else {
+            root.join(path)
+        };
+        match std::fs::read(&abs) {
+            Ok(bytes) => {
+                let locator =
+                    AssetLocator::bundle(dev_reload_font_bundle(), dev_reload_font_asset_key(&abs));
+                let request =
+                    AssetRequest::new(locator.clone()).with_kind_hint(AssetKindHint::Font);
+                let mut resolved = ResolvedAssetBytes::new(
+                    locator,
+                    stable_dev_reload_font_asset_revision(&abs, &bytes),
+                    bytes,
+                );
+                if let Some(media_type) = dev_reload_font_media_type(&abs) {
+                    resolved = resolved.with_media_type(media_type);
+                }
+                batch.requests.push(request);
+                batch.resolved.push(resolved);
+            }
+            Err(err) => batch
+                .errors
+                .push(format!("read failed: {}: {err}", abs.display())),
+        }
+    }
+
+    batch
 }
 
 fn parse_fonts_manifest(bytes: &[u8]) -> Result<FontsManifest, String> {
@@ -265,28 +437,18 @@ impl DevReloadWatcher {
             match std::fs::read(&self.fonts_manifest_path) {
                 Ok(bytes) => match parse_fonts_manifest(&bytes) {
                     Ok(manifest) => {
-                        let mut fonts: Vec<Vec<u8>> = Vec::new();
-                        let mut errors: Vec<String> = Vec::new();
-                        for p in manifest.fonts {
-                            let abs = if p.is_absolute() {
-                                p
-                            } else {
-                                self.root.join(p)
-                            };
-                            match std::fs::read(&abs) {
-                                Ok(bytes) => fonts.push(bytes),
-                                Err(e) => {
-                                    errors.push(format!("read failed: {}: {e}", abs.display()))
-                                }
-                            }
+                        let batch = build_dev_reload_font_asset_batch(&self.root, manifest);
+                        let resolver = ensure_dev_reload_font_asset_layer(app);
+                        resolver.replace_entries(batch.resolved.clone());
+
+                        if !batch.errors.is_empty() {
+                            tick.fonts_error = Some(batch.errors.join("; "));
                         }
 
-                        if !errors.is_empty() {
-                            tick.fonts_error = Some(errors.join("; "));
-                        }
-
-                        if !fonts.is_empty() {
-                            app.push_effect(Effect::TextAddFonts { fonts });
+                        if !batch.requests.is_empty() {
+                            app.push_effect(Effect::TextAddFontAssets {
+                                requests: batch.requests,
+                            });
                             tick.reloaded_fonts = true;
                         }
                     }
@@ -318,4 +480,79 @@ pub(crate) fn handle_dev_reload_timer(
         out = Some(w.poll_and_apply(app, window));
     });
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use fret_assets::{AssetKindHint, AssetLocator};
+
+    use super::*;
+
+    fn unique_temp_dir(label: &str) -> PathBuf {
+        static NEXT_ID: AtomicU64 = AtomicU64::new(1);
+
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock must be after unix epoch")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!(
+            "fret-dev-reload-{label}-{}-{nanos}-{}",
+            std::process::id(),
+            NEXT_ID.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(&dir).expect("temp dir must be creatable");
+        dir
+    }
+
+    #[test]
+    fn build_font_asset_batch_emits_font_bundle_requests() {
+        let root = unique_temp_dir("requests");
+        let font_path = root.join("demo font.ttf");
+        fs::write(&font_path, b"fake-font-bytes").expect("font fixture must be writable");
+
+        let batch = build_dev_reload_font_asset_batch(
+            &root,
+            FontsManifest {
+                fonts: vec![PathBuf::from("demo font.ttf")],
+            },
+        );
+
+        assert!(batch.errors.is_empty());
+        assert_eq!(batch.requests.len(), 1);
+        assert_eq!(batch.resolved.len(), 1);
+        assert_eq!(batch.requests[0].kind_hint, Some(AssetKindHint::Font));
+        assert_eq!(&batch.requests[0].locator, &batch.resolved[0].locator);
+        match &batch.requests[0].locator {
+            AssetLocator::BundleAsset(locator) => {
+                assert_eq!(locator.bundle, dev_reload_font_bundle());
+            }
+            other => panic!("expected bundle asset request, got {other:?}"),
+        }
+
+        fs::remove_dir_all(&root).expect("temp dir must be removable");
+    }
+
+    #[test]
+    fn build_font_asset_batch_records_read_failures() {
+        let root = unique_temp_dir("errors");
+
+        let batch = build_dev_reload_font_asset_batch(
+            &root,
+            FontsManifest {
+                fonts: vec![PathBuf::from("missing.ttf")],
+            },
+        );
+
+        assert!(batch.requests.is_empty());
+        assert!(batch.resolved.is_empty());
+        assert_eq!(batch.errors.len(), 1);
+        assert!(batch.errors[0].contains("missing.ttf"));
+
+        fs::remove_dir_all(&root).expect("temp dir must be removable");
+    }
 }

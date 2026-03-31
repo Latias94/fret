@@ -305,6 +305,13 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - startup bundled baseline injection plus runtime `TextAddFontAssets` / `TextAddFonts` now all
       feed that same shared source inventory instead of keeping startup-vs-runtime font provenance
       on separate publication paths.
+    - first-party manifest-driven development font reload now also stays on the asset-identity
+      lane:
+      - `fret-bootstrap::dev_reload` publishes stable bundle asset locators for manifest entries,
+      - repeated reloads reuse one mutable resolver layer instead of stacking duplicate
+        registrations,
+      - and the watcher now emits `TextAddFontAssets` instead of bypassing identity with raw
+        `TextAddFonts`.
     - `fret-bootstrap` diagnostics now export that renderer inventory through
       `debug.resource_loading.font_environment.renderer_font_*`, so diagnostics bundles can see
       the same revision/source records the future SVG-text bridge will depend on.
@@ -323,6 +330,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - add stable Android target evidence once the local/CI environment provides NDK clang
       toolchains
     - add mobile-specific diagnostics or startup gates beyond shared native runner wiring
+    - the remaining first-party `TextAddFonts` call sites are intentional user-provided file
+      dialog flows in `apps/fret-ui-gallery` and `apps/fret-examples`; keep them as the explicit
+      raw-byte lane unless/until Fret defines a stable asset-identity surface for imported user
+      fonts
   - Evidence:
     - `crates/fret-runtime/src/font_catalog.rs`
     - `crates/fret-diag-protocol/src/lib.rs`
@@ -333,10 +344,13 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `publish_renderer_font_environment_sets_key_after_locale_application`)
     - `crates/fret-render-text/src/{parley_font_db.rs,parley_shaper.rs}`
     - `crates/fret-render-wgpu/src/{renderer/config.rs,renderer/svg/{mod.rs,raster.rs},text/fonts.rs,text/tests.rs}`
+    - `ecosystem/fret-bootstrap/src/dev_reload.rs`
     - `ecosystem/fret-bootstrap/src/ui_diagnostics/{debug_snapshot_impl.rs,debug_snapshot_predicates.rs,debug_snapshot_types.rs}`
     - `cargo nextest run -p fret-launch`
+    - `cargo nextest run -p fret-bootstrap --features ui-app-driver --lib`
     - `cargo nextest run -p fret-bootstrap --features 'ui-app-driver diagnostics' debug_snapshot_types_tests::font_environment_snapshot_from_runtime_keeps_renderer_font_sources`
     - `cargo check -p fret-bootstrap --features 'ui-app-driver diagnostics'`
+    - `cargo check -p fret-ui-gallery --target wasm32-unknown-unknown --features gallery-dev`
 
 - [~] RESLOAD-font-320 Define bundled font profiles/manifests as a real product surface.
   - Minimum guarantees:
