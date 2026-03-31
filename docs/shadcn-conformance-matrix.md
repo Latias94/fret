@@ -47,6 +47,19 @@ Notes:
 - The suite enables screenshots when needed and can be used as a CI-friendly gate.
 - For deterministic fonts on desktop, the suite sets `FRET_UI_GALLERY_BOOTSTRAP_FONTS=1` (bundled fonts).
 
+For a smaller runner-backed proof set focused on recent scroll/click/runtime parity fixes, run:
+
+```bash
+cargo run -p fretboard -- diag suite ui-gallery-shadcn-runtime-evidence --launch -- cargo run -p fret-ui-gallery --release
+```
+
+This targeted suite keeps only four representative scripts:
+
+- Accordion usage toggle under the real runner.
+- Select commit + selected-label update after content-scroll positioning.
+- Navigation Menu docs open/close + role assertions on the real docs page.
+- Command scrollable filter clamp after page-scroll + overlay-scroll interaction.
+
 ## Font / text stress strategy (practical)
 
 We treat “fonts overlap” as: **no unintended bounds overlap** between sibling UI elements where
@@ -76,7 +89,7 @@ Legend:
 
 | Component | UI Gallery Page | Diag Scripts | Rust Tests | Coverage (Fonts/Hit/Layout) | Status | Notes |
 |---|---|---|---|---|---|---|
-| Accordion | `accordion` | `tools/diag-scripts/ui-gallery-accordion-returns-first-open-height.json`, `tools/diag-scripts/ui-gallery-accordion-demo-shipping-initial-open-height.json` | TODO | Layout (collapsible height; first-open vs reopen) | In progress | Add keyboard navigation + multi-open invariants. |
+| Accordion | `accordion` | `tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json`, `tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-returns-first-open-height.json`, `tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-demo-shipping-initial-open-height.json` | TODO | Layout + real-runner interaction (`usage` toggle; first-open vs reopen) | In progress | Runtime evidence now includes the composable `usage` path that previously looked non-clickable in UI Gallery. |
 | Alert | `alert` | TODO | TODO | TODO | TODO | |
 | Alert Dialog | `alert_dialog` | `tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json` | TODO | Focus + least-destructive default | In progress | Add dismiss + click-through gates. |
 | Aspect Ratio | `aspect_ratio` | TODO | TODO | TODO | TODO | |
@@ -92,7 +105,7 @@ Legend:
 | Checkbox | `checkbox` | TODO | TODO | TODO | TODO | |
 | Collapsible | `collapsible` | `tools/diag-scripts/ui-gallery-collapsible-demo-open-non-overlap.json`, `tools/diag-scripts/ui-gallery-collapsible-basic-double-click-close.json`, `tools/diag-scripts/ui-gallery-collapsible-demo-first-open-height.json`, `tools/diag-scripts/ui-gallery-collapsible-demo-order-details-shows-sections.json`, `tools/diag-scripts/ui-gallery-collapsible-settings-open-shows-inputs.json`, `tools/diag-scripts/ui-gallery-collapsible-file-tree-open-components-ui-shows-button.json`, `tools/diag-scripts/ui-gallery-collapsible-rtl-open-scrolls-to-content.json` | TODO | Hit-testing + layout + docs-demo parity across demo/basic/settings/file-tree/RTL outcomes | In progress | Expand coverage: animated height clamp + deeper nested tree branches. |
 | Combobox | `combobox` | `tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json`, `tools/diag-scripts/ui-gallery-combobox-commit-pixels-changed.json` | TODO | Focus restore + selection commit | In progress | Add disabled item + outside press policy. |
-| Command Palette | `command` | TODO | TODO | TODO | TODO | |
+| Command Palette | `command` | `tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-filter-clamps-scroll.json` | TODO | Real-runner page scroll + overlay viewport scroll + filter clamp | In progress | Covers the mixed page-scroll/overlay-scroll path that is sensitive to `scroll_into_view` guard quality. |
 | Context Menu | `context_menu` | `tools/diag-scripts/ui-gallery-context-menu-right-click.json` | TODO | Right-click routing + overlay | In progress | Add click-through + submenu bounds gates. |
 | DataGrid | `data_grid` | TODO | TODO | TODO | TODO | |
 | DataTable | `data_table` | `tools/diag-scripts/ui-gallery-data-table-smoke.json`, `tools/diag-scripts/ui-gallery-data-table-default-recipe-smoke.json`, `tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-responsive.json`, `tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-query-source-toggle.json`, `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-header-screenshot-zinc-light.json` | `ecosystem/fret-ui-shadcn/tests/data_table_toolbar_faceted_responsive.rs` | Layout (responsive toolbar semantics; smoke) + header chrome/clipping (Guide Demo labels + sort icons) | In progress | `ui-gallery-data-table` and `ui-gallery-shadcn-conformance` both include the Guide Demo header screenshot gate; expand next: faceted filter overlay interactions + retained table routing gates. |
@@ -115,14 +128,14 @@ Legend:
 | Menubar | `menubar` | `tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json` | TODO | Keyboard navigation | In progress | Add open/close + focus return gates. |
 | Menus | `menus` | TODO | TODO | TODO | TODO | |
 | Native Select | `native_select` | TODO | TODO | TODO | TODO | |
-| Navigation Menu | `navigation_menu` | `tools/diag-scripts/ui-gallery-navigation-menu-docs-layout-smoke.json`, `tools/diag-scripts/ui-gallery-navigation-menu-hover-switch-and-escape.json`, `tools/diag-scripts/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json` | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | Layout + interaction (responsive breakpoint semantics; hover/escape) | In progress | Add bounds gates for viewport sizing vs anchor width tracking. |
+| Navigation Menu | `navigation_menu` | `tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json`, `tools/diag-scripts/ui-gallery-navigation-menu-docs-layout-smoke.json`, `tools/diag-scripts/ui-gallery-navigation-menu-hover-switch-and-escape.json`, `tools/diag-scripts/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json` | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | Layout + interaction (docs-page open/close + role assertions; responsive breakpoint semantics; hover/escape) | In progress | The targeted runtime-evidence suite uses the docs smoke path as the real-runner proof surface. |
 | Pagination | `pagination` | TODO | TODO | TODO | TODO | |
 | Popover | `popover` | `tools/diag-scripts/ui-gallery-popover-click-through-outside-press-focus-underlay.json`, `tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json` | TODO | Click-through + outside press + focus | In progress | Add placement bounds gate. |
 | Progress | `progress` | `tools/diag-scripts/ui-gallery-progress-docs-smoke.json`, `tools/diag-scripts/ui-gallery-progress-numeric-semantics.json` | `ecosystem/fret-ui-shadcn/src/progress.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/progress.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`, `apps/fret-ui-gallery/tests/progress_docs_surface.rs` | Docs-path smoke + semantics + chrome/layout (track/indicator geometry, numeric semantics, timer/RTL teaching surface) | Aligned (with gaps) | Default shadcn lane is aligned; Base UI label/value parts remain a separate headless follow-up rather than a default generic children API. |
 | Radio Group | `radio_group` | TODO | TODO | TODO | TODO | |
 | Resizable | `resizable` | TODO | TODO | TODO | TODO | |
 | Scroll Area | `scroll_area` | TODO | TODO | TODO | TODO | |
-| Select | `select` | `fretboard diag suite ui-gallery-select` (runs `tools/diag-scripts/ui-gallery-select-*.json`) | TODO | Open/close, commit, disabled, bounds | In progress | Add click-through + focus trap variants if needed. |
+| Select | `select` | `fretboard diag suite ui-gallery-select`, `tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json` | TODO | Open/close, commit, disabled, bounds, selected-label update after content-scroll positioning | In progress | The targeted runtime-evidence suite keeps the commit + label-update path as the smallest runner-backed proof for the scroll guard fix. |
 | Separator | `separator` | TODO | TODO | TODO | TODO | |
 | Sheet | `sheet` | TODO | TODO | TODO | TODO | |
 | Sidebar | `sidebar` | `tools/diag-scripts/ui-gallery-sidebar-mobile-controlled-open-sync.json`, `tools/diag-scripts/ui-gallery-sidebar-provider-shortcut-toggle-focus.json`, `tools/diag-scripts/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | Focus + layout (mobile vs desktop routing) | In progress | Add viewport breakpoint + docking/panel interaction gates if needed. |
