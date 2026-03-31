@@ -74,8 +74,7 @@ Clarification (2026-03-31):
       migration.
 - [x] Do not split the remaining `fret-ui-kit::imui` root surface yet because the current split
       already matches ownership better than another coordination-layer shuffle would.
-- [ ] Keep official generic/editor adapters on `&mut impl fret_authoring::UiWriter<H>` and avoid
-      concrete `ImUi` coupling.
+- [x] Keep official adapter seams generic over authoring traits and avoid concrete `ImUi` coupling.
 
 Generic audit result (2026-03-31):
 
@@ -95,6 +94,10 @@ Generic audit result (2026-03-31):
   dedicated submodules (`combo_controls`, `drag_drop`, `popup_overlay`, `tooltip_overlay`, etc.).
   Splitting the root file again in this lane would mostly move tightly coupled coordination code
   across files without improving owner clarity.
+- The final surface rule for this lane is:
+  editor-owned declarative forwarders stay on `&mut impl fret_authoring::UiWriter<H>`, while
+  generic immediate adapter seams compile against `UiWriterImUiFacadeExt<H>` and remain free of any
+  concrete `fret_imui::ImUi` dependency.
 
 ## M4 - Gates and evidence closure
 

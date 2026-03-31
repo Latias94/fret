@@ -95,4 +95,11 @@ fn adapter_seam_module_stays_contract_only() {
             "adapters.rs should not grow built-in sample wrappers: {marker}"
         );
     }
+
+    for marker in ["fret_imui", "ImUi<"] {
+        assert!(
+            !ADAPTERS_RS.contains(marker),
+            "adapters.rs should stay free of concrete frontend coupling: {marker}"
+        );
+    }
 }

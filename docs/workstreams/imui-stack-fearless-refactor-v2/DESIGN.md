@@ -265,7 +265,11 @@ Generic audit status (2026-03-31):
 - while the remaining large root file (`ecosystem/fret-ui-kit/src/imui.rs`) is still the
   coordination surface for options, responses, `ImUiFacade`, and `UiWriterImUiFacadeExt`; the
   behavior-heavy code is already split into dedicated submodules, so another root-file split would
-  mostly increase navigation churn rather than sharpen ownership.
+  mostly increase navigation churn rather than sharpen ownership,
+- and the correct authoring-shape rule is now explicit:
+  editor-owned declarative forwarders stay on `&mut impl fret_authoring::UiWriter<H>`,
+  generic immediate adapter seams compile against `UiWriterImUiFacadeExt<H>`,
+  and neither surface should depend on concrete `fret_imui::ImUi`.
 
 ## Dear ImGui comparison stance
 
