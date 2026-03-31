@@ -122,7 +122,9 @@ Channels:
    - default trigger file: `.fret/asset_reload.touch` (bump the shared `AssetReloadEpoch`)
    - intended usage: a tooling watcher updates the trigger file when assets change
    - current scope (L1): native file-reference image decode bridge and SVG file-byte bridge
-   - fonts: `.fret/fonts.json` (list of TTF/OTF/TTC files) is applied via `Effect::TextAddFontBytes` on change or when `asset_reload.touch` bumps
+   - fonts: `.fret/fonts.json` (list of TTF/OTF/TTC files) is mapped to stable bundle asset
+     locators and applied via `Effect::TextAddFontAssets` on change or when `asset_reload.touch`
+     bumps
 
 3) **Hot literals**
    - developer strings/labels/tooltips sourced from a data file in `.fret/` or the app root
