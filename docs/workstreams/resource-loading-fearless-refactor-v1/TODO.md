@@ -689,10 +689,14 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - image helpers propagating unsupported file-locator capability errors instead of swallowing
         them,
       - byte-backed URL resolvers remaining consumable through the shared image bridge,
-      - native reference-only URL resolvers failing truthfully instead of pretending they are
-        image-ready,
+      - reference-only URL resolvers remaining consumable for images while SVG URL requests still
+        fail truthfully as reference-only locators,
       - SVG UI helpers keeping native file-reference reload caching internal while byte-backed
         bundle assets and URL locators remain truthful about whether they are immediately SVG-ready.
+    - `ecosystem/fret-ui-ai/src/elements/attachments.rs` now locks the first-party attachment
+      preview call site for:
+      - generating image-only URL asset requests,
+      - accepting the shipped `UrlPassthroughAssetResolver` lane used by the default launch hosts.
   - Remaining:
     - add broader packaged/mobile-facing capability tests once builder/package startup lanes are
       defined

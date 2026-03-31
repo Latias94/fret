@@ -235,6 +235,12 @@ This workstream takes a fearless posture:
   - it marks raw-file and URL lanes truthfully per platform,
   - and it records the current mobile inference: generated embedded/bundle modules are the only
     trustworthy first-party packaged story today.
+- The former “default image URL chain is not closed” risk is now retired on the shipped
+  desktop/web launch hosts:
+  - `fret-launch` installs `UrlPassthroughAssetResolver`,
+  - `fret-ui-assets` consumes URL references through the shared image bridge,
+  - first-party AI attachment previews lock the same lane with focused tests,
+  - and the remaining explicit URL gap is now limited to SVG/font lanes.
 - Legacy public file-path constructors have been removed; native/dev compatibility now stays on the
   explicit locator/reference bridge helpers plus crate-private native bridge constructors.
 - Generated directory scanning is still only a native/package-dev convenience lane today; the new

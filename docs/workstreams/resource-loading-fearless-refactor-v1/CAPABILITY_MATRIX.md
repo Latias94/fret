@@ -93,6 +93,10 @@ escape hatches.
   - `resolve_image_source*` can now consume a resolver-provided URL reference on every platform:
     web/WASM now routes `ImageSource::Url` through the browser image pipeline, while non-wasm
     targets fetch bytes off-thread and decode through the shared Rust image pipeline,
+  - first-party AI attachment previews now exercise that same shipped lane through
+    `attachment_preview_request_for(...)` / `resolve_attachment_preview_source_from_host(...)`, so
+    the former “default image URL chain is not end-to-end” risk is closed for the shipped desktop
+    and web launch hosts,
   - shipped desktop/web launch hosts now have truthful default image URL support, but custom hosts
     should still treat `AssetCapabilities { url: true, .. }` as owned by the resolver layers they
     actually install,
@@ -185,6 +189,7 @@ escape hatches.
 - `crates/fret-assets/src/file_manifest.rs`
 - `crates/fret-runtime/src/asset_resolver.rs`
 - `crates/fret-launch/src/assets.rs`
+- `crates/fret-launch/src/runner/desktop/runner/run.rs`
 - `crates/fret-launch/src/runner/web/mod.rs`
 - `ecosystem/fret/src/lib.rs`
 - `ecosystem/fret/src/app_entry.rs`
@@ -192,6 +197,7 @@ escape hatches.
 - `crates/fret-runtime/src/asset_reload.rs`
 - `ecosystem/fret-ui-assets/src/image_source.rs`
 - `ecosystem/fret-ui-assets/src/ui.rs`
+- `ecosystem/fret-ui-ai/src/elements/attachments.rs`
 - `crates/fret-launch/src/runner/web/gfx_init.rs`
 - `crates/fret-launch/src/runner/web/effects.rs`
 - `crates/fret-launch/src/runner/desktop/runner/effects.rs`

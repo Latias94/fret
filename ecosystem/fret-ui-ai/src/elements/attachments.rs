@@ -1755,4 +1755,24 @@ mod tests {
 
         assert!(resolve_attachment_preview_source_from_host(&app, &data).is_some());
     }
+
+    #[test]
+    fn attachment_preview_source_accepts_first_party_url_passthrough_resolver() {
+        use std::sync::Arc;
+
+        use fret_app::App;
+        use fret_assets::UrlPassthroughAssetResolver;
+
+        let data = AttachmentData::File(
+            AttachmentFileData::new("att-image")
+                .filename("preview.png")
+                .media_type("image/png")
+                .url("https://example.com/preview.png"),
+        );
+
+        let mut app = App::new();
+        fret_runtime::set_asset_resolver(&mut app, Arc::new(UrlPassthroughAssetResolver::new()));
+
+        assert!(resolve_attachment_preview_source_from_host(&app, &data).is_some());
+    }
 }

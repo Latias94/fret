@@ -77,6 +77,10 @@ Deliverables:
 Status note (2026-03-30):
 
 - image loading and the current SVG bridge now both sit on the shared locator/resolver contract,
+- the shipped desktop/web launch hosts now close the image URL lane end-to-end:
+  `fret-launch` installs `UrlPassthroughAssetResolver`, `fret-ui-assets` consumes the resulting
+  URL references for images, and first-party AI attachment previews lock that path with a focused
+  gate,
 - the public `SvgFileSource` / `resolve_svg_file_source*` compatibility seam is now deleted while
   the native file-reference reload cache remains internal to `SvgAssetElementContextExt`,
 - the first-party SVG raster path no longer silently loads system fonts for SVG `<text>`,
@@ -91,6 +95,11 @@ Status note (2026-03-30):
   outcomes, selection misses, missing glyphs, and fallback hops, and
 - that long-term bridge is now documented in
   `docs/workstreams/resource-loading-fearless-refactor-v1/SVG_TEXT_FONT_ENVIRONMENT_PLAN.md`.
+
+Remaining explicit gap:
+
+- first-party SVG/font URL lanes are still not shipped even though image URL support is now closed
+  on the shipped desktop/web launch hosts.
 
 Exit criteria:
 
