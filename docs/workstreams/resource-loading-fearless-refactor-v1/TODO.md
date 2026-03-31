@@ -316,6 +316,13 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
         registrations,
       - and the watcher now emits `TextAddFontAssets` instead of bypassing identity with raw
         `TextAddFontBytes`.
+    - first-party local font import flows now also stay on the asset-identity lane:
+      - `fret_fonts::build_imported_font_asset_batch(...)` prepares stable memory locators plus
+        `Font`-hinted requests for user-selected files,
+      - `fret_fonts::ImportedFontAssetResolver` provides one mutable memory resolver layer for
+        session-local imports, and
+      - `apps/fret-ui-gallery` plus `apps/fret-examples` now stage local file-dialog imports into
+        that resolver before emitting `TextAddFontAssets`.
     - `fret-bootstrap` diagnostics now export that renderer inventory through
       `debug.resource_loading.font_environment.renderer_font_*`, so diagnostics bundles can see
       the same revision/source records the future SVG-text bridge will depend on.
@@ -334,12 +341,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - add stable Android target evidence once the local/CI environment provides NDK clang
       toolchains
     - add mobile-specific diagnostics or startup gates beyond shared native runner wiring
-    - the remaining first-party `TextAddFontBytes` call sites are intentional user-provided file
-      dialog flows in `apps/fret-ui-gallery` and `apps/fret-examples`; they now share
-      `fret_fonts::SUPPORTED_USER_FONT_IMPORT_EXTENSIONS` plus
-      `fret_fonts::collect_supported_user_font_bytes(...)` so dialog filters and runtime acceptance
-      stay aligned. Keep them as the explicit raw-byte lane unless/until Fret defines a stable
-      asset-identity surface for imported user fonts
+    - decide whether `Effect::TextAddFontBytes` can shrink further now that framework-owned
+      startup, first-party dev reload, and first-party local font import flows all stay on
+      asset identity; the raw-byte lane may now only need to serve truly external/low-level
+      callers
   - Evidence:
     - `crates/fret-fonts/src/{lib.rs,tests.rs}`
     - `crates/fret-runtime/src/font_catalog.rs`
@@ -350,7 +355,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `inject_font_blobs_and_refresh_catalog_refreshes_only_when_fonts_were_added`,
       `publish_renderer_font_environment_sets_key_after_locale_application`)
     - `apps/fret-ui-gallery/src/driver/runtime_driver.rs`
-      (`ui_gallery_default_profile_font_requests_stay_on_asset_request_lane`)
+      (`ui_gallery_default_profile_font_requests_stay_on_asset_request_lane`,
+      `ui_gallery_local_font_import_installs_memory_asset_requests`)
+    - `apps/fret-examples/src/components_gallery.rs`
+      (`components_gallery_local_font_import_installs_memory_asset_requests`)
     - `crates/fret-render-text/src/{parley_font_db.rs,parley_shaper.rs}`
     - `crates/fret-render-wgpu/src/{renderer/config.rs,renderer/svg/{mod.rs,raster.rs},text/fonts.rs,text/tests.rs}`
     - `ecosystem/fret-bootstrap/src/dev_reload.rs`

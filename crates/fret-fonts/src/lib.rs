@@ -12,8 +12,11 @@
 //!   still avoids promising `sans`/`serif`.
 
 use fret_assets::{
-    AssetBundleId, AssetKindHint, AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry,
+    AssetBundleId, AssetCapabilities, AssetKindHint, AssetLoadError, AssetLocator, AssetMemoryKey,
+    AssetRequest, AssetResolver, AssetRevision, ResolvedAssetBytes, StaticAssetEntry,
 };
+use std::collections::HashMap;
+use std::sync::RwLock;
 
 mod assets;
 mod profiles;
@@ -33,6 +36,66 @@ pub const SUPPORTED_USER_FONT_IMPORT_EXTENSIONS: &[&str] = &["ttf", "otf", "ttc"
 pub struct ImportedFontBytesBatch {
     pub fonts: Vec<Vec<u8>>,
     pub rejected_files: usize,
+}
+
+/// Result of preparing user-provided font files for the runtime memory-asset lane.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ImportedFontAssetBatch {
+    pub requests: Vec<AssetRequest>,
+    pub resolved: Vec<ResolvedAssetBytes>,
+    pub rejected_files: usize,
+}
+
+/// Mutable memory resolver used by first-party and app-level local font import flows.
+#[derive(Debug, Default)]
+pub struct ImportedFontAssetResolver {
+    entries: RwLock<HashMap<AssetLocator, ResolvedAssetBytes>>,
+}
+
+impl ImportedFontAssetResolver {
+    pub fn replace_entries(&self, entries: impl IntoIterator<Item = ResolvedAssetBytes>) {
+        let next = entries
+            .into_iter()
+            .map(|resolved| (resolved.locator.clone(), resolved))
+            .collect::<HashMap<_, _>>();
+        *self
+            .entries
+            .write()
+            .expect("poisoned ImportedFontAssetResolver entries lock") = next;
+    }
+
+    pub fn replace_batch(&self, batch: &ImportedFontAssetBatch) {
+        self.replace_entries(batch.resolved.iter().cloned());
+    }
+}
+
+impl AssetResolver for ImportedFontAssetResolver {
+    fn capabilities(&self) -> AssetCapabilities {
+        AssetCapabilities {
+            memory: true,
+            embedded: false,
+            bundle_asset: false,
+            file: false,
+            url: false,
+            file_watch: false,
+            system_font_scan: false,
+        }
+    }
+
+    fn resolve_bytes(&self, request: &AssetRequest) -> Result<ResolvedAssetBytes, AssetLoadError> {
+        if !matches!(request.locator, AssetLocator::Memory(_)) {
+            return Err(AssetLoadError::UnsupportedLocatorKind {
+                kind: request.locator.kind(),
+            });
+        }
+
+        self.entries
+            .read()
+            .expect("poisoned ImportedFontAssetResolver entries lock")
+            .get(&request.locator)
+            .cloned()
+            .ok_or(AssetLoadError::NotFound)
+    }
 }
 
 /// Returns true when the bytes look like a TTF/OTF/TTC payload accepted by the raw font lane.
@@ -62,6 +125,44 @@ where
             batch.rejected_files += 1;
         }
     }
+    batch
+}
+
+/// Prepares user-provided font files for the runtime memory-asset lane.
+///
+/// Each accepted file is assigned a stable session-local memory locator and a `Font` kind hint so
+/// first-party import flows can stay on the shared asset identity contract instead of injecting raw
+/// byte vectors directly into the renderer path.
+pub fn build_imported_font_asset_batch<I, N, B>(files: I) -> ImportedFontAssetBatch
+where
+    I: IntoIterator<Item = (N, B)>,
+    N: AsRef<str>,
+    B: AsRef<[u8]>,
+{
+    let mut batch = ImportedFontAssetBatch::default();
+    let mut duplicate_counts = HashMap::<String, usize>::new();
+
+    for (name, bytes) in files {
+        let name = name.as_ref();
+        let bytes = bytes.as_ref();
+        if !is_supported_user_font_bytes(bytes) {
+            batch.rejected_files += 1;
+            continue;
+        }
+
+        let memory_key = imported_font_memory_key(name, bytes, &mut duplicate_counts);
+        let revision = stable_font_asset_revision(memory_key.as_str(), bytes);
+        let locator = AssetLocator::memory(memory_key);
+        let request = AssetRequest::new(locator.clone()).with_kind_hint(AssetKindHint::Font);
+        let mut resolved = ResolvedAssetBytes::new(locator, revision, bytes.to_vec());
+        if let Some(media_type) = supported_user_font_media_type(bytes) {
+            resolved = resolved.with_media_type(media_type);
+        }
+
+        batch.requests.push(request);
+        batch.resolved.push(resolved);
+    }
+
     batch
 }
 
@@ -158,13 +259,75 @@ impl BundledFontFaceSpec {
 }
 
 fn stable_font_asset_revision(key: &str, bytes: &[u8]) -> AssetRevision {
+    let hash = stable_font_asset_hash(key.as_bytes().iter().copied().chain(bytes.iter().copied()));
+    AssetRevision(if hash == 0 { 1 } else { hash })
+}
+
+fn stable_font_asset_hash(bytes: impl IntoIterator<Item = u8>) -> u64 {
     const FNV_OFFSET: u64 = 0xcbf29ce484222325;
     const FNV_PRIME: u64 = 0x100000001b3;
 
     let mut hash = FNV_OFFSET;
-    for byte in key.as_bytes().iter().chain(bytes.iter()) {
-        hash ^= u64::from(*byte);
+    for byte in bytes {
+        hash ^= u64::from(byte);
         hash = hash.wrapping_mul(FNV_PRIME);
     }
-    AssetRevision(if hash == 0 { 1 } else { hash })
+    hash
+}
+
+fn imported_font_memory_key(
+    name: &str,
+    bytes: &[u8],
+    duplicate_counts: &mut HashMap<String, usize>,
+) -> AssetMemoryKey {
+    let base = imported_font_memory_key_base(name, bytes);
+    let duplicates = duplicate_counts.entry(base.clone()).or_insert(0);
+    let key = if *duplicates == 0 {
+        base
+    } else {
+        format!("{base}-dup{duplicates}")
+    };
+    *duplicates += 1;
+    AssetMemoryKey::new(key)
+}
+
+fn imported_font_memory_key_base(name: &str, bytes: &[u8]) -> String {
+    let name = sanitize_imported_font_name(name);
+    let hash = stable_font_asset_hash(
+        name.as_bytes()
+            .iter()
+            .copied()
+            .chain(std::iter::once(0xff))
+            .chain(bytes.iter().copied()),
+    );
+    format!("user-font/{hash:016x}-{name}")
+}
+
+fn sanitize_imported_font_name(name: &str) -> String {
+    let name = name.trim();
+    let name = if name.is_empty() { "font" } else { name };
+    name.chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '_') {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
+fn supported_user_font_media_type(bytes: &[u8]) -> Option<&'static str> {
+    if bytes.starts_with(b"OTTO") {
+        Some("font/otf")
+    } else if bytes.starts_with(b"ttcf") {
+        Some("font/collection")
+    } else if bytes
+        .get(0..4)
+        .is_some_and(|header| header == [0x00, 0x01, 0x00, 0x00])
+    {
+        Some("font/ttf")
+    } else {
+        None
+    }
 }

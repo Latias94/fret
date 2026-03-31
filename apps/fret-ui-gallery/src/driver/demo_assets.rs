@@ -289,9 +289,13 @@ mod tests {
 
         install_gallery_demo_asset_bundle(&mut app);
 
-        let resolved = fret_runtime::resolve_asset_bytes(&app, &ui_gallery_profile_square_request())
-            .expect("expected profile square preview asset to resolve");
-        assert_eq!(resolved.locator, ui_gallery_profile_square_request().locator);
+        let resolved =
+            fret_runtime::resolve_asset_bytes(&app, &ui_gallery_profile_square_request())
+                .expect("expected profile square preview asset to resolve");
+        assert_eq!(
+            resolved.locator,
+            ui_gallery_profile_square_request().locator
+        );
         assert_eq!(resolved.revision, AssetRevision(1));
         assert_eq!(resolved.bytes.as_ref(), UI_GALLERY_PROFILE_SQUARE_BYTES);
         assert_eq!(
@@ -319,7 +323,10 @@ mod tests {
             ui_gallery_image_object_fit_sampling_request().locator
         );
         assert_eq!(resolved.revision, AssetRevision(1));
-        assert_eq!(resolved.bytes.as_ref(), UI_GALLERY_IMAGE_OBJECT_FIT_SAMPLING_BYTES);
+        assert_eq!(
+            resolved.bytes.as_ref(),
+            UI_GALLERY_IMAGE_OBJECT_FIT_SAMPLING_BYTES
+        );
         assert_eq!(
             resolved
                 .media_type

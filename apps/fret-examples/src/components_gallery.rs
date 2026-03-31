@@ -64,6 +64,44 @@ struct ComponentsGalleryWindowState {
     awaiting_font_dialog: bool,
 }
 
+#[derive(Debug, Clone, Default)]
+struct ComponentsGalleryImportedFontAssetLayer {
+    installed: bool,
+    resolver: Arc<fret_fonts::ImportedFontAssetResolver>,
+}
+
+fn ensure_components_gallery_imported_font_asset_resolver(
+    app: &mut App,
+) -> Arc<fret_fonts::ImportedFontAssetResolver> {
+    let mut resolver = None;
+    app.with_global_mut(
+        ComponentsGalleryImportedFontAssetLayer::default,
+        |layer, app| {
+            if !layer.installed {
+                fret_runtime::register_asset_resolver(app, layer.resolver.clone());
+                layer.installed = true;
+            }
+            resolver = Some(layer.resolver.clone());
+        },
+    );
+    resolver.expect("components gallery imported font asset resolver must install")
+}
+
+fn components_gallery_install_imported_font_assets(
+    app: &mut App,
+    files: &[fret_core::file_dialog::FileDialogFileData],
+) -> fret_fonts::ImportedFontAssetBatch {
+    let batch = fret_fonts::build_imported_font_asset_batch(
+        files
+            .iter()
+            .map(|file| (file.name.as_str(), file.bytes.as_slice())),
+    );
+    if !batch.requests.is_empty() {
+        ensure_components_gallery_imported_font_asset_resolver(app).replace_batch(&batch);
+    }
+    batch
+}
+
 #[derive(Default)]
 struct ComponentsGalleryDriver;
 
@@ -1747,14 +1785,12 @@ fn handle_event(
             }
             state.pending_font_dialog = None;
 
-            let font_batch = fret_fonts::collect_supported_user_font_bytes(
-                data.files.iter().map(|file| file.bytes.as_slice()),
-            );
-            let accepted_fonts = font_batch.fonts.len();
+            let font_batch = components_gallery_install_imported_font_assets(app, &data.files);
+            let accepted_fonts = font_batch.requests.len();
             let rejected_files = font_batch.rejected_files;
-            if !font_batch.fonts.is_empty() {
-                app.push_effect(Effect::TextAddFontBytes {
-                    fonts: font_batch.fonts,
+            if !font_batch.requests.is_empty() {
+                app.push_effect(Effect::TextAddFontAssets {
+                    requests: font_batch.requests,
                 });
             }
             app.push_effect(Effect::FileDialogRelease { token: data.token });
@@ -2165,4 +2201,42 @@ pub fn run() -> anyhow::Result<()> {
 
     fret::advanced::interop::run_native_with_compat_driver(config, app, build_fn_driver())
         .context("run components_gallery app")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn components_gallery_local_font_import_installs_memory_asset_requests() {
+        let mut app = App::new();
+        let files = vec![
+            fret_core::file_dialog::FileDialogFileData {
+                name: "Acme Sans.ttf".to_string(),
+                bytes: vec![0x00, 0x01, 0x00, 0x00, 0x10],
+            },
+            fret_core::file_dialog::FileDialogFileData {
+                name: "README.txt".to_string(),
+                bytes: b"plain".to_vec(),
+            },
+        ];
+
+        let batch = components_gallery_install_imported_font_assets(&mut app, &files);
+
+        assert_eq!(batch.requests.len(), 1);
+        assert_eq!(batch.rejected_files, 1);
+        assert!(
+            matches!(
+                batch.requests[0].locator,
+                fret::assets::AssetLocator::Memory(_)
+            ),
+            "expected local imports to stay on the memory asset lane"
+        );
+
+        for request in &batch.requests {
+            let resolved = fret_runtime::resolve_asset_bytes(&app, request)
+                .expect("components gallery local font requests should resolve via runtime assets");
+            assert_eq!(resolved.locator, request.locator);
+        }
+    }
 }

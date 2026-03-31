@@ -29,6 +29,78 @@ fn imported_font_batch_accepts_supported_sfnt_signatures_only() {
 }
 
 #[test]
+fn imported_font_asset_batch_builds_memory_font_requests() {
+    let true_type = [0x00, 0x01, 0x00, 0x00, 0x10];
+    let open_type = *b"OTTOx";
+    let junk = *b"plain";
+
+    let batch = build_imported_font_asset_batch([
+        ("Acme Sans.ttf", true_type.as_slice()),
+        ("Acme Serif.otf", open_type.as_slice()),
+        ("README.txt", junk.as_slice()),
+    ]);
+
+    assert_eq!(batch.requests.len(), 2);
+    assert_eq!(batch.resolved.len(), 2);
+    assert_eq!(batch.rejected_files, 1);
+
+    for request in &batch.requests {
+        assert_eq!(request.kind_hint, Some(fret_assets::AssetKindHint::Font));
+        assert!(
+            matches!(request.locator, AssetLocator::Memory(_)),
+            "expected imported font requests to stay on the memory asset lane"
+        );
+    }
+
+    assert_eq!(batch.requests[0].locator, batch.resolved[0].locator);
+    assert_eq!(batch.requests[1].locator, batch.resolved[1].locator);
+    assert_ne!(batch.requests[0].locator, batch.requests[1].locator);
+    assert_eq!(
+        batch.resolved[0]
+            .media_type
+            .as_ref()
+            .map(|value| value.as_str()),
+        Some("font/ttf")
+    );
+    assert_eq!(
+        batch.resolved[1]
+            .media_type
+            .as_ref()
+            .map(|value| value.as_str()),
+        Some("font/otf")
+    );
+}
+
+#[test]
+fn imported_font_asset_batch_is_stable_for_same_input() {
+    let true_type = [0x00, 0x01, 0x00, 0x00, 0x10];
+
+    let first = build_imported_font_asset_batch([("Acme Sans.ttf", true_type.as_slice())]);
+    let second = build_imported_font_asset_batch([("Acme Sans.ttf", true_type.as_slice())]);
+
+    assert_eq!(first, second);
+}
+
+#[test]
+fn imported_font_asset_resolver_round_trips_memory_requests() {
+    let true_type = [0x00, 0x01, 0x00, 0x00, 0x10];
+    let collection = *b"ttcfx";
+    let batch = build_imported_font_asset_batch([
+        ("Acme Sans.ttf", true_type.as_slice()),
+        ("Acme Collection.ttc", collection.as_slice()),
+    ]);
+    let resolver = ImportedFontAssetResolver::default();
+    resolver.replace_batch(&batch);
+
+    for (request, resolved) in batch.requests.iter().zip(batch.resolved.iter()) {
+        let actual = resolver
+            .resolve_bytes(request)
+            .expect("expected imported font asset to resolve");
+        assert_eq!(actual, *resolved);
+    }
+}
+
+#[test]
 fn supported_user_font_import_extensions_lock_first_party_dialog_contract() {
     assert_eq!(
         SUPPORTED_USER_FONT_IMPORT_EXTENSIONS,

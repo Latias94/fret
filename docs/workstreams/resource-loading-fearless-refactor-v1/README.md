@@ -213,6 +213,13 @@ This workstream takes a fearless posture:
   - startup bundled baseline injection plus runtime `TextAddFontAssets` / `TextAddFontBytes` now all
     feed that same inventory instead of leaving font provenance split across startup-only and
     runtime-only paths,
+  - first-party local font import flows now also stay on the asset-identity lane:
+    - `fret_fonts::build_imported_font_asset_batch(...)` assigns stable memory locators plus
+      `Font`-hinted `AssetRequest`s,
+    - `fret_fonts::ImportedFontAssetResolver` provides the mutable runtime memory layer used by the
+      first-party import surfaces, and
+    - `apps/fret-ui-gallery` plus `apps/fret-examples` now stage local file-dialog imports into
+      that resolver before emitting `TextAddFontAssets`,
   - and bootstrap diagnostics now expose that state under
     `debug.resource_loading.font_environment.renderer_font_*` so future SVG-text work can depend on
     one runtime-visible source of truth instead of reconstructing it from logs or family names,

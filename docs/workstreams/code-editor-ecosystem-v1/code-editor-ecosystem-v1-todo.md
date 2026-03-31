@@ -45,7 +45,8 @@ Legend:
 - [x] Define focus/blur rules and map them to `Effect::ImeAllow`.
 - [x] Web runner: flush `Effect::ImeAllow` on pointer-down (user activation) to allow synchronous textarea focus.
 - [x] Define best-effort caret anchoring and map it to `Effect::ImeSetCursorArea`.
-- [x] Load bundled default fonts during web renderer adoption (avoid “first frame” tofu; keep `TextAddFontBytes` for user-provided fonts).
+- [x] Load bundled default fonts during web renderer adoption (avoid “first frame” tofu; keep the
+  user-provided import escape hatch on asset-backed runtime requests).
 
 ### Event translation
 

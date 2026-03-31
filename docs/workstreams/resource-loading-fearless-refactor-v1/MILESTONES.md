@@ -55,6 +55,9 @@ Status note (2026-03-30):
   publishing extra raw font bytes into runtime globals,
 - current local evidence includes `cargo check -p fret-launch --target aarch64-apple-ios`, so the
   same startup contract is at least compile-validated on iOS,
+- first-party local font import surfaces now also stage user-selected files through stable memory
+  asset locators plus `TextAddFontAssets` instead of bypassing asset identity with raw byte
+  injection, and
 - desktop system-font refresh now has a focused runner-level gate proving it augments the live
   catalog without replacing the bundled baseline snapshot or seeding desktop family defaults.
 
