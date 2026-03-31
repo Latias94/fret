@@ -198,8 +198,9 @@ points rather than direct graph mutation.
     helpers there instead of a separate public extension trait, and the old root `fret_node::ui::*`
     queue/helper aliases are removed from the
     public surface.
-  - The retained-backed domain demo and the workflow gallery snippet now also import those raw queue
-    surfaces from `advanced::*`, so the sample code no longer teaches root `ui::*` queue imports.
+  - The retained-backed domain demo now imports its raw queue seam from `advanced::*`, while the
+    workflow gallery snippet no longer owns a raw `NodeGraphViewQueue` at all and instead uses
+    `NodeGraphSurfaceBinding::{set_viewport_action_host, fit_view_nodes_in_bounds_action_host}`.
   - Crate-internal retained/test callers now also use explicit module paths instead of the old root
     queue aliases, completing the in-tree cleanup for this transport seam.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on

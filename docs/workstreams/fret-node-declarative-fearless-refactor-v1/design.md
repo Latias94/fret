@@ -79,8 +79,8 @@ These are no longer part of the recommended public story.
 
 - Root `fret_node::ui::*` queue/helper aliases are removed.
 - `NodeGraphViewportHelper::from_controller(...)` is removed.
-- `NodeGraphController::with_edit_queue(...)` / `with_view_queue(...)` are replaced by the explicit
-  advanced trait.
+- Queue-bound controller construction is only available through the explicit
+  `bind_controller_*_transport(...)` advanced helpers.
 - Direct public retained queue-binding methods are demoted to crate-private compatibility seams.
 - Unused direct `NodeGraphCanvas::with_edit_queue(...)` is removed outright.
 
@@ -95,6 +95,8 @@ Use this unless you have a specific retained-only requirement.
 3. Pass the controller into declarative composition.
 4. Route committed edits through controller/store transactions.
 5. Keep app-facing viewport operations on the controller surface.
+6. In declarative button/action hooks, prefer `NodeGraphSurfaceBinding::*_action_host(...)` instead
+   of teaching raw queue ownership.
 
 ### Recipe B - compatibility retained shell
 

@@ -248,6 +248,9 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
 - diagnostics-only paint-only graph hotkeys now also build/commit transactions instead of teaching
   direct `Graph` mutation,
 - it can sync external graph/view models from store after commits,
+- `NodeGraphSurfaceBinding` now also exposes object-safe viewport entry points for declarative
+  action hooks (`set_viewport_action_host`, `fit_view_nodes_in_bounds_action_host`) so first-party
+  controls do not need to teach raw view queues,
 - retained rename / portal / blackboard / compatibility glue now also prefers controller-owned
   transaction submission when a controller/store exists,
 - the retained legacy demo now routes its canvas / rename overlay / blackboard / portal / minimap
@@ -268,7 +271,9 @@ Queue-first APIs such as `NodeGraphEditQueue`, `NodeGraphViewQueue`, and
 app-facing integration surface. `NodeGraphViewportHelper` is now bounded to the advanced
 queue-model seam only, so app-facing composition should call
 `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*,`
-`fit_view_nodes_in_bounds*}` directly.
+`fit_view_nodes_in_bounds*}` directly, while declarative action hooks should prefer
+`NodeGraphSurfaceBinding::{set_viewport_action_host, fit_view_nodes_in_bounds_action_host}` over
+owning raw transport queues.
 
 In the landed shape, `NodeGraphViewportHelper::new(view_state, view_queue)` remains the explicit
 transport-first constructor for retained-only integrations that still own the raw queue/models
@@ -581,7 +586,6 @@ Canonical runnable targets:
 | layering | `python tools/check_layering.py` | catches accidental boundary drift while the surface is still moving |
 
 The TODO tracker defines the next gate additions still required for full transaction-safe declarative parity.
-
 
 
 

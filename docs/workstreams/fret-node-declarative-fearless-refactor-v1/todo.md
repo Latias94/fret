@@ -180,7 +180,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - [x] Add one short README/workstream note that queue APIs are advanced retained transport seams, not
         the default app-facing integration surface.
   - [x] Migrate retained-only examples / docs that still import queue types from root `fret_node::ui::*`
-        to `fret_node::ui::advanced::*` (`node_graph_domain_demo`, workflow gallery snippet).
+        to `fret_node::ui::advanced::*` (`node_graph_domain_demo`).
+  - [x] Stop teaching raw view queues in the workflow gallery snippet; use
+        `NodeGraphSurfaceBinding::*_action_host(...)` instead.
   - [x] Clear in-tree uses of root queue/helper aliases (apps, gallery snippet, crate-internal retained/tests).
   - [x] Skip the external compatibility/deprecation phase and remove the old root aliases directly.
 

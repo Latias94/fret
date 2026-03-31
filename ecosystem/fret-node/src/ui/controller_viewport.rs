@@ -5,6 +5,20 @@ impl NodeGraphController {
         self.set_viewport_with_options(host, pan, zoom, NodeGraphSetViewportOptions::default())
     }
 
+    pub fn set_viewport_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        pan: CanvasPoint,
+        zoom: f32,
+    ) -> bool {
+        self.set_viewport_with_options_action_host(
+            host,
+            pan,
+            zoom,
+            NodeGraphSetViewportOptions::default(),
+        )
+    }
+
     pub fn set_viewport_with_options<H: UiHost>(
         &self,
         host: &mut H,
@@ -12,23 +26,17 @@ impl NodeGraphController {
         zoom: f32,
         options: NodeGraphSetViewportOptions,
     ) -> bool {
-        if let Some(queue) = self.view_queue.as_ref() {
-            return queue
-                .update(host, |queue, _cx| {
-                    queue.push_set_viewport_with_options(pan, zoom, options);
-                })
-                .is_ok();
-        }
+        self.set_viewport_in_models(host.models_mut(), pan, zoom, options)
+    }
 
-        let (current_pan, current_zoom) = self.viewport(&*host);
-        let pan = normalize_requested_pan(current_pan, pan);
-        let zoom = normalize_requested_zoom(current_zoom, zoom, options.min_zoom, options.max_zoom);
-
-        self.store
-            .update(host, |store, _cx| {
-                store.set_viewport(pan, zoom);
-            })
-            .is_ok()
+    pub fn set_viewport_with_options_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        pan: CanvasPoint,
+        zoom: f32,
+        options: NodeGraphSetViewportOptions,
+    ) -> bool {
+        self.set_viewport_in_models(host.models_mut(), pan, zoom, options)
     }
 
     pub fn set_center_in_bounds<H: UiHost>(
@@ -46,6 +54,21 @@ impl NodeGraphController {
         )
     }
 
+    pub fn set_center_in_bounds_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        bounds: Rect,
+        center: CanvasPoint,
+    ) -> bool {
+        self.set_center_in_bounds_with_options_action_host(
+            host,
+            bounds,
+            center,
+            None,
+            NodeGraphSetViewportOptions::default(),
+        )
+    }
+
     pub fn set_center_in_bounds_with_options<H: UiHost>(
         &self,
         host: &mut H,
@@ -54,19 +77,34 @@ impl NodeGraphController {
         zoom: Option<f32>,
         options: NodeGraphSetViewportOptions,
     ) -> bool {
-        let (_, current_zoom) = self.viewport(&*host);
-        let zoom = normalize_requested_zoom(
-            current_zoom,
-            zoom.unwrap_or(current_zoom),
-            options.min_zoom,
-            options.max_zoom,
-        );
-        let pan = pan_for_center(bounds, center, zoom);
-        self.set_viewport_with_options(host, pan, zoom, options)
+        self.set_center_in_bounds_in_models(host.models_mut(), bounds, center, zoom, options)
+    }
+
+    pub fn set_center_in_bounds_with_options_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        bounds: Rect,
+        center: CanvasPoint,
+        zoom: Option<f32>,
+        options: NodeGraphSetViewportOptions,
+    ) -> bool {
+        self.set_center_in_bounds_in_models(host.models_mut(), bounds, center, zoom, options)
     }
 
     pub fn fit_view_nodes<H: UiHost>(&self, host: &mut H, nodes: Vec<NodeId>) -> bool {
         self.fit_view_nodes_with_options(host, nodes, NodeGraphFitViewOptions::default())
+    }
+
+    pub fn fit_view_nodes_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        nodes: Vec<NodeId>,
+    ) -> bool {
+        self.fit_view_nodes_with_options_action_host(
+            host,
+            nodes,
+            NodeGraphFitViewOptions::default(),
+        )
     }
 
     pub fn fit_view_nodes_with_options<H: UiHost>(
@@ -75,14 +113,16 @@ impl NodeGraphController {
         nodes: Vec<NodeId>,
         options: NodeGraphFitViewOptions,
     ) -> bool {
-        let Some(queue) = self.view_queue.as_ref() else {
-            return false;
-        };
-        queue
-            .update(host, |queue, _cx| {
-                queue.push_frame_nodes_with_options(nodes, options);
-            })
-            .is_ok()
+        self.fit_view_nodes_in_models(host.models_mut(), nodes, options)
+    }
+
+    pub fn fit_view_nodes_with_options_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        nodes: Vec<NodeId>,
+        options: NodeGraphFitViewOptions,
+    ) -> bool {
+        self.fit_view_nodes_in_models(host.models_mut(), nodes, options)
     }
 
     pub fn fit_view_nodes_in_bounds<H: UiHost>(
@@ -99,6 +139,20 @@ impl NodeGraphController {
         )
     }
 
+    pub fn fit_view_nodes_in_bounds_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        bounds: Rect,
+        nodes: Vec<NodeId>,
+    ) -> bool {
+        self.fit_view_nodes_in_bounds_with_options_action_host(
+            host,
+            bounds,
+            nodes,
+            NodeGraphFitViewOptions::default(),
+        )
+    }
+
     pub fn fit_view_nodes_in_bounds_with_options<H: UiHost>(
         &self,
         host: &mut H,
@@ -106,9 +160,89 @@ impl NodeGraphController {
         nodes: Vec<NodeId>,
         options: NodeGraphFitViewOptions,
     ) -> bool {
-        let target = self
-            .store
-            .read_ref(&*host, |store| {
+        self.fit_view_nodes_in_bounds_in_models(host.models_mut(), bounds, nodes, options)
+    }
+
+    pub fn fit_view_nodes_in_bounds_with_options_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        bounds: Rect,
+        nodes: Vec<NodeId>,
+        options: NodeGraphFitViewOptions,
+    ) -> bool {
+        self.fit_view_nodes_in_bounds_in_models(host.models_mut(), bounds, nodes, options)
+    }
+
+    fn set_viewport_in_models(
+        &self,
+        models: &mut ModelStore,
+        pan: CanvasPoint,
+        zoom: f32,
+        options: NodeGraphSetViewportOptions,
+    ) -> bool {
+        if let Some(queue) = self.view_queue.as_ref() {
+            return models
+                .update(queue, |queue| {
+                    queue.push_set_viewport_with_options(pan, zoom, options);
+                })
+                .is_ok();
+        }
+
+        let (current_pan, current_zoom) = self.viewport_in_models(models);
+        let pan = normalize_requested_pan(current_pan, pan);
+        let zoom = normalize_requested_zoom(current_zoom, zoom, options.min_zoom, options.max_zoom);
+
+        models
+            .update(&self.store, |store| {
+                store.set_viewport(pan, zoom);
+            })
+            .is_ok()
+    }
+
+    fn set_center_in_bounds_in_models(
+        &self,
+        models: &mut ModelStore,
+        bounds: Rect,
+        center: CanvasPoint,
+        zoom: Option<f32>,
+        options: NodeGraphSetViewportOptions,
+    ) -> bool {
+        let (_, current_zoom) = self.viewport_in_models(models);
+        let zoom = normalize_requested_zoom(
+            current_zoom,
+            zoom.unwrap_or(current_zoom),
+            options.min_zoom,
+            options.max_zoom,
+        );
+        let pan = pan_for_center(bounds, center, zoom);
+        self.set_viewport_in_models(models, pan, zoom, options)
+    }
+
+    fn fit_view_nodes_in_models(
+        &self,
+        models: &mut ModelStore,
+        nodes: Vec<NodeId>,
+        options: NodeGraphFitViewOptions,
+    ) -> bool {
+        let Some(queue) = self.view_queue.as_ref() else {
+            return false;
+        };
+        models
+            .update(queue, |queue| {
+                queue.push_frame_nodes_with_options(nodes, options);
+            })
+            .is_ok()
+    }
+
+    fn fit_view_nodes_in_bounds_in_models(
+        &self,
+        models: &mut ModelStore,
+        bounds: Rect,
+        nodes: Vec<NodeId>,
+        options: NodeGraphFitViewOptions,
+    ) -> bool {
+        let target = models
+            .read(&self.store, |store| {
                 let interaction = &store.view_state().interaction;
                 let node_origin = interaction.node_origin.normalized();
                 let padding = normalize_fit_view_padding(
@@ -159,8 +293,8 @@ impl NodeGraphController {
             return false;
         };
 
-        self.set_viewport_with_options(
-            host,
+        self.set_viewport_in_models(
+            models,
             pan,
             zoom,
             NodeGraphSetViewportOptions {
@@ -171,6 +305,16 @@ impl NodeGraphController {
                 ease: options.ease,
             },
         )
+    }
+
+    fn viewport_in_models(&self, models: &ModelStore) -> (CanvasPoint, f32) {
+        models
+            .read(&self.store, |store| {
+                let view = store.view_state();
+                (view.pan, view.zoom)
+            })
+            .ok()
+            .unwrap_or((CanvasPoint::default(), 1.0))
     }
 }
 

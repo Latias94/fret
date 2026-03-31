@@ -50,6 +50,9 @@ mod surface_policy_tests {
     const ADVANCED_RS: &str = include_str!("advanced.rs");
     const COMPAT_RETAINED_RS: &str = include_str!("ui/declarative/compat_retained.rs");
     const UI_ADVANCED_RS: &str = include_str!("ui/advanced.rs");
+    const WORKFLOW_NODE_GRAPH_DEMO_RS: &str = include_str!(
+        "../../../apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs"
+    );
 
     fn public_surface() -> &'static str {
         LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
@@ -90,5 +93,17 @@ mod surface_policy_tests {
         assert!(UI_ADVANCED_RS.contains("pub fn bind_controller_edit_queue_transport("));
         assert!(UI_ADVANCED_RS.contains("pub fn bind_controller_view_queue_transport("));
         assert!(!UI_ADVANCED_RS.contains("pub trait NodeGraphControllerTransportExt"));
+    }
+
+    #[test]
+    fn workflow_gallery_surface_stays_binding_first_for_viewport_controls() {
+        assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphSurfaceBinding::new("));
+        assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("binding.set_viewport_action_host("));
+        assert!(
+            WORKFLOW_NODE_GRAPH_DEMO_RS.contains("binding.fit_view_nodes_in_bounds_action_host(")
+        );
+        assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphViewQueue"));
+        assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("bind_controller_view_queue_transport"));
+        assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("use fret_node::ui::advanced::{"));
     }
 }

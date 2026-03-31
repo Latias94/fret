@@ -13,11 +13,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     use fret_core::Px;
     use fret_icons::IconId;
     use fret_node::io::NodeGraphViewState;
-    use fret_node::runtime::store::NodeGraphStore;
-    use fret_node::ui::advanced::{NodeGraphViewQueue, bind_controller_view_queue_transport};
-    use fret_node::ui::{
-        NodeGraphCanvas, NodeGraphController, NodeGraphEditor, NodeGraphSurfaceBinding,
-    };
+    use fret_node::ui::{NodeGraphCanvas, NodeGraphEditor, NodeGraphSurfaceBinding};
     use fret_node::{
         CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
         PortCapacity, PortDirection, PortId, PortKey, PortKind,
@@ -270,9 +266,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     #[derive(Clone)]
     struct DemoSurfaceState {
         binding: NodeGraphSurfaceBinding,
-        graph: Model<Graph>,
-        view_state: Model<NodeGraphViewState>,
-        view_queue: Model<NodeGraphViewQueue>,
     }
 
     let binding_slot = cx.keyed_slot_id("binding");
@@ -285,27 +278,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let surface = match surface {
         Some(surface) => surface,
         None => {
-            let graph_value = build_demo_graph(GraphId::from_u128(42));
-            let graph = cx.app.models_mut().insert(graph_value.clone());
-            let view_state = cx.app.models_mut().insert(NodeGraphViewState::default());
-            let view_queue = cx.app.models_mut().insert(NodeGraphViewQueue::default());
-            let store = cx.app.models_mut().insert(NodeGraphStore::new(
-                graph_value,
-                NodeGraphViewState::default(),
-            ));
-            let controller = bind_controller_view_queue_transport(
-                NodeGraphController::new(store),
-                view_queue.clone(),
-            );
             let surface = DemoSurfaceState {
-                binding: NodeGraphSurfaceBinding::from_models(
-                    graph.clone(),
-                    view_state.clone(),
-                    controller,
+                binding: NodeGraphSurfaceBinding::new(
+                    cx.app.models_mut(),
+                    build_demo_graph(GraphId::from_u128(42)),
+                    NodeGraphViewState::default(),
                 ),
-                graph,
-                view_state,
-                view_queue,
             };
             cx.state_for(
                 binding_slot,
@@ -321,6 +299,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         }
     };
     let binding = surface.binding.clone();
+    let graph = binding.graph_model();
+    let view_state = binding.view_state_model();
 
     let max_w = LayoutRefinement::default()
         .w_full()
@@ -329,8 +309,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let zoom_in = {
         let bounds = bounds.clone();
-        let view_state = surface.view_state.clone();
-        let view_queue = surface.view_queue.clone();
+        let binding = binding.clone();
+        let view_state = view_state.clone();
         move |host: &mut dyn UiActionHost, action_cx: ActionCx| {
             let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
                 return;
@@ -349,17 +329,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 (z * 1.10).min(4.0)
             };
             let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
-            let _ = host.models_mut().update(&view_queue, |queue| {
-                queue.push_set_viewport(pan, zoom);
-            });
+            let _ = binding.set_viewport_action_host(host, pan, zoom);
             host.request_redraw(action_cx.window);
         }
     };
 
     let zoom_out = {
         let bounds = bounds.clone();
-        let view_state = surface.view_state.clone();
-        let view_queue = surface.view_queue.clone();
+        let binding = binding.clone();
+        let view_state = view_state.clone();
         move |host: &mut dyn UiActionHost, action_cx: ActionCx| {
             let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
                 return;
@@ -378,36 +356,34 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 (z / 1.10).max(0.15)
             };
             let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
-            let _ = host.models_mut().update(&view_queue, |queue| {
-                queue.push_set_viewport(pan, zoom);
-            });
+            let _ = binding.set_viewport_action_host(host, pan, zoom);
             host.request_redraw(action_cx.window);
         }
     };
 
     let fit_view = {
-        let graph = surface.graph.clone();
-        let view_queue = surface.view_queue.clone();
+        let binding = binding.clone();
+        let bounds = bounds.clone();
+        let graph = graph.clone();
         move |host: &mut dyn UiActionHost, action_cx: ActionCx| {
+            let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
+                return;
+            };
             let nodes = host
                 .models_mut()
                 .read(&graph, |graph| {
                     graph.nodes.keys().copied().collect::<Vec<_>>()
                 })
                 .unwrap_or_default();
-            let _ = host.models_mut().update(&view_queue, |queue| {
-                queue.push_frame_nodes(nodes);
-            });
+            let _ = binding.fit_view_nodes_in_bounds_action_host(host, bounds, nodes);
             host.request_redraw(action_cx.window);
         }
     };
 
     let reset_view = {
-        let view_queue = surface.view_queue.clone();
+        let binding = binding.clone();
         move |host: &mut dyn UiActionHost, action_cx: ActionCx| {
-            let _ = host.models_mut().update(&view_queue, |queue| {
-                queue.push_set_viewport(CanvasPoint::default(), 1.0);
-            });
+            let _ = binding.set_viewport_action_host(host, CanvasPoint::default(), 1.0);
             host.request_redraw(action_cx.window);
         }
     };

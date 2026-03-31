@@ -754,6 +754,27 @@ mod tests {
     }
 
     #[test]
+    fn controller_set_viewport_action_host_falls_back_to_store_without_queue() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store);
+
+        assert!(controller.set_viewport_action_host(
+            &mut host,
+            CanvasPoint { x: -12.0, y: 8.0 },
+            1.75,
+        ));
+        assert_eq!(
+            controller.viewport(&host),
+            (CanvasPoint { x: -12.0, y: 8.0 }, 1.75)
+        );
+    }
+
+    #[test]
     fn controller_set_viewport_fallback_clamps_zoom_options() {
         let mut host = TestUiHostImpl::default();
         let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
@@ -854,6 +875,87 @@ mod tests {
             vec![node_a, node_b],
             options.clone(),
         ));
+
+        let expected = compute_fit_view_target(
+            &[
+                FitViewNodeInfo {
+                    pos: CanvasPoint { x: 0.0, y: 0.0 },
+                    size_px: (100.0, 100.0),
+                },
+                FitViewNodeInfo {
+                    pos: CanvasPoint { x: 200.0, y: 0.0 },
+                    size_px: (100.0, 100.0),
+                },
+            ],
+            FitViewComputeOptions {
+                viewport_width_px: 800.0,
+                viewport_height_px: 600.0,
+                node_origin: (0.0, 0.0),
+                padding: options.padding.unwrap_or(0.0),
+                margin_px_fallback: CONTROLLER_FIT_VIEW_MARGIN_PX_FALLBACK,
+                min_zoom: CONTROLLER_FIT_VIEW_MIN_ZOOM,
+                max_zoom: CONTROLLER_FIT_VIEW_MAX_ZOOM,
+            },
+        )
+        .expect("fit-view target");
+        let (pan, zoom) = controller.viewport(&host);
+
+        assert!((pan.x - expected.0.x).abs() <= 1.0e-6);
+        assert!((pan.y - expected.0.y).abs() <= 1.0e-6);
+        assert!((zoom - expected.1).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn controller_fit_view_nodes_in_bounds_action_host_falls_back_to_store_without_queue() {
+        let mut host = TestUiHostImpl::default();
+        let mut graph = Graph::new(GraphId::new());
+        let node_a = NodeId::new();
+        let node_b = NodeId::new();
+        graph.nodes.insert(
+            node_a,
+            test_node_with_size(
+                CanvasPoint { x: 0.0, y: 0.0 },
+                Some(CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                }),
+                Vec::new(),
+            ),
+        );
+        graph.nodes.insert(
+            node_b,
+            test_node_with_size(
+                CanvasPoint { x: 200.0, y: 0.0 },
+                Some(CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                }),
+                Vec::new(),
+            ),
+        );
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph, NodeGraphViewState::default()));
+        let controller = NodeGraphController::new(store);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let options = NodeGraphFitViewOptions {
+            min_zoom: Some(CONTROLLER_FIT_VIEW_MIN_ZOOM),
+            max_zoom: Some(CONTROLLER_FIT_VIEW_MAX_ZOOM),
+            padding: Some(0.0),
+            ..NodeGraphFitViewOptions::default()
+        };
+
+        assert!(
+            controller.fit_view_nodes_in_bounds_with_options_action_host(
+                &mut host,
+                bounds,
+                vec![node_a, node_b],
+                options.clone(),
+            )
+        );
 
         let expected = compute_fit_view_target(
             &[

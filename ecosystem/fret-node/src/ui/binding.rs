@@ -1,3 +1,4 @@
+use fret_core::Rect;
 use fret_runtime::{Model, ModelStore};
 use fret_ui::action::UiActionHost;
 use fret_ui::{ElementContext, Invalidation, UiHost};
@@ -174,12 +175,52 @@ impl NodeGraphSurfaceBinding {
 
     /// Applies a viewport change through the bound controller.
     pub fn set_viewport<H: UiHost>(&self, host: &mut H, pan: CanvasPoint, zoom: f32) -> bool {
-        self.controller.set_viewport(host, pan, zoom)
+        let applied = self.controller.set_viewport(host, pan, zoom);
+        self.sync_view_state_after_viewport_update(host, applied)
+    }
+
+    /// Applies a viewport change from an object-safe action hook.
+    pub fn set_viewport_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        pan: CanvasPoint,
+        zoom: f32,
+    ) -> bool {
+        let applied = self.controller.set_viewport_action_host(host, pan, zoom);
+        self.sync_view_state_after_viewport_update_action_host(host, applied)
     }
 
     /// Fits the viewport to the given node ids through the bound controller.
     pub fn fit_view_nodes<H: UiHost>(&self, host: &mut H, nodes: Vec<NodeId>) -> bool {
-        self.controller.fit_view_nodes(host, nodes)
+        let applied = self.controller.fit_view_nodes(host, nodes);
+        self.sync_view_state_after_viewport_update(host, applied)
+    }
+
+    /// Fits the viewport to the given nodes inside explicit bounds.
+    pub fn fit_view_nodes_in_bounds<H: UiHost>(
+        &self,
+        host: &mut H,
+        bounds: Rect,
+        nodes: Vec<NodeId>,
+    ) -> bool {
+        let applied = self
+            .controller
+            .fit_view_nodes_in_bounds(host, bounds, nodes);
+        self.sync_view_state_after_viewport_update(host, applied)
+    }
+
+    /// Fits the viewport to the given nodes inside explicit bounds from an object-safe action
+    /// hook.
+    pub fn fit_view_nodes_in_bounds_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        bounds: Rect,
+        nodes: Vec<NodeId>,
+    ) -> bool {
+        let applied = self
+            .controller
+            .fit_view_nodes_in_bounds_action_host(host, bounds, nodes);
+        self.sync_view_state_after_viewport_update_action_host(host, applied)
     }
 
     /// Returns the outgoing neighbor node ids for the given node.
@@ -241,6 +282,32 @@ impl NodeGraphSurfaceBinding {
     ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
         self.controller
             .redo_and_sync_models(host, &self.graph, &self.view_state)
+    }
+
+    fn sync_view_state_after_viewport_update<H: UiHost>(
+        &self,
+        host: &mut H,
+        applied: bool,
+    ) -> bool {
+        if applied && self.controller.transport_view_queue().is_none() {
+            let _ = self
+                .controller
+                .sync_view_state_model_from_store(host, &self.view_state);
+        }
+        applied
+    }
+
+    fn sync_view_state_after_viewport_update_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        applied: bool,
+    ) -> bool {
+        if applied && self.controller.transport_view_queue().is_none() {
+            let _ = self
+                .controller
+                .sync_view_state_model_from_store_action_host(host, &self.view_state);
+        }
+        applied
     }
 }
 
