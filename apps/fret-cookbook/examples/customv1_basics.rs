@@ -1,3 +1,4 @@
+use fret::component::prelude::{ColorRef, IntoUiElement, Radius, Space, Theme, UiExt, ui};
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
 use fret_core::{AppWindowId, Color, EffectId, Px, SemanticsRole};
@@ -134,6 +135,7 @@ fn preview_content(
     .w_full()
     .h_full()
 }
+
 impl View for CustomV1BasicsView {
     fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self

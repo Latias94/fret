@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
+use fret::component::prelude::*;
 use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandId, CommandMeta, Effect, WindowRequest};
 use fret_core::{AppWindowId, Color, Px};
 use fret_render::WgpuAdapterSelectionSnapshot;
 use fret_runtime::{
-    PlatformCapabilities, RunnerWindowStyleDiagnosticsStore, WindowBackgroundMaterialRequest,
-    WindowDecorationsRequest, WindowStyleRequest,
+    Model, PlatformCapabilities, RunnerWindowStyleDiagnosticsStore,
+    WindowBackgroundMaterialRequest, WindowDecorationsRequest, WindowStyleRequest,
 };
 
 const CMD_TO_NONE: &str = "cookbook.utility_window_materials.to_none.v1";
@@ -116,7 +117,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
     let status = cx
         .app
         .models()
-        .read(&st.status, |v| v.clone())
+        .read(&st.status, |v: &Arc<str>| Arc::clone(v))
         .unwrap_or_else(|_| Arc::from("Idle"));
 
     let caps = cx.app.global::<PlatformCapabilities>().cloned();
