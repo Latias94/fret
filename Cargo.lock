@@ -1794,7 +1794,6 @@ dependencies = [
  "fret-ui-kit",
  "fret-ui-material3",
  "fret-ui-shadcn",
- "fret-workspace",
  "slotmap",
  "thiserror 2.0.18",
  "time",

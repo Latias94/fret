@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
-publish = false
+description = "Thin UI adoption layer for fret-router with router stores, links, and outlets."
 
 [features]
 default = []

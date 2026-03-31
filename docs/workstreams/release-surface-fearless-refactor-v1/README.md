@@ -1,0 +1,37 @@
+# Release Surface Fearless Refactor v1
+
+Goal: make the publishable Fret surface boring, bounded, and mechanically releasable before the
+first public release.
+
+This workstream focuses on:
+
+- the smallest user-facing crate set we actually want to teach,
+- the crates.io publish closure behind those entry points,
+- removing `publish = false` dependencies from publishable crates,
+- shrinking obviously misplaced facade surface area before release.
+
+Non-goals:
+
+- redesigning runtime contracts or component behavior,
+- making every in-tree ecosystem crate release-ready in one pass,
+- preserving pre-release facade shortcuts just because they already exist.
+
+## Current stance
+
+- Default app authors should still learn `fret`.
+- Advanced/manual assembly should still center on `fret-framework` + `fret-bootstrap`.
+- Component/policy authors should still center on `fret-ui-kit` and `fret-ui-shadcn`.
+- Tooling stays tooling: `fretboard` and `fret-diag` are not part of the minimal library release.
+
+## First landed slice
+
+- `fret` no longer carries the editor-only `workspace_shell` module on its public root surface.
+- `fret` no longer directly depends on `fret-workspace`.
+- `fret-router-ui` is promoted from `publish = false` to a publishable thin adoption crate so the
+  optional `fret/router` lane no longer blocks `fret` release packaging.
+
+## Documents
+
+- Design: [docs/workstreams/release-surface-fearless-refactor-v1/DESIGN.md](./DESIGN.md)
+- TODO: [docs/workstreams/release-surface-fearless-refactor-v1/TODO.md](./TODO.md)
+- Milestones: [docs/workstreams/release-surface-fearless-refactor-v1/MILESTONES.md](./MILESTONES.md)

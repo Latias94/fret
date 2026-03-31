@@ -276,12 +276,9 @@ pub(crate) enum AssetMount {
 pub mod actions;
 mod view;
 pub mod workspace_menu;
-pub mod workspace_shell;
 
 /// Explicit app-integration contracts for reusable ecosystem bundles.
 pub mod integration;
-
-mod pending_shortcut_overlay;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 mod app_entry;
@@ -3461,14 +3458,14 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn root_surface_omits_workspace_shell_shortcuts() {
+    fn root_surface_omits_workspace_shell_from_the_fret_facade() {
         let root_header = root_surface_header_source();
         let public_surface = crate_public_surface_source();
 
         assert!(!root_header.contains(
             "pub use workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu};"
         ));
-        assert!(public_surface.contains("pub mod workspace_shell;"));
+        assert!(!public_surface.contains("pub mod workspace_shell;"));
         assert!(!app_prelude_exports_symbol("workspace_shell_model"));
         assert!(!app_prelude_exports_symbol(
             "workspace_shell_model_default_menu"
@@ -3503,7 +3500,6 @@ mod authoring_surface_policy_tests {
             "semantics",
             "style",
             "workspace_menu",
-            "workspace_shell",
         ]
         .into_iter()
         .map(str::to_owned)

@@ -21,6 +21,8 @@ repo's canonical example host.
   `apps/fret-ui-gallery`, and heavier platform/app demos in their owning app crates.
 
 This keeps the facade teachable while leaving example/tooling ownership outside the crate.
+Editor/workspace-shell composition stays on owning crates such as `fret-workspace` instead of
+growing the default `fret` facade into an editor-specific shell surface.
 
 For repository overview / architecture docs, see the monorepo README:
 https://github.com/Latias94/fret
