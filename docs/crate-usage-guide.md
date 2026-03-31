@@ -186,9 +186,7 @@ plus
 and keep `packaged_entries(...)`, `packaged_bundle_entries(...)`, or
 `packaged_embedded_entries(...)` for packaged/web/mobile-friendly bytes. Generated asset modules
 remain the packaged lane because they already expose `ENTRIES`, `bundle_id()`, `Bundle`,
-`install(app)`, and `mount(builder)`. Keep `FretApp::asset_dir(...)` /
-`UiAppBuilder::with_asset_dir(...)` as the lower-level native/package-dev convenience lane when
-you only need one lane or intentionally custom layering.
+`install(app)`, and `mount(builder)`.
 When you are on `fret-bootstrap` directly instead of `fret`, use the same startup contract from
 `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
 `BootstrapBuilder::with_asset_startup(...)`; keep file-backed native/package-dev inputs on
@@ -211,15 +209,11 @@ Use `fret::assets::register_file_manifest(...)` when tooling already emits an ex
 artifact that should be reviewed, versioned, or packaged directly.
 For a first-party manifest artifact command, use
 `fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-app`.
-If you are already on the `fret` builder path, prefer `FretApp::asset_dir(...)` /
-`UiAppBuilder::with_asset_dir(...)` for one-off convenience, or
-`FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` when you already have a
-manifest file, so validation fails early during startup configuration instead of being buried in
-app-local setup glue. When startup needs one named contract for both development and packaged
-builds, prefer `FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)` with
-`AssetStartupPlan` + `AssetStartupMode`. On the builder path, asset registrations preserve call
-order, so later registrations can intentionally override earlier ones for the same logical
-locator.
+If you are already on the `fret` builder path, keep both development and packaged startup on
+`FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)` with `AssetStartupPlan` +
+`AssetStartupMode`, so validation fails early during startup configuration instead of being buried
+in app-local setup glue. On the builder path, asset registrations preserve call order, so later
+registrations can intentionally override earlier ones for the same logical locator.
 For package-owned or generated compile-time bytes, the same ordered builder surface now includes
 `FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` and
 `UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}`.
@@ -535,10 +529,10 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   `fret`'s `ui-assets` feature when you want the default image/SVG caches driven from the event pipeline.
   App-owned resources should normally live under `AssetBundleId::app(...)`; ecosystem/package-owned
   shipped resources should normally live under `AssetBundleId::package(...)`.
-  On native/package-dev lanes, prefer `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)`
-  for the convenience lane or `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)`
-  for explicit manifest artifacts before dropping to `fret::assets::register_file_bundle_dir(...)`
-  or `fret::assets::register_file_manifest(...)`.
+  On native/package-dev lanes, keep the builder path on `FretApp::asset_startup(...)` /
+  `UiAppBuilder::with_asset_startup(...)` with
+  `AssetStartupPlan::{development_dir(...), development_manifest(...)}` before dropping to
+  `fret::assets::register_file_bundle_dir(...)` or `fret::assets::register_file_manifest(...)`.
   For compile-time owned bytes, prefer generated modules that expose `mount(builder)` or the
   builder-path helpers `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)`
   before falling back to app-local setup glue.

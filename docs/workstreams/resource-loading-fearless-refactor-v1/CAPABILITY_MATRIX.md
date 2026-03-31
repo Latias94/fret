@@ -160,11 +160,10 @@ escape hatches.
     `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
     `BootstrapBuilder::with_asset_startup(...)`.
 - Native/package-dev convenience:
-  - `FretApp::asset_dir(...)`,
-  - `UiAppBuilder::with_asset_dir(...)`,
+  - `FretApp::asset_startup(...)`,
+  - `UiAppBuilder::with_asset_startup(...)`,
+  - `AssetStartupPlan::{development_dir(...), development_manifest(...)}`,
   - `fret::assets::register_file_bundle_dir(...)`,
-  - `FretApp::asset_manifest(...)`,
-  - `UiAppBuilder::with_asset_manifest(...)`,
   - `fret::assets::register_file_manifest(...)`.
 - Escape hatches:
   - direct file-path UI helpers are for native/dev compatibility only,

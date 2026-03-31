@@ -3,8 +3,6 @@
 //! This module provides an ergonomic, desktop-first entry surface (ecosystem-level) while
 //! preserving the golden-path driver's hotpatch-friendly posture (function-pointer hooks).
 
-use std::path::PathBuf;
-
 use crate::{
     AssetMount, Defaults, Result, UiAppBuilder, UiAppDriver,
     assets::{AssetBundleId, StaticAssetEntry},
@@ -82,35 +80,6 @@ impl FretApp {
         self
     }
 
-    /// Register a native/package-dev asset manifest on the default app builder path.
-    ///
-    /// This keeps logical bundle keys on the builder surface instead of teaching ad-hoc runtime
-    /// resolver registration inside app setup or widget code. Asset registrations preserve the
-    /// builder call order, so later calls can intentionally override earlier ones for the same
-    /// logical locator.
-    pub fn asset_manifest(mut self, manifest_path: impl Into<PathBuf>) -> Self {
-        self.asset_mounts.push(AssetMount::Manifest {
-            path: manifest_path.into(),
-        });
-        self
-    }
-
-    /// Register a native/package-dev asset directory under the default app bundle id.
-    ///
-    /// This convenience lane scans `dir` eagerly during builder assembly and exposes the files as
-    /// logical bundle assets under `AssetBundleId::app(root_name)`. Prefer
-    /// [`asset_manifest`](Self::asset_manifest) when tooling already emits an explicit manifest
-    /// artifact that should be reviewed or packaged directly. Asset registrations preserve the
-    /// builder call order, so later calls can intentionally override earlier ones for the same
-    /// logical locator.
-    pub fn asset_dir(mut self, dir: impl Into<PathBuf>) -> Self {
-        self.asset_mounts.push(AssetMount::Dir {
-            bundle: AssetBundleId::app(self.root_name),
-            dir: dir.into(),
-        });
-        self
-    }
-
     /// Register compile-time/static app bundle entries on the builder path.
     ///
     /// This is the packaged/web/mobile-friendly lane for assets already owned by the Rust build
@@ -160,9 +129,9 @@ impl FretApp {
     /// Apply one explicit development-vs-packaged startup plan on the default app builder path.
     ///
     /// Use this when app/bootstrap code wants one named asset-publication decision instead of
-    /// manually branching between `asset_dir(...)`, `asset_manifest(...)`, and packaged static
-    /// entry registration at the call site. The lower-level methods remain available for custom
-    /// ordered layering beyond this higher-level split.
+    /// manually branching between file-backed development inputs and packaged static entries at the
+    /// call site. Combine it with `asset_entries(...)`, `bundle_asset_entries(...)`, and
+    /// `embedded_asset_entries(...)` when startup intentionally layers additional static overrides.
     pub fn asset_startup(
         mut self,
         mode: crate::assets::AssetStartupMode,
@@ -340,44 +309,49 @@ mod tests {
     #[test]
     fn asset_mounts_preserve_builder_call_order() {
         let app = FretApp::new("demo-app")
-            .asset_dir("assets/dev")
             .asset_entries([StaticAssetEntry::new(
                 "icons/search.svg",
                 AssetRevision(1),
                 br#"<svg></svg>"#,
             )])
-            .asset_manifest("assets.manifest.json")
-            .asset_dir("assets/override");
+            .asset_startup(
+                crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new().development_dir("assets/dev"),
+            )
+            .embedded_asset_entries(
+                AssetBundleId::package("demo-kit"),
+                [StaticAssetEntry::new(
+                    "images/logo.png",
+                    AssetRevision(2),
+                    b"demo-kit",
+                )],
+            );
 
-        assert_eq!(app.asset_mounts.len(), 4);
+        assert_eq!(app.asset_mounts.len(), 3);
         match &app.asset_mounts[0] {
-            AssetMount::Dir { bundle, dir } => {
-                assert_eq!(bundle, &AssetBundleId::app("demo-app"));
-                assert_eq!(dir, &PathBuf::from("assets/dev"));
-            }
-            other => panic!("expected dir mount first, got {other:?}"),
-        }
-        match &app.asset_mounts[1] {
             AssetMount::BundleEntries { bundle, entries } => {
                 assert_eq!(bundle, &AssetBundleId::app("demo-app"));
                 assert_eq!(entries.len(), 1);
                 assert_eq!(entries[0].key, "icons/search.svg");
                 assert_eq!(entries[0].revision, AssetRevision(1));
             }
-            other => panic!("expected bundle entries mount second, got {other:?}"),
+            other => panic!("expected bundle entries mount first, got {other:?}"),
+        }
+        match &app.asset_mounts[1] {
+            AssetMount::Startup { bundle, mode, .. } => {
+                assert_eq!(bundle, &AssetBundleId::app("demo-app"));
+                assert_eq!(mode, &crate::assets::AssetStartupMode::Development);
+            }
+            other => panic!("expected startup mount second, got {other:?}"),
         }
         match &app.asset_mounts[2] {
-            AssetMount::Manifest { path } => {
-                assert_eq!(path, &PathBuf::from("assets.manifest.json"));
+            AssetMount::EmbeddedEntries { owner, entries } => {
+                assert_eq!(owner, &AssetBundleId::package("demo-kit"));
+                assert_eq!(entries.len(), 1);
+                assert_eq!(entries[0].key, "images/logo.png");
+                assert_eq!(entries[0].revision, AssetRevision(2));
             }
-            other => panic!("expected manifest mount third, got {other:?}"),
-        }
-        match &app.asset_mounts[3] {
-            AssetMount::Dir { bundle, dir } => {
-                assert_eq!(bundle, &AssetBundleId::app("demo-app"));
-                assert_eq!(dir, &PathBuf::from("assets/override"));
-            }
-            other => panic!("expected dir mount fourth, got {other:?}"),
+            other => panic!("expected embedded entries mount third, got {other:?}"),
         }
     }
 
@@ -439,7 +413,10 @@ mod tests {
     #[test]
     fn asset_reload_policy_mount_is_recorded_explicitly() {
         let app = FretApp::new("demo-app")
-            .asset_dir("assets/dev")
+            .asset_startup(
+                crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new().development_dir("assets/dev"),
+            )
             .asset_reload_policy(crate::assets::AssetReloadPolicy::development_default());
 
         assert_eq!(app.asset_mounts.len(), 2);

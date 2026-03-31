@@ -162,12 +162,9 @@ inputs on `development_dir(...)` / `development_manifest(...)`, and keep package
 bytes on `packaged_entries(...)`, `packaged_bundle_entries(...)`, or
 `packaged_embedded_entries(...)`. Generated modules still fit this packaged lane because they
 already expose `ENTRIES`, `bundle_id()`, `Bundle`, `install(app)`, and `mount(builder)`. Keep
-`FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` as the lower-level
-native/package-dev convenience lane when you only need one lane or custom ordering.
-On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is the convenience
-lane that scans one directory into one logical bundle without pushing repo-relative paths into
-widget code. `fret::assets::register_file_manifest(...)` is the explicit manifest-artifact lane
-when tooling already emits a reviewable/packageable mapping.
+`fret::assets::register_file_bundle_dir(...)` / `fret::assets::register_file_manifest(...)` as
+the lower-level host-path escape hatches when app/bootstrap code intentionally installs file-backed
+resolver layers directly instead of staying on the builder startup contract.
 When native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
 logical bundle locators and let
 `fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
@@ -179,10 +176,10 @@ loading. Keep `resolve_image_source_from_host_locator(...)` /
 integration truly needs the raw external reference itself.
 On the app-facing builder path, prefer `FretApp::asset_startup(...)` /
 `UiAppBuilder::with_asset_startup(...)` when startup needs one explicit
-`AssetStartupMode` switch between development and packaged lanes. Keep
-`FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` and
-`FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` as the lower-level
-ordered builder seams when you intentionally need custom layering. On the host path,
+`AssetStartupMode` switch between development and packaged lanes, and layer additional packaged
+overrides with `FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` or
+`UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}` when needed. On the host
+path,
 `set_primary_resolver(...)`,
 `register_resolver(...)`, `register_bundle_entries(...)`, and `register_embedded_entries(...)`
 participate in one ordered resolver stack, so later registrations override earlier ones for the
@@ -248,10 +245,9 @@ following seams first-class:
 
 - `FretApp::{setup(...), view::<V>(), view_with_hooks::<V>()}`
 - `FretApp::asset_startup(...)` plus `fret::assets::{AssetStartupPlan, AssetStartupMode}`
-- `FretApp::asset_dir(...)` for native/package-dev generated bundle manifests
-- `FretApp::asset_manifest(...)` for native/package-dev logical bundle manifests
 - `FretApp::{asset_entries(...), bundle_asset_entries(...), embedded_asset_entries(...)}`
-- `UiAppBuilder::{configure(...), setup(...), setup_with(...), with_asset_startup(...), with_asset_dir(...), with_asset_manifest(...), with_bundle_asset_entries(...), with_embedded_asset_entries(...)}`
+- `UiAppBuilder::{configure(...), setup(...), setup_with(...), with_asset_startup(...), with_bundle_asset_entries(...), with_embedded_asset_entries(...)}`
+- `fret::assets::{register_file_bundle_dir(...), register_file_manifest(...)}`
 - `fret::advanced::FretAppAdvancedExt::install(...)`
 - `fret::advanced::UiAppBuilderAdvancedExt::{install(...), on_gpu_ready(...), install_custom_effects(...)}`
 - `UiAppDriver::{window_create_spec, window_created, before_close_window}`

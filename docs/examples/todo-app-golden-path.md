@@ -75,7 +75,8 @@ cargo run -p fretboard -- new todo --name my-todo --ui-assets
 ```
 
 That scaffold now also creates an `assets/` directory and mounts it through
-`FretApp::asset_dir("assets")`, so app-owned bundle assets already have a default logical lane.
+a checked-in `src/generated_assets.rs` stub, so app-owned bundle assets already have a default
+logical lane plus a portable packaged path.
 
 Notes:
 
@@ -434,8 +435,9 @@ If you want UI render asset conveniences (not an editor/project asset pipeline):
   the default portable packaged lane; if startup needs one explicit development-vs-packaged
   contract, use `fret::assets::{AssetStartupPlan, AssetStartupMode}` with
   `FretApp::asset_startup(...)`.
-- Keep `FretApp::asset_dir("assets")` only as the lower-level native/package-dev convenience lane
-  when you intentionally want a file-backed development source on the builder path.
+- Keep file-backed development startup on `FretApp::asset_startup(...)` plus
+  `AssetStartupPlan::development_dir(...)` only when you intentionally want a native/package-dev
+  source on the builder path.
 - Optionally call `.ui_assets_budgets(...)` on `FretApp` to override budgets.
 - If you want to call cache APIs directly (stats, keyed helpers), add an explicit dependency on
   `fret-ui-assets` and enable its `app-integration` feature.

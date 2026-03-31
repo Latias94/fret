@@ -201,8 +201,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       surface while preserving fail-early builder semantics,
     - `UiAppBuilder::with_asset_startup(...)` keeps the same policy available on the explicit
       advanced builder lane,
-    - the plan intentionally lowers to the existing ordered builder registrations:
-      `asset_dir(...)`, `asset_manifest(...)`, `with_bundle_asset_entries(...)`, and
+    - the plan intentionally lowers to the existing ordered startup registrations for
+      file-backed development inputs plus `with_bundle_asset_entries(...)` /
       `with_embedded_asset_entries(...)`,
     - `AssetStartupMode::preferred()` now provides one shared app-facing heuristic for
       `native+debug => Development` vs packaged/web/mobile/release => `Packaged`,
@@ -533,16 +533,15 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - the generated `--surface fret` module now exposes a named `Bundle` type that implements
       `fret::integration::InstallIntoApp`, so reusable crates can stay on the `.setup(...)`
       surface without rewriting the generated registration boilerplate
-    - `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` keep the directory-scanning
-      convenience lane on the builder/startup surface
-    - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` keep that manifest
-      lane on the builder/startup surface
+    - `FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)` now keep
+      file-backed `development_dir(...)` / `development_manifest(...)` selection on one named
+      builder/startup contract instead of duplicating facade-specific dir/manifest helpers
     - `FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` now keep static
       bundle/embedded registrations on the same builder/startup surface
     - `UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}` now keep
-      compile-time static asset registration on the same ordered startup surface as manifest/dir
-      mounts
-    - `FretApp` now preserves mixed `asset_dir(...)` / `asset_manifest(...)` call order so later
+      compile-time static asset registration on the same ordered startup surface as
+      `asset_startup(...)`
+    - `FretApp` now preserves mixed `asset_startup(...)` / static-entry call order so later
       builder calls override earlier ones consistently
     - host-level resolver precedence is now unified across
       `set_primary_resolver(...)`, `register_resolver(...)`,
@@ -557,7 +556,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `preferred_startup_mode()` so the scaffold owns native-debug vs packaged startup behavior
     - scaffold READMEs now teach the regeneration command
       `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle ...`
-      instead of teaching `FretApp::asset_dir("assets")` as the default first-contact story
+      instead of teaching dedicated file-backed builder helpers as the default first-contact story
     - cookbook asset basics now teaches the facade lane instead of direct
       `fret-assets` / `fret-runtime` imports
   - Remaining:
@@ -711,7 +710,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - `fretboard -- new {simple-todo,todo} --ui-assets` already starts on generated
       `src/generated_assets.rs` modules and `generated_assets::mount(builder)?` instead of teaching
-      `.asset_dir("assets")` as the default first-contact story.
+      dedicated file-backed builder helpers as the default first-contact story.
     - cookbook examples now cover all three first-party lanes explicitly:
       - app-owned compile-time bundle assets,
       - package-owned reusable bundle assets,
@@ -778,6 +777,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `with_asset_startup(...) + AssetStartupPlan::{development_dir,development_manifest}(...)`
       path instead of duplicating native/package-dev one-off helpers for
       `with_asset_dir(...)` / `with_asset_manifest(...)`.
+    - `ecosystem/fret::FretApp` and `UiAppBuilder` now keep app-facing file-backed startup on that
+      same `asset_startup(...) + AssetStartupPlan::{development_dir,development_manifest}(...)`
+      contract and no longer advertise separate `asset_dir(...)` / `asset_manifest(...)` helpers.
     - first-party usage docs now teach that bootstrap lane as one named startup contract instead of
       advertising duplicate builder helpers.
   - Remaining:

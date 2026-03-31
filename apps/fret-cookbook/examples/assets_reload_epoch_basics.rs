@@ -1,4 +1,11 @@
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::{
+    advanced::{KernelApp, prelude::Effect},
+    app::prelude::*,
+    assets::{AssetBundleId, AssetLocator, AssetRequest, AssetStartupMode, AssetStartupPlan},
+    children::UiElementSinkExt as _,
+    component::prelude::IntoUiElement,
+    style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
+};
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SizeStyle, SvgIconProps};
 use fret_ui_assets::ui::{ImageSourceElementContextExt as _, SvgAssetElementContextExt as _};
 use std::path::PathBuf;
@@ -27,30 +34,24 @@ fn assets_dir_from_manifest_dir() -> PathBuf {
     repo_root_from_manifest_dir().join("assets")
 }
 
-fn demo_app_bundle() -> fret::assets::AssetBundleId {
-    fret::assets::AssetBundleId::app(APP_ID)
+fn demo_app_bundle() -> AssetBundleId {
+    AssetBundleId::app(APP_ID)
 }
 
 struct AssetsReloadEpochBasicsView {
-    window: AppWindowId,
+    window: WindowId,
     applied_bumps: u64,
-    image_request: fret::assets::AssetRequest,
-    svg_request: fret::assets::AssetRequest,
+    image_request: AssetRequest,
+    svg_request: AssetRequest,
 }
 
 impl View for AssetsReloadEpochBasicsView {
-    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: WindowId) -> Self {
         // Optional: configure budgets explicitly so this example is self-contained.
         fret_ui_assets::UiAssets::configure(app, fret_ui_assets::UiAssetsBudgets::default());
 
-        let image_request = fret::assets::AssetRequest::new(fret::assets::AssetLocator::bundle(
-            demo_app_bundle(),
-            IMAGE_KEY,
-        ));
-        let svg_request = fret::assets::AssetRequest::new(fret::assets::AssetLocator::bundle(
-            demo_app_bundle(),
-            SVG_KEY,
-        ));
+        let image_request = AssetRequest::new(AssetLocator::bundle(demo_app_bundle(), IMAGE_KEY));
+        let svg_request = AssetRequest::new(AssetLocator::bundle(demo_app_bundle(), SVG_KEY));
 
         Self {
             window,
@@ -137,7 +138,7 @@ impl View for AssetsReloadEpochBasicsView {
                     ui::children![cx;
                         shadcn::card_title("Assets reload epoch basics"),
                         shadcn::card_description(
-                            "Demonstrates the native/package-dev bundle-dir lane: mount `assets/` with `FretApp::asset_dir(...)`, resolve logical bundle locators into image/SVG sources, and trigger a ViewCache-safe reload by bumping the shared `AssetReloadEpoch`.",
+                            "Demonstrates the native/package-dev development lane: mount `assets/` through `FretApp::asset_startup(...)`, resolve logical bundle locators into image/SVG sources, and trigger a ViewCache-safe reload by bumping the shared `AssetReloadEpoch`.",
                         ),
                     ]
                 }),
@@ -222,7 +223,7 @@ fn render_image_panel(
                 ui::children![cx;
                     shadcn::card_title("Image from logical bundle locator"),
                     shadcn::card_description(
-                        "Loads `textures/test.jpg` from the default app bundle mounted by `FretApp::asset_dir(...)`; the UI helper resolves the logical locator through the shared asset contract and keeps native/package-dev reload ergonomics without app code constructing `ImageSource` directly.",
+                        "Loads `textures/test.jpg` from the default app bundle mounted by `FretApp::asset_startup(...)` on its development lane; the UI helper resolves the logical locator through the shared asset contract and keeps native/package-dev reload ergonomics without app code constructing `ImageSource` directly.",
                     ),
                 ]
             }),
@@ -302,7 +303,7 @@ fn render_svg_panel(
                 ui::children![cx;
                     shadcn::card_title("SVG icon from logical bundle locator"),
                     shadcn::card_description(
-                        "Loads `demo/icon-search.svg` from the default app bundle mounted by `FretApp::asset_dir(...)`; the UI helper resolves the logical locator through the shared asset contract and keeps native/package-dev reload ergonomics without app code managing a separate file-path SVG shim.",
+                        "Loads `demo/icon-search.svg` from the default app bundle mounted by `FretApp::asset_startup(...)` on its development lane; the UI helper resolves the logical locator through the shared asset contract and keeps native/package-dev reload ergonomics without app code managing a separate file-path SVG shim.",
                     ),
                 ]
             }),
@@ -317,7 +318,10 @@ fn main() -> anyhow::Result<()> {
     FretApp::new(APP_ID)
         .window(APP_ID, (960.0, 780.0))
         .config_files(false)
-        .asset_dir(assets_dir_from_manifest_dir())
+        .asset_startup(
+            AssetStartupMode::Development,
+            AssetStartupPlan::new().development_dir(assets_dir_from_manifest_dir()),
+        )
         .setup(fret_cookbook::install_cookbook_defaults)
         .view::<AssetsReloadEpochBasicsView>()?
         .run()

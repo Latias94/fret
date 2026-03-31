@@ -69,15 +69,13 @@
 //! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
 //! - use `fret::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`
 //!   for logical bundle/embedded assets; prefer `AssetBundleId::app(...)` /
-//!   `AssetBundleId::package(...)` over raw global strings; on native/package-dev lanes you can
-//!   mount a scanned bundle directory via `AssetStartupPlan` + `AssetStartupMode` on the high
-//!   lane, or `FretApp::asset_dir(...)`, `UiAppBuilder::with_asset_dir(...)`, and
-//!   `register_file_bundle_dir(...)` on the lower-level native/package-dev lane; use
-//!   `FretApp::asset_manifest(...)`, `UiAppBuilder::with_asset_manifest(...)`, or
-//!   `register_file_manifest(...)` when tooling already emits an explicit manifest artifact; treat
-//!   `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches;
-//!   when native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
-//!   logical bundle locators and let
+//!   `AssetBundleId::package(...)` over raw global strings; keep app-facing startup on
+//!   `AssetStartupPlan` + `AssetStartupMode` through `FretApp::asset_startup(...)` or
+//!   `UiAppBuilder::with_asset_startup(...)`, use `register_file_bundle_dir(...)` /
+//!   `register_file_manifest(...)` when host/bootstrap code intentionally installs file-backed
+//!   resolver layers directly, and treat `AssetLocator::file(...)` / `AssetLocator::url(...)` as
+//!   capability-gated escape hatches; when native/dev-only UI helpers still need file reload
+//!   ergonomics, keep app/widget code on logical bundle locators and let
 //!   `fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
 //!   or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
 //!   consume the resolver's bundle/reference bridge instead of constructing raw file-path sources
@@ -96,9 +94,6 @@
 //!   composition can also use `.setup((install_a, install_b))` while ordinary app code keeps
 //!   passing named installer functions to `.setup(...)` and keeps inline one-off closures or
 //!   runtime-captured config on `UiAppBuilder::setup_with(...)`
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-use std::path::PathBuf;
-
 #[cfg(feature = "desktop")]
 use crate::advanced::KernelApp;
 
@@ -329,13 +324,6 @@ pub mod assets {
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[derive(Debug, Clone)]
 pub(crate) enum AssetMount {
-    Dir {
-        bundle: fret_assets::AssetBundleId,
-        dir: PathBuf,
-    },
-    Manifest {
-        path: PathBuf,
-    },
     BundleEntries {
         bundle: fret_assets::AssetBundleId,
         entries: Vec<fret_assets::StaticAssetEntry>,
@@ -1268,43 +1256,6 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
-    /// Register a native/package-dev asset manifest on the builder path.
-    ///
-    /// This loads the manifest eagerly so failures stay on the build/configure path instead of
-    /// surfacing later during `run()`.
-    pub fn with_asset_manifest(self, manifest_path: impl AsRef<std::path::Path>) -> Result<Self> {
-        let resolver = std::sync::Arc::new(
-            crate::assets::FileAssetManifestResolver::from_manifest_path(manifest_path)
-                .map_err(AssetManifestError::from)?,
-        );
-        Ok(Self {
-            inner: self.inner.init_app(move |app| {
-                crate::assets::register_resolver(app, resolver);
-            }),
-        })
-    }
-
-    /// Scan a native/package-dev directory and mount it as one logical bundle on the builder path.
-    ///
-    /// This eagerly validates the directory so failures stay on the build/configure path instead
-    /// of surfacing later during `run()`. Prefer [`with_asset_manifest`](Self::with_asset_manifest)
-    /// when you want an explicit manifest artifact that tooling can emit, review, or package.
-    pub fn with_asset_dir(
-        self,
-        bundle: impl Into<crate::assets::AssetBundleId>,
-        dir: impl AsRef<std::path::Path>,
-    ) -> Result<Self> {
-        let resolver = std::sync::Arc::new(
-            crate::assets::FileAssetManifestResolver::from_bundle_dir(bundle, dir)
-                .map_err(AssetManifestError::from)?,
-        );
-        Ok(Self {
-            inner: self.inner.init_app(move |app| {
-                crate::assets::register_resolver(app, resolver);
-            }),
-        })
-    }
-
     /// Register static bundle-scoped entries on the builder path.
     ///
     /// This is the packaged/web/mobile-friendly lane for compile-time owned assets such as
@@ -1345,9 +1296,8 @@ impl<S: 'static> UiAppBuilder<S> {
     /// Apply one explicit development-vs-packaged startup plan on the builder path.
     ///
     /// This higher-level surface keeps the current startup decision on one named value while still
-    /// lowering to the same ordered builder registrations as `with_asset_dir(...)`,
-    /// `with_asset_manifest(...)`, `with_bundle_asset_entries(...)`, and
-    /// `with_embedded_asset_entries(...)`.
+    /// composing with the same ordered static-entry registrations as
+    /// `with_bundle_asset_entries(...)` and `with_embedded_asset_entries(...)`.
     pub fn with_asset_startup(
         self,
         app_bundle: impl Into<crate::assets::AssetBundleId>,
@@ -1413,8 +1363,6 @@ fn apply_asset_mount<S: 'static>(
     mount: AssetMount,
 ) -> Result<UiAppBuilder<S>> {
     match mount {
-        AssetMount::Dir { bundle, dir } => builder.with_asset_dir(bundle, dir),
-        AssetMount::Manifest { path } => builder.with_asset_manifest(path),
         AssetMount::BundleEntries { bundle, entries } => {
             Ok(builder.with_bundle_asset_entries(bundle, entries))
         }
@@ -1778,27 +1726,6 @@ mod builder_surface_tests {
     }
 
     #[test]
-    fn fret_app_asset_manifest_installs_on_builder_path() {
-        let manifest_path = write_asset_manifest_fixture();
-
-        let _builder = FretApp::new("builder-view-asset-manifest")
-            .asset_manifest(&manifest_path)
-            .view::<SmokeView>()
-            .expect("asset manifest should load on fret app builder path");
-    }
-
-    #[test]
-    fn ui_app_builder_with_asset_manifest_installs_on_builder_path() {
-        let manifest_path = write_asset_manifest_fixture();
-
-        let _builder = FretApp::new("builder-view-ui-builder-asset-manifest")
-            .view::<SmokeView>()
-            .expect("view should build")
-            .with_asset_manifest(&manifest_path)
-            .expect("asset manifest should load on ui app builder path");
-    }
-
-    #[test]
     fn register_file_bundle_dir_installs_on_host_path() {
         let asset_dir = write_asset_dir_fixture("fret-register-file-bundle-dir");
         let bundle = AssetBundleId::app("builder-register-file-bundle-dir");
@@ -1835,30 +1762,6 @@ mod builder_surface_tests {
             resolved.reference.as_file_path(),
             Some(asset_dir.join("images/logo.png").as_path())
         );
-    }
-
-    #[test]
-    fn fret_app_asset_dir_installs_on_builder_path() {
-        let asset_dir = write_asset_dir_fixture("fret-builder-asset-dir");
-
-        let _builder = FretApp::new("builder-view-asset-dir")
-            .asset_dir(&asset_dir)
-            .view::<SmokeView>()
-            .expect("asset dir should load on fret app builder path");
-    }
-
-    #[test]
-    fn ui_app_builder_with_asset_dir_installs_on_builder_path() {
-        let asset_dir = write_asset_dir_fixture("fret-ui-builder-asset-dir");
-
-        let _builder = FretApp::new("builder-view-ui-builder-asset-dir")
-            .view::<SmokeView>()
-            .expect("view should build")
-            .with_asset_dir(
-                AssetBundleId::app("builder-view-ui-builder-asset-dir"),
-                &asset_dir,
-            )
-            .expect("asset dir should load on ui app builder path");
     }
 
     #[test]
@@ -1919,6 +1822,25 @@ mod builder_surface_tests {
             )
             .view::<SmokeView>()
             .expect("development asset startup plan should load on fret app builder path");
+    }
+
+    #[test]
+    fn fret_app_asset_startup_installs_selected_development_manifest_lane_on_builder_path() {
+        let manifest_path = write_asset_manifest_fixture();
+
+        let _builder = FretApp::new("builder-view-asset-startup-manifest")
+            .asset_startup(
+                crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new()
+                    .development_manifest(&manifest_path)
+                    .packaged_entries([StaticAssetEntry::new(
+                        "images/logo.png",
+                        AssetRevision(1),
+                        b"builder-bytes",
+                    )]),
+            )
+            .view::<SmokeView>()
+            .expect("development manifest startup plan should load on fret app builder path");
     }
 
     #[test]
@@ -1988,50 +1910,61 @@ mod builder_surface_tests {
     }
 
     #[test]
-    fn asset_manifest_builder_methods_fail_early_for_missing_files() {
+    fn asset_startup_builder_methods_fail_early_for_missing_development_manifests() {
         let missing = std::env::temp_dir().join("definitely-missing-fret-assets.manifest.json");
 
-        let fret_app_err = match FretApp::new("builder-view-missing-asset-manifest")
-            .asset_manifest(&missing)
+        let fret_app_err = match FretApp::new("builder-view-missing-asset-startup-manifest")
+            .asset_startup(
+                crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new().development_manifest(&missing),
+            )
             .view::<SmokeView>()
         {
-            Ok(_) => panic!("missing manifest should fail on fret app builder path"),
+            Ok(_) => panic!("missing development manifest should fail on fret app builder path"),
             Err(err) => err,
         };
         assert!(matches!(fret_app_err, Error::AssetManifest(_)));
 
-        let ui_builder_err = match FretApp::new("builder-view-missing-asset-manifest-ui-builder")
-            .view::<SmokeView>()
-            .expect("view should build")
-            .with_asset_manifest(&missing)
-        {
-            Ok(_) => panic!("missing manifest should fail on ui app builder path"),
-            Err(err) => err,
-        };
+        let ui_builder_err =
+            match FretApp::new("builder-view-missing-asset-startup-manifest-ui-builder")
+                .view::<SmokeView>()
+                .expect("view should build")
+                .with_asset_startup(
+                    AssetBundleId::app("builder-view-missing-asset-startup-manifest-ui-builder"),
+                    crate::assets::AssetStartupMode::Development,
+                    crate::assets::AssetStartupPlan::new().development_manifest(&missing),
+                ) {
+                Ok(_) => panic!("missing development manifest should fail on ui app builder path"),
+                Err(err) => err,
+            };
         assert!(matches!(ui_builder_err, Error::AssetManifest(_)));
     }
 
     #[test]
-    fn asset_dir_builder_methods_fail_early_for_missing_directories() {
+    fn asset_startup_builder_methods_fail_early_for_missing_development_directories() {
         let missing = std::env::temp_dir().join("definitely-missing-fret-assets-dir");
 
-        let fret_app_err = match FretApp::new("builder-view-missing-asset-dir")
-            .asset_dir(&missing)
+        let fret_app_err = match FretApp::new("builder-view-missing-asset-startup-dir")
+            .asset_startup(
+                crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new().development_dir(&missing),
+            )
             .view::<SmokeView>()
         {
-            Ok(_) => panic!("missing asset dir should fail on fret app builder path"),
+            Ok(_) => panic!("missing development dir should fail on fret app builder path"),
             Err(err) => err,
         };
         assert!(matches!(fret_app_err, Error::AssetManifest(_)));
 
-        let ui_builder_err = match FretApp::new("builder-view-missing-asset-dir-ui-builder")
+        let ui_builder_err = match FretApp::new("builder-view-missing-asset-startup-dir-ui-builder")
             .view::<SmokeView>()
             .expect("view should build")
-            .with_asset_dir(
-                AssetBundleId::app("builder-view-missing-asset-dir-ui-builder"),
-                &missing,
+            .with_asset_startup(
+                AssetBundleId::app("builder-view-missing-asset-startup-dir-ui-builder"),
+                crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new().development_dir(&missing),
             ) {
-            Ok(_) => panic!("missing asset dir should fail on ui app builder path"),
+            Ok(_) => panic!("missing development dir should fail on ui app builder path"),
             Err(err) => err,
         };
         assert!(matches!(ui_builder_err, Error::AssetManifest(_)));
@@ -2536,12 +2469,14 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`AssetBundleId::app(...)`"));
         assert!(CRATE_README.contains("`AssetBundleId::package(...)`"));
         assert!(CRATE_README.contains("`AssetLocator::bundle(...)`"));
-        assert!(CRATE_README.contains("`FretApp::asset_dir(...)`"));
-        assert!(CRATE_README.contains("`UiAppBuilder::with_asset_dir(...)`"));
+        assert!(CRATE_README.contains("`FretApp::asset_startup(...)`"));
+        assert!(CRATE_README.contains("`UiAppBuilder::with_asset_startup(...)`"));
         assert!(CRATE_README.contains("`fret::assets::register_file_bundle_dir(...)`"));
-        assert!(CRATE_README.contains("`FretApp::asset_manifest(...)`"));
-        assert!(CRATE_README.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(CRATE_README.contains("`fret::assets::register_file_manifest(...)`"));
+        assert!(!CRATE_README.contains("`FretApp::asset_dir(...)`"));
+        assert!(!CRATE_README.contains("`UiAppBuilder::with_asset_dir(...)`"));
+        assert!(!CRATE_README.contains("`FretApp::asset_manifest(...)`"));
+        assert!(!CRATE_README.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(!CRATE_README.contains(".run_view::<"));
         assert!(!CRATE_README.contains(".install_app("));
         assert!(!CRATE_README.contains("`fret_runtime::register_bundle_asset_entries(...)`"));
@@ -2733,12 +2668,14 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`AssetBundleId::package(...)`"));
         assert!(CRATE_README.contains("`AssetLocator::bundle(...)`"));
         assert!(CRATE_README.contains("`register_bundle_entries(...)`"));
-        assert!(CRATE_README.contains("`FretApp::asset_dir(...)`"));
-        assert!(CRATE_README.contains("`UiAppBuilder::with_asset_dir(...)`"));
+        assert!(CRATE_README.contains("`FretApp::asset_startup(...)`"));
+        assert!(CRATE_README.contains("`UiAppBuilder::with_asset_startup(...)`"));
         assert!(CRATE_README.contains("`fret::assets::register_file_bundle_dir(...)`"));
-        assert!(CRATE_README.contains("`FretApp::asset_manifest(...)`"));
-        assert!(CRATE_README.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(CRATE_README.contains("`fret::assets::register_file_manifest(...)`"));
+        assert!(!CRATE_README.contains("`FretApp::asset_dir(...)`"));
+        assert!(!CRATE_README.contains("`UiAppBuilder::with_asset_dir(...)`"));
+        assert!(!CRATE_README.contains("`FretApp::asset_manifest(...)`"));
+        assert!(!CRATE_README.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(CRATE_README.contains(
             "`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`"
         ));
@@ -2757,12 +2694,14 @@ mod authoring_surface_policy_tests {
         assert!(rustdoc.contains("`AssetStartupMode`"));
         assert!(rustdoc.contains("`AssetBundleId::app(...)`"));
         assert!(rustdoc.contains("`AssetBundleId::package(...)`"));
-        assert!(rustdoc.contains("`FretApp::asset_dir(...)`"));
-        assert!(rustdoc.contains("`UiAppBuilder::with_asset_dir(...)`"));
+        assert!(rustdoc.contains("`FretApp::asset_startup(...)`"));
+        assert!(rustdoc.contains("`UiAppBuilder::with_asset_startup(...)`"));
         assert!(rustdoc.contains("`register_file_bundle_dir(...)`"));
-        assert!(rustdoc.contains("`FretApp::asset_manifest(...)`"));
-        assert!(rustdoc.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(rustdoc.contains("`register_file_manifest(...)`"));
+        assert!(!rustdoc.contains("`FretApp::asset_dir(...)`"));
+        assert!(!rustdoc.contains("`UiAppBuilder::with_asset_dir(...)`"));
+        assert!(!rustdoc.contains("`FretApp::asset_manifest(...)`"));
+        assert!(!rustdoc.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(rustdoc.contains("`AssetLocator::file(...)`"));
         assert!(rustdoc.contains("`AssetLocator::url(...)`"));
         assert!(rustdoc.contains(
@@ -2944,12 +2883,14 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`AssetBundleId::package(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetLocator::bundle(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`register_bundle_entries(...)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`FretApp::asset_dir(...)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_asset_dir(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`FretApp::asset_startup(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_asset_startup(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::register_file_bundle_dir(...)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`FretApp::asset_manifest(...)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::register_file_manifest(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`FretApp::asset_dir(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_asset_dir(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`FretApp::asset_manifest(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`BootstrapBuilder::with_asset_startup(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupPlan::development_dir(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupPlan::development_manifest(...)`"));
@@ -4037,14 +3978,6 @@ mod authoring_surface_policy_tests {
             APP_ENTRY_RS.contains("pub fn asset_startup(")
                 || APP_ENTRY_RS.contains("pub fn asset_startup<")
         );
-        assert!(
-            APP_ENTRY_RS.contains("pub fn asset_manifest(")
-                || APP_ENTRY_RS.contains("pub fn asset_manifest<")
-        );
-        assert!(
-            APP_ENTRY_RS.contains("pub fn asset_dir(")
-                || APP_ENTRY_RS.contains("pub fn asset_dir<")
-        );
         assert!(APP_ENTRY_RS.contains("pub fn view<") || APP_ENTRY_RS.contains("pub fn view("));
         assert!(
             APP_ENTRY_RS.contains("pub fn view_with_hooks<")
@@ -4052,6 +3985,10 @@ mod authoring_surface_policy_tests {
         );
         assert!(!APP_ENTRY_RS.contains("pub fn install_app("));
         assert!(!APP_ENTRY_RS.contains("pub fn install("));
+        assert!(!APP_ENTRY_RS.contains("pub fn asset_manifest("));
+        assert!(!APP_ENTRY_RS.contains("pub fn asset_manifest<"));
+        assert!(!APP_ENTRY_RS.contains("pub fn asset_dir("));
+        assert!(!APP_ENTRY_RS.contains("pub fn asset_dir<"));
         assert!(!APP_ENTRY_RS.contains("pub fn register_icon_pack("));
         assert!(!APP_ENTRY_RS.contains("pub fn run_view("));
         assert!(!APP_ENTRY_RS.contains("pub fn run_view_with_hooks("));
@@ -4062,10 +3999,10 @@ mod authoring_surface_policy_tests {
             ui_app_builder.contains("pub fn setup<") || ui_app_builder.contains("pub fn setup(")
         );
         assert!(ui_app_builder.contains("pub fn with_asset_startup("));
-        assert!(ui_app_builder.contains("pub fn with_asset_dir("));
-        assert!(ui_app_builder.contains("pub fn with_asset_manifest("));
         assert!(!ui_app_builder.contains("pub fn init_app("));
         assert!(!ui_app_builder.contains("pub fn install("));
+        assert!(!ui_app_builder.contains("pub fn with_asset_dir("));
+        assert!(!ui_app_builder.contains("pub fn with_asset_manifest("));
         assert!(!ui_app_builder.contains("pub fn register_icon_pack("));
         assert!(!ui_app_builder.contains("pub fn with_lucide_icons("));
         assert!(!ui_app_builder.contains("pub fn install_custom_effects("));

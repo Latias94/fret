@@ -83,14 +83,11 @@ This workstream takes a fearless posture:
     so platform APIs can ask for a real file path without bypassing bundle identity.
   - `fretboard assets manifest write --dir ... --out ... --app-bundle ...` now emits an explicit
     file-backed manifest artifact from a scanned bundle directory,
-  - `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` keep that generated-manifest
-    convenience lane on the startup builder surface,
-  - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` now keep that
-    manifest lane on the startup builder surface instead of app-local setup glue.
   - `fret::assets::{AssetStartupPlan, AssetStartupMode}` plus
     `FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)` now provide one named
-    first-party startup contract for choosing the development lane without re-teaching
-    path-first branching in app code.
+    first-party startup contract for both `development_dir(...)` and
+    `development_manifest(...)` without re-teaching path-first branching or duplicate builder
+    helpers in app code.
   - `fret-launch::assets::{AssetStartupPlan, AssetStartupMode}` plus
     `WinitAppBuilder::{with_asset_manifest, with_asset_dir, with_bundle_asset_entries,
     with_embedded_asset_entries, with_asset_startup}` now make that same contract explicit on the
@@ -133,9 +130,9 @@ This workstream takes a fearless posture:
   - the completed M5 delete/rename scope is tracked explicitly in
     `docs/workstreams/resource-loading-fearless-refactor-v1/M5_DEPRECATION_CLEANUP.md`, including
     the removed shim symbols plus the dev-reload env/file rename.
-  - `FretApp` now preserves asset registration call order across `asset_dir(...)` and
-    `asset_manifest(...)`, so later builder calls override earlier ones consistently with the
-    composable resolver stack.
+  - `FretApp` now preserves asset registration call order across `asset_startup(...)`,
+    `asset_entries(...)`, `bundle_asset_entries(...)`, and `embedded_asset_entries(...)`, so later
+    builder calls override earlier ones consistently with the composable resolver stack.
   - `fretboard new todo --ui-assets` / `fretboard new simple-todo --ui-assets` now scaffold:
     - an `assets/` directory for app-owned files,
     - a checked-in `src/generated_assets.rs` stub for the portable compile-time lane,
@@ -164,7 +161,7 @@ This workstream takes a fearless posture:
   - `FretApp::asset_entries(...)`, `FretApp::bundle_asset_entries(...)`,
     `FretApp::embedded_asset_entries(...)`, `UiAppBuilder::with_bundle_asset_entries(...)`, and
     `UiAppBuilder::with_embedded_asset_entries(...)` now keep compile-time/static registrations on
-    the same ordered builder/startup surface as `asset_dir(...)` and `asset_manifest(...)`.
+    the same ordered builder/startup surface as `asset_startup(...)`.
   - the same startup-plan surface now also selects this packaged lane explicitly through
     `AssetStartupMode::Packaged`, so app/bootstrap code can name both development and packaged
     behavior without re-encoding the low-level builder calls at every startup site.

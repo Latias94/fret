@@ -805,7 +805,6 @@ mod fn_driver_builder_tests {
 
     use super::{AssetStartupMode, AssetStartupPlan, BootstrapBuilder, BootstrapError};
 
-
     struct DriverState;
     struct WindowState;
 
