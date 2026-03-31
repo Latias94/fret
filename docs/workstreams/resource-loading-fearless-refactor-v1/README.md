@@ -96,9 +96,9 @@ This workstream takes a fearless posture:
     with_embedded_asset_entries, with_asset_startup}` now make that same contract explicit on the
     lowest-level native startup surface.
   - `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` now re-export the launch-owned
-    contract, and `BootstrapBuilder::{with_asset_manifest, with_asset_dir,
-    with_bundle_asset_entries, with_embedded_asset_entries, with_asset_startup}` now delegate to
-    `WinitAppBuilder`, so direct bootstrap apps no longer fork ad-hoc resolver setup logic.
+    contract, and `BootstrapBuilder::with_asset_startup(...)` now keeps file-backed startup on the
+    same named development-vs-packaged plan surface while `with_bundle_asset_entries(...)` /
+    `with_embedded_asset_entries(...)` remain the explicit direct packaged-byte builder lane.
   - `fret-runtime` now also exposes one generic invalidation contract for asset-consuming code:
     - `AssetReloadEpoch`,
     - `AssetReloadSupport`,
@@ -108,6 +108,9 @@ This workstream takes a fearless posture:
     - `asset_reload_epoch(...)`,
     - `asset_reload_status(...)`,
     - `bump_asset_reload_epoch(...)`.
+  - there is no separate `fret-ui-assets::reload` shim anymore; first-party code now reads and
+    mutates reload state directly through `fret-runtime` (or the app-facing `fret::assets`
+    re-exports).
   - desktop native startup now also has a first-party development reload automation lane:
     - `fret-launch::assets::AssetReloadPolicy`,
     - `WinitAppBuilder::with_asset_reload_policy(...)`,

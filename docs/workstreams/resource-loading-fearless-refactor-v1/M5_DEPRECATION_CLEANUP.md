@@ -13,8 +13,8 @@ It exists to prevent the last stage of the resource-loading refactor from drifti
 
 | Surface | Current status | Why it still exists | M5 action |
 | --- | --- | --- | --- |
-| `UiAssetsReloadEpoch` in `ecosystem/fret-ui-assets/src/reload.rs` | Removed | UI-specific reload alias no longer matches the shared asset contract | Deleted |
-| `bump_ui_assets_reload_epoch(...)` in `ecosystem/fret-ui-assets/src/reload.rs` | Removed | UI-specific helper no longer matches the shared asset contract | Deleted |
+| historical `UiAssetsReloadEpoch` alias from the deleted `fret-ui-assets::reload` shim | Removed | UI-specific reload alias no longer matches the shared asset contract | Deleted |
+| historical `bump_ui_assets_reload_epoch(...)` alias from the deleted `fret-ui-assets::reload` shim | Removed | UI-specific helper no longer matches the shared asset contract | Deleted |
 | `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH` | Removed | Generic asset-reload env naming is now the only first-party contract | Deleted |
 | `.fret/ui_assets.touch` | Removed as the first-party default | Generic asset-reload trigger naming is now the only first-party contract | Replaced by `.fret/asset_reload.touch` |
 
@@ -33,7 +33,7 @@ Exit check:
 - `rg -n "UiAssetsReloadEpoch|bump_ui_assets_reload_epoch" apps crates ecosystem docs tools`
   returns only:
   - historical workstream notes that intentionally mention the migration, or
-  - zero code references outside the deprecated shim file.
+  - zero code references in first-party code.
 
 ### 2. Dev-reload env var naming
 
@@ -70,7 +70,8 @@ Exit check:
 
 ## Evidence anchors
 
-- `ecosystem/fret-ui-assets/src/reload.rs`
+- `crates/fret-runtime/src/asset_reload.rs`
+- `ecosystem/fret/src/lib.rs`
 - `ecosystem/fret-bootstrap/src/dev_reload.rs`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/README.md`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/TODO.md`

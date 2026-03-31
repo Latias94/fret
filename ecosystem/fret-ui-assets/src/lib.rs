@@ -23,7 +23,6 @@ pub mod image_asset_cache;
 pub mod image_asset_state;
 pub mod image_source;
 pub mod image_upload;
-pub mod reload;
 pub mod svg_asset_cache;
 pub mod svg_asset_state;
 pub mod ui_assets;
@@ -35,7 +34,6 @@ pub use asset_resolver::*;
 pub use image_asset_cache::*;
 pub use image_source::*;
 pub use image_upload::*;
-pub use reload::*;
 pub use svg_asset_cache::*;
 pub use ui_assets::*;
 
@@ -50,7 +48,6 @@ mod surface_policy_tests {
     const APP_RS: &str = include_str!("app.rs");
     const ADVANCED_RS: &str = include_str!("advanced.rs");
     const IMAGE_SOURCE_RS: &str = include_str!("image_source.rs");
-    const RELOAD_RS: &str = include_str!("reload.rs");
     const UI_RS: &str = include_str!("ui.rs");
     const ASSET_RESOLVER_RS: &str = include_str!("asset_resolver.rs");
 
@@ -102,10 +99,11 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn reload_surface_keeps_only_generic_asset_reload_names() {
-        assert!(RELOAD_RS.contains("AssetReloadEpoch"));
-        assert!(RELOAD_RS.contains("bump_asset_reload_epoch"));
-        assert!(!RELOAD_RS.contains("UiAssetsReloadEpoch"));
-        assert!(!RELOAD_RS.contains("bump_ui_assets_reload_epoch"));
+    fn reload_surface_is_not_reexported_from_ui_assets() {
+        let public_surface = public_surface();
+        assert!(!public_surface.contains("pub mod reload;"));
+        assert!(!public_surface.contains("pub use reload::*;"));
+        assert!(!public_surface.contains("AssetReloadEpoch"));
+        assert!(!public_surface.contains("bump_asset_reload_epoch"));
     }
 }

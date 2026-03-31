@@ -194,9 +194,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `fret::assets::{AssetStartupPlan, AssetStartupMode}` now gives the `fret` facade one named
       startup policy object for selecting development vs packaged publication on the builder path,
     - `fret-bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` now re-exports the same
-      launch-owned contract and keeps `BootstrapBuilder::{with_asset_manifest, with_asset_dir,
-      with_bundle_asset_entries, with_embedded_asset_entries, with_asset_startup}` as direct
-      delegation over `WinitAppBuilder`,
+      launch-owned contract and keeps bootstrap startup on `BootstrapBuilder::with_asset_startup(...)`
+      plus `AssetStartupPlan::{development_dir,development_manifest}(...)`, with
+      `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)` reserved for explicit
+      builder-local packaged bytes,
     - `FretApp::asset_startup(...)` lowers that policy onto the default app-facing startup
       surface while preserving fail-early builder semantics,
     - `UiAppBuilder::with_asset_startup(...)` keeps the same policy available on the explicit
@@ -602,9 +603,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - first-party callers now use the generic names instead of the deprecated UI-specific ones:
       - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
       - `ecosystem/fret-bootstrap/src/dev_reload.rs`
-    - the deprecated UI-specific aliases and the legacy dev-reload env/file naming have now been
-      removed from first-party code:
-      - `ecosystem/fret-ui-assets/src/reload.rs`
+    - the dedicated `fret-ui-assets::reload` shim is now deleted, so first-party code only uses
+      the shared runtime/app-facing reload surfaces:
+      - `crates/fret-runtime/src/asset_reload.rs`
+      - `ecosystem/fret/src/lib.rs`
       - `ecosystem/fret-bootstrap/src/dev_reload.rs`
   - Follow-up record:
     - `docs/workstreams/resource-loading-fearless-refactor-v1/M5_DEPRECATION_CLEANUP.md`
