@@ -91,8 +91,8 @@ Tracking format:
       directly where they actually need dev-state hooks
     - `fret/devloop` and `fret/tracing` are kept only as advanced/maintainer aliases with explicit
       comments instead of being taught as part of the primary root story
-    - `fret/material3` and `fret/ui-ai` were removed from the root feature matrix; direct owning
-      crates are now the only recommended and supported surface until a stable `fret` root story
+    - `fret/material3` and `fret/ui-ai` are kept only as discoverability aliases; direct owning
+      crates remain the only recommended and supported surface until a stable `fret` root story
       exists
     - `fret/editor` was removed from the root feature matrix; editor-themed apps now depend on
       `fret-ui-editor` directly and install their own preset replay policy

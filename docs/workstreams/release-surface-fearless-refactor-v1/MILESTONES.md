@@ -71,8 +71,8 @@
   optional integration into its own published bridge.
 - `fret` root no longer teaches maintainer/niche lanes as first-class release surfaces:
   `devloop` and `tracing` now stay documented as advanced aliases, while `material3` and `ui-ai`
-  were removed from the root feature matrix entirely so those ecosystems stay on their owning
-  crates.
+  now stay as discoverability-only aliases and no longer proxy their owning crates into the
+  release closure.
 - `fret` root no longer proxies editor theming replay through an `editor` feature; editor policy
   now stays entirely on `fret-ui-editor`, and first-party examples depend on that crate directly.
 - `fret` root no longer proxies docking through a `docking` feature; first-party examples and the

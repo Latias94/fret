@@ -54,6 +54,8 @@ cookbook-renderer = ["dep:fret-launch"]
 cookbook-table = ["dep:fret-ui-kit"]
 cookbook-date-picker = ["dep:fret-ui-kit"]
 cookbook-image-assets = ["dep:fret-ui-assets"]
+# LocalState-first selector helpers used by selected cookbook examples.
+cookbook-state = ["fret/state-selector"]
 cookbook-query = ["fret/state-query"]
 cookbook-router = ["fret/router"]
 cookbook-undo = ["dep:fret-undo"]
@@ -163,7 +165,11 @@ required-features = ["cookbook-customv1"]
 
 [[example]]
 name = "markdown_and_code_basics"
-required-features = ["cookbook-markdown"]
+required-features = ["cookbook-markdown", "cookbook-state"]
+
+[[example]]
+name = "text_input_basics"
+required-features = ["cookbook-state"]
 
 [[example]]
 name = "canvas_pan_zoom_basics"
@@ -176,6 +182,10 @@ required-features = ["cookbook-chart"]
 [[example]]
 name = "gizmo_basics"
 required-features = ["cookbook-gizmo"]
+
+[[example]]
+name = "virtual_list_basics"
+required-features = ["cookbook-state"]
 
 [lints.rust]
 warnings = "allow"

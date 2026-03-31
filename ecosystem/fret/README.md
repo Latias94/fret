@@ -211,6 +211,10 @@ The same ordered builder surface now also includes compile-time/static entries t
   `fret-bootstrap/tracing` directly for explicit wiring.
 - `devloop`: advanced/maintainer alias for `fret-launch/dev-state`; prefer the owning crate
   directly when you need dev-state hooks.
+- `material3`: discoverability alias only; depend on `fret-ui-material3` directly for Material 3
+  recipes and tokens.
+- `ui-ai`: discoverability alias only; depend on `fret-ui-ai` directly for AI-specific policy
+  surfaces.
 - `ui-assets`: enable UI render-asset caches (images/SVG) and install default budgets.
 - `icons`: install the default built-in icon pack (Lucide).
 - `preload-icon-svgs`: pre-register SVG icons on GPU ready.
@@ -218,8 +222,9 @@ The same ordered builder surface now also includes compile-time/static entries t
   default shadcn overlay bridge.
 
 Design-system- or domain-specific ecosystems that do not form a stable `fret` root authoring
-story should stay as direct crate dependencies instead of root feature proxies. Today that
-includes `fret-ui-material3` and `fret-ui-ai`.
+story should stay as direct crate dependencies instead of root feature proxies. The root
+`material3` / `ui-ai` feature names are retained only as discoverability aliases and do not pull
+those crates into the `fret` publish closure.
 
 ## Web / wasm
 

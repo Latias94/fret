@@ -142,6 +142,20 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("cx.on_action_notify_"));
     }
 
+    fn assert_uses_app_surface_with_explicit_advanced_runtime_seams(src: &str) {
+        assert!(src.contains("app::prelude::*"));
+        assert!(src.contains("advanced::{KernelApp, prelude::Effect}"));
+        assert!(src.contains("fn init(app: &mut KernelApp, window: WindowId) -> Self"));
+        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
+        assert!(!src.contains("advanced::prelude::*"));
+        assert!(!src.contains("use fret::prelude::*;"));
+        assert!(!src.contains("AppWindowId"));
+        assert!(!src.contains("AppUi<'_, '_, KernelApp>"));
+        assert!(!src.contains("ViewCx<'_, '_, KernelApp>"));
+        assert!(!src.contains("cx.use_local"));
+        assert!(!src.contains("cx.on_action_notify_"));
+    }
+
     fn assert_advanced_view_runtime_example_uses_app_ui_aliases(src: &str) {
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(
@@ -658,7 +672,6 @@ mod authoring_surface_policy_tests {
         assert_uses_advanced_surface(EFFECTS_LAYER_EXAMPLE);
         assert_uses_advanced_surface(DROP_SHADOW_EXAMPLE);
         assert_uses_advanced_surface(ICONS_AND_ASSETS_EXAMPLE);
-        assert_uses_advanced_surface(ASSETS_RELOAD_EPOCH_EXAMPLE);
         assert_uses_advanced_surface(CANVAS_PAN_ZOOM_EXAMPLE);
         assert_uses_advanced_surface(CHART_INTERACTIONS_EXAMPLE);
         assert_uses_advanced_surface(CUSTOM_V1_EXAMPLE);
@@ -667,6 +680,7 @@ mod authoring_surface_policy_tests {
         assert_uses_advanced_surface(EXTERNAL_TEXTURE_IMPORT_EXAMPLE);
         assert_uses_advanced_surface(GIZMO_EXAMPLE);
         assert_uses_advanced_surface(UTILITY_WINDOW_MATERIALS_EXAMPLE);
+        assert_uses_app_surface_with_explicit_advanced_runtime_seams(ASSETS_RELOAD_EPOCH_EXAMPLE);
 
         assert!(DRAG_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
         assert!(DRAG_EXAMPLE.contains("use fret::component::prelude::*;"));
@@ -751,10 +765,9 @@ mod authoring_surface_policy_tests {
             APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("without native-only file path assumptions.")
         );
         assert!(!APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("ImageSource::from_file_path"));
-        assert!(
-            ASSETS_RELOAD_EPOCH_EXAMPLE
-                .contains("use fret::{FretApp, advanced::prelude::*, shadcn};")
-        );
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("advanced::{KernelApp, prelude::Effect}"));
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("app::prelude::*"));
+        assert!(!ASSETS_RELOAD_EPOCH_EXAMPLE.contains("advanced::prelude::*"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret::assets::bump_asset_reload_epoch"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret::assets::asset_reload_epoch(&*cx.app)"));
         assert!(
@@ -1253,5 +1266,24 @@ mod authoring_surface_policy_tests {
         assert!(
             GOLDEN_PATH_DOC.contains("cx.actions().local(&draft).set::<act::Add>(String::new())")
         );
+    }
+
+    #[test]
+    fn cookbook_examples_follow_surface_contracts() {
+        migrated_basics_examples_use_the_new_app_surface();
+        advanced_examples_use_the_explicit_advanced_surface();
+        advanced_view_examples_prefer_app_ui_and_ui_aliases();
+        advanced_helper_contexts_prefer_uicx_aliases();
+        common_shadcn_control_examples_prefer_local_state_bridges_over_clone_model();
+        date_picker_example_prefers_local_state_bridges_over_clone_model();
+        overlay_example_prefers_local_state_bool_root_bridges_over_clone_model();
+        selected_cookbook_examples_prefer_handle_first_tracked_reads();
+        cookbook_examples_keep_setup_on_named_installers();
+        cookbook_examples_keep_card_wrapper_family_as_the_only_card_teaching_surface();
+        cookbook_examples_limit_raw_action_notify_to_host_owned_cases();
+        cookbook_examples_limit_raw_shadcn_escape_hatches();
+        cookbook_examples_use_unified_centered_page_helpers();
+        utility_window_example_uses_ui_single_for_single_surface_shells();
+        retained_canvas_helpers_keep_raw_landing_seams();
     }
 }
