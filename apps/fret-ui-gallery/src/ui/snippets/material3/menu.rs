@@ -208,7 +208,6 @@ pub fn render(
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N3)
             .items_start().into_element(cx)
-    .into()
 }
 
 // endregion: example
