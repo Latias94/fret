@@ -1746,7 +1746,7 @@ fn handle_event(
 
             let fonts: Vec<Vec<u8>> = data.files.iter().map(|f| f.bytes.clone()).collect();
             if !fonts.is_empty() {
-                app.push_effect(Effect::TextAddFonts { fonts });
+                app.push_effect(Effect::TextAddFontBytes { fonts });
             }
             app.push_effect(Effect::FileDialogRelease { token: data.token });
 

@@ -236,7 +236,7 @@ pub enum Effect {
     ///
     /// The runner/backend is responsible for applying this to the renderer and triggering any
     /// required invalidation/redraw.
-    TextAddFonts {
+    TextAddFontBytes {
         fonts: Vec<Vec<u8>>,
     },
     /// Resolve logical font assets through the shared runtime asset resolver and add the resulting

@@ -265,7 +265,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         for effect in effects {
             match effect {
-                Effect::TextAddFonts { fonts } => {
+                Effect::TextAddFontBytes { fonts } => {
                     let added = super::super::font_catalog::inject_font_blobs_and_refresh_catalog(
                         &mut self.app,
                         &mut gfx.renderer,

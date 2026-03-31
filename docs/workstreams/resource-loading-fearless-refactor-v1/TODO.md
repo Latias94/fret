@@ -302,7 +302,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       publish the current `fret-fonts::default_profile()` identity (profile name, bundle id,
       logical asset keys, declared roles, guaranteed generics) before startup font-environment
       initialization.
-    - startup bundled baseline injection plus runtime `TextAddFontAssets` / `TextAddFonts` now all
+    - startup bundled baseline injection plus runtime `TextAddFontAssets` / `TextAddFontBytes` now all
       feed that same shared source inventory instead of keeping startup-vs-runtime font provenance
       on separate publication paths.
     - first-party manifest-driven development font reload now also stays on the asset-identity
@@ -311,7 +311,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - repeated reloads reuse one mutable resolver layer instead of stacking duplicate
         registrations,
       - and the watcher now emits `TextAddFontAssets` instead of bypassing identity with raw
-        `TextAddFonts`.
+        `TextAddFontBytes`.
     - `fret-bootstrap` diagnostics now export that renderer inventory through
       `debug.resource_loading.font_environment.renderer_font_*`, so diagnostics bundles can see
       the same revision/source records the future SVG-text bridge will depend on.
@@ -330,7 +330,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - add stable Android target evidence once the local/CI environment provides NDK clang
       toolchains
     - add mobile-specific diagnostics or startup gates beyond shared native runner wiring
-    - the remaining first-party `TextAddFonts` call sites are intentional user-provided file
+    - the remaining first-party `TextAddFontBytes` call sites are intentional user-provided file
       dialog flows in `apps/fret-ui-gallery` and `apps/fret-examples`; keep them as the explicit
       raw-byte lane unless/until Fret defines a stable asset-identity surface for imported user
       fonts

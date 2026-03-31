@@ -68,7 +68,7 @@ Runners should refresh the catalog only on:
 
 - initial renderer availability (startup/adopt),
 - `Effect::TextAddFontAssets` when fonts were actually added,
-- `Effect::TextAddFonts` when fonts were actually added,
+- `Effect::TextAddFontBytes` when fonts were actually added,
 - an explicit “rescan system fonts” operation (native-only; may be async).
 
 No periodic scanning is implied by this ADR.
@@ -78,7 +78,7 @@ refresh trigger: it should publish package-owned bundled font assets, resolve th
 assets through the shared runtime contract, and then inject the resulting bytes into the renderer
 before the initial catalog snapshot is published. `Effect::TextAddFontAssets` is the explicit
 runtime asset-identity lane after startup for framework-owned/runtime callers, while
-`Effect::TextAddFonts` remains the explicit runtime/user-provided raw-byte lane.
+`Effect::TextAddFontBytes` remains the explicit runtime/user-provided raw-byte lane.
 
 ### 4) Catalog metadata probes must remain best-effort and budgetable
 
@@ -97,10 +97,10 @@ Current knobs:
 
 - Desktop runner (startup): `crates/fret-launch/src/runner/desktop/app_handler.rs`
 - Shared bundled-baseline bootstrap: `crates/fret-launch/src/runner/font_catalog.rs`
-- Desktop runner (`Effect::TextAddFontAssets` / `Effect::TextAddFonts`): `crates/fret-launch/src/runner/desktop/mod.rs`
+- Desktop runner (`Effect::TextAddFontAssets` / `Effect::TextAddFontBytes`): `crates/fret-launch/src/runner/desktop/mod.rs`
 - Desktop runner (`Effect::TextRescanSystemFonts`): `crates/fret-launch/src/runner/desktop/mod.rs`
 - Web runner (adopt gfx): `crates/fret-launch/src/runner/web/gfx_init.rs`
-- Web runner (`Effect::TextAddFontAssets` / `Effect::TextAddFonts`): `crates/fret-launch/src/runner/web/effects.rs`
+- Web runner (`Effect::TextAddFontAssets` / `Effect::TextAddFontBytes`): `crates/fret-launch/src/runner/web/effects.rs`
 
 ## Consequences
 

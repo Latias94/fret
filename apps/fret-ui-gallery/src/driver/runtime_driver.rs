@@ -1875,7 +1875,7 @@ impl WinitAppDriver for UiGalleryDriver {
                         shadcn::ToastMessageOptions::new().description(description),
                     );
                 } else {
-                    host.push_effect(Effect::TextAddFonts { fonts });
+                    host.push_effect(Effect::TextAddFontBytes { fonts });
                     let description = if data.errors.is_empty() {
                         "Fonts added to TextSystem.".to_string()
                     } else {

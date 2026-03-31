@@ -123,7 +123,7 @@ Recent changes (2026-02-01):
 - A11y: promote `TextInputRegion` to `SemanticsRole::TextField` and allow publishing value/selection/composition ranges (ADR 0071).
 - A11y: wire `SetTextSelection` into the code editor via `TextInputRegion` (best-effort, windowed value).
 - Web: enable a default CJK demo font bundle (`cjk-lite` subset) to reduce “tofu” in IME/editor harnesses (still limited; use “Load fonts…” for full coverage).
-- UI Gallery: add a code-editor “Load fonts…” action (file dialog → `Effect::TextAddFonts`) and a soft-wrap toggle for wrap-boundary regression checks.
+- UI Gallery: add a code-editor “Load fonts…” action (file dialog → `Effect::TextAddFontBytes`) and a soft-wrap toggle for wrap-boundary regression checks.
 - Desktop: update Windows taskbar visibility wiring for winit 0.31 platform attributes.
 
 This document is an implementation-focused tracker for building an editor-grade **code editor ecosystem** for Fret.
@@ -192,9 +192,9 @@ P0 (correctness and contracts):
 - Web: document and enforce the default font story for editor-grade surfaces (monospace + CJK + emoji).
   - Baseline: `TextFontFamilyConfig` + `common_fallback` seeded via `FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates`.
   - Web default: ship a small `cjk-lite` subset + optional emoji bundle; accept that glyph coverage is limited and "tofu" is expected outside the subset.
-  - Escape hatch: UI Gallery “Load fonts…” (`Effect::TextAddFonts`) for full CJK coverage when validating IME/editor behavior.
+  - Escape hatch: UI Gallery “Load fonts…” (`Effect::TextAddFontBytes`) for full CJK coverage when validating IME/editor behavior.
   - Diagnostics: surface `TextFontStackKey` + `TextFontFamilyConfig` + `FontCatalog` in the UI Gallery web IME harness panel to make tofu causes debuggable.
-  - Runner: load bundled default fonts during web renderer adoption (not via a delayed `TextAddFonts` effect) to reduce “first frame” tofu.
+  - Runner: load bundled default fonts during web renderer adoption (not via a delayed `TextAddFontBytes` effect) to reduce “first frame” tofu.
   - Evidence: `crates/fret-runtime/src/font_bootstrap.rs` (curated defaults), `crates/fret-render-wgpu/src/text/mod.rs` (`cjk_fallback_*` tests).
 
 P1 (robustness and testability):

@@ -210,7 +210,7 @@ This workstream takes a fearless posture:
   - `fret_runtime::RendererFontEnvironmentSnapshot` tracks a monotonic `revision`, the current
     `text_font_stack_key`, and accepted renderer font sources across all three current lanes
     (`bundled_startup`, `asset_request`, `raw_runtime_bytes`),
-  - startup bundled baseline injection plus runtime `TextAddFontAssets` / `TextAddFonts` now all
+  - startup bundled baseline injection plus runtime `TextAddFontAssets` / `TextAddFontBytes` now all
     feed that same inventory instead of leaving font provenance split across startup-only and
     runtime-only paths,
   - and bootstrap diagnostics now expose that state under

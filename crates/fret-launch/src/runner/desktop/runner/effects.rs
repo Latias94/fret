@@ -1114,7 +1114,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         self.diag_incoming_open_payloads.remove(&token);
                         self.incoming_open_path_payloads.remove(&token);
                     }
-                    Effect::TextAddFonts { fonts } => {
+                    Effect::TextAddFontBytes { fonts } => {
                         let Some(renderer) = self.renderer.as_mut() else {
                             continue;
                         };
