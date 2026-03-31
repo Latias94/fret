@@ -231,19 +231,9 @@ impl Default for UiDiagnosticsConfig {
         let diag_enabled = raw_diag.is_some() || out_dir_env.is_some() || config_enabled;
 
         let (devtools_ws_url, devtools_token) = {
-            #[cfg(all(feature = "diagnostics-ws", target_arch = "wasm32"))]
+            #[cfg(feature = "diagnostics-ws")]
             {
-                fret_diag_ws::client::devtools_ws_config_from_window_query()
-            }
-            #[cfg(all(feature = "diagnostics-ws", not(target_arch = "wasm32")))]
-            {
-                let ws_url = std::env::var("FRET_DEVTOOLS_WS")
-                    .ok()
-                    .filter(|v| !v.trim().is_empty());
-                let token = std::env::var("FRET_DEVTOOLS_TOKEN")
-                    .ok()
-                    .filter(|v| !v.trim().is_empty());
-                (ws_url, token)
+                crate::ui_diagnostics_ws_bridge::devtools_ws_config()
             }
             #[cfg(not(feature = "diagnostics-ws"))]
             {

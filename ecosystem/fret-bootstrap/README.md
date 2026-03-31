@@ -50,6 +50,13 @@ Recommended mental model:
 - Use `fret-bootstrap-shadcn` when you want the default shadcn `CommandDialog` overlay on top of
   that capability.
 
+## Diagnostics boundary
+
+- `fret-bootstrap/diagnostics` owns the diagnostics service and bundle/script orchestration.
+- retained canvas cache exporters are opt-in on `fret-bootstrap/diagnostics-canvas`.
+- the devtools WebSocket transport bridge is intentionally not owned here; use
+  `fret-bootstrap/diagnostics-ws`, which routes through `fret-bootstrap-diag-ws`.
+
 ## Minimal examples
 
 - General UI app: see `ecosystem/fret/src/lib.rs`

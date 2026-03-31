@@ -59,16 +59,28 @@ Tracking format:
     - shadcn-specific command palette UI moved into a thin `fret-bootstrap-shadcn` bridge crate
     - `fret`'s `command-palette` feature now explicitly depends on that bridge instead of relying
       on a hidden `fret-bootstrap -> fret-ui-shadcn` edge
+    - `fret-bootstrap/diagnostics` no longer pulls the unused `fret-query` dependency into its
+      closure
+    - retained canvas cache diagnostics now sit behind explicit
+      `fret-bootstrap/diagnostics-canvas`
+    - devtools WS transport now sits behind thin `fret-bootstrap-diag-ws` instead of making
+      `fret-bootstrap` depend on `fret-diag-ws` directly
   - Remaining suspects:
-    - diagnostics websocket support
     - optional icon packs
     - ui-assets integration
   - Evidence:
     - `ecosystem/fret-bootstrap/Cargo.toml`
     - `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`
+    - `ecosystem/fret-bootstrap-diag-ws/src/lib.rs`
     - `ecosystem/fret-bootstrap-shadcn/src/lib.rs`
     - `ecosystem/fret/Cargo.toml`
     - `ecosystem/fret/src/lib.rs`
+    - `cargo check -p fret-bootstrap --features diagnostics`
+    - `cargo tree -p fret-bootstrap --features diagnostics -e normal`
+    - `cargo check -p fret-bootstrap --features diagnostics-canvas`
+    - `cargo check -p fret-bootstrap --features diagnostics-ws`
+    - `cargo tree -p fret-bootstrap --features diagnostics-ws -e normal`
     - `cargo check -p fret-bootstrap --features ui-app-command-palette`
     - `cargo check -p fret-bootstrap-shadcn`
     - `cargo check -p fret --features command-palette`
@@ -84,6 +96,7 @@ Tracking format:
     - `fret-framework`
     - `fret-bootstrap`
     - `fret-bootstrap-shadcn`
+    - `fret-bootstrap-diag-ws`
     - `fret-ui-kit`
     - `fret-ui-shadcn`
     - `fret-selector`

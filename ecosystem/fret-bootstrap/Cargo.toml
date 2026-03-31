@@ -32,8 +32,9 @@ ui-app-command-palette = ["ui-app-driver"]
 window-style-profiles = ["dep:fret-window-style-profiles"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
 tracy = ["tracing", "dep:tracing-tracy"]
-diagnostics = ["tracing", "dep:fret-canvas", "dep:fret-query", "fret-launch/diag-screenshots"]
-diagnostics-ws = ["diagnostics", "dep:fret-diag-ws"]
+diagnostics = ["tracing", "fret-launch/diag-screenshots"]
+diagnostics-canvas = ["diagnostics", "dep:fret-canvas"]
+diagnostics-ws = ["diagnostics", "dep:fret-bootstrap-diag-ws"]
 
 [dependencies]
 thiserror.workspace = true
@@ -58,7 +59,7 @@ fret-diag-protocol = { version = "0.1.0", path = "../../crates/fret-diag-protoco
 fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true }
 fret-ui-app = { version = "0.1.0", path = "../../crates/fret-ui-app", optional = true }
 fret-canvas = { version = "0.1.0", path = "../fret-canvas", optional = true }
-fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
+fret-bootstrap-diag-ws = { version = "0.1.0", path = "../fret-bootstrap-diag-ws", optional = true }
 
 fret-i18n-fluent = { version = "0.1.0", path = "../fret-i18n-fluent" }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", optional = true }
@@ -67,14 +68,8 @@ fret-icons-lucide = { version = "0.1.0", path = "../fret-icons-lucide", optional
 fret-icons-radix = { version = "0.1.0", path = "../fret-icons-radix", optional = true, default-features = false }
 subsecond = { version = "0.7.2", optional = true }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-fret-diag-ws = { version = "0.1.0", path = "../../crates/fret-diag-ws", optional = true, default-features = false, features = ["client-native"] }
-
 [target.'cfg(windows)'.dependencies]
 windows-sys.workspace = true
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-fret-diag-ws = { version = "0.1.0", path = "../../crates/fret-diag-ws", optional = true, default-features = false, features = ["client-wasm"] }
 
 [lints.clippy]
 arc_with_non_send_sync = "allow"

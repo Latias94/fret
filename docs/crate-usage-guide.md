@@ -602,6 +602,11 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 layer only. If you want the default shadcn `CommandDialog` presentation on top of that capability,
 pair it with `fret-bootstrap-shadcn` or use `fret`'s `command-palette` feature.
 
+**Diagnostics note:** `fret-bootstrap/diagnostics` now keeps the generic diagnostics/export path
+leaner. Enable `fret-bootstrap/diagnostics-canvas` only when you need retained canvas cache stats
+in diagnostics bundles. Enable `fret-bootstrap/diagnostics-ws` only when you need the devtools
+WebSocket transport bridge.
+
 Note: dev hotpatch is an internal maintainer workflow today and is not part of the user-facing
 onboarding path.
 
@@ -623,6 +628,21 @@ UI without inlining your own overlay renderer into `UiAppDriver`.
 - **Apps with custom design systems:** stay on `fret-bootstrap/ui-app-command-palette` and supply
   an app-owned `UiAppDriver::command_palette_overlay(...)` renderer instead of depending on this
   shadcn-specific bridge.
+
+### `fret-bootstrap-diag-ws`
+
+**What it is:** a thin bridge crate that binds `fret-bootstrap` diagnostics to the
+`fret-diag-ws` transport client.
+
+**Use it when:** you need the devtools WebSocket transport lane for diagnostics-enabled bootstrap
+apps.
+
+**Recommended integration:**
+
+- **Apps using `fret-bootstrap` directly:** prefer `fret-bootstrap/diagnostics-ws`; it already
+  pulls this bridge in for the bootstrap diagnostics lane.
+- **Apps using `fret` only:** this is not part of the default app-creation baseline; keep it off
+  unless your tooling/dev loop explicitly needs the devtools WS transport.
 
 ### `fret-executor`
 

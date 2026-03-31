@@ -1857,17 +1857,16 @@ dependencies = [
  "blake3",
  "fret-app",
  "fret-assets",
+ "fret-bootstrap-diag-ws",
  "fret-canvas",
  "fret-core",
  "fret-diag-protocol",
- "fret-diag-ws",
  "fret-i18n",
  "fret-i18n-fluent",
  "fret-icons",
  "fret-icons-lucide",
  "fret-icons-radix",
  "fret-launch",
- "fret-query",
  "fret-render",
  "fret-runtime",
  "fret-ui",
@@ -1884,6 +1883,14 @@ dependencies = [
  "tracing-subscriber",
  "tracing-tracy",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "fret-bootstrap-diag-ws"
+version = "0.1.0"
+dependencies = [
+ "fret-diag-protocol",
+ "fret-diag-ws",
 ]
 
 [[package]]

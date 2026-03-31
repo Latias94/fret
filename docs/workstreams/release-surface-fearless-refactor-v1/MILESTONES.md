@@ -66,6 +66,12 @@
   default shadcn command palette UI now lives in `fret-bootstrap-shadcn`.
 - `fret`'s `command-palette` feature now pulls in that bridge explicitly, keeping the app-facing
   authoring story unchanged while making the crate boundary honest.
+- `fret-bootstrap/diagnostics` no longer pulls an unused `fret-query` edge into the diagnostics
+  closure.
+- retained canvas cache diagnostics now sit behind explicit
+  `fret-bootstrap/diagnostics-canvas` instead of bloating the base diagnostics lane.
+- devtools WS transport now sits behind thin `fret-bootstrap-diag-ws` instead of making
+  `fret-bootstrap` depend on `fret-diag-ws` directly.
 
 **Remaining to close**
 
@@ -81,8 +87,13 @@
 - `apps/fret-ui-gallery/Cargo.toml`
 - `ecosystem/fret-bootstrap/Cargo.toml`
 - `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+- `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`
+- `ecosystem/fret-bootstrap-diag-ws/src/lib.rs`
 - `ecosystem/fret-bootstrap-shadcn/src/lib.rs`
 - `ecosystem/fret/Cargo.toml`
+- `cargo check -p fret-bootstrap --features diagnostics`
+- `cargo check -p fret-bootstrap --features diagnostics-canvas`
+- `cargo check -p fret-bootstrap --features diagnostics-ws`
 
 ## M3 — Release candidate freeze
 
