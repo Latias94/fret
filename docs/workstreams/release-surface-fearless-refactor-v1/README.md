@@ -26,7 +26,7 @@ Non-goals:
   they become a genuinely separate authoring surface that users should learn independently.
 - `fret` root features should stay limited to lanes that form a real app-facing teaching surface;
   maintainer conveniences and niche design-system/domain crates should stay on direct owning
-  crates.
+  crates, even if `fret` keeps a few commented compatibility aliases for discoverability.
 
 ## First landed slice
 

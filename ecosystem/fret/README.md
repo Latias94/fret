@@ -208,11 +208,17 @@ The same ordered builder surface now also includes compile-time/static entries t
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
 - `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).
+- `tracing`: advanced/maintainer alias for bootstrap tracing setup; prefer
+  `fret-bootstrap/tracing` directly for explicit wiring.
+- `devloop`: advanced/maintainer alias for `fret-launch/dev-state`; prefer the owning crate
+  directly when you need dev-state hooks.
 - `ui-assets`: enable UI render-asset caches (images/SVG) and install default budgets.
 - `icons`: install the default built-in icon pack (Lucide).
 - `preload-icon-svgs`: pre-register SVG icons on GPU ready.
 - `command-palette`: enable the command palette wiring in the golden-path driver, including the
   default shadcn overlay bridge.
+- `material3`, `ui-ai`: compatibility aliases kept for discoverability; prefer direct dependencies
+  on `fret-ui-material3` / `fret-ui-ai` until `fret` grows a stable root authoring story for them.
 
 Design-system- or domain-specific ecosystems that do not form a stable `fret` root authoring
 story should stay as direct crate dependencies instead of root feature proxies.

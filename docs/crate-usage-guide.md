@@ -328,9 +328,12 @@ Notes:
 - `editor` is an app-integration feature only: it teaches `FretApp`'s shadcn auto-theme middleware
   to replay any installed `fret-ui-editor` preset after host theme resets. Reusable editor
   controls, layout primitives, and presets still live in `fret-ui-editor`.
+- `devloop` and `tracing` are kept only as advanced/maintainer aliases on `fret`; prefer the
+  owning crates (`fret-launch/dev-state`, `fret-bootstrap/tracing`) for new integrations.
 - Design-system- or domain-specific crates that do not form a stable `fret` root story
   (for example Material 3 or AI UI ecosystems) should be used as direct crate dependencies
-  instead of expecting `fret` root feature proxies.
+  instead of expecting `fret` root feature proxies, even though `fret` keeps compatibility aliases
+  for discoverability.
 
 ### `fret-framework`
 

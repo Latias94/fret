@@ -74,8 +74,9 @@
   a separate bridge crate.
 - Wave 2 now treats `fret-bootstrap` as a feature-first app-kit crate rather than splitting every
   optional integration into its own published bridge.
-- `fret` root no longer proxies maintainer/niche lanes that lacked a real authoring story:
-  `devloop`, `tracing`, `material3`, and `ui-ai` now stay on their owning crates.
+- `fret` root no longer teaches maintainer/niche lanes as first-class release surfaces:
+  `devloop`, `tracing`, `material3`, and `ui-ai` now stay documented as compatibility/advanced
+  aliases while first-party usage stays on the owning crates.
 
 **Remaining to close**
 

@@ -624,8 +624,20 @@ pub mod advanced {
             view_init_window, view_view,
         };
 
-        #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-        pub use crate::view::view_record_engine_frame;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub use crate::view::view_record_engine_frame;
+    }
+
+    /// Dev-only helpers kept as an advanced compatibility lane for iteration workflows.
+    ///
+    /// Prefer the owning `fret-launch::dev_state::*` surface directly in first-party or advanced
+    /// code; `fret/devloop` exists mainly as a discoverable alias on the app facade.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "devloop"))]
+    pub mod dev {
+        pub use fret_launch::dev_state::{
+            DevStateExport, DevStateHook, DevStateHooks, DevStateSnapshot,
+            DevStateWindowKeyRegistry,
+        };
     }
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -3677,6 +3689,18 @@ mod authoring_surface_policy_tests {
         assert!(advanced_surface.contains("view_init_window,"));
         assert!(advanced_surface.contains("view_view"));
         assert!(advanced_surface.contains("view_record_engine_frame"));
+    }
+
+    #[test]
+    fn advanced_surface_quarantines_devloop_helpers_off_root() {
+        let root_header = root_surface_header_source();
+        let advanced_surface = advanced_prelude_source();
+
+        assert!(!root_header.contains("pub mod dev {"));
+        assert!(advanced_surface.contains("pub mod dev {"));
+        assert!(advanced_surface.contains("DevStateExport, DevStateHook, DevStateHooks,"));
+        assert!(advanced_surface.contains("DevStateSnapshot,"));
+        assert!(advanced_surface.contains("DevStateWindowKeyRegistry,"));
     }
 
     #[test]

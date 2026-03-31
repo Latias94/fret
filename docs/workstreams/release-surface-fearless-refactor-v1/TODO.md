@@ -87,13 +87,14 @@ Tracking format:
 - [x] RELFACE-fret-120 Re-audit the `fret` optional feature matrix after Wave 2 and cut anything
       that still feels like an internal repo convenience instead of a real public contract.
   - Landed slice:
-    - removed `fret/devloop`; first-party examples already use `fret-launch/dev-state` directly
-      where they actually need dev-state hooks
-    - removed `fret/tracing`; bootstrap tracing stays on `fret-bootstrap/tracing` instead of
-      widening the `fret` root story for a maintainer-oriented toggle
-    - removed `fret/material3` and `fret/ui-ai`; those ecosystems stay on direct owning crates
-      until they form a stable `fret` root teaching surface
-    - `fret` root now keeps only app-facing lanes that are documented and intentionally taught
+    - first-party examples no longer rely on `fret/devloop`; they use `fret-launch/dev-state`
+      directly where they actually need dev-state hooks
+    - `fret/devloop` and `fret/tracing` are kept only as advanced/maintainer aliases with explicit
+      comments instead of being taught as part of the primary root story
+    - `fret/material3` and `fret/ui-ai` are kept only as compatibility aliases for discoverability;
+      direct owning crates remain the recommended surface until they form a stable `fret` root
+      teaching surface
+    - `fret` root now distinguishes between taught app-facing lanes and non-primary aliases
   - Evidence:
     - `ecosystem/fret/Cargo.toml`
     - `ecosystem/fret/README.md`

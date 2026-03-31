@@ -71,11 +71,23 @@ desktop = [
     "fret-bootstrap/ui-app-driver",
 ]
 
+# Maintainer/dev convenience alias. Kept for discoverability, but first-party examples should use
+# `fret-launch/dev-state` directly when they need the owning surface.
+devloop = ["fret-launch/dev-state"]
+
 # Common app/dev conveniences (still optional; users can disable for minimal builds).
 diagnostics = ["fret-bootstrap/diagnostics"]
+# Maintainer/dev convenience alias. Prefer `fret-bootstrap/tracing` directly for explicit wiring.
+tracing = ["fret-bootstrap/tracing"]
 
 # Ecosystem integrations.
 shadcn = ["dep:fret-ui-shadcn"]
+# Compatibility alias only. Prefer depending on `fret-ui-material3` directly until a stable
+# `fret` root Material 3 story exists.
+material3 = ["dep:fret-ui-material3"]
+# Compatibility alias only. Prefer depending on `fret-ui-ai` directly until a stable `fret` root
+# AI UI story exists.
+ui-ai = ["dep:fret-ui-ai"]
 ui-assets = ["fret-bootstrap/ui-assets"]
 icons = [
     "fret-bootstrap/icons-lucide",
@@ -103,7 +115,9 @@ fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
 fret-router = { version = "0.1.0", path = "../fret-router", optional = true }
 fret-router-ui = { version = "0.1.0", path = "../fret-router-ui", optional = true }
 fret-selector = { version = "0.1.0", path = "../fret-selector", optional = true }
+fret-ui-ai = { version = "0.1.0", path = "../fret-ui-ai", optional = true }
 fret-ui-editor = { version = "0.1.0", path = "../fret-ui-editor", optional = true }
+fret-ui-material3 = { version = "0.1.0", path = "../fret-ui-material3", optional = true }
 fret-ui-shadcn = { version = "0.1.0", path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit" }
 time.workspace = true
