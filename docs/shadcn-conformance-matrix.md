@@ -45,7 +45,8 @@ cargo run -p fretboard -- diag suite ui-gallery-shadcn-conformance --launch -- c
 Notes:
 
 - The suite enables screenshots when needed and can be used as a CI-friendly gate.
-- For deterministic fonts on desktop, the suite sets `FRET_UI_GALLERY_BOOTSTRAP_FONTS=1` (bundled fonts).
+- For deterministic fonts on desktop, the suite sets `FRET_UI_GALLERY_BOOTSTRAP_FONTS=1` to
+  synchronize the shipped bundled startup baseline into the UI gallery font catalog.
 
 For a smaller runner-backed proof set focused on recent scroll/click/runtime parity fixes, run:
 

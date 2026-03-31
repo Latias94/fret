@@ -849,7 +849,7 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_co
 
     if evidence.system_fonts_enabled {
         return Err(format!(
-            "ui-gallery text mixed-script bundled fallback gate failed: expected system_fonts_enabled=false for a deterministic (bundled-only) fallback baseline\n  hint: rerun with --env FRET_TEXT_SYSTEM_FONTS=0 and ensure bundled fonts are loaded (FRET_UI_GALLERY_BOOTSTRAP_FONTS=1)\n  evidence: {}",
+            "ui-gallery text mixed-script bundled fallback gate failed: expected system_fonts_enabled=false for a deterministic (bundled-only) fallback baseline\n  hint: rerun with --env FRET_TEXT_SYSTEM_FONTS=0 and synchronize the bundled startup baseline into the UI gallery font catalog (FRET_UI_GALLERY_BOOTSTRAP_FONTS=1)\n  evidence: {}",
             evidence_path.display()
         ));
     }

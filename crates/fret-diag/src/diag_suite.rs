@@ -1960,7 +1960,8 @@ fn resolve_builtin_suite_scripts(
             // screenshot evidence for overlap regressions.
             push_env_if_missing(launch_env, "FRET_DIAG_REDACT_TEXT", "0");
             push_env_if_missing(launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-            // Ensure bundled fonts are loaded on desktop so font metrics are deterministic.
+            // Ensure the bundled startup baseline is synchronized into the UI gallery font
+            // catalog on desktop so font metrics are deterministic.
             push_env_if_missing(launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
             let mut scripts = expand_script_inputs(
                 workspace_root,

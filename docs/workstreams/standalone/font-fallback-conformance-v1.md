@@ -150,6 +150,10 @@ FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/sha
   --launch -- cargo run -p fret-ui-gallery --release --features gallery-web-ime-harness
 ```
 
+`FRET_UI_GALLERY_BOOTSTRAP_FONTS=1` now means "publish the already-installed bundled startup
+baseline into the UI gallery font catalog immediately" rather than "inject extra bundled font
+bytes through a separate app-local path".
+
 ## Next (recommended)
 
 1) Add a bundled-only conformance gate that asserts missing-glyph traces are captured when tofu occurs (debug-only case).

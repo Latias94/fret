@@ -159,6 +159,62 @@ fn ui_gallery_default_profile_expected_families_present(app: &App) -> bool {
         })
 }
 
+fn ui_gallery_preferred_text_locale(app: &App) -> Option<String> {
+    app.global::<fret_runtime::fret_i18n::I18nService>()
+        .and_then(|service| service.preferred_locales().first())
+        .map(|locale| locale.to_string())
+}
+
+fn ui_gallery_font_catalog_entries_from_renderer(
+    renderer: &mut fret_render::Renderer,
+) -> Vec<fret_runtime::FontCatalogEntry> {
+    renderer
+        .all_font_catalog_entries()
+        .into_iter()
+        .map(|entry| {
+            let (
+                family,
+                has_variable_axes,
+                known_variable_axes,
+                variable_axes,
+                is_monospace_candidate,
+            ) = entry.into_parts();
+            fret_runtime::FontCatalogEntry {
+                family,
+                has_variable_axes,
+                known_variable_axes,
+                variable_axes: variable_axes
+                    .into_iter()
+                    .map(|axis| fret_runtime::FontVariableAxisInfo {
+                        tag: axis.tag().to_string(),
+                        min_bits: axis.min_bits(),
+                        max_bits: axis.max_bits(),
+                        default_bits: axis.default_bits(),
+                    })
+                    .collect(),
+                is_monospace_candidate,
+            }
+        })
+        .collect()
+}
+
+fn publish_ui_gallery_font_catalog_from_renderer(
+    app: &mut App,
+    renderer: &mut fret_render::Renderer,
+) {
+    let update = fret_runtime::apply_font_catalog_update_with_metadata(
+        app,
+        ui_gallery_font_catalog_entries_from_renderer(renderer),
+        fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
+    );
+    let _ = renderer.set_text_font_families(&update.config);
+    let locale = ui_gallery_preferred_text_locale(app);
+    let _ = renderer.set_text_locale(locale.as_deref());
+    app.set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
+        renderer.text_font_stack_key(),
+    ));
+}
+
 pub(crate) fn ui_gallery_default_profile_font_requests(
     app: &mut App,
 ) -> Vec<fret::assets::AssetRequest> {
@@ -167,24 +223,6 @@ pub(crate) fn ui_gallery_default_profile_font_requests(
         .faces
         .iter()
         .map(|face| face.asset_request())
-        .collect()
-}
-
-pub(crate) fn ui_gallery_default_profile_font_blobs(app: &mut App) -> Vec<Vec<u8>> {
-    ui_gallery_default_profile_font_requests(app)
-        .into_iter()
-        .map(|request| {
-            fret_runtime::resolve_asset_bytes(app, &request)
-                .unwrap_or_else(|err| {
-                    panic!(
-                        "ui-gallery bundled font asset '{:?}' failed to resolve after registration: {:?}",
-                        request.locator, err
-                    )
-                })
-                .bytes
-                .as_ref()
-                .to_vec()
-        })
         .collect()
 }
 
@@ -1157,19 +1195,10 @@ impl WinitAppDriver for UiGalleryDriver {
         let wants_bootstrap_fonts =
             std::env::var_os("FRET_UI_GALLERY_BOOTSTRAP_FONTS").is_some_and(|v| !v.is_empty());
         if wants_bootstrap_fonts {
-            let fonts = ui_gallery_default_profile_font_blobs(app);
-            let _ = renderer.add_fonts(fonts);
-
-            let update = fret_runtime::apply_font_catalog_update(
-                app,
-                renderer.all_font_names(),
-                fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
-            );
-            let _ = renderer.set_text_font_families(&update.config);
-            app.set_global::<fret_core::TextFontFamilyConfig>(update.config.clone());
-            app.set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
-                renderer.text_font_stack_key(),
-            ));
+            // The default launch path already installed the bundled startup baseline. This
+            // diagnostics switch only forces the UI gallery's runtime globals to publish the live
+            // renderer catalog immediately, instead of re-injecting the same bundled font bytes.
+            publish_ui_gallery_font_catalog_from_renderer(app, renderer);
         }
 
         // Ensure magic ecosystem components can use renderer-controlled Tier B materials.
