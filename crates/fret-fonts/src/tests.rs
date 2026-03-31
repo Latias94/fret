@@ -5,6 +5,37 @@ use read_fonts::tables::name::NameId;
 use read_fonts::{FontRef, TableProvider as _};
 use std::collections::BTreeSet;
 
+#[test]
+fn imported_font_batch_accepts_supported_sfnt_signatures_only() {
+    let true_type = [0x00, 0x01, 0x00, 0x00, 0x10];
+    let open_type = *b"OTTOx";
+    let collection = *b"ttcfx";
+    let woff = *b"wOFFx";
+    let junk = *b"plain";
+
+    let batch = collect_supported_user_font_bytes([
+        true_type.as_slice(),
+        open_type.as_slice(),
+        collection.as_slice(),
+        woff.as_slice(),
+        junk.as_slice(),
+    ]);
+
+    assert_eq!(batch.fonts.len(), 3);
+    assert_eq!(batch.rejected_files, 2);
+    assert_eq!(batch.fonts[0], true_type);
+    assert_eq!(batch.fonts[1], open_type);
+    assert_eq!(batch.fonts[2], collection);
+}
+
+#[test]
+fn supported_user_font_import_extensions_lock_first_party_dialog_contract() {
+    assert_eq!(
+        SUPPORTED_USER_FONT_IMPORT_EXTENSIONS,
+        &["ttf", "otf", "ttc"]
+    );
+}
+
 fn dedupe_families(values: impl IntoIterator<Item = &'static str>) -> Vec<&'static str> {
     let mut seen = BTreeSet::new();
     let mut out = Vec::new();

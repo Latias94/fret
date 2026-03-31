@@ -695,11 +695,10 @@ impl UiGalleryDriver {
                         multiple: true,
                         filters: vec![FileDialogFilter {
                             name: "Font files".to_string(),
-                            extensions: vec![
-                                "ttf".to_string(),
-                                "otf".to_string(),
-                                "ttc".to_string(),
-                            ],
+                            extensions: fret_fonts::SUPPORTED_USER_FONT_IMPORT_EXTENSIONS
+                                .iter()
+                                .map(|ext| (*ext).to_string())
+                                .collect(),
                         }],
                     },
                 });
@@ -1839,34 +1838,30 @@ impl WinitAppDriver for UiGalleryDriver {
                     return;
                 }
 
-                let is_font_blob = |bytes: &[u8]| -> bool {
-                    bytes.starts_with(b"OTTO")
-                        || bytes.starts_with(b"ttcf")
-                        || bytes
-                            .get(0..4)
-                            .is_some_and(|b| b == [0x00, 0x01, 0x00, 0x00])
-                };
-
-                let mut fonts: Vec<Vec<u8>> = Vec::new();
-                for file in &data.files {
-                    let name = file.name.to_ascii_lowercase();
-                    let looks_like_font = name.ends_with(".ttf")
-                        || name.ends_with(".otf")
-                        || name.ends_with(".ttc")
-                        || is_font_blob(&file.bytes);
-                    if looks_like_font {
-                        fonts.push(file.bytes.clone());
-                    }
-                }
+                let font_batch = fret_fonts::collect_supported_user_font_bytes(
+                    data.files.iter().map(|file| file.bytes.as_slice()),
+                );
+                let accepted_fonts = font_batch.fonts.len();
+                let rejected_files = font_batch.rejected_files;
+                let fonts = font_batch.fonts;
 
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
 
                 if fonts.is_empty() {
-                    let description = if data.errors.is_empty() {
-                        "No font files found in selection.".to_string()
-                    } else {
-                        format!("No fonts loaded ({} read errors).", data.errors.len())
+                    let description = match (rejected_files, data.errors.len()) {
+                        (0, 0) => {
+                            "No supported TTF/OTF/TTC font bytes found in selection.".to_string()
+                        }
+                        (rejected, 0) => {
+                            format!("No supported fonts loaded ({rejected} rejected).")
+                        }
+                        (0, read_errors) => {
+                            format!("No fonts loaded ({read_errors} read errors).")
+                        }
+                        (rejected, read_errors) => format!(
+                            "No supported fonts loaded ({rejected} rejected, {read_errors} read errors)."
+                        ),
                     };
                     sonner.toast_error_message(
                         &mut host,
@@ -1876,13 +1871,17 @@ impl WinitAppDriver for UiGalleryDriver {
                     );
                 } else {
                     host.push_effect(Effect::TextAddFontBytes { fonts });
-                    let description = if data.errors.is_empty() {
-                        "Fonts added to TextSystem.".to_string()
-                    } else {
-                        format!(
-                            "Fonts added to TextSystem ({} read errors).",
-                            data.errors.len()
-                        )
+                    let description = match (rejected_files, data.errors.len()) {
+                        (0, 0) => "Fonts added to TextSystem.".to_string(),
+                        (rejected, 0) => format!(
+                            "Fonts added to TextSystem ({accepted_fonts} accepted, {rejected} rejected)."
+                        ),
+                        (0, read_errors) => {
+                            format!("Fonts added to TextSystem ({read_errors} read errors).")
+                        }
+                        (rejected, read_errors) => format!(
+                            "Fonts added to TextSystem ({accepted_fonts} accepted, {rejected} rejected, {read_errors} read errors)."
+                        ),
                     };
                     sonner.toast_success_message(
                         &mut host,

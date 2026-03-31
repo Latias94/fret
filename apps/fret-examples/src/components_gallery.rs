@@ -1686,7 +1686,10 @@ fn handle_command(
                 multiple: true,
                 filters: vec![FileDialogFilter {
                     name: "Fonts".to_string(),
-                    extensions: vec!["ttf".to_string(), "otf".to_string(), "ttc".to_string()],
+                    extensions: fret_fonts::SUPPORTED_USER_FONT_IMPORT_EXTENSIONS
+                        .iter()
+                        .map(|ext| (*ext).to_string())
+                        .collect(),
                 }],
             },
         });
@@ -1744,16 +1747,23 @@ fn handle_event(
             }
             state.pending_font_dialog = None;
 
-            let fonts: Vec<Vec<u8>> = data.files.iter().map(|f| f.bytes.clone()).collect();
-            if !fonts.is_empty() {
-                app.push_effect(Effect::TextAddFontBytes { fonts });
+            let font_batch = fret_fonts::collect_supported_user_font_bytes(
+                data.files.iter().map(|file| file.bytes.as_slice()),
+            );
+            let accepted_fonts = font_batch.fonts.len();
+            let rejected_files = font_batch.rejected_files;
+            if !font_batch.fonts.is_empty() {
+                app.push_effect(Effect::TextAddFontBytes {
+                    fonts: font_batch.fonts,
+                });
             }
             app.push_effect(Effect::FileDialogRelease { token: data.token });
 
             let msg: Arc<str> = Arc::from(
                 format!(
-                    "fonts.load: loaded_files={} errors={}",
-                    data.files.len(),
+                    "fonts.load: accepted_fonts={} rejected_files={} read_errors={}",
+                    accepted_fonts,
+                    rejected_files,
                     data.errors.len()
                 )
                 .into_boxed_str(),

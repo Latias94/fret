@@ -40,6 +40,7 @@ fret-gizmo = { path = "../../ecosystem/fret-gizmo" }
 fret-undo = { path = "../../ecosystem/fret-undo" }
 delinea = { path = "../../ecosystem/delinea" }
 fret-core = { path = "../../crates/fret-core" }
+fret-fonts = { path = "../../crates/fret-fonts" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-render = { path = "../../crates/fret-render" }
 fret-app = { path = "../../crates/fret-app" }

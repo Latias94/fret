@@ -331,10 +331,13 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       toolchains
     - add mobile-specific diagnostics or startup gates beyond shared native runner wiring
     - the remaining first-party `TextAddFontBytes` call sites are intentional user-provided file
-      dialog flows in `apps/fret-ui-gallery` and `apps/fret-examples`; keep them as the explicit
-      raw-byte lane unless/until Fret defines a stable asset-identity surface for imported user
-      fonts
+      dialog flows in `apps/fret-ui-gallery` and `apps/fret-examples`; they now share
+      `fret_fonts::SUPPORTED_USER_FONT_IMPORT_EXTENSIONS` plus
+      `fret_fonts::collect_supported_user_font_bytes(...)` so dialog filters and runtime acceptance
+      stay aligned. Keep them as the explicit raw-byte lane unless/until Fret defines a stable
+      asset-identity surface for imported user fonts
   - Evidence:
+    - `crates/fret-fonts/src/{lib.rs,tests.rs}`
     - `crates/fret-runtime/src/font_catalog.rs`
     - `crates/fret-diag-protocol/src/lib.rs`
     - `crates/fret-launch/src/runner/font_catalog.rs`
