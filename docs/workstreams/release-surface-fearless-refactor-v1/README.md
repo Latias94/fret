@@ -30,6 +30,12 @@ Non-goals:
 - `fret-router-ui` is promoted from `publish = false` to a publishable thin adoption crate so the
   optional `fret/router` lane no longer blocks `fret` release packaging.
 
+## Wave 2 current slice
+
+- `fret-ui-shadcn` no longer pulls `fret-chart` into its default closure.
+- chart recipes now sit behind an explicit `chart` feature, with `fret-ui-gallery` opting in only
+  on its chart-specific gallery lanes.
+
 ## Documents
 
 - Design: [docs/workstreams/release-surface-fearless-refactor-v1/DESIGN.md](./DESIGN.md)

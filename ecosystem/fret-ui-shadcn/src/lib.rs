@@ -46,6 +46,8 @@
 //! - `app-integration`: explicit app-surface helpers under `fret_ui_shadcn::app::{install, ...}`
 //!   plus advanced hooks under `fret_ui_shadcn::advanced::{...}` for environment syncing and
 //!   `UiServices`-boundary integration.
+//! - `chart`: opt into chart-specific shadcn recipes backed by `fret-chart`.
+//! - `executor-integration`: opt into executor-backed async recipe helpers.
 //! - `state-selector`, `state-query`: opt-in state helpers used by some recipes/demos.
 
 mod a11y_modal;
@@ -66,6 +68,7 @@ mod calendar_multiple;
 mod calendar_range;
 mod card;
 mod carousel;
+#[cfg(feature = "chart")]
 mod chart;
 mod checkbox;
 mod checked_state_model;
@@ -120,6 +123,7 @@ mod popover;
 mod popper_arrow;
 mod progress;
 mod radio_group;
+#[cfg(feature = "chart")]
 mod recharts_geometry;
 mod resizable;
 mod rtl;
@@ -206,6 +210,7 @@ pub mod raw {
     raw_module!(calendar_range);
     raw_module!(card);
     raw_module!(carousel);
+    #[cfg(feature = "chart")]
     raw_module!(chart);
     raw_module!(checked_state_model);
     raw_module!(checkbox);
@@ -252,6 +257,7 @@ pub mod raw {
     raw_module!(popover);
     raw_module!(progress);
     raw_module!(radio_group);
+    #[cfg(feature = "chart")]
     raw_module!(recharts_geometry);
     raw_module!(resizable);
     raw_module!(scroll_area);
@@ -350,6 +356,7 @@ pub mod facade {
         CarouselOrientation, CarouselPlugin, CarouselPrevious, CarouselSlidesInViewSnapshot,
         CarouselSlidesToScroll, CarouselWheelGesturesConfig, carousel_context, use_carousel,
     };
+    #[cfg(feature = "chart")]
     pub use crate::chart::{
         ChartConfig, ChartConfigItem, ChartContainer, ChartContainerBuild, ChartContext,
         ChartLegend, ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartStyle,
@@ -523,8 +530,11 @@ pub mod facade {
     pub use crate::solar_hijri_month_model::IntoSolarHijriMonthModel;
     pub use crate::sonner::{
         Sonner, ToastAction, ToastIconOverride, ToastIconOverrides, ToastId, ToastMessageOptions,
-        ToastOffset, ToastPosition, ToastPromise, ToastPromiseAsyncOptions, ToastPromiseHandle,
-        ToastPromiseUnwrapError, ToastRequest, ToastVariant, Toaster,
+        ToastOffset, ToastPosition, ToastPromise, ToastRequest, ToastVariant, Toaster,
+    };
+    #[cfg(feature = "executor-integration")]
+    pub use crate::sonner::{
+        ToastPromiseAsyncOptions, ToastPromiseHandle, ToastPromiseUnwrapError,
     };
     pub use crate::spinner::Spinner;
     pub use crate::switch::{Switch, SwitchSize, switch};

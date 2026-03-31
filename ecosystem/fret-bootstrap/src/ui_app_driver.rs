@@ -30,9 +30,6 @@ use fret_core::time::Instant;
 #[cfg(feature = "diagnostics")]
 use crate::ui_diagnostics::UiDiagnosticsService;
 
-#[cfg(feature = "ui-app-command-palette")]
-use fret_ui_shadcn::facade as shadcn;
-
 pub type ViewElements = Elements;
 
 type ViewFn<S> = for<'a> fn(&mut ElementContext<'a, App>, &mut S) -> ViewElements;
@@ -64,6 +61,17 @@ type RecordEngineFrameHookFn<S> = fn(
     TickId,
     FrameId,
 ) -> EngineFrameUpdate;
+
+#[cfg(feature = "ui-app-command-palette")]
+pub type CommandPaletteOverlayFn =
+    for<'a> fn(&mut ElementContext<'a, App>, CommandPaletteOverlayCx, &mut ViewElements);
+
+#[cfg(feature = "ui-app-command-palette")]
+#[derive(Debug, Clone)]
+pub struct CommandPaletteOverlayCx {
+    pub models: CommandPaletteModels,
+    pub open: bool,
+}
 
 /// A minimal, hotpatch-friendly “golden path” app driver.
 ///
@@ -106,6 +114,8 @@ pub struct UiAppDriver<S> {
 
     #[cfg(feature = "ui-app-command-palette")]
     command_palette_enabled: bool,
+    #[cfg(feature = "ui-app-command-palette")]
+    command_palette_overlay: Option<CommandPaletteOverlayFn>,
 }
 
 impl<S> UiAppDriver<S> {
@@ -138,12 +148,24 @@ impl<S> UiAppDriver<S> {
 
             #[cfg(feature = "ui-app-command-palette")]
             command_palette_enabled: true,
+            #[cfg(feature = "ui-app-command-palette")]
+            command_palette_overlay: None,
         }
     }
 
     #[cfg(feature = "ui-app-command-palette")]
     pub fn command_palette(mut self, enabled: bool) -> Self {
         self.command_palette_enabled = enabled;
+        self
+    }
+
+    /// Register an app-owned command palette overlay renderer.
+    ///
+    /// `fret-bootstrap` keeps the command toggle/gating capability, while recipe crates own the
+    /// default UI presentation.
+    #[cfg(feature = "ui-app-command-palette")]
+    pub fn command_palette_overlay(mut self, f: CommandPaletteOverlayFn) -> Self {
+        self.command_palette_overlay = Some(f);
         self
     }
 
@@ -453,6 +475,39 @@ fn command_palette_cleanup_gating_if_closed(app: &mut App, window: AppWindowId, 
             |svc, _app| {
                 let _ = svc.pop_snapshot(handle);
             },
+        );
+    }
+}
+
+#[cfg(feature = "ui-app-command-palette")]
+fn render_command_palette_overlay_if_needed<S>(
+    driver: &UiAppDriver<S>,
+    cx: &mut ElementContext<'_, App>,
+    out: &mut ViewElements,
+) {
+    if !driver.command_palette_enabled {
+        return;
+    }
+
+    let Some(models) = cx
+        .app
+        .global::<CommandPaletteService>()
+        .and_then(|svc| svc.models(cx.window))
+    else {
+        return;
+    };
+
+    let open_now = cx.app.models().get_copied(&models.open).unwrap_or(false);
+    command_palette_cleanup_gating_if_closed(cx.app, cx.window, open_now);
+
+    if let Some(render_overlay) = driver.command_palette_overlay {
+        render_overlay(
+            cx,
+            CommandPaletteOverlayCx {
+                models,
+                open: open_now,
+            },
+            out,
         );
     }
 }
@@ -2056,42 +2111,7 @@ fn ui_app_render<S>(
                     };
 
                     #[cfg(feature = "ui-app-command-palette")]
-                    if driver.command_palette_enabled
-                        && let Some(models) = cx
-                            .app
-                            .global::<CommandPaletteService>()
-                            .and_then(|svc| svc.models(cx.window))
-                    {
-                        let open_now = cx.app.models().get_copied(&models.open).unwrap_or(false);
-                        command_palette_cleanup_gating_if_closed(cx.app, cx.window, open_now);
-                        let entries: Vec<shadcn::CommandEntry> = if open_now {
-                            fret_ui_kit::command::command_catalog_entries_from_host_commands_with_options(
-                                cx,
-                                fret_ui_kit::command::CommandCatalogOptions::default(),
-                            )
-                            .into_iter()
-                            .map(Into::into)
-                            .collect()
-                        } else {
-                            Vec::new()
-                        };
-
-                        let dialog =
-                            shadcn::CommandDialog::new(models.open, models.query, Vec::new())
-                                .entries(entries)
-                                .a11y_label("Command palette")
-                                .into_element(cx, |cx| {
-                                    cx.interactivity_gate_props(
-                                        fret_ui::element::InteractivityGateProps {
-                                            present: false,
-                                            interactive: false,
-                                            ..Default::default()
-                                        },
-                                        |_| vec![],
-                                    )
-                                });
-                        out.push(dialog);
-                    }
+                    render_command_palette_overlay_if_needed(driver, cx, &mut out);
 
                     drive_preferences_overlay(cx);
                     out
@@ -2112,42 +2132,7 @@ fn ui_app_render<S>(
                     let mut out = out;
 
                     #[cfg(feature = "ui-app-command-palette")]
-                    if driver.command_palette_enabled
-                        && let Some(models) = cx
-                            .app
-                            .global::<CommandPaletteService>()
-                            .and_then(|svc| svc.models(cx.window))
-                    {
-                        let open_now = cx.app.models().get_copied(&models.open).unwrap_or(false);
-                        command_palette_cleanup_gating_if_closed(cx.app, cx.window, open_now);
-                        let entries: Vec<shadcn::CommandEntry> = if open_now {
-                            fret_ui_kit::command::command_catalog_entries_from_host_commands_with_options(
-                                cx,
-                                fret_ui_kit::command::CommandCatalogOptions::default(),
-                            )
-                            .into_iter()
-                            .map(Into::into)
-                            .collect()
-                        } else {
-                            Vec::new()
-                        };
-
-                        let dialog =
-                            shadcn::CommandDialog::new(models.open, models.query, Vec::new())
-                                .entries(entries)
-                                .a11y_label("Command palette")
-                                .into_element(cx, |cx| {
-                                    cx.interactivity_gate_props(
-                                        fret_ui::element::InteractivityGateProps {
-                                            present: false,
-                                            interactive: false,
-                                            ..Default::default()
-                                        },
-                                        |_| vec![],
-                                    )
-                                });
-                        out.push(dialog);
-                    }
+                    render_command_palette_overlay_if_needed(driver, cx, &mut out);
 
                     drive_preferences_overlay(cx);
                     out

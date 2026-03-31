@@ -211,7 +211,8 @@ The same ordered builder surface now also includes compile-time/static entries t
 - `ui-assets`: enable UI render-asset caches (images/SVG) and install default budgets.
 - `icons`: install the default built-in icon pack (Lucide).
 - `preload-icon-svgs`: pre-register SVG icons on GPU ready.
-- `command-palette`: enable the command palette wiring in the golden-path driver.
+- `command-palette`: enable the command palette wiring in the golden-path driver, including the
+  default shadcn overlay bridge.
 
 ## Web / wasm
 

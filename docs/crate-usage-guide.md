@@ -462,6 +462,11 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 **Use it when:** you want a ready-to-use design-system surface (buttons, inputs, popovers, command palette, etc).
 
+**Optional heavy lanes:**
+
+- enable `fret-ui-shadcn/chart` only when you need the shadcn-aligned chart recipe surface
+- enable `fret-ui-shadcn/executor-integration` only when you need executor-backed async recipe helpers such as Sonner promise flows
+
 **Theme integration:**
 
 - Direct crate usage: prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`, then call
@@ -590,11 +595,34 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   `BootstrapBuilder::with_asset_startup(...)`,
 - icon pack registration (built-in packs or custom),
 - optional UI app driver wiring,
-- optional command palette integration,
+- optional command palette capability (toggle handling + per-window state + command gating),
 - optional diagnostics + tracing wiring.
+
+**Command palette note:** `fret-bootstrap/ui-app-command-palette` keeps the app-driver capability
+layer only. If you want the default shadcn `CommandDialog` presentation on top of that capability,
+pair it with `fret-bootstrap-shadcn` or use `fret`'s `command-palette` feature.
 
 Note: dev hotpatch is an internal maintainer workflow today and is not part of the user-facing
 onboarding path.
+
+### `fret-bootstrap-shadcn`
+
+**What it is:** a thin bridge crate that binds `fret-bootstrap` command palette capability to the
+default shadcn `CommandDialog` recipe.
+
+**Use it when:** you are on `fret-bootstrap` directly and want the default shadcn command palette
+UI without inlining your own overlay renderer into `UiAppDriver`.
+
+**Recommended integration:**
+
+- **Apps using `fret`:** prefer `fret`'s `command-palette` feature; it already installs this
+  bridge for the golden-path authoring surface.
+- **Apps using `fret-bootstrap` directly:** call
+  `fret_bootstrap_shadcn::with_shadcn_command_palette(driver)` after enabling
+  `fret-bootstrap/ui-app-command-palette`.
+- **Apps with custom design systems:** stay on `fret-bootstrap/ui-app-command-palette` and supply
+  an app-owned `UiAppDriver::command_palette_overlay(...)` renderer instead of depending on this
+  shadcn-specific bridge.
 
 ### `fret-executor`
 

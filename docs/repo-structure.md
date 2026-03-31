@@ -69,6 +69,7 @@ Common examples:
   - `fret-ui-shadcn`
 - "App kit" / default app policies:
   - `fret-bootstrap` (opinionated startup glue over `fret-launch`)
+  - `fret-bootstrap-shadcn` (thin bootstrap + shadcn bridge crate)
   - `fret-ui-assets` (UI render asset caches and upload helpers)
 - Icons:
   - `fret-icons` (primitives/registry)

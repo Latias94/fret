@@ -17,6 +17,8 @@ Experimental learning project (not production-ready).
 ## Features
 
 - `app-integration`: explicit app helpers under `fret_ui_shadcn::app::{install, install_with, ...}` and advanced hooks under `fret_ui_shadcn::advanced::{...}` (optional)
+- `chart`: opt into shadcn chart recipes backed by `fret-chart`
+- `executor-integration`: opt into executor-backed async recipe helpers (currently Sonner promise flows)
 - `state-selector` / `state-query`: opt into derived/async state helpers
 - `state`: enables both selector + query integration
 

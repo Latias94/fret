@@ -4,7 +4,7 @@
 
 - `M0` Baseline and blocker identification: **Completed**
 - `M1` Publish blocker removal: **In progress**
-- `M2` Closure slimming: **Not started**
+- `M2` Closure slimming: **In progress**
 - `M3` Release candidate freeze: **Not started**
 
 ## M0 — Baseline and blocker identification
@@ -53,14 +53,36 @@
 
 ## M2 — Closure slimming
 
-**Status:** Not started
+**Status:** In progress
 
-**What should close**
+**Current landed slice**
 
-- `fret-ui-shadcn` no longer pulls obviously non-baseline heavy crates into its default closure,
+- `fret-ui-shadcn` moved chart recipes behind an explicit `chart` feature instead of pulling
+  `fret-chart` into the default closure.
+- `fret-ui-shadcn` moved executor-backed async recipe helpers behind an explicit
+  `executor-integration` feature instead of pulling `fret-executor` into the default closure.
+- `fret-ui-gallery` now opts into that feature only on `gallery-chart` / `gallery-dev`.
+- `fret-bootstrap` no longer binds command palette capability directly to `fret-ui-shadcn`;
+  default shadcn command palette UI now lives in `fret-bootstrap-shadcn`.
+- `fret`'s `command-palette` feature now pulls in that bridge explicitly, keeping the app-facing
+  authoring story unchanged while making the crate boundary honest.
+
+**Remaining to close**
+
 - `fret-bootstrap` feature fan-out is rebalanced so onboarding defaults stay smaller and more
   predictable,
 - the `fret` optional feature matrix maps cleanly to publishable, intentional extension seams.
+
+**Evidence**
+
+- `ecosystem/fret-ui-shadcn/Cargo.toml`
+- `ecosystem/fret-ui-shadcn/src/lib.rs`
+- `ecosystem/fret-ui-shadcn/src/sonner.rs`
+- `apps/fret-ui-gallery/Cargo.toml`
+- `ecosystem/fret-bootstrap/Cargo.toml`
+- `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+- `ecosystem/fret-bootstrap-shadcn/src/lib.rs`
+- `ecosystem/fret/Cargo.toml`
 
 ## M3 — Release candidate freeze
 

@@ -1212,7 +1212,7 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "dialog.rs",
             DIALOG_RS,
             &[
-                "impl Dialog { pub fn new(open: impl IntoBoolModel) -> Self { let open = open.into_bool_model(); Self { open, overlay_closable: true,",
+                "impl Dialog { pub fn new(open: impl IntoBoolModel) -> Self { let open = open.into_bool_model(); Self { open, handle: None, overlay_closable: true,",
             ][..],
             &["impl Dialog { pub fn new(open: Model<bool>) -> Self {"][..],
         ),
@@ -1957,6 +1957,35 @@ fn selector_and_query_helpers_stay_isolated_to_opt_in_state_module() {
 }
 
 #[test]
+fn chart_helpers_stay_isolated_to_opt_in_chart_feature() {
+    let normalized_lib = normalize_ws(LIB_RS);
+    assert!(
+        normalized_lib.contains("#[cfg(feature=\"chart\")]modchart;"),
+        "lib.rs should keep the chart recipe module behind an explicit `chart` feature"
+    );
+    assert!(
+        normalized_lib.contains("#[cfg(feature=\"chart\")]modrecharts_geometry;"),
+        "lib.rs should keep recharts geometry helpers behind the same opt-in chart feature"
+    );
+    assert!(
+        normalized_lib.contains("#[cfg(feature=\"chart\")]raw_module!(chart);"),
+        "raw chart access should stay behind the explicit chart feature"
+    );
+    assert!(
+        normalized_lib.contains("#[cfg(feature=\"chart\")]raw_module!(recharts_geometry);"),
+        "raw recharts geometry access should stay behind the explicit chart feature"
+    );
+    assert!(
+        normalized_lib.contains("#[cfg(feature=\"chart\")]pubusecrate::chart::{"),
+        "facade chart re-exports should stay behind the explicit chart feature"
+    );
+    assert!(
+        README.contains("- `chart`: opt into shadcn chart recipes backed by `fret-chart`"),
+        "README should document the explicit chart feature instead of treating chart recipes as baseline"
+    );
+}
+
+#[test]
 fn kbd_icon_stays_an_explicit_raw_helper_for_kbd_child_lists() {
     assert!(
         KBD_RS.contains(
@@ -2138,6 +2167,9 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
             "dialog.rs",
             DIALOG_RS,
             &[
+                "pub fn new<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn open_model(&self) -> Model<bool>",
                 "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
                 "pub fn new(open: Model<bool>) -> Self",
             ][..],

@@ -1101,6 +1101,9 @@ impl<S> UiAppDriver<S> {
     #[cfg(feature = "command-palette")]
     pub fn command_palette(mut self, enabled: bool) -> Self {
         self.inner = self.inner.command_palette(enabled);
+        if enabled {
+            self.inner = fret_bootstrap_shadcn::with_shadcn_command_palette(self.inner);
+        }
         self
     }
 }

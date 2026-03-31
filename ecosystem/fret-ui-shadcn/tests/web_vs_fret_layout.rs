@@ -40,7 +40,9 @@ pub(crate) use std::sync::Arc;
 
 mod css_color;
 pub(crate) use css_color::{Rgba, color_to_rgba, parse_css_color};
+#[cfg(feature = "chart")]
 mod chart_test_data;
+#[cfg(feature = "chart")]
 pub(crate) use chart_test_data::{CHART_INTERACTIVE_DESKTOP, CHART_INTERACTIVE_MOBILE};
 
 #[path = "web_vs_fret_layout/support.rs"]
@@ -84,6 +86,7 @@ pub(crate) use calendar::{
 mod card;
 #[path = "web_vs_fret_layout/carousel.rs"]
 mod carousel;
+#[cfg(feature = "chart")]
 #[path = "web_vs_fret_layout/chart.rs"]
 mod chart;
 #[path = "web_vs_fret_layout/collapsible.rs"]
@@ -96,6 +99,7 @@ mod empty;
 mod item;
 #[path = "web_vs_fret_layout/kbd.rs"]
 mod kbd;
+#[cfg(feature = "chart")]
 #[path = "web_vs_fret_layout/chart_scaffold.rs"]
 mod layout_chart_scaffold_fixtures;
 #[path = "web_vs_fret_layout/field.rs"]

@@ -40,6 +40,16 @@ Recommended mental model:
   defaults but need more control over driver wiring.
 - `fret-launch` remains the lower-level runner facade for advanced integration details.
 
+## Command palette boundary
+
+- `fret-bootstrap/ui-app-command-palette` owns the driver-level capability:
+  - command dispatch handling,
+  - per-window open/query models,
+  - command gating snapshots.
+- Default recipe UI is intentionally not owned here.
+- Use `fret-bootstrap-shadcn` when you want the default shadcn `CommandDialog` overlay on top of
+  that capability.
+
 ## Minimal examples
 
 - General UI app: see `ecosystem/fret/src/lib.rs`

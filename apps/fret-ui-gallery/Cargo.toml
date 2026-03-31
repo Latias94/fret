@@ -19,6 +19,7 @@ gallery-web-ime-harness = ["fret-fonts/emoji"]
 gallery-chart = [
     "dep:fret-chart",
     "dep:delinea",
+    "fret-ui-shadcn/chart",
 ]
 gallery-dev = [
     "gallery-ai",
