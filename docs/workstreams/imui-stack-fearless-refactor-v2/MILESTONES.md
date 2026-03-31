@@ -9,6 +9,9 @@ Baseline audit: `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT
 Teaching-surface audit:
 `docs/workstreams/imui-stack-fearless-refactor-v2/TEACHING_SURFACE_AUDIT_2026-03-31.md`
 
+Closeout audit:
+`docs/workstreams/imui-stack-fearless-refactor-v2/CLOSEOUT_AUDIT_2026-03-31.md`
+
 This file is forward-looking only.
 Earlier `imui` closure lanes remain valuable as audit history, but the milestones below describe
 the recommended execution order for the next fearless pass.
@@ -87,7 +90,7 @@ Exit gates:
 
 ## Phase D - Delete-ready cleanup and closeout
 
-Status: In progress
+Status: Completed
 
 Goal:
 
@@ -111,6 +114,14 @@ Exit gates:
   modules,
 - and this lane can become the historical closeout record for the next follow-on only if fresh
   evidence appears.
+
+Closeout result (2026-03-31):
+
+- The lane is now closed with a final survive/promote/declarative-only/delete audit.
+- No active first-party `imui` teaching surface currently bypasses the official editor adapter
+  layer where an adapter exists, and no active example teaches deleted historical helper names.
+- The next follow-on should open a new lane only if new evidence appears, not by reopening this one
+  as a vague backlog bucket.
 
 ## Recommended execution order
 

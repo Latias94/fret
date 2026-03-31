@@ -14,9 +14,12 @@ Upstream sources:
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
-Status: Active workstream
+Status: Closed
 
 Last updated: 2026-03-31
+
+Closeout audit:
+`docs/workstreams/imui-stack-fearless-refactor-v2/CLOSEOUT_AUDIT_2026-03-31.md`
 
 ## Purpose
 

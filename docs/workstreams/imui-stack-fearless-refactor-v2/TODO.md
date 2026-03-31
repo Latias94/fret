@@ -9,6 +9,9 @@ Baseline audit: `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT
 Teaching-surface audit:
 `docs/workstreams/imui-stack-fearless-refactor-v2/TEACHING_SURFACE_AUDIT_2026-03-31.md`
 
+Closeout audit:
+`docs/workstreams/imui-stack-fearless-refactor-v2/CLOSEOUT_AUDIT_2026-03-31.md`
+
 This board assumes a workspace-wide breaking migration.
 Compatibility shims are explicitly out of scope.
 
@@ -31,7 +34,7 @@ Compatibility shims are explicitly out of scope.
 - [x] Reject `property_row(...)` promotion for this lane and keep it declarative-only.
 - [x] If `property_row(...)` stays declarative-only, document that decision explicitly in this
       lane and remove ambiguity from proof/demo code.
-- [ ] Delete or rewrite any competing first-party helper path that becomes redundant once the
+- [x] Delete or rewrite any competing first-party helper path that becomes redundant once the
       adapter closure is in place.
 
 Decision note (2026-03-31):
@@ -52,6 +55,10 @@ Audit result (2026-03-31):
   not missing top-level immediate nouns:
   `PropertyRow`, `PropertyRowReset`, row/context carrier types, callback aliases, binding structs,
   options/outcome enums, and similar support types.
+- The direct competing first-party paths found during this lane were closed in two ways:
+  the immediate proof/demo column now routes editor-owned nouns through `fret_ui_editor::imui`,
+  and the built-in sample wrapper pair was removed from the public
+  `fret_ui_kit::imui::adapters` module so the seam stays contract-only.
 
 ## M2 - Proof/demo migration
 
@@ -122,7 +129,7 @@ Generic audit result (2026-03-31):
 
 - [x] Verify docs and proof surfaces no longer teach bypasses or stale gap statements.
 - [x] Verify each surviving helper family has one clear owner.
-- [ ] Capture a final audit of:
+- [x] Capture a final audit of:
       - what survived,
       - what was newly promoted,
       - what remains intentionally declarative-only,
@@ -141,3 +148,5 @@ Teaching-surface audit result (2026-03-31):
   editor-owned nouns use `fret_ui_editor::imui`,
   and `imui_node_graph_demo` remains explicitly labeled as a retained-bridge compatibility example
   rather than the default downstream authoring path.
+- The final survive/promote/declarative-only/delete summary now lives in
+  `CLOSEOUT_AUDIT_2026-03-31.md`; no open migration item remains in this lane.
