@@ -40,6 +40,7 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) debug_scroll_wheel: bool,
     pub(crate) debug_scroll_extent_probe: bool,
     pub(crate) debug_scroll_handle_set_offset: bool,
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) resizable_split_log: bool,
 
     pub(crate) hit_test_bounds_tree_disabled: bool,
@@ -189,6 +190,7 @@ impl UiRuntimeEnvConfig {
         let debug_scroll_extent_probe = env_is_one("FRET_DEBUG_SCROLL_EXTENT_PROBE");
         let debug_scroll_handle_set_offset = env_enabled("FRET_DEBUG_SCROLL_HANDLE_SET_OFFSET");
 
+        #[cfg(not(target_arch = "wasm32"))]
         let resizable_split_log = env_present("FRET_RESIZABLE_SPLIT_LOG");
 
         let hit_test_bounds_tree_disabled = env_non_empty("FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE");
@@ -350,6 +352,7 @@ impl UiRuntimeEnvConfig {
             debug_scroll_wheel,
             debug_scroll_extent_probe,
             debug_scroll_handle_set_offset,
+            #[cfg(not(target_arch = "wasm32"))]
             resizable_split_log,
             hit_test_bounds_tree_disabled,
             hit_test_bounds_tree_min_records,

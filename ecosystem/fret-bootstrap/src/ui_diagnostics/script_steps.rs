@@ -821,11 +821,11 @@ pub(super) fn handle_capture_layout_sidecar_step(
     svc: &mut UiDiagnosticsService,
     app: &mut App,
     window: AppWindowId,
-    window_bounds: Rect,
+    _window_bounds: Rect,
     step_index: usize,
     label: Option<String>,
     root_label_filter: Option<String>,
-    scale_factor: f32,
+    _scale_factor: f32,
     ui: &mut Option<&mut UiTree<App>>,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
@@ -910,7 +910,7 @@ pub(super) fn handle_capture_layout_sidecar_step(
         return true;
     };
 
-    let Some(root) = ui.base_root() else {
+    let Some(_root) = ui.base_root() else {
         push_script_event_log(
             active,
             &svc.cfg,
@@ -938,9 +938,9 @@ pub(super) fn handle_capture_layout_sidecar_step(
     let sidecar_result = ui.debug_write_layout_sidecar_taffy_v1_json(
         app,
         window,
-        root,
-        window_bounds,
-        scale_factor,
+        _root,
+        _window_bounds,
+        _scale_factor,
         root_label_filter,
         &dumped_dir,
         captured_at_unix_ms,

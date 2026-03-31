@@ -97,8 +97,10 @@
 //!   composition can also use `.setup((install_a, install_b))` while ordinary app code keeps
 //!   passing named installer functions to `.setup(...)` and keeps inline one-off closures or
 //!   runtime-captured config on `UiAppBuilder::setup_with(...)`
-#[cfg(feature = "desktop")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 use crate::advanced::KernelApp;
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+use fret_framework as kernel;
 
 /// Canonical app-facing window identity alias for the default authoring surface.
 pub type WindowId = fret_core::AppWindowId;
@@ -397,9 +399,6 @@ impl Default for Defaults {
 mod interop;
 
 /// Re-export the kernel facade (desktop builds).
-#[cfg(feature = "desktop")]
-use fret_framework as kernel;
-
 /// App-facing imports for ordinary Fret application code.
 pub mod app {
     /// Canonical app-facing view trait on the explicit app lane.
@@ -1388,9 +1387,9 @@ pub(crate) fn apply_desktop_defaults<D: fret_launch::WinitAppDriver + 'static>(
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "shadcn"))]
 fn shadcn_sync_theme_from_environment_on_global_changes<S>(
-    app: &mut KernelApp,
+    app: &mut crate::advanced::KernelApp,
     window: fret_core::AppWindowId,
-    _ui: &mut fret_ui::UiTree<KernelApp>,
+    _ui: &mut fret_ui::UiTree<crate::advanced::KernelApp>,
     _st: &mut S,
     changed: &[std::any::TypeId],
 ) {

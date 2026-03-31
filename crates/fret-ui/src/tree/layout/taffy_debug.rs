@@ -1,6 +1,7 @@
 use super::*;
 use crate::layout_engine::{DebugDumpNodeInfo, TaffyLayoutEngine};
 
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone, Copy)]
 struct LayoutSidecarRootRecord {
     capture_index: usize,
@@ -102,6 +103,7 @@ fn layout_debug_search_label<H: UiHost>(app: &mut H, window: AppWindowId, node: 
         .unwrap_or_default()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn find_layout_debug_match_in_subtree<H: UiHost>(
     tree: &UiTree<H>,
     app: &mut H,
@@ -135,6 +137,7 @@ fn find_layout_debug_match_in_subtree<H: UiHost>(
 }
 
 impl<H: UiHost> UiTree<H> {
+    #[cfg(not(target_arch = "wasm32"))]
     fn layout_sidecar_roots(
         &self,
         fallback_root: NodeId,
