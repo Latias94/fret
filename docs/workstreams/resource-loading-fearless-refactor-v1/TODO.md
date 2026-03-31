@@ -295,16 +295,15 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       renderer font inventory:
       - monotonic `revision`,
       - `text_font_stack_key`,
-      - accepted renderer source records for `bundled_startup`, `asset_request`, and
-        `raw_runtime_bytes`,
+      - accepted renderer source records for `bundled_startup` and `asset_request`,
       - stable byte fingerprints and logical `AssetRequest` identity when available.
     - web and the current native winit startup path now both install bundled default fonts and
       publish the current `fret-fonts::default_profile()` identity (profile name, bundle id,
       logical asset keys, declared roles, guaranteed generics) before startup font-environment
       initialization.
-    - startup bundled baseline injection plus runtime `TextAddFontAssets` / `TextAddFontBytes` now all
-      feed that same shared source inventory instead of keeping startup-vs-runtime font provenance
-      on separate publication paths.
+    - startup bundled baseline injection plus runtime `TextAddFontAssets` now all feed that same
+      shared source inventory instead of keeping startup-vs-runtime font provenance on separate
+      publication paths.
     - the UI gallery's deterministic bundled-font diagnostics switch
       (`FRET_UI_GALLERY_BOOTSTRAP_FONTS=1`) now republishes the already-installed startup baseline
       through live renderer catalog metadata instead of re-injecting duplicate bundled font bytes
@@ -314,8 +313,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - `fret-bootstrap::dev_reload` publishes stable bundle asset locators for manifest entries,
       - repeated reloads reuse one mutable resolver layer instead of stacking duplicate
         registrations,
-      - and the watcher now emits `TextAddFontAssets` instead of bypassing identity with raw
-        `TextAddFontBytes`.
+      - and the watcher now emits `TextAddFontAssets` instead of bypassing identity with a
+        separate runtime raw-byte path.
     - first-party local font import flows now also stay on the asset-identity lane:
       - `fret_fonts::build_imported_font_asset_batch(...)` prepares stable memory locators plus
         `Font`-hinted requests for user-selected files,
@@ -341,10 +340,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - add stable Android target evidence once the local/CI environment provides NDK clang
       toolchains
     - add mobile-specific diagnostics or startup gates beyond shared native runner wiring
-    - decide whether `Effect::TextAddFontBytes` can shrink further now that framework-owned
-      startup, first-party dev reload, and first-party local font import flows all stay on
-      asset identity; the raw-byte lane may now only need to serve truly external/low-level
-      callers
+    - audit whether any remaining internal APIs still talk about a runtime raw-byte lane even
+      though the shipped runtime surface now loads fonts only through asset requests
   - Evidence:
     - `crates/fret-fonts/src/{lib.rs,tests.rs}`
     - `crates/fret-runtime/src/font_catalog.rs`
@@ -352,7 +349,6 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `crates/fret-launch/src/runner/font_catalog.rs`
       (`install_default_bundled_font_baseline_adds_fonts_and_publishes_snapshot`,
       `inject_font_asset_batch_and_refresh_catalog_records_asset_sources`,
-      `inject_font_blobs_and_refresh_catalog_refreshes_only_when_fonts_were_added`,
       `publish_renderer_font_environment_sets_key_after_locale_application`)
     - `apps/fret-ui-gallery/src/driver/runtime_driver.rs`
       (`ui_gallery_default_profile_font_requests_stay_on_asset_request_lane`,

@@ -94,7 +94,8 @@ Progress update (2026-03-30):
   once they install a truthful URL resolver.
 - `RLRR-003` is landed as a stage-1 closure: startup bundled-font injection now re-resolves bytes
   from the shared runtime asset resolver with no silent fallback path, and the ADR/runtime wording
-  now explicitly distinguishes that startup baseline from the runtime `Effect::TextAddFontBytes` lane.
+  now explicitly distinguishes that startup baseline from post-startup runtime asset-request
+  loading.
 - the first-party runtime bundled-font top-up lane now also has an explicit asset-identity effect
   (`Effect::TextAddFontAssets`), so framework-owned post-startup injections no longer need to
   masquerade as user-provided raw bytes.
@@ -179,7 +180,8 @@ Status note (2026-03-30):
   (`asset identity -> resolver lookup -> renderer byte injection`),
 - `Effect::TextAddFontAssets` is now the runtime asset-identity lane for framework-owned/runtime
   callers after startup,
-- `Effect::TextAddFontBytes` remains the runtime/user-provided raw-byte lane,
+- first-party local imports now also stage through asset requests instead of a separate runtime
+  raw-byte path,
 - full asset-pipeline unification is still future work rather than an implied current guarantee.
 
 ### 4) Web serif guarantee is now shipped on the bundled startup lane

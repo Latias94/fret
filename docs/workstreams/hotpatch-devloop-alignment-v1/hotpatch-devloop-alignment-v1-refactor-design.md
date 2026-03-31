@@ -60,7 +60,7 @@ Evidence anchors:
 - `crates/fret-runtime/src/asset_reload.rs` (`AssetReloadEpoch`)
 - `ecosystem/fret-ui-assets/src/image_source.rs` (epoch in cache key)
 - `ecosystem/fret-ui-assets/src/ui.rs` (internal epoch-gated SVG file-reference cache)
-- `crates/fret-runtime/src/effect.rs` (`Effect::TextAddFontAssets`, `Effect::TextAddFontBytes`)
+- `crates/fret-runtime/src/effect.rs` (`Effect::TextAddFontAssets`)
 
 ## 2) Detect surface (L1)
 

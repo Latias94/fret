@@ -97,9 +97,8 @@ Baseline contract for Web/WASM:
   font environment.
 - The framework-owned startup baseline must publish a truthful bundled asset identity even if the
   runner resolves those assets to bytes and injects them directly into the renderer.
-- `Effect::TextAddFontAssets` is the runtime asset-identity lane for framework-owned/runtime
-  callers that already have logical font asset requests.
-- `Effect::TextAddFontBytes` remains the runtime/user-provided raw-byte lane after startup.
+- `Effect::TextAddFontAssets` is the runtime font-loading lane after startup. Local user imports
+  should also be staged as asset requests instead of bypassing the shared resolver contract.
 - The `fret-fonts` crate provides **role-based bundles** (not “complete coverage”).
 
 Minimum requirement for the shipped `fret_fonts::default_profile()` (v1):

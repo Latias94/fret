@@ -22,7 +22,6 @@ Fret now has a deterministic startup font baseline story for main text:
 
 - runner startup installs the framework-owned bundled baseline,
 - runtime font loading can flow through `Effect::TextAddFontAssets`,
-- raw user/runtime bytes can still flow through `Effect::TextAddFontBytes`,
 - and runtime globals publish coarse font-environment metadata such as
   `BundledFontBaselineSnapshot`, `FontCatalogMetadata`, and `TextFontStackKey`.
 
@@ -68,10 +67,10 @@ Status note (2026-03-30):
 
 - landed slice:
   - `fret_runtime::RendererFontEnvironmentSnapshot` now publishes a monotonic `revision`,
-    `text_font_stack_key`, and accepted renderer source records for bundled startup,
-    asset-request-backed runtime injection, and raw runtime font bytes,
+    `text_font_stack_key`, and accepted renderer source records for bundled startup and
+    asset-request-backed runtime injection,
   - `crates/fret-launch/src/runner/font_catalog.rs` now records those source records from
-    `install_default_bundled_font_baseline`, `TextAddFontAssets`, and `TextAddFontBytes`,
+    `install_default_bundled_font_baseline` and `TextAddFontAssets`,
   - `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_{impl,types}.rs` now exports the
     same inventory under `debug.resource_loading.font_environment.renderer_font_*`.
 - remaining gap:
@@ -89,7 +88,7 @@ Minimum shape:
 - a new runtime global such as `RendererFontEnvironmentSnapshot`,
 - monotonic `revision`,
 - per-font source records containing:
-  - source lane (`bundled_startup`, `asset_request`, `raw_runtime_bytes`),
+  - source lane (`bundled_startup`, `asset_request`),
   - optional logical identity (`AssetRequest` or equivalent asset key/bundle pair),
   - stable byte fingerprint,
   - enough information for diagnostics and provenance; actual bridge rehydration may stay
@@ -173,7 +172,7 @@ Promote support only after focused gates exist for:
 - bundled-only SVG text on wasm and native producing deterministic results,
 - runtime-added font assets participating in SVG text after the shared revision bumps,
 - missing-font cases failing explicitly instead of silently choosing a host font,
-- cache invalidation across `TextAddFontAssets`, `TextAddFontBytes`, and any system-font augmentation
+- cache invalidation across `TextAddFontAssets` and any system-font augmentation
   that the main text environment already exposes.
 
 Initial supported scope should stay conservative:
@@ -211,7 +210,7 @@ This plan does not aim to:
 
 1. Add the runtime/global font-inventory snapshot described in Stage 1.
 2. Thread successful font injection (`install_default_bundled_font_baseline`,
-   `TextAddFontAssets`, `TextAddFontBytes`) through that snapshot.
+   `TextAddFontAssets`) through that snapshot.
 3. Keep the renderer-owned bridge snapshot aligned with the shared diagnostics vocabulary as new
    SVG text cases are admitted.
 4. Add broader deterministic wasm/mobile/runtime-font gates before widening supported scope.

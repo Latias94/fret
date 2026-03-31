@@ -6,26 +6,18 @@ use read_fonts::{FontRef, TableProvider as _};
 use std::collections::BTreeSet;
 
 #[test]
-fn imported_font_batch_accepts_supported_sfnt_signatures_only() {
+fn supported_user_font_bytes_accept_supported_sfnt_signatures_only() {
     let true_type = [0x00, 0x01, 0x00, 0x00, 0x10];
     let open_type = *b"OTTOx";
     let collection = *b"ttcfx";
     let woff = *b"wOFFx";
     let junk = *b"plain";
 
-    let batch = collect_supported_user_font_bytes([
-        true_type.as_slice(),
-        open_type.as_slice(),
-        collection.as_slice(),
-        woff.as_slice(),
-        junk.as_slice(),
-    ]);
-
-    assert_eq!(batch.fonts.len(), 3);
-    assert_eq!(batch.rejected_files, 2);
-    assert_eq!(batch.fonts[0], true_type);
-    assert_eq!(batch.fonts[1], open_type);
-    assert_eq!(batch.fonts[2], collection);
+    assert!(is_supported_user_font_bytes(true_type.as_slice()));
+    assert!(is_supported_user_font_bytes(open_type.as_slice()));
+    assert!(is_supported_user_font_bytes(collection.as_slice()));
+    assert!(!is_supported_user_font_bytes(woff.as_slice()));
+    assert!(!is_supported_user_font_bytes(junk.as_slice()));
 }
 
 #[test]

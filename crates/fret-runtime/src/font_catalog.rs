@@ -129,7 +129,6 @@ pub enum RendererFontSourceLane {
     #[default]
     BundledStartup,
     AssetRequest,
-    RawRuntimeBytes,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -168,16 +167,6 @@ impl RendererFontSourceRecord {
         Self {
             source_lane: RendererFontSourceLane::AssetRequest,
             asset_request: Some(asset_request),
-            byte_hash,
-            byte_len,
-            added_face_count,
-        }
-    }
-
-    pub fn raw_runtime_bytes(byte_hash: u64, byte_len: u64, added_face_count: u64) -> Self {
-        Self {
-            source_lane: RendererFontSourceLane::RawRuntimeBytes,
-            asset_request: None,
             byte_hash,
             byte_len,
             added_face_count,

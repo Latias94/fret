@@ -208,11 +208,10 @@ This workstream takes a fearless posture:
     enumeration augments the live catalog without redefining that baseline identity.
 - runner-visible font publication now also records a shared renderer source inventory:
   - `fret_runtime::RendererFontEnvironmentSnapshot` tracks a monotonic `revision`, the current
-    `text_font_stack_key`, and accepted renderer font sources across all three current lanes
-    (`bundled_startup`, `asset_request`, `raw_runtime_bytes`),
-  - startup bundled baseline injection plus runtime `TextAddFontAssets` / `TextAddFontBytes` now all
-    feed that same inventory instead of leaving font provenance split across startup-only and
-    runtime-only paths,
+    `text_font_stack_key`, and accepted renderer font sources across the shipped lanes
+    (`bundled_startup`, `asset_request`),
+  - startup bundled baseline injection plus runtime `TextAddFontAssets` now all feed that same
+    inventory instead of leaving font provenance split across startup-only and runtime-only paths,
   - first-party local font import flows now also stay on the asset-identity lane:
     - `fret_fonts::build_imported_font_asset_batch(...)` assigns stable memory locators plus
       `Font`-hinted `AssetRequest`s,

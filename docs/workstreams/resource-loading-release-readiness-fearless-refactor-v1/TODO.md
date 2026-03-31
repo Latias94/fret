@@ -70,8 +70,8 @@ Tracking format:
       bytes,
     - ADR/runtime/repo docs now explicitly describe startup bundled baseline loading as
       `asset identity -> resolver lookup -> renderer byte injection`, while
-      `Effect::TextAddFontAssets` is the runtime asset-identity lane and `Effect::TextAddFontBytes`
-      remains the runtime/user-provided raw-byte lane.
+      `Effect::TextAddFontAssets` remains the runtime font-loading lane after startup, including
+      first-party local imports staged through memory asset locators.
   - Evidence:
     - `crates/fret-launch/src/runner/font_catalog.rs`
     - `crates/fret-runtime/src/effect.rs`

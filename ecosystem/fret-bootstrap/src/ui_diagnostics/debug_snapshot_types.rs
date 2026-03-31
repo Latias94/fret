@@ -550,7 +550,6 @@ impl UiRendererFontSourceSnapshotV1 {
             source_lane: match record.source_lane {
                 fret_runtime::RendererFontSourceLane::BundledStartup => "bundled_startup",
                 fret_runtime::RendererFontSourceLane::AssetRequest => "asset_request",
-                fret_runtime::RendererFontSourceLane::RawRuntimeBytes => "raw_runtime_bytes",
             }
             .to_string(),
             byte_hash_hex: format!("{:016x}", record.byte_hash),
@@ -682,19 +681,16 @@ mod debug_snapshot_types_tests {
             Some(&fret_runtime::RendererFontEnvironmentSnapshot {
                 revision: 2,
                 text_font_stack_key: Some(99),
-                sources: vec![
-                    fret_runtime::RendererFontSourceRecord::bundled_startup(
-                        fret_assets::AssetRequest::new(fret_assets::AssetLocator::bundle(
-                            fret_assets::AssetBundleId::package("fret-fonts"),
-                            "fonts/Inter-roman-subset.ttf",
-                        ))
-                        .with_kind_hint(fret_assets::AssetKindHint::Font),
-                        0x1234,
-                        4096,
-                        1,
-                    ),
-                    fret_runtime::RendererFontSourceRecord::raw_runtime_bytes(0x5678, 2048, 2),
-                ],
+                sources: vec![fret_runtime::RendererFontSourceRecord::bundled_startup(
+                    fret_assets::AssetRequest::new(fret_assets::AssetLocator::bundle(
+                        fret_assets::AssetBundleId::package("fret-fonts"),
+                        "fonts/Inter-roman-subset.ttf",
+                    ))
+                    .with_kind_hint(fret_assets::AssetKindHint::Font),
+                    0x1234,
+                    4096,
+                    1,
+                )],
             }),
             Some(99),
             Some(fret_runtime::SystemFontRescanState {
@@ -705,7 +701,7 @@ mod debug_snapshot_types_tests {
         .expect("font environment snapshot");
 
         assert_eq!(snapshot.renderer_font_environment_revision, Some(2));
-        assert_eq!(snapshot.renderer_font_sources.len(), 2);
+        assert_eq!(snapshot.renderer_font_sources.len(), 1);
         assert_eq!(
             snapshot.renderer_font_sources[0].source_lane,
             "bundled_startup"
@@ -726,11 +722,6 @@ mod debug_snapshot_types_tests {
             snapshot.renderer_font_sources[0].byte_hash_hex,
             "0000000000001234"
         );
-        assert_eq!(
-            snapshot.renderer_font_sources[1].source_lane,
-            "raw_runtime_bytes"
-        );
-        assert!(snapshot.renderer_font_sources[1].asset_bundle.is_none());
         assert_eq!(snapshot.text_font_stack_key, Some(99));
         assert_eq!(snapshot.system_font_rescan_pending, Some(true));
     }

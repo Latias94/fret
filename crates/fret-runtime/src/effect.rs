@@ -236,23 +236,11 @@ pub enum Effect {
         window: AppWindowId,
         enabled: bool,
     },
-    /// Add font bytes (TTF/OTF/TTC) to the renderer text system.
-    ///
-    /// This is the runtime/user-provided raw-byte lane. Framework-owned bundled startup baselines
-    /// should publish logical asset identity through the shared runtime asset resolver and resolve
-    /// those assets to bytes before renderer injection.
-    ///
-    /// The runner/backend is responsible for applying this to the renderer and triggering any
-    /// required invalidation/redraw.
-    TextAddFontBytes {
-        fonts: Vec<Vec<u8>>,
-    },
     /// Resolve logical font assets through the shared runtime asset resolver and add the resulting
     /// bytes to the renderer text system.
     ///
-    /// This is the framework-owned/runtime asset lane for callers that already have stable asset
-    /// identity and want resolver overrides, diagnostics, and packaged mounts to participate
-    /// before byte injection.
+    /// This is the runtime font-loading lane for callers that want resolver overrides,
+    /// diagnostics, and packaged mounts to participate before byte injection.
     ///
     /// The runner/backend is responsible for resolving each request, applying any successful
     /// results to the renderer, and triggering any required invalidation/redraw.
