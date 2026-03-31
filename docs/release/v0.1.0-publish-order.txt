@@ -29,11 +29,11 @@
 27. fret-webview
 28. fret-window-style-profiles
 29. fret-render
-30. fret-icons-lucide
-31. fret-icons-radix
-32. fret-runner-web
-33. fret-ui
-34. fret-webview-wry
+30. fret-icons-radix
+31. fret-runner-web
+32. fret-ui
+33. fret-webview-wry
+34. fret-icons-lucide
 35. fret-canvas
 36. fret-query
 37. fret-selector
@@ -80,11 +80,11 @@ cargo publish -p fret-text-nav
 cargo publish -p fret-webview
 cargo publish -p fret-window-style-profiles
 cargo publish -p fret-render
-cargo publish -p fret-icons-lucide
 cargo publish -p fret-icons-radix
 cargo publish -p fret-runner-web
 cargo publish -p fret-ui
 cargo publish -p fret-webview-wry
+cargo publish -p fret-icons-lucide
 cargo publish -p fret-canvas
 cargo publish -p fret-query
 cargo publish -p fret-selector

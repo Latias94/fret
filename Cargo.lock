@@ -2353,10 +2353,6 @@ dependencies = [
 [[package]]
 name = "fret-icons"
 version = "0.1.0"
-dependencies = [
- "fret-icons-lucide",
- "fret-icons-radix",
-]
 
 [[package]]
 name = "fret-icons-lucide"
@@ -2365,6 +2361,7 @@ dependencies = [
  "fret-app",
  "fret-core",
  "fret-icons",
+ "fret-icons-radix",
  "rust-embed",
 ]
 

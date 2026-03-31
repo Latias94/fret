@@ -15,7 +15,9 @@ import tomllib
 
 
 DEPENDENCY_SECTIONS = ("dependencies", "build-dependencies", "dev-dependencies")
-ORDER_SECTIONS = ("dependencies", "build-dependencies")
+# `cargo publish` validates dev-dependencies during package preparation, so first-wave
+# publish order must account for them instead of only runtime/build edges.
+ORDER_SECTIONS = DEPENDENCY_SECTIONS
 
 
 @dataclass
@@ -487,4 +489,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
