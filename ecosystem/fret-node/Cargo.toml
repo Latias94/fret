@@ -16,7 +16,6 @@ fret-app = { version = "0.1.0", path = "../../crates/fret-app", optional = true 
 fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
 fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime", optional = true }
 fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true }
-fret-authoring = { version = "0.1.0", path = "../fret-authoring", optional = true }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", optional = true, default-features = false, features = ["dnd"] }
 serde.workspace = true
 serde_json.workspace = true
@@ -28,11 +27,9 @@ slotmap.workspace = true
 [features]
 default = ["fret-ui", "kit"]
 
-# Convention-aligned feature aliases:
+# Convention-aligned feature alias:
 # - `ui` implies the existing `fret-ui` integration surface.
-# - `imui` adds immediate-mode authoring adapters on top of `ui`.
 ui = ["fret-ui"]
-imui = ["ui", "dep:fret-authoring", "compat-retained-canvas"]
 
 # Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
 fret-ui = ["dep:fret-ui", "dep:fret-runtime", "dep:fret-canvas", "dep:fret-ui-kit"]

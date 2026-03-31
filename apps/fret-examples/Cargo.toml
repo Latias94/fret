@@ -18,7 +18,7 @@ hotpatch = ["fret-launch/hotpatch-subsecond", "fret-bootstrap/hotpatch-subsecond
 macos-hit-test-regions = ["fret-launch/macos-hit-test-regions"]
 # Node-graph demos are split so the default path stays declarative-first (no retained bridge).
 node-graph-demos = []
-node-graph-demos-legacy = ["node-graph-demos", "fret-node/imui"]
+node-graph-demos-legacy = ["node-graph-demos", "fret-node/compat-retained-canvas"]
 devtools-ws = ["fret-bootstrap/diagnostics-ws"]
 
 [dependencies]

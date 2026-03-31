@@ -19,7 +19,9 @@ use fret_node::rules::{
     ConnectDecision, ConnectPlan, DiagnosticSeverity, DiagnosticTarget, InsertNodeTemplate,
     PortTemplate,
 };
-use fret_node::runtime::callbacks::NodeGraphCallbacks;
+use fret_node::runtime::callbacks::{
+    NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks,
+};
 use fret_node::runtime::changes::NodeGraphChanges;
 use fret_node::runtime::events::ViewChange;
 use fret_node::runtime::store::NodeGraphStore;
@@ -66,7 +68,7 @@ struct DomainDemoCallbacks {
     last_viewport_log_at: Option<Instant>,
 }
 
-impl NodeGraphCallbacks for DomainDemoCallbacks {
+impl NodeGraphCommitCallbacks for DomainDemoCallbacks {
     fn on_graph_commit(&mut self, committed: &GraphTransaction, changes: &NodeGraphChanges) {
         self.commit_count += 1;
         tracing::info!(
@@ -78,7 +80,9 @@ impl NodeGraphCallbacks for DomainDemoCallbacks {
             "node graph committed"
         );
     }
+}
 
+impl NodeGraphViewCallbacks for DomainDemoCallbacks {
     fn on_view_change(&mut self, changes: &[ViewChange]) {
         for change in changes {
             match change {
@@ -114,6 +118,8 @@ impl NodeGraphCallbacks for DomainDemoCallbacks {
         }
     }
 }
+
+impl NodeGraphGestureCallbacks for DomainDemoCallbacks {}
 
 fn build_demo_graph(graph_id: GraphId) -> Graph {
     let mut graph = Graph::new(graph_id);

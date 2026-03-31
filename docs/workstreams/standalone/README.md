@@ -28,12 +28,17 @@ git log --since='2026-01-01' --name-only -- docs/workstreams/standalone
 
 ## Immediate-Mode Note Cluster
 
-Current source of truth for the current in-tree `imui` execution surface:
+Most recent closeout record for the in-tree `imui` retained-compatibility follow-on:
 
-- `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
-- `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
+- `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
+- `docs/workstreams/imui-compat-retained-surface-v1/TODO.md`
+- `docs/workstreams/imui-compat-retained-surface-v1/MILESTONES.md`
+- `docs/workstreams/imui-compat-retained-surface-v1/BASELINE_AUDIT_2026-03-31.md`
+- `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`
+
+Closed stack reset + teaching-surface closeout record:
+
+- `docs/workstreams/imui-stack-fearless-refactor-v2/CLOSEOUT_AUDIT_2026-03-31.md`
 
 Standalone `imui` notes in this folder are companion or archive material:
 
@@ -62,10 +67,10 @@ Use them for rationale, parity, and migration history, not as the first stop for
 - `fret-node-internals-m0.md` — first 2026-02-03, latest 2026-03-01 (history: `docs/workstreams/fret-node-internals-m0.md`)
 - `fret-node-xyflow-parity.md` — first 2026-01-20, latest 2026-02-16 (history: `docs/workstreams/fret-node-xyflow-parity.md`)
 - `gpui-default-semantics-alignment.md` — first 2026-02-18, latest 2026-02-18 (history: `docs/workstreams/gpui-default-semantics-alignment.md`)
-- `imui-ecosystem-facade-perf-v1.md` — first 2026-02-06, latest 2026-02-06 (historical imui companion note; current active execution surface is `docs/workstreams/imui-stack-fearless-refactor-v2/`) (history: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`)
-- `imui-imgui-parity-audit-v1.md` — first 2026-02-08, latest 2026-02-16 (historical parity audit; current active execution surface is `docs/workstreams/imui-stack-fearless-refactor-v2/`) (history: `docs/workstreams/imui-imgui-parity-audit-v1.md`)
-- `imui-shadcn-adapter-v1.md` — first 2026-02-06, latest 2026-02-06 (historical imui companion note; current active execution surface is `docs/workstreams/imui-stack-fearless-refactor-v2/`) (history: `docs/workstreams/imui-shadcn-adapter-v1.md`)
-- `imui-state-integration-v1.md` — first 2026-02-06, latest 2026-03-09 (historical imui companion note; current active execution surface is `docs/workstreams/imui-stack-fearless-refactor-v2/`) (history: `docs/workstreams/imui-state-integration-v1.md`)
+- `imui-ecosystem-facade-perf-v1.md` — first 2026-02-06, latest 2026-02-06 (historical imui companion note; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`) (history: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`)
+- `imui-imgui-parity-audit-v1.md` — first 2026-02-08, latest 2026-02-16 (historical parity audit; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`) (history: `docs/workstreams/imui-imgui-parity-audit-v1.md`)
+- `imui-shadcn-adapter-v1.md` — first 2026-02-06, latest 2026-02-06 (historical imui companion note; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`) (history: `docs/workstreams/imui-shadcn-adapter-v1.md`)
+- `imui-state-integration-v1.md` — first 2026-02-06, latest 2026-03-09 (historical imui companion note; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`) (history: `docs/workstreams/imui-state-integration-v1.md`)
 - `macos-docking-multiwindow-imgui-parity.md` — first 2026-01-27, latest 2026-02-16 (history: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`)
 - `os-menubar.md` — first 2026-01-20, latest 2026-02-16 (history: `docs/workstreams/os-menubar.md`)
 - `overlay-arbitration-polish-todo.md` — first 2026-01-24, latest 2026-02-11 (history: `docs/workstreams/overlay-arbitration-polish-todo.md`)

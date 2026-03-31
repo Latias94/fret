@@ -53,6 +53,8 @@ pub(crate) fn command_cx<'a>(
         focus: None,
         invalidations: Vec::new(),
         requested_focus: None,
+        notify_requested: false,
+        notify_requested_location: None,
         stop_propagation: false,
     }
 }

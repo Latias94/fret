@@ -38,11 +38,11 @@ See `apps/fret-examples/src/node_graph_demo.rs` for a runnable example.
 ## Features
 
 - `ui` / `fret-ui`: enable `crates/fret-ui` integration helpers (canvas widget, styling surfaces)
-- `imui`: optional immediate-mode authoring adapters (builds on `fret-authoring`)
 - `canvas-rstar`: opt into an R-tree spatial index backend for large graphs
 - `app-integration`: optional `fret-app` helpers (commands/default bindings)
 - `headless`: build headless-only graph model surfaces
-- `compat-retained-canvas`: retained widget/editor stack (compatibility-only; delete-planned)
+- `compat-retained-canvas`: declarative compatibility surface that hosts the retained widget/editor
+  stack internally (compatibility-only; delete-planned)
 
 ## Upstream references (non-normative)
 

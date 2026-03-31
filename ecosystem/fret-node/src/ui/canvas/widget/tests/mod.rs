@@ -1386,6 +1386,8 @@ mod legacy_inline_harness {
             focus: None,
             invalidations: Vec::new(),
             requested_focus: None,
+            notify_requested: false,
+            notify_requested_location: None,
             stop_propagation: false,
         }
     }

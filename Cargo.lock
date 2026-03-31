@@ -2493,7 +2493,6 @@ name = "fret-node"
 version = "0.1.0"
 dependencies = [
  "fret-app",
- "fret-authoring",
  "fret-canvas",
  "fret-core",
  "fret-runtime",
@@ -2549,7 +2548,6 @@ dependencies = [
 name = "fret-plot"
 version = "0.1.0"
 dependencies = [
- "fret-authoring",
  "fret-canvas",
  "fret-core",
  "fret-runtime",

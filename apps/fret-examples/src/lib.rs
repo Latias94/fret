@@ -1138,6 +1138,8 @@ mod authoring_surface_policy_tests {
                 "compatibility-oriented and should not be treated as the default downstream",
                 "Prefer the declarative node-graph surfaces for normal downstream guidance.",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "NodeGraphSurfaceCompatRetainedProps::new(",
+                "node_graph_surface_compat_retained(",
             ],
             &[],
         );
@@ -1153,6 +1155,44 @@ mod authoring_surface_policy_tests {
             ],
             &[],
         );
+    }
+
+    #[test]
+    fn compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example()
+     {
+        for marker in [
+            "Retained-bridge IMUI demo for `fret-node`.",
+            "compatibility-oriented and should not be treated as the default downstream",
+            "Prefer the declarative node-graph surfaces for normal downstream guidance.",
+            "NodeGraphSurfaceCompatRetainedProps::new(",
+            "node_graph_surface_compat_retained(",
+        ] {
+            assert!(
+                IMUI_NODE_GRAPH_DEMO.contains(marker),
+                "imui_node_graph_demo should stay explicitly labeled as the retained compatibility proof: {marker}"
+            );
+        }
+
+        for (name, src) in [
+            ("imui_hello_demo", IMUI_HELLO_DEMO),
+            ("imui_floating_windows_demo", IMUI_FLOATING_WINDOWS_DEMO),
+            ("imui_response_signals_demo", IMUI_RESPONSE_SIGNALS_DEMO),
+            ("imui_shadcn_adapter_demo", IMUI_SHADCN_ADAPTER_DEMO),
+            ("imui_editor_proof_demo", IMUI_EDITOR_PROOF_DEMO),
+        ] {
+            for marker in [
+                "retained_bridge::",
+                "RetainedSubtreeProps",
+                "UiTreeRetainedExt as _",
+                "retained_subtree_with(",
+                "fret_node::imui::",
+            ] {
+                assert!(
+                    !src.contains(marker),
+                    "{name} should not reintroduce retained-bridge authoring on the first-party imui teaching surface: {marker}"
+                );
+            }
+        }
     }
 
     #[test]

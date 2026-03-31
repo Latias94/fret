@@ -52,11 +52,14 @@ It complements (but does not replace) ADRs:
 
 ## P1 - Authoring surfaces (imui convergence)
 
-- Baseline source of truth for the in-tree `imui` stack:
-  - `docs/workstreams/imui-stack-fearless-refactor-v2/DESIGN.md`
-  - `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
-  - `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
-  - `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
+- Source of truth for the closed `imui` compatibility-retained follow-on:
+  - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
+  - `docs/workstreams/imui-compat-retained-surface-v1/TODO.md`
+  - `docs/workstreams/imui-compat-retained-surface-v1/MILESTONES.md`
+  - `docs/workstreams/imui-compat-retained-surface-v1/BASELINE_AUDIT_2026-03-31.md`
+  - `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`
+- Treat `docs/workstreams/imui-stack-fearless-refactor-v2/` as the closed stack-reset and
+  teaching-surface closeout record, not the current active execution surface.
 - Treat `docs/workstreams/imui-stack-fearless-refactor-v1/` as the completed stack-reset baseline,
   not the current active execution surface.
 - Treat `docs/workstreams/imui-authoring-vocabulary-closure-v1/` as historical closeout evidence
@@ -67,8 +70,9 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-sortable-recipe-v1/CLOSEOUT_AUDIT_2026-03-30.md`
   - `docs/workstreams/imui-shell-ghost-choreography-v1/CLOSEOUT_AUDIT_2026-03-30.md`
   - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/CLOSEOUT_AUDIT_2026-03-30.md`
-- Current immediate-mode follow-up should only reopen a new lane when there is new evidence for a
-  real missing noun, a boundary mistake, or a regression against the shipped gates.
+- The completed immediate-mode follow-up narrowed the public/proof retained compatibility question
+  to explicit delete decisions; do not reopen generic helper growth or runtime widening from this
+  lane.
 - Keep official ecosystem `imui` adapters accepting `&mut impl fret_authoring::UiWriter<H>` to avoid concrete `ImUi` coupling.
 
 ## P0 - IME / Text Input

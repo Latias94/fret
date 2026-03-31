@@ -50,6 +50,7 @@ use fret_node::runtime::store::NodeGraphStore;
 use fret_node::schema::{
     NodeKindMigrateError, NodeKindMigrator, NodeRegistry, NodeSchema, PortDecl,
 };
+use fret_node::ui::advanced::{NodeGraphControllerTransportExt as _, NodeGraphEditQueue};
 use fret_node::ui::canvas::RejectNonFiniteTx;
 use fret_node::ui::declarative::NodeGraphSurfaceBinding;
 use fret_node::ui::presenter::{
@@ -61,11 +62,11 @@ use fret_node::ui::{
     EdgePaintOverrideV1, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
     NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort,
     NodeGraphBlackboardOverlay, NodeGraphCanvas, NodeGraphControlsOverlay, NodeGraphDiagAnchor,
-    NodeGraphDiagConnectingFlag, NodeGraphEdgeToolbar, NodeGraphEdgeTypes, NodeGraphEditQueue,
-    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar,
-    NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPaintOverridesMap,
-    NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
-    NodeGraphPresetFamily, NodeGraphPresetSkinV1, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
+    NodeGraphDiagConnectingFlag, NodeGraphEdgeToolbar, NodeGraphEdgeTypes, NodeGraphEditor,
+    NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar, NodeGraphNodeTypes,
+    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPaintOverridesMap, NodeGraphPanel,
+    NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout, NodeGraphPresetFamily,
+    NodeGraphPresetSkinV1, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
     PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
     RegistryNodeGraphPresenter, register_node_graph_commands,
 };
@@ -1710,14 +1711,15 @@ impl NodeGraphDemoDriver {
             Vec::new()
         };
 
+        let controller = fret_node::ui::NodeGraphController::new(store.clone())
+            .bind_edit_queue_transport(edits.clone());
         let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
-            .with_store(store.clone())
+            .with_controller(controller.clone())
             .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_edge_types(edge_types)
             .with_style(style.clone())
             .with_skin(preset_skin)
-            .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
             .with_internals_store(internals)
             .with_measured_output_store(measured.derived.clone())
@@ -1767,12 +1769,12 @@ impl NodeGraphDemoDriver {
 
         let overlay_host = NodeGraphOverlayHost::new(
             graph,
-            edits,
             overlays,
             group_rename_text.clone(),
             canvas_node,
             style.clone(),
-        );
+        )
+        .with_controller(controller.clone());
         let overlay_node = ui.create_node_retained(overlay_host);
         let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
         ui.set_children(overlay_node, vec![rename_input_node]);
@@ -1808,7 +1810,7 @@ impl NodeGraphDemoDriver {
             node_types.into_portal_renderer(),
         )
         .with_cull_margin_px(style.paint.render_cull_margin_px)
-        .with_edit_queue(models.edits.clone())
+        .with_controller(controller.clone())
         .with_canvas_focus_target(canvas_node)
         .with_command_handler(PortalNumberEditHandler::new(
             portal_root,
@@ -1855,14 +1857,18 @@ impl NodeGraphDemoDriver {
         };
 
         let blackboard_node = if toggles.show_blackboard() {
-            Some(ui.create_node_retained(NodeGraphBlackboardOverlay::new(
-                models.graph.clone(),
-                models.view.clone(),
-                models.edits.clone(),
-                models.overlays.clone(),
-                canvas_node,
-                style.clone(),
-            )))
+            Some(
+                ui.create_node_retained(
+                    NodeGraphBlackboardOverlay::new(
+                        models.graph.clone(),
+                        models.view.clone(),
+                        models.overlays.clone(),
+                        canvas_node,
+                        style.clone(),
+                    )
+                    .with_controller(controller.clone()),
+                ),
+            )
         } else {
             None
         };
@@ -2430,7 +2436,9 @@ fn handle_command(
             label: Some("Bump Float Value".to_string()),
             ops,
         };
-        let _ = models.edits.update(app, |q, _cx| q.push(tx));
+        let _ = models
+            .edits
+            .update(app, |q: &mut NodeGraphEditQueue, _cx| q.push(tx));
         return;
     }
 
@@ -2529,8 +2537,9 @@ fn render(
                                 models.graph.clone(),
                                 models.view.clone(),
                             );
-                        surface_props.store = Some(models.store.clone());
-                        surface_props.edit_queue = Some(models.edits.clone());
+                        surface_props.controller = Some(fret_node::ui::NodeGraphController::new(
+                            models.store.clone(),
+                        ));
                         surface_props.overlays = Some(models.overlays.clone());
                         surface_props.internals = internals;
                         surface_props.test_id =

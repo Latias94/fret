@@ -22,8 +22,6 @@ pub mod runtime;
 pub mod schema;
 pub mod types;
 
-#[cfg(feature = "imui")]
-pub mod imui;
 #[cfg(feature = "fret-ui")]
 pub mod ui;
 
@@ -47,8 +45,10 @@ pub mod app;
 #[cfg(test)]
 mod surface_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
+    const CARGO_TOML: &str = include_str!("../Cargo.toml");
     const APP_RS: &str = include_str!("app.rs");
     const ADVANCED_RS: &str = include_str!("advanced.rs");
+    const COMPAT_RETAINED_RS: &str = include_str!("ui/declarative/compat_retained.rs");
 
     fn public_surface() -> &'static str {
         LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
@@ -66,5 +66,19 @@ mod surface_policy_tests {
         assert!(APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
         assert!(!APP_RS.contains("install_with_ui_services"));
         assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
+    }
+
+    #[test]
+    fn retained_compatibility_surface_stays_declarative_only() {
+        let public_surface = public_surface();
+        assert!(!public_surface.contains("pub mod imui;"));
+        assert!(!CARGO_TOML.contains("\nimui = ["));
+        assert!(!CARGO_TOML.contains("fret-authoring"));
+        assert!(COMPAT_RETAINED_RS.contains("This is a **compatibility** surface:"));
+        assert!(COMPAT_RETAINED_RS.contains("delete-planned"));
+        assert!(
+            COMPAT_RETAINED_RS
+                .contains("keeps retained authoring out of the downstream API surface")
+        );
     }
 }

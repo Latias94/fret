@@ -8,11 +8,7 @@ use fret_node::core::{
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 use fret_node::io::NodeGraphViewState;
-use fret_node::ui::{NodeGraphCanvas, NodeGraphEditor};
 use fret_runtime::Model;
-use fret_ui::UiTree;
-use fret_ui::element::{LayoutStyle, Length};
-use fret_ui::retained_bridge::{RetainedSubtreeProps, UiTreeRetainedExt as _};
 use serde_json::Value;
 
 struct ImUiNodeGraphView {
@@ -44,32 +40,24 @@ impl View for ImUiNodeGraphView {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
             use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
-            let root = fret_ui_kit::ui::v_flex_build(ui.cx_mut(), move |cx, out| {
+            let root = fret_ui_kit::ui::v_flex_build(move |cx, out| {
                 fret_imui::imui_build(cx, out, |ui| {
-                    let title = fret_ui_kit::ui::text().font_semibold();
+                    let title = fret_ui_kit::ui::text("imui node-graph compatibility proof")
+                        .font_semibold();
                     ui.add_ui(title);
                     ui.separator();
 
-                    let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Fill;
-                    layout.size.height = Length::Fill;
-                    layout.flex.grow = 1.0;
-
-                    fret_node::imui::retained_subtree_with(
-                        ui,
-                        RetainedSubtreeProps::new::<KernelApp>(
-                            move |ui_tree: &mut UiTree<KernelApp>| {
-                                let canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-                                    .with_fit_view_on_mount();
-                                let canvas_node = ui_tree.create_node_retained(canvas);
-
-                                let root = ui_tree.create_node_retained(NodeGraphEditor::new());
-                                ui_tree.set_children(root, vec![canvas_node]);
-                                root
-                            },
-                        )
-                        .with_layout(layout),
+                    let mut surface_props =
+                        fret_node::ui::declarative::NodeGraphSurfaceCompatRetainedProps::new(
+                            graph.clone(),
+                            view.clone(),
+                        );
+                    surface_props.fit_view_on_mount = true;
+                    let surface = fret_node::ui::declarative::node_graph_surface_compat_retained(
+                        ui.cx_mut(),
+                        surface_props,
                     );
+                    ui.add(surface);
                 });
             })
             .size_full();
