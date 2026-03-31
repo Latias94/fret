@@ -182,8 +182,6 @@ pub mod overlay {
 /// mount scanned bundle directories or explicit file-backed manifests without leaking raw paths
 /// into widget code. Raw files and URLs stay explicit, capability-gated escape hatches.
 pub mod assets {
-    use std::sync::Arc;
-
     #[cfg(not(target_arch = "wasm32"))]
     pub use fret_assets::FileAssetManifestResolver;
     pub use fret_assets::{
@@ -210,92 +208,46 @@ pub mod assets {
     /// registration. Replacing an existing primary layer keeps that layer's current stack
     /// position, so later registrations can still intentionally override it for the same logical
     /// locator.
-    pub fn set_primary_resolver(
-        host: &mut impl fret_runtime::GlobalsHost,
-        resolver: Arc<dyn AssetResolver>,
-    ) {
-        fret_runtime::set_asset_resolver(host, resolver);
-    }
+    pub use fret_runtime::set_asset_resolver as set_primary_resolver;
 
     /// Add an additional resolver layer without replacing earlier registrations.
     ///
     /// Host resolver registrations preserve insertion order across primary, layered, and static
     /// entry registrations, so later registrations take precedence over earlier ones for the same
     /// logical locator.
-    pub fn register_resolver(
-        host: &mut impl fret_runtime::GlobalsHost,
-        resolver: Arc<dyn AssetResolver>,
-    ) {
-        fret_runtime::register_asset_resolver(host, resolver);
-    }
+    pub use fret_runtime::register_asset_resolver as register_resolver;
 
     /// Register static bundle-scoped entries on the current host.
     ///
     /// These entries participate in the same ordered host resolver stack as other registrations,
     /// so a later static registration can override an earlier resolver layer and vice versa.
-    pub fn register_bundle_entries(
-        host: &mut impl fret_runtime::GlobalsHost,
-        bundle: impl Into<AssetBundleId>,
-        entries: impl IntoIterator<Item = StaticAssetEntry>,
-    ) {
-        fret_runtime::register_bundle_asset_entries(host, bundle, entries);
-    }
+    pub use fret_runtime::register_bundle_asset_entries as register_bundle_entries;
 
     /// Register static embedded entries owned by a specific bundle or crate.
     ///
     /// These entries participate in the same ordered host resolver stack as other registrations,
     /// so a later static registration can override an earlier resolver layer and vice versa.
-    pub fn register_embedded_entries(
-        host: &mut impl fret_runtime::GlobalsHost,
-        owner: impl Into<AssetBundleId>,
-        entries: impl IntoIterator<Item = StaticAssetEntry>,
-    ) {
-        fret_runtime::register_embedded_asset_entries(host, owner, entries);
-    }
+    pub use fret_runtime::register_embedded_asset_entries as register_embedded_entries;
 
     /// Inspect the composed asset resolver service installed on the current host.
-    pub fn resolver(host: &impl fret_runtime::GlobalsHost) -> Option<&AssetResolverService> {
-        fret_runtime::asset_resolver(host)
-    }
+    pub use fret_runtime::asset_resolver as resolver;
 
     /// Report the current host's aggregated asset capabilities.
-    pub fn capabilities(host: &impl fret_runtime::GlobalsHost) -> Option<AssetCapabilities> {
-        fret_runtime::asset_capabilities(host)
-    }
+    pub use fret_runtime::asset_capabilities as capabilities;
 
     /// Resolve bytes for a logical asset request through the host-installed resolver chain.
-    pub fn resolve_bytes(
-        host: &impl fret_runtime::GlobalsHost,
-        request: &AssetRequest,
-    ) -> Result<ResolvedAssetBytes, AssetLoadError> {
-        fret_runtime::resolve_asset_bytes(host, request)
-    }
+    pub use fret_runtime::resolve_asset_bytes as resolve_bytes;
 
     /// Resolve bytes for a single locator through the host-installed resolver chain.
-    pub fn resolve_locator(
-        host: &impl fret_runtime::GlobalsHost,
-        locator: AssetLocator,
-    ) -> Result<ResolvedAssetBytes, AssetLoadError> {
-        fret_runtime::resolve_asset_locator_bytes(host, locator)
-    }
+    pub use fret_runtime::resolve_asset_locator_bytes as resolve_locator;
 
     /// Resolve an external file/URL reference for a logical asset request through the
     /// host-installed resolver chain.
-    pub fn resolve_reference(
-        host: &impl fret_runtime::GlobalsHost,
-        request: &AssetRequest,
-    ) -> Result<ResolvedAssetReference, AssetLoadError> {
-        fret_runtime::resolve_asset_reference(host, request)
-    }
+    pub use fret_runtime::resolve_asset_reference as resolve_reference;
 
     /// Resolve an external file/URL reference for a single locator through the host-installed
     /// resolver chain.
-    pub fn resolve_locator_reference(
-        host: &impl fret_runtime::GlobalsHost,
-        locator: AssetLocator,
-    ) -> Result<ResolvedAssetReference, AssetLoadError> {
-        fret_runtime::resolve_asset_locator_reference(host, locator)
-    }
+    pub use fret_runtime::resolve_asset_locator_reference as resolve_locator_reference;
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -3675,15 +3627,35 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("asset_package_bundle_id,"));
         assert!(root_header.contains("pub use fret_runtime::AssetResolverService;"));
         assert!(root_header.contains("pub use fret_assets::FileAssetManifestResolver;"));
-        assert!(root_header.contains("pub fn set_primary_resolver("));
-        assert!(root_header.contains("pub fn register_resolver("));
-        assert!(root_header.contains("pub fn register_bundle_entries("));
-        assert!(root_header.contains("pub fn register_embedded_entries("));
-        assert!(root_header.contains("pub fn capabilities("));
-        assert!(root_header.contains("pub fn resolve_bytes("));
-        assert!(root_header.contains("pub fn resolve_locator("));
-        assert!(root_header.contains("pub fn resolve_reference("));
-        assert!(root_header.contains("pub fn resolve_locator_reference("));
+        assert!(
+            root_header
+                .contains("pub use fret_runtime::set_asset_resolver as set_primary_resolver;")
+        );
+        assert!(
+            root_header
+                .contains("pub use fret_runtime::register_asset_resolver as register_resolver;")
+        );
+        assert!(root_header.contains(
+            "pub use fret_runtime::register_bundle_asset_entries as register_bundle_entries;"
+        ));
+        assert!(root_header.contains(
+            "pub use fret_runtime::register_embedded_asset_entries as register_embedded_entries;"
+        ));
+        assert!(root_header.contains("pub use fret_runtime::asset_capabilities as capabilities;"));
+        assert!(
+            root_header.contains("pub use fret_runtime::resolve_asset_bytes as resolve_bytes;")
+        );
+        assert!(
+            root_header
+                .contains("pub use fret_runtime::resolve_asset_locator_bytes as resolve_locator;")
+        );
+        assert!(
+            root_header
+                .contains("pub use fret_runtime::resolve_asset_reference as resolve_reference;")
+        );
+        assert!(root_header.contains(
+            "pub use fret_runtime::resolve_asset_locator_reference as resolve_locator_reference;"
+        ));
     }
 
     #[test]

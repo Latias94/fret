@@ -1,6 +1,8 @@
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Duration;
+
+#[cfg(any(target_arch = "wasm32", test))]
+use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use fret_assets::FileAssetManifestResolver;
@@ -20,20 +22,10 @@ pub use fret_runtime::{
 };
 
 /// Install or replace the primary resolver layer for the current host.
-pub fn set_primary_resolver(
-    host: &mut impl fret_runtime::GlobalsHost,
-    resolver: Arc<dyn AssetResolver>,
-) {
-    fret_runtime::set_asset_resolver(host, resolver);
-}
+pub use fret_runtime::set_asset_resolver as set_primary_resolver;
 
 /// Add an additional resolver layer without replacing earlier registrations.
-pub fn register_resolver(
-    host: &mut impl fret_runtime::GlobalsHost,
-    resolver: Arc<dyn AssetResolver>,
-) {
-    fret_runtime::register_asset_resolver(host, resolver);
-}
+pub use fret_runtime::register_asset_resolver as register_resolver;
 
 #[cfg(any(target_arch = "wasm32", test))]
 pub(crate) fn ensure_default_web_url_passthrough_resolver(
@@ -46,36 +38,16 @@ pub(crate) fn ensure_default_web_url_passthrough_resolver(
 }
 
 /// Register static bundle-scoped entries on the current host.
-pub fn register_bundle_entries(
-    host: &mut impl fret_runtime::GlobalsHost,
-    bundle: impl Into<AssetBundleId>,
-    entries: impl IntoIterator<Item = StaticAssetEntry>,
-) {
-    fret_runtime::register_bundle_asset_entries(host, bundle, entries);
-}
+pub use fret_runtime::register_bundle_asset_entries as register_bundle_entries;
 
 /// Register static embedded entries owned by a specific bundle or crate.
-pub fn register_embedded_entries(
-    host: &mut impl fret_runtime::GlobalsHost,
-    owner: impl Into<AssetBundleId>,
-    entries: impl IntoIterator<Item = StaticAssetEntry>,
-) {
-    fret_runtime::register_embedded_asset_entries(host, owner, entries);
-}
+pub use fret_runtime::register_embedded_asset_entries as register_embedded_entries;
 
 /// Inspect the composed asset resolver service installed on the current host.
-pub fn resolver(
-    host: &impl fret_runtime::GlobalsHost,
-) -> Option<&fret_runtime::AssetResolverService> {
-    fret_runtime::asset_resolver(host)
-}
+pub use fret_runtime::asset_resolver as resolver;
 
 /// Report the current host's aggregated asset capabilities.
-pub fn capabilities(
-    host: &impl fret_runtime::GlobalsHost,
-) -> Option<fret_assets::AssetCapabilities> {
-    fret_runtime::asset_capabilities(host)
-}
+pub use fret_runtime::asset_capabilities as capabilities;
 
 /// Selects which asset-publication lane a startup plan should apply.
 ///
