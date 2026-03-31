@@ -1,20 +1,20 @@
 pub const SOURCE: &str = include_str!("prompt_input_docs_demo.rs");
 
 // region: example
+use super::shared_preview_image_id;
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
-use fret_core::{ImageColorSpace, ImageId, Px};
+use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 mod act {
     fret::actions!([ToggleSearch = "ui-gallery.ai.prompt_input_docs.toggle_search.v1"]);
@@ -36,62 +36,6 @@ const MODELS: &[DemoModel] = &[
         name: "Claude 4 Opus",
     },
 ];
-
-fn screenshot_preview_rgba8(width: u32, height: u32) -> Vec<u8> {
-    let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
-    let width_f = (width.saturating_sub(1)).max(1) as f32;
-    let height_f = (height.saturating_sub(1)).max(1) as f32;
-
-    for y in 0..height {
-        for x in 0..width {
-            let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
-            let fx = x as f32 / width_f;
-            let fy = y as f32 / height_f;
-
-            let mut r = (18.0 + 76.0 * (1.0 - fy) + 118.0 * fx).min(255.0);
-            let mut g = (22.0 + 42.0 * fy + 56.0 * (1.0 - fx)).min(255.0);
-            let mut b = (36.0 + 82.0 * fy + 96.0 * (1.0 - fx)).min(255.0);
-
-            if x < 8 || y < 8 || x + 8 >= width || y + 8 >= height {
-                r = 232.0;
-                g = 236.0;
-                b = 241.0;
-            } else if y > height / 5 && y < (height / 5) + 18 {
-                r = 245.0;
-                g = 196.0;
-                b = 92.0;
-            } else if x > width / 6 && x < (width * 5) / 6 && y > height / 3 && y < (height * 4) / 5
-            {
-                r = (r + 18.0).min(255.0);
-                g = (g + 18.0).min(255.0);
-                b = (b + 24.0).min(255.0);
-            }
-
-            out[idx] = r as u8;
-            out[idx + 1] = g as u8;
-            out[idx + 2] = b as u8;
-            out[idx + 3] = 255;
-        }
-    }
-
-    out
-}
-
-fn screenshot_source() -> &'static ImageSource {
-    static SOURCE: OnceLock<ImageSource> = OnceLock::new();
-    SOURCE.get_or_init(|| {
-        ImageSource::rgba8(
-            320,
-            200,
-            screenshot_preview_rgba8(320, 200),
-            ImageColorSpace::Srgb,
-        )
-    })
-}
-
-fn screenshot_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
-    cx.use_image_source_state(screenshot_source()).image
-}
 
 fn model_name(model_id: &str) -> Arc<str> {
     MODELS
@@ -117,7 +61,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let searching = cx
         .get_model_cloned(&use_web_search, Invalidation::Layout)
         .unwrap_or(false);
-    let screenshot_preview = screenshot_image_id(cx);
+    let screenshot_preview = shared_preview_image_id(cx);
 
     cx.actions().models::<act::ToggleSearch>({
         let use_web_search = use_web_search.clone();

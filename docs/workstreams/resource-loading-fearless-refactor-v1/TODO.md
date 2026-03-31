@@ -744,6 +744,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_list.rs`
     - `apps/fret-ui-gallery/src/ui/pages/ai_attachments_demo.rs`
     - `apps/fret-ui-gallery/src/ui/snippets/ai/image_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_docs_demo.rs`
     - `apps/fret-ui-gallery/src/ui/snippets/ai/queue_demo.rs`
     - `apps/fret-ui-gallery/src/ui/snippets/ai/chain_of_thought_demo.rs`
     - `apps/fret-ui-gallery/src/driver/demo_assets.rs`

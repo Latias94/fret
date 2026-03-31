@@ -195,6 +195,7 @@ mod tests {
     const ATTACHMENTS_GRID_SOURCE: &str = include_str!("attachments_grid.rs");
     const ATTACHMENTS_INLINE_SOURCE: &str = include_str!("attachments_inline.rs");
     const ATTACHMENTS_LIST_SOURCE: &str = include_str!("attachments_list.rs");
+    const PROMPT_INPUT_DOCS_DEMO_SOURCE: &str = include_str!("prompt_input_docs_demo.rs");
 
     #[test]
     fn ai_gallery_preview_helpers_resolve_gallery_demo_assets_via_asset_requests() {
@@ -219,5 +220,8 @@ mod tests {
 
         assert!(ATTACHMENTS_LIST_SOURCE.contains("attachment_landscape_image_id(cx)"));
         assert!(!ATTACHMENTS_LIST_SOURCE.contains("ImageSource::rgba8("));
+
+        assert!(PROMPT_INPUT_DOCS_DEMO_SOURCE.contains("shared_preview_image_id(cx)"));
+        assert!(!PROMPT_INPUT_DOCS_DEMO_SOURCE.contains("ImageSource::rgba8("));
     }
 }
