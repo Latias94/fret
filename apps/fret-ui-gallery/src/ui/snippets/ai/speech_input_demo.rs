@@ -75,14 +75,14 @@ fn fill_text_layout() -> LayoutStyle {
 
 fn body_text(
     cx: &mut UiCx<'_>,
-    text: impl Into<Arc<str>>,
+    text: Arc<str>,
     style: TextStyle,
     color: Color,
     align: TextAlign,
 ) -> impl UiChild + use<> {
     cx.text_props(TextProps {
         layout: fill_text_layout(),
-        text: text.into(),
+        text,
         style: Some(style),
         color: Some(color),
         wrap: TextWrap::WordBreak,
@@ -294,21 +294,25 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     } else {
                         "Click the microphone to start speaking"
                     };
-                    body_text(cx, message, muted_text_style, muted, TextAlign::Center)
-                        .into_element(cx)
-                        .attach_semantics(SemanticsDecoration::default().test_id(
-                            if processing_now {
-                                "ui-ai-speech-input-demo-processing"
-                            } else {
-                                "ui-ai-speech-input-demo-hint"
-                            },
-                        ))
+                    body_text(
+                        cx,
+                        Arc::<str>::from(message),
+                        muted_text_style,
+                        muted,
+                        TextAlign::Center,
+                    )
+                    .into_element(cx)
+                    .attach_semantics(SemanticsDecoration::default().test_id(if processing_now {
+                        "ui-ai-speech-input-demo-processing"
+                    } else {
+                        "ui-ai-speech-input-demo-hint"
+                    }))
                 } else {
                     let content = ui::v_flex(move |cx| {
                         vec![
                             body_text(
                                 cx,
-                                "Transcript:",
+                                Arc::<str>::from("Transcript:"),
                                 transcript_label_style,
                                 muted,
                                 TextAlign::Start,
@@ -316,7 +320,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .into_element(cx),
                             body_text(
                                 cx,
-                                transcript_now.clone(),
+                                Arc::<str>::from(transcript_now.clone()),
                                 transcript_body_style,
                                 foreground,
                                 TextAlign::Start,

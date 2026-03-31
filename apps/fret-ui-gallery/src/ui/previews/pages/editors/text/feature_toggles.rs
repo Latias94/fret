@@ -201,12 +201,8 @@ pub(in crate::ui) fn preview_text_feature_toggles(
         },
     );
 
-    let page = doc_layout::wrap_preview_page(
-        cx,
-        None,
-        "Text feature toggles",
-        vec![header.into_element(cx), panel],
-    );
+    let header = header.into_element(cx);
+    let page = doc_layout::wrap_preview_page(cx, None, "Text feature toggles", vec![header, panel]);
 
     vec![page.into_element(cx)]
 }

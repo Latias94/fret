@@ -264,7 +264,7 @@ pub(in crate::ui) fn wrap_row<F>(
     gap: Space,
     align: fret_ui::element::CrossAlign,
     children: F,
-) -> impl UiChild + use<F>
+) -> AnyElement
 where
     F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
 {
@@ -282,6 +282,7 @@ where
         },
         children,
     )
+    .into_element(cx)
 }
 
 #[cfg(feature = "gallery-dev")]
@@ -290,7 +291,7 @@ pub(in crate::ui) fn wrap_controls_row<F>(
     theme: &Theme,
     gap: Space,
     children: F,
-) -> impl UiChild + use<F>
+) -> AnyElement
 where
     F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
 {

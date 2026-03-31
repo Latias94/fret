@@ -199,11 +199,15 @@ mod tests {
 
     #[test]
     fn ai_gallery_preview_helpers_resolve_gallery_demo_assets_via_asset_requests() {
-        assert!(MODULE_SOURCE.contains("use_image_source_state_from_asset_request"));
-        assert!(MODULE_SOURCE.contains("ui_gallery_shared_media_preview_request"));
-        assert!(MODULE_SOURCE.contains("ui_gallery_ai_attachment_landscape_request"));
-        assert!(MODULE_SOURCE.contains("ui_gallery_ai_attachment_portrait_request"));
-        assert!(!MODULE_SOURCE.contains("ImageSource::rgba8("));
+        let helper_source = MODULE_SOURCE
+            .split("#[cfg(all(test, feature = \"gallery-dev\"))]")
+            .next()
+            .expect("ai snippet module keeps helper section before tests");
+        assert!(helper_source.contains("use_image_source_state_from_asset_request"));
+        assert!(helper_source.contains("ui_gallery_shared_media_preview_request"));
+        assert!(helper_source.contains("ui_gallery_ai_attachment_landscape_request"));
+        assert!(helper_source.contains("ui_gallery_ai_attachment_portrait_request"));
+        assert!(!helper_source.contains("ImageSource::rgba8("));
     }
 
     #[test]
