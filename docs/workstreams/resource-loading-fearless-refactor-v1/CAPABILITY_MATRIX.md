@@ -163,8 +163,8 @@ escape hatches.
   - `FretApp::asset_startup(...)`,
   - `UiAppBuilder::with_asset_startup(...)`,
   - `AssetStartupPlan::{development_dir(...), development_manifest(...)}`,
-  - `fret::assets::register_file_bundle_dir(...)`,
-  - `fret::assets::register_file_manifest(...)`.
+  - `FileAssetManifestResolver::{from_bundle_dir(...), from_manifest_path(...)}` plus
+    `fret::assets::register_resolver(...)`.
 - Escape hatches:
   - direct file-path UI helpers are for native/dev compatibility only,
   - direct `fret-ui-assets` app wiring is intentionally named `configure_caches*` because cache

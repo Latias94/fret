@@ -71,11 +71,14 @@
 //!   for logical bundle/embedded assets; prefer `AssetBundleId::app(...)` /
 //!   `AssetBundleId::package(...)` over raw global strings; keep app-facing startup on
 //!   `AssetStartupPlan` + `AssetStartupMode` through `FretApp::asset_startup(...)` or
-//!   `UiAppBuilder::with_asset_startup(...)`, use `register_file_bundle_dir(...)` /
-//!   `register_file_manifest(...)` when host/bootstrap code intentionally installs file-backed
-//!   resolver layers directly, and treat `AssetLocator::file(...)` / `AssetLocator::url(...)` as
-//!   capability-gated escape hatches; when native/dev-only UI helpers still need file reload
-//!   ergonomics, keep app/widget code on logical bundle locators and let
+//!   `UiAppBuilder::with_asset_startup(...)`; when host/bootstrap code intentionally installs
+//!   file-backed resolver layers directly, construct
+//!   `FileAssetManifestResolver::from_bundle_dir(...)` /
+//!   `FileAssetManifestResolver::from_manifest_path(...)` and register the result with
+//!   `register_resolver(...)` instead of teaching path-first helpers to widget code, and treat
+//!   `AssetLocator::file(...)` / `AssetLocator::url(...)` as capability-gated escape hatches;
+//!   when native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
+//!   logical bundle locators and let
 //!   `fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
 //!   or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
 //!   consume the resolver's bundle/reference bridge instead of constructing raw file-path sources
@@ -224,32 +227,6 @@ pub mod assets {
         resolver: Arc<dyn AssetResolver>,
     ) {
         fret_runtime::register_asset_resolver(host, resolver);
-    }
-
-    /// Load a native/package-dev file manifest and register it as a layered resolver.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn register_file_manifest(
-        host: &mut impl fret_runtime::GlobalsHost,
-        manifest_path: impl AsRef<std::path::Path>,
-    ) -> Result<(), AssetManifestLoadError> {
-        let resolver = FileAssetManifestResolver::from_manifest_path(manifest_path)?;
-        register_resolver(host, Arc::new(resolver));
-        Ok(())
-    }
-
-    /// Scan a native/package-dev directory and register it as a logical bundle resolver layer.
-    ///
-    /// This is a convenience lane for local development and package-time assembly. Prefer
-    /// [`register_file_manifest`] when your tooling already emits a reviewable manifest artifact.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn register_file_bundle_dir(
-        host: &mut impl fret_runtime::GlobalsHost,
-        bundle: impl Into<AssetBundleId>,
-        dir: impl AsRef<std::path::Path>,
-    ) -> Result<(), AssetManifestLoadError> {
-        let resolver = FileAssetManifestResolver::from_bundle_dir(bundle, dir)?;
-        register_resolver(host, Arc::new(resolver));
-        Ok(())
     }
 
     /// Register static bundle-scoped entries on the current host.
@@ -1500,6 +1477,7 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
 mod builder_surface_tests {
     use std::path::PathBuf;
+    use std::sync::Arc;
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -1513,7 +1491,7 @@ mod builder_surface_tests {
     use crate::view::View;
     use crate::{AppUi, Defaults, Error, Ui, WindowId};
     use fret_app::CreateWindowRequest;
-    use fret_assets::{AssetBundleId, AssetRevision, StaticAssetEntry};
+    use fret_assets::{AssetBundleId, AssetRevision, FileAssetManifestResolver, StaticAssetEntry};
     use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
     use fret_runtime::{CommandId, FrameId, TickId};
 
@@ -1726,13 +1704,14 @@ mod builder_surface_tests {
     }
 
     #[test]
-    fn register_file_bundle_dir_installs_on_host_path() {
+    fn file_manifest_resolver_from_bundle_dir_installs_on_host_path() {
         let asset_dir = write_asset_dir_fixture("fret-register-file-bundle-dir");
         let bundle = AssetBundleId::app("builder-register-file-bundle-dir");
         let mut app = App::new();
+        let resolver = FileAssetManifestResolver::from_bundle_dir(bundle.clone(), &asset_dir)
+            .expect("bundle dir resolver should build");
 
-        crate::assets::register_file_bundle_dir(&mut app, bundle.clone(), &asset_dir)
-            .expect("bundle dir should register");
+        crate::assets::register_resolver(&mut app, Arc::new(resolver));
 
         let resolved = crate::assets::resolve_locator(
             &app,
@@ -1744,13 +1723,14 @@ mod builder_surface_tests {
     }
 
     #[test]
-    fn register_file_bundle_dir_exposes_external_file_reference_on_host_path() {
+    fn file_manifest_resolver_from_bundle_dir_exposes_external_file_reference_on_host_path() {
         let asset_dir = write_asset_dir_fixture("fret-register-file-bundle-dir-reference");
         let bundle = AssetBundleId::app("builder-register-file-bundle-dir-reference");
         let mut app = App::new();
+        let resolver = FileAssetManifestResolver::from_bundle_dir(bundle.clone(), &asset_dir)
+            .expect("bundle dir resolver should build");
 
-        crate::assets::register_file_bundle_dir(&mut app, bundle.clone(), &asset_dir)
-            .expect("bundle dir should register");
+        crate::assets::register_resolver(&mut app, Arc::new(resolver));
 
         let resolved = crate::assets::resolve_locator_reference(
             &app,
@@ -2471,12 +2451,15 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`AssetLocator::bundle(...)`"));
         assert!(CRATE_README.contains("`FretApp::asset_startup(...)`"));
         assert!(CRATE_README.contains("`UiAppBuilder::with_asset_startup(...)`"));
-        assert!(CRATE_README.contains("`fret::assets::register_file_bundle_dir(...)`"));
-        assert!(CRATE_README.contains("`fret::assets::register_file_manifest(...)`"));
+        assert!(CRATE_README.contains("`FileAssetManifestResolver::from_bundle_dir(...)`"));
+        assert!(CRATE_README.contains("`FileAssetManifestResolver::from_manifest_path(...)`"));
+        assert!(CRATE_README.contains("`register_resolver(...)`"));
         assert!(!CRATE_README.contains("`FretApp::asset_dir(...)`"));
         assert!(!CRATE_README.contains("`UiAppBuilder::with_asset_dir(...)`"));
         assert!(!CRATE_README.contains("`FretApp::asset_manifest(...)`"));
         assert!(!CRATE_README.contains("`UiAppBuilder::with_asset_manifest(...)`"));
+        assert!(!CRATE_README.contains("`fret::assets::register_file_bundle_dir(...)`"));
+        assert!(!CRATE_README.contains("`fret::assets::register_file_manifest(...)`"));
         assert!(!CRATE_README.contains(".run_view::<"));
         assert!(!CRATE_README.contains(".install_app("));
         assert!(!CRATE_README.contains("`fret_runtime::register_bundle_asset_entries(...)`"));
@@ -2670,8 +2653,9 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`register_bundle_entries(...)`"));
         assert!(CRATE_README.contains("`FretApp::asset_startup(...)`"));
         assert!(CRATE_README.contains("`UiAppBuilder::with_asset_startup(...)`"));
-        assert!(CRATE_README.contains("`fret::assets::register_file_bundle_dir(...)`"));
-        assert!(CRATE_README.contains("`fret::assets::register_file_manifest(...)`"));
+        assert!(CRATE_README.contains("`FileAssetManifestResolver::from_bundle_dir(...)`"));
+        assert!(CRATE_README.contains("`FileAssetManifestResolver::from_manifest_path(...)`"));
+        assert!(CRATE_README.contains("`register_resolver(...)`"));
         assert!(!CRATE_README.contains("`FretApp::asset_dir(...)`"));
         assert!(!CRATE_README.contains("`UiAppBuilder::with_asset_dir(...)`"));
         assert!(!CRATE_README.contains("`FretApp::asset_manifest(...)`"));
@@ -2696,8 +2680,11 @@ mod authoring_surface_policy_tests {
         assert!(rustdoc.contains("`AssetBundleId::package(...)`"));
         assert!(rustdoc.contains("`FretApp::asset_startup(...)`"));
         assert!(rustdoc.contains("`UiAppBuilder::with_asset_startup(...)`"));
-        assert!(rustdoc.contains("`register_file_bundle_dir(...)`"));
-        assert!(rustdoc.contains("`register_file_manifest(...)`"));
+        assert!(rustdoc.contains("`FileAssetManifestResolver::from_bundle_dir(...)`"));
+        assert!(rustdoc.contains("`FileAssetManifestResolver::from_manifest_path(...)`"));
+        assert!(rustdoc.contains("`register_resolver(...)`"));
+        assert!(!rustdoc.contains("`register_file_bundle_dir(...)`"));
+        assert!(!rustdoc.contains("`register_file_manifest(...)`"));
         assert!(!rustdoc.contains("`FretApp::asset_dir(...)`"));
         assert!(!rustdoc.contains("`UiAppBuilder::with_asset_dir(...)`"));
         assert!(!rustdoc.contains("`FretApp::asset_manifest(...)`"));
@@ -2885,8 +2872,11 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`register_bundle_entries(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`FretApp::asset_startup(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_asset_startup(...)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::register_file_bundle_dir(...)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::register_file_manifest(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`FileAssetManifestResolver::from_bundle_dir(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`FileAssetManifestResolver::from_manifest_path(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`register_resolver(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`fret::assets::register_file_bundle_dir(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`fret::assets::register_file_manifest(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`FretApp::asset_dir(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_asset_dir(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`FretApp::asset_manifest(...)`"));
@@ -3687,8 +3677,6 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub use fret_assets::FileAssetManifestResolver;"));
         assert!(root_header.contains("pub fn set_primary_resolver("));
         assert!(root_header.contains("pub fn register_resolver("));
-        assert!(root_header.contains("pub fn register_file_manifest("));
-        assert!(root_header.contains("pub fn register_file_bundle_dir("));
         assert!(root_header.contains("pub fn register_bundle_entries("));
         assert!(root_header.contains("pub fn register_embedded_entries("));
         assert!(root_header.contains("pub fn capabilities("));

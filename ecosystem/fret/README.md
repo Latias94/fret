@@ -162,9 +162,11 @@ inputs on `development_dir(...)` / `development_manifest(...)`, and keep package
 bytes on `packaged_entries(...)`, `packaged_bundle_entries(...)`, or
 `packaged_embedded_entries(...)`. Generated modules still fit this packaged lane because they
 already expose `ENTRIES`, `bundle_id()`, `Bundle`, `install(app)`, and `mount(builder)`. Keep
-`fret::assets::register_file_bundle_dir(...)` / `fret::assets::register_file_manifest(...)` as
-the lower-level host-path escape hatches when app/bootstrap code intentionally installs file-backed
-resolver layers directly instead of staying on the builder startup contract.
+`FileAssetManifestResolver::from_bundle_dir(...)` /
+`FileAssetManifestResolver::from_manifest_path(...)` plus
+`register_resolver(...)` as the lower-level host-path escape hatch when app/bootstrap code
+intentionally installs file-backed resolver layers directly instead of staying on the builder
+startup contract.
 When native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
 logical bundle locators and let
 `fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
@@ -247,7 +249,7 @@ following seams first-class:
 - `FretApp::asset_startup(...)` plus `fret::assets::{AssetStartupPlan, AssetStartupMode}`
 - `FretApp::{asset_entries(...), bundle_asset_entries(...), embedded_asset_entries(...)}`
 - `UiAppBuilder::{configure(...), setup(...), setup_with(...), with_asset_startup(...), with_bundle_asset_entries(...), with_embedded_asset_entries(...)}`
-- `fret::assets::{register_file_bundle_dir(...), register_file_manifest(...)}`
+- `fret::assets::{FileAssetManifestResolver, register_resolver(...)}`
 - `fret::advanced::FretAppAdvancedExt::install(...)`
 - `fret::advanced::UiAppBuilderAdvancedExt::{install(...), on_gpu_ready(...), install_custom_effects(...)}`
 - `UiAppDriver::{window_create_spec, window_created, before_close_window}`

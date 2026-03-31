@@ -193,9 +193,10 @@ When you are on `fret-bootstrap` directly instead of `fret`, use the same startu
 `AssetStartupPlan::development_dir(...)` / `AssetStartupPlan::development_manifest(...)`, and use
 `AssetStartupPlan::packaged_entries(...)`, `AssetStartupPlan::packaged_bundle_entries(...)`, or
 `AssetStartupPlan::packaged_embedded_entries(...)` for packaged/web/mobile-friendly bytes.
-On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is the first-party
+On native/package-dev lanes, `FileAssetManifestResolver::from_bundle_dir(...)` is the first-party
 generated-manifest convenience path when you want one directory to become one logical bundle
-without teaching raw repo-relative paths in app/widget code.
+without teaching raw repo-relative paths in app/widget code; register that resolver with
+`fret::assets::register_resolver(...)` on the host path.
 When a native/dev-only UI helper still needs real file reload ergonomics, keep the app/widget
 surface on logical bundle locators and let
 `fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
@@ -205,8 +206,9 @@ loading in app code. Keep `resolve_image_source_from_host_locator(...)` /
 `resolve_svg_source_from_host_locator(...)` as the lower-level UI-ready source seams, and use
 `fret::assets::resolve_reference(...)` / `resolve_locator_reference(...)` when a non-UI
 integration truly needs the raw external reference itself.
-Use `fret::assets::register_file_manifest(...)` when tooling already emits an explicit manifest
-artifact that should be reviewed, versioned, or packaged directly.
+Use `FileAssetManifestResolver::from_manifest_path(...)` plus
+`fret::assets::register_resolver(...)` when tooling already emits an explicit manifest artifact
+that should be reviewed, versioned, or packaged directly.
 For a first-party manifest artifact command, use
 `fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-app`.
 If you are already on the `fret` builder path, keep both development and packaged startup on
@@ -532,7 +534,8 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   On native/package-dev lanes, keep the builder path on `FretApp::asset_startup(...)` /
   `UiAppBuilder::with_asset_startup(...)` with
   `AssetStartupPlan::{development_dir(...), development_manifest(...)}` before dropping to
-  `fret::assets::register_file_bundle_dir(...)` or `fret::assets::register_file_manifest(...)`.
+  `FileAssetManifestResolver::{from_bundle_dir(...), from_manifest_path(...)}` plus
+  `fret::assets::register_resolver(...)`.
   For compile-time owned bytes, prefer generated modules that expose `mount(builder)` or the
   builder-path helpers `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)`
   before falling back to app-local setup glue.

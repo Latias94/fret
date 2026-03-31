@@ -74,10 +74,9 @@ This workstream takes a fearless posture:
   - `FileAssetManifestBundleV1::scan_dir(...)` and
     `FileAssetManifestResolver::from_bundle_dir(...)` now provide the first generated-manifest
     convenience lane for one directory -> one logical bundle,
-  - `fret::assets::register_file_bundle_dir(...)` exposes that directory-scanning convenience on
-    the app-facing facade,
-  - `fret::assets::register_file_manifest(...)` mounts that resolver on the app-facing facade
-    without teaching repo-relative paths in widget code.
+  - app/bootstrap host code now registers those file-backed resolvers explicitly through
+    `FileAssetManifestResolver::{from_bundle_dir(...), from_manifest_path(...)}` plus
+    `fret::assets::register_resolver(...)` instead of keeping duplicate facade-only wrappers,
   - file-backed bundle locators can now also expose an explicit native file-reference handoff via
     `resolve_reference(...)` / `resolve_locator_reference(...)` on the shared resolver contract,
     so platform APIs can ask for a real file path without bypassing bundle identity.

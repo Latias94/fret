@@ -45,29 +45,6 @@ pub(crate) fn ensure_default_web_url_passthrough_resolver(
     register_resolver(host, Arc::new(UrlPassthroughAssetResolver::new()));
 }
 
-/// Load a native/package-dev file manifest and register it as a layered resolver.
-#[cfg(not(target_arch = "wasm32"))]
-pub fn register_file_manifest(
-    host: &mut impl fret_runtime::GlobalsHost,
-    manifest_path: impl AsRef<std::path::Path>,
-) -> Result<(), AssetManifestLoadError> {
-    let resolver = FileAssetManifestResolver::from_manifest_path(manifest_path)?;
-    register_resolver(host, Arc::new(resolver));
-    Ok(())
-}
-
-/// Scan a native/package-dev directory and register it as a logical bundle resolver layer.
-#[cfg(not(target_arch = "wasm32"))]
-pub fn register_file_bundle_dir(
-    host: &mut impl fret_runtime::GlobalsHost,
-    bundle: impl Into<AssetBundleId>,
-    dir: impl AsRef<std::path::Path>,
-) -> Result<(), AssetManifestLoadError> {
-    let resolver = FileAssetManifestResolver::from_bundle_dir(bundle, dir)?;
-    register_resolver(host, Arc::new(resolver));
-    Ok(())
-}
-
 /// Register static bundle-scoped entries on the current host.
 pub fn register_bundle_entries(
     host: &mut impl fret_runtime::GlobalsHost,

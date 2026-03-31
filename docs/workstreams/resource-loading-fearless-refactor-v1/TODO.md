@@ -517,10 +517,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `ecosystem/fret/src/lib.rs` now exposes `fret::assets`
     - app-facing registration helpers exist on the facade
       (`register_bundle_entries`, `register_embedded_entries`, `register_resolver`)
-    - `register_file_bundle_dir(...)` now exposes the first generated-manifest directory lane on
-      the app-facing facade
-    - `register_file_manifest(...)` now exposes the first native/package-dev manifest lane on the
-      app-facing facade
+    - native/package-dev host code now uses
+      `FileAssetManifestResolver::{from_bundle_dir(...), from_manifest_path(...)}` plus
+      `register_resolver(...)` instead of duplicate facade wrappers
     - `fretboard assets manifest write ...` now emits an explicit manifest artifact from a scanned
       bundle directory
     - `fretboard assets rust write ...` now emits a compile-time embedded Rust module for
