@@ -2315,6 +2315,26 @@ mod tests {
     }
 
     #[test]
+    fn ui_gallery_default_profile_font_requests_stay_on_asset_request_lane() {
+        let mut app = App::new();
+
+        let requests = ui_gallery_default_profile_font_requests(&mut app);
+        let expected: Vec<_> = fret_fonts::default_profile()
+            .faces
+            .iter()
+            .map(|face| face.asset_request())
+            .collect();
+
+        assert_eq!(requests, expected);
+
+        for request in &requests {
+            let resolved = fret_runtime::resolve_asset_bytes(&app, request)
+                .expect("ui-gallery default profile requests should resolve via runtime assets");
+            assert_eq!(resolved.locator, request.locator);
+        }
+    }
+
+    #[test]
     fn ensure_ui_gallery_default_profile_fonts_present_requeues_after_catalog_regression() {
         let mut app = App::new();
         let window = AppWindowId::default();

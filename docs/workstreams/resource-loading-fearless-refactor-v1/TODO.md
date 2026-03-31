@@ -305,6 +305,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - startup bundled baseline injection plus runtime `TextAddFontAssets` / `TextAddFontBytes` now all
       feed that same shared source inventory instead of keeping startup-vs-runtime font provenance
       on separate publication paths.
+    - the UI gallery's deterministic bundled-font diagnostics switch
+      (`FRET_UI_GALLERY_BOOTSTRAP_FONTS=1`) now republishes the already-installed startup baseline
+      through live renderer catalog metadata instead of re-injecting duplicate bundled font bytes
+      through an app-local side lane.
     - first-party manifest-driven development font reload now also stays on the asset-identity
       lane:
       - `fret-bootstrap::dev_reload` publishes stable bundle asset locators for manifest entries,
@@ -345,6 +349,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `inject_font_asset_batch_and_refresh_catalog_records_asset_sources`,
       `inject_font_blobs_and_refresh_catalog_refreshes_only_when_fonts_were_added`,
       `publish_renderer_font_environment_sets_key_after_locale_application`)
+    - `apps/fret-ui-gallery/src/driver/runtime_driver.rs`
+      (`ui_gallery_default_profile_font_requests_stay_on_asset_request_lane`)
     - `crates/fret-render-text/src/{parley_font_db.rs,parley_shaper.rs}`
     - `crates/fret-render-wgpu/src/{renderer/config.rs,renderer/svg/{mod.rs,raster.rs},text/fonts.rs,text/tests.rs}`
     - `ecosystem/fret-bootstrap/src/dev_reload.rs`
