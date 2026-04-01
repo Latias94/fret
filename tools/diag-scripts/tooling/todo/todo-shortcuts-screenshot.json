@@ -1,6 +1,7 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
+    { "type": "set_window_inner_size", "width_px": 680.0, "height_px": 760.0 },
     {
       "type": "wait_until",
       "predicate": {
@@ -9,7 +10,16 @@
       },
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "todo_demo.draft" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 12 },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "todo_demo.row.3" } },
+    { "type": "wait_frames", "n": 12 },
     { "type": "capture_bundle", "label": "todo-demo" },
     { "type": "capture_screenshot", "label": "todo-demo" }
   ]

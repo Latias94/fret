@@ -435,13 +435,13 @@ fn textarea_element<H: UiHost>(
                     }
                     let mut props = base_props.clone();
 
-                    // shadcn/ui v4 textarea uses `transition-[color,box-shadow]` with Tailwind
-                    // defaults, so border + ring should ease instead of snapping.
+                    // Text-entry controls need an active editing affordance on pointer focus as
+                    // well as keyboard focus, so keep the shadcn border/ring transition keyed to
+                    // focus rather than the window-scoped `focus-visible` heuristic alone.
                     let duration = overlay_motion::shadcn_motion_duration_150(cx);
-                    let focus_visible = cx.is_focused_element(id)
-                        && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
+                    let focused = cx.is_focused_element(id);
 
-                    let target_border = if focus_visible {
+                    let target_border = if focused {
                         props.chrome.border_color_focused
                     } else {
                         props.chrome.border_color
@@ -461,7 +461,7 @@ fn textarea_element<H: UiHost>(
                         cx,
                         id,
                         "textarea.chrome.ring.alpha",
-                        if focus_visible { 1.0 } else { 0.0 },
+                        if focused { 1.0 } else { 0.0 },
                         duration,
                         tailwind_transition_ease_in_out,
                     );
@@ -472,7 +472,7 @@ fn textarea_element<H: UiHost>(
                         }
                         props.chrome.focus_ring = Some(ring);
                     }
-                    props.focus_ring_always_paint = ring_alpha.animating;
+                    props.focus_ring_always_paint = focused || ring_alpha.animating;
 
                     props
                 });
@@ -542,10 +542,9 @@ fn textarea_element<H: UiHost>(
                 let mut props = base_props.clone();
 
                 let duration = overlay_motion::shadcn_motion_duration_150(cx);
-                let focus_visible = cx.is_focused_element(id)
-                    && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
+                let focused = cx.is_focused_element(id);
 
-                let target_border = if focus_visible {
+                let target_border = if focused {
                     props.chrome.border_color_focused
                 } else {
                     props.chrome.border_color
@@ -565,7 +564,7 @@ fn textarea_element<H: UiHost>(
                     cx,
                     id,
                     "textarea.chrome.ring.alpha",
-                    if focus_visible { 1.0 } else { 0.0 },
+                    if focused { 1.0 } else { 0.0 },
                     duration,
                     tailwind_transition_ease_in_out,
                 );
@@ -576,7 +575,7 @@ fn textarea_element<H: UiHost>(
                     }
                     props.chrome.focus_ring = Some(ring);
                 }
-                props.focus_ring_always_paint = ring_alpha.animating;
+                props.focus_ring_always_paint = focused || ring_alpha.animating;
 
                 props
             });
@@ -733,8 +732,8 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
     use fret_core::{
-        Modifiers, PathCommand, Size as UiSize, SvgId, SvgService, TextBlobId, TextConstraints,
-        TextMetrics, TextService,
+        PathCommand, Size as UiSize, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics,
+        TextService,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::FrameId;
@@ -852,7 +851,7 @@ mod tests {
         use std::rc::Rc;
         use std::time::Duration;
 
-        use fret_core::{Event, KeyCode, Rect, Size};
+        use fret_core::{Rect, Size};
 
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -941,26 +940,18 @@ mod tests {
             "expected ring alpha to start at 0, got {a0}"
         );
 
-        // Focus the textarea and mark focus-visible via a navigation key.
+        // Pointer focus should already start the border/ring transition, even before
+        // `focus-visible` is enabled.
         let focusable = ui
             .first_focusable_descendant_including_declarative(&mut app, window, root)
             .expect("focusable textarea");
         ui.set_focus(Some(focusable));
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::KeyDown {
-                key: KeyCode::Tab,
-                modifiers: Modifiers::default(),
-                repeat: false,
-            },
-        );
         assert!(
-            focus_visible::is_focus_visible(&mut app, Some(window)),
-            "sanity: focus-visible should be enabled after navigation key"
+            !focus_visible::is_focus_visible(&mut app, Some(window)),
+            "sanity: pointer focus should not force focus-visible"
         );
 
-        // Frame 2: ring should be in-between (not snapped).
+        // Frame 2: ring should be in-between (not snapped) even without focus-visible.
         app.set_frame_id(FrameId(2));
         let _ = render_frame(
             &mut ui,
@@ -973,9 +964,14 @@ mod tests {
             always_paint_out.clone(),
         );
         let a1 = ring_alpha_out.get().expect("a1");
+        let always_paint_focus = always_paint_out.get().expect("always_paint_focus");
         assert!(
             a1 > 0.0,
             "expected ring alpha to start animating in, got {a1}"
+        );
+        assert!(
+            always_paint_focus,
+            "expected focused textarea to keep painting the ring while active"
         );
 
         // Advance frames until the default 150ms transition settles.

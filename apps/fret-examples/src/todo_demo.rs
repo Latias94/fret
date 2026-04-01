@@ -5,14 +5,15 @@ use fret::app::prelude::*;
 use fret::icons::IconId;
 use fret::shadcn::raw::{LayoutRefinement, icon};
 use fret::style::{
-    ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap, Theme, ThemeSnapshot,
+    ChromeRefinement, ColorRef, MetricRef, Radius, Space, TextOverflow, TextWrap, Theme,
+    ThemeSnapshot,
 };
 use fret_core::scene::DashPatternV1;
 use fret_core::{
     AttributedText, Color, Corners, DecorationLineStyle, Px, StrikethroughStyle, TextAlign,
     TextPaintStyle, TextSpan,
 };
-use fret_ui::element::StyledTextProps;
+use fret_ui::element::{HoverRegionProps, StyledTextProps};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{WidgetStateProperty, WidgetStates, typography};
 
@@ -217,6 +218,8 @@ impl View for TodoDemoView {
         let muted = theme.color_token("muted");
         let border = theme.color_token("border");
         let card = theme.color_token("card");
+        let destructive = theme.color_token("destructive");
+        let footer_bg = alpha(muted, 0.5);
         let success = Color::from_srgb_hex_rgb(0x22_c5_5e);
         let title_icon = ui::v_flex(|cx| {
             let icon_el = icon::icon_with(
@@ -445,13 +448,33 @@ impl View for TodoDemoView {
         .items_center()
         .wrap();
 
+        let clear_done_style = shadcn::raw::button::ButtonStyle::default()
+            .background(
+                WidgetStateProperty::new(Some(ColorRef::Color(Color::TRANSPARENT)))
+                    .when(
+                        WidgetStates::HOVERED,
+                        Some(ColorRef::Color(alpha(destructive, 0.10))),
+                    )
+                    .when(
+                        WidgetStates::ACTIVE,
+                        Some(ColorRef::Color(alpha(destructive, 0.16))),
+                    ),
+            )
+            .foreground(
+                WidgetStateProperty::new(Some(ColorRef::Color(muted_foreground)))
+                    .when(WidgetStates::HOVERED, Some(ColorRef::Color(destructive)))
+                    .when(WidgetStates::ACTIVE, Some(ColorRef::Color(destructive))),
+            );
+
         let clear_done_btn = shadcn::Button::new("清除已完成")
             .variant(shadcn::ButtonVariant::Ghost)
-            .size(shadcn::ButtonSize::Sm)
+            .size(shadcn::ButtonSize::Xs)
             .corner_radii_override(Corners::all(Px(9999.0)))
+            .style(clear_done_style)
             .disabled(!has_completed)
             .action(act::ClearDone)
-            .refine_style(ChromeRefinement::default().py(Space::N1).px(Space::N3))
+            .refine_style(footer_pill_chrome())
+            .refine_layout(footer_pill_layout())
             .test_id(TEST_ID_CLEAR_DONE);
 
         let footer = ui::h_flex(|cx| {
@@ -498,7 +521,7 @@ impl View for TodoDemoView {
                                     ui::container(|cx| ui::single(cx, footer))
                                         .px(Space::N6)
                                         .py(Space::N3p5)
-                                        .bg(ColorRef::Color(muted))
+                                        .bg(ColorRef::Color(footer_bg))
                                         .w_full()
                                         .into_element(cx),
                                 ]
@@ -555,17 +578,20 @@ fn filter_chip(
     let selected = filter == current;
     let action: fret::ActionId = action.into();
 
-    shadcn::Button::new(filter.label())
-        .variant(if selected {
-            shadcn::ButtonVariant::Secondary
-        } else {
-            shadcn::ButtonVariant::Ghost
-        })
-        .size(shadcn::ButtonSize::Sm)
-        .corner_radii_override(Corners::all(Px(9999.0)))
-        .refine_style(ChromeRefinement::default().py(Space::N1).px(Space::N3))
-        .action(action)
-        .test_id(test_id)
+    ui::keyed(("todo-filter-chip", filter.label()), move |_cx| {
+        shadcn::Button::new(filter.label())
+            .variant(if selected {
+                shadcn::ButtonVariant::Secondary
+            } else {
+                shadcn::ButtonVariant::Ghost
+            })
+            .size(shadcn::ButtonSize::Xs)
+            .corner_radii_override(Corners::all(Px(9999.0)))
+            .refine_style(footer_pill_chrome())
+            .refine_layout(footer_pill_layout())
+            .action(action)
+            .test_id(test_id)
+    })
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
@@ -580,146 +606,179 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
     let destructive = theme.color_token("destructive");
     let success = Color::from_srgb_hex_rgb(0x22_c5_5e);
     let done_surface = Color::from_srgb_hex_rgb(0xf8_fa_fc);
+    let hover_border = alpha(theme.color_token("primary"), 0.20);
     let mut destructive_hover_bg = destructive;
     destructive_hover_bg.a = 0.10;
     let mut destructive_active_bg = destructive;
     destructive_active_bg.a = 0.16;
 
-    let row = ui::h_flex(move |cx| {
-        let toggle_visual = if row_done {
-            ui::v_flex(|cx| {
-                let icon_el = icon::icon_with(
-                    cx,
-                    IconId::new("lucide.check"),
-                    Some(Px(14.0)),
-                    Some(ColorRef::Color(primary_foreground)),
-                );
-                ui::single(cx, icon_el)
-            })
-            .w_px(Px(20.0))
-            .h_px(Px(20.0))
-            .justify_center()
-            .items_center()
-            .bg(ColorRef::Color(success))
-            .rounded(Radius::Full)
-            .into_element(cx)
-        } else {
-            icon::icon_with(
-                cx,
-                IconId::new("lucide.circle"),
-                Some(Px(20.0)),
-                Some(ColorRef::Color(muted_foreground)),
-            )
-        };
-
-        let toggle = shadcn::Button::new("")
-            .variant(shadcn::ButtonVariant::Ghost)
-            .size(shadcn::ButtonSize::IconSm)
-            .corner_radii_override(Corners::all(Px(9999.0)))
-            .action(act::Toggle)
-            .action_payload(row_id)
-            .a11y_label(if row_done {
-                "标记为未完成"
-            } else {
-                "标记为已完成"
-            })
-            .children([toggle_visual])
-            .test_id(format!("{TEST_ID_DONE_PREFIX}{row_id}"));
-
-        let text = if row_done {
-            let rich = rich_strikethrough(&row_text, muted_foreground);
-            let style = typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
-                .resolve(&theme);
-            cx.styled_text_props(StyledTextProps {
-                layout: decl_style::layout_style(
-                    &theme,
-                    LayoutRefinement::default().flex_1().min_w_0(),
-                ),
-                rich,
-                style: Some(style),
-                color: Some(muted_foreground),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-                align: TextAlign::Start,
-                ink_overflow: Default::default(),
-            })
-        } else {
-            ui::text(row_text.clone())
-                .truncate()
-                .text_sm()
-                .font_medium()
-                .flex_1()
-                .min_w_0()
-                .text_color(ColorRef::Color(foreground))
+    ui::container(move |cx| {
+        let mut hover = HoverRegionProps::default();
+        hover.layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+        let hover_region = cx.hover_region(hover, move |cx, hovered| {
+            let toggle_visual = if row_done {
+                ui::v_flex(|cx| {
+                    let icon_el = icon::icon_with(
+                        cx,
+                        IconId::new("lucide.check"),
+                        Some(Px(14.0)),
+                        Some(ColorRef::Color(primary_foreground)),
+                    );
+                    ui::single(cx, icon_el)
+                })
+                .w_px(Px(20.0))
+                .h_px(Px(20.0))
+                .justify_center()
+                .items_center()
+                .bg(ColorRef::Color(success))
+                .rounded(Radius::Full)
                 .into_element(cx)
-        };
+            } else {
+                icon::icon_with(
+                    cx,
+                    IconId::new("lucide.circle"),
+                    Some(Px(20.0)),
+                    Some(ColorRef::Color(muted_foreground)),
+                )
+            };
 
-        let leading = ui::h_flex(|cx| ui::children![cx; toggle, text])
-            .gap(Space::N3)
-            .items_center()
-            .flex_1()
-            .min_w_0();
+            let toggle = shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Ghost)
+                .size(shadcn::ButtonSize::IconSm)
+                .corner_radii_override(Corners::all(Px(9999.0)))
+                .action(act::Toggle)
+                .action_payload(row_id)
+                .a11y_label(if row_done {
+                    "标记为未完成"
+                } else {
+                    "标记为已完成"
+                })
+                .children([toggle_visual])
+                .test_id(format!("{TEST_ID_DONE_PREFIX}{row_id}"));
 
-        let delete_style = shadcn::raw::button::ButtonStyle::default()
-            .background(
-                WidgetStateProperty::new(Some(ColorRef::Color(Color::TRANSPARENT)))
-                    .when(
-                        WidgetStates::HOVERED,
-                        Some(ColorRef::Color(destructive_hover_bg)),
-                    )
-                    .when(
-                        WidgetStates::ACTIVE,
-                        Some(ColorRef::Color(destructive_active_bg)),
+            let text = if row_done {
+                let rich = rich_strikethrough(&row_text, muted_foreground);
+                let style = typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
+                    .resolve(&theme);
+                cx.styled_text_props(StyledTextProps {
+                    layout: decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default().flex_1().min_w_0(),
                     ),
-            )
-            .foreground(
-                WidgetStateProperty::new(Some(ColorRef::Color(muted_foreground)))
-                    .when(WidgetStates::HOVERED, Some(ColorRef::Color(destructive)))
-                    .when(WidgetStates::ACTIVE, Some(ColorRef::Color(destructive))),
-            );
+                    rich,
+                    style: Some(style),
+                    color: Some(muted_foreground),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Ellipsis,
+                    align: TextAlign::Start,
+                    ink_overflow: Default::default(),
+                })
+            } else {
+                ui::text(row_text.clone())
+                    .truncate()
+                    .text_sm()
+                    .font_medium()
+                    .flex_1()
+                    .min_w_0()
+                    .text_color(ColorRef::Color(foreground))
+                    .into_element(cx)
+            };
 
-        let remove = shadcn::Button::new("")
-            .variant(shadcn::ButtonVariant::Ghost)
-            .size(shadcn::ButtonSize::IconSm)
-            .corner_radii_override(Corners::all(Px(10.0)))
-            .style(delete_style)
-            .action(act::Remove)
-            .action_payload(row_id)
-            .a11y_label("删除任务")
-            .children([icon::icon_with(
-                cx,
-                IconId::new("lucide.trash-2"),
-                Some(Px(16.0)),
-                Some(ColorRef::Color(muted_foreground)),
-            )])
-            .test_id(format!("{TEST_ID_REMOVE_PREFIX}{row_id}"));
+            let leading = ui::h_flex(|cx| ui::children![cx; toggle, text])
+                .gap(Space::N3)
+                .items_center()
+                .flex_1()
+                .min_w_0();
 
-        ui::children![cx; leading, remove]
+            let delete_style = shadcn::raw::button::ButtonStyle::default()
+                .background(
+                    WidgetStateProperty::new(Some(ColorRef::Color(Color::TRANSPARENT)))
+                        .when(
+                            WidgetStates::HOVERED,
+                            Some(ColorRef::Color(destructive_hover_bg)),
+                        )
+                        .when(
+                            WidgetStates::ACTIVE,
+                            Some(ColorRef::Color(destructive_active_bg)),
+                        ),
+                )
+                .foreground(
+                    WidgetStateProperty::new(Some(ColorRef::Color(muted_foreground)))
+                        .when(WidgetStates::HOVERED, Some(ColorRef::Color(destructive)))
+                        .when(WidgetStates::ACTIVE, Some(ColorRef::Color(destructive))),
+                );
+
+            let remove_button = shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Ghost)
+                .size(shadcn::ButtonSize::IconSm)
+                .corner_radii_override(Corners::all(Px(10.0)))
+                .style(delete_style)
+                .action(act::Remove)
+                .action_payload(row_id)
+                .a11y_label("删除任务")
+                .children([icon::icon_with(
+                    cx,
+                    IconId::new("lucide.trash-2"),
+                    Some(Px(16.0)),
+                    Some(ColorRef::Color(muted_foreground)),
+                )])
+                .test_id(format!("{TEST_ID_REMOVE_PREFIX}{row_id}"));
+
+            let remove = cx.interactivity_gate(true, hovered, move |cx| {
+                vec![cx.opacity(if hovered { 1.0 } else { 0.0 }, move |cx| {
+                    vec![remove_button.into_element(cx)]
+                })]
+            });
+
+            let row = ui::h_flex(|cx| ui::children![cx; leading, remove])
+                .gap(Space::N2)
+                .items_center()
+                .justify_between()
+                .bg(ColorRef::Color(if row_done {
+                    done_surface
+                } else {
+                    background
+                }))
+                .border_1()
+                .border_color(ColorRef::Color(if row_done {
+                    Color::TRANSPARENT
+                } else if hovered {
+                    hover_border
+                } else {
+                    border
+                }))
+                .rounded(Radius::Lg)
+                .p(Space::N3p5)
+                .w_full()
+                .test_id(format!("{TEST_ID_ROW_PREFIX}{row_id}"));
+
+            let row = if row_done {
+                row.shadow_none()
+            } else if hovered {
+                row.shadow_md()
+            } else {
+                row.shadow_sm()
+            };
+
+            vec![row.into_element(cx)]
+        });
+
+        ui::single(cx, hover_region)
     })
-    .gap(Space::N2)
-    .items_center()
-    .justify_between()
-    .bg(ColorRef::Color(if row_done {
-        done_surface
-    } else {
-        background
-    }))
-    .border_1()
-    .border_color(ColorRef::Color(if row_done {
-        Color::TRANSPARENT
-    } else {
-        border
-    }))
-    .rounded(Radius::Lg)
-    .p(Space::N3p5)
     .w_full()
-    .test_id(format!("{TEST_ID_ROW_PREFIX}{row_id}"));
+}
 
-    if row_done {
-        row.shadow_none()
-    } else {
-        row.shadow_sm()
-    }
+fn footer_pill_chrome() -> ChromeRefinement {
+    ChromeRefinement::default().px(Space::N3)
+}
+
+fn footer_pill_layout() -> LayoutRefinement {
+    LayoutRefinement::default().h_px(MetricRef::Px(Px(28.0)))
+}
+
+fn alpha(mut color: Color, a: f32) -> Color {
+    color.a = a.clamp(0.0, 1.0);
+    color
 }
 
 fn rich_strikethrough(text: &Arc<str>, strike_color: Color) -> AttributedText {
