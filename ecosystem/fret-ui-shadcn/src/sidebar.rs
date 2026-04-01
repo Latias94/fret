@@ -2683,10 +2683,10 @@ impl SidebarMenuItem {
         }
 
         cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
-            let focus_probe = cx.with_callsite_counters_snapshot(|cx| render_children(cx));
-            let focus_within = focus_probe
-                .iter()
-                .any(|child| any_element_subtree_has_focus(cx, child));
+            // Derive focus-within from the menu-item root instead of probe-rendering the child
+            // subtree twice. Re-rendering the builder in the same frame can collide with child
+            // local state callsites and trigger `use_state` warnings for otherwise valid content.
+            let focus_within = cx.is_focus_within_element(cx.root_id());
 
             with_sidebar_menu_item_state(
                 cx,
@@ -6562,6 +6562,66 @@ mod tests {
                 .iter()
                 .any(|n| n.test_id.as_deref() == Some("sidebar-menu-action")),
             "expected show_on_hover action to be visible when menu item has focus-within"
+        );
+    }
+
+    #[test]
+    fn sidebar_menu_item_children_builder_runs_once_per_frame() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+        let render_count = Rc::new(Cell::new(0usize));
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-menu-item-builder-once",
+            {
+                let render_count = render_count.clone();
+                move |cx| {
+                    let item = SidebarMenuItem::new(cx.spacer(SpacerProps {
+                        min: Px(0.0),
+                        ..Default::default()
+                    }))
+                    .test_id("sidebar-menu-item")
+                    .into_element_with_children(cx, {
+                        let render_count = render_count.clone();
+                        move |cx| {
+                            render_count.set(render_count.get() + 1);
+                            vec![
+                                SidebarMenuButton::new("Projects")
+                                    .test_id("sidebar-menu-button")
+                                    .into_element(cx),
+                            ]
+                        }
+                    });
+                    let menu = SidebarMenu::new([item]).into_element(cx);
+                    vec![menu]
+                }
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(
+            render_count.get(),
+            1,
+            "expected menu item children builder to render once per frame"
         );
     }
 
