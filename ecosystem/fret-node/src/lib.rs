@@ -144,7 +144,9 @@ mod surface_policy_tests {
         );
         assert!(!binding_surface.contains("pub fn fit_view_nodes("));
         assert!(UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_view_nodes_in_bounds<"));
+        assert!(UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_canvas_rect_in_bounds<"));
         assert!(binding_surface.contains("pub fn fit_view_nodes_in_bounds<"));
+        assert!(binding_surface.contains("pub fn fit_canvas_rect_in_bounds<"));
     }
 
     #[test]
@@ -159,6 +161,12 @@ mod surface_policy_tests {
         assert!(binding_surface.contains("pub fn fit_view_nodes_in_bounds_with_options<"));
         assert!(
             binding_surface.contains("pub fn fit_view_nodes_in_bounds_with_options_action_host(")
+        );
+        assert!(binding_surface.contains("pub fn fit_canvas_rect_in_bounds<"));
+        assert!(binding_surface.contains("pub fn fit_canvas_rect_in_bounds_action_host("));
+        assert!(binding_surface.contains("pub fn fit_canvas_rect_in_bounds_with_options<"));
+        assert!(
+            binding_surface.contains("pub fn fit_canvas_rect_in_bounds_with_options_action_host(")
         );
     }
 

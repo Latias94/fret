@@ -26,15 +26,15 @@ something else.
 - `NodeGraphController`
   - owns the recommended app-facing runtime facade,
   - owns viewport operations directly (`set_viewport*`, `set_center_in_bounds*`,
-    `fit_view_nodes_in_bounds*`),
+    `fit_view_nodes_in_bounds*`, `fit_canvas_rect_in_bounds*`),
   - keeps public viewport options store-first (`min/max zoom`, `padding`, `include_hidden_nodes`)
     instead of exposing retained queue animation overrides,
   - owns transaction-safe graph commits and query helpers.
 - `NodeGraphSurfaceBinding`
   - remains the instance-style app-facing bundle for declarative surfaces,
   - now mirrors the full common store-first viewport helper family (`set_viewport*`,
-    `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, including action-host and option-bearing
-    variants),
+    `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, `fit_canvas_rect_in_bounds*`,
+    including action-host and option-bearing variants),
   - now also mirrors routine bound-store edit/sync/history helpers (`dispatch_transaction*`,
     `submit_transaction*`, `replace_*_action_host`, `set_selection_action_host`,
     `undo_action_host`, `redo_action_host`),

@@ -52,9 +52,10 @@ copy.
 - Render `node_graph_surface(cx, binding.surface_props())` for the default surface props.
 - Prefer the binding itself for common app-facing helpers:
   `viewport`, `graph_snapshot`, `view_state_snapshot`, `set_viewport*`,
-  `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, `replace_document`, `replace_graph`,
-  `replace_view_state`, `set_selection`, `update_node*`, `update_edge*`, `outgoers`, `incomers`,
-  `connected_edges`, `port_connections`, `node_connections`, `undo`, and `redo`.
+  `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, `fit_canvas_rect_in_bounds*`,
+  `replace_document`, `replace_graph`, `replace_view_state`, `set_selection`, `update_node*`,
+  `update_edge*`, `outgoers`, `incomers`, `connected_edges`, `port_connections`,
+  `node_connections`, `undo`, and `redo`.
 - Treat `update_node*` / `update_edge*` as metadata-oriented ergonomic helpers.
   They intentionally expose `NodeGraphNodeUpdate` / `NodeGraphEdgeUpdate` drafts instead of raw
   `Node` / `Edge`, so structural port edits and endpoint rewires stay on explicit transactions.

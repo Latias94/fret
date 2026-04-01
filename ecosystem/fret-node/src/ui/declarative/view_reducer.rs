@@ -3,6 +3,7 @@ use fret_core::{Point, Px, Rect};
 
 use crate::core::CanvasPoint;
 use crate::io::NodeGraphViewState;
+use crate::runtime::fit_view::{FitViewComputeOptions, compute_fit_view_target_for_canvas_rect};
 
 pub fn view_from_state(state: &NodeGraphViewState) -> PanZoom2D {
     PanZoom2D {
@@ -73,38 +74,26 @@ pub fn apply_fit_view_to_canvas_rect(
     } else {
         0.0
     };
-
-    let avail_w = (bounds.size.width.0 - 2.0 * padding).max(1.0);
-    let avail_h = (bounds.size.height.0 - 2.0 * padding).max(1.0);
-
-    let zoom_x = avail_w / target_canvas.size.width.0;
-    let zoom_y = avail_h / target_canvas.size.height.0;
-    if !zoom_x.is_finite() || !zoom_y.is_finite() {
+    let Some((pan, zoom)) = compute_fit_view_target_for_canvas_rect(
+        target_canvas,
+        FitViewComputeOptions {
+            viewport_width_px: bounds.size.width.0,
+            viewport_height_px: bounds.size.height.0,
+            node_origin: (0.0, 0.0),
+            padding: 0.0,
+            margin_px_fallback: padding,
+            min_zoom,
+            max_zoom,
+        },
+    ) else {
         return false;
-    }
-
-    let new_zoom = PanZoom2D::sanitize_zoom(zoom_x.min(zoom_y), 1.0).clamp(min_zoom, max_zoom);
-
-    let screen_center = Point::new(
-        Px(bounds.origin.x.0 + padding + avail_w * 0.5),
-        Px(bounds.origin.y.0 + padding + avail_h * 0.5),
-    );
-    let canvas_center = Point::new(
-        Px(target_canvas.origin.x.0 + target_canvas.size.width.0 * 0.5),
-        Px(target_canvas.origin.y.0 + target_canvas.size.height.0 * 0.5),
-    );
-
-    let new_pan_x = (screen_center.x.0 - bounds.origin.x.0) / new_zoom - canvas_center.x.0;
-    let new_pan_y = (screen_center.y.0 - bounds.origin.y.0) / new_zoom - canvas_center.y.0;
-    if !new_pan_x.is_finite() || !new_pan_y.is_finite() {
-        return false;
-    }
+    };
 
     write_view_to_state(
         state,
         PanZoom2D {
-            pan: Point::new(Px(new_pan_x), Px(new_pan_y)),
-            zoom: new_zoom,
+            pan: Point::new(Px(pan.x), Px(pan.y)),
+            zoom,
         },
     );
     true

@@ -3,6 +3,7 @@
 //! This module is intentionally headless-safe and does not depend on `fret-ui`.
 
 use crate::core::CanvasPoint;
+use fret_core::Rect;
 
 #[derive(Debug, Clone, Copy)]
 pub struct FitViewComputeOptions {
@@ -226,10 +227,61 @@ pub fn compute_fit_view_target(
     best
 }
 
+/// Computes the viewport pan/zoom that frames the given canvas-space rect in view.
+pub fn compute_fit_view_target_for_canvas_rect(
+    target_canvas: Rect,
+    options: FitViewComputeOptions,
+) -> Option<(CanvasPoint, f32)> {
+    let options = options.normalized()?;
+    if !target_canvas.size.width.0.is_finite()
+        || !target_canvas.size.height.0.is_finite()
+        || target_canvas.size.width.0 <= 0.0
+        || target_canvas.size.height.0 <= 0.0
+        || !target_canvas.origin.x.0.is_finite()
+        || !target_canvas.origin.y.0.is_finite()
+    {
+        return None;
+    }
+
+    let (viewport_w, viewport_h) = (options.viewport_width_px, options.viewport_height_px);
+    let (margin_x, margin_y) = if options.padding > 0.0 {
+        (viewport_w * options.padding, viewport_h * options.padding)
+    } else {
+        (options.margin_px_fallback, options.margin_px_fallback)
+    };
+
+    let zoom_x = (viewport_w - 2.0 * margin_x) / target_canvas.size.width.0;
+    let zoom_y = (viewport_h - 2.0 * margin_y) / target_canvas.size.height.0;
+    if !zoom_x.is_finite() || !zoom_y.is_finite() {
+        return None;
+    }
+
+    let zoom = zoom_x.min(zoom_y).clamp(options.min_zoom, options.max_zoom);
+    if !zoom.is_finite() || zoom <= 0.0 {
+        return None;
+    }
+
+    let center_x = target_canvas.origin.x.0 + 0.5 * target_canvas.size.width.0;
+    let center_y = target_canvas.origin.y.0 + 0.5 * target_canvas.size.height.0;
+    let pan = CanvasPoint {
+        x: 0.5 * viewport_w / zoom - center_x,
+        y: 0.5 * viewport_h / zoom - center_y,
+    };
+    if !pan.x.is_finite() || !pan.y.is_finite() {
+        return None;
+    }
+
+    Some((pan, zoom))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{FitViewComputeOptions, FitViewNodeInfo, compute_fit_view_target};
+    use super::{
+        FitViewComputeOptions, FitViewNodeInfo, compute_fit_view_target,
+        compute_fit_view_target_for_canvas_rect,
+    };
     use crate::core::CanvasPoint;
+    use fret_core::{Point, Px, Rect, Size};
 
     #[test]
     fn compute_fit_view_target_returns_valid_viewport() {
@@ -260,5 +312,29 @@ mod tests {
 
         assert!(pan.x.is_finite() && pan.y.is_finite());
         assert!(zoom.is_finite() && zoom > 0.0);
+    }
+
+    #[test]
+    fn compute_fit_view_target_for_canvas_rect_returns_valid_viewport() {
+        let (pan, zoom) = compute_fit_view_target_for_canvas_rect(
+            Rect::new(
+                Point::new(Px(100.0), Px(50.0)),
+                Size::new(Px(400.0), Px(200.0)),
+            ),
+            FitViewComputeOptions {
+                viewport_width_px: 800.0,
+                viewport_height_px: 600.0,
+                node_origin: (0.0, 0.0),
+                padding: 0.0,
+                margin_px_fallback: 24.0,
+                min_zoom: 0.1,
+                max_zoom: 4.0,
+            },
+        )
+        .expect("target");
+
+        assert!((zoom - 1.88).abs() <= 1.0e-6);
+        assert!((pan.x - (-87.23404)).abs() <= 1.0e-4);
+        assert!((pan.y - (9.574471)).abs() <= 1.0e-4);
     }
 }

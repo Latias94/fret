@@ -109,14 +109,18 @@ Execution companion: `design.md` (surface map + next worktree order).
   - those transactions now commit through the same controller/store transaction path when present
 - [ ] Extend the controller surface further for broader imperative viewport choreography beyond the
       first bounds-aware helper set.
+  - Progress: controller/binding now also expose `fit_canvas_rect_in_bounds*`, lifting the
+    declarative-only fit-rect viewport math into a store-first runtime/controller helper so
+    XyFlow-style `fitBounds` framing no longer depends on paint-only-local reducers.
 - [x] Split the public viewport option surface from retained queue-era animation transport.
   - Progress: root `ui::*` now re-exports `NodeGraphFitViewOptions` /
     `NodeGraphSetViewportOptions` from a dedicated store-first module, while `view_queue.rs` keeps
     queue-only animation overrides crate-internal.
 - [x] Keep `NodeGraphSurfaceBinding` complete enough for routine instance-style viewport authoring.
   - Progress: binding now mirrors `set_viewport*`, `set_center_in_bounds*`,
-    and `fit_view_nodes_in_bounds*` with both option-bearing and action-host variants, so ordinary
-    viewport hooks no longer need to drop to explicit controller construction.
+    `fit_view_nodes_in_bounds*`, and `fit_canvas_rect_in_bounds*` with both option-bearing and
+    action-host variants, so ordinary viewport hooks no longer need to drop to explicit controller
+    construction.
 - [x] Keep `NodeGraphSurfaceBinding` complete enough for routine instance-style bound-store
       edit/sync/history hooks.
   - Progress: binding now mirrors `dispatch_transaction*`, `submit_transaction*`,

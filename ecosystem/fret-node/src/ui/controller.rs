@@ -10,7 +10,10 @@ use crate::core::{
 };
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphTransaction, graph_diff};
-use crate::runtime::fit_view::{FitViewComputeOptions, FitViewNodeInfo, compute_fit_view_target};
+use crate::runtime::fit_view::{
+    FitViewComputeOptions, FitViewNodeInfo, compute_fit_view_target,
+    compute_fit_view_target_for_canvas_rect,
+};
 use crate::runtime::lookups::{ConnectionSide, HandleConnection};
 use crate::runtime::store::{DispatchError, DispatchOutcome, NodeGraphStore};
 use crate::runtime::utils::{get_connected_edges, get_incomers, get_outgoers};
@@ -102,6 +105,7 @@ mod tests {
     use crate::ops::{GraphOp, GraphTransaction};
     use crate::runtime::fit_view::{
         FitViewComputeOptions, FitViewNodeInfo, compute_fit_view_target,
+        compute_fit_view_target_for_canvas_rect,
     };
     use crate::runtime::lookups::{ConnectionSide, HandleConnection};
     use crate::runtime::store::NodeGraphStore;
@@ -984,6 +988,110 @@ mod tests {
             },
         )
         .expect("fit-view target");
+        let (pan, zoom) = controller.viewport(&host);
+
+        assert!((pan.x - expected.0.x).abs() <= 1.0e-6);
+        assert!((pan.y - expected.0.y).abs() <= 1.0e-6);
+        assert!((zoom - expected.1).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn controller_fit_canvas_rect_in_bounds_falls_back_to_store_without_queue() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let target_canvas = Rect::new(
+            Point::new(Px(100.0), Px(50.0)),
+            Size::new(Px(400.0), Px(200.0)),
+        );
+        let options = NodeGraphFitViewOptions {
+            min_zoom: Some(CONTROLLER_FIT_VIEW_MIN_ZOOM),
+            max_zoom: Some(CONTROLLER_FIT_VIEW_MAX_ZOOM),
+            padding: Some(0.0),
+            ..NodeGraphFitViewOptions::default()
+        };
+
+        assert!(controller.fit_canvas_rect_in_bounds_with_options(
+            &mut host,
+            bounds,
+            target_canvas,
+            options,
+        ));
+
+        let expected = compute_fit_view_target_for_canvas_rect(
+            target_canvas,
+            FitViewComputeOptions {
+                viewport_width_px: 800.0,
+                viewport_height_px: 600.0,
+                node_origin: (0.0, 0.0),
+                padding: 0.0,
+                margin_px_fallback: CONTROLLER_FIT_VIEW_MARGIN_PX_FALLBACK,
+                min_zoom: CONTROLLER_FIT_VIEW_MIN_ZOOM,
+                max_zoom: CONTROLLER_FIT_VIEW_MAX_ZOOM,
+            },
+        )
+        .expect("fit-rect target");
+        let (pan, zoom) = controller.viewport(&host);
+
+        assert!((pan.x - expected.0.x).abs() <= 1.0e-6);
+        assert!((pan.y - expected.0.y).abs() <= 1.0e-6);
+        assert!((zoom - expected.1).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn controller_fit_canvas_rect_in_bounds_action_host_falls_back_to_store_without_queue() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let target_canvas = Rect::new(
+            Point::new(Px(100.0), Px(50.0)),
+            Size::new(Px(400.0), Px(200.0)),
+        );
+        let options = NodeGraphFitViewOptions {
+            min_zoom: Some(CONTROLLER_FIT_VIEW_MIN_ZOOM),
+            max_zoom: Some(CONTROLLER_FIT_VIEW_MAX_ZOOM),
+            padding: Some(0.0),
+            ..NodeGraphFitViewOptions::default()
+        };
+
+        assert!(
+            controller.fit_canvas_rect_in_bounds_with_options_action_host(
+                &mut host,
+                bounds,
+                target_canvas,
+                options,
+            )
+        );
+
+        let expected = compute_fit_view_target_for_canvas_rect(
+            target_canvas,
+            FitViewComputeOptions {
+                viewport_width_px: 800.0,
+                viewport_height_px: 600.0,
+                node_origin: (0.0, 0.0),
+                padding: 0.0,
+                margin_px_fallback: CONTROLLER_FIT_VIEW_MARGIN_PX_FALLBACK,
+                min_zoom: CONTROLLER_FIT_VIEW_MIN_ZOOM,
+                max_zoom: CONTROLLER_FIT_VIEW_MAX_ZOOM,
+            },
+        )
+        .expect("fit-rect target");
         let (pan, zoom) = controller.viewport(&host);
 
         assert!((pan.x - expected.0.x).abs() <= 1.0e-6);

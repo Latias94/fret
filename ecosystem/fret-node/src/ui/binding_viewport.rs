@@ -158,6 +158,71 @@ impl NodeGraphSurfaceBinding {
         self.sync_view_state_after_viewport_update_action_host(host, applied)
     }
 
+    /// Fits the viewport to the given canvas-space rect inside explicit bounds.
+    pub fn fit_canvas_rect_in_bounds<H: UiHost>(
+        &self,
+        host: &mut H,
+        bounds: Rect,
+        target_canvas: Rect,
+    ) -> bool {
+        let applied = self
+            .controller()
+            .fit_canvas_rect_in_bounds(host, bounds, target_canvas);
+        self.sync_view_state_after_viewport_update(host, applied)
+    }
+
+    /// Fits the viewport to the given canvas-space rect inside explicit bounds with store-first
+    /// fit-view options.
+    pub fn fit_canvas_rect_in_bounds_with_options<H: UiHost>(
+        &self,
+        host: &mut H,
+        bounds: Rect,
+        target_canvas: Rect,
+        options: NodeGraphFitViewOptions,
+    ) -> bool {
+        let applied = self.controller().fit_canvas_rect_in_bounds_with_options(
+            host,
+            bounds,
+            target_canvas,
+            options,
+        );
+        self.sync_view_state_after_viewport_update(host, applied)
+    }
+
+    /// Fits the viewport to the given canvas-space rect inside explicit bounds from an object-safe
+    /// action hook.
+    pub fn fit_canvas_rect_in_bounds_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        bounds: Rect,
+        target_canvas: Rect,
+    ) -> bool {
+        let applied =
+            self.controller()
+                .fit_canvas_rect_in_bounds_action_host(host, bounds, target_canvas);
+        self.sync_view_state_after_viewport_update_action_host(host, applied)
+    }
+
+    /// Fits the viewport to the given canvas-space rect inside explicit bounds with store-first
+    /// fit-view options from an object-safe action hook.
+    pub fn fit_canvas_rect_in_bounds_with_options_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        bounds: Rect,
+        target_canvas: Rect,
+        options: NodeGraphFitViewOptions,
+    ) -> bool {
+        let applied = self
+            .controller()
+            .fit_canvas_rect_in_bounds_with_options_action_host(
+                host,
+                bounds,
+                target_canvas,
+                options,
+            );
+        self.sync_view_state_after_viewport_update_action_host(host, applied)
+    }
+
     fn sync_view_state_after_viewport_update<H: UiHost>(
         &self,
         host: &mut H,

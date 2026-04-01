@@ -114,8 +114,13 @@ mod tests {
     };
     use crate::io::NodeGraphViewState;
     use crate::ops::{GraphOp, GraphTransaction};
+    use crate::runtime::fit_view::{
+        FitViewComputeOptions, compute_fit_view_target_for_canvas_rect,
+    };
     use crate::runtime::store::NodeGraphStore;
+    use crate::ui::NodeGraphFitViewOptions;
     use fret_core::AppWindowId;
+    use fret_core::{Point, Px, Rect, Size};
     use fret_runtime::{Effect, ModelStore, TimerToken};
     use serde_json::Value;
 
@@ -359,5 +364,55 @@ mod tests {
             .expect("view model readable");
         assert_eq!(pan, next.pan);
         assert_eq!(zoom, next.zoom);
+    }
+
+    #[test]
+    fn fit_canvas_rect_in_bounds_action_host_syncs_bound_view_model() {
+        let mut host = TestActionHost::default();
+        let binding = NodeGraphSurfaceBinding::new(
+            &mut host.models,
+            Graph::new(GraphId::from_u128(0x9008)),
+            NodeGraphViewState::default(),
+        );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let target_canvas = Rect::new(
+            Point::new(Px(100.0), Px(50.0)),
+            Size::new(Px(400.0), Px(200.0)),
+        );
+        let options = NodeGraphFitViewOptions {
+            padding: Some(0.0),
+            ..NodeGraphFitViewOptions::default()
+        };
+
+        assert!(binding.fit_canvas_rect_in_bounds_with_options_action_host(
+            &mut host,
+            bounds,
+            target_canvas,
+            options,
+        ));
+
+        let expected = compute_fit_view_target_for_canvas_rect(
+            target_canvas,
+            FitViewComputeOptions {
+                viewport_width_px: 800.0,
+                viewport_height_px: 600.0,
+                node_origin: (0.0, 0.0),
+                padding: 0.0,
+                margin_px_fallback: 48.0,
+                min_zoom: 0.05,
+                max_zoom: 64.0,
+            },
+        )
+        .expect("fit-rect target");
+        let (pan, zoom) = host
+            .models
+            .read(&binding.view_state_model(), |state| (state.pan, state.zoom))
+            .expect("view model readable");
+        assert!((pan.x - expected.0.x).abs() <= 1.0e-6);
+        assert!((pan.y - expected.0.y).abs() <= 1.0e-6);
+        assert!((zoom - expected.1).abs() <= 1.0e-6);
     }
 }

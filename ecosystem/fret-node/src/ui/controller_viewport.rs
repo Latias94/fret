@@ -139,6 +139,54 @@ impl NodeGraphController {
         self.fit_view_nodes_in_bounds_in_models(host.models_mut(), bounds, nodes, options)
     }
 
+    pub fn fit_canvas_rect_in_bounds<H: UiHost>(
+        &self,
+        host: &mut H,
+        bounds: Rect,
+        target_canvas: Rect,
+    ) -> bool {
+        self.fit_canvas_rect_in_bounds_with_options(
+            host,
+            bounds,
+            target_canvas,
+            NodeGraphFitViewOptions::default(),
+        )
+    }
+
+    pub fn fit_canvas_rect_in_bounds_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        bounds: Rect,
+        target_canvas: Rect,
+    ) -> bool {
+        self.fit_canvas_rect_in_bounds_with_options_action_host(
+            host,
+            bounds,
+            target_canvas,
+            NodeGraphFitViewOptions::default(),
+        )
+    }
+
+    pub fn fit_canvas_rect_in_bounds_with_options<H: UiHost>(
+        &self,
+        host: &mut H,
+        bounds: Rect,
+        target_canvas: Rect,
+        options: NodeGraphFitViewOptions,
+    ) -> bool {
+        self.fit_canvas_rect_in_bounds_in_models(host.models_mut(), bounds, target_canvas, options)
+    }
+
+    pub fn fit_canvas_rect_in_bounds_with_options_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        bounds: Rect,
+        target_canvas: Rect,
+        options: NodeGraphFitViewOptions,
+    ) -> bool {
+        self.fit_canvas_rect_in_bounds_in_models(host.models_mut(), bounds, target_canvas, options)
+    }
+
     fn set_viewport_in_models(
         &self,
         models: &mut ModelStore,
@@ -221,6 +269,53 @@ impl NodeGraphController {
                         viewport_width_px: bounds.size.width.0,
                         viewport_height_px: bounds.size.height.0,
                         node_origin: (node_origin.x, node_origin.y),
+                        padding,
+                        margin_px_fallback: CONTROLLER_FIT_VIEW_MARGIN_PX_FALLBACK,
+                        min_zoom,
+                        max_zoom,
+                    },
+                )
+            })
+            .ok()
+            .flatten();
+
+        let Some((pan, zoom)) = target else {
+            return false;
+        };
+
+        self.set_viewport_in_models(
+            models,
+            pan,
+            zoom,
+            NodeGraphSetViewportOptions {
+                min_zoom: options.min_zoom,
+                max_zoom: options.max_zoom,
+            },
+        )
+    }
+
+    fn fit_canvas_rect_in_bounds_in_models(
+        &self,
+        models: &mut ModelStore,
+        bounds: Rect,
+        target_canvas: Rect,
+        options: NodeGraphFitViewOptions,
+    ) -> bool {
+        let target = models
+            .read(&self.store, |store| {
+                let interaction = &store.view_state().interaction;
+                let padding = normalize_fit_view_padding(
+                    options.padding.unwrap_or(interaction.frame_view_padding),
+                );
+                let (min_zoom, max_zoom) =
+                    normalize_fit_view_zoom_bounds(options.min_zoom, options.max_zoom);
+
+                compute_fit_view_target_for_canvas_rect(
+                    target_canvas,
+                    FitViewComputeOptions {
+                        viewport_width_px: bounds.size.width.0,
+                        viewport_height_px: bounds.size.height.0,
+                        node_origin: (0.0, 0.0),
                         padding,
                         margin_px_fallback: CONTROLLER_FIT_VIEW_MARGIN_PX_FALLBACK,
                         min_zoom,
