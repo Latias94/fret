@@ -8,7 +8,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         window: Option<AppWindowId>,
         pan: CanvasPoint,
         zoom: f32,
-        options: Option<&crate::ui::view_queue::NodeGraphSetViewportOptions>,
+        options: Option<&crate::ui::view_queue::NodeGraphViewQueueSetViewportOptions>,
     ) -> bool {
         let snapshot = self.sync_view_state(host);
 

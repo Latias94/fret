@@ -58,7 +58,7 @@ use crate::ui::presenter::{
     PortAnchorHint,
 };
 use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphStyle};
-use crate::ui::view_queue::{NodeGraphFitViewOptions, NodeGraphViewQueue};
+use crate::ui::view_queue::{NodeGraphViewQueue, NodeGraphViewQueueFitViewOptions};
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
     NodeGraphCanvasTransform, NodeGraphController, NodeGraphEdgeTypes,
@@ -442,7 +442,7 @@ pub struct NodeGraphCanvasWith<M> {
     view_queue_key: Option<u64>,
     overlays: Option<Model<NodeGraphOverlayState>>,
 
-    fit_view_on_mount: Option<NodeGraphFitViewOptions>,
+    fit_view_on_mount: Option<NodeGraphViewQueueFitViewOptions>,
     did_fit_view_on_mount: bool,
 
     measured_output: Option<Arc<MeasuredGeometryStore>>,

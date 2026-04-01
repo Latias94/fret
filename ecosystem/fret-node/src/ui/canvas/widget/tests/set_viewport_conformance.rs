@@ -1,7 +1,7 @@
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::CanvasPoint;
-use crate::ui::view_queue::{NodeGraphSetViewportOptions, NodeGraphViewQueue};
+use crate::ui::view_queue::{NodeGraphViewQueue, NodeGraphViewQueueSetViewportOptions};
 
 use super::prelude::NodeGraphCanvas;
 use super::{make_host_graph_view, make_test_graph_two_nodes_with_size};
@@ -23,9 +23,9 @@ fn set_viewport_via_view_queue_updates_pan_and_zoom() {
 
     let pan = CanvasPoint { x: 123.0, y: -45.0 };
     let zoom = 2.5;
-    let opts = NodeGraphSetViewportOptions {
+    let opts = NodeGraphViewQueueSetViewportOptions {
         duration_ms: Some(0),
-        ..NodeGraphSetViewportOptions::default()
+        ..NodeGraphViewQueueSetViewportOptions::default()
     };
     let _ = queue.update(&mut host, |q, _cx| {
         q.push_set_viewport_with_options(pan, zoom, opts)
@@ -59,9 +59,9 @@ fn set_viewport_via_view_queue_clamps_zoom_to_style_limits() {
     canvas.style.geometry.min_zoom = 0.5;
     canvas.style.geometry.max_zoom = 1.0;
 
-    let opts = NodeGraphSetViewportOptions {
+    let opts = NodeGraphViewQueueSetViewportOptions {
         duration_ms: Some(0),
-        ..NodeGraphSetViewportOptions::default()
+        ..NodeGraphViewQueueSetViewportOptions::default()
     };
     let _ = queue.update(&mut host, |q, _cx| {
         q.push_set_viewport_with_options(CanvasPoint::default(), 2.0, opts)

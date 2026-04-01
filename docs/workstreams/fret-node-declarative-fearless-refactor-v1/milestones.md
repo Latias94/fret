@@ -192,6 +192,10 @@ points rather than direct graph mutation.
     composition calls `NodeGraphController::{set_viewport*, set_center_in_bounds*,`
     `fit_view_nodes_in_bounds*}` directly, and raw queue ownership stays a crate-internal
     compatibility detail rather than a public app-facing choice.
+  - Public `NodeGraphFitViewOptions` / `NodeGraphSetViewportOptions` now live in
+    `ui/viewport_options.rs` and only expose store-first clamp/padding fields, while
+    `ui/view_queue.rs` keeps queue-era animation overrides as crate-internal compatibility
+    transport-only types.
   - Raw edit/view transport is now crate-internal; root `fret_node::ui::*` re-exports viewport
     option types but not the underlying queue/request machinery, and the temporary public
     `fret_node::ui::advanced::*` edit seam is deleted.

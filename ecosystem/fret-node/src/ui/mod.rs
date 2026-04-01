@@ -25,6 +25,7 @@ pub mod skin;
 pub mod style;
 mod view_queue;
 mod viewport_helper;
+mod viewport_options;
 
 #[cfg(feature = "compat-retained-canvas")]
 pub mod a11y;
@@ -90,7 +91,7 @@ pub use skin::{
     PortShapeHint, WireGlowHint, WireHighlightHint, WireOutlineHint,
 };
 pub use style::{NodeGraphColorMode, NodeGraphStyle};
-pub use view_queue::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};
+pub use viewport_options::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};
 
 #[cfg(feature = "compat-retained-canvas")]
 pub use a11y::NodeGraphA11yActiveDescendant;

@@ -18,7 +18,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         window: Option<AppWindowId>,
         bounds: Rect,
         node_ids: &[GraphNodeId],
-        options: Option<&crate::ui::view_queue::NodeGraphFitViewOptions>,
+        options: Option<&crate::ui::view_queue::NodeGraphViewQueueFitViewOptions>,
     ) -> bool {
         let snapshot = self.sync_view_state(host);
         let include_hidden_nodes = options.is_some_and(|o| o.include_hidden_nodes);

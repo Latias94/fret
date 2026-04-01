@@ -1,6 +1,6 @@
 # `fret-node` Fearless Refactor (v1) - Design Map
 
-Status: execution-oriented companion (last updated 2026-03-31)
+Status: execution-oriented companion (last updated 2026-04-01)
 Scope: `ecosystem/fret-node` only
 
 This file is the shortest possible answer to:
@@ -27,6 +27,8 @@ something else.
   - owns the recommended app-facing runtime facade,
   - owns viewport operations directly (`set_viewport*`, `set_center_in_bounds*`,
     `fit_view_nodes_in_bounds*`),
+  - keeps public viewport options store-first (`min/max zoom`, `padding`, `include_hidden_nodes`)
+    instead of exposing retained queue animation overrides,
   - owns transaction-safe graph commits and query helpers.
 - `node_graph_surface(...)`
   - remains the recommended lightweight declarative authoring surface,
@@ -67,6 +69,8 @@ These are no longer part of the recommended public story.
 - Public `fret_node::ui::advanced::*` edit transport is removed.
 - `NodeGraphViewportHelper` is removed.
 - Raw edit/view queue transport is crate-internal only.
+- Public viewport option types are now split from retained queue animation options; the queue-only
+  motion overrides stay crate-internal.
 - Direct public retained queue-binding methods are demoted to crate-private compatibility seams.
 - Unused direct `NodeGraphCanvas::with_edit_queue(...)` is removed outright.
 
@@ -105,27 +109,33 @@ focused tests that still need queue transport while the retained stack is being 
 
 ## Next worktree order
 
-### Slice 1 - callback surface split
+### Slice 1 - remaining controller surface closure
 
 Why first:
 
-- it is still one of the largest remaining "hard to explain" API surfaces,
-- it blocks a cleaner app-facing controller story,
+- the public viewport story is now intentionally store-first, so the remaining ambiguity is no
+  longer queue transport but which broader imperative helpers/naming still belong on the controller,
+- it blocks a cleaner long-term `Controller` vs `Instance` decision and the remaining XyFlow-style
+  mapping work,
 - it can land without reopening the already-finished transport cleanup.
 
 What should be true after landing:
 
-- reviewers can distinguish commit callbacks vs view-state callbacks vs gesture-lifecycle callbacks,
-- controller/store commit callbacks stop getting mixed with retained gesture glue,
-- app code has one obvious callback layer to adopt.
+- reviewers can explain which imperative graph/viewport/query helpers belong on the controller
+  surface without reaching for retained compatibility seams,
+- controller naming/ownership stops drifting every time a new helper is added,
+- app code keeps one obvious controller/binding-first story for runtime actions.
 
 First landing in this worktree:
 
-- `runtime::callbacks` is now split into `NodeGraphCommitCallbacks`,
-  `NodeGraphViewCallbacks`, and `NodeGraphGestureCallbacks`.
-- `NodeGraphCallbacks` remains only as the composite seam consumed by
-  `install_callbacks(...)` and `NodeGraphCanvas::with_callbacks(...)`.
-- App-facing docs/examples now teach commit/view first, while retained glue owns gesture hooks.
+- Public `NodeGraphFitViewOptions` / `NodeGraphSetViewportOptions` now live in a dedicated
+  `viewport_options.rs` module and only expose fields the store-first controller path really
+  consumes.
+- Retained `view_queue.rs` keeps its richer animation options as crate-internal transport-only
+  types, so public app code no longer sees queue-era motion knobs that are no-ops on the
+  controller/binding path.
+- The next follow-up after this slice should decide which remaining imperative helpers or naming
+  changes still belong on the controller surface before widening it further.
 
 ### Slice 2 - declarative transaction closure
 

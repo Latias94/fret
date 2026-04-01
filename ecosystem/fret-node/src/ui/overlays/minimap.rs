@@ -13,8 +13,10 @@ use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::controller::NodeGraphController;
 use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
-use crate::ui::view_queue::NodeGraphSetViewportOptions;
-use crate::ui::{NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphStyle};
+use crate::ui::{
+    NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphSetViewportOptions,
+    NodeGraphStyle,
+};
 
 use super::OverlayPlacement;
 

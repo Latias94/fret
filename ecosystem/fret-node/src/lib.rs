@@ -53,6 +53,8 @@ mod surface_policy_tests {
     const UI_CONTROLLER_RS: &str = include_str!("ui/controller.rs");
     const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
     const UI_MOD_RS: &str = include_str!("ui/mod.rs");
+    const UI_VIEWPORT_OPTIONS_RS: &str = include_str!("ui/viewport_options.rs");
+    const UI_VIEW_QUEUE_RS: &str = include_str!("ui/view_queue.rs");
     const MINIMAP_RS: &str = include_str!("ui/overlays/minimap.rs");
     const NODE_GRAPH_DOMAIN_DEMO_RS: &str =
         include_str!("../../../apps/fret-examples/src/node_graph_domain_demo.rs");
@@ -127,12 +129,33 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn root_ui_surface_re_exports_viewport_option_types_but_not_raw_view_queue_module() {
+    fn root_ui_surface_re_exports_store_first_viewport_option_types_but_not_raw_view_queue_module()
+    {
         assert!(UI_MOD_RS.contains("mod view_queue;"));
+        assert!(UI_MOD_RS.contains("mod viewport_options;"));
         assert!(!UI_MOD_RS.contains("pub mod view_queue;"));
         assert!(UI_MOD_RS.contains(
-            "pub use view_queue::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};"
+            "pub use viewport_options::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};"
         ));
+    }
+
+    #[test]
+    fn public_viewport_option_surface_stays_store_first() {
+        assert!(UI_VIEWPORT_OPTIONS_RS.contains("pub struct NodeGraphFitViewOptions"));
+        assert!(UI_VIEWPORT_OPTIONS_RS.contains("pub struct NodeGraphSetViewportOptions"));
+        assert!(!UI_VIEWPORT_OPTIONS_RS.contains("duration_ms"));
+        assert!(!UI_VIEWPORT_OPTIONS_RS.contains("interpolate"));
+        assert!(!UI_VIEWPORT_OPTIONS_RS.contains("ease"));
+        assert!(UI_VIEW_QUEUE_RS.contains("pub(crate) struct NodeGraphViewQueueFitViewOptions"));
+        assert!(
+            UI_VIEW_QUEUE_RS.contains("pub(crate) struct NodeGraphViewQueueSetViewportOptions")
+        );
+        assert!(UI_VIEW_QUEUE_RS.contains("duration_ms"));
+        assert!(UI_VIEW_QUEUE_RS.contains("interpolate"));
+        assert!(UI_VIEW_QUEUE_RS.contains("ease"));
+        assert!(!UI_CONTROLLER_VIEWPORT_RS.contains("duration_ms"));
+        assert!(!UI_CONTROLLER_VIEWPORT_RS.contains("interpolate"));
+        assert!(!UI_CONTROLLER_VIEWPORT_RS.contains("ease"));
     }
 
     #[test]

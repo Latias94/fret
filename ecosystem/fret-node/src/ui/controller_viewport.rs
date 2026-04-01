@@ -242,9 +242,6 @@ impl NodeGraphController {
             NodeGraphSetViewportOptions {
                 min_zoom: options.min_zoom,
                 max_zoom: options.max_zoom,
-                duration_ms: options.duration_ms,
-                interpolate: options.interpolate,
-                ease: options.ease,
             },
         )
     }

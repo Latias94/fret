@@ -1,6 +1,6 @@
 # Workstream: `fret-node` Fearless Refactor (v1)
 
-Status: Reframed and active (last updated 2026-03-31)
+Status: Reframed and active (last updated 2026-04-01)
 Quick navigation:
 
 - `design.md` - current surface map + next worktree order
@@ -179,8 +179,9 @@ convergence slices.
 
 - The controller now covers the first query / transaction / viewport / selection helpers, including
   XyFlow-style node/handle connection lookups; retained canvas / minimap glue can also bind through
-  the controller now, while richer edit commands, fit-view ergonomics without explicit bounds, and
-  callback layering are still open.
+  the controller now, public viewport option types now stay store-first instead of leaking retained
+  queue animation knobs, while richer edit commands, long-term controller/instance naming, and
+  broader callback cleanup are still open.
 - Evidence:
   - `ecosystem/fret-node/src/ui/controller.rs`
   - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md` (`M3`)
@@ -278,7 +279,9 @@ owning raw transport queues.
 `fret_node::ui::advanced::*` is now deleted, and root `fret_node::ui::*` no longer exposes the raw
 queue/helper surfaces. First-party demos stay controller/binding-first, while retained/test callers
 use explicit crate-internal module paths as needed; viewport option types still stay on the root
-`ui::*` surface without exposing the raw view queue itself.
+`ui::*` surface without exposing the raw view queue itself, but those root types now come from a
+dedicated store-first module and no longer expose queue-era animation fields that only retained
+transport still consumes internally.
 Because this repo does not need a public compatibility window, the old root queue/helper aliases are
 removed outright instead of going through a deprecation cycle.
 Current controller-facing XyFlow mapping (review helper, not a final contract):

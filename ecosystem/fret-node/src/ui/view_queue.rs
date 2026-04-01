@@ -3,28 +3,36 @@
 //! This is a small "message passing" surface for editor subtrees or embedding apps that need to
 //! request viewport actions (e.g. fit-view over a specific node set) without taking a direct
 //! dependency on a particular canvas/editor widget instance.
+//!
+//! This module is crate-internal compatibility transport. Public controller/binding helpers use the
+//! smaller store-first option types from `viewport_options.rs`.
 
 use crate::core::CanvasPoint;
 use crate::core::NodeId;
 use crate::io::{NodeGraphViewportEase, NodeGraphViewportInterpolate};
 
+use super::viewport_options::{
+    NodeGraphFitViewOptions as PublicNodeGraphFitViewOptions,
+    NodeGraphSetViewportOptions as PublicNodeGraphSetViewportOptions,
+};
+
 #[derive(Debug, Clone)]
-pub enum NodeGraphViewRequest {
+pub(crate) enum NodeGraphViewRequest {
     /// Frame a subset of nodes in view (XyFlow `fitViewOptions.nodes` mental model).
     FrameNodes {
         nodes: Vec<NodeId>,
-        options: NodeGraphFitViewOptions,
+        options: NodeGraphViewQueueFitViewOptions,
     },
     /// Sets the viewport pan/zoom (XyFlow `setViewport` mental model).
     SetViewport {
         pan: CanvasPoint,
         zoom: f32,
-        options: NodeGraphSetViewportOptions,
+        options: NodeGraphViewQueueSetViewportOptions,
     },
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct NodeGraphFitViewOptions {
+#[derive(Debug, Default, Clone, Copy)]
+pub(crate) struct NodeGraphViewQueueFitViewOptions {
     /// Include hidden nodes (XyFlow `fitViewOptions.includeHiddenNodes`).
     pub include_hidden_nodes: bool,
     /// Optional per-call zoom clamp override (XyFlow `fitViewOptions.minZoom`).
@@ -41,8 +49,22 @@ pub struct NodeGraphFitViewOptions {
     pub padding: Option<f32>,
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct NodeGraphSetViewportOptions {
+impl From<PublicNodeGraphFitViewOptions> for NodeGraphViewQueueFitViewOptions {
+    fn from(options: PublicNodeGraphFitViewOptions) -> Self {
+        Self {
+            include_hidden_nodes: options.include_hidden_nodes,
+            min_zoom: options.min_zoom,
+            max_zoom: options.max_zoom,
+            duration_ms: None,
+            interpolate: None,
+            ease: None,
+            padding: options.padding,
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub(crate) struct NodeGraphViewQueueSetViewportOptions {
     /// Optional per-call zoom clamp override (XyFlow `setViewport({ zoom }, { duration })`).
     pub min_zoom: Option<f32>,
     /// Optional per-call zoom clamp override (XyFlow `setViewport({ zoom }, { duration })`).
@@ -55,49 +77,61 @@ pub struct NodeGraphSetViewportOptions {
     pub ease: Option<NodeGraphViewportEase>,
 }
 
+impl From<PublicNodeGraphSetViewportOptions> for NodeGraphViewQueueSetViewportOptions {
+    fn from(options: PublicNodeGraphSetViewportOptions) -> Self {
+        Self {
+            min_zoom: options.min_zoom,
+            max_zoom: options.max_zoom,
+            duration_ms: None,
+            interpolate: None,
+            ease: None,
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone)]
-pub struct NodeGraphViewQueue {
+pub(crate) struct NodeGraphViewQueue {
     pub pending: Vec<NodeGraphViewRequest>,
 }
 
 impl NodeGraphViewQueue {
-    pub fn push(&mut self, req: NodeGraphViewRequest) {
+    pub(crate) fn push(&mut self, req: NodeGraphViewRequest) {
         self.pending.push(req);
     }
 
-    pub fn push_frame_nodes(&mut self, nodes: Vec<NodeId>) {
+    pub(crate) fn push_frame_nodes(&mut self, nodes: Vec<NodeId>) {
         self.push(NodeGraphViewRequest::FrameNodes {
             nodes,
-            options: NodeGraphFitViewOptions::default(),
+            options: NodeGraphViewQueueFitViewOptions::default(),
         });
     }
 
-    pub fn push_frame_nodes_with_options(
+    pub(crate) fn push_frame_nodes_with_options(
         &mut self,
         nodes: Vec<NodeId>,
-        options: NodeGraphFitViewOptions,
+        options: NodeGraphViewQueueFitViewOptions,
     ) {
         self.push(NodeGraphViewRequest::FrameNodes { nodes, options });
     }
 
-    pub fn push_set_viewport(&mut self, pan: CanvasPoint, zoom: f32) {
+    pub(crate) fn push_set_viewport(&mut self, pan: CanvasPoint, zoom: f32) {
         self.push(NodeGraphViewRequest::SetViewport {
             pan,
             zoom,
-            options: NodeGraphSetViewportOptions::default(),
+            options: NodeGraphViewQueueSetViewportOptions::default(),
         });
     }
 
-    pub fn push_set_viewport_with_options(
+    pub(crate) fn push_set_viewport_with_options(
         &mut self,
         pan: CanvasPoint,
         zoom: f32,
-        options: NodeGraphSetViewportOptions,
+        options: NodeGraphViewQueueSetViewportOptions,
     ) {
         self.push(NodeGraphViewRequest::SetViewport { pan, zoom, options });
     }
 
-    pub fn drain(&mut self) -> Vec<NodeGraphViewRequest> {
+    pub(crate) fn drain(&mut self) -> Vec<NodeGraphViewRequest> {
         std::mem::take(&mut self.pending)
     }
 }

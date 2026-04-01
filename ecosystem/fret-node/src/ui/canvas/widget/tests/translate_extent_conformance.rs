@@ -2,7 +2,7 @@ use fret_canvas::view::{CanvasViewport2D, PanZoom2D};
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{CanvasPoint, CanvasRect, CanvasSize};
-use crate::ui::view_queue::{NodeGraphSetViewportOptions, NodeGraphViewQueue};
+use crate::ui::view_queue::{NodeGraphViewQueue, NodeGraphViewQueueSetViewportOptions};
 
 use super::prelude::NodeGraphCanvas;
 use super::{make_host_graph_view, make_test_graph_two_nodes_with_size};
@@ -65,9 +65,9 @@ fn set_viewport_clamps_pan_to_translate_extent() {
         y: -900.0,
     };
     let zoom = 1.0;
-    let opts = NodeGraphSetViewportOptions {
+    let opts = NodeGraphViewQueueSetViewportOptions {
         duration_ms: Some(0),
-        ..NodeGraphSetViewportOptions::default()
+        ..NodeGraphViewQueueSetViewportOptions::default()
     };
     let _ = queue.update(&mut host, |q, _cx| {
         q.push_set_viewport_with_options(pan, zoom, opts)
@@ -123,9 +123,9 @@ fn set_viewport_clamps_pan_to_translate_extent_at_zoom() {
     // - allowed pan_y is [-700, 0]
     let pan = CanvasPoint { x: -900.0, y: 50.0 };
     let zoom = 2.0;
-    let opts = NodeGraphSetViewportOptions {
+    let opts = NodeGraphViewQueueSetViewportOptions {
         duration_ms: Some(0),
-        ..NodeGraphSetViewportOptions::default()
+        ..NodeGraphViewQueueSetViewportOptions::default()
     };
     let _ = queue.update(&mut host, |q, _cx| {
         q.push_set_viewport_with_options(pan, zoom, opts)
@@ -182,9 +182,9 @@ fn translate_extent_centers_when_viewport_is_larger_than_extent() {
         y: -999.0,
     };
     let zoom = 1.0;
-    let opts = NodeGraphSetViewportOptions {
+    let opts = NodeGraphViewQueueSetViewportOptions {
         duration_ms: Some(0),
-        ..NodeGraphSetViewportOptions::default()
+        ..NodeGraphViewQueueSetViewportOptions::default()
     };
     let _ = queue.update(&mut host, |q, _cx| {
         q.push_set_viewport_with_options(pan, zoom, opts)

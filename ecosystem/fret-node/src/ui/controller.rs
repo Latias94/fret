@@ -11,8 +11,8 @@ use crate::runtime::lookups::{ConnectionSide, HandleConnection};
 use crate::runtime::store::{DispatchError, DispatchOutcome, NodeGraphStore};
 use crate::runtime::utils::{get_connected_edges, get_incomers, get_outgoers};
 
-use super::view_queue::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};
 use super::viewport_helper::pan_for_center;
+use super::viewport_options::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};
 
 #[path = "controller_queries.rs"]
 mod controller_queries;
@@ -93,8 +93,9 @@ mod tests {
     };
     use crate::runtime::lookups::{ConnectionSide, HandleConnection};
     use crate::runtime::store::NodeGraphStore;
-    use crate::ui::NodeGraphSurfaceBinding;
-    use crate::ui::view_queue::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};
+    use crate::ui::{
+        NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphSurfaceBinding,
+    };
 
     #[derive(Default)]
     struct TestUiHostImpl {
@@ -781,10 +782,7 @@ mod tests {
             bounds,
             CanvasPoint { x: 10.0, y: 20.0 },
             None,
-            NodeGraphSetViewportOptions {
-                duration_ms: Some(0),
-                ..NodeGraphSetViewportOptions::default()
-            },
+            NodeGraphSetViewportOptions::default(),
         ));
 
         let (pan, zoom) = controller.viewport(&host);
@@ -812,10 +810,7 @@ mod tests {
             bounds,
             CanvasPoint { x: 10.0, y: 20.0 },
             Some(4.0),
-            NodeGraphSetViewportOptions {
-                duration_ms: Some(0),
-                ..NodeGraphSetViewportOptions::default()
-            },
+            NodeGraphSetViewportOptions::default(),
         ));
 
         let (pan, zoom) = controller.viewport(&host);

@@ -109,10 +109,16 @@ Execution companion: `design.md` (surface map + next worktree order).
   - those transactions now commit through the same controller/store transaction path when present
 - [ ] Extend the controller surface further for broader imperative viewport choreography beyond the
       first bounds-aware helper set.
+- [x] Split the public viewport option surface from retained queue-era animation transport.
+  - Progress: root `ui::*` now re-exports `NodeGraphFitViewOptions` /
+    `NodeGraphSetViewportOptions` from a dedicated store-first module, while `view_queue.rs` keeps
+    queue-only animation overrides crate-internal.
 - [ ] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes
       an internal detail of the controller.
   - Progress: retained canvas / minimap composition can now bind through `NodeGraphController`, so
     new app/UI glue no longer needs to teach raw queue mutation first.
+  - Progress: public viewport options no longer expose retained-only `duration/ease/interpolate`
+    knobs, so the remaining decision is transport ownership rather than public API shape.
 - [x] Decide whether `edit_queue` stays public, becomes controller-owned, or is limited to internal
       composition seams.
   - Decision: raw edit transport is now crate-internal only; first-party demos no longer own

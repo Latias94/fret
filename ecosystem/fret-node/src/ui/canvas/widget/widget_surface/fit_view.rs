@@ -1,5 +1,8 @@
 use super::*;
 
+use crate::ui::NodeGraphFitViewOptions;
+use crate::ui::view_queue::NodeGraphViewQueueFitViewOptions;
+
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     fn fit_view_on_mount_node_ids<H: UiHost>(
         &self,
@@ -29,7 +32,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     }
 
     pub fn with_fit_view_on_mount_options(mut self, options: NodeGraphFitViewOptions) -> Self {
-        self.fit_view_on_mount = Some(options);
+        self.fit_view_on_mount = Some(NodeGraphViewQueueFitViewOptions::from(options));
         self.did_fit_view_on_mount = false;
         self
     }
