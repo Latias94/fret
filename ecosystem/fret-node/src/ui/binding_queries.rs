@@ -6,6 +6,26 @@ impl NodeGraphSurfaceBinding {
         self.controller().viewport(host)
     }
 
+    /// Projects a screen-space point into canvas space using the authoritative store viewport.
+    pub fn screen_to_canvas<H: UiHost>(
+        &self,
+        host: &H,
+        bounds: Rect,
+        screen: Point,
+    ) -> Option<CanvasPoint> {
+        self.controller().screen_to_canvas(host, bounds, screen)
+    }
+
+    /// Projects a canvas-space point into screen space using the authoritative store viewport.
+    pub fn canvas_to_screen<H: UiHost>(
+        &self,
+        host: &H,
+        bounds: Rect,
+        canvas: CanvasPoint,
+    ) -> Option<Point> {
+        self.controller().canvas_to_screen(host, bounds, canvas)
+    }
+
     /// Clones the current graph snapshot from the authoritative store.
     pub fn graph_snapshot<H: UiHost>(&self, host: &H) -> Option<Graph> {
         self.controller().graph_snapshot(host)

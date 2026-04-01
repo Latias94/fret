@@ -11,6 +11,48 @@ impl NodeGraphController {
             .unwrap_or((CanvasPoint::default(), 1.0))
     }
 
+    pub fn screen_to_canvas<H: UiHost>(
+        &self,
+        host: &H,
+        bounds: Rect,
+        screen: Point,
+    ) -> Option<CanvasPoint> {
+        self.store
+            .read_ref(host, |store| {
+                let view_state = store.view_state();
+                let zoom = PanZoom2D::sanitize_zoom(view_state.zoom, 1.0);
+                let view = PanZoom2D {
+                    pan: Point::new(Px(view_state.pan.x), Px(view_state.pan.y)),
+                    zoom,
+                };
+                let point = view.screen_to_canvas(bounds, screen);
+                CanvasPoint {
+                    x: point.x.0,
+                    y: point.y.0,
+                }
+            })
+            .ok()
+    }
+
+    pub fn canvas_to_screen<H: UiHost>(
+        &self,
+        host: &H,
+        bounds: Rect,
+        canvas: CanvasPoint,
+    ) -> Option<Point> {
+        self.store
+            .read_ref(host, |store| {
+                let view_state = store.view_state();
+                let zoom = PanZoom2D::sanitize_zoom(view_state.zoom, 1.0);
+                let view = PanZoom2D {
+                    pan: Point::new(Px(view_state.pan.x), Px(view_state.pan.y)),
+                    zoom,
+                };
+                view.canvas_to_screen(bounds, Point::new(Px(canvas.x), Px(canvas.y)))
+            })
+            .ok()
+    }
+
     pub fn graph_snapshot<H: UiHost>(&self, host: &H) -> Option<Graph> {
         self.store
             .read_ref(host, |store| store.graph().clone())

@@ -112,6 +112,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: controller/binding now also expose `fit_canvas_rect_in_bounds*`, lifting the
     declarative-only fit-rect viewport math into a store-first runtime/controller helper so
     XyFlow-style `fitBounds` framing no longer depends on paint-only-local reducers.
+  - Progress: controller/binding now also expose `screen_to_canvas` / `canvas_to_screen`, so
+    app-facing viewport choreography no longer has to reach into retained/declarative-local view
+    math just to project pointer positions or anchors.
 - [x] Split the public viewport option surface from retained queue-era animation transport.
   - Progress: root `ui::*` now re-exports `NodeGraphFitViewOptions` /
     `NodeGraphSetViewportOptions` from a dedicated store-first module, while `view_queue.rs` keeps

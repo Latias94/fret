@@ -242,7 +242,8 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
 - it provides common query helpers and transaction-safe commit helpers,
 - it now includes the first bounds-aware viewport helpers (`set_center_in_bounds*`,
   `fit_view_nodes_in_bounds*`) plus a canvas-rect framing helper (`fit_canvas_rect_in_bounds*`),
-  so paint-only / fallback hosts can drive viewport state without requiring a retained widget queue,
+  plus viewport projection helpers (`screen_to_canvas`, `canvas_to_screen`), so paint-only /
+  fallback hosts can drive viewport state without requiring a retained widget queue,
 - declarative keyboard/wheel/pinch/pan viewport updates have started converging on the same
   controller/store-backed view-state path when a controller/store is present,
 - the deferred `fit-to-portals` viewport application path now also uses that same view-state
@@ -297,10 +298,11 @@ Queue-first APIs such as `NodeGraphEditQueue` are no longer public app-facing se
 transport is crate-internal only, and the temporary `NodeGraphViewportHelper` facade is deleted, so
 app-facing composition can stay on either the instance-style
 `NodeGraphSurfaceBinding::{set_viewport*, set_center_in_bounds*, fit_view_nodes_in_bounds*,
-fit_canvas_rect_in_bounds*}` family or the lower-level
+fit_canvas_rect_in_bounds*, screen_to_canvas, canvas_to_screen}` family or the lower-level
 `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes_in_bounds*,
-fit_canvas_rect_in_bounds*}` surface, while declarative action hooks should prefer the matching
-`NodeGraphSurfaceBinding::*_action_host(...)` helpers over owning raw transport queues.
+fit_canvas_rect_in_bounds*, screen_to_canvas, canvas_to_screen}` surface, while declarative
+action hooks should prefer the matching `NodeGraphSurfaceBinding::*_action_host(...)` helpers over
+owning raw transport queues.
 The remaining raw edit queue transport now lives under `ui/compat_transport.rs`, making it an
 explicit retained compatibility detail rather than a root `fret_node::ui::*` concept.
 The remaining raw viewport queue transport now lives under
@@ -327,6 +329,10 @@ Current controller-facing XyFlow mapping (review helper, not a final contract):
   - XyFlow mental model: `fitView`, `fitBounds`
   - current Fret surface:
     `NodeGraphController::fit_view_nodes_in_bounds*`, `fit_canvas_rect_in_bounds*`
+- coordinate projection:
+  - XyFlow mental model: `screenToFlowPosition`, `flowToScreenPosition`
+  - current Fret surface:
+    `NodeGraphController::screen_to_canvas`, `canvas_to_screen`
 - node / handle connections:
   - XyFlow mental model: `getNodeConnections`, `getHandleConnections`
   - current Fret surface: `NodeGraphController::node_connections`, `port_connections`

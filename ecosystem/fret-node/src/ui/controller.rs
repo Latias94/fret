@@ -1,4 +1,5 @@
-use fret_core::Rect;
+use fret_canvas::view::PanZoom2D;
+use fret_core::{Point, Px, Rect};
 use fret_runtime::{Model, ModelStore};
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHost;
@@ -749,6 +750,54 @@ mod tests {
             controller.viewport(&host),
             (CanvasPoint { x: 3.0, y: 4.0 }, 1.25)
         );
+    }
+
+    #[test]
+    fn controller_screen_to_canvas_uses_store_viewport() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
+        let mut view_state = NodeGraphViewState::default();
+        view_state.pan = CanvasPoint { x: 10.0, y: 20.0 };
+        view_state.zoom = 2.0;
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_state));
+        let controller = NodeGraphController::new(store);
+        let bounds = Rect::new(
+            Point::new(Px(100.0), Px(50.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let canvas = controller
+            .screen_to_canvas(&host, bounds, Point::new(Px(300.0), Px(250.0)))
+            .expect("projection");
+
+        assert!((canvas.x - 90.0).abs() <= 1.0e-6);
+        assert!((canvas.y - 80.0).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn controller_canvas_to_screen_uses_store_viewport() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
+        let mut view_state = NodeGraphViewState::default();
+        view_state.pan = CanvasPoint { x: 10.0, y: 20.0 };
+        view_state.zoom = 2.0;
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_state));
+        let controller = NodeGraphController::new(store);
+        let bounds = Rect::new(
+            Point::new(Px(100.0), Px(50.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let screen = controller
+            .canvas_to_screen(&host, bounds, CanvasPoint { x: 90.0, y: 80.0 })
+            .expect("projection");
+
+        assert!((screen.x.0 - 300.0).abs() <= 1.0e-6);
+        assert!((screen.y.0 - 250.0).abs() <= 1.0e-6);
     }
 
     #[test]

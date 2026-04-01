@@ -168,6 +168,8 @@ mod surface_policy_tests {
         assert!(
             binding_surface.contains("pub fn fit_canvas_rect_in_bounds_with_options_action_host(")
         );
+        assert!(binding_surface.contains("pub fn screen_to_canvas<"));
+        assert!(binding_surface.contains("pub fn canvas_to_screen<"));
     }
 
     #[test]

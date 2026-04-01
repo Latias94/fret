@@ -1,4 +1,4 @@
-use fret_core::Rect;
+use fret_core::{Point, Rect};
 use fret_runtime::{Model, ModelStore};
 use fret_ui::action::UiActionHost;
 use fret_ui::{ElementContext, Invalidation, UiHost};
