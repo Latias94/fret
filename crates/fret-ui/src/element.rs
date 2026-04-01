@@ -1106,6 +1106,7 @@ pub struct SemanticsProps {
     pub disabled: bool,
     pub read_only: bool,
     pub required: bool,
+    pub invalid: Option<fret_core::SemanticsInvalid>,
     pub hidden: bool,
     pub visited: bool,
     pub multiselectable: bool,
@@ -1164,6 +1165,7 @@ impl Default for SemanticsProps {
             disabled: false,
             read_only: false,
             required: false,
+            invalid: None,
             hidden: false,
             visited: false,
             multiselectable: false,
@@ -1650,6 +1652,7 @@ pub struct PressableA11y {
     /// This is a portable approximation of ARIA `aria-multiselectable`.
     pub multiselectable: bool,
     pub required: bool,
+    pub invalid: Option<fret_core::SemanticsInvalid>,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,

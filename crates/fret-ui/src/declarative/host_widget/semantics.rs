@@ -102,6 +102,7 @@ impl ElementHostWidget {
                 if props.required {
                     cx.set_required(true);
                 }
+                cx.set_invalid(props.invalid);
                 if props.hidden {
                     cx.set_hidden(true);
                 }
@@ -275,6 +276,7 @@ impl ElementHostWidget {
                     if props.a11y.required {
                         cx.set_required(true);
                     }
+                    cx.set_invalid(props.a11y.invalid);
                     if let Some(expanded) = props.a11y.expanded {
                         cx.set_expanded(expanded);
                     }

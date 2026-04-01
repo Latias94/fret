@@ -303,6 +303,7 @@ impl RadioGroupItem {
         let tab_stop = self.tab_stop;
         let index = self.index;
         let set_size = self.set_size;
+        let inherited_invalid = props.a11y.invalid;
 
         cx.pressable_with_id_props(move |cx, st, id| {
             cx.key_add_on_key_down_for(
@@ -323,6 +324,7 @@ impl RadioGroupItem {
             {
                 a11y = a11y.with_collection_position(index, count);
             }
+            a11y.invalid = inherited_invalid;
             props.a11y = a11y;
 
             let children = f(cx, st, id, checked, &mut props);

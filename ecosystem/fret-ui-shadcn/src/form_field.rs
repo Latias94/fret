@@ -226,7 +226,53 @@ fn form_decorate_control_element(
                 props.a11y.label = a11y_label.cloned();
             }
             if invalid {
-                props.focus_ring = Some(ring);
+                props.a11y.invalid = Some(fret_core::SemanticsInvalid::True);
+                if let Some(existing_ring) = props.focus_ring.as_mut() {
+                    existing_ring.color =
+                        recolor_animated_color(existing_ring.color, default_ring.color, ring.color);
+                    match (
+                        existing_ring.offset_color.as_mut(),
+                        default_ring.offset_color,
+                        ring.offset_color,
+                    ) {
+                        (Some(existing_offset), Some(default_offset), Some(target_offset)) => {
+                            *existing_offset = recolor_animated_color(
+                                *existing_offset,
+                                default_offset,
+                                target_offset,
+                            );
+                        }
+                        (Some(existing_offset), None, Some(target_offset)) => {
+                            *existing_offset = Color {
+                                a: existing_offset.a,
+                                ..target_offset
+                            };
+                        }
+                        (None, _, Some(target_offset)) => {
+                            existing_ring.offset_color = Some(target_offset);
+                        }
+                        _ => {}
+                    }
+                } else {
+                    props.focus_ring = Some(ring);
+                }
+            }
+
+            for child in element.children.iter_mut() {
+                form_decorate_control_element(
+                    child,
+                    a11y_label,
+                    invalid,
+                    destructive,
+                    default_ring,
+                    ring,
+                    shadow_focus_ring_color,
+                );
+            }
+        }
+        ElementKind::Semantics(props) => {
+            if invalid && props.role == fret_core::SemanticsRole::RadioGroup {
+                props.invalid = Some(fret_core::SemanticsInvalid::True);
             }
 
             for child in element.children.iter_mut() {
@@ -367,9 +413,12 @@ mod tests {
     use fret_ui_headless::form_state::FormState;
     use std::time::Duration;
 
+    use crate::combobox::{Combobox, ComboboxItem};
     use crate::input::Input;
     use crate::input_group::InputGroup;
     use crate::input_otp::InputOtp;
+    use crate::radio_group::{RadioGroup, RadioGroupItem};
+    use crate::select::{Select, SelectItem};
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
     use crate::textarea::Textarea;
 
@@ -809,5 +858,190 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("otp.input"))
             .expect("expected semantics node otp.input");
         assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
+    }
+
+    #[test]
+    fn form_field_invalid_select_marks_trigger_semantics_invalid() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let field_id: Arc<str> = Arc::from("country");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-invalid-select",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [Select::new(model.clone(), open.clone())
+                            .items([
+                                SelectItem::new("cn", "China"),
+                                SelectItem::new("jp", "Japan"),
+                            ])
+                            .trigger_test_id("form-field-select-trigger")
+                            .into_element(cx)],
+                    )
+                    .label("Country")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-select-trigger"))
+            .expect("select trigger semantics");
+        assert_eq!(trigger.role, fret_core::SemanticsRole::ComboBox);
+        assert_eq!(
+            trigger.flags.invalid,
+            Some(fret_core::SemanticsInvalid::True)
+        );
+    }
+
+    #[test]
+    fn form_field_invalid_combobox_marks_trigger_semantics_invalid() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let field_id: Arc<str> = Arc::from("framework");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-invalid-combobox",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [Combobox::new(model.clone(), open.clone())
+                            .test_id_prefix("form-field-combobox")
+                            .items(vec![
+                                ComboboxItem::new("fret", "Fret"),
+                                ComboboxItem::new("gpui", "GPUI"),
+                            ])
+                            .into_element(cx)],
+                    )
+                    .label("Framework")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-combobox-trigger"))
+            .expect("combobox trigger semantics");
+        assert_eq!(trigger.role, fret_core::SemanticsRole::ComboBox);
+        assert_eq!(
+            trigger.flags.invalid,
+            Some(fret_core::SemanticsInvalid::True)
+        );
+    }
+
+    #[test]
+    fn form_field_invalid_radio_group_marks_group_semantics_invalid() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let field_id: Arc<str> = Arc::from("plan");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-invalid-radio-group",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [RadioGroup::new(model.clone())
+                            .a11y_label("Plan")
+                            .item(RadioGroupItem::new("free", "Free"))
+                            .item(RadioGroupItem::new("pro", "Pro"))
+                            .into_element(cx)],
+                    )
+                    .label("Plan")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let group = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::RadioGroup && n.label.as_deref() == Some("Plan")
+            })
+            .expect("radio group semantics");
+        assert_eq!(group.flags.invalid, Some(fret_core::SemanticsInvalid::True));
     }
 }
