@@ -18,6 +18,7 @@ use super::hover_anchor::{HoverTooltipAnchorSource, hovered_canvas_anchor_rect_f
 use super::overlay_elements::{
     build_hover_tooltip_overlay_spec, clamp_marquee_overlay_rect_to_bounds,
 };
+use super::pointer_down::read_left_pointer_down_snapshot_action_host;
 use super::{
     AuthoritativeSurfaceBoundarySnapshot, DeclarativeDiagKeyAction, DeclarativeDiagViewPreset,
     DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
@@ -1662,6 +1663,62 @@ fn begin_left_pointer_down_action_host_empty_space_clear_arms_pending_clear() {
 }
 
 #[test]
+fn read_left_pointer_down_snapshot_action_host_uses_authoritative_store_view_state_when_bound_view_is_stale()
+ {
+    let mut host = TestActionHostImpl::default();
+    let (graph_value, geom, node_a, node_b) = test_marquee_geometry();
+    let spatial =
+        crate::ui::canvas::CanvasSpatialDerived::build(&graph_value, &geom, 1.0, 0.0, 64.0);
+    let derived_cache = host.models.insert(DerivedGeometryCacheState {
+        key: None,
+        rebuilds: 1,
+        geom: Some(Arc::new(geom)),
+        index: Some(Arc::new(spatial)),
+    });
+    let authoritative_view = NodeGraphViewState {
+        pan: CanvasPoint { x: 0.0, y: 0.0 },
+        zoom: 1.0,
+        selected_nodes: vec![node_b],
+        ..Default::default()
+    };
+    let stale_view = NodeGraphViewState {
+        pan: CanvasPoint { x: 400.0, y: 300.0 },
+        zoom: 1.0,
+        selected_nodes: Vec::new(),
+        ..Default::default()
+    };
+    let view_state = host.models.insert(stale_view);
+    let graph = host.models.insert(Graph::new(graph_value.graph_id));
+    let store = host
+        .models
+        .insert(NodeGraphStore::new(graph_value, authoritative_view));
+    let controller = NodeGraphController::new(store);
+    let binding = test_binding(&graph, &view_state, &controller);
+    let hit_scratch = host.models.insert(Vec::<NodeId>::new());
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(400.0), Px(200.0)),
+    );
+    let down = test_pointer_down(
+        MouseButton::Left,
+        Point::new(Px(20.0), Px(20.0)),
+        Modifiers::default(),
+    );
+
+    let snapshot = read_left_pointer_down_snapshot_action_host(
+        &mut host,
+        &binding,
+        &derived_cache,
+        &hit_scratch,
+        down,
+        bounds,
+    );
+
+    assert_eq!(snapshot.hit, Some(node_a));
+    assert_eq!(snapshot.base_selection, vec![node_b]);
+}
+
+#[test]
 fn handle_node_drag_pointer_move_action_host_activation_commits_pending_selection_and_requests_capture()
  {
     let mut host = TestActionHostImpl::default();
@@ -1747,6 +1804,82 @@ fn handle_node_drag_pointer_move_action_host_activation_commits_pending_selectio
 }
 
 #[test]
+fn handle_node_drag_pointer_move_action_host_uses_authoritative_store_interaction_when_bound_view_is_stale()
+ {
+    let mut host = TestActionHostImpl::default();
+    let authoritative_view = NodeGraphViewState {
+        interaction: crate::io::NodeGraphInteractionConfig {
+            node_drag_threshold: 4.0,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let stale_view = NodeGraphViewState {
+        interaction: crate::io::NodeGraphInteractionConfig {
+            node_drag_threshold: 40.0,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let view_state = host.models.insert(stale_view);
+    let mut graph_value = Graph::new(GraphId::from_u128(99731));
+    graph_value.nodes.insert(
+        NodeId::from_u128(99741),
+        test_node(CanvasPoint { x: 0.0, y: 0.0 }),
+    );
+    graph_value.nodes.insert(
+        NodeId::from_u128(99751),
+        test_node(CanvasPoint { x: 40.0, y: 20.0 }),
+    );
+    let store = host
+        .models
+        .insert(NodeGraphStore::new(graph_value, authoritative_view));
+    let controller = NodeGraphController::new(store);
+    let graph = host.models.insert(Graph::new(GraphId::from_u128(99731)));
+    let binding = test_binding(&graph, &view_state, &controller);
+    let node_drag = host.models.insert(Some(NodeDragState {
+        start_screen: Point::new(Px(0.0), Px(0.0)),
+        current_screen: Point::new(Px(0.0), Px(0.0)),
+        phase: NodeDragPhase::Armed,
+        nodes_sorted: Arc::from([NodeId::from_u128(99741)]),
+    }));
+    let pending = host.models.insert(Some(PendingSelectionState {
+        nodes: Arc::from([NodeId::from_u128(99751)]),
+        clear_edges: false,
+        clear_groups: false,
+    }));
+    let hovered = host.models.insert(Some(NodeId::from_u128(99761)));
+    let mv = test_pointer_move(
+        Point::new(Px(10.0), Px(0.0)),
+        MouseButtons {
+            left: true,
+            right: false,
+            middle: false,
+        },
+        Modifiers::default(),
+    );
+
+    let outcome = handle_node_drag_pointer_move_action_host(
+        &mut host, &node_drag, &pending, &hovered, &binding, mv,
+    );
+
+    assert_eq!(
+        outcome,
+        Some(NodeDragPointerMoveOutcome {
+            capture_pointer: true,
+            needs_layout_redraw: true,
+        })
+    );
+    host.models
+        .read(&node_drag, |state| {
+            let state = state.as_ref().expect("node drag readable");
+            assert!(state.is_active());
+            assert_eq!(state.current_screen, Point::new(Px(10.0), Px(0.0)));
+        })
+        .expect("node drag readable");
+}
+
+#[test]
 fn handle_node_drag_pointer_move_action_host_canceled_session_clears_hover_without_redraw() {
     let mut host = TestActionHostImpl::default();
     let view_value = NodeGraphViewState::default();
@@ -1798,13 +1931,21 @@ fn handle_node_drag_pointer_move_action_host_canceled_session_clears_hover_witho
 #[test]
 fn handle_marquee_pointer_move_action_host_non_selectable_clears_session_without_touching_hover() {
     let mut host = TestActionHostImpl::default();
-    let view_state = host.models.insert(NodeGraphViewState {
+    let view_value = NodeGraphViewState {
         interaction: crate::io::NodeGraphInteractionConfig {
             elements_selectable: false,
             ..Default::default()
         },
         ..Default::default()
-    });
+    };
+    let view_state = host.models.insert(view_value.clone());
+    let graph = host.models.insert(Graph::new(GraphId::from_u128(9979)));
+    let store = host.models.insert(NodeGraphStore::new(
+        Graph::new(GraphId::from_u128(9979)),
+        view_value,
+    ));
+    let controller = NodeGraphController::new(store);
+    let binding = test_binding(&graph, &view_state, &controller);
     let marquee = host.models.insert(Some(MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -1829,7 +1970,7 @@ fn handle_marquee_pointer_move_action_host_non_selectable_clears_session_without
         &mut host,
         &marquee,
         &hovered,
-        &view_state,
+        &binding,
         &derived_cache,
         mv,
         bounds,
@@ -1863,14 +2004,19 @@ fn handle_marquee_pointer_move_action_host_updates_preview_and_clears_hover() {
         geom: Some(Arc::new(geom)),
         index: Some(Arc::new(spatial)),
     });
-    let view_state = host.models.insert(NodeGraphViewState {
+    let view_value = NodeGraphViewState {
         interaction: crate::io::NodeGraphInteractionConfig {
             elements_selectable: true,
             selection_mode: crate::io::NodeGraphSelectionMode::Partial,
             ..Default::default()
         },
         ..Default::default()
-    });
+    };
+    let view_state = host.models.insert(view_value.clone());
+    let graph_model = host.models.insert(graph.clone());
+    let store = host.models.insert(NodeGraphStore::new(graph, view_value));
+    let controller = NodeGraphController::new(store);
+    let binding = test_binding(&graph_model, &view_state, &controller);
     let marquee = host.models.insert(Some(MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -1894,7 +2040,7 @@ fn handle_marquee_pointer_move_action_host_updates_preview_and_clears_hover() {
         &mut host,
         &marquee,
         &hovered,
-        &view_state,
+        &binding,
         &derived_cache,
         mv,
         bounds,
@@ -1918,6 +2064,85 @@ fn handle_marquee_pointer_move_action_host_updates_preview_and_clears_hover() {
 }
 
 #[test]
+fn handle_marquee_pointer_move_action_host_uses_authoritative_store_view_when_bound_view_is_stale()
+{
+    let mut host = TestActionHostImpl::default();
+    let (graph_value, geom, node_a, _node_b) = test_marquee_geometry();
+    let spatial =
+        crate::ui::canvas::CanvasSpatialDerived::build(&graph_value, &geom, 1.0, 0.0, 64.0);
+    let derived_cache = host.models.insert(DerivedGeometryCacheState {
+        key: None,
+        rebuilds: 1,
+        geom: Some(Arc::new(geom)),
+        index: Some(Arc::new(spatial)),
+    });
+    let authoritative_view = NodeGraphViewState {
+        interaction: crate::io::NodeGraphInteractionConfig {
+            elements_selectable: true,
+            selection_mode: crate::io::NodeGraphSelectionMode::Partial,
+            ..Default::default()
+        },
+        pan: CanvasPoint { x: 0.0, y: 0.0 },
+        zoom: 1.0,
+        ..Default::default()
+    };
+    let stale_view = NodeGraphViewState {
+        interaction: crate::io::NodeGraphInteractionConfig {
+            elements_selectable: false,
+            selection_mode: crate::io::NodeGraphSelectionMode::Partial,
+            ..Default::default()
+        },
+        pan: CanvasPoint { x: 400.0, y: 300.0 },
+        zoom: 1.0,
+        ..Default::default()
+    };
+    let view_state = host.models.insert(stale_view);
+    let graph = host.models.insert(Graph::new(graph_value.graph_id));
+    let store = host
+        .models
+        .insert(NodeGraphStore::new(graph_value, authoritative_view));
+    let controller = NodeGraphController::new(store);
+    let binding = test_binding(&graph, &view_state, &controller);
+    let marquee = host.models.insert(Some(MarqueeDragState {
+        start_screen: Point::new(Px(0.0), Px(0.0)),
+        current_screen: Point::new(Px(0.0), Px(0.0)),
+        active: false,
+        toggle: false,
+        base_selected_nodes: Arc::from([]),
+        preview_selected_nodes: Arc::from([]),
+    }));
+    let hovered = host.models.insert(Some(NodeId::from_u128(99801)));
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(400.0), Px(200.0)),
+    );
+    let mv = test_pointer_move(
+        Point::new(Px(80.0), Px(40.0)),
+        MouseButtons::default(),
+        Modifiers::default(),
+    );
+
+    let outcome = handle_marquee_pointer_move_action_host(
+        &mut host,
+        &marquee,
+        &hovered,
+        &binding,
+        &derived_cache,
+        mv,
+        bounds,
+    );
+
+    assert_eq!(outcome, Some(MarqueePointerMoveOutcome::NotifyRedraw));
+    host.models
+        .read(&marquee, |state| {
+            let state = state.as_ref().expect("marquee readable");
+            assert!(state.active);
+            assert_eq!(state.preview_selected_nodes.as_ref(), &[node_a]);
+        })
+        .expect("marquee readable");
+}
+
+#[test]
 fn update_hovered_node_pointer_move_action_host_sets_hit_node_from_geometry() {
     let mut host = TestActionHostImpl::default();
     let (graph, geom, _node_a, node_b) = test_marquee_geometry();
@@ -1928,7 +2153,12 @@ fn update_hovered_node_pointer_move_action_host_sets_hit_node_from_geometry() {
         geom: Some(Arc::new(geom)),
         index: Some(Arc::new(spatial)),
     });
-    let view_state = host.models.insert(NodeGraphViewState::default());
+    let view_value = NodeGraphViewState::default();
+    let view_state = host.models.insert(view_value.clone());
+    let graph_model = host.models.insert(graph.clone());
+    let store = host.models.insert(NodeGraphStore::new(graph, view_value));
+    let controller = NodeGraphController::new(store);
+    let binding = test_binding(&graph_model, &view_state, &controller);
     let hovered = host.models.insert(None::<NodeId>);
     let hit_scratch = host.models.insert(Vec::<NodeId>::new());
     let bounds = Rect::new(
@@ -1944,7 +2174,66 @@ fn update_hovered_node_pointer_move_action_host_sets_hit_node_from_geometry() {
     assert!(update_hovered_node_pointer_move_action_host(
         &mut host,
         &hovered,
-        &view_state,
+        &binding,
+        &derived_cache,
+        &hit_scratch,
+        mv,
+        bounds,
+    ));
+    assert_eq!(
+        host.models
+            .read(&hovered, |state| *state)
+            .expect("hovered readable"),
+        Some(node_b)
+    );
+}
+
+#[test]
+fn update_hovered_node_pointer_move_action_host_uses_authoritative_store_view_when_bound_view_is_stale()
+ {
+    let mut host = TestActionHostImpl::default();
+    let (graph_value, geom, _node_a, node_b) = test_marquee_geometry();
+    let spatial =
+        crate::ui::canvas::CanvasSpatialDerived::build(&graph_value, &geom, 1.0, 0.0, 64.0);
+    let derived_cache = host.models.insert(DerivedGeometryCacheState {
+        key: None,
+        rebuilds: 1,
+        geom: Some(Arc::new(geom)),
+        index: Some(Arc::new(spatial)),
+    });
+    let authoritative_view = NodeGraphViewState::default();
+    let stale_view = NodeGraphViewState {
+        pan: CanvasPoint { x: 400.0, y: 300.0 },
+        zoom: 1.0,
+        interaction: crate::io::NodeGraphInteractionConfig {
+            node_click_distance: 0.0,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let view_state = host.models.insert(stale_view);
+    let graph = host.models.insert(Graph::new(graph_value.graph_id));
+    let store = host
+        .models
+        .insert(NodeGraphStore::new(graph_value, authoritative_view));
+    let controller = NodeGraphController::new(store);
+    let binding = test_binding(&graph, &view_state, &controller);
+    let hovered = host.models.insert(None::<NodeId>);
+    let hit_scratch = host.models.insert(Vec::<NodeId>::new());
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(400.0), Px(200.0)),
+    );
+    let mv = test_pointer_move(
+        Point::new(Px(160.0), Px(20.0)),
+        MouseButtons::default(),
+        Modifiers::default(),
+    );
+
+    assert!(update_hovered_node_pointer_move_action_host(
+        &mut host,
+        &hovered,
+        &binding,
         &derived_cache,
         &hit_scratch,
         mv,

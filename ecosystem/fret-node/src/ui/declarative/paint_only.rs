@@ -145,7 +145,8 @@ use self::surface_state::{
     MarqueeDragState, NodeDragPhase, NodeDragState, PendingSelectionState, PortalDebugFlags,
 };
 use self::surface_support::{
-    authoritative_surface_boundary_snapshot, mouse_buttons_contains, stable_hash_u64,
+    authoritative_surface_boundary_snapshot, mouse_buttons_contains,
+    read_authoritative_view_state_action_host, stable_hash_u64,
     sync_authoritative_surface_boundary_in_models, use_uncontrolled_model,
 };
 use self::transactions::{

@@ -43,6 +43,17 @@ pub(super) fn authoritative_surface_boundary_snapshot(
     }
 }
 
+pub(super) fn read_authoritative_view_state_action_host<T>(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    binding: &NodeGraphSurfaceBinding,
+    f: impl FnOnce(&NodeGraphViewState) -> T,
+) -> Option<T> {
+    let store = binding.store_model();
+    host.models_mut()
+        .read(&store, |store| f(store.view_state()))
+        .ok()
+}
+
 pub(super) fn sync_authoritative_surface_boundary_in_models(
     models: &mut fret_runtime::ModelStore,
     boundary: &Model<Option<AuthoritativeSurfaceBoundarySnapshot>>,

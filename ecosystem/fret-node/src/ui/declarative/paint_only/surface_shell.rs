@@ -70,7 +70,6 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
         authoritative_surface_boundary: _,
     } = surface_models;
     let graph = binding.graph_model();
-    let view_state = binding.view_state_model();
 
     if let Some(bounds) = cx.last_bounds_for_element(element) {
         let _ = cx.app.models_mut().update(&grid_cache, |state| {
@@ -103,7 +102,7 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
         marquee_drag: marquee_drag.clone(),
         node_drag: node_drag.clone(),
         pending_selection: pending_selection.clone(),
-        view_state: view_state.clone(),
+        binding: binding.clone(),
         grid_cache: grid_cache.clone(),
         derived_cache: derived_cache.clone(),
         hovered_node: hovered_node.clone(),

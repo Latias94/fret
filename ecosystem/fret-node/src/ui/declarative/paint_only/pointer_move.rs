@@ -20,7 +20,6 @@ pub(super) fn handle_node_drag_pointer_move_action_host(
     binding: &NodeGraphSurfaceBinding,
     mv: fret_ui::action::PointerMoveCx,
 ) -> Option<NodeDragPointerMoveOutcome> {
-    let view_state = binding.view_state_model();
     let node_drag_value = host
         .models_mut()
         .read(node_drag, |state| state.clone())
@@ -42,11 +41,9 @@ pub(super) fn handle_node_drag_pointer_move_action_host(
         });
     }
 
-    let interaction = host
-        .models_mut()
-        .read(&view_state, |state| state.interaction.clone())
-        .ok()
-        .unwrap_or_default();
+    let interaction =
+        read_authoritative_view_state_action_host(host, binding, |state| state.interaction.clone())
+            .unwrap_or_default();
     let should_activate = pointer_crossed_threshold(
         node_drag_value.start_screen,
         mv.position,
@@ -91,7 +88,7 @@ pub(super) fn handle_marquee_pointer_move_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     marquee: &Model<Option<MarqueeDragState>>,
     hovered: &Model<Option<crate::core::NodeId>>,
-    view_state: &Model<NodeGraphViewState>,
+    binding: &NodeGraphSurfaceBinding,
     derived_cache: &Model<DerivedGeometryCacheState>,
     mv: fret_ui::action::PointerMoveCx,
     bounds: Rect,
@@ -101,12 +98,10 @@ pub(super) fn handle_marquee_pointer_move_action_host(
         .read(marquee, |state| state.clone())
         .ok()
         .flatten()?;
-    let (interaction, view) = host
-        .models_mut()
-        .read(view_state, |state| {
+    let (interaction, view): (crate::io::NodeGraphInteractionConfig, PanZoom2D) =
+        read_authoritative_view_state_action_host(host, binding, |state| {
             (state.interaction.clone(), view_from_state(state))
         })
-        .ok()
         .unwrap_or((Default::default(), PanZoom2D::default()));
 
     if !interaction.elements_selectable {
@@ -167,22 +162,20 @@ pub(super) fn handle_marquee_pointer_move_action_host(
 pub(super) fn update_hovered_node_pointer_move_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     hovered: &Model<Option<crate::core::NodeId>>,
-    view_state: &Model<NodeGraphViewState>,
+    binding: &NodeGraphSurfaceBinding,
     derived_cache: &Model<DerivedGeometryCacheState>,
     hit_scratch: &Model<Vec<crate::core::NodeId>>,
     mv: fret_ui::action::PointerMoveCx,
     bounds: Rect,
 ) -> bool {
-    let node_click_distance_screen_px = host
-        .models_mut()
-        .read(view_state, |state| state.interaction.node_click_distance)
-        .ok()
-        .unwrap_or(6.0);
-    let view = host
-        .models_mut()
-        .read(view_state, view_from_state)
-        .ok()
-        .unwrap_or_default();
+    let (node_click_distance_screen_px, view) =
+        read_authoritative_view_state_action_host(host, binding, |state| {
+            (
+                state.interaction.node_click_distance,
+                view_from_state(state),
+            )
+        })
+        .unwrap_or((6.0, PanZoom2D::default()));
 
     let (geom, index) = host
         .models_mut()

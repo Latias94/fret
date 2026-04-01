@@ -10,7 +10,6 @@ use fret_ui::action::{
 };
 
 use crate::core::NodeId;
-use crate::io::NodeGraphViewState;
 use crate::ui::NodeGraphSurfaceBinding;
 use crate::ui::paint_overrides::NodeGraphPaintOverridesMap;
 
@@ -55,7 +54,7 @@ pub(super) struct PointerDownHandlerParams {
     pub(super) marquee_drag: Model<Option<MarqueeDragState>>,
     pub(super) node_drag: Model<Option<NodeDragState>>,
     pub(super) pending_selection: Model<Option<PendingSelectionState>>,
-    pub(super) view_state: Model<NodeGraphViewState>,
+    pub(super) binding: NodeGraphSurfaceBinding,
     pub(super) grid_cache: Model<GridPaintCacheState>,
     pub(super) derived_cache: Model<DerivedGeometryCacheState>,
     pub(super) hovered_node: HoveredNodeModel,
@@ -189,7 +188,7 @@ pub(super) fn build_pointer_down_handler(params: PointerDownHandlerParams) -> On
 
         let snapshot = read_left_pointer_down_snapshot_action_host(
             host,
-            &params.view_state,
+            &params.binding,
             &params.derived_cache,
             &params.hit_scratch,
             down,
@@ -214,7 +213,6 @@ pub(super) fn build_pointer_down_handler(params: PointerDownHandlerParams) -> On
 
 pub(super) fn build_pointer_move_handler(params: PointerMoveHandlerParams) -> OnPointerMove {
     Arc::new(move |host, action_cx: ActionCx, mv: PointerMoveCx| {
-        let view_state = params.binding.view_state_model();
         let bounds = host.bounds();
         let _ = host.models_mut().update(&params.grid_cache, |state| {
             if state.bounds != bounds {
@@ -253,7 +251,7 @@ pub(super) fn build_pointer_move_handler(params: PointerMoveHandlerParams) -> On
                 host,
                 &params.marquee_drag,
                 &params.hovered_node,
-                &view_state,
+                &params.binding,
                 &params.derived_cache,
                 mv,
                 bounds,
@@ -273,7 +271,7 @@ pub(super) fn build_pointer_move_handler(params: PointerMoveHandlerParams) -> On
             let changed = update_hovered_node_pointer_move_action_host(
                 host,
                 &params.hovered_node,
-                &view_state,
+                &params.binding,
                 &params.derived_cache,
                 &params.hit_scratch,
                 mv,

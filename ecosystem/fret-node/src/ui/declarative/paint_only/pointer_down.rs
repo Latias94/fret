@@ -47,15 +47,14 @@ pub(super) fn begin_pan_pointer_down_action_host(
 
 pub(super) fn read_left_pointer_down_snapshot_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
-    view_state: &Model<NodeGraphViewState>,
+    binding: &NodeGraphSurfaceBinding,
     derived_cache: &Model<DerivedGeometryCacheState>,
     hit_scratch: &Model<Vec<crate::core::NodeId>>,
     down: fret_ui::action::PointerDownCx,
     bounds: Rect,
 ) -> LeftPointerDownSnapshot {
-    let (interaction, base_selection, node_click_distance_screen_px, view) = host
-        .models_mut()
-        .read(view_state, |state| {
+    let (interaction, base_selection, node_click_distance_screen_px, view) =
+        read_authoritative_view_state_action_host(host, binding, |state| {
             (
                 state.interaction.clone(),
                 state.selected_nodes.clone(),
@@ -63,7 +62,6 @@ pub(super) fn read_left_pointer_down_snapshot_action_host(
                 view_from_state(state),
             )
         })
-        .ok()
         .unwrap_or((Default::default(), Vec::new(), 6.0, PanZoom2D::default()));
 
     let (geom, index) = host
