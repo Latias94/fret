@@ -797,17 +797,12 @@ impl SceneRecording {
                 blur_radius,
                 color,
             } => {
-                let effective_width = (rect.size.width.0 + spread.0 * 2.0).max(0.0);
-                let effective_height = (rect.size.height.0 + spread.0 * 2.0).max(0.0);
-                let max = effective_width.min(effective_height) * 0.5;
+                let max = rect.size.width.0.min(rect.size.height.0) * 0.5;
                 let max = if max.is_finite() { max.max(0.0) } else { 0.0 };
-                corner_radii.top_left = Px((corner_radii.top_left.0 + spread.0).max(0.0).min(max));
-                corner_radii.top_right =
-                    Px((corner_radii.top_right.0 + spread.0).max(0.0).min(max));
-                corner_radii.bottom_left =
-                    Px((corner_radii.bottom_left.0 + spread.0).max(0.0).min(max));
-                corner_radii.bottom_right =
-                    Px((corner_radii.bottom_right.0 + spread.0).max(0.0).min(max));
+                corner_radii.top_left = Px(corner_radii.top_left.0.max(0.0).min(max));
+                corner_radii.top_right = Px(corner_radii.top_right.0.max(0.0).min(max));
+                corner_radii.bottom_left = Px(corner_radii.bottom_left.0.max(0.0).min(max));
+                corner_radii.bottom_right = Px(corner_radii.bottom_right.0.max(0.0).min(max));
 
                 let blur_radius = if blur_radius.0.is_finite() {
                     Px(blur_radius
@@ -1396,7 +1391,7 @@ mod tests {
     }
 
     #[test]
-    fn push_shadow_rrect_clamps_blur_and_corner_radii_after_spread() {
+    fn push_shadow_rrect_clamps_blur_and_preserves_base_corner_radii() {
         let mut scene = Scene::default();
         scene.push(SceneOp::ShadowRRect {
             order: DrawOrder(0),
@@ -1418,7 +1413,7 @@ mod tests {
         };
 
         assert_eq!(blur_radius, SHADOW_RRECT_V1_MAX_BLUR_RADIUS_PX);
-        assert_eq!(corner_radii, Corners::all(Px(2.0)));
+        assert_eq!(corner_radii, Corners::all(Px(6.0)));
     }
 
     #[test]

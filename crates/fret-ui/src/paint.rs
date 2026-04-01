@@ -40,31 +40,6 @@ fn rect_deflate(rect: Rect, delta: Px) -> Rect {
     )
 }
 
-fn rect_expand(rect: Rect, delta: Px) -> Rect {
-    if delta.0 >= 0.0 {
-        rect_inflate(rect, delta)
-    } else {
-        rect_deflate(rect, Px(-delta.0))
-    }
-}
-
-fn corners_expand(corners: Corners, delta: Px) -> Corners {
-    if delta.0 >= 0.0 {
-        corners_inflate(corners, delta)
-    } else {
-        corners_deflate(corners, Px(-delta.0))
-    }
-}
-
-fn color_with_alpha(mut color: Color, alpha: f32) -> Color {
-    color.a = alpha.clamp(0.0, 1.0);
-    color
-}
-
-fn shadow_alpha_weight(step_index: usize) -> f32 {
-    1.0 / (1.0 + step_index as f32)
-}
-
 fn paint_shadow_layer(
     scene: &mut Scene,
     order: DrawOrder,
@@ -83,63 +58,26 @@ fn paint_shadow_layer(
         return;
     }
 
-    let blur = layer.blur.0.max(0.0);
-    let spread = layer.spread.0;
-
-    // Approximate blur by drawing multiple expanded quads with alpha falloff. Keep the number of
-    // steps bounded, but preserve the correct outer footprint (`spread + blur`) by using fractional
-    // expansion steps when `blur` exceeds the cap.
-    //
-    // Normalize the per-step weights so extra softness layers redistribute opacity instead of
-    // implicitly increasing the total alpha budget. This keeps low-radius shadows from looking
-    // disproportionately dark/hard simply because they use multiple overlap quads.
-    let max_steps = 32_f32;
-    let steps = blur.ceil().clamp(0.0, max_steps) as usize;
-    let denom = (steps as f32).max(1.0);
-    let alpha_weight_sum = if steps == 0 {
-        1.0
-    } else {
-        (0..=steps)
-            .map(shadow_alpha_weight)
-            .sum::<f32>()
-            .max(f32::EPSILON)
-    };
-
-    for i in (0..=steps).rev() {
-        let t = i as f32 / denom;
-        let layer_spread = spread + blur * t;
-        let rect = {
-            let mut rect = rect_expand(bounds, Px(layer_spread));
-            rect.origin.x = Px(rect.origin.x.0 + layer.offset_x.0);
-            rect.origin.y = Px(rect.origin.y.0 + layer.offset_y.0);
-            rect
-        };
-        if rect.size.width.0 <= 0.0 || rect.size.height.0 <= 0.0 {
-            continue;
-        }
-
-        let alpha = if steps == 0 {
-            layer.color.a
-        } else {
-            layer.color.a * (shadow_alpha_weight(i) / alpha_weight_sum)
-        };
-        let background = color_with_alpha(layer.color, alpha);
-
-        scene.push(SceneOp::Quad {
-            order,
-            rect,
-            background: Paint::Solid(background).into(),
-            border: Edges::all(Px(0.0)),
-            border_paint: Paint::Solid(Color::TRANSPARENT).into(),
-            corner_radii: corners_expand(corner_radii, Px(layer_spread)),
-        });
+    if layer.color.a <= 0.0 {
+        return;
     }
+
+    scene.push(SceneOp::ShadowRRect {
+        order,
+        rect: bounds,
+        corner_radii,
+        offset: Point::new(layer.offset_x, layer.offset_y),
+        spread: layer.spread,
+        blur_radius: Px(layer.blur.0.max(0.0)),
+        color: layer.color,
+    });
 }
 
 /// Paint a low-level drop shadow for an elevated surface.
 ///
-/// The baseline implementation approximates softness by drawing multiple expanded quads with alpha
-/// falloff (ADR 0060). Backends are free to implement a true blur later without changing this API.
+/// The default implementation lowers each logical shadow layer to one `SceneOp::ShadowRRect`
+/// primitive, leaving softness evaluation to the renderer rather than expanding many quads in the
+/// UI layer.
 pub fn paint_shadow(scene: &mut Scene, order: DrawOrder, bounds: Rect, shadow: ShadowStyle) {
     paint_shadow_layer(scene, order, bounds, shadow.primary, shadow.corner_radii);
     if let Some(layer) = shadow.secondary {
@@ -304,41 +242,6 @@ mod tests {
     use crate::element::{ShadowLayerStyle, ShadowStyle};
     use fret_core::{Color, Corners, DrawOrder, Paint, Point, Px, Rect, Scene, SceneOp, Size};
 
-    fn point_in_rect(point: Point, rect: Rect) -> bool {
-        point.x.0 >= rect.origin.x.0
-            && point.x.0 < rect.origin.x.0 + rect.size.width.0
-            && point.y.0 >= rect.origin.y.0
-            && point.y.0 < rect.origin.y.0 + rect.size.height.0
-    }
-
-    fn quad_alphas_covering_point(scene: &Scene, point: Point) -> Vec<f32> {
-        let mut alphas = Vec::new();
-        for op in scene.ops() {
-            let SceneOp::Quad {
-                rect, background, ..
-            } = op
-            else {
-                continue;
-            };
-            if !point_in_rect(point, *rect) {
-                continue;
-            }
-            let Paint::Solid(color) = background.paint else {
-                continue;
-            };
-            alphas.push(color.a.clamp(0.0, 1.0));
-        }
-        alphas
-    }
-
-    fn composite_black_darkness_over_white(alphas: &[f32]) -> f32 {
-        let mut brightness = 1.0_f32;
-        for alpha in alphas {
-            brightness *= 1.0 - alpha.clamp(0.0, 1.0);
-        }
-        1.0 - brightness
-    }
-
     #[test]
     fn paint_state_layer_emits_single_quad_with_expected_alpha() {
         let mut scene = Scene::default();
@@ -459,7 +362,7 @@ mod tests {
     }
 
     #[test]
-    fn paint_shadow_normalizes_alpha_budget_across_softness_layers() {
+    fn paint_shadow_emits_single_shadow_rrect_with_layer_parameters() {
         let mut scene = Scene::default();
         paint_shadow(
             &mut scene,
@@ -486,31 +389,35 @@ mod tests {
             },
         );
 
-        let mut alphas = Vec::new();
-        for op in scene.ops() {
-            let SceneOp::Quad { background, .. } = op else {
-                continue;
-            };
-            let Paint::Solid(color) = background.paint else {
-                panic!("expected solid shadow paint");
-            };
-            alphas.push(color.a);
-        }
-
-        assert_eq!(alphas.len(), 4, "blur=3 should emit four shadow layers");
-        let total_alpha: f32 = alphas.iter().sum();
-        assert!(
-            (total_alpha - 0.2).abs() <= 1e-6,
-            "expected normalized shadow alpha budget, got total={total_alpha}"
+        assert_eq!(scene.ops().len(), 1);
+        let SceneOp::ShadowRRect {
+            rect,
+            corner_radii,
+            offset,
+            spread,
+            blur_radius,
+            color,
+            ..
+        } = scene.ops()[0]
+        else {
+            panic!("expected shadow rrect");
+        };
+        assert_eq!(
+            rect,
+            Rect::new(
+                Point::new(Px(10.0), Px(10.0)),
+                Size::new(Px(20.0), Px(12.0))
+            )
         );
-        assert!(
-            alphas[0] < alphas[1] && alphas[1] < alphas[2] && alphas[2] < alphas[3],
-            "expected outer-to-inner shadow alphas to increase smoothly, got {alphas:?}"
-        );
+        assert_eq!(corner_radii, Corners::all(Px(4.0)));
+        assert_eq!(offset, Point::new(Px(0.0), Px(1.0)));
+        assert_eq!(spread, Px(0.0));
+        assert_eq!(blur_radius, Px(3.0));
+        assert_eq!(color.a, 0.2);
     }
 
     #[test]
-    fn paint_shadow_zero_blur_keeps_single_layer_alpha() {
+    fn paint_shadow_emits_one_shadow_op_per_logical_layer() {
         let mut scene = Scene::default();
         paint_shadow(
             &mut scene,
@@ -532,94 +439,44 @@ mod tests {
                     blur: Px(0.0),
                     spread: Px(0.0),
                 },
-                secondary: None,
-                corner_radii: Corners::all(Px(2.0)),
-            },
-        );
-
-        assert_eq!(scene.ops().len(), 1);
-        let SceneOp::Quad { background, .. } = scene.ops()[0] else {
-            panic!("expected quad");
-        };
-        let Paint::Solid(color) = background.paint else {
-            panic!("expected solid paint");
-        };
-        assert!((color.a - 0.15).abs() <= 1e-6);
-    }
-
-    #[test]
-    fn paint_shadow_softness_profile_darkens_monotonically_toward_edge() {
-        let mut scene = Scene::default();
-        paint_shadow(
-            &mut scene,
-            DrawOrder(0),
-            Rect::new(
-                fret_core::Point::new(Px(10.0), Px(10.0)),
-                Size::new(Px(20.0), Px(12.0)),
-            ),
-            ShadowStyle {
-                primary: ShadowLayerStyle {
+                secondary: Some(ShadowLayerStyle {
                     color: Color {
                         r: 0.0,
                         g: 0.0,
                         b: 0.0,
-                        a: 0.2,
+                        a: 0.08,
                     },
                     offset_x: Px(0.0),
-                    offset_y: Px(0.0),
-                    blur: Px(3.0),
-                    spread: Px(0.0),
-                },
-                secondary: None,
-                corner_radii: Corners::all(Px(0.0)),
+                    offset_y: Px(2.0),
+                    blur: Px(4.0),
+                    spread: Px(1.0),
+                }),
+                corner_radii: Corners::all(Px(2.0)),
             },
         );
 
-        let y = Px(16.0);
-        let outside_alphas = quad_alphas_covering_point(&scene, Point::new(Px(6.5), y));
-        let band_1_alphas = quad_alphas_covering_point(&scene, Point::new(Px(7.5), y));
-        let band_2_alphas = quad_alphas_covering_point(&scene, Point::new(Px(8.5), y));
-        let band_3_alphas = quad_alphas_covering_point(&scene, Point::new(Px(9.5), y));
-        let full_overlap_alphas = quad_alphas_covering_point(&scene, Point::new(Px(10.5), y));
-
-        let outside = composite_black_darkness_over_white(&outside_alphas);
-        let band_1 = composite_black_darkness_over_white(&band_1_alphas);
-        let band_2 = composite_black_darkness_over_white(&band_2_alphas);
-        let band_3 = composite_black_darkness_over_white(&band_3_alphas);
-        let full_overlap = composite_black_darkness_over_white(&full_overlap_alphas);
-        let linear_alpha_budget: f32 = full_overlap_alphas.iter().sum();
-        let expected_full_overlap = 1.0
-            - full_overlap_alphas
-                .iter()
-                .fold(1.0_f32, |brightness, alpha| brightness * (1.0 - alpha));
-
-        assert!(
-            outside <= 1e-6,
-            "expected no shadow outside the blur footprint, got darkness={outside}"
-        );
-        assert!(
-            outside_alphas.is_empty(),
-            "expected no shadow layers outside the blur footprint, got {outside_alphas:?}"
-        );
-        assert!(
-            band_1 > outside && band_2 > band_1 && band_3 > band_2,
-            "expected darkness to increase toward the edge, got outside={outside} band1={band_1} band2={band_2} band3={band_3}"
-        );
-        assert!(
-            (linear_alpha_budget - 0.2).abs() <= 1e-6,
-            "expected full-overlap layers to preserve the recipe alpha budget, got {linear_alpha_budget}"
-        );
-        assert!(
-            (full_overlap - expected_full_overlap).abs() <= 1e-6,
-            "expected full-overlap darkness to follow the layer compositing model, got actual={full_overlap} expected={expected_full_overlap}"
-        );
-        assert!(
-            full_overlap < linear_alpha_budget,
-            "expected composited full-overlap darkness to stay below the linear alpha budget, got darkness={full_overlap} budget={linear_alpha_budget}"
-        );
-        assert!(
-            band_3 < full_overlap,
-            "expected the outer softness profile to stay lighter than full overlap, got band3={band_3} full={full_overlap}"
-        );
+        assert_eq!(scene.ops().len(), 2);
+        let SceneOp::ShadowRRect {
+            blur_radius: primary_blur,
+            color: primary_color,
+            ..
+        } = scene.ops()[0]
+        else {
+            panic!("expected first shadow layer");
+        };
+        let SceneOp::ShadowRRect {
+            blur_radius: secondary_blur,
+            spread: secondary_spread,
+            color: secondary_color,
+            ..
+        } = scene.ops()[1]
+        else {
+            panic!("expected second shadow layer");
+        };
+        assert_eq!(primary_blur, Px(0.0));
+        assert_eq!(primary_color.a, 0.15);
+        assert_eq!(secondary_blur, Px(4.0));
+        assert_eq!(secondary_spread, Px(1.0));
+        assert_eq!(secondary_color.a, 0.08);
     }
 }

@@ -66,11 +66,19 @@ Tracking legend:
 
 ## D. Renderer implementation
 
-- [ ] SRPFR-wgpu-030 Add encoder/plumbing for the new shadow op in `fret-render-wgpu`.
+- [x] SRPFR-wgpu-030 Add encoder/plumbing for the new shadow op in `fret-render-wgpu`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/shadow.rs`
+    - `crates/fret-render-wgpu/src/renderer/tests.rs`
 
-- [ ] SRPFR-wgpu-031 Add a dedicated shader/pipeline path for rounded-rect shadows.
+- [x] SRPFR-wgpu-031 Add a dedicated shader/pipeline path for rounded-rect shadows.
+  - Result: the default wgpu renderer now evaluates rounded-rect shadow coverage analytically in
+    the scene-draw quad shader branch (`quad_part_{a,b}.wgsl`) keyed by shadow-mode pipeline
+    specialization.
 
-- [ ] SRPFR-wgpu-032 Add deterministic clipping and transform coverage for the new primitive.
+- [x] SRPFR-wgpu-032 Add deterministic clipping and transform coverage for the new primitive.
+  - Result: the primitive now rides the existing scene draw clip/mask/transform/opacity stacks,
+    with focused GPU conformance in `crates/fret-render-wgpu/tests/shadow_rrect_conformance.rs`.
 
 - [ ] SRPFR-fallback-033 Decide and implement the non-native fallback path.
   - Requirement: fallback may replay the normalized quad approximation, but it must not keep
@@ -78,8 +86,11 @@ Tracking legend:
 
 ## E. UI/runtime migration
 
-- [ ] SRPFR-ui-040 Change `ShadowStyle` lowering in `crates/fret-ui/src/paint.rs` to emit one shadow
+- [x] SRPFR-ui-040 Change `ShadowStyle` lowering in `crates/fret-ui/src/paint.rs` to emit one shadow
   op per logical layer instead of expanding into many quads.
+  - Evidence:
+    - `crates/fret-ui/src/paint.rs`
+    - `crates/fret-ui/src/declarative/tests/layout/container.rs`
 
 - [ ] SRPFR-ui-041 Keep the existing quad approximation only as an explicit fallback helper after the
   primitive lands.
@@ -88,8 +99,13 @@ Tracking legend:
 
 ## F. Gates and evidence
 
-- [ ] SRPFR-test-050 Add renderer conformance for blur footprint, spread, offset, corner radii, and
+- [~] SRPFR-test-050 Add renderer conformance for blur footprint, spread, offset, corner radii, and
   clip behavior.
+  - Current coverage:
+    - shadow encode contract: `crates/fret-render-wgpu/src/renderer/tests.rs`
+    - blur footprint + content-hole + rounded-corner shape: `crates/fret-render-wgpu/tests/shadow_rrect_conformance.rs`
+  - Remaining gap: extend the conformance matrix to explicit spread/clip cases rather than only the
+    current rounded-bottom probe.
 
 - [ ] SRPFR-diag-051 Extend screenshot evidence to representative elevated surfaces:
   - `Card`
@@ -103,8 +119,10 @@ Tracking legend:
 
 ## G. Cleanup
 
-- [ ] SRPFR-cleanup-060 Delete or demote the UI-layer multi-quad path as the default implementation
+- [x] SRPFR-cleanup-060 Delete or demote the UI-layer multi-quad path as the default implementation
   once the renderer primitive is shipped and gated.
+  - Result: `crates/fret-ui/src/paint.rs` no longer expands default `ShadowStyle` layers into many
+    quads; default lowering now emits `SceneOp::ShadowRRect`.
 
 - [ ] SRPFR-cleanup-061 Update shadow workstreams so they point to the primitive lane as the next
   fidelity closure step instead of suggesting more painter tuning.

@@ -972,6 +972,7 @@ fn compile_for_scene_composite_group_preserves_output_clear_guardrail() {
             dash_enabled: false,
             fill_material_sampled: false,
             border_material_sampled: false,
+            shadow_mode: false,
         },
     }));
 
@@ -1037,6 +1038,7 @@ fn compile_for_scene_clip_path_preserves_output_clear_guardrail() {
             dash_enabled: false,
             fill_material_sampled: false,
             border_material_sampled: false,
+            shadow_mode: false,
         },
     }));
 

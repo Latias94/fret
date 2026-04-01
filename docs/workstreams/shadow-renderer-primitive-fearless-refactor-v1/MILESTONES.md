@@ -33,8 +33,9 @@ Exit criteria:
 
 ## M2 - Renderer primitive lands
 
-Status note (2026-04-01): in progress. `fret-core` now exposes the new shadow op, but the default
-renderer still treats it as a placeholder boundary rather than a rendered shadow primitive.
+Status note (2026-04-01): complete for the default path. `fret-core` exposes the new shadow op, the
+default wgpu renderer now renders it through an analytic rounded-rect shadow branch, and focused
+conformance exists in `crates/fret-render-wgpu/tests/shadow_rrect_conformance.rs`.
 
 Exit criteria:
 
@@ -44,7 +45,9 @@ Exit criteria:
 
 ## M3 - UI migration and fallback cleanup
 
-Status note (2026-04-01): open.
+Status note (2026-04-01): in progress. `ShadowStyle` now lowers to the new scene primitive and the
+old UI-layer multi-quad expansion is no longer the default path, but explicit non-native fallback
+documentation/cleanup is still pending.
 
 Exit criteria:
 

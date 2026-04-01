@@ -129,6 +129,7 @@ pub(in super::super) fn encode_quad(
         dash_enabled,
         fill_material_sampled,
         border_material_sampled,
+        shadow_mode: false,
     };
 
     let needs_new_batch = match state.quad_batch {
@@ -159,5 +160,6 @@ pub(in super::super) fn encode_quad(
         corner_radii,
         border,
         dash_params,
+        shadow_params: [0.0; 4],
     });
 }

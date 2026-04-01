@@ -450,8 +450,19 @@ fn container_paints_shadow_before_background() {
     assert_eq!(scene.ops_len(), 3);
 
     let shadow_bounds = match scene.ops()[0] {
-        SceneOp::Quad { rect, .. } => rect,
-        _ => panic!("expected shadow quad first"),
+        SceneOp::ShadowRRect {
+            rect,
+            offset,
+            spread,
+            blur_radius,
+            ..
+        } => {
+            assert_eq!(offset, Point::new(Px(2.0), Px(3.0)));
+            assert_eq!(spread, Px(1.0));
+            assert_eq!(blur_radius, Px(0.0));
+            rect
+        }
+        _ => panic!("expected shadow primitive first"),
     };
     match scene.ops()[1] {
         SceneOp::Quad {
@@ -466,10 +477,7 @@ fn container_paints_shadow_before_background() {
         _ => panic!("expected background quad second"),
     }
 
-    assert!(shadow_bounds.origin.x.0 > container_bounds.origin.x.0);
-    assert!(shadow_bounds.origin.y.0 > container_bounds.origin.y.0);
-    assert!(shadow_bounds.size.width.0 > container_bounds.size.width.0);
-    assert!(shadow_bounds.size.height.0 > container_bounds.size.height.0);
+    assert_eq!(shadow_bounds, container_bounds);
 }
 
 #[test]
