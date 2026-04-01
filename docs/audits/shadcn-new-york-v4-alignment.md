@@ -61,7 +61,13 @@ Recent breadth wins:
 - **Recurring layout families**: `textarea-*`, `empty-*`, `resizable-*`, `native-select-*` now have baseline layout gates.
 - **Field + date + skeleton edges**: `field-responsive`, `button-as-child`, `date-picker-with-range`, `skeleton-*` now have web-vs-fret layout gates.
 - **Block-ish text semantics**: `CardTitle` and form field label/title no longer force `nowrap`; wrapping is now driven by the parent width (matching upstream which uses `leading-*` but not `whitespace-nowrap`).
+- **Card shadow footprint**: `card-demo` now has dedicated light/dark shadow footprint gates, and
+  the shared `shadow-sm` preset was realigned to the current `new-york-v4` web source/golden
+  outcome instead of the previous harder single-layer fallback.
 - **Calendar root chrome**: `calendar-01` now gates the calendar root background (painted quad color matches web).
+- **Calendar demo root elevation**: `calendar-demo` now has dedicated light/dark shadow footprint
+  gates for the caller-owned `rounded-md border shadow-sm` root chrome, so demo-level elevation is
+  checked directly rather than inferred from background quads alone.
 - **Calendar nested chrome**: `calendar-22.open` now gates the calendar root background when rendered in a popover
   (matches upstream `[[data-slot=popover-content]_&]:bg-transparent`; implemented via `surface_slot` context).
 - **DatePicker popover surface**: `DatePicker` / `DateRangePicker` now wrap the calendar in `PopoverContent` (matches upstream `w-auto p-0`),
@@ -70,10 +76,10 @@ Recent breadth wins:
 - **DatePicker open popover placement**: new shadcn-web `.open` goldens are now gated for
   `date-picker-demo.open`, `date-picker-with-presets.open`, and `date-picker-with-range.open` (portal rect + insets via the shared overlay placement harness).
 - **DatePicker nested overlay placement**: `date-picker-with-presets.select-open.open` now gates the Select listbox popper placement while the popover is open (ComboBox -> ListBox portal).
-- **Sonner (toast) depth gates**: `sonner-demo*` / `sonner-types*` have open-mode goldens and a deterministic geometry gate for the toast item rect, including the `sonner-types` variant matrix (`default/success/info/warning/error/promise-loading`) and `vp1440x240` constrained viewport variants.
+- **Sonner (toast) depth gates**: `sonner-demo*` / `sonner-types*` have open-mode goldens and a deterministic geometry gate for the toast item rect, including the `sonner-types` variant matrix (`default/success/info/warning/error/promise-loading`) and `vp1440x240` constrained viewport variants. `sonner-demo` also now has dedicated light/dark shadow footprint gates, proving the shared toast fallback baseline against the checked-in web outcome instead of leaving it as an unreviewed generic overlay shadow.
 - **DatePicker presets behavior (Tomorrow)**: `date-picker-with-presets.preset-tomorrow.open` now gates the selected-day ARIA label and the trigger’s `format(date, "PPP")` output (`January 16th, 2026` when extracted with `--freezeDate=2026-01-15`).
 - **Dashboard block shell**: `dashboard-01` now has a shell geometry gate (sidebar width + header inset geometry).
-- **Chart tooltip/legend wrapper**: initial `chart-tooltip-*` + `chart-*-legend` panel geometry gates (min-width + padding + line-height outcomes).
+- **Chart tooltip/legend wrapper**: `chart-tooltip-*` + `chart-*-legend` panel geometry gates (min-width + padding + line-height outcomes), plus a dedicated light/dark tooltip shadow footprint gate for the recipe-owned `shadow-xl` lane.
   - Tooltip variants now include `chart-tooltip-label-none`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`, `chart-tooltip-icons`,
     `chart-tooltip-formatter`, `chart-tooltip-advanced` (including internal item rows + “Total” row bounds).
   - Pie legend variant includes `chart-pie-legend` (recharts wrapper + shadcn `*:basis-1/4` layout).

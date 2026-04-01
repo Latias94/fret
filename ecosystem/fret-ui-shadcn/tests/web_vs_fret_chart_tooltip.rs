@@ -1,14 +1,23 @@
 #![cfg(feature = "chart")]
 use fret_app::App;
-use fret_core::{AppWindowId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
+use fret_core::{
+    AppWindowId, FrameId, Paint, Point, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize,
+};
 use fret_ui::element::{AnyElement, LayoutStyle, Length};
 use fret_ui::tree::UiTree;
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
+#[path = "css_color.rs"]
+mod css_color;
+
 #[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
+
+#[path = "support/shadow_insets.rs"]
+mod shadow_insets;
+use shadow_insets::{assert_shadow_insets_match, fret_drop_shadow_insets_candidates};
 
 #[path = "support/assert.rs"]
 mod test_assert;
@@ -82,14 +91,28 @@ fn run_fret_root(
     bounds: Rect,
     f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<AnyElement>,
 ) -> fret_core::SemanticsSnapshot {
+    run_fret_root_with_scene_and_scheme(
+        bounds,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+        f,
+    )
+    .0
+}
+
+fn run_fret_root_with_scene_and_scheme(
+    bounds: Rect,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+    f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<AnyElement>,
+) -> (fret_core::SemanticsSnapshot, Scene) {
     let window = AppWindowId::default();
     let mut app = App::new();
 
     fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+        scheme,
     );
+    app.set_frame_id(FrameId(1));
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -108,9 +131,15 @@ fn run_fret_root(
     ui.request_semantics_snapshot();
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    ui.semantics_snapshot()
+    let snap = ui
+        .semantics_snapshot()
         .cloned()
-        .expect("expected semantics snapshot")
+        .expect("expected semantics snapshot");
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    (snap, scene)
 }
 
 fn find_semantics<'a>(
@@ -136,6 +165,59 @@ fn assert_rect_close_px(label: &str, actual: Rect, expected: WebRect, tol: f32) 
     assert_close_px(&format!("{label} h"), actual.size.height, expected.h, tol);
 }
 
+fn web_find_chart_tooltip_panel<'a>(root: &'a WebNode) -> Option<&'a WebNode> {
+    find_first(root, &|n| {
+        n.tag == "div"
+            && class_has_token(n, "border-border/50")
+            && class_has_token(n, "bg-background")
+            && class_has_token(n, "shadow-xl")
+            && class_has_token(n, "min-w-[8rem]")
+    })
+}
+
+fn web_drop_shadow_insets(node: &WebNode) -> Vec<shadow_insets::ShadowInsets> {
+    let box_shadow = node
+        .computed_style
+        .get("boxShadow")
+        .map(String::as_str)
+        .unwrap_or("");
+    shadow_insets::shadow_insets_from_box_shadow(box_shadow, |color| {
+        css_color::parse_css_color(color).map(|rgba| rgba.a)
+    })
+}
+
+fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> Option<Rect> {
+    let mut best = None;
+    let mut best_score = f32::INFINITY;
+
+    for op in scene.ops() {
+        let SceneOp::Quad {
+            rect, background, ..
+        } = *op
+        else {
+            continue;
+        };
+        let Paint::Solid(background_color) = background.paint else {
+            continue;
+        };
+        if background_color.a < 0.95 {
+            continue;
+        }
+
+        let score = (rect.origin.x.0 - target.origin.x.0).abs()
+            + (rect.origin.y.0 - target.origin.y.0).abs()
+            + (rect.size.width.0 - target.size.width.0).abs()
+            + (rect.size.height.0 - target.size.height.0).abs();
+
+        if score < best_score {
+            best_score = score;
+            best = Some(rect);
+        }
+    }
+
+    best
+}
+
 fn assert_chart_tooltip_rect_matches_web(
     web_name: &str,
     indicator: shadcn::ChartTooltipIndicator,
@@ -148,14 +230,7 @@ fn assert_chart_tooltip_rect_matches_web(
     let web = read_web_golden(web_name);
     let theme = web_theme(&web);
 
-    let web_tooltip = find_first(&theme.root, &|n| {
-        n.tag == "div"
-            && class_has_token(n, "border-border/50")
-            && class_has_token(n, "bg-background")
-            && class_has_token(n, "shadow-xl")
-            && class_has_token(n, "min-w-[8rem]")
-    })
-    .expect("web chart tooltip node");
+    let web_tooltip = web_find_chart_tooltip_panel(&theme.root).expect("web chart tooltip node");
 
     let advanced_layout = matches!(kind, shadcn::ChartTooltipContentKind::AdvancedKcalTotal)
         && web_name == "chart-tooltip-advanced";
@@ -408,6 +483,65 @@ fn assert_chart_pie_legend_rect_matches_web(web_name: &str) {
     assert_rect_close_px(web_name, legend.bounds, web_legend.rect, 1.0);
 }
 
+fn assert_chart_tooltip_shadow_matches_web(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden("chart-tooltip-default");
+    let theme = web_theme_named(&web, web_theme_name);
+    let web_tooltip = web_find_chart_tooltip_panel(&theme.root).expect("web chart tooltip node");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (_snap, scene) = run_fret_root_with_scene_and_scheme(bounds, scheme, |cx| {
+        let tooltip = shadcn::ChartTooltipContent::new()
+            .label("Tue")
+            .items([
+                shadcn::ChartTooltipItem::new("Running", "380"),
+                shadcn::ChartTooltipItem::new("Swimming", "420"),
+            ])
+            .into_element(cx);
+
+        let tooltip = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                    layout.inset.left = Some(Px(web_tooltip.rect.x)).into();
+                    layout.inset.top = Some(Px(web_tooltip.rect.y)).into();
+                    layout
+                },
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from(format!(
+                    "Golden:{web_theme_name}:chart-tooltip-default"
+                ))),
+                ..Default::default()
+            },
+            move |_cx| vec![tooltip],
+        );
+
+        vec![tooltip]
+    });
+
+    let target = Rect::new(
+        Point::new(Px(web_tooltip.rect.x), Px(web_tooltip.rect.y)),
+        CoreSize::new(Px(web_tooltip.rect.w), Px(web_tooltip.rect.h)),
+    );
+    let quad = find_best_opaque_background_quad(&scene, target).expect("painted tooltip quad");
+    let expected = web_drop_shadow_insets(web_tooltip);
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad);
+
+    assert_shadow_insets_match(
+        "chart-tooltip-default",
+        web_theme_name,
+        &expected,
+        &candidates,
+    );
+}
+
 #[test]
 fn web_vs_fret_chart_tooltip_default_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
@@ -603,4 +737,20 @@ fn web_vs_fret_chart_radar_legend_small_viewport_geometry_matches_web() {
 #[test]
 fn web_vs_fret_chart_pie_legend_small_viewport_geometry_matches_web() {
     assert_chart_pie_legend_rect_matches_web("chart-pie-legend.vp375x320");
+}
+
+#[test]
+fn web_vs_fret_chart_tooltip_default_shadow_matches_web_light() {
+    assert_chart_tooltip_shadow_matches_web(
+        "light",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_chart_tooltip_default_shadow_matches_web_dark() {
+    assert_chart_tooltip_shadow_matches_web(
+        "dark",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
+    );
 }

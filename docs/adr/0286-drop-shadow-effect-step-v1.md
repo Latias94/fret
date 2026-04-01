@@ -1,6 +1,6 @@
 ---
 title: Drop Shadow Effect Step v1 (Bounded, Blur-Based)
-status: Draft
+status: Accepted
 date: 2026-02-18
 ---
 
@@ -105,4 +105,3 @@ Cons:
 - Workstream: `docs/workstreams/renderer-drop-shadow-effect-v1/renderer-drop-shadow-effect-v1.md`
 - TODO: `docs/workstreams/renderer-drop-shadow-effect-v1/renderer-drop-shadow-effect-v1-todo.md`
 - Milestones: `docs/workstreams/renderer-drop-shadow-effect-v1/renderer-drop-shadow-effect-v1-milestones.md`
-

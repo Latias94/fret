@@ -28,6 +28,7 @@ This document tracks parity work for shadcn/ui chart surfaces and related toolti
 - Gallery page: `apps/fret-ui-gallery/src/ui/pages/chart.rs`
 - Copyable usage snippet: `apps/fret-ui-gallery/src/ui/snippets/chart/usage.rs`
 - Geometry gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart_tooltip.rs`
+- Tooltip shadow footprint gate (`shadow-xl`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart_tooltip.rs`
 - Interactive hover gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart_hover_mid.rs`
 - Baseline chart DOM invariants: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart.rs`
 
@@ -38,6 +39,8 @@ This document tracks parity work for shadcn/ui chart surfaces and related toolti
 - Pass: `ChartConfig` + `ChartConfigItem` already cover the upstream config-map authoring model.
 - Pass: `ChartContainer` provides the expected chart-scoped wrapper/context surface.
 - Pass: `ChartTooltip` / `ChartTooltipContent` and `ChartLegend` / `ChartLegendContent` already cover the important shadcn recipe outcomes for tooltip/legend authoring.
+- Pass: `ChartTooltipContent` now has a dedicated light/dark shadow footprint gate, so the
+  recipe-owned `shadow-xl` lane is no longer inferred only from panel geometry.
 - Pass: because Fret's actual chart engine integration lives below this recipe layer, this surface does not need a generic `compose()` builder; the main docs gap was a concise minimal `Usage` example.
 
 ### What 1:1 parity means here
@@ -76,3 +79,4 @@ Evidence anchors:
 - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart_tooltip.rs`
 - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart_hover_mid.rs`
 - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart.rs`
+- `cargo nextest run -p fret-ui-shadcn --features chart web_vs_fret_chart_tooltip_default_shadow_matches_web_light web_vs_fret_chart_tooltip_default_shadow_matches_web_dark --status-level fail`

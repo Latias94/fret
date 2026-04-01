@@ -28,6 +28,13 @@ mod web_tree;
 
 use web_tree::contains_text;
 
+#[path = "support/shadow_insets.rs"]
+mod shadow_insets;
+use shadow_insets::{
+    assert_shadow_insets_match, fret_drop_shadow_insets_candidates, parse_box_shadow_layer,
+    split_box_shadow_layers,
+};
+
 fn has_descendant_attr(node: &WebNode, key: &str, value: &str) -> bool {
     if node.attrs.get(key).is_some_and(|v| v == value) {
         return true;
@@ -270,10 +277,20 @@ impl fret_core::MaterialService for FakeServices {
 }
 
 fn setup_app_with_shadcn_theme(app: &mut App) {
+    setup_app_with_shadcn_theme_scheme(
+        app,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+}
+
+fn setup_app_with_shadcn_theme_scheme(
+    app: &mut App,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+) {
     fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         app,
         fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+        scheme,
     );
 }
 
@@ -283,13 +300,36 @@ fn render_and_paint(
     render_and_paint_in_bounds(CoreSize::new(Px(1024.0), Px(768.0)), render)
 }
 
+fn render_and_paint_with_theme_scheme(
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+    render: impl Fn(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> (fret_core::SemanticsSnapshot, Scene) {
+    render_and_paint_in_bounds_with_theme_scheme(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        scheme,
+        render,
+    )
+}
+
 fn render_and_paint_in_bounds(
     size: CoreSize,
     render: impl Fn(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
 ) -> (fret_core::SemanticsSnapshot, Scene) {
+    render_and_paint_in_bounds_with_theme_scheme(
+        size,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+        render,
+    )
+}
+
+fn render_and_paint_in_bounds_with_theme_scheme(
+    size: CoreSize,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+    render: impl Fn(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> (fret_core::SemanticsSnapshot, Scene) {
     let window = AppWindowId::default();
     let mut app = App::new();
-    setup_app_with_shadcn_theme(&mut app);
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
     app.set_frame_id(FrameId(1));
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -401,71 +441,15 @@ fn assert_close(label: &str, actual: f32, expected: f32, tol: f32) {
     );
 }
 
-fn split_box_shadow_layers(s: &str) -> Vec<&str> {
-    let mut out = Vec::new();
-    let mut depth = 0_u32;
-    let mut start = 0_usize;
-    for (idx, ch) in s.char_indices() {
-        match ch {
-            '(' => depth = depth.saturating_add(1),
-            ')' => depth = depth.saturating_sub(1),
-            ',' if depth == 0 => {
-                out.push(s[start..idx].trim());
-                start = idx + 1;
-            }
-            _ => {}
-        }
-    }
-    if start < s.len() {
-        out.push(s[start..].trim());
-    }
-    out.into_iter().filter(|p| !p.is_empty()).collect()
-}
-
-fn parse_box_shadow_layer(layer: &str) -> Option<(String, f32, f32, f32, f32)> {
-    let layer = layer.trim();
-    if layer.is_empty() || layer == "none" {
-        return None;
-    }
-
-    let (color, rest) = if layer.starts_with('#') {
-        let mut it = layer.splitn(2, char::is_whitespace);
-        let color = it.next()?.trim().to_string();
-        (color, it.next().unwrap_or("").trim())
-    } else if let Some(paren) = layer.find('(') {
-        let mut depth = 0_u32;
-        let mut end = None;
-        for (idx, ch) in layer.char_indices().skip(paren) {
-            match ch {
-                '(' => depth = depth.saturating_add(1),
-                ')' => {
-                    depth = depth.saturating_sub(1);
-                    if depth == 0 {
-                        end = Some(idx);
-                        break;
-                    }
-                }
-                _ => {}
-            }
-        }
-        let end = end?;
-        let color = layer[..=end].trim().to_string();
-        (color, layer[end + 1..].trim())
-    } else {
-        let mut it = layer.splitn(2, char::is_whitespace);
-        let color = it.next()?.trim().to_string();
-        (color, it.next().unwrap_or("").trim())
-    };
-
-    let parts: Vec<&str> = rest.split_whitespace().filter(|p| !p.is_empty()).collect();
-    if parts.len() < 4 {
-        return None;
-    }
-    let x = parse_px(parts[0])?;
-    let y = parse_px(parts[1])?;
-    let blur = parse_px(parts[2])?;
-    let spread = parse_px(parts[3])?;
-    Some((color, x, y, blur, spread))
+fn web_drop_shadow_insets(node: &WebNode) -> Vec<shadow_insets::ShadowInsets> {
+    let box_shadow = node
+        .computed_style
+        .get("boxShadow")
+        .map(String::as_str)
+        .unwrap_or("");
+    shadow_insets::shadow_insets_from_box_shadow(box_shadow, |color| {
+        css_color::parse_css_color(color).map(|rgba| rgba.a)
+    })
 }
 
 fn web_box_shadow_focus_ring(node: &WebNode) -> Option<(String, f32)> {
@@ -3441,6 +3425,71 @@ fn web_vs_fret_card_demo_chrome_matches() {
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("card radius[{idx}]"), *corner, web_radius, 1.0);
     }
+}
+
+fn assert_card_demo_shadow_matches(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden("card-demo");
+    let theme = web
+        .themes
+        .get(web_theme_name)
+        .expect("missing requested theme in web golden");
+
+    let web_card = find_first(&theme.root, &|n| {
+        if n.tag != "div" {
+            return false;
+        }
+        if !contains_text(n, "Login to your account") {
+            return false;
+        }
+        let border = web_border_width_px(n);
+        let radius = web_corner_radius_effective_px(n);
+        border.is_some_and(|v| (v - 1.0).abs() <= 0.1) && radius.is_some_and(|v| v >= 8.0)
+    })
+    .expect("web card container");
+
+    let expected = web_drop_shadow_insets(web_card);
+    let web_w = web_card.rect.w;
+    let web_h = web_card.rect.h;
+
+    let (_snap, scene) = render_and_paint_with_theme_scheme(scheme, |cx| {
+        vec![
+            shadcn::Card::new(Vec::new())
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(Px(web_w))
+                        .h_px(Px(web_h)),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_w), Px(web_h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for card");
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+
+    assert_shadow_insets_match("card-demo", web_theme_name, &expected, &candidates);
+}
+
+#[test]
+fn web_vs_fret_card_demo_shadow_matches_web_light() {
+    assert_card_demo_shadow_matches(
+        "light",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_card_demo_shadow_matches_web_dark() {
+    assert_card_demo_shadow_matches(
+        "dark",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
+    );
 }
 
 #[test]

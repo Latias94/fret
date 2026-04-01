@@ -1983,6 +1983,8 @@ pub fn render<H: UiHost + 'static>(
                 };
 
                 let shadow = toast_style.shadow.or_else(|| {
+                    // Source-aligned Sonner baseline from the checked-in open-mode web goldens:
+                    // `rgba(0, 0, 0, 0.1) 0px 4px 12px 0px`.
                     Some(fret_ui::element::ShadowStyle {
                         primary: fret_ui::element::ShadowLayerStyle {
                             color: Color {

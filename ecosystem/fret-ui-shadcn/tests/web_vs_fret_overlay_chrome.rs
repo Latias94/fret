@@ -65,6 +65,8 @@ mod popover;
 mod select;
 #[path = "web_vs_fret_overlay_chrome/sheet.rs"]
 mod sheet;
+#[path = "web_vs_fret_overlay_chrome/sonner.rs"]
+mod sonner;
 #[path = "web_vs_fret_overlay_chrome/tooltip.rs"]
 mod tooltip;
 
