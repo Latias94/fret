@@ -11,9 +11,8 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, ThemeSnapshot, UiHost};
 
 use crate::core::{Graph, NodeId, PortDirection};
-use crate::io::NodeGraphViewState;
 use crate::ui::declarative::view_reducer::apply_fit_view_to_canvas_rect;
-use crate::ui::{NodeGraphController, style::NodeGraphStyle};
+use crate::ui::{NodeGraphSurfaceBinding, style::NodeGraphStyle};
 
 use super::record_portal_measured_node_size_in_state;
 use super::{
@@ -305,8 +304,7 @@ pub(super) fn host_visible_portal_labels<H: UiHost + 'static>(
 
 pub(super) fn apply_pending_fit_to_portals<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     portal_bounds_store: &Model<PortalBoundsStore>,
     portals_enabled: bool,
     portals_disabled: bool,
@@ -344,7 +342,7 @@ pub(super) fn apply_pending_fit_to_portals<H: UiHost + 'static>(
         .flatten();
 
     if bounds_valid && let Some(target) = target {
-        let applied = update_view_state_ui_host(cx.app, view_state, controller, |state| {
+        let applied = update_view_state_ui_host(cx.app, binding, |state| {
             let _ = apply_fit_view_to_canvas_rect(state, bounds, target, 24.0, min_zoom, max_zoom);
         });
 

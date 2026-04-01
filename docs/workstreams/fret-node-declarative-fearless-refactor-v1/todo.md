@@ -123,12 +123,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     `replace_*_action_host`, `set_selection_action_host`, `undo_action_host`, and
     `redo_action_host`, so object-safe app hooks no longer need to bypass the binding for routine
     bound-model synchronization.
-- [x] Start converging declarative `paint_only` routine action hooks on the same binding-first
-      facade taught to app code.
+- [x] Start converging declarative `paint_only` routine hooks on the same binding-first facade
+      taught to app code.
   - Progress: `paint_only` transaction commit, selection commit, diagnostics preset/keyboard zoom,
-    and pointer release/move helpers now consume `NodeGraphSurfaceBinding`, so internal declarative
-    orchestration no longer rethreads `graph + view_state + controller` for ordinary bound-surface
-    work.
+    pointer release/move helpers, and fit-to-portals viewport updates now consume
+    `NodeGraphSurfaceBinding`, so internal declarative orchestration no longer rethreads `graph +
+    view_state + controller` for ordinary bound-surface work.
 - [ ] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes
       an internal detail of the controller.
   - Progress: retained canvas / minimap composition can now bind through `NodeGraphController`, so

@@ -27,8 +27,7 @@ use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverr
 use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphController, NodeGraphPresenter,
-    NodeGraphSurfaceBinding,
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphPresenter, NodeGraphSurfaceBinding,
 };
 
 #[path = "paint_only/cache.rs"]

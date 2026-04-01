@@ -6,7 +6,6 @@ use fret_ui::element::CanvasProps;
 use fret_ui::{ElementContext, Invalidation, ThemeSnapshot, UiHost};
 
 use crate::core::{Graph, NodeId};
-use crate::io::NodeGraphViewState;
 use crate::ui::paint_overrides::NodeGraphPaintOverridesRef;
 use crate::ui::style::NodeGraphStyle;
 
@@ -20,9 +19,8 @@ use super::{
 
 pub(super) struct SurfaceRegionChildrenParams {
     pub(super) canvas: CanvasProps,
+    pub(super) binding: crate::ui::NodeGraphSurfaceBinding,
     pub(super) graph: Model<Graph>,
-    pub(super) view_state: Model<NodeGraphViewState>,
-    pub(super) controller: crate::ui::NodeGraphController,
     pub(super) hovered_node_model: Model<Option<NodeId>>,
     pub(super) node_drag_model: Model<Option<NodeDragState>>,
     pub(super) marquee_drag_model: Model<Option<MarqueeDragState>>,
@@ -61,9 +59,8 @@ pub(super) fn build_surface_region_children<H: UiHost + 'static>(
 ) -> Vec<AnyElement> {
     let SurfaceRegionChildrenParams {
         canvas,
+        binding,
         graph,
-        view_state,
-        controller,
         hovered_node_model,
         node_drag_model,
         marquee_drag_model,
@@ -104,6 +101,7 @@ pub(super) fn build_surface_region_children<H: UiHost + 'static>(
     let paint_overrides_for_paint = paint_overrides_ref.clone();
 
     let graph_model_id = graph.id();
+    let view_state = binding.view_state_model();
     let view_state_model_id = view_state.id();
     let hovered_node_model_id = hovered_node_model.id();
     let node_drag_model_id = node_drag_model.id();
@@ -197,8 +195,7 @@ pub(super) fn build_surface_region_children<H: UiHost + 'static>(
 
     apply_pending_fit_to_portals(
         cx,
-        &view_state,
-        &controller,
+        &binding,
         &portal_bounds_store,
         portals_enabled,
         portals_disabled,

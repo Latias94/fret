@@ -73,16 +73,14 @@ pub(super) fn update_view_state_action_host(
 
 pub(super) fn update_view_state_ui_host<H: UiHost>(
     host: &mut H,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     f: impl FnOnce(&mut NodeGraphViewState),
 ) -> bool {
-    let Ok(mut next_view_state) = host.models_mut().read(view_state, |state| state.clone()) else {
+    let view_state = binding.view_state_model();
+    let Ok(mut next_view_state) = host.models_mut().read(&view_state, |state| state.clone()) else {
         return false;
     };
     f(&mut next_view_state);
 
-    controller
-        .replace_view_state_and_sync_model(host, view_state, next_view_state)
-        .is_ok()
+    binding.replace_view_state(host, next_view_state).is_ok()
 }
