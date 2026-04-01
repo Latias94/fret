@@ -42,10 +42,11 @@ use super::{
     handle_node_drag_pointer_move_action_host,
     handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
     nodes_cache_key, pointer_cancel_declarative_interactions_action_host,
-    pointer_crossed_threshold, record_portal_measured_node_size_in_state,
-    resolve_hover_tooltip_anchor, stable_hash_u64, sync_authoritative_surface_boundary_in_models,
-    sync_hover_anchor_store_in_models, sync_portal_canvas_bounds_in_models,
-    update_hovered_node_pointer_move_action_host, update_view_state_action_host, view_from_state,
+    pointer_crossed_threshold, read_authoritative_view_state_in_models,
+    record_portal_measured_node_size_in_state, resolve_hover_tooltip_anchor, stable_hash_u64,
+    sync_authoritative_surface_boundary_in_models, sync_hover_anchor_store_in_models,
+    sync_portal_canvas_bounds_in_models, update_hovered_node_pointer_move_action_host,
+    update_view_state_action_host, view_from_state,
 };
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,
@@ -1663,6 +1664,44 @@ fn begin_left_pointer_down_action_host_empty_space_clear_arms_pending_clear() {
 }
 
 #[test]
+fn read_authoritative_view_state_in_models_uses_store_when_bound_view_is_stale() {
+    let mut host = TestActionHostImpl::default();
+    let node = NodeId::from_u128(99730);
+    let mut authoritative_graph = Graph::new(GraphId::from_u128(99729));
+    authoritative_graph
+        .nodes
+        .insert(node, test_node(CanvasPoint { x: 8.0, y: 16.0 }));
+    let authoritative_view = NodeGraphViewState {
+        pan: CanvasPoint { x: 12.0, y: 24.0 },
+        zoom: 2.0,
+        selected_nodes: vec![node],
+        ..Default::default()
+    };
+    let stale_view = NodeGraphViewState {
+        pan: CanvasPoint { x: -40.0, y: -80.0 },
+        zoom: 0.5,
+        selected_nodes: Vec::new(),
+        ..Default::default()
+    };
+    let view_state = host.models.insert(stale_view);
+    let graph = host.models.insert(Graph::new(GraphId::from_u128(99729)));
+    let store = host
+        .models
+        .insert(NodeGraphStore::new(authoritative_graph, authoritative_view));
+    let controller = NodeGraphController::new(store);
+    let binding = test_binding(&graph, &view_state, &controller);
+
+    let projection = read_authoritative_view_state_in_models(&mut host.models, &binding, |state| {
+        (state.pan, state.zoom, state.selected_nodes.clone())
+    })
+    .expect("projection readable");
+
+    assert_eq!(projection.0, CanvasPoint { x: 12.0, y: 24.0 });
+    assert_eq!(projection.1, 2.0);
+    assert_eq!(projection.2, vec![node]);
+}
+
+#[test]
 fn read_left_pointer_down_snapshot_action_host_uses_authoritative_store_view_state_when_bound_view_is_stale()
  {
     let mut host = TestActionHostImpl::default();
@@ -2387,8 +2426,9 @@ fn handle_declarative_keyboard_zoom_action_host_reset_normalizes_zoom() {
 fn handle_declarative_diag_key_action_host_toggle_paint_overrides_sets_first_edge_override() {
     let mut host = TestActionHostImpl::default();
     let edge_id = EdgeId::new();
-    let mut graph_value = Graph::new(GraphId::new());
-    graph_value.edges.insert(
+    let graph = host.models.insert(Graph::new(GraphId::from_u128(9967)));
+    let mut authoritative_graph = Graph::new(GraphId::from_u128(9967));
+    authoritative_graph.edges.insert(
         edge_id,
         crate::core::Edge {
             kind: crate::core::EdgeKind::Data,
@@ -2399,13 +2439,11 @@ fn handle_declarative_diag_key_action_host_toggle_paint_overrides_sets_first_edg
             reconnectable: None,
         },
     );
-    let graph = host.models.insert(graph_value);
     let view_value = NodeGraphViewState::default();
     let view_state = host.models.insert(view_value.clone());
-    let store = host.models.insert(NodeGraphStore::new(
-        Graph::new(GraphId::from_u128(9967)),
-        view_value,
-    ));
+    let store = host
+        .models
+        .insert(NodeGraphStore::new(authoritative_graph, view_value));
     let controller = NodeGraphController::new(store);
     let binding = test_binding(&graph, &view_state, &controller);
     let portal_bounds = host.models.insert(PortalBoundsStore::default());

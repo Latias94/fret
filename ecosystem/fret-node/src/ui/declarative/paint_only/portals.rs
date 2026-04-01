@@ -8,7 +8,7 @@ use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, LayoutQueryRegionProps, Length, PositionStyle,
     SemanticsDecoration, SpacingEdges, SpacingLength, TextProps,
 };
-use fret_ui::{ElementContext, Invalidation, ThemeSnapshot, UiHost};
+use fret_ui::{ElementContext, ThemeSnapshot, UiHost};
 
 use crate::core::{Graph, NodeId, PortDirection};
 use crate::ui::declarative::view_reducer::apply_fit_view_to_canvas_rect;
@@ -17,8 +17,8 @@ use crate::ui::{NodeGraphSurfaceBinding, style::NodeGraphStyle};
 use super::record_portal_measured_node_size_in_state;
 use super::{
     NodeDragState, NodeRectDraw, PortalBoundsStore, PortalMeasuredGeometryState,
-    canvas_viewport_rect, node_drag_delta_canvas, rect_union, rects_intersect,
-    sync_portal_canvas_bounds_in_models, update_view_state_ui_host,
+    canvas_viewport_rect, node_drag_delta_canvas, read_authoritative_graph_in_models, rect_union,
+    rects_intersect, sync_portal_canvas_bounds_in_models, update_view_state_ui_host,
 };
 
 #[derive(Debug, Clone)]
@@ -122,7 +122,7 @@ pub(super) fn collect_portal_label_infos_for_visible_subset(
 pub(super) fn host_visible_portal_labels<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     overlay_children: &mut Vec<AnyElement>,
-    graph: &Model<Graph>,
+    binding: &NodeGraphSurfaceBinding,
     node_draws: Option<&Arc<Vec<NodeRectDraw>>>,
     bounds: Rect,
     view: PanZoom2D,
@@ -147,8 +147,8 @@ pub(super) fn host_visible_portal_labels<H: UiHost + 'static>(
     }
 
     let cull_canvas = canvas_viewport_rect(bounds, view, cull_margin_screen_px);
-    let portal_infos: Vec<PortalLabelInfo> = cx
-        .read_model_ref(graph, Invalidation::Paint, |graph_value| {
+    let portal_infos: Vec<PortalLabelInfo> =
+        read_authoritative_graph_in_models(cx.app.models_mut(), binding, |graph_value| {
             collect_portal_label_infos_for_visible_subset(
                 graph_value,
                 node_draws.map(|draws| draws.as_slice()),

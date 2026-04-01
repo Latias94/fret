@@ -331,6 +331,14 @@ Execution companion: `design.md` (surface map + next worktree order).
     threshold, marquee preview, and hover hit-testing now read interaction/view baselines from the
     authoritative store via `NodeGraphSurfaceBinding`, with focused stale-bound tests proving local
     bound view mirrors no longer decide declarative interaction math.
+  - Landed authoritative frame-view follow-up: frame preparation and canvas paint observation now
+    also read view-state baselines from the authoritative store, so pan/zoom/selection-driven
+    paint/layout paths no longer depend on the bound `view_state` mirror staying fresh.
+  - Landed authoritative graph-read follow-up: paint-only frame assembly, cache rebuilds, portal
+    hosting, hover-tooltip diagnostics, and visible-edge diagnostics now read the graph document
+    from the authoritative store via `NodeGraphSurfaceBinding`, while graph-dependent cache/frame
+    invalidation now keys off `NodeGraphStore::graph_revision()` instead of a stale bound
+    `graph_model()` mirror.
 - [x] Keep pointer-capture and cancel behavior as a first-class regression target while doing this.
   - Landed initial declarative gates for selection-only release, escape cancel, and pointer-cancel
     cleanup in `paint_only.rs`.

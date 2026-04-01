@@ -5,7 +5,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::element::CanvasProps;
 use fret_ui::{ElementContext, Invalidation, ThemeSnapshot, UiHost};
 
-use crate::core::{Graph, NodeId};
+use crate::core::NodeId;
 use crate::ui::paint_overrides::NodeGraphPaintOverridesRef;
 use crate::ui::style::NodeGraphStyle;
 
@@ -20,7 +20,6 @@ use super::{
 pub(super) struct SurfaceRegionChildrenParams {
     pub(super) canvas: CanvasProps,
     pub(super) binding: crate::ui::NodeGraphSurfaceBinding,
-    pub(super) graph: Model<Graph>,
     pub(super) hovered_node_model: Model<Option<NodeId>>,
     pub(super) node_drag_model: Model<Option<NodeDragState>>,
     pub(super) marquee_drag_model: Model<Option<MarqueeDragState>>,
@@ -60,7 +59,6 @@ pub(super) fn build_surface_region_children<H: UiHost + 'static>(
     let SurfaceRegionChildrenParams {
         canvas,
         binding,
-        graph,
         hovered_node_model,
         node_drag_model,
         marquee_drag_model,
@@ -100,15 +98,12 @@ pub(super) fn build_surface_region_children<H: UiHost + 'static>(
     let node_drag_for_paint = node_drag_value.clone();
     let paint_overrides_for_paint = paint_overrides_ref.clone();
 
-    let graph_model_id = graph.id();
-    let view_state = binding.view_state_model();
-    let view_state_model_id = view_state.id();
+    let store_model_id = binding.store_model().id();
     let hovered_node_model_id = hovered_node_model.id();
     let node_drag_model_id = node_drag_model.id();
     let marquee_drag_model_id = marquee_drag_model.id();
     let canvas = cx.canvas(canvas, move |p| {
-        p.observe_model_id(graph_model_id, Invalidation::Paint);
-        p.observe_model_id(view_state_model_id, Invalidation::Paint);
+        p.observe_model_id(store_model_id, Invalidation::Paint);
         p.observe_model_id(hovered_node_model_id, Invalidation::Paint);
         p.observe_model_id(node_drag_model_id, Invalidation::Paint);
         p.observe_model_id(marquee_drag_model_id, Invalidation::Paint);
@@ -143,7 +138,7 @@ pub(super) fn build_surface_region_children<H: UiHost + 'static>(
         host_visible_portal_labels(
             cx,
             &mut overlay_children,
-            &graph,
+            &binding,
             node_draws.as_ref(),
             grid_bounds,
             view_for_paint,
@@ -177,7 +172,7 @@ pub(super) fn build_surface_region_children<H: UiHost + 'static>(
         cx,
         &mut overlay_children,
         HoverTooltipOverlayParams {
-            graph: &graph,
+            binding: &binding,
             portal_bounds_store: &portal_bounds_store,
             hover_anchor_store: &hover_anchor_store,
             style_tokens: &style_tokens,

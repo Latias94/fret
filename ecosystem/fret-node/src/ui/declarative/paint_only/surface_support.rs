@@ -48,10 +48,25 @@ pub(super) fn read_authoritative_view_state_action_host<T>(
     binding: &NodeGraphSurfaceBinding,
     f: impl FnOnce(&NodeGraphViewState) -> T,
 ) -> Option<T> {
+    read_authoritative_view_state_in_models(host.models_mut(), binding, f)
+}
+
+pub(super) fn read_authoritative_view_state_in_models<T>(
+    models: &mut fret_runtime::ModelStore,
+    binding: &NodeGraphSurfaceBinding,
+    f: impl FnOnce(&NodeGraphViewState) -> T,
+) -> Option<T> {
     let store = binding.store_model();
-    host.models_mut()
-        .read(&store, |store| f(store.view_state()))
-        .ok()
+    models.read(&store, |store| f(store.view_state())).ok()
+}
+
+pub(super) fn read_authoritative_graph_in_models<T>(
+    models: &mut fret_runtime::ModelStore,
+    binding: &NodeGraphSurfaceBinding,
+    f: impl FnOnce(&crate::core::Graph) -> T,
+) -> Option<T> {
+    let store = binding.store_model();
+    models.read(&store, |store| f(store.graph())).ok()
 }
 
 pub(super) fn sync_authoritative_surface_boundary_in_models(

@@ -837,7 +837,7 @@ pub(super) fn sync_grid_cache<H: UiHost>(
 
 pub(super) fn sync_derived_cache<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    graph: &Model<Graph>,
+    binding: &crate::ui::NodeGraphSurfaceBinding,
     derived_cache: &Model<DerivedGeometryCacheState>,
     graph_rev: u64,
     view_for_paint: PanZoom2D,
@@ -866,8 +866,8 @@ pub(super) fn sync_derived_cache<H: UiHost>(
     );
 
     if derived_cache_value.key != Some(key) {
-        let (geom, index) = cx
-            .read_model_ref(graph, Invalidation::Paint, |graph_value| {
+        let (geom, index) =
+            read_authoritative_graph_in_models(cx.app.models_mut(), binding, |graph_value| {
                 let zoom = PanZoom2D::sanitize_zoom(view_for_paint.zoom, 1.0);
                 let z = zoom.max(1.0e-6);
 
@@ -902,7 +902,7 @@ pub(super) fn sync_derived_cache<H: UiHost>(
 
                 (Arc::new(geom), Arc::new(index))
             })
-            .unwrap_or_else(|_| {
+            .unwrap_or_else(|| {
                 (
                     Arc::new(CanvasGeometry::default()),
                     Arc::new(CanvasSpatialDerived::empty()),
@@ -927,7 +927,7 @@ pub(super) fn sync_derived_cache<H: UiHost>(
 
 pub(super) fn sync_nodes_cache<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    graph: &Model<Graph>,
+    binding: &crate::ui::NodeGraphSurfaceBinding,
     nodes_cache: &Model<NodePaintCacheState>,
     derived_cache_value: &DerivedGeometryCacheState,
     graph_rev: u64,
@@ -962,10 +962,10 @@ pub(super) fn sync_nodes_cache<H: UiHost>(
             }
             Arc::new(out)
         } else {
-            cx.read_model_ref(graph, Invalidation::Paint, |graph_value| {
+            read_authoritative_graph_in_models(cx.app.models_mut(), binding, |graph_value| {
                 build_nodes_draws_paint_only(graph_value, view_for_paint.zoom)
             })
-            .unwrap_or_else(|_| Arc::new(Vec::new()))
+            .unwrap_or_else(|| Arc::new(Vec::new()))
         };
         let _ = cx.app.models_mut().update(nodes_cache, |st| {
             st.key = Some(key);
@@ -982,7 +982,7 @@ pub(super) fn sync_nodes_cache<H: UiHost>(
 
 pub(super) fn sync_edges_cache<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    graph: &Model<Graph>,
+    binding: &crate::ui::NodeGraphSurfaceBinding,
     edges_cache: &Model<EdgePaintCacheState>,
     derived_cache_value: &DerivedGeometryCacheState,
     graph_rev: u64,
@@ -1008,8 +1008,8 @@ pub(super) fn sync_edges_cache<H: UiHost>(
             .geom
             .clone()
             .unwrap_or_else(|| Arc::new(CanvasGeometry::default()));
-        let draws = cx
-            .read_model_ref(graph, Invalidation::Paint, |graph_value| {
+        let draws =
+            read_authoritative_graph_in_models(cx.app.models_mut(), binding, |graph_value| {
                 build_edges_draws_paint_only(
                     graph_value,
                     graph_rev,
@@ -1018,7 +1018,7 @@ pub(super) fn sync_edges_cache<H: UiHost>(
                     style_tokens,
                 )
             })
-            .unwrap_or_else(|_| Arc::new(Vec::new()));
+            .unwrap_or_else(|| Arc::new(Vec::new()));
         let _ = cx.app.models_mut().update(edges_cache, |st| {
             st.key = Some(key);
             st.rebuilds = st.rebuilds.saturating_add(1);

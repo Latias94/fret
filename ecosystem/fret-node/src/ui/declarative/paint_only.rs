@@ -146,7 +146,8 @@ use self::surface_state::{
 };
 use self::surface_support::{
     authoritative_surface_boundary_snapshot, mouse_buttons_contains,
-    read_authoritative_view_state_action_host, stable_hash_u64,
+    read_authoritative_graph_in_models, read_authoritative_view_state_action_host,
+    read_authoritative_view_state_in_models, stable_hash_u64,
     sync_authoritative_surface_boundary_in_models, use_uncontrolled_model,
 };
 use self::transactions::{
@@ -296,8 +297,6 @@ pub fn node_graph_surface<H: UiHost + 'static>(
         pinch_zoom_speed,
         test_id,
     } = props;
-    let graph = binding.graph_model();
-    let view_state = binding.view_state_model();
 
     let PaintOnlySurfaceModels {
         drag,
@@ -322,8 +321,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     let prepared_frame = prepare_surface_frame(
         cx,
         PrepareSurfaceFrameParams {
-            graph: &graph,
-            view_state: &view_state,
+            binding: &binding,
             surface_models: &PaintOnlySurfaceModels {
                 drag: drag.clone(),
                 marquee_drag: marquee_drag.clone(),

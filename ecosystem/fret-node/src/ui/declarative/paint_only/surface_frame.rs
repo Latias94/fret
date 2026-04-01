@@ -1,11 +1,9 @@
 use std::sync::Arc;
 
 use fret_canvas::view::PanZoom2D;
-use fret_runtime::Model;
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 
-use crate::core::{Graph, NodeId};
-use crate::io::NodeGraphViewState;
+use crate::core::NodeId;
 use crate::ui::MeasuredGeometryStore;
 use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
 use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
@@ -15,7 +13,8 @@ use super::{
     PaintOnlySurfaceModels, PortalBoundsStore, PortalMeasuredGeometryFlushOutcome,
     SurfaceSemanticsParams, authoritative_surface_boundary_snapshot,
     collect_edge_paint_diagnostics, collect_portal_diagnostics, declarative_presenter_revision,
-    effective_selected_nodes_for_paint, flush_portal_measured_geometry_state, stable_hash_u64,
+    effective_selected_nodes_for_paint, flush_portal_measured_geometry_state,
+    read_authoritative_graph_in_models, read_authoritative_view_state_in_models, stable_hash_u64,
     sync_authoritative_surface_boundary_in_models, sync_derived_cache, sync_edges_cache,
     sync_grid_cache, sync_nodes_cache, view_from_state,
 };
@@ -45,8 +44,7 @@ pub(super) struct PreparedPaintOnlySurfaceFrame {
 }
 
 pub(super) struct PrepareSurfaceFrameParams<'a> {
-    pub(super) graph: &'a Model<Graph>,
-    pub(super) view_state: &'a Model<NodeGraphViewState>,
+    pub(super) binding: &'a crate::ui::NodeGraphSurfaceBinding,
     pub(super) surface_models: &'a PaintOnlySurfaceModels,
     pub(super) geometry_overrides: Option<NodeGraphGeometryOverridesRef>,
     pub(super) paint_overrides: Option<NodeGraphPaintOverridesRef>,
@@ -60,8 +58,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
     params: PrepareSurfaceFrameParams<'_>,
 ) -> PreparedPaintOnlySurfaceFrame {
     let PrepareSurfaceFrameParams {
-        graph,
-        view_state,
+        binding,
         surface_models,
         geometry_overrides,
         paint_overrides,
@@ -89,18 +86,23 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         authoritative_surface_boundary,
     } = surface_models;
 
-    cx.observe_model(graph, Invalidation::Paint);
+    cx.observe_model(&binding.store_model(), Invalidation::Layout);
 
-    let view_value = cx
-        .get_model_cloned(view_state, Invalidation::Layout)
+    let view_value =
+        read_authoritative_view_state_in_models(cx.app.models_mut(), binding, |state| {
+            state.clone()
+        })
         .unwrap_or_default();
-    let graph_rev = graph.revision(&*cx.app).unwrap_or(0);
-    let graph_id = cx
-        .read_model_ref(graph, Invalidation::Paint, |graph_value| {
-            graph_value.graph_id
+    let graph_meta = cx
+        .app
+        .models()
+        .read(&binding.store_model(), |store| {
+            (store.graph_revision(), store.graph().graph_id)
         })
         .ok()
-        .unwrap_or_else(|| crate::core::GraphId::from_u128(0));
+        .unwrap_or((0, crate::core::GraphId::from_u128(0)));
+    let graph_rev = graph_meta.0;
+    let graph_id = graph_meta.1;
     let authoritative_boundary =
         authoritative_surface_boundary_snapshot(graph_id, graph_rev, &view_value);
     let _ = sync_authoritative_surface_boundary_in_models(
@@ -172,7 +174,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         .unwrap_or_default();
     let portal_measured_flush_outcome = if let Some(measured_geometry) = measured_geometry.as_ref()
     {
-        cx.read_model_ref(graph, Invalidation::Paint, |graph_value| {
+        read_authoritative_graph_in_models(cx.app.models_mut(), binding, |graph_value| {
             flush_portal_measured_geometry_state(
                 graph_value,
                 &style_tokens,
@@ -201,7 +203,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
 
     let derived_cache_value = sync_derived_cache(
         cx,
-        graph,
+        binding,
         derived_cache,
         graph_rev,
         view_for_paint,
@@ -217,7 +219,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
 
     let nodes_cache_value = sync_nodes_cache(
         cx,
-        graph,
+        binding,
         nodes_cache,
         &derived_cache_value,
         graph_rev,
@@ -229,7 +231,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
 
     let edges_cache_value = sync_edges_cache(
         cx,
-        graph,
+        binding,
         edges_cache,
         &derived_cache_value,
         graph_rev,

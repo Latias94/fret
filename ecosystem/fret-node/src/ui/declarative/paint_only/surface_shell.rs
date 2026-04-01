@@ -69,7 +69,6 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
         hover_anchor_store,
         authoritative_surface_boundary: _,
     } = surface_models;
-    let graph = binding.graph_model();
 
     if let Some(bounds) = cx.last_bounds_for_element(element) {
         let _ = cx.app.models_mut().update(&grid_cache, |state| {
@@ -168,7 +167,6 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
             SurfaceRegionChildrenParams {
                 canvas,
                 binding: binding.clone(),
-                graph: graph.clone(),
                 hovered_node_model: hovered_node.clone(),
                 node_drag_model: node_drag.clone(),
                 marquee_drag_model: marquee_drag.clone(),

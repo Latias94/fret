@@ -40,6 +40,7 @@ pub enum DispatchError {
 /// This is intentionally headless-safe and does not depend on `fret-ui`.
 pub struct NodeGraphStore {
     graph: Graph,
+    graph_revision: u64,
     view_state: NodeGraphViewState,
     history: GraphHistory,
     profile: Option<Box<dyn GraphProfile>>,
@@ -66,6 +67,7 @@ impl std::fmt::Debug for NodeGraphStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("NodeGraphStore")
             .field("graph_id", &self.graph.graph_id)
+            .field("graph_revision", &self.graph_revision)
             .field("node_count", &self.graph.nodes.len())
             .field("edge_count", &self.graph.edges.len())
             .field("lookup_node_count", &self.lookups.node_lookup.len())
@@ -90,6 +92,7 @@ impl NodeGraphStore {
         lookups.rebuild_from(&graph);
         Self {
             graph,
+            graph_revision: 0,
             view_state,
             history: GraphHistory::default(),
             profile: None,
@@ -112,6 +115,7 @@ impl NodeGraphStore {
         lookups.rebuild_from(&graph);
         Self {
             graph,
+            graph_revision: 0,
             view_state,
             history: GraphHistory::default(),
             profile: Some(profile),
@@ -215,6 +219,10 @@ impl NodeGraphStore {
         &self.graph
     }
 
+    pub fn graph_revision(&self) -> u64 {
+        self.graph_revision
+    }
+
     pub fn lookups(&self) -> &NodeGraphLookups {
         &self.lookups
     }
@@ -228,6 +236,7 @@ impl NodeGraphStore {
     /// reset and re-render. Selection is sanitized against the new graph.
     pub fn replace_graph(&mut self, graph: Graph) {
         self.graph = graph;
+        self.bump_graph_revision();
         self.view_state.sanitize_for_graph(&self.graph);
         self.lookups.rebuild_from(&self.graph);
         self.notify_selectors();
@@ -420,6 +429,7 @@ impl NodeGraphStore {
             return Err(DispatchError::Apply(Self::reject_tx(key, message)));
         }
         self.graph = scratch;
+        self.bump_graph_revision();
         self.lookups.apply_transaction(&self.graph, &committed);
         self.history.record(committed.clone());
         let changes = NodeGraphChanges::from_transaction(&committed);
@@ -495,6 +505,7 @@ impl NodeGraphStore {
             return Err(Self::reject_tx(key, message));
         }
         self.graph = scratch;
+        self.bump_graph_revision();
         self.lookups.apply_transaction(&self.graph, &committed);
         self.history.record(committed.clone());
         let changes = NodeGraphChanges::from_transaction(&committed);
@@ -546,6 +557,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_default();
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
+        self.bump_graph_revision();
         self.lookups.apply_transaction(&self.graph, &committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
@@ -578,6 +590,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_default();
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
+        self.bump_graph_revision();
         self.lookups.apply_transaction(&self.graph, &committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
@@ -608,6 +621,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_default();
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
+        self.bump_graph_revision();
         self.lookups.apply_transaction(&self.graph, &committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
@@ -640,6 +654,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_default();
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
+        self.bump_graph_revision();
         self.lookups.apply_transaction(&self.graph, &committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
@@ -676,6 +691,10 @@ impl NodeGraphStore {
                 fixes: Vec::new(),
             }],
         }
+    }
+
+    fn bump_graph_revision(&mut self) {
+        self.graph_revision = self.graph_revision.saturating_add(1);
     }
 
     fn emit(&mut self, event: NodeGraphStoreEvent<'_>) {

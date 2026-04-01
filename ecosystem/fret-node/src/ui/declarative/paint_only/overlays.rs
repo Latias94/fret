@@ -4,9 +4,9 @@ use fret_canvas::view::PanZoom2D;
 use fret_core::Rect;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, PositionStyle};
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContext, UiHost};
 
-use crate::core::{Graph, NodeId};
+use crate::core::NodeId;
 use crate::ui::style::NodeGraphStyle;
 
 use super::HoverAnchorStore;
@@ -18,9 +18,10 @@ use super::overlay_elements::{
     build_hover_tooltip_overlay_spec, push_hover_tooltip_overlay, push_marquee_overlay,
 };
 use super::portals::collect_hovered_node_label_and_ports;
+use super::read_authoritative_graph_in_models;
 
 pub(super) struct HoverTooltipOverlayParams<'a> {
-    pub(super) graph: &'a Model<Graph>,
+    pub(super) binding: &'a crate::ui::NodeGraphSurfaceBinding,
     pub(super) portal_bounds_store: &'a Model<PortalBoundsStore>,
     pub(super) hover_anchor_store: &'a Model<HoverAnchorStore>,
     pub(super) style_tokens: &'a NodeGraphStyle,
@@ -91,11 +92,10 @@ pub(super) fn push_hover_tooltip_overlay_if_needed<H: UiHost + 'static>(
         return;
     };
 
-    let (hovered_label, ports_in, ports_out) = cx
-        .read_model_ref(params.graph, Invalidation::Paint, |graph| {
+    let (hovered_label, ports_in, ports_out) =
+        read_authoritative_graph_in_models(cx.app.models_mut(), params.binding, |graph| {
             collect_hovered_node_label_and_ports(graph, hovered_id)
         })
-        .ok()
         .flatten()
         .unwrap_or_else(|| (Arc::<str>::from("node"), 0, 0));
 

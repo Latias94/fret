@@ -169,7 +169,6 @@ fn toggle_diag_paint_overrides_action_host(
     diag_paint_overrides: &Arc<NodeGraphPaintOverridesMap>,
     diag_paint_overrides_enabled: &Model<bool>,
 ) -> bool {
-    let graph = binding.graph_model();
     let enable_next = host
         .models_mut()
         .read(diag_paint_overrides_enabled, |state| !*state)
@@ -179,11 +178,8 @@ fn toggle_diag_paint_overrides_action_host(
         .models_mut()
         .update(diag_paint_overrides_enabled, |state| *state = enable_next);
 
-    let edge_id = host
-        .models_mut()
-        .read(&graph, |graph: &Graph| graph.edges.keys().next().copied())
-        .ok()
-        .flatten();
+    let edge_id = authoritative_graph_snapshot_action_host(host, binding)
+        .and_then(|graph| graph.edges.keys().next().copied());
 
     if let Some(edge_id) = edge_id {
         if enable_next {
