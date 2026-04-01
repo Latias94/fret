@@ -9,22 +9,24 @@ fn update_selection_action_host(
         &mut Vec<crate::core::GroupId>,
     ),
 ) -> bool {
-    let view_state = binding.view_state_model();
-    let Ok(state) = host.models_mut().read(&view_state, |state| state.clone()) else {
+    let store = binding.store_model();
+    if host
+        .models_mut()
+        .update(&store, move |store| {
+            store.update_view_state(|state| {
+                f(
+                    &mut state.selected_nodes,
+                    &mut state.selected_edges,
+                    &mut state.selected_groups,
+                );
+            });
+        })
+        .is_err()
+    {
         return false;
-    };
-    let mut selected_nodes = state.selected_nodes;
-    let mut selected_edges = state.selected_edges;
-    let mut selected_groups = state.selected_groups;
-    f(
-        &mut selected_nodes,
-        &mut selected_edges,
-        &mut selected_groups,
-    );
-
-    binding
-        .set_selection_action_host(host, selected_nodes, selected_edges, selected_groups)
-        .is_ok()
+    }
+    let _ = binding.sync_from_store_action_host(host);
+    true
 }
 
 fn compute_marquee_candidate_nodes(

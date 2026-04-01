@@ -55,20 +55,31 @@ pub(super) fn commit_node_drag_transaction(
     commit_graph_transaction(host, binding, tx)
 }
 
+pub(super) fn authoritative_graph_snapshot_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    binding: &NodeGraphSurfaceBinding,
+) -> Option<Graph> {
+    let store = binding.store_model();
+    host.models_mut()
+        .read(&store, |store| store.graph().clone())
+        .ok()
+}
+
 pub(super) fn update_view_state_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     binding: &NodeGraphSurfaceBinding,
     f: impl FnOnce(&mut NodeGraphViewState),
 ) -> bool {
-    let view_state = binding.view_state_model();
-    let Ok(mut next_view_state) = host.models_mut().read(&view_state, |state| state.clone()) else {
+    let store = binding.store_model();
+    if host
+        .models_mut()
+        .update(&store, move |store| store.update_view_state(f))
+        .is_err()
+    {
         return false;
-    };
-    f(&mut next_view_state);
-
-    binding
-        .replace_view_state_action_host(host, next_view_state)
-        .is_ok()
+    }
+    let _ = binding.sync_from_store_action_host(host);
+    true
 }
 
 pub(super) fn update_view_state_ui_host<H: UiHost>(
@@ -76,11 +87,14 @@ pub(super) fn update_view_state_ui_host<H: UiHost>(
     binding: &NodeGraphSurfaceBinding,
     f: impl FnOnce(&mut NodeGraphViewState),
 ) -> bool {
-    let view_state = binding.view_state_model();
-    let Ok(mut next_view_state) = host.models_mut().read(&view_state, |state| state.clone()) else {
+    let store = binding.store_model();
+    if host
+        .models_mut()
+        .update(&store, move |store| store.update_view_state(f))
+        .is_err()
+    {
         return false;
-    };
-    f(&mut next_view_state);
-
-    binding.replace_view_state(host, next_view_state).is_ok()
+    }
+    let _ = binding.sync_from_store(host);
+    true
 }

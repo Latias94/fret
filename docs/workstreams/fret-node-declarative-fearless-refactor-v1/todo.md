@@ -323,6 +323,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Landed pointer-move reducer follow-up: node-drag activation/update, marquee preview, and
     hover hit-testing now route through explicit helpers, with focused tests covering drag
     activation, canceled drag cleanup, marquee preview/cancel, and hover hit updates.
+  - Landed local-surface-state follow-up: drag/marquee/pending-selection/cache boundary types now
+    live in the private `paint_only/surface_state.rs` seam, so the main declarative surface file
+    keeps moving toward orchestration-only ownership instead of re-embedding every local session
+    type inline.
 - [x] Keep pointer-capture and cancel behavior as a first-class regression target while doing this.
   - Landed initial declarative gates for selection-only release, escape cancel, and pointer-cancel
     cleanup in `paint_only.rs`.

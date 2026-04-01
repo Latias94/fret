@@ -129,8 +129,7 @@ fn commit_diag_graph_transaction_action_host(
     binding: &NodeGraphSurfaceBinding,
     build_tx: fn(&Graph) -> GraphTransaction,
 ) -> bool {
-    let graph = binding.graph_model();
-    let tx = host.models_mut().read(&graph, build_tx).ok();
+    let tx = authoritative_graph_snapshot_action_host(host, binding).map(|graph| build_tx(&graph));
     if let Some(tx) = tx.as_ref() {
         let _ = commit_graph_transaction(host, binding, tx);
     }
