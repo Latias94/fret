@@ -117,6 +117,12 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: binding now mirrors `set_viewport*`, `set_center_in_bounds*`,
     and `fit_view_nodes_in_bounds*` with both option-bearing and action-host variants, so ordinary
     viewport hooks no longer need to drop to `binding.controller()`.
+- [x] Keep `NodeGraphSurfaceBinding` complete enough for routine instance-style bound-store
+      edit/sync/history hooks.
+  - Progress: binding now mirrors `dispatch_transaction*`, `submit_transaction*`,
+    `replace_*_action_host`, `set_selection_action_host`, `undo_action_host`, and
+    `redo_action_host`, so object-safe app hooks no longer need to bypass the binding for routine
+    bound-model synchronization.
 - [ ] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes
       an internal detail of the controller.
   - Progress: retained canvas / minimap composition can now bind through `NodeGraphController`, so

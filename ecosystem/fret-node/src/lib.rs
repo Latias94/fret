@@ -143,6 +143,20 @@ mod surface_policy_tests {
     }
 
     #[test]
+    fn binding_surface_covers_instance_style_sync_and_history_helpers() {
+        assert!(UI_BINDING_RS.contains("pub fn dispatch_transaction<"));
+        assert!(UI_BINDING_RS.contains("pub fn dispatch_transaction_action_host("));
+        assert!(UI_BINDING_RS.contains("pub fn submit_transaction<"));
+        assert!(UI_BINDING_RS.contains("pub fn submit_transaction_action_host("));
+        assert!(UI_BINDING_RS.contains("pub fn replace_graph_action_host("));
+        assert!(UI_BINDING_RS.contains("pub fn replace_document_action_host("));
+        assert!(UI_BINDING_RS.contains("pub fn replace_view_state_action_host("));
+        assert!(UI_BINDING_RS.contains("pub fn set_selection_action_host("));
+        assert!(UI_BINDING_RS.contains("pub fn undo_action_host("));
+        assert!(UI_BINDING_RS.contains("pub fn redo_action_host("));
+    }
+
+    #[test]
     fn root_ui_surface_re_exports_store_first_viewport_option_types_but_not_raw_view_queue_module()
     {
         assert!(UI_MOD_RS.contains("mod view_queue;"));

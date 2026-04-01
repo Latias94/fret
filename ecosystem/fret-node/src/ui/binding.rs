@@ -5,6 +5,7 @@ use fret_ui::{ElementContext, Invalidation, UiHost};
 
 use crate::core::{CanvasPoint, EdgeId, Graph, GroupId, NodeId};
 use crate::io::NodeGraphViewState;
+use crate::ops::GraphTransaction;
 use crate::runtime::lookups::HandleConnection;
 use crate::runtime::store::{DispatchOutcome, NodeGraphStore};
 
@@ -120,6 +121,58 @@ impl NodeGraphSurfaceBinding {
             .sync_models_from_store_action_host(host, &self.graph, &self.view_state)
     }
 
+    /// Dispatches a transaction and keeps the external graph/view mirrors in sync.
+    pub fn dispatch_transaction<H: UiHost>(
+        &self,
+        host: &mut H,
+        tx: &GraphTransaction,
+    ) -> Result<DispatchOutcome, NodeGraphControllerError> {
+        self.controller.dispatch_transaction_and_sync_models(
+            host,
+            &self.graph,
+            &self.view_state,
+            tx,
+        )
+    }
+
+    /// Dispatches a transaction from an object-safe action hook and keeps the external graph/view
+    /// mirrors in sync.
+    pub fn dispatch_transaction_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        tx: &GraphTransaction,
+    ) -> Result<DispatchOutcome, NodeGraphControllerError> {
+        self.controller
+            .dispatch_transaction_and_sync_models_action_host(
+                host,
+                &self.graph,
+                &self.view_state,
+                tx,
+            )
+    }
+
+    /// Submits a transaction and keeps the external graph/view mirrors in sync.
+    pub fn submit_transaction<H: UiHost>(
+        &self,
+        host: &mut H,
+        tx: &GraphTransaction,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.controller
+            .submit_transaction_and_sync_models(host, &self.graph, &self.view_state, tx)
+    }
+
+    /// Submits a transaction from an object-safe action hook and keeps the external graph/view
+    /// mirrors in sync.
+    pub fn submit_transaction_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        tx: &GraphTransaction,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.controller.submit_transaction_action_host(host, tx)?;
+        let _ = self.sync_from_store_action_host(host);
+        Ok(())
+    }
+
     /// Replaces the authoritative graph and keeps the external graph/view mirrors in sync.
     pub fn replace_graph<H: UiHost>(
         &self,
@@ -128,6 +181,21 @@ impl NodeGraphSurfaceBinding {
     ) -> Result<(), NodeGraphControllerError> {
         self.controller
             .replace_graph_and_sync_models(host, &self.graph, &self.view_state, graph)
+    }
+
+    /// Replaces the authoritative graph from an object-safe action hook and keeps the external
+    /// graph/view mirrors in sync.
+    pub fn replace_graph_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        graph: Graph,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.controller.replace_graph_and_sync_models_action_host(
+            host,
+            &self.graph,
+            &self.view_state,
+            graph,
+        )
     }
 
     /// Replaces the entire document snapshot (graph + view state), clears history, and keeps the
@@ -147,6 +215,24 @@ impl NodeGraphSurfaceBinding {
         )
     }
 
+    /// Replaces the entire document snapshot from an object-safe action hook, clears history, and
+    /// keeps the external graph/view mirrors in sync.
+    pub fn replace_document_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        graph: Graph,
+        view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.controller
+            .replace_document_and_sync_models_action_host(
+                host,
+                &self.graph,
+                &self.view_state,
+                graph,
+                view_state,
+            )
+    }
+
     /// Replaces the authoritative view state and keeps the external view model in sync.
     pub fn replace_view_state<H: UiHost>(
         &self,
@@ -155,6 +241,17 @@ impl NodeGraphSurfaceBinding {
     ) -> Result<(), NodeGraphControllerError> {
         self.controller
             .replace_view_state_and_sync_model(host, &self.view_state, view_state)
+    }
+
+    /// Replaces the authoritative view state from an object-safe action hook and keeps the
+    /// external view model in sync.
+    pub fn replace_view_state_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.controller
+            .replace_view_state_and_sync_model_action_host(host, &self.view_state, view_state)
     }
 
     /// Replaces the authoritative selection and keeps the external view model in sync.
@@ -172,6 +269,25 @@ impl NodeGraphSurfaceBinding {
             edges,
             groups,
         )
+    }
+
+    /// Replaces the authoritative selection from an object-safe action hook and keeps the external
+    /// view model in sync.
+    pub fn set_selection_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        nodes: Vec<NodeId>,
+        edges: Vec<EdgeId>,
+        groups: Vec<GroupId>,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.controller
+            .set_selection_and_sync_view_model_action_host(
+                host,
+                &self.view_state,
+                nodes,
+                edges,
+                groups,
+            )
     }
 
     /// Applies a viewport change through the bound controller.
@@ -383,6 +499,16 @@ impl NodeGraphSurfaceBinding {
             .undo_and_sync_models(host, &self.graph, &self.view_state)
     }
 
+    /// Undoes the last committed transaction from an object-safe action hook and keeps the external
+    /// graph/view mirrors in sync.
+    pub fn undo_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        self.controller
+            .undo_and_sync_models_action_host(host, &self.graph, &self.view_state)
+    }
+
     /// Redoes the last undone transaction and keeps the external graph/view mirrors in sync.
     pub fn redo<H: UiHost>(
         &self,
@@ -390,6 +516,16 @@ impl NodeGraphSurfaceBinding {
     ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
         self.controller
             .redo_and_sync_models(host, &self.graph, &self.view_state)
+    }
+
+    /// Redoes the last undone transaction from an object-safe action hook and keeps the external
+    /// graph/view mirrors in sync.
+    pub fn redo_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        self.controller
+            .redo_and_sync_models_action_host(host, &self.graph, &self.view_state)
     }
 
     fn sync_view_state_after_viewport_update<H: UiHost>(
@@ -422,10 +558,70 @@ impl NodeGraphSurfaceBinding {
 #[cfg(test)]
 mod tests {
     use super::NodeGraphSurfaceBinding;
-    use crate::core::{CanvasPoint, Graph, GraphId};
+    use crate::core::{
+        CanvasPoint, CanvasRect, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey, StickyNote,
+        StickyNoteId,
+    };
     use crate::io::NodeGraphViewState;
+    use crate::ops::{GraphOp, GraphTransaction};
     use crate::runtime::store::NodeGraphStore;
-    use fret_runtime::ModelStore;
+    use fret_core::AppWindowId;
+    use fret_runtime::{Effect, ModelStore, TimerToken};
+    use serde_json::Value;
+
+    #[derive(Default)]
+    struct TestActionHost {
+        models: ModelStore,
+        effects: Vec<Effect>,
+        next_token: u64,
+    }
+
+    impl fret_ui::action::UiActionHost for TestActionHost {
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+
+        fn request_redraw(&mut self, _window: AppWindowId) {}
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.next_token = self.next_token.saturating_add(1);
+            TimerToken(self.next_token)
+        }
+
+        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+            self.next_token = self.next_token.saturating_add(1);
+            fret_runtime::ClipboardToken(self.next_token)
+        }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.next_token = self.next_token.saturating_add(1);
+            fret_runtime::ShareSheetToken(self.next_token)
+        }
+    }
+
+    fn test_node(pos: CanvasPoint) -> Node {
+        Node {
+            kind: NodeKindKey::new("test.node"),
+            kind_version: 1,
+            pos,
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: None,
+            extent: None,
+            expand_parent: None,
+            size: None,
+            hidden: false,
+            collapsed: false,
+            ports: Vec::new(),
+            data: Value::Null,
+        }
+    }
 
     #[test]
     fn new_binding_seeds_graph_view_and_store_models() {
@@ -480,5 +676,138 @@ mod tests {
         assert_eq!(graph_id, graph.graph_id);
         assert_eq!(pan, view_state.pan);
         assert_eq!(zoom, view_state.zoom);
+    }
+
+    #[test]
+    fn dispatch_transaction_action_host_and_history_sync_bound_models() {
+        let mut host = TestActionHost::default();
+        let binding = NodeGraphSurfaceBinding::new(
+            &mut host.models,
+            Graph::new(GraphId::from_u128(0x9003)),
+            NodeGraphViewState::default(),
+        );
+
+        let note_id = StickyNoteId::from_u128(0x9004);
+        let note = StickyNote {
+            text: "note".into(),
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 10.0, y: 20.0 },
+                size: CanvasSize {
+                    width: 120.0,
+                    height: 80.0,
+                },
+            },
+            color: Some("amber".into()),
+        };
+        let mut tx = GraphTransaction::new();
+        tx.push(GraphOp::AddStickyNote {
+            id: note_id,
+            note: note.clone(),
+        });
+
+        let outcome = binding
+            .dispatch_transaction_action_host(&mut host, &tx)
+            .expect("dispatch succeeds");
+        assert_eq!(outcome.committed.ops.len(), 1);
+        assert!(matches!(
+            outcome.committed.ops.first(),
+            Some(GraphOp::AddStickyNote { id, .. }) if *id == note_id
+        ));
+        assert!(outcome.changes.nodes.is_empty());
+        assert!(outcome.changes.edges.is_empty());
+        assert!(
+            host.models
+                .read(&binding.graph_model(), |graph| graph
+                    .sticky_notes
+                    .contains_key(&note_id))
+                .expect("graph model readable")
+        );
+
+        let undo = binding.undo_action_host(&mut host).expect("undo succeeds");
+        assert!(undo.is_some());
+        assert!(
+            !host
+                .models
+                .read(&binding.graph_model(), |graph| graph
+                    .sticky_notes
+                    .contains_key(&note_id))
+                .expect("graph model readable")
+        );
+
+        let redo = binding.redo_action_host(&mut host).expect("redo succeeds");
+        assert!(redo.is_some());
+        assert!(
+            host.models
+                .read(&binding.graph_model(), |graph| graph
+                    .sticky_notes
+                    .contains_key(&note_id))
+                .expect("graph model readable")
+        );
+    }
+
+    #[test]
+    fn replace_graph_and_selection_action_host_sync_bound_models() {
+        let mut host = TestActionHost::default();
+        let binding = NodeGraphSurfaceBinding::new(
+            &mut host.models,
+            Graph::new(GraphId::from_u128(0x9005)),
+            NodeGraphViewState::default(),
+        );
+
+        let node_id = NodeId::from_u128(0x9006);
+        let mut graph = Graph::new(GraphId::from_u128(0x9005));
+        graph
+            .nodes
+            .insert(node_id, test_node(CanvasPoint { x: 64.0, y: 96.0 }));
+
+        binding
+            .replace_graph_action_host(&mut host, graph)
+            .expect("replace graph succeeds");
+        assert!(
+            host.models
+                .read(&binding.graph_model(), |value| value
+                    .nodes
+                    .contains_key(&node_id))
+                .expect("graph model readable")
+        );
+
+        binding
+            .set_selection_action_host(&mut host, vec![node_id], Vec::new(), Vec::new())
+            .expect("set selection succeeds");
+        assert_eq!(
+            host.models
+                .read(&binding.view_state_model(), |state| state
+                    .selected_nodes
+                    .clone())
+                .expect("view model readable"),
+            vec![node_id]
+        );
+    }
+
+    #[test]
+    fn replace_view_state_action_host_syncs_bound_view_model() {
+        let mut host = TestActionHost::default();
+        let binding = NodeGraphSurfaceBinding::new(
+            &mut host.models,
+            Graph::new(GraphId::from_u128(0x9007)),
+            NodeGraphViewState::default(),
+        );
+
+        let next = NodeGraphViewState {
+            pan: CanvasPoint { x: 21.0, y: 34.0 },
+            zoom: 1.75,
+            ..NodeGraphViewState::default()
+        };
+
+        binding
+            .replace_view_state_action_host(&mut host, next.clone())
+            .expect("replace view state succeeds");
+
+        let (pan, zoom) = host
+            .models
+            .read(&binding.view_state_model(), |state| (state.pan, state.zoom))
+            .expect("view model readable");
+        assert_eq!(pan, next.pan);
+        assert_eq!(zoom, next.zoom);
     }
 }

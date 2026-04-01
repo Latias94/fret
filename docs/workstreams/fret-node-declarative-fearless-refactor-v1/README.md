@@ -254,6 +254,10 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
   `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, including option-bearing variants), so
   first-party controls do not need to teach raw view queues or drop to `binding.controller()` for
   routine viewport work,
+- `NodeGraphSurfaceBinding` now also mirrors common instance-style edit/sync/history helpers
+  (`dispatch_transaction*`, `submit_transaction*`, `replace_*_action_host`,
+  `set_selection_action_host`, `undo_action_host`, `redo_action_host`), so object-safe app hooks
+  no longer need to bypass the binding for routine bound-store coordination,
 - retained rename / portal / blackboard / compatibility glue now also prefers controller-owned
   transaction submission when a controller/store exists,
 - the retained legacy demo now routes its canvas / rename overlay / blackboard / portal / minimap
@@ -419,8 +423,9 @@ For new editor surfaces, teach and copy this shape first:
 2. render `node_graph_surface(cx, binding.surface_props())` for the default surface props,
 3. use the binding itself for common app-facing helpers (`viewport`, `graph_snapshot`,
    `view_state_snapshot`, `set_viewport`, `set_center_in_bounds`, `fit_view_nodes_in_bounds`,
-   `replace_document`, `replace_graph`, `replace_view_state`, `set_selection`, `outgoers`,
-   `incomers`, `connected_edges`, `port_connections`, `node_connections`, `undo`, `redo`),
+   `dispatch_transaction`, `submit_transaction`, `replace_document`, `replace_graph`,
+   `replace_view_state`, `set_selection`, `outgoers`, `incomers`, `connected_edges`,
+   `port_connections`, `node_connections`, `undo`, `redo`),
 4. drop to `binding.controller()` only for advanced helpers or retained/compat composition,
 5. treat raw graph/view models as advanced seams rather than the default teaching surface.
 

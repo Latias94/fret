@@ -280,6 +280,11 @@ points rather than direct graph mutation.
     (`set_viewport*`, `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, including option-bearing
     and action-host variants), so routine app-facing viewport hooks can stay on the instance-style
     binding surface instead of dropping to `binding.controller()`.
+  - `NodeGraphSurfaceBinding` now also mirrors routine bound-store edit/sync/history helpers
+    (`dispatch_transaction*`, `submit_transaction*`, `replace_*_action_host`,
+    `set_selection_action_host`, `undo_action_host`, `redo_action_host`), so object-safe app hooks
+    can keep model synchronization on the binding surface instead of reaching for controller-only
+    plumbing.
   - Controlled mode now has an explicit full-replace-first policy: replacing the authoritative graph
     document is treated as a reset + re-sync operation, while diff-first replace helpers remain a
     deferred follow-up rather than the default contract.

@@ -35,8 +35,11 @@ something else.
   - now mirrors the full common store-first viewport helper family (`set_viewport*`,
     `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, including action-host and option-bearing
     variants),
+  - now also mirrors routine bound-store edit/sync/history helpers (`dispatch_transaction*`,
+    `submit_transaction*`, `replace_*_action_host`, `set_selection_action_host`,
+    `undo_action_host`, `redo_action_host`),
   - should be enough for routine app-facing viewport authoring without dropping to
-    `binding.controller()`.
+    `binding.controller()` for normal instance-style hooks.
 - `node_graph_surface(...)`
   - remains the recommended lightweight declarative authoring surface,
   - should keep converging toward the editor-grade path rather than staying a "lite demo only"
