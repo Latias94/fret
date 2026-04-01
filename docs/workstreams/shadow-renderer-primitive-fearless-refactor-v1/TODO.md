@@ -45,19 +45,24 @@ Tracking legend:
     - degradation rules for unsupported backends.
   - Landed as `docs/adr/0318-rounded-rect-shadow-scene-primitive-v1.md`.
 
-- [ ] SRPFR-adr-011 Refresh ADR alignment notes once the contract lands.
+- [x] SRPFR-adr-011 Refresh ADR alignment notes once the contract lands.
   - Expected rows:
     - `0030-shape-rendering-and-sdf-semantics.md`
     - `0060-shadows-and-elevation.md`
     - new ADR row for the primitive
+  - Result: the alignment matrix now distinguishes the new core primitive skeleton from the still-
+    missing renderer/default-lowering work.
 
 ## C. Core scene surface
 
-- [ ] SRPFR-core-020 Add the new shadow scene operation to `crates/fret-core/src/scene/mod.rs`.
+- [x] SRPFR-core-020 Add the new shadow scene operation to `crates/fret-core/src/scene/mod.rs`.
 
-- [ ] SRPFR-core-021 Add sanitize/validation/fingerprint/replay support for the new op.
+- [x] SRPFR-core-021 Add sanitize/validation/fingerprint/replay support for the new op.
 
-- [ ] SRPFR-core-022 Add focused unit tests proving ordering and serialization/fingerprint stability.
+- [x] SRPFR-core-022 Add focused unit tests proving ordering and serialization/fingerprint stability.
+  - Current evidence:
+    - `crates/fret-core/src/scene/{mod.rs,validate.rs,fingerprint.rs}`
+    - `crates/fret-core/tests/scene_state_stack_conformance.rs`
 
 ## D. Renderer implementation
 

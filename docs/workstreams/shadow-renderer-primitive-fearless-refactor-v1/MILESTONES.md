@@ -23,8 +23,8 @@ Exit criteria:
 
 ## M1 - Contract lock
 
-Status note (2026-04-01): in progress. The first ADR draft now exists, but the contract is not yet
-accepted and the related ADR alignment notes have not been refreshed.
+Status note (2026-04-01): in progress. The first ADR draft now exists and the related ADR alignment
+notes are refreshed, but the contract is not yet accepted.
 
 Exit criteria:
 
@@ -33,7 +33,8 @@ Exit criteria:
 
 ## M2 - Renderer primitive lands
 
-Status note (2026-04-01): open.
+Status note (2026-04-01): in progress. `fret-core` now exposes the new shadow op, but the default
+renderer still treats it as a placeholder boundary rather than a rendered shadow primitive.
 
 Exit criteria:
 

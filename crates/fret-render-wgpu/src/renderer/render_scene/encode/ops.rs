@@ -361,6 +361,9 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                 style.dash,
             );
         }
+        SceneOp::ShadowRRect { .. } => {
+            state.flush_quad_batch();
+        }
         SceneOp::Image {
             rect,
             image,

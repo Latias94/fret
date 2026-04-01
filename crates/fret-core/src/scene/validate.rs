@@ -572,6 +572,29 @@ impl SceneRecording {
                         });
                     }
                 }
+                SceneOp::ShadowRRect {
+                    rect,
+                    corner_radii,
+                    offset,
+                    spread,
+                    blur_radius,
+                    color,
+                    ..
+                } => {
+                    if !rect_is_finite(rect)
+                        || !corners_is_finite(corner_radii)
+                        || !point_is_finite(offset)
+                        || !px_is_finite(spread)
+                        || !px_is_finite(blur_radius)
+                        || !color_is_finite(color)
+                    {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
                 SceneOp::Image { rect, opacity, .. } => {
                     if !rect_is_finite(rect) || !opacity.is_finite() {
                         return Err(SceneValidationError {

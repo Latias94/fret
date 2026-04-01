@@ -639,6 +639,24 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                 }
             }
         }
+        SceneOp::ShadowRRect {
+            order,
+            rect,
+            corner_radii,
+            offset,
+            spread,
+            blur_radius,
+            color,
+        } => {
+            let mut state = mix_u64(state, 15);
+            state = mix_u64(state, u64::from(order.0));
+            state = mix_rect(state, rect);
+            state = mix_corners(state, corner_radii);
+            state = mix_point(state, offset);
+            state = mix_px(state, spread);
+            state = mix_px(state, blur_radius);
+            mix_color(state, color)
+        }
         SceneOp::Image {
             order,
             rect,
