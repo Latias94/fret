@@ -16,7 +16,6 @@ applications while keeping the framework/kernel crates (`crates/*`) policy-light
 repo's canonical example host.
 
 - Use `docs/examples/README.md` for the canonical learning/index path.
-- Use `examples/README.md` as the GitHub-friendly portal.
 - Keep runnable lessons in `apps/fret-cookbook/examples/`, component coverage in
   `apps/fret-ui-gallery`, and heavier platform/app demos in their owning app crates.
 

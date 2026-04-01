@@ -142,10 +142,9 @@ Reference apps (app-scale):
   - [x] cookbook topics
   - [x] UI gallery (component catalog)
   - [x] diagnostics bundles/scripts
-- [x] Add a GitHub-friendly `examples/` portal (Bevy-style index):
-  - [`examples/README.md`](../../../examples/README.md)
+- [x] Keep a single canonical examples index doc instead of a duplicate top-level portal:
+  - [`docs/examples/README.md`](../../../docs/examples/README.md)
 - [x] Document canonical ownership for example surfaces:
-  - [x] `examples/README.md` is the GitHub-friendly portal
   - [x] `docs/examples/README.md` is the canonical docs index
   - [x] cookbook/gallery/app crates remain the owning runnable surfaces
 - [ ] Ensure `README.md` only links the *canonical* path (avoid scattering run commands).
