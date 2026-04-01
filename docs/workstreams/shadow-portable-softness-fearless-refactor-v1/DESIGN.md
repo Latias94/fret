@@ -4,6 +4,10 @@ Status: In Progress
 
 Last updated: 2026-04-01
 
+Renderer primitive follow-on:
+
+- `docs/workstreams/shadow-renderer-primitive-fearless-refactor-v1/DESIGN.md`
+
 ## Context
 
 The previous shadow closure lane (`docs/workstreams/shadow-surface-fearless-refactor-v1/`) finished
