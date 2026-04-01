@@ -240,6 +240,26 @@ This workstream should turn that direction into a smaller and clearer implementa
 
 If a piece of fallback behavior is not explainable through those inputs, it is in the wrong place.
 
+### 6) Make native `platform_default` safe for generic UI text
+
+The pre-refactor contract implicitly treated native `platform_default` as a pure
+`system_fallback` lane. In practice that left first-party app surfaces vulnerable to tofu for
+mixed-script UI text, especially when generic UI fonts (`FontId::Ui`, `Serif`, `Monospace`) were
+used without an app-local fallback override.
+
+Target rule:
+
+- bundled-only / wasm: `platform_default` injects the common fallback baseline into both generic
+  and named-family stacks;
+- native system-font builds: `platform_default` is a **hybrid lane**:
+  - generic UI families get a renderer-owned no-tofu common-fallback baseline,
+  - named-family stacks stay on the system-fallback lane unless the app explicitly selects
+    `common_fallback`.
+
+This keeps app surfaces readable without forcing every demo or first-party app to carry a local
+font override, while still preserving a truthful system-fallback path for explicit named-family
+authoring and diagnostics.
+
 ## Seams To Delete Or Replace
 
 - Scattered runner update sequences that publish font globals in partially-settled states.

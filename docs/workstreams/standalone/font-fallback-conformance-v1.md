@@ -79,20 +79,25 @@ Expected:
 
 - The script starts on `text_mixed_script_fallback`, captures a BEFORE bundle, triggers
   `app.locale.switch_next` via the default `primary+alt+l` shortcut, then captures an AFTER
-  bundle. On Windows, the script opts out of the UI Gallery's curated common-fallback override so
-  the run stays on the true `platform_default -> prefer_system_fallback` path.
+  bundle. This page lives on the lightweight text harness surface, so the launch command must
+  include `--features gallery-web-ime-harness`. On Windows, the script opts out of the UI
+  Gallery's curated common-fallback override so the run exercises the framework-owned native
+  `platform_default` hybrid baseline directly.
 - The gate asserts:
   - `system_fonts_enabled` is `true` in both captures.
-  - `common_fallback_injection` stays `platform_default`, `prefer_common_fallback` stays `false`,
-    and `common_fallback_candidates` stays empty in both captures.
+  - `common_fallback_injection` stays `platform_default` and `prefer_common_fallback` stays
+    `false` in both captures, so named-family stacks remain on the system-fallback lane.
+  - `prefer_common_fallback_for_generics` stays `true` in both captures, and
+    `common_fallback_candidates` stay non-empty, so generic UI text keeps the renderer-owned
+    no-tofu baseline.
   - `locale_bcp47` is `en-US` in the BEFORE capture and `zh-CN` in the AFTER capture.
   - The mixed-script sample traces (`m`, `你`, `😀`, `m你😀`) appear in both captures.
   - Those sample trace locales settle to `["en-US"]` in the BEFORE capture and `["zh-CN"]` in
     the AFTER capture.
-  - The sample trace classes stay `requested` for latin and `system_fallback` for CJK / emoji.
+  - The sample trace classes stay `requested` for latin and `common_fallback` for CJK / emoji.
   - The mixed-script trace preserves `latin -> cjk -> emoji` family order while the CJK / emoji
-    sample families resolve outside the curated `common_fallback_candidates` lane, and the mixed
-    trace classes stay `requested -> system_fallback -> system_fallback`.
+    sample families resolve inside the renderer-owned `common_fallback_candidates` lane, and the
+    mixed trace classes stay `requested -> common_fallback -> common_fallback`.
   - `frame_missing_glyphs` is `0` in both captures.
   - `fallback_policy_key` differs between the two labeled captures.
 

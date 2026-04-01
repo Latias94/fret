@@ -155,6 +155,7 @@ pub struct RendererTextFallbackPolicySnapshot {
 
     pub common_fallback_injection: crate::TextCommonFallbackInjection,
     pub prefer_common_fallback: bool,
+    pub prefer_common_fallback_for_generics: bool,
 
     pub configured_ui_sans_families: Vec<String>,
     pub configured_ui_serif_families: Vec<String>,

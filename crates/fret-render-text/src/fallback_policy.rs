@@ -16,7 +16,8 @@ pub struct TextFallbackPolicyV1 {
     locale_bcp47: Option<String>,
 
     /// Derived, renderer-internal policy state.
-    common_fallback_mode: CommonFallbackMode,
+    generic_common_fallback_mode: CommonFallbackMode,
+    named_common_fallback_mode: CommonFallbackMode,
     common_fallback_candidates: Vec<String>,
     common_fallback_stack_suffix: String,
 
@@ -29,7 +30,8 @@ impl TextFallbackPolicyV1 {
         let mut out = Self {
             font_family_config: fret_core::TextFontFamilyConfig::default(),
             locale_bcp47: None,
-            common_fallback_mode: CommonFallbackMode::PreferSystemFallback,
+            generic_common_fallback_mode: CommonFallbackMode::PreferSystemFallback,
+            named_common_fallback_mode: CommonFallbackMode::PreferSystemFallback,
             common_fallback_candidates: Vec::new(),
             common_fallback_stack_suffix: String::new(),
             // Non-zero by default so callers can treat `0` as "unknown/uninitialized" if desired.
@@ -57,11 +59,26 @@ impl TextFallbackPolicyV1 {
     }
 
     pub fn common_fallback_mode(&self) -> CommonFallbackMode {
-        self.common_fallback_mode
+        self.named_common_fallback_mode
+    }
+
+    pub fn generic_common_fallback_mode(&self) -> CommonFallbackMode {
+        self.generic_common_fallback_mode
     }
 
     pub fn prefer_common_fallback(&self) -> bool {
-        self.common_fallback_mode == CommonFallbackMode::PreferCommonFallback
+        self.named_common_fallback_mode == CommonFallbackMode::PreferCommonFallback
+    }
+
+    pub fn prefer_common_fallback_for_generics(&self) -> bool {
+        self.generic_common_fallback_mode == CommonFallbackMode::PreferCommonFallback
+    }
+
+    pub fn uses_common_fallback_for_font(&self, font: &fret_core::FontId) -> bool {
+        match font {
+            fret_core::FontId::Family(_) => self.prefer_common_fallback(),
+            _ => self.prefer_common_fallback_for_generics(),
+        }
     }
 
     pub fn common_fallback_candidates(&self) -> &[String] {
@@ -83,44 +100,61 @@ impl TextFallbackPolicyV1 {
         self.fallback_policy_key
     }
 
-    fn platform_default_common_fallback_mode(shaper: &ParleyShaper) -> CommonFallbackMode {
+    fn platform_default_common_fallback_modes(
+        shaper: &ParleyShaper,
+    ) -> (CommonFallbackMode, CommonFallbackMode) {
         #[cfg(target_arch = "wasm32")]
         {
             let _ = shaper;
-            CommonFallbackMode::PreferCommonFallback
+            (
+                CommonFallbackMode::PreferCommonFallback,
+                CommonFallbackMode::PreferCommonFallback,
+            )
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
             if shaper.system_fonts_enabled() {
-                CommonFallbackMode::PreferSystemFallback
+                (
+                    CommonFallbackMode::PreferCommonFallback,
+                    CommonFallbackMode::PreferSystemFallback,
+                )
             } else {
-                CommonFallbackMode::PreferCommonFallback
+                (
+                    CommonFallbackMode::PreferCommonFallback,
+                    CommonFallbackMode::PreferCommonFallback,
+                )
             }
         }
     }
 
     pub fn refresh_derived(&mut self, shaper: &ParleyShaper) {
-        self.common_fallback_mode = match self.font_family_config.common_fallback_injection {
+        let (generic_mode, named_mode) = match self.font_family_config.common_fallback_injection {
             fret_core::TextCommonFallbackInjection::PlatformDefault => {
-                Self::platform_default_common_fallback_mode(shaper)
+                Self::platform_default_common_fallback_modes(shaper)
             }
-            fret_core::TextCommonFallbackInjection::None => {
-                CommonFallbackMode::PreferSystemFallback
-            }
-            fret_core::TextCommonFallbackInjection::CommonFallback => {
-                CommonFallbackMode::PreferCommonFallback
-            }
-        };
-
-        self.common_fallback_candidates = match self.common_fallback_mode {
-            CommonFallbackMode::PreferSystemFallback => Vec::new(),
-            CommonFallbackMode::PreferCommonFallback => effective_common_fallback_candidates(
-                &self.font_family_config.common_fallback,
-                default_common_fallback_families(shaper),
+            fret_core::TextCommonFallbackInjection::None => (
+                CommonFallbackMode::PreferSystemFallback,
+                CommonFallbackMode::PreferSystemFallback,
+            ),
+            fret_core::TextCommonFallbackInjection::CommonFallback => (
+                CommonFallbackMode::PreferCommonFallback,
+                CommonFallbackMode::PreferCommonFallback,
             ),
         };
+        self.generic_common_fallback_mode = generic_mode;
+        self.named_common_fallback_mode = named_mode;
 
-        self.common_fallback_stack_suffix = match self.common_fallback_mode {
+        self.common_fallback_candidates =
+            if self.prefer_common_fallback() || self.prefer_common_fallback_for_generics() {
+                effective_common_fallback_candidates(
+                    &self.font_family_config.common_fallback,
+                    default_common_fallback_families(shaper),
+                )
+            } else {
+                Vec::new()
+            };
+
+        self.common_fallback_stack_suffix = match self.named_common_fallback_mode {
             CommonFallbackMode::PreferSystemFallback => String::new(),
             CommonFallbackMode::PreferCommonFallback => self.common_fallback_candidates.join(", "),
         };
@@ -136,8 +170,16 @@ impl TextFallbackPolicyV1 {
         );
         update_key_u8(
             &mut hasher,
-            "common_fallback_mode",
-            match self.common_fallback_mode {
+            "generic_common_fallback_mode",
+            match self.generic_common_fallback_mode {
+                CommonFallbackMode::PreferSystemFallback => 0,
+                CommonFallbackMode::PreferCommonFallback => 1,
+            },
+        );
+        update_key_u8(
+            &mut hasher,
+            "named_common_fallback_mode",
+            match self.named_common_fallback_mode {
                 CommonFallbackMode::PreferSystemFallback => 0,
                 CommonFallbackMode::PreferCommonFallback => 1,
             },
@@ -206,6 +248,7 @@ impl TextFallbackPolicyV1 {
             locale_bcp47: self.locale_bcp47.clone(),
             common_fallback_injection: self.font_family_config.common_fallback_injection,
             prefer_common_fallback: self.prefer_common_fallback(),
+            prefer_common_fallback_for_generics: self.prefer_common_fallback_for_generics(),
             configured_ui_sans_families: self.font_family_config.ui_sans.clone(),
             configured_ui_serif_families: self.font_family_config.ui_serif.clone(),
             configured_ui_mono_families: self.font_family_config.ui_mono.clone(),
@@ -779,6 +822,38 @@ mod tests {
         );
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn platform_default_prefers_common_fallback_for_generics_but_not_named_stacks_on_native() {
+        let mut shaper = ParleyShaper::default();
+        let policy = build_policy(
+            &mut shaper,
+            fret_core::TextFontFamilyConfig {
+                common_fallback_injection: fret_core::TextCommonFallbackInjection::PlatformDefault,
+                ..Default::default()
+            },
+            Some("en-US"),
+        );
+
+        assert!(
+            policy.prefer_common_fallback_for_generics(),
+            "expected native PlatformDefault to keep generic UI stacks on a no-tofu baseline"
+        );
+        assert!(
+            !policy.prefer_common_fallback(),
+            "expected native PlatformDefault to keep named-family stacks on the system-fallback lane"
+        );
+        assert!(
+            !policy.common_fallback_candidates().is_empty(),
+            "expected native PlatformDefault to derive a generic common fallback candidate list"
+        );
+        assert_eq!(
+            policy.common_fallback_stack_suffix(),
+            "",
+            "expected native PlatformDefault to keep named stacks free of an explicit common-fallback suffix"
+        );
+    }
+
     #[test]
     fn diagnostics_snapshot_reports_profile_contract_and_defaults_in_bundled_only_mode() {
         let mut shaper = ParleyShaper::new_without_system_fonts();
@@ -795,6 +870,7 @@ mod tests {
 
         assert!(!snapshot.system_fonts_enabled);
         assert!(snapshot.prefer_common_fallback);
+        assert!(snapshot.prefer_common_fallback_for_generics);
         assert_eq!(
             snapshot.common_fallback_injection,
             config.common_fallback_injection

@@ -29,8 +29,9 @@ pub struct TextFontFamilyConfig {
     pub ui_mono: Vec<String>,
     /// Controls how `common_fallback` is injected into the effective font stack.
     ///
-    /// - `platform_default`: prefer deterministic injection on wasm/bundled-only environments and
-    ///   prefer system fallback on desktop.
+    /// - `platform_default`: prefer deterministic injection on wasm/bundled-only environments; on
+    ///   native system-font builds, keep named families on the system-fallback lane but inject the
+    ///   framework no-tofu baseline into generic UI families.
     /// - `none`: never inject `common_fallback` into the explicit stack (system fallback only).
     /// - `common_fallback`: inject `common_fallback` into both generic and named family stacks to
     ///   enforce a "no tofu" baseline (may override system fallback selection on desktop).

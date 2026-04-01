@@ -2623,15 +2623,19 @@ fn fallback_policy_key_changes_when_common_fallback_injection_changes() {
     let snap0 = text.fallback_policy_snapshot(fret_core::FrameId(1));
     assert!(
         !snap0.prefer_common_fallback,
-        "expected PlatformDefault to prefer system fallback when system fonts are enabled"
+        "expected PlatformDefault to keep named-family stacks on the system-fallback lane when system fonts are enabled"
+    );
+    assert!(
+        snap0.prefer_common_fallback_for_generics,
+        "expected PlatformDefault to keep generic UI stacks on the no-tofu common-fallback lane when system fonts are enabled"
     );
     assert_eq!(
         snap0.common_fallback_stack_suffix, "",
         "expected no explicit common fallback suffix when prefer_common_fallback=false"
     );
     assert!(
-        snap0.common_fallback_candidates.is_empty(),
-        "expected no explicit common fallback candidates when prefer_common_fallback=false"
+        !snap0.common_fallback_candidates.is_empty(),
+        "expected generic common fallback candidates to be available on the native PlatformDefault lane"
     );
 
     let config1 = fret_core::TextFontFamilyConfig {
@@ -2647,6 +2651,10 @@ fn fallback_policy_key_changes_when_common_fallback_injection_changes() {
     assert!(
         snap1.prefer_common_fallback,
         "expected CommonFallback injection to prefer common fallback"
+    );
+    assert!(
+        snap1.prefer_common_fallback_for_generics,
+        "expected CommonFallback injection to keep generic stacks on the common-fallback lane"
     );
     assert!(
         !snap1.common_fallback_stack_suffix.is_empty(),
@@ -2906,6 +2914,7 @@ fn fallback_policy_snapshot_reports_profile_contract_and_defaults() {
 
     assert!(!snap.system_fonts_enabled);
     assert!(snap.prefer_common_fallback);
+    assert!(snap.prefer_common_fallback_for_generics);
     assert_eq!(snap.configured_ui_sans_families, config.ui_sans);
     assert_eq!(snap.configured_ui_serif_families, config.ui_serif);
     assert_eq!(snap.configured_ui_mono_families, config.ui_mono);

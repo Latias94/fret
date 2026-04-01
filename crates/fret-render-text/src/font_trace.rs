@@ -88,7 +88,7 @@ impl FontTraceState {
         let text_preview = truncate_text_preview(text, max_text_bytes);
 
         let mut common_fallback_lower: HashSet<String> = HashSet::new();
-        if fallback_policy.prefer_common_fallback() {
+        if fallback_policy.uses_common_fallback_for_font(&style.font) {
             for f in fallback_policy.common_fallback_candidates() {
                 common_fallback_lower.insert(f.trim().to_ascii_lowercase());
             }
