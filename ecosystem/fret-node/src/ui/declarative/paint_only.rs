@@ -1313,7 +1313,7 @@ mod tests {
                 .models
                 .insert(NodeGraphStore::new(graph_value, initial_view));
             let controller = NodeGraphController::new(store.clone());
-            let binding = NodeGraphSurfaceBinding::from_models(
+            let binding = NodeGraphSurfaceBinding::from_models_and_controller(
                 graph.clone(),
                 view_state.clone(),
                 controller.clone(),
@@ -1364,7 +1364,11 @@ mod tests {
         view_state: &Model<NodeGraphViewState>,
         controller: &NodeGraphController,
     ) -> NodeGraphSurfaceBinding {
-        NodeGraphSurfaceBinding::from_models(graph.clone(), view_state.clone(), controller.clone())
+        NodeGraphSurfaceBinding::from_models_and_controller(
+            graph.clone(),
+            view_state.clone(),
+            controller.clone(),
+        )
     }
 
     #[test]

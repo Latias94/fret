@@ -2,7 +2,9 @@ use fret_canvas::view::{CanvasViewport2D, PanZoom2D};
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{CanvasPoint, CanvasRect, CanvasSize};
-use crate::ui::view_queue::{NodeGraphViewQueue, NodeGraphViewQueueSetViewportOptions};
+use crate::ui::canvas::widget::view_queue::{
+    NodeGraphViewQueue, NodeGraphViewQueueSetViewportOptions,
+};
 
 use super::prelude::NodeGraphCanvas;
 use super::{make_host_graph_view, make_test_graph_two_nodes_with_size};

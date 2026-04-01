@@ -142,8 +142,11 @@ update rather than an incidental refactor.
     final.
 
 - **Ergonomic API fragmentation**
-  - Viewport helpers, lookups, commands, store subscriptions, and controlled updates do not yet read
-    like one coherent instance/controller surface.
+  - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing
+    bundle) plus `NodeGraphController` (lower-level imperative/runtime facade).
+  - The remaining gap is helper breadth and internal organization: viewport helpers, lookups,
+    commands, store subscriptions, and controlled updates still need to keep converging on that
+    pair without regrowing god files.
 
 - **Mixed callback responsibilities**
   - The current callback surface mixes store/headless commit signals with UI gesture lifecycle.
@@ -180,8 +183,8 @@ convergence slices.
 - The controller now covers the first query / transaction / viewport / selection helpers, including
   XyFlow-style node/handle connection lookups; retained canvas / minimap glue can also bind through
   the controller now, public viewport option types now stay store-first instead of leaking retained
-  queue animation knobs, while richer edit commands, long-term controller/instance naming, and
-  broader callback cleanup are still open.
+  queue animation knobs, while richer edit commands, helper breadth, and broader callback cleanup
+  are still open.
 - Evidence:
   - `ecosystem/fret-node/src/ui/controller.rs`
   - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md` (`M3`)
@@ -252,7 +255,7 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
 - `NodeGraphSurfaceBinding` now also exposes the full store-first viewport helper family for
   declarative action hooks and common instance-style app code (`set_viewport*`,
   `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, including option-bearing variants), so
-  first-party controls do not need to teach raw view queues or drop to `binding.controller()` for
+  first-party controls do not need to teach raw view queues or explicit controller wiring for
   routine viewport work,
 - `NodeGraphSurfaceBinding` now also mirrors common instance-style edit/sync/history helpers
   (`dispatch_transaction*`, `submit_transaction*`, `replace_*_action_host`,
@@ -263,23 +266,33 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
   flows, and fit-to-portals viewport updates, so internal declarative orchestration starts from the
   same binding-first contract taught to apps,
 - the workflow gallery retained subtree now keeps an explicit controller beside the binding instead
-  of calling `binding.controller()` inline, so first-party teaching code keeps that advanced
-  retained seam visible rather than smuggling it through the binding helper,
+  of routing retained composition through a hidden binding escape hatch, so first-party teaching
+  code keeps that advanced retained seam visible rather than smuggling it through the binding helper,
 - retained rename / portal / blackboard / compatibility glue now also prefers controller-owned
   transaction submission when a controller/store exists,
 - the retained legacy demo now routes its canvas / rename overlay / blackboard / portal / minimap
   glue through the same controller-first surface,
 - the default declarative demo now uses it.
 
-This is intentionally not the final shape yet. Richer viewport commands, callback layering, and the
-long-term public naming/ownership story are still open; `edit_queue` is trending toward a
-transport/compatibility seam rather than the preferred app-facing teaching surface.
+This is intentionally not the final shape yet. Richer viewport commands, callback layering, and
+broader declarative closure are still open, but the public naming/ownership story is now closed
+around `NodeGraphSurfaceBinding` plus `NodeGraphController`. `edit_queue` is no longer a public
+teaching surface; it is a crate-internal transport/compatibility seam.
 
 For retained composition, the preferred teaching posture is now controller-first:
 `compat_retained` takes a controller binding at the declarative boundary, while the public retained
 widget posture is `new(...)` plus optional `with_controller(...)`. Raw queue binding on retained
 widgets now stay crate-internal for compatibility harnesses, focused retained tests, and temporary
 migration glue.
+Source-policy tests now lock that posture across retained canvas / portal / rename overlay /
+blackboard / minimap surfaces, and the workflow gallery now constructs its retained controller from
+`binding.store_model()` instead of teaching a hidden controller escape hatch on the binding.
+The explicit advanced binding constructor is now named
+`NodeGraphSurfaceBinding::from_models_and_controller(...)`, so mirror-owned/controller-owned wiring
+does not read like a routine convenience constructor.
+`NodeGraphSurfaceBinding` itself is now split across `binding.rs` plus focused companion modules
+(`binding_queries.rs`, `binding_store_sync.rs`, `binding_viewport.rs`), and source-policy tests now
+aggregate that surface instead of forcing the contract to live in one growing file.
 Queue-first APIs such as `NodeGraphEditQueue` are no longer public app-facing seams. Raw edit/view
 transport is crate-internal only, and the temporary `NodeGraphViewportHelper` facade is deleted, so
 app-facing composition can stay on either the instance-style
@@ -287,6 +300,11 @@ app-facing composition can stay on either the instance-style
 or the lower-level `NodeGraphController::{set_viewport*, set_center_in_bounds*,
 fit_view_nodes_in_bounds*}` surface, while declarative action hooks should prefer the matching
 `NodeGraphSurfaceBinding::*_action_host(...)` helpers over owning raw transport queues.
+The remaining raw edit queue transport now lives under `ui/compat_transport.rs`, making it an
+explicit retained compatibility detail rather than a root `fret_node::ui::*` concept.
+The remaining raw viewport queue transport now lives under
+`ui/canvas/widget/view_queue.rs`, making it retained-canvas-local compatibility plumbing instead of
+something rooted at `fret_node::ui::*`.
 
 `fret_node::ui::advanced::*` is now deleted, and root `fret_node::ui::*` no longer exposes the raw
 queue/helper surfaces. First-party demos stay controller/binding-first, while retained/test callers
@@ -310,14 +328,18 @@ Current controller-facing XyFlow mapping (review helper, not a final contract):
 - node / handle connections:
   - XyFlow mental model: `getNodeConnections`, `getHandleConnections`
   - current Fret surface: `NodeGraphController::node_connections`, `port_connections`
+- node / edge metadata updates:
+  - XyFlow mental model: `updateNode`, `updateEdge`
+  - current Fret surface: `NodeGraphController::update_node*`, `update_edge*`
+  - contract note: these helpers expose `NodeGraphNodeUpdate` / `NodeGraphEdgeUpdate` drafts
+    rather than raw `Node` / `Edge`, so structural port ordering and edge endpoint rewiring stay on
+    explicit transactions
 - graph replacement / transaction-safe updates:
   - XyFlow mental model: imperative instance/store writes
   - current Fret surface: `replace_graph`, `submit_transaction*`,
     `submit_transaction_and_sync_*`, `dispatch_transaction*`
 - still open:
-  - `updateNode` / `updateEdge`-style ergonomic helpers,
-  - final `Controller` vs `Instance` naming,
-  - whether raw queues survive as public transport or become mostly internal wiring.
+  - whether diff-first controlled sync earns a public helper beyond the full-replace-first contract.
 
 ### P5. The workstream itself must stay reviewable
 
@@ -433,10 +455,13 @@ For new editor surfaces, teach and copy this shape first:
    `dispatch_transaction`, `submit_transaction`, `replace_document`, `replace_graph`,
    `replace_view_state`, `set_selection`, `outgoers`, `incomers`, `connected_edges`,
    `port_connections`, `node_connections`, `undo`, `redo`),
-4. drop to `binding.controller()` only for advanced helpers or retained/compat composition,
+4. when retained/compat composition or lower-level controller APIs are required, construct
+   `NodeGraphController::new(binding.store_model())` explicitly,
 5. treat raw graph/view models as advanced seams rather than the default teaching surface.
 
 This is the public teaching surface now used by `apps/fret-examples/src/node_graph_demo.rs`.
+When retained composition is still required, keep the controller explicit at the composition site;
+do not hide that advanced seam behind routine binding helpers.
 
 For controlled sync, the current canonical posture is **full replace first**: use
 `binding.replace_document(...)` (or the controller's sync helper) when external authority swaps the

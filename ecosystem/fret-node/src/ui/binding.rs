@@ -10,11 +10,18 @@ use crate::runtime::lookups::HandleConnection;
 use crate::runtime::store::{DispatchOutcome, NodeGraphStore};
 
 use super::controller::{
-    NodeGraphController, NodeGraphControllerError, NodeGraphNodeConnectionsQuery,
-    NodeGraphPortConnectionsQuery,
+    NodeGraphController, NodeGraphControllerError, NodeGraphEdgeUpdate,
+    NodeGraphNodeConnectionsQuery, NodeGraphNodeUpdate, NodeGraphPortConnectionsQuery,
 };
 use super::declarative::NodeGraphSurfaceProps;
 use super::viewport_options::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};
+
+#[path = "binding_queries.rs"]
+mod binding_queries;
+#[path = "binding_store_sync.rs"]
+mod binding_store_sync;
+#[path = "binding_viewport.rs"]
+mod binding_viewport;
 
 /// Canonical app-facing binding bundle for the declarative node-graph surface.
 ///
@@ -24,7 +31,7 @@ use super::viewport_options::{NodeGraphFitViewOptions, NodeGraphSetViewportOptio
 pub struct NodeGraphSurfaceBinding {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,
-    controller: NodeGraphController,
+    store: Model<NodeGraphStore>,
 }
 
 impl NodeGraphSurfaceBinding {
@@ -33,7 +40,7 @@ impl NodeGraphSurfaceBinding {
         let graph_model = models.insert(graph.clone());
         let view_state_model = models.insert(view_state.clone());
         let store = models.insert(NodeGraphStore::new(graph, view_state));
-        Self::from_models(
+        Self::from_models_and_controller(
             graph_model,
             view_state_model,
             NodeGraphController::new(store),
@@ -47,15 +54,15 @@ impl NodeGraphSurfaceBinding {
         let store_model = models.insert(store);
         let graph_model = models.insert(graph);
         let view_state_model = models.insert(view_state);
-        Self::from_models(
+        Self::from_models_and_controller(
             graph_model,
             view_state_model,
             NodeGraphController::new(store_model),
         )
     }
 
-    /// Advanced seam for callers that already own explicit graph/view models.
-    pub fn from_models(
+    /// Advanced seam for callers that already own explicit graph/view mirrors and controller state.
+    pub fn from_models_and_controller(
         graph: Model<Graph>,
         view_state: Model<NodeGraphViewState>,
         controller: NodeGraphController,
@@ -63,7 +70,7 @@ impl NodeGraphSurfaceBinding {
         Self {
             graph,
             view_state,
-            controller,
+            store: controller.store(),
         }
     }
 
@@ -75,483 +82,26 @@ impl NodeGraphSurfaceBinding {
         self.view_state.clone()
     }
 
-    /// Advanced escape hatch for controller-only helpers not yet surfaced on the binding.
-    pub fn controller(&self) -> NodeGraphController {
-        self.controller.clone()
-    }
-
+    /// Advanced lower-level seam for callers that need explicit controller ownership.
+    ///
+    /// Typical app code should stay on the binding surface. Retained/compat composition can derive
+    /// a fresh `NodeGraphController` explicitly from this store handle.
     pub fn store_model(&self) -> Model<NodeGraphStore> {
-        self.controller.store()
+        self.store.clone()
     }
 
     pub fn surface_props(&self) -> NodeGraphSurfaceProps {
         NodeGraphSurfaceProps::new(self.clone())
     }
 
-    /// Reads the current viewport from the authoritative store-backed controller.
-    pub fn viewport<H: UiHost>(&self, host: &H) -> (CanvasPoint, f32) {
-        self.controller.viewport(host)
-    }
-
-    /// Clones the current graph snapshot from the authoritative store.
-    pub fn graph_snapshot<H: UiHost>(&self, host: &H) -> Option<Graph> {
-        self.controller.graph_snapshot(host)
-    }
-
-    /// Clones the current view-state snapshot from the authoritative store.
-    pub fn view_state_snapshot<H: UiHost>(&self, host: &H) -> Option<NodeGraphViewState> {
-        self.controller.view_state_snapshot(host)
+    fn controller(&self) -> NodeGraphController {
+        NodeGraphController::new(self.store.clone())
     }
 
     /// Observes the external graph/view mirrors that the declarative surface keeps in sync.
     pub fn observe<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) {
         cx.observe_model(&self.graph, Invalidation::Paint);
         cx.observe_model(&self.view_state, Invalidation::Paint);
-    }
-
-    /// Re-syncs the graph/view mirrors from the authoritative store.
-    pub fn sync_from_store<H: UiHost>(&self, host: &mut H) -> bool {
-        self.controller
-            .sync_models_from_store(host, &self.graph, &self.view_state)
-    }
-
-    /// Re-syncs the graph/view mirrors from the authoritative store.
-    pub fn sync_from_store_action_host(&self, host: &mut dyn UiActionHost) -> bool {
-        self.controller
-            .sync_models_from_store_action_host(host, &self.graph, &self.view_state)
-    }
-
-    /// Dispatches a transaction and keeps the external graph/view mirrors in sync.
-    pub fn dispatch_transaction<H: UiHost>(
-        &self,
-        host: &mut H,
-        tx: &GraphTransaction,
-    ) -> Result<DispatchOutcome, NodeGraphControllerError> {
-        self.controller.dispatch_transaction_and_sync_models(
-            host,
-            &self.graph,
-            &self.view_state,
-            tx,
-        )
-    }
-
-    /// Dispatches a transaction from an object-safe action hook and keeps the external graph/view
-    /// mirrors in sync.
-    pub fn dispatch_transaction_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        tx: &GraphTransaction,
-    ) -> Result<DispatchOutcome, NodeGraphControllerError> {
-        self.controller
-            .dispatch_transaction_and_sync_models_action_host(
-                host,
-                &self.graph,
-                &self.view_state,
-                tx,
-            )
-    }
-
-    /// Submits a transaction and keeps the external graph/view mirrors in sync.
-    pub fn submit_transaction<H: UiHost>(
-        &self,
-        host: &mut H,
-        tx: &GraphTransaction,
-    ) -> Result<(), NodeGraphControllerError> {
-        self.controller
-            .submit_transaction_and_sync_models(host, &self.graph, &self.view_state, tx)
-    }
-
-    /// Submits a transaction from an object-safe action hook and keeps the external graph/view
-    /// mirrors in sync.
-    pub fn submit_transaction_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        tx: &GraphTransaction,
-    ) -> Result<(), NodeGraphControllerError> {
-        self.controller.submit_transaction_action_host(host, tx)?;
-        let _ = self.sync_from_store_action_host(host);
-        Ok(())
-    }
-
-    /// Replaces the authoritative graph and keeps the external graph/view mirrors in sync.
-    pub fn replace_graph<H: UiHost>(
-        &self,
-        host: &mut H,
-        graph: Graph,
-    ) -> Result<(), NodeGraphControllerError> {
-        self.controller
-            .replace_graph_and_sync_models(host, &self.graph, &self.view_state, graph)
-    }
-
-    /// Replaces the authoritative graph from an object-safe action hook and keeps the external
-    /// graph/view mirrors in sync.
-    pub fn replace_graph_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        graph: Graph,
-    ) -> Result<(), NodeGraphControllerError> {
-        self.controller.replace_graph_and_sync_models_action_host(
-            host,
-            &self.graph,
-            &self.view_state,
-            graph,
-        )
-    }
-
-    /// Replaces the entire document snapshot (graph + view state), clears history, and keeps the
-    /// external graph/view mirrors in sync.
-    pub fn replace_document<H: UiHost>(
-        &self,
-        host: &mut H,
-        graph: Graph,
-        view_state: NodeGraphViewState,
-    ) -> Result<(), NodeGraphControllerError> {
-        self.controller.replace_document_and_sync_models(
-            host,
-            &self.graph,
-            &self.view_state,
-            graph,
-            view_state,
-        )
-    }
-
-    /// Replaces the entire document snapshot from an object-safe action hook, clears history, and
-    /// keeps the external graph/view mirrors in sync.
-    pub fn replace_document_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        graph: Graph,
-        view_state: NodeGraphViewState,
-    ) -> Result<(), NodeGraphControllerError> {
-        self.controller
-            .replace_document_and_sync_models_action_host(
-                host,
-                &self.graph,
-                &self.view_state,
-                graph,
-                view_state,
-            )
-    }
-
-    /// Replaces the authoritative view state and keeps the external view model in sync.
-    pub fn replace_view_state<H: UiHost>(
-        &self,
-        host: &mut H,
-        view_state: NodeGraphViewState,
-    ) -> Result<(), NodeGraphControllerError> {
-        self.controller
-            .replace_view_state_and_sync_model(host, &self.view_state, view_state)
-    }
-
-    /// Replaces the authoritative view state from an object-safe action hook and keeps the
-    /// external view model in sync.
-    pub fn replace_view_state_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        view_state: NodeGraphViewState,
-    ) -> Result<(), NodeGraphControllerError> {
-        self.controller
-            .replace_view_state_and_sync_model_action_host(host, &self.view_state, view_state)
-    }
-
-    /// Replaces the authoritative selection and keeps the external view model in sync.
-    pub fn set_selection<H: UiHost>(
-        &self,
-        host: &mut H,
-        nodes: Vec<NodeId>,
-        edges: Vec<EdgeId>,
-        groups: Vec<GroupId>,
-    ) -> Result<(), NodeGraphControllerError> {
-        self.controller.set_selection_and_sync_view_model(
-            host,
-            &self.view_state,
-            nodes,
-            edges,
-            groups,
-        )
-    }
-
-    /// Replaces the authoritative selection from an object-safe action hook and keeps the external
-    /// view model in sync.
-    pub fn set_selection_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        nodes: Vec<NodeId>,
-        edges: Vec<EdgeId>,
-        groups: Vec<GroupId>,
-    ) -> Result<(), NodeGraphControllerError> {
-        self.controller
-            .set_selection_and_sync_view_model_action_host(
-                host,
-                &self.view_state,
-                nodes,
-                edges,
-                groups,
-            )
-    }
-
-    /// Applies a viewport change through the bound controller.
-    pub fn set_viewport<H: UiHost>(&self, host: &mut H, pan: CanvasPoint, zoom: f32) -> bool {
-        let applied = self.controller.set_viewport(host, pan, zoom);
-        self.sync_view_state_after_viewport_update(host, applied)
-    }
-
-    /// Applies a viewport change with store-first viewport options through the bound controller.
-    pub fn set_viewport_with_options<H: UiHost>(
-        &self,
-        host: &mut H,
-        pan: CanvasPoint,
-        zoom: f32,
-        options: NodeGraphSetViewportOptions,
-    ) -> bool {
-        let applied = self
-            .controller
-            .set_viewport_with_options(host, pan, zoom, options);
-        self.sync_view_state_after_viewport_update(host, applied)
-    }
-
-    /// Applies a viewport change from an object-safe action hook.
-    pub fn set_viewport_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        pan: CanvasPoint,
-        zoom: f32,
-    ) -> bool {
-        let applied = self.controller.set_viewport_action_host(host, pan, zoom);
-        self.sync_view_state_after_viewport_update_action_host(host, applied)
-    }
-
-    /// Applies a viewport change with store-first viewport options from an object-safe action hook.
-    pub fn set_viewport_with_options_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        pan: CanvasPoint,
-        zoom: f32,
-        options: NodeGraphSetViewportOptions,
-    ) -> bool {
-        let applied = self
-            .controller
-            .set_viewport_with_options_action_host(host, pan, zoom, options);
-        self.sync_view_state_after_viewport_update_action_host(host, applied)
-    }
-
-    /// Centers a canvas point inside explicit bounds through the bound controller.
-    pub fn set_center_in_bounds<H: UiHost>(
-        &self,
-        host: &mut H,
-        bounds: Rect,
-        center: CanvasPoint,
-    ) -> bool {
-        let applied = self.controller.set_center_in_bounds(host, bounds, center);
-        self.sync_view_state_after_viewport_update(host, applied)
-    }
-
-    /// Centers a canvas point inside explicit bounds from an object-safe action hook.
-    pub fn set_center_in_bounds_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        bounds: Rect,
-        center: CanvasPoint,
-    ) -> bool {
-        let applied = self
-            .controller
-            .set_center_in_bounds_action_host(host, bounds, center);
-        self.sync_view_state_after_viewport_update_action_host(host, applied)
-    }
-
-    /// Centers a canvas point inside explicit bounds with store-first viewport options.
-    pub fn set_center_in_bounds_with_options<H: UiHost>(
-        &self,
-        host: &mut H,
-        bounds: Rect,
-        center: CanvasPoint,
-        zoom: Option<f32>,
-        options: NodeGraphSetViewportOptions,
-    ) -> bool {
-        let applied = self
-            .controller
-            .set_center_in_bounds_with_options(host, bounds, center, zoom, options);
-        self.sync_view_state_after_viewport_update(host, applied)
-    }
-
-    /// Centers a canvas point inside explicit bounds with store-first viewport options from an
-    /// object-safe action hook.
-    pub fn set_center_in_bounds_with_options_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        bounds: Rect,
-        center: CanvasPoint,
-        zoom: Option<f32>,
-        options: NodeGraphSetViewportOptions,
-    ) -> bool {
-        let applied = self
-            .controller
-            .set_center_in_bounds_with_options_action_host(host, bounds, center, zoom, options);
-        self.sync_view_state_after_viewport_update_action_host(host, applied)
-    }
-
-    /// Fits the viewport to the given nodes inside explicit bounds.
-    pub fn fit_view_nodes_in_bounds<H: UiHost>(
-        &self,
-        host: &mut H,
-        bounds: Rect,
-        nodes: Vec<NodeId>,
-    ) -> bool {
-        let applied = self
-            .controller
-            .fit_view_nodes_in_bounds(host, bounds, nodes);
-        self.sync_view_state_after_viewport_update(host, applied)
-    }
-
-    /// Fits the viewport to the given nodes inside explicit bounds with store-first fit-view
-    /// options.
-    pub fn fit_view_nodes_in_bounds_with_options<H: UiHost>(
-        &self,
-        host: &mut H,
-        bounds: Rect,
-        nodes: Vec<NodeId>,
-        options: NodeGraphFitViewOptions,
-    ) -> bool {
-        let applied = self
-            .controller
-            .fit_view_nodes_in_bounds_with_options(host, bounds, nodes, options);
-        self.sync_view_state_after_viewport_update(host, applied)
-    }
-
-    /// Fits the viewport to the given nodes inside explicit bounds from an object-safe action
-    /// hook.
-    pub fn fit_view_nodes_in_bounds_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        bounds: Rect,
-        nodes: Vec<NodeId>,
-    ) -> bool {
-        let applied = self
-            .controller
-            .fit_view_nodes_in_bounds_action_host(host, bounds, nodes);
-        self.sync_view_state_after_viewport_update_action_host(host, applied)
-    }
-
-    /// Fits the viewport to the given nodes inside explicit bounds with store-first fit-view
-    /// options from an object-safe action hook.
-    pub fn fit_view_nodes_in_bounds_with_options_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        bounds: Rect,
-        nodes: Vec<NodeId>,
-        options: NodeGraphFitViewOptions,
-    ) -> bool {
-        let applied = self
-            .controller
-            .fit_view_nodes_in_bounds_with_options_action_host(host, bounds, nodes, options);
-        self.sync_view_state_after_viewport_update_action_host(host, applied)
-    }
-
-    /// Returns the outgoing neighbor node ids for the given node.
-    pub fn outgoers<H: UiHost>(&self, host: &H, node: NodeId) -> Vec<NodeId> {
-        self.controller.outgoers(host, node)
-    }
-
-    /// Returns the incoming neighbor node ids for the given node.
-    pub fn incomers<H: UiHost>(&self, host: &H, node: NodeId) -> Vec<NodeId> {
-        self.controller.incomers(host, node)
-    }
-
-    /// Returns the edge ids incident to the given node.
-    pub fn connected_edges<H: UiHost>(&self, host: &H, node: NodeId) -> Vec<EdgeId> {
-        self.controller.connected_edges(host, node)
-    }
-
-    /// Returns handle-level connections for the given node-side/port query.
-    pub fn port_connections<H: UiHost>(
-        &self,
-        host: &H,
-        query: NodeGraphPortConnectionsQuery,
-    ) -> Vec<HandleConnection> {
-        self.controller.port_connections(host, query)
-    }
-
-    /// Returns node-level connections for the given query.
-    pub fn node_connections<H: UiHost>(
-        &self,
-        host: &H,
-        query: NodeGraphNodeConnectionsQuery,
-    ) -> Vec<HandleConnection> {
-        self.controller.node_connections(host, query)
-    }
-
-    /// Returns whether the bound store currently has undo history.
-    pub fn can_undo<H: UiHost>(&self, host: &H) -> bool {
-        self.controller.can_undo(host)
-    }
-
-    /// Returns whether the bound store currently has redo history.
-    pub fn can_redo<H: UiHost>(&self, host: &H) -> bool {
-        self.controller.can_redo(host)
-    }
-
-    /// Undoes the last committed transaction and keeps the external graph/view mirrors in sync.
-    pub fn undo<H: UiHost>(
-        &self,
-        host: &mut H,
-    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
-        self.controller
-            .undo_and_sync_models(host, &self.graph, &self.view_state)
-    }
-
-    /// Undoes the last committed transaction from an object-safe action hook and keeps the external
-    /// graph/view mirrors in sync.
-    pub fn undo_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
-        self.controller
-            .undo_and_sync_models_action_host(host, &self.graph, &self.view_state)
-    }
-
-    /// Redoes the last undone transaction and keeps the external graph/view mirrors in sync.
-    pub fn redo<H: UiHost>(
-        &self,
-        host: &mut H,
-    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
-        self.controller
-            .redo_and_sync_models(host, &self.graph, &self.view_state)
-    }
-
-    /// Redoes the last undone transaction from an object-safe action hook and keeps the external
-    /// graph/view mirrors in sync.
-    pub fn redo_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
-        self.controller
-            .redo_and_sync_models_action_host(host, &self.graph, &self.view_state)
-    }
-
-    fn sync_view_state_after_viewport_update<H: UiHost>(
-        &self,
-        host: &mut H,
-        applied: bool,
-    ) -> bool {
-        if applied {
-            let _ = self
-                .controller
-                .sync_view_state_model_from_store(host, &self.view_state);
-        }
-        applied
-    }
-
-    fn sync_view_state_after_viewport_update_action_host(
-        &self,
-        host: &mut dyn UiActionHost,
-        applied: bool,
-    ) -> bool {
-        if applied {
-            let _ = self
-                .controller
-                .sync_view_state_model_from_store_action_host(host, &self.view_state);
-        }
-        applied
     }
 }
 

@@ -108,6 +108,10 @@ impl NodeGraphMiniMapOverlay {
         self
     }
 
+    /// Routes retained minimap navigation through a store-backed controller.
+    ///
+    /// This is the public advanced retained seam. Raw viewport transport remains
+    /// crate-internal compatibility plumbing behind the controller/store path.
     pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
         self.store = Some(controller.store());
         self.bindings.navigation = NodeGraphMiniMapNavigationBinding::Controller(controller);

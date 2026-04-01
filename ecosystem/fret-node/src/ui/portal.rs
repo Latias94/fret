@@ -21,7 +21,7 @@ use crate::core::{CanvasPoint, Graph, NodeId};
 use crate::io::NodeGraphViewState;
 use crate::ops::GraphTransaction;
 use crate::ui::NodeGraphController;
-use crate::ui::edit_queue::NodeGraphEditQueue;
+use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::measured::MeasuredGeometryStore;
 use crate::ui::style::NodeGraphStyle;
 
@@ -296,6 +296,11 @@ impl<P, C> NodeGraphPortalHost<P, C> {
         self
     }
 
+    /// Routes retained portal command commits through a store-backed controller.
+    ///
+    /// This is the public advanced retained seam. Raw edit-queue fallback remains
+    /// crate-internal compatibility plumbing for focused retained tests and temporary
+    /// migration harnesses.
     pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
         self.controller = Some(controller);
         self

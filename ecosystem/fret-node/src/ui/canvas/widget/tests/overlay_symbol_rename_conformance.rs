@@ -9,7 +9,7 @@ use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
 use crate::core::{Graph, GraphId, Symbol, SymbolId};
 use crate::ops::{GraphOp, GraphTransaction};
-use crate::ui::edit_queue::NodeGraphEditQueue;
+use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::{
     NodeGraphEditor, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphStyle,
     SymbolRenameOverlay,

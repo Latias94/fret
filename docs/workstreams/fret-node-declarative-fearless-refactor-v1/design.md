@@ -42,7 +42,7 @@ something else.
     flows and fit-to-portals viewport updates, so internal declarative orchestration stops
     re-introducing controller-only triplets for ordinary bound-surface work,
   - should be enough for routine app-facing viewport authoring without dropping to
-    `binding.controller()` for normal instance-style hooks.
+    explicit controller construction for normal instance-style hooks.
 - `node_graph_surface(...)`
   - remains the recommended lightweight declarative authoring surface,
   - should keep converging toward the editor-grade path rather than staying a "lite demo only"
@@ -67,7 +67,7 @@ they should not read like public downstream authoring APIs.
 
 - `NodeGraphCanvas::with_view_queue`
 - `NodeGraphController::bind_edit_queue_transport`
-- `NodeGraphEditQueue`
+- `ui/compat_transport.rs` (`NodeGraphEditQueue`)
 - `NodeGraphPortalHost::with_edit_queue`
 - `NodeGraphOverlayHost::with_edit_queue`
 - `NodeGraphBlackboardOverlay::with_edit_queue`
@@ -107,7 +107,8 @@ Use this when a retained-only harness still needs the legacy canvas / overlay st
 
 1. Create `NodeGraphStore`.
 2. Create `NodeGraphController`.
-3. Pass the controller to retained widgets via `with_controller(...)`.
+3. Pass the controller explicitly to retained widgets via `with_controller(...)`; this is the only
+   public retained binding seam.
 4. Let retained internals fall back to crate-private queue seams only where the compatibility path
    still needs them.
 
@@ -122,21 +123,21 @@ focused tests that still need queue transport while the retained stack is being 
 
 ## Next worktree order
 
-### Slice 1 - remaining controller surface closure
+### Slice 1 - remaining controller surface breadth
 
 Why first:
 
 - the public viewport story is now intentionally store-first, so the remaining ambiguity is no
-  longer queue transport but which broader imperative helpers/naming still belong on the controller,
-- it blocks a cleaner long-term `Controller` vs `Instance` decision and the remaining XyFlow-style
-  mapping work,
+  longer queue transport but which broader imperative helpers still belong on the controller,
+- the `Controller` vs `Binding` naming/ownership story is now locked, so the remaining work is
+  helper breadth, internal organization, and the remaining XyFlow-style mapping work,
 - it can land without reopening the already-finished transport cleanup.
 
 What should be true after landing:
 
 - reviewers can explain which imperative graph/viewport/query helpers belong on the controller
   surface without reaching for retained compatibility seams,
-- controller naming/ownership stops drifting every time a new helper is added,
+- controller helper breadth stops drifting every time a new helper is added,
 - app code keeps one obvious controller/binding-first story for runtime actions.
 
 First landing in this worktree:
@@ -147,8 +148,14 @@ First landing in this worktree:
 - Retained `view_queue.rs` keeps its richer animation options as crate-internal transport-only
   types, so public app code no longer sees queue-era motion knobs that are no-ops on the
   controller/binding path.
-- The next follow-up after this slice should decide which remaining imperative helpers or naming
-  changes still belong on the controller surface before widening it further.
+- `update_node*` / `update_edge*` now use `NodeGraphNodeUpdate` / `NodeGraphEdgeUpdate` drafts,
+  so structural node-port edits and edge endpoint rewires are not representable through the
+  ergonomic helper surface and must stay on explicit transactions.
+- The next follow-up after this slice should decide which remaining imperative helpers or transport
+  ownership changes still belong on the controller surface before widening it further.
+- `NodeGraphSurfaceBinding` is now already split into focused companion modules
+  (`binding_queries.rs`, `binding_store_sync.rs`, `binding_viewport.rs`), so future breadth work
+  should preserve responsibility boundaries instead of re-growing a single surface file.
 
 ### Slice 2 - declarative transaction closure
 

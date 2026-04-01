@@ -1,4 +1,5 @@
 use crate::ui::canvas::state::{ViewportAnimationEase, ViewportAnimationInterpolate};
+use crate::ui::canvas::widget::view_queue::NodeGraphViewQueueSetViewportOptions;
 use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -8,7 +9,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         window: Option<AppWindowId>,
         pan: CanvasPoint,
         zoom: f32,
-        options: Option<&crate::ui::view_queue::NodeGraphViewQueueSetViewportOptions>,
+        options: Option<&NodeGraphViewQueueSetViewportOptions>,
     ) -> bool {
         let snapshot = self.sync_view_state(host);
 

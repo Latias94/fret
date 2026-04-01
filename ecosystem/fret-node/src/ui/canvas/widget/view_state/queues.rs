@@ -1,4 +1,6 @@
+use crate::ui::canvas::widget::view_queue::{NodeGraphViewQueue, NodeGraphViewRequest};
 use crate::ui::canvas::widget::*;
+use crate::ui::compat_transport::NodeGraphEditQueue;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn drain_edit_queue<H: UiHost>(
@@ -6,7 +8,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         host: &mut H,
         window: Option<AppWindowId>,
     ) {
-        let Some(queue): Option<&fret_runtime::Model<crate::ui::edit_queue::NodeGraphEditQueue>> =
+        let Some(queue): Option<&fret_runtime::Model<NodeGraphEditQueue>> =
             self.edit_queue.as_ref()
         else {
             return;
@@ -19,10 +21,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
         self.edit_queue_key = Some(rev);
 
-        let Ok(txs) = queue.update(
-            host,
-            |q: &mut crate::ui::edit_queue::NodeGraphEditQueue, _cx| q.drain(),
-        ) else {
+        let Ok(txs) = queue.update(host, |q: &mut NodeGraphEditQueue, _cx| q.drain()) else {
             return;
         };
         for tx in txs {
@@ -35,7 +34,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         host: &mut H,
         window: Option<AppWindowId>,
     ) -> bool {
-        let Some(queue): Option<&fret_runtime::Model<crate::ui::view_queue::NodeGraphViewQueue>> =
+        let Some(queue): Option<&fret_runtime::Model<NodeGraphViewQueue>> =
             self.view_queue.as_ref()
         else {
             return false;
@@ -48,10 +47,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
         self.view_queue_key = Some(rev);
 
-        let Ok(reqs) = queue.update(
-            host,
-            |q: &mut crate::ui::view_queue::NodeGraphViewQueue, _cx| q.drain(),
-        ) else {
+        let Ok(reqs) = queue.update(host, |q: &mut NodeGraphViewQueue, _cx| q.drain()) else {
             return false;
         };
         if reqs.is_empty() {
@@ -62,7 +58,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let mut did = false;
         for req in reqs {
             match req {
-                crate::ui::view_queue::NodeGraphViewRequest::FrameNodes { nodes, options } => {
+                NodeGraphViewRequest::FrameNodes { nodes, options } => {
                     did |= self.frame_nodes_in_view_with_options(
                         host,
                         window,
@@ -71,7 +67,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         Some(&options),
                     );
                 }
-                crate::ui::view_queue::NodeGraphViewRequest::SetViewport { pan, zoom, options } => {
+                NodeGraphViewRequest::SetViewport { pan, zoom, options } => {
                     did |= self.set_viewport_with_options(host, window, pan, zoom, Some(&options));
                 }
             }

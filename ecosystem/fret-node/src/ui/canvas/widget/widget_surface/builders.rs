@@ -82,6 +82,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self
     }
 
+    /// Binds this retained canvas to a store-backed controller.
+    ///
+    /// This is an advanced retained composition seam. Raw view-queue transport remains
+    /// crate-internal compatibility plumbing and is not part of the public widget posture.
     pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
         self.store = Some(controller.store());
         self.store_rev = None;

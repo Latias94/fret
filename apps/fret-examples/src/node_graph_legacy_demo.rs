@@ -2542,7 +2542,7 @@ fn render(
                         )
                     }
                     NodeGraphDemoDeclarativeMode::PaintOnly => {
-                        let binding = NodeGraphSurfaceBinding::from_models(
+                        let binding = NodeGraphSurfaceBinding::from_models_and_controller(
                             models.graph.clone(),
                             models.view.clone(),
                             models.controller.clone(),

@@ -97,6 +97,9 @@ make compatibility paths explicit instead of accidental.
 - `ecosystem/fret-node/src/ui/declarative/mod.rs`
 - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
 - `ecosystem/fret-node/src/ui/binding.rs`
+- `ecosystem/fret-node/src/ui/binding_queries.rs`
+- `ecosystem/fret-node/src/ui/binding_store_sync.rs`
+- `ecosystem/fret-node/src/ui/binding_viewport.rs`
 - `apps/fret-examples/src/node_graph_demo.rs`
 - `apps/fret-examples/src/node_graph_legacy_demo.rs`
 - `apps/fret-examples/src/imui_node_graph_demo.rs`
@@ -174,6 +177,10 @@ points rather than direct graph mutation.
     without reaching into store lookups directly.
   - The controller now also covers the first bounds-aware viewport helpers:
     `set_center_in_bounds*` and `fit_view_nodes_in_bounds*`.
+  - The controller and binding now also expose `update_node*` / `update_edge*` ergonomic helpers,
+    but those helpers intentionally accept `NodeGraphNodeUpdate` / `NodeGraphEdgeUpdate` drafts
+    instead of raw `Node` / `Edge`, keeping structural port edits and endpoint rewires on explicit
+    transactions.
   - Retained glue now starts consuming controller-owned viewport transport instead of teaching raw
     queue mutation first: `NodeGraphCanvas::with_controller`, `NodeGraphMiniMapOverlay::with_controller`,
     and the gallery workflow snippet controls now route common viewport actions through the binding-first facade.
@@ -194,8 +201,8 @@ points rather than direct graph mutation.
     compatibility detail rather than a public app-facing choice.
   - Public `NodeGraphFitViewOptions` / `NodeGraphSetViewportOptions` now live in
     `ui/viewport_options.rs` and only expose store-first clamp/padding fields, while
-    `ui/view_queue.rs` keeps queue-era animation overrides as crate-internal compatibility
-    transport-only types.
+    `ui/canvas/widget/view_queue.rs` keeps queue-era animation overrides as retained-canvas-local
+    crate-internal compatibility transport-only types.
   - Raw edit/view transport is now crate-internal; root `fret_node::ui::*` re-exports viewport
     option types but not the underlying queue/request machinery, and the temporary public
     `fret_node::ui::advanced::*` edit seam is deleted.
@@ -274,12 +281,22 @@ points rather than direct graph mutation.
   - `NodeGraphSurfaceBinding` now acts as the instance-style app-facing facade for common queries,
     viewport actions, graph adjacency queries, and controlled-sync helpers (`replace_graph`,
     `replace_view_state`, `set_selection`, `outgoers`, `incomers`, `connected_edges`,
-    `port_connections`, `node_connections`, `undo`, `redo`), while `binding.controller()` stays available as the advanced
-    escape hatch.
+    `port_connections`, `node_connections`, `undo`, `redo`), while lower-level controller ownership
+    now stays explicit via `NodeGraphController::new(binding.store_model())`.
+  - `NodeGraphSurfaceBinding` is now split by responsibility across `binding.rs`,
+    `binding_queries.rs`, `binding_store_sync.rs`, and `binding_viewport.rs`, while source-policy
+    tests aggregate that companion surface so the public contract is no longer coupled to one
+    monolithic file.
+  - The advanced mirror-owned binding constructor is now spelled
+    `NodeGraphSurfaceBinding::from_models_and_controller(...)`, so explicit
+    graph/view/controller ownership does not masquerade as the default constructor family.
+  - Internally, `NodeGraphSurfaceBinding` now stores the authoritative `NodeGraphStore` handle rather
+    than privately holding a controller instance, so the implementation matches the public
+    ownership story: controller construction is explicit, while the binding stays store-backed.
   - `NodeGraphSurfaceBinding` now also mirrors the full common store-first viewport helper family
     (`set_viewport*`, `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, including option-bearing
     and action-host variants), so routine app-facing viewport hooks can stay on the instance-style
-    binding surface instead of dropping to `binding.controller()`.
+    binding surface instead of dropping to explicit controller wiring.
   - `NodeGraphSurfaceBinding` now also mirrors routine bound-store edit/sync/history helpers
     (`dispatch_transaction*`, `submit_transaction*`, `replace_*_action_host`,
     `set_selection_action_host`, `undo_action_host`, `redo_action_host`), so object-safe app hooks
@@ -290,8 +307,12 @@ points rather than direct graph mutation.
     helpers, and fit-to-portals viewport updates no longer thread `graph + view_state +
     controller` triplets for ordinary bound-surface work.
   - The workflow gallery retained subtree now also keeps its retained controller as explicit local
-    state instead of calling `binding.controller()` inline, so first-party teaching code makes that
-    advanced seam visible rather than hiding it inside the binding helper.
+    state and constructs it from `binding.store_model()` rather than teaching hidden controller
+    extraction from the binding, so first-party code makes that advanced seam visible instead of
+    hiding it inside the binding helper.
+  - Source-policy tests now also lock the retained advanced seam posture itself: retained
+    canvas/portal/rename/blackboard/minimap widgets keep `with_controller(...)` as the public
+    binding story, while raw queue transport stays crate-internal compatibility plumbing.
   - Controlled mode now has an explicit full-replace-first policy: replacing the authoritative graph
     document is treated as a reset + re-sync operation, while diff-first replace helpers remain a
     deferred follow-up rather than the default contract.
@@ -377,6 +398,9 @@ points rather than direct graph mutation.
 - `ecosystem/fret-node/src/ui/controller_viewport.rs`
 - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
 - `ecosystem/fret-node/src/ui/binding.rs`
+- `ecosystem/fret-node/src/ui/binding_queries.rs`
+- `ecosystem/fret-node/src/ui/binding_store_sync.rs`
+- `ecosystem/fret-node/src/ui/binding_viewport.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`

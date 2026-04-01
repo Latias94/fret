@@ -1,17 +1,12 @@
-//! UI-side view command queue.
+//! Retained-canvas-local view command queue.
 //!
-//! This is a small "message passing" surface for editor subtrees or embedding apps that need to
-//! request viewport actions (e.g. fit-view over a specific node set) without taking a direct
-//! dependency on a particular canvas/editor widget instance.
-//!
-//! This module is crate-internal compatibility transport. Public controller/binding helpers use the
-//! smaller store-first option types from `viewport_options.rs`.
+//! This is a crate-internal compatibility transport for the retained canvas stack. Public
+//! controller/binding helpers use the smaller store-first option types from `viewport_options.rs`.
 
 use crate::core::CanvasPoint;
 use crate::core::NodeId;
 use crate::io::{NodeGraphViewportEase, NodeGraphViewportInterpolate};
-
-use super::viewport_options::{
+use crate::ui::viewport_options::{
     NodeGraphFitViewOptions as PublicNodeGraphFitViewOptions,
     NodeGraphSetViewportOptions as PublicNodeGraphSetViewportOptions,
 };

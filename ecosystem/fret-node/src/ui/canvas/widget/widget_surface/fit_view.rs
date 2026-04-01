@@ -1,7 +1,7 @@
 use super::*;
 
 use crate::ui::NodeGraphFitViewOptions;
-use crate::ui::view_queue::NodeGraphViewQueueFitViewOptions;
+use crate::ui::canvas::widget::view_queue::NodeGraphViewQueueFitViewOptions;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     fn fit_view_on_mount_node_ids<H: UiHost>(

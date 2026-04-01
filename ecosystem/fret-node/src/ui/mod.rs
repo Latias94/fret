@@ -9,10 +9,10 @@
 pub mod binding;
 pub mod canvas;
 pub mod commands;
+mod compat_transport;
 pub mod controller;
 pub mod declarative;
 pub mod edge_types;
-mod edit_queue;
 pub mod geometry_overrides;
 pub mod internals;
 pub mod measured;
@@ -23,7 +23,6 @@ pub mod presets;
 pub mod registry;
 pub mod skin;
 pub mod style;
-mod view_queue;
 mod viewport_helper;
 mod viewport_options;
 
@@ -58,8 +57,8 @@ pub use canvas::{
 };
 pub use commands::register_node_graph_commands;
 pub use controller::{
-    NodeGraphController, NodeGraphControllerError, NodeGraphNodeConnectionsQuery,
-    NodeGraphPortConnectionsQuery,
+    NodeGraphController, NodeGraphControllerError, NodeGraphEdgeUpdate,
+    NodeGraphNodeConnectionsQuery, NodeGraphNodeUpdate, NodeGraphPortConnectionsQuery,
 };
 pub use declarative::{NodeGraphSurfaceProps, node_graph_surface};
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};

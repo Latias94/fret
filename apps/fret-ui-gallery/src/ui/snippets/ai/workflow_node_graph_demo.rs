@@ -286,8 +286,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 build_demo_graph(GraphId::from_u128(42)),
                 NodeGraphViewState::default(),
             );
+            let controller = NodeGraphController::new(binding.store_model());
             let surface = DemoSurfaceState {
-                controller: binding.controller(),
+                controller,
                 binding,
             };
             cx.state_for(

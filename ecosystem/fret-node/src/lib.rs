@@ -50,12 +50,20 @@ mod surface_policy_tests {
     const ADVANCED_RS: &str = include_str!("advanced.rs");
     const COMPAT_RETAINED_RS: &str = include_str!("ui/declarative/compat_retained.rs");
     const UI_BINDING_RS: &str = include_str!("ui/binding.rs");
+    const UI_BINDING_QUERIES_RS: &str = include_str!("ui/binding_queries.rs");
+    const UI_BINDING_STORE_SYNC_RS: &str = include_str!("ui/binding_store_sync.rs");
+    const UI_BINDING_VIEWPORT_RS: &str = include_str!("ui/binding_viewport.rs");
+    const UI_CANVAS_BUILDERS_RS: &str = include_str!("ui/canvas/widget/widget_surface/builders.rs");
     const UI_CONTROLLER_RS: &str = include_str!("ui/controller.rs");
+    const UI_CONTROLLER_UPDATES_RS: &str = include_str!("ui/controller_updates.rs");
     const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
     const UI_MOD_RS: &str = include_str!("ui/mod.rs");
+    const UI_OVERLAY_GROUP_RENAME_RS: &str = include_str!("ui/overlays/group_rename.rs");
+    const UI_OVERLAY_BLACKBOARD_RS: &str = include_str!("ui/overlays/blackboard.rs");
     const UI_VIEWPORT_OPTIONS_RS: &str = include_str!("ui/viewport_options.rs");
-    const UI_VIEW_QUEUE_RS: &str = include_str!("ui/view_queue.rs");
+    const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
     const MINIMAP_RS: &str = include_str!("ui/overlays/minimap.rs");
+    const PORTAL_RS: &str = include_str!("ui/portal.rs");
     const NODE_GRAPH_DOMAIN_DEMO_RS: &str =
         include_str!("../../../apps/fret-examples/src/node_graph_domain_demo.rs");
     const NODE_GRAPH_LEGACY_DEMO_RS: &str =
@@ -66,6 +74,16 @@ mod surface_policy_tests {
 
     fn public_surface() -> &'static str {
         LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
+    }
+
+    fn binding_surface() -> String {
+        [
+            UI_BINDING_RS,
+            UI_BINDING_QUERIES_RS,
+            UI_BINDING_STORE_SYNC_RS,
+            UI_BINDING_VIEWPORT_RS,
+        ]
+        .join("\n")
     }
 
     #[test]
@@ -117,49 +135,76 @@ mod surface_policy_tests {
 
     #[test]
     fn fit_view_surface_stays_bounds_first() {
+        let binding_surface = binding_surface();
         assert!(!UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_view_nodes("));
         assert!(!UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_view_nodes_action_host("));
         assert!(!UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_view_nodes_with_options("));
         assert!(
             !UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_view_nodes_with_options_action_host(")
         );
-        assert!(!UI_BINDING_RS.contains("pub fn fit_view_nodes("));
+        assert!(!binding_surface.contains("pub fn fit_view_nodes("));
         assert!(UI_CONTROLLER_VIEWPORT_RS.contains("pub fn fit_view_nodes_in_bounds<"));
-        assert!(UI_BINDING_RS.contains("pub fn fit_view_nodes_in_bounds<"));
+        assert!(binding_surface.contains("pub fn fit_view_nodes_in_bounds<"));
     }
 
     #[test]
     fn binding_surface_covers_instance_style_viewport_helpers() {
-        assert!(UI_BINDING_RS.contains("pub fn set_viewport_with_options<"));
-        assert!(UI_BINDING_RS.contains("pub fn set_viewport_with_options_action_host("));
-        assert!(UI_BINDING_RS.contains("pub fn set_center_in_bounds<"));
-        assert!(UI_BINDING_RS.contains("pub fn set_center_in_bounds_action_host("));
-        assert!(UI_BINDING_RS.contains("pub fn set_center_in_bounds_with_options<"));
-        assert!(UI_BINDING_RS.contains("pub fn set_center_in_bounds_with_options_action_host("));
-        assert!(UI_BINDING_RS.contains("pub fn fit_view_nodes_in_bounds_with_options<"));
+        let binding_surface = binding_surface();
+        assert!(binding_surface.contains("pub fn set_viewport_with_options<"));
+        assert!(binding_surface.contains("pub fn set_viewport_with_options_action_host("));
+        assert!(binding_surface.contains("pub fn set_center_in_bounds<"));
+        assert!(binding_surface.contains("pub fn set_center_in_bounds_action_host("));
+        assert!(binding_surface.contains("pub fn set_center_in_bounds_with_options<"));
+        assert!(binding_surface.contains("pub fn set_center_in_bounds_with_options_action_host("));
+        assert!(binding_surface.contains("pub fn fit_view_nodes_in_bounds_with_options<"));
         assert!(
-            UI_BINDING_RS.contains("pub fn fit_view_nodes_in_bounds_with_options_action_host(")
+            binding_surface.contains("pub fn fit_view_nodes_in_bounds_with_options_action_host(")
         );
     }
 
     #[test]
     fn binding_surface_covers_instance_style_sync_and_history_helpers() {
-        assert!(UI_BINDING_RS.contains("pub fn dispatch_transaction<"));
-        assert!(UI_BINDING_RS.contains("pub fn dispatch_transaction_action_host("));
-        assert!(UI_BINDING_RS.contains("pub fn submit_transaction<"));
-        assert!(UI_BINDING_RS.contains("pub fn submit_transaction_action_host("));
-        assert!(UI_BINDING_RS.contains("pub fn replace_graph_action_host("));
-        assert!(UI_BINDING_RS.contains("pub fn replace_document_action_host("));
-        assert!(UI_BINDING_RS.contains("pub fn replace_view_state_action_host("));
-        assert!(UI_BINDING_RS.contains("pub fn set_selection_action_host("));
-        assert!(UI_BINDING_RS.contains("pub fn undo_action_host("));
-        assert!(UI_BINDING_RS.contains("pub fn redo_action_host("));
+        let binding_surface = binding_surface();
+        assert!(binding_surface.contains(
+            "pub struct NodeGraphSurfaceBinding {\n    graph: Model<Graph>,\n    view_state: Model<NodeGraphViewState>,\n    store: Model<NodeGraphStore>,\n}"
+        ));
+        assert!(binding_surface.contains("pub fn from_models_and_controller("));
+        assert!(!binding_surface.contains("pub fn from_models("));
+        assert!(binding_surface.contains("pub fn dispatch_transaction<"));
+        assert!(binding_surface.contains("pub fn dispatch_transaction_action_host("));
+        assert!(binding_surface.contains("pub fn submit_transaction<"));
+        assert!(binding_surface.contains("pub fn submit_transaction_action_host("));
+        assert!(binding_surface.contains("pub fn update_node<"));
+        assert!(binding_surface.contains("pub fn update_node_action_host<"));
+        assert!(binding_surface.contains("pub fn update_edge<"));
+        assert!(binding_surface.contains("pub fn update_edge_action_host<"));
+        assert!(binding_surface.contains("FnOnce(&mut NodeGraphNodeUpdate)"));
+        assert!(binding_surface.contains("FnOnce(&mut NodeGraphEdgeUpdate)"));
+        assert!(binding_surface.contains("pub fn store_model(&self) -> Model<NodeGraphStore> {"));
+        assert!(!binding_surface.contains("pub fn controller(&self) -> NodeGraphController {"));
+        assert!(binding_surface.contains("pub fn replace_graph_action_host("));
+        assert!(binding_surface.contains("pub fn replace_document_action_host("));
+        assert!(binding_surface.contains("pub fn replace_view_state_action_host("));
+        assert!(binding_surface.contains("pub fn set_selection_action_host("));
+        assert!(binding_surface.contains("pub fn undo_action_host("));
+        assert!(binding_surface.contains("pub fn redo_action_host("));
+    }
+
+    #[test]
+    fn update_helpers_hide_structural_fields_behind_explicit_transactions() {
+        assert!(UI_CONTROLLER_UPDATES_RS.contains("pub struct NodeGraphNodeUpdate"));
+        assert!(UI_CONTROLLER_UPDATES_RS.contains("pub struct NodeGraphEdgeUpdate"));
+        assert!(!UI_CONTROLLER_UPDATES_RS.contains("pub ports:"));
+        assert!(!UI_CONTROLLER_UPDATES_RS.contains("pub from:"));
+        assert!(!UI_CONTROLLER_UPDATES_RS.contains("pub to:"));
+        assert!(UI_CONTROLLER_UPDATES_RS.contains("Use explicit transactions for port"));
+        assert!(UI_CONTROLLER_UPDATES_RS.contains("Use explicit transactions for reconnects"));
     }
 
     #[test]
     fn root_ui_surface_re_exports_store_first_viewport_option_types_but_not_raw_view_queue_module()
     {
-        assert!(UI_MOD_RS.contains("mod view_queue;"));
+        assert!(!UI_MOD_RS.contains("mod view_queue;"));
         assert!(UI_MOD_RS.contains("mod viewport_options;"));
         assert!(!UI_MOD_RS.contains("pub mod view_queue;"));
         assert!(UI_MOD_RS.contains(
@@ -187,13 +232,53 @@ mod surface_policy_tests {
     }
 
     #[test]
+    fn retained_public_widgets_keep_controller_only_binding_surface() {
+        assert!(UI_CANVAS_BUILDERS_RS.contains(
+            "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
+        ));
+        assert!(UI_CANVAS_BUILDERS_RS.contains("pub(crate) fn with_view_queue("));
+        assert!(UI_CANVAS_BUILDERS_RS.contains("advanced retained composition seam"));
+        assert!(UI_CANVAS_BUILDERS_RS.contains("crate-internal compatibility plumbing"));
+
+        assert!(PORTAL_RS.contains(
+            "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
+        ));
+        assert!(PORTAL_RS.contains("pub(crate) fn with_edit_queue("));
+        assert!(PORTAL_RS.contains("public advanced retained seam"));
+        assert!(PORTAL_RS.contains("crate-internal compatibility plumbing"));
+
+        assert!(UI_OVERLAY_GROUP_RENAME_RS.contains(
+            "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
+        ));
+        assert!(UI_OVERLAY_GROUP_RENAME_RS.contains("pub(crate) fn with_edit_queue("));
+        assert!(UI_OVERLAY_GROUP_RENAME_RS.contains("public advanced retained seam"));
+
+        assert!(UI_OVERLAY_BLACKBOARD_RS.contains(
+            "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
+        ));
+        assert!(UI_OVERLAY_BLACKBOARD_RS.contains("pub(crate) fn with_edit_queue("));
+        assert!(UI_OVERLAY_BLACKBOARD_RS.contains("public advanced retained seam"));
+
+        assert!(MINIMAP_RS.contains(
+            "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
+        ));
+        assert!(!MINIMAP_RS.contains("pub(crate) fn with_view_queue("));
+        assert!(MINIMAP_RS.contains("public advanced retained seam"));
+        assert!(MINIMAP_RS.contains("crate-internal compatibility plumbing"));
+    }
+
+    #[test]
     fn workflow_gallery_surface_stays_binding_first_for_viewport_controls() {
         assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphSurfaceBinding::new("));
         assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("controller: NodeGraphController,"));
+        assert!(
+            WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphController::new(binding.store_model())")
+        );
         assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("binding.set_viewport_action_host("));
         assert!(
             WORKFLOW_NODE_GRAPH_DEMO_RS.contains("binding.fit_view_nodes_in_bounds_action_host(")
         );
+        assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("binding.controller()"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains(".with_controller(binding.controller())"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphViewQueue"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("bind_controller_view_queue_transport"));
@@ -208,8 +293,10 @@ mod surface_policy_tests {
             assert!(!source.contains("use fret_node::ui::advanced::{"));
         }
         assert!(NODE_GRAPH_DOMAIN_DEMO_RS.contains("let controller = NodeGraphController::new("));
+        assert!(NODE_GRAPH_DOMAIN_DEMO_RS.contains(".with_controller(controller.clone())"));
         assert!(NODE_GRAPH_LEGACY_DEMO_RS.contains("submit_transaction_and_sync_graph_model("));
         assert!(NODE_GRAPH_LEGACY_DEMO_RS.contains("replace_document_and_sync_models("));
+        assert!(NODE_GRAPH_LEGACY_DEMO_RS.contains(".with_controller(controller.clone())"));
     }
 
     #[test]

@@ -1,4 +1,5 @@
 use crate::ui::canvas::state::{ViewportAnimationEase, ViewportAnimationInterpolate};
+use crate::ui::canvas::widget::view_queue::NodeGraphViewQueueFitViewOptions;
 use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -18,7 +19,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         window: Option<AppWindowId>,
         bounds: Rect,
         node_ids: &[GraphNodeId],
-        options: Option<&crate::ui::view_queue::NodeGraphViewQueueFitViewOptions>,
+        options: Option<&NodeGraphViewQueueFitViewOptions>,
     ) -> bool {
         let snapshot = self.sync_view_state(host);
         let include_hidden_nodes = options.is_some_and(|o| o.include_hidden_nodes);

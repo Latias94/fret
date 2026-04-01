@@ -6,8 +6,8 @@ use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::core::{GroupId, SymbolId};
 use crate::ops::{GraphOp, GraphTransaction};
+use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::controller::NodeGraphController;
-use crate::ui::edit_queue::NodeGraphEditQueue;
 use crate::ui::screen_space_placement::clamp_rect_to_bounds;
 use crate::ui::style::NodeGraphStyle;
 
@@ -103,6 +103,11 @@ impl NodeGraphOverlayHost {
         self
     }
 
+    /// Routes retained rename commits through a store-backed controller.
+    ///
+    /// This is the public advanced retained seam. Raw edit-queue fallback remains
+    /// crate-internal compatibility plumbing for focused retained tests and temporary
+    /// migration harnesses.
     pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
         self.controller = Some(controller);
         self

@@ -386,7 +386,7 @@ impl NodeGraphController {
         self.dispatch_transaction_in_models(models, tx).map(|_| ())
     }
 
-    fn dispatch_transaction_in_models(
+    pub(super) fn dispatch_transaction_in_models(
         &self,
         models: &mut ModelStore,
         tx: &GraphTransaction,

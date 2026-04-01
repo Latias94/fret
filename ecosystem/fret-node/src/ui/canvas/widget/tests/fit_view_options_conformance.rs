@@ -2,7 +2,7 @@ use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::CanvasPoint;
 
-use crate::ui::view_queue::{NodeGraphViewQueue, NodeGraphViewQueueFitViewOptions};
+use crate::ui::canvas::widget::view_queue::{NodeGraphViewQueue, NodeGraphViewQueueFitViewOptions};
 
 use super::prelude::NodeGraphCanvas;
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};

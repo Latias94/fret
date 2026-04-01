@@ -24,8 +24,9 @@ Use controlled mode when:
 If you are building a typical editor UI with a single graph instance, prefer the
 **binding-first declarative** path: construct one store-backed `NodeGraphSurfaceBinding`, render
 `node_graph_surface(...)`, use the binding's common helpers for viewport/history/controlled-sync
-work, and drop to `binding.controller()` only for advanced helpers that are not yet surfaced on the
-binding or for retained/compat composition. This keeps undo/redo, lookup caches, and editor
+work, and construct `NodeGraphController::new(binding.store_model())` explicitly only when you need
+the lower-level controller surface or retained/compat composition. This keeps undo/redo, lookup
+caches, and editor
 interactions in the store/runtime while teaching the same declarative surface that app code should
 copy.
 
@@ -41,7 +42,8 @@ copy.
   - `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore`)
 - Controller + declarative surface:
   - `ecosystem/fret-node/src/ui/controller.rs` (`NodeGraphController`)
-  - `ecosystem/fret-node/src/ui/binding.rs` (`NodeGraphSurfaceBinding`)
+  - `ecosystem/fret-node/src/ui/binding.rs` + `binding_queries.rs` + `binding_store_sync.rs` +
+    `binding_viewport.rs` (`NodeGraphSurfaceBinding`)
   - `ecosystem/fret-node/src/ui/declarative/mod.rs` (`NodeGraphSurfaceProps`, `node_graph_surface`)
 
 ## Pattern A - Binding-first declarative surface (recommended default)
@@ -49,11 +51,18 @@ copy.
 - Create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`.
 - Render `node_graph_surface(cx, binding.surface_props())` for the default surface props.
 - Prefer the binding itself for common app-facing helpers:
-  `viewport`, `graph_snapshot`, `view_state_snapshot`, `set_viewport`, `fit_view_nodes`,
-  `replace_document`, `replace_graph`, `replace_view_state`, `set_selection`, `outgoers`,
-  `incomers`, `connected_edges`, `port_connections`, `node_connections`, `undo`, and `redo`.
-- Treat `binding.controller()` as the advanced escape hatch for helpers that are not yet surfaced on
-  the binding or for retained/compat wiring.
+  `viewport`, `graph_snapshot`, `view_state_snapshot`, `set_viewport*`,
+  `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, `replace_document`, `replace_graph`,
+  `replace_view_state`, `set_selection`, `update_node*`, `update_edge*`, `outgoers`, `incomers`,
+  `connected_edges`, `port_connections`, `node_connections`, `undo`, and `redo`.
+- Treat `update_node*` / `update_edge*` as metadata-oriented ergonomic helpers.
+  They intentionally expose `NodeGraphNodeUpdate` / `NodeGraphEdgeUpdate` drafts instead of raw
+  `Node` / `Edge`, so structural port edits and endpoint rewires stay on explicit transactions.
+- Treat `NodeGraphController::new(binding.store_model())` as the explicit lower-level escape hatch
+  for controller-only helpers or retained/compat wiring.
+- When you already own explicit graph/view mirrors plus controller state, use
+  `NodeGraphSurfaceBinding::from_models_and_controller(...)`; this is an advanced constructor, not
+  the default teaching path.
 - Expect transient paint-only interaction sessions to stay local to the surface: marquee preview,
   pending click-selection preview, hover targets, and live drag arming/preview are not persisted
   into `NodeGraphViewState` until commit/cancel time.
@@ -142,4 +151,3 @@ impl NodeGraphGestureCallbacks for ControlledGraph {}
 ## Runnable example
 
 See `ecosystem/fret-node/examples/controlled_mode.rs`.
-

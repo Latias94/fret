@@ -2,10 +2,14 @@ use fret_core::Rect;
 use fret_runtime::{Model, ModelStore};
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHost;
+use serde_json::Value;
 
-use crate::core::{CanvasPoint, EdgeId, Graph, NodeId, PortId};
+use crate::core::{
+    CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, EdgeReconnectable, Graph, GroupId, Node,
+    NodeExtent, NodeId, NodeKindKey, PortId,
+};
 use crate::io::NodeGraphViewState;
-use crate::ops::GraphTransaction;
+use crate::ops::{GraphTransaction, graph_diff};
 use crate::runtime::fit_view::{FitViewComputeOptions, FitViewNodeInfo, compute_fit_view_target};
 use crate::runtime::lookups::{ConnectionSide, HandleConnection};
 use crate::runtime::store::{DispatchError, DispatchOutcome, NodeGraphStore};
@@ -18,8 +22,12 @@ use super::viewport_options::{NodeGraphFitViewOptions, NodeGraphSetViewportOptio
 mod controller_queries;
 #[path = "controller_store_sync.rs"]
 mod controller_store_sync;
+#[path = "controller_updates.rs"]
+mod controller_updates;
 #[path = "controller_viewport.rs"]
 mod controller_viewport;
+
+pub use controller_updates::{NodeGraphEdgeUpdate, NodeGraphNodeUpdate};
 
 const CONTROLLER_FIT_VIEW_MIN_ZOOM: f32 = 0.05;
 const CONTROLLER_FIT_VIEW_MAX_ZOOM: f32 = 64.0;
@@ -31,6 +39,10 @@ pub enum NodeGraphControllerError {
     StoreUnavailable,
     #[error(transparent)]
     Dispatch(#[from] DispatchError),
+    #[error("node {0:?} not found")]
+    NodeNotFound(NodeId),
+    #[error("edge {0:?} not found")]
+    EdgeNotFound(EdgeId),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1091,8 +1103,11 @@ mod tests {
             graph_value,
             NodeGraphViewState::default(),
         ));
-        let binding =
-            NodeGraphSurfaceBinding::from_models(graph, view, NodeGraphController::new(store));
+        let binding = NodeGraphSurfaceBinding::from_models_and_controller(
+            graph,
+            view,
+            NodeGraphController::new(store),
+        );
         let expected = HandleConnection {
             edge,
             source_node: node_a,
@@ -1127,6 +1142,173 @@ mod tests {
             ),
             vec![expected],
         );
+    }
+
+    #[test]
+    fn controller_update_node_dispatches_graph_diff_through_store() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, node_a, _node_b) = make_test_graph_two_nodes();
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store.clone());
+
+        let outcome = controller
+            .update_node(&mut host, node_a, |node| {
+                node.hidden = true;
+            })
+            .expect("update node through controller");
+
+        assert_eq!(outcome.committed.label.as_deref(), Some("Update Node"));
+        assert!(
+            outcome.committed.ops.iter().any(
+                |op| matches!(op, GraphOp::SetNodeHidden { id, to: true, .. } if *id == node_a)
+            )
+        );
+        let hidden = store
+            .read_ref(&host, |store| {
+                store.graph().nodes.get(&node_a).map(|node| node.hidden)
+            })
+            .ok()
+            .flatten()
+            .expect("updated node");
+        assert!(hidden);
+    }
+
+    #[test]
+    fn controller_update_node_reports_missing_node() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store);
+        let missing = NodeId::from_u128(0x9007);
+
+        let err = controller
+            .update_node(&mut host, missing, |node| {
+                node.hidden = true;
+            })
+            .expect_err("missing node must be rejected");
+
+        assert!(matches!(err, super::NodeGraphControllerError::NodeNotFound(id) if id == missing));
+    }
+
+    #[test]
+    fn controller_update_edge_dispatches_graph_diff_through_store() {
+        let mut host = TestUiHostImpl::default();
+        let (mut graph_value, _node_a, a_out, _node_b, b_in) =
+            make_test_graph_two_nodes_with_ports();
+        let edge = EdgeId::new();
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_out,
+                to: b_in,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store.clone());
+
+        let outcome = controller
+            .update_edge_action_host(&mut host, edge, |value| {
+                value.selectable = Some(false);
+            })
+            .expect("update edge through controller");
+
+        assert_eq!(outcome.committed.label.as_deref(), Some("Update Edge"));
+        assert!(outcome.committed.ops.iter().any(
+            |op| matches!(op, GraphOp::SetEdgeSelectable { id, to: Some(false), .. } if *id == edge)
+        ));
+        let selectable = store
+            .read_ref(&host, |store| {
+                store
+                    .graph()
+                    .edges
+                    .get(&edge)
+                    .and_then(|value| value.selectable)
+            })
+            .ok()
+            .flatten();
+        assert_eq!(selectable, Some(false));
+    }
+
+    #[test]
+    fn binding_update_helpers_sync_bound_graph_models() {
+        let mut host = TestUiHostImpl::default();
+        let (mut graph_value, node_a, a_out, _node_b, b_in) =
+            make_test_graph_two_nodes_with_ports();
+        let edge = EdgeId::new();
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_out,
+                to: b_in,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        let graph = host.models.insert(graph_value.clone());
+        let view = host.models.insert(NodeGraphViewState::default());
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let binding = NodeGraphSurfaceBinding::from_models_and_controller(
+            graph.clone(),
+            view,
+            NodeGraphController::new(store.clone()),
+        );
+
+        binding
+            .update_node_action_host(&mut host, node_a, |node| {
+                node.collapsed = true;
+            })
+            .expect("binding update node");
+        binding
+            .update_edge_action_host(&mut host, edge, |value| {
+                value.deletable = Some(false);
+            })
+            .expect("binding update edge");
+
+        let (graph_node_collapsed, graph_edge_deletable) = graph
+            .read_ref(&host, |value| {
+                (
+                    value.nodes.get(&node_a).map(|node| node.collapsed),
+                    value.edges.get(&edge).and_then(|edge| edge.deletable),
+                )
+            })
+            .ok()
+            .expect("graph model snapshot");
+        let (store_node_collapsed, store_edge_deletable) = store
+            .read_ref(&host, |value| {
+                (
+                    value.graph().nodes.get(&node_a).map(|node| node.collapsed),
+                    value
+                        .graph()
+                        .edges
+                        .get(&edge)
+                        .and_then(|edge| edge.deletable),
+                )
+            })
+            .ok()
+            .expect("store snapshot");
+
+        assert_eq!(graph_node_collapsed, Some(true));
+        assert_eq!(store_node_collapsed, Some(true));
+        assert_eq!(graph_edge_deletable, Some(false));
+        assert_eq!(store_edge_deletable, Some(false));
     }
 
     #[test]

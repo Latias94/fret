@@ -51,14 +51,13 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_NUDGE_UP, CMD_NODE_GRAPH_NUDGE_UP_FAST,
     CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
 };
-use crate::ui::edit_queue::NodeGraphEditQueue;
+use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate,
     NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter, NodeResizeHandleSet,
     PortAnchorHint,
 };
 use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphStyle};
-use crate::ui::view_queue::{NodeGraphViewQueue, NodeGraphViewQueueFitViewOptions};
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
     NodeGraphCanvasTransform, NodeGraphController, NodeGraphEdgeTypes,
@@ -338,6 +337,7 @@ mod toast;
 mod view_math;
 mod view_math_rect;
 mod view_math_viewport;
+pub(in crate::ui::canvas::widget) mod view_queue;
 mod view_state;
 mod viewport_timer_animation;
 mod viewport_timer_auto_pan;
@@ -359,6 +359,7 @@ use overlay_hit::{
 use rect_math::{
     edge_bounds_rect, inflate_rect, path_bounds_rect, rect_from_points, rect_union, rects_intersect,
 };
+use view_queue::{NodeGraphViewQueue, NodeGraphViewQueueFitViewOptions};
 use wire_math::{
     closest_point_on_edge_route, closest_point_on_path, dist2_point_to_segment,
     path_midpoint_and_normal, path_start_end_tangents, step_wire_distance2, wire_distance2,

@@ -116,29 +116,40 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Keep `NodeGraphSurfaceBinding` complete enough for routine instance-style viewport authoring.
   - Progress: binding now mirrors `set_viewport*`, `set_center_in_bounds*`,
     and `fit_view_nodes_in_bounds*` with both option-bearing and action-host variants, so ordinary
-    viewport hooks no longer need to drop to `binding.controller()`.
+    viewport hooks no longer need to drop to explicit controller construction.
 - [x] Keep `NodeGraphSurfaceBinding` complete enough for routine instance-style bound-store
       edit/sync/history hooks.
   - Progress: binding now mirrors `dispatch_transaction*`, `submit_transaction*`,
     `replace_*_action_host`, `set_selection_action_host`, `undo_action_host`, and
     `redo_action_host`, so object-safe app hooks no longer need to bypass the binding for routine
     bound-model synchronization.
+- [x] Split `NodeGraphSurfaceBinding` by responsibility instead of letting `binding.rs` regrow as a
+      god file.
+  - Progress: viewport helpers now live in `binding_viewport.rs`, queries in
+    `binding_queries.rs`, store-sync/history helpers in `binding_store_sync.rs`, while source-policy
+    tests aggregate the full binding surface so the public contract is no longer tied to single-file
+    placement.
 - [x] Start converging declarative `paint_only` routine hooks on the same binding-first facade
       taught to app code.
   - Progress: `paint_only` transaction commit, selection commit, diagnostics preset/keyboard zoom,
     pointer release/move helpers, and fit-to-portals viewport updates now consume
     `NodeGraphSurfaceBinding`, so internal declarative orchestration no longer rethreads `graph +
     view_state + controller` for ordinary bound-surface work.
-- [ ] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes
-      an internal detail of the controller.
+- [x] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes
+      an internal retained compatibility detail.
+  - Decision: raw viewport queue transport now lives under
+    `ui/canvas/widget/view_queue.rs`, so it is retained-canvas-local compatibility plumbing rather
+    than a root `ui` concept or app-facing controller surface.
   - Progress: retained canvas / minimap composition can now bind through `NodeGraphController`, so
     new app/UI glue no longer needs to teach raw queue mutation first.
   - Progress: public viewport options no longer expose retained-only `duration/ease/interpolate`
-    knobs, so the remaining decision is transport ownership rather than public API shape.
+    knobs, so app-facing viewport authors stay on controller/binding-first store-backed options.
 - [x] Decide whether `edit_queue` stays public, becomes controller-owned, or is limited to internal
       composition seams.
   - Decision: raw edit transport is now crate-internal only; first-party demos no longer own
     `NodeGraphEditQueue`, and controller-first submission is the only taught app-facing path.
+  - Progress: the remaining raw edit transport now lives under `ui/compat_transport.rs`, making it
+    an explicit retained compatibility detail instead of a root `ui` module concept.
 - [x] Collapse the remaining legacy-demo-only raw `edit_queue` command hotkey (`Bump Float Value`)
       into controller-owned submission helpers so example code stops teaching ad-hoc queue mutation.
 - [x] Normalize retained controller binding APIs toward `new + with_*` composition where it improves
@@ -163,10 +174,18 @@ Execution companion: `design.md` (surface map + next worktree order).
   - `NodeGraphController::node_connections`
   - `NodeGraphController::port_connections` (XyFlow `getHandleConnections` analogue)
 - [x] Document the current XyFlow-style viewport/controller mapping in the workstream README.
-- [ ] Add a clear mapping from the remaining XyFlow-style expectations to the controller API:
-  - update node/edge style helpers where appropriate
-- [ ] Decide the long-term public naming/ownership story (`Controller` vs `Instance` vs split
-      facades) before widening the teaching surface further.
+- [x] Add a clear mapping from the remaining XyFlow-style expectations to the controller API:
+  - Landed via `NodeGraphController::{update_node*, update_edge*}` and the matching
+    `NodeGraphSurfaceBinding` helpers.
+  - Contract: those helpers now use `NodeGraphNodeUpdate` / `NodeGraphEdgeUpdate` drafts rather
+    than raw `Node` / `Edge`, so structural port edits and endpoint rewires still require explicit
+    transactions.
+- [x] Decide the long-term public naming/ownership story before widening the teaching surface
+      further.
+  - Decision: `NodeGraphSurfaceBinding` is the instance-style app-facing bundle, while
+    `NodeGraphController` remains the lower-level imperative/runtime facade. Advanced retained
+    composition stays explicit via `NodeGraphController::new(binding.store_model())` plus
+    `with_controller(...)`; the binding no longer hides controller ownership.
 
 ### Retained transport seam audit (snapshot 2026-03-06)
 
@@ -206,6 +225,8 @@ Execution companion: `design.md` (surface map + next worktree order).
         `NodeGraphController` when explicitly needed.
   - [x] Clear in-tree uses of root queue/helper aliases (apps, gallery snippet, crate-internal retained/tests).
   - [x] Skip the external compatibility/deprecation phase and remove the old root aliases directly.
+  - [x] Add source-policy coverage that retained public widget/overlay composition stays
+        controller-only, while raw queue fallback remains crate-internal compatibility plumbing.
 
 
 

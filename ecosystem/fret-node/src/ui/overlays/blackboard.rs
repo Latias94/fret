@@ -18,8 +18,8 @@ use crate::core::{
 };
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphOpBuilderExt as _, GraphTransaction};
+use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::controller::NodeGraphController;
-use crate::ui::edit_queue::NodeGraphEditQueue;
 use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
 use crate::ui::style::NodeGraphStyle;
 
@@ -114,6 +114,11 @@ impl NodeGraphBlackboardOverlay {
         self
     }
 
+    /// Routes retained blackboard actions through a store-backed controller.
+    ///
+    /// This is the public advanced retained seam. Raw edit-queue fallback remains
+    /// crate-internal compatibility plumbing for focused retained tests and temporary
+    /// migration harnesses.
     pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
         self.controller = Some(controller);
         self
