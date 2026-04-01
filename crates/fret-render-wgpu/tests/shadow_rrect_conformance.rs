@@ -125,6 +125,10 @@ fn render_and_readback(
     read_texture_rgba8(&ctx.device, &ctx.queue, &texture, size)
 }
 
+fn u(v: f32, sf: f32) -> u32 {
+    (v * sf).round() as u32
+}
+
 #[test]
 fn shadow_rrect_conformance_masks_content_and_rounds_bottom_corners() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
@@ -154,10 +158,6 @@ fn shadow_rrect_conformance_masks_content_and_rounds_bottom_corners() {
             a: 0.8,
         },
     });
-
-    fn u(v: f32, sf: f32) -> u32 {
-        (v * sf).round() as u32
-    }
 
     for scale_factor in [1.0_f32, 2.0_f32] {
         let size = (u(128.0, scale_factor), u(96.0, scale_factor));
@@ -193,6 +193,192 @@ fn shadow_rrect_conformance_masks_content_and_rounds_bottom_corners() {
         assert!(
             below_corner[3] + 20 < below_center[3],
             "rounded bottom corners should stay softer than the bottom center; center={below_center:?} corner={below_corner:?} sf={scale_factor}"
+        );
+    }
+}
+
+#[test]
+fn shadow_rrect_conformance_positive_spread_expands_hard_footprint() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            return;
+        }
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+
+    let mut no_spread = Scene::default();
+    no_spread.push(SceneOp::ShadowRRect {
+        order: DrawOrder(0),
+        rect: Rect::new(
+            Point::new(Px(32.0), Px(24.0)),
+            Size::new(Px(48.0), Px(32.0)),
+        ),
+        corner_radii: Corners::all(Px(12.0)),
+        offset: Point::new(Px(0.0), Px(0.0)),
+        spread: Px(0.0),
+        blur_radius: Px(0.0),
+        color: Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    });
+
+    let mut positive_spread = Scene::default();
+    positive_spread.push(SceneOp::ShadowRRect {
+        order: DrawOrder(0),
+        rect: Rect::new(
+            Point::new(Px(32.0), Px(24.0)),
+            Size::new(Px(48.0), Px(32.0)),
+        ),
+        corner_radii: Corners::all(Px(12.0)),
+        offset: Point::new(Px(0.0), Px(0.0)),
+        spread: Px(6.0),
+        blur_radius: Px(0.0),
+        color: Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    });
+
+    for scale_factor in [1.0_f32, 2.0_f32] {
+        let size = (u(128.0, scale_factor), u(96.0, scale_factor));
+        let no_spread_pixels =
+            render_and_readback(&ctx, &mut renderer, &no_spread, size, scale_factor);
+        let positive_spread_pixels =
+            render_and_readback(&ctx, &mut renderer, &positive_spread, size, scale_factor);
+
+        let spread_band_probe = (u(28.0, scale_factor), u(40.0, scale_factor));
+        let content_probe = (u(56.0, scale_factor), u(40.0, scale_factor));
+
+        let no_spread_band = pixel_rgba(
+            &no_spread_pixels,
+            size.0,
+            spread_band_probe.0,
+            spread_band_probe.1,
+        );
+        let positive_spread_band = pixel_rgba(
+            &positive_spread_pixels,
+            size.0,
+            spread_band_probe.0,
+            spread_band_probe.1,
+        );
+        let positive_spread_content = pixel_rgba(
+            &positive_spread_pixels,
+            size.0,
+            content_probe.0,
+            content_probe.1,
+        );
+
+        assert!(
+            no_spread_band[3] < 8,
+            "expected no-spread shadow to stay outside the probe band; got rgba={no_spread_band:?} sf={scale_factor}"
+        );
+        assert!(
+            positive_spread_band[3] > 220,
+            "expected positive spread to extend the hard footprint into the probe band; got rgba={positive_spread_band:?} sf={scale_factor}"
+        );
+        assert!(
+            positive_spread_content[3] < 8,
+            "spread must not fill the content hole; got rgba={positive_spread_content:?} sf={scale_factor}"
+        );
+    }
+}
+
+#[test]
+fn shadow_rrect_conformance_obeys_clip_stack() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            return;
+        }
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+
+    let make_shadow_scene = |clipped: bool| {
+        let mut scene = Scene::default();
+        if clipped {
+            scene.push(SceneOp::PushClipRect {
+                rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(128.0), Px(60.0))),
+            });
+        }
+        scene.push(SceneOp::ShadowRRect {
+            order: DrawOrder(0),
+            rect: Rect::new(
+                Point::new(Px(32.0), Px(24.0)),
+                Size::new(Px(48.0), Px(32.0)),
+            ),
+            corner_radii: Corners::all(Px(12.0)),
+            offset: Point::new(Px(0.0), Px(8.0)),
+            spread: Px(0.0),
+            blur_radius: Px(8.0),
+            color: Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.8,
+            },
+        });
+        if clipped {
+            scene.push(SceneOp::PopClip);
+        }
+        scene
+    };
+
+    let unclipped = make_shadow_scene(false);
+    let clipped = make_shadow_scene(true);
+
+    for scale_factor in [1.0_f32, 2.0_f32] {
+        let size = (u(128.0, scale_factor), u(96.0, scale_factor));
+        let unclipped_pixels =
+            render_and_readback(&ctx, &mut renderer, &unclipped, size, scale_factor);
+        let clipped_pixels = render_and_readback(&ctx, &mut renderer, &clipped, size, scale_factor);
+
+        let inside_clip_probe = (u(56.0, scale_factor), u(56.0, scale_factor));
+        let outside_clip_probe = (u(56.0, scale_factor), u(68.0, scale_factor));
+
+        let unclipped_inside = pixel_rgba(
+            &unclipped_pixels,
+            size.0,
+            inside_clip_probe.0,
+            inside_clip_probe.1,
+        );
+        let clipped_inside = pixel_rgba(
+            &clipped_pixels,
+            size.0,
+            inside_clip_probe.0,
+            inside_clip_probe.1,
+        );
+        let unclipped_outside = pixel_rgba(
+            &unclipped_pixels,
+            size.0,
+            outside_clip_probe.0,
+            outside_clip_probe.1,
+        );
+        let clipped_outside = pixel_rgba(
+            &clipped_pixels,
+            size.0,
+            outside_clip_probe.0,
+            outside_clip_probe.1,
+        );
+
+        assert!(
+            unclipped_inside[3] > 20 && clipped_inside[3] > 20,
+            "shadow should remain visible inside the clip; unclipped={unclipped_inside:?} clipped={clipped_inside:?} sf={scale_factor}"
+        );
+        assert!(
+            unclipped_outside[3] > 20,
+            "control scene should show shadow outside the clip boundary; got rgba={unclipped_outside:?} sf={scale_factor}"
+        );
+        assert!(
+            clipped_outside[3] < 8,
+            "clip stack must suppress shadow coverage outside the clip; got rgba={clipped_outside:?} sf={scale_factor}"
         );
     }
 }

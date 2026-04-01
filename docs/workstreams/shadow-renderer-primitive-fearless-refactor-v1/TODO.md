@@ -99,13 +99,12 @@ Tracking legend:
 
 ## F. Gates and evidence
 
-- [~] SRPFR-test-050 Add renderer conformance for blur footprint, spread, offset, corner radii, and
+- [x] SRPFR-test-050 Add renderer conformance for blur footprint, spread, offset, corner radii, and
   clip behavior.
-  - Current coverage:
+  - Evidence:
     - shadow encode contract: `crates/fret-render-wgpu/src/renderer/tests.rs`
-    - blur footprint + content-hole + rounded-corner shape: `crates/fret-render-wgpu/tests/shadow_rrect_conformance.rs`
-  - Remaining gap: extend the conformance matrix to explicit spread/clip cases rather than only the
-    current rounded-bottom probe.
+    - blur footprint + content-hole + rounded-corner shape + positive spread + clip-stack behavior:
+      `crates/fret-render-wgpu/tests/shadow_rrect_conformance.rs`
 
 - [ ] SRPFR-diag-051 Extend screenshot evidence to representative elevated surfaces:
   - `Card`
