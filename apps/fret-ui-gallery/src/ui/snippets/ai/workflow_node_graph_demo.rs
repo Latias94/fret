@@ -13,7 +13,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     use fret_core::Px;
     use fret_icons::IconId;
     use fret_node::io::NodeGraphViewState;
-    use fret_node::ui::{NodeGraphCanvas, NodeGraphEditor, NodeGraphSurfaceBinding};
+    use fret_node::ui::{
+        NodeGraphCanvas, NodeGraphController, NodeGraphEditor, NodeGraphSurfaceBinding,
+    };
     use fret_node::{
         CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
         PortCapacity, PortDirection, PortId, PortKey, PortKind,
@@ -266,6 +268,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     #[derive(Clone)]
     struct DemoSurfaceState {
         binding: NodeGraphSurfaceBinding,
+        controller: NodeGraphController,
     }
 
     let binding_slot = cx.keyed_slot_id("binding");
@@ -278,12 +281,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let surface = match surface {
         Some(surface) => surface,
         None => {
+            let binding = NodeGraphSurfaceBinding::new(
+                cx.app.models_mut(),
+                build_demo_graph(GraphId::from_u128(42)),
+                NodeGraphViewState::default(),
+            );
             let surface = DemoSurfaceState {
-                binding: NodeGraphSurfaceBinding::new(
-                    cx.app.models_mut(),
-                    build_demo_graph(GraphId::from_u128(42)),
-                    NodeGraphViewState::default(),
-                ),
+                controller: binding.controller(),
+                binding,
             };
             cx.state_for(
                 binding_slot,
@@ -464,6 +469,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let stage = cx.container(stage_props, move |cx| {
         let binding = binding.clone();
         let bounds = bounds.clone();
+        let controller = surface.controller.clone();
 
         let mut layout = LayoutStyle::default();
         layout.size.width = fret_ui::element::Length::Fill;
@@ -474,7 +480,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
             let editor = ui.create_node_retained(NodeGraphEditor::new());
             let canvas = NodeGraphCanvas::new(binding.graph_model(), binding.view_state_model())
-                .with_controller(binding.controller())
+                .with_controller(controller.clone())
                 .with_fit_view_on_mount();
             let canvas_node = ui.create_node_retained(canvas);
             let bounds_node = ui.create_node_retained(BoundsRecorder::new(bounds.clone()));

@@ -262,6 +262,9 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
   transaction commit, selection commit, keyboard zoom, diagnostics presets, pointer release/move
   flows, and fit-to-portals viewport updates, so internal declarative orchestration starts from the
   same binding-first contract taught to apps,
+- the workflow gallery retained subtree now keeps an explicit controller beside the binding instead
+  of calling `binding.controller()` inline, so first-party teaching code keeps that advanced
+  retained seam visible rather than smuggling it through the binding helper,
 - retained rename / portal / blackboard / compatibility glue now also prefers controller-owned
   transaction submission when a controller/store exists,
 - the retained legacy demo now routes its canvas / rename overlay / blackboard / portal / minimap

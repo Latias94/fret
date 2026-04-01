@@ -289,6 +289,9 @@ points rather than direct graph mutation.
     transaction commit, selection commit, diagnostics presets, keyboard zoom, pointer release/move
     helpers, and fit-to-portals viewport updates no longer thread `graph + view_state +
     controller` triplets for ordinary bound-surface work.
+  - The workflow gallery retained subtree now also keeps its retained controller as explicit local
+    state instead of calling `binding.controller()` inline, so first-party teaching code makes that
+    advanced seam visible rather than hiding it inside the binding helper.
   - Controlled mode now has an explicit full-replace-first policy: replacing the authoritative graph
     document is treated as a reset + re-sync operation, while diff-first replace helpers remain a
     deferred follow-up rather than the default contract.
