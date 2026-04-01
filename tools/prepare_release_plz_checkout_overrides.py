@@ -16,6 +16,7 @@ OVERRIDE_PATHS = (
     "ecosystem/fret-ui-shadcn/src/dropdown_menu.rs",
     "ecosystem/fret-ui-shadcn/src/menubar.rs",
     "ecosystem/fret-ui-shadcn/src/tabs.rs",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
 )
 
 
