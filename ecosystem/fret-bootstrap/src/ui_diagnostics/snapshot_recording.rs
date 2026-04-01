@@ -63,6 +63,7 @@ pub(super) fn icon_svg_cache_stats(_app: &App) -> Option<UiRetainedSvgCacheStats
     None
 }
 
+#[cfg(feature = "diagnostics-canvas")]
 pub(super) fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEntryV1> {
     let Some(registry) = app.global::<fret_canvas::diagnostics::CanvasCacheStatsRegistry>() else {
         return Vec::new();
@@ -164,6 +165,14 @@ pub(super) fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCan
             }),
         })
         .collect()
+}
+
+#[cfg(not(feature = "diagnostics-canvas"))]
+pub(super) fn canvas_cache_stats_for_window(
+    _app: &App,
+    _window: u64,
+) -> Vec<UiCanvasCacheEntryV1> {
+    Vec::new()
 }
 
 pub(super) fn resource_caches_for_window(

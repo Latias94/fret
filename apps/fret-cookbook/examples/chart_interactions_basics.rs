@@ -4,7 +4,7 @@ use std::rc::Rc;
 use delinea::data::{Column, DataTable};
 use delinea::engine::window::DataWindow;
 use delinea::{Action, AxisKind, AxisPointerSpec, AxisPointerTrigger, AxisPointerType, AxisScale};
-use fret::shadcn::raw::prelude::{CachedSubtreeExt, CachedSubtreeProps};
+use fret::component::prelude::*;
 use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandMeta, CommandScope};
 use fret_chart::ChartCanvas;
@@ -12,6 +12,7 @@ use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::CommandId;
 use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SemanticsProps};
 use fret_ui::retained_bridge::RetainedSubtreeProps;
+use fret_ui_kit::declarative::{CachedSubtreeExt, CachedSubtreeProps};
 
 const ROOT_NAME: &str = "cookbook-chart-interactions-basics";
 
@@ -293,9 +294,12 @@ fn chart_canvas(cx: &mut UiCx<'_>, st: &ChartInteractionsWindowState) -> AnyElem
     })
     .with_layout(layout);
 
-    cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+    cx.cached_subtree_with(
+        CachedSubtreeProps::default().contained_layout(true),
+        |cx: &mut UiCx<'_>| {
         vec![cx.retained_subtree(props)]
-    })
+        },
+    )
 }
 
 fn view(
@@ -427,7 +431,7 @@ fn view(
             test_id: None,
             ..Default::default()
         },
-        |_cx| vec![root],
+        move |_cx| root.into_vec(),
     )]
     .into()
 }

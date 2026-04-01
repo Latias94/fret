@@ -31,13 +31,6 @@ pub use profiles::{bootstrap_profile, default_profile};
 /// File extensions that first-party file dialogs should advertise for user-provided font import.
 pub const SUPPORTED_USER_FONT_IMPORT_EXTENSIONS: &[&str] = &["ttf", "otf", "ttc"];
 
-/// Result of filtering user-provided file bytes for the raw font import lane.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct ImportedFontBytesBatch {
-    pub fonts: Vec<Vec<u8>>,
-    pub rejected_files: usize,
-}
-
 /// Result of preparing user-provided font files for the runtime memory-asset lane.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ImportedFontAssetBatch {
@@ -105,27 +98,6 @@ pub fn is_supported_user_font_bytes(bytes: &[u8]) -> bool {
         || bytes
             .get(0..4)
             .is_some_and(|header| header == [0x00, 0x01, 0x00, 0x00])
-}
-
-/// Filters user-provided file bytes for the raw font import lane.
-///
-/// This keeps first-party app surfaces honest about what `Effect::TextAddFontBytes` actually
-/// accepts instead of treating arbitrary file payloads as renderer-loadable fonts.
-pub fn collect_supported_user_font_bytes<I, B>(files: I) -> ImportedFontBytesBatch
-where
-    I: IntoIterator<Item = B>,
-    B: AsRef<[u8]>,
-{
-    let mut batch = ImportedFontBytesBatch::default();
-    for bytes in files {
-        let bytes = bytes.as_ref();
-        if is_supported_user_font_bytes(bytes) {
-            batch.fonts.push(bytes.to_vec());
-        } else {
-            batch.rejected_files += 1;
-        }
-    }
-    batch
 }
 
 /// Prepares user-provided font files for the runtime memory-asset lane.

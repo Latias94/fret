@@ -1,0 +1,144 @@
+# Fret v0.1.0 Wave 4 dry-run status
+
+Date verified: 2026-04-01.
+
+Commands run:
+
+- `cargo publish --dry-run -p fret-app`
+- `cargo publish --dry-run -p fret-executor`
+- `cargo publish --dry-run -p fret-interaction`
+- `cargo publish --dry-run -p fret-platform-web`
+- `cargo publish --dry-run -p fret-render-wgpu`
+- `cargo publish --dry-run -p fret-text-nav`
+- `cargo publish --dry-run -p fret-webview`
+- `cargo publish --dry-run -p fret-window-style-profiles`
+
+Status:
+
+- `fret-app`: failed (awaiting earlier waves on crates.io)
+- `fret-executor`: failed (awaiting earlier waves on crates.io)
+- `fret-interaction`: failed (awaiting earlier waves on crates.io)
+- `fret-platform-web`: failed (awaiting earlier waves on crates.io)
+- `fret-render-wgpu`: failed (awaiting earlier waves on crates.io)
+- `fret-text-nav`: failed (awaiting earlier waves on crates.io)
+- `fret-webview`: failed (awaiting earlier waves on crates.io)
+- `fret-window-style-profiles`: failed (awaiting earlier waves on crates.io)
+
+Failure excerpts:
+
+## `fret-app`
+
+```text
+Updating crates.io index
+   Packaging fret-app v0.1.0 (./crates/fret-app)
+    Updating crates.io index
+error: failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `fret-core` found
+  location searched: crates.io index
+  required by package `fret-app v0.1.0 (./crates/fret-app)`
+```
+
+## `fret-executor`
+
+```text
+Updating crates.io index
+   Packaging fret-executor v0.1.0 (./ecosystem/fret-executor)
+    Updating crates.io index
+error: failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `fret-core` found
+  location searched: crates.io index
+  required by package `fret-executor v0.1.0 (./ecosystem/fret-executor)`
+```
+
+## `fret-interaction`
+
+```text
+Updating crates.io index
+   Packaging fret-interaction v0.1.0 (./ecosystem/fret-interaction)
+    Updating crates.io index
+error: failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `fret-core` found
+  location searched: crates.io index
+  required by package `fret-interaction v0.1.0 (./ecosystem/fret-interaction)`
+```
+
+## `fret-platform-web`
+
+```text
+Updating crates.io index
+   Packaging fret-platform-web v0.1.0 (./crates/fret-platform-web)
+    Updating crates.io index
+error: failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `fret-core` found
+  location searched: crates.io index
+  required by package `fret-platform-web v0.1.0 (./crates/fret-platform-web)`
+```
+
+## `fret-render-wgpu`
+
+```text
+Updating crates.io index
+   Packaging fret-render-wgpu v0.1.0 (./crates/fret-render-wgpu)
+    Updating crates.io index
+error: failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `fret-core` found
+  location searched: crates.io index
+  required by package `fret-render-wgpu v0.1.0 (./crates/fret-render-wgpu)`
+```
+
+## `fret-text-nav`
+
+```text
+Updating crates.io index
+   Packaging fret-text-nav v0.1.0 (./crates/fret-text-nav)
+    Updating crates.io index
+error: failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `fret-runtime` found
+  location searched: crates.io index
+  required by package `fret-text-nav v0.1.0 (./crates/fret-text-nav)`
+```
+
+## `fret-webview`
+
+```text
+Updating crates.io index
+   Packaging fret-webview v0.1.0 (./crates/fret-webview)
+    Updating crates.io index
+error: failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `fret-core` found
+  location searched: crates.io index
+  required by package `fret-webview v0.1.0 (./crates/fret-webview)`
+```
+
+## `fret-window-style-profiles`
+
+```text
+Updating crates.io index
+   Packaging fret-window-style-profiles v0.1.0 (./ecosystem/fret-window-style-profiles)
+    Updating crates.io index
+error: failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `fret-runtime` found
+  location searched: crates.io index
+  required by package `fret-window-style-profiles v0.1.0 (./ecosystem/fret-window-style-profiles)`
+```
+
+Interpretation:
+
+- Wave 4 is packaging-clean, but local `cargo publish --dry-run` still depends on earlier waves being visible on crates.io.
+- Registry-gap failures are expected when later waves depend on crates that have not been published yet.

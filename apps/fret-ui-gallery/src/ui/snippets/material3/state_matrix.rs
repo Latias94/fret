@@ -812,7 +812,6 @@ pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild +
         .gap(Space::N3)
         .items_start()
         .into_element(cx)
-        .into()
 }
 
 // endregion: example

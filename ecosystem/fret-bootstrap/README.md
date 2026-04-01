@@ -40,6 +40,24 @@ Recommended mental model:
   defaults but need more control over driver wiring.
 - `fret-launch` remains the lower-level runner facade for advanced integration details.
 
+## Command palette boundary
+
+- `fret-bootstrap/ui-app-command-palette` owns the driver-level capability:
+  - command dispatch handling,
+  - per-window open/query models,
+  - command gating snapshots.
+- `fret-bootstrap/ui-app-command-palette-shadcn` adds the default shadcn `CommandDialog` overlay
+  on top of that capability.
+- Custom design systems should stay on `ui-app-command-palette` and supply an app-owned overlay
+  renderer.
+
+## Diagnostics boundary
+
+- `fret-bootstrap/diagnostics` owns the diagnostics service and bundle/script orchestration.
+- retained canvas cache exporters are opt-in on `fret-bootstrap/diagnostics-canvas`.
+- `fret-bootstrap/diagnostics-ws` is the explicit opt-in lane for the devtools WebSocket
+  transport.
+
 ## Minimal examples
 
 - General UI app: see `ecosystem/fret/src/lib.rs`

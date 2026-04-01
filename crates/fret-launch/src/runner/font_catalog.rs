@@ -201,17 +201,6 @@ struct PendingFontInjectionSource {
 }
 
 impl PendingFontInjectionSource {
-    fn raw_runtime_bytes(font_blob: Vec<u8>) -> Self {
-        let byte_hash = hash_font_blob(&font_blob);
-        let byte_len = font_blob.len() as u64;
-        Self {
-            source_record: fret_runtime::RendererFontSourceRecord::raw_runtime_bytes(
-                byte_hash, byte_len, 0,
-            ),
-            font_blob,
-        }
-    }
-
     fn runtime_asset(
         lane: fret_runtime::RendererFontSourceLane,
         request: AssetRequest,
@@ -229,9 +218,6 @@ impl PendingFontInjectionSource {
                 fret_runtime::RendererFontSourceRecord::asset_request(
                     request, byte_hash, byte_len, 0,
                 )
-            }
-            fret_runtime::RendererFontSourceLane::RawRuntimeBytes => {
-                panic!("raw runtime bytes must not carry an asset request")
             }
         };
         Self {
@@ -396,19 +382,6 @@ pub fn inject_font_asset_requests_and_refresh_catalog(
     }
 
     inject_font_asset_batch_and_refresh_catalog(app, renderer, batch, source_lane, policy)
-}
-
-#[doc(hidden)]
-pub fn inject_font_blobs_and_refresh_catalog(
-    app: &mut impl GlobalsHost,
-    renderer: &mut (impl RendererFontEnvironmentHost + FontBlobInjectionHost),
-    fonts: impl IntoIterator<Item = Vec<u8>>,
-    policy: FontFamilyDefaultsPolicy,
-) -> usize {
-    let sources = fonts
-        .into_iter()
-        .map(PendingFontInjectionSource::raw_runtime_bytes);
-    inject_font_sources_and_refresh_catalog(app, renderer, sources, policy)
 }
 
 #[doc(hidden)]
@@ -1221,51 +1194,6 @@ mod tests {
 
         assert_eq!(added, expected_fonts.len());
         assert_eq!(second_renderer.font_blobs, expected_fonts);
-    }
-
-    #[test]
-    fn inject_font_blobs_and_refresh_catalog_refreshes_only_when_fonts_were_added() {
-        let mut app = TestApp::default();
-        let mut renderer = TestRenderer {
-            entries: vec![FontCatalogEntry {
-                family: "Inter".to_string(),
-                ..Default::default()
-            }],
-            ..Default::default()
-        };
-
-        let added = inject_font_blobs_and_refresh_catalog(
-            &mut app,
-            &mut renderer,
-            [b"font-bytes".to_vec()],
-            FontFamilyDefaultsPolicy::None,
-        );
-        assert_eq!(added, 1);
-        assert_eq!(renderer.steps, vec!["entries", "families", "locale"]);
-        assert_eq!(
-            app.global::<fret_runtime::RendererFontEnvironmentSnapshot>()
-                .cloned()
-                .expect("renderer font environment snapshot"),
-            fret_runtime::RendererFontEnvironmentSnapshot {
-                revision: 1,
-                text_font_stack_key: Some(42),
-                sources: vec![fret_runtime::RendererFontSourceRecord::raw_runtime_bytes(
-                    hash_font_blob(b"font-bytes"),
-                    b"font-bytes".len() as u64,
-                    1,
-                )],
-            }
-        );
-
-        renderer.steps.clear();
-        let added = inject_font_blobs_and_refresh_catalog(
-            &mut app,
-            &mut renderer,
-            std::iter::empty::<Vec<u8>>(),
-            FontFamilyDefaultsPolicy::None,
-        );
-        assert_eq!(added, 0);
-        assert!(renderer.steps.is_empty());
     }
 
     #[test]

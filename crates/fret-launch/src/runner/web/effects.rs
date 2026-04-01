@@ -265,19 +265,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         for effect in effects {
             match effect {
-                Effect::TextAddFontBytes { fonts } => {
-                    let added = super::super::font_catalog::inject_font_blobs_and_refresh_catalog(
-                        &mut self.app,
-                        &mut gfx.renderer,
-                        fonts,
-                        fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
-                    );
-                    if added == 0 {
-                        continue;
-                    }
-
-                    self.request_sink_redraw(window);
-                }
                 Effect::TextAddFontAssets { requests } => {
                     let added =
                         super::super::font_catalog::inject_font_asset_requests_and_refresh_catalog(

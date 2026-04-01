@@ -41,16 +41,11 @@ batteries = [
 app = [
     "shadcn",
 ]
-editor = [
-    "dep:fret-ui-editor",
-    "shadcn",
-]
 
 # Derived + async state helpers used by `AppUi`.
 state = ["state-selector", "state-query"]
 state-selector = ["dep:fret-selector", "fret-selector/ui"]
 state-query = ["dep:fret-query", "fret-query/ui", "fret-ui-kit/state-query"]
-docking = ["dep:fret-docking"]
 router = [
     "dep:fret-router",
     "dep:fret-router-ui",
@@ -71,17 +66,23 @@ desktop = [
     "fret-bootstrap/ui-app-driver",
 ]
 
-# Dev-only iteration helpers (fast restart state restore, etc).
+# Maintainer/dev convenience alias. Kept for discoverability, but first-party examples should use
+# `fret-launch/dev-state` directly when they need the owning surface.
 devloop = ["fret-launch/dev-state"]
 
 # Common app/dev conveniences (still optional; users can disable for minimal builds).
 diagnostics = ["fret-bootstrap/diagnostics"]
+# Maintainer/dev convenience alias. Prefer `fret-bootstrap/tracing` directly for explicit wiring.
 tracing = ["fret-bootstrap/tracing"]
 
 # Ecosystem integrations.
 shadcn = ["dep:fret-ui-shadcn"]
-material3 = ["dep:fret-ui-material3"]
-ui-ai = ["dep:fret-ui-ai"]
+# Discoverability alias only. Intentionally does not proxy `fret-ui-material3` into the `fret`
+# release/publish closure until a stable root Material 3 story exists.
+material3 = []
+# Discoverability alias only. Intentionally does not proxy `fret-ui-ai` into the `fret`
+# release/publish closure until a stable root AI UI story exists.
+ui-ai = []
 ui-assets = ["fret-bootstrap/ui-assets"]
 icons = [
     "fret-bootstrap/icons-lucide",
@@ -89,7 +90,10 @@ icons = [
     "fret-ui-kit/icons",
 ]
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
-command-palette = ["fret-bootstrap/ui-app-command-palette"]
+command-palette = [
+    "shadcn",
+    "fret-bootstrap/ui-app-command-palette-shadcn",
+]
 
 [dependencies]
 thiserror.workspace = true
@@ -100,15 +104,11 @@ fret-framework = { version = "0.1.0", path = "../../crates/fret-framework", pack
 # Golden-path wiring and optional ecosystem integrations.
 fret-assets = { version = "0.1.0", path = "../../crates/fret-assets" }
 fret-bootstrap = { version = "0.1.0", path = "../fret-bootstrap", default-features = false }
-fret-docking = { version = "0.1.0", path = "../fret-docking", optional = true }
 fret-icons = { version = "0.1.0", path = "../fret-icons" }
 fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
 fret-router = { version = "0.1.0", path = "../fret-router", optional = true }
 fret-router-ui = { version = "0.1.0", path = "../fret-router-ui", optional = true }
 fret-selector = { version = "0.1.0", path = "../fret-selector", optional = true }
-fret-ui-ai = { version = "0.1.0", path = "../fret-ui-ai", optional = true }
-fret-ui-editor = { version = "0.1.0", path = "../fret-ui-editor", optional = true }
-fret-ui-material3 = { version = "0.1.0", path = "../fret-ui-material3", optional = true }
 fret-ui-shadcn = { version = "0.1.0", path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit" }
 time.workspace = true
@@ -119,7 +119,6 @@ fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
 fret-launch = { version = "0.1.0", path = "../../crates/fret-launch" }
 fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
 fret-ui = { version = "0.1.0", path = "../../crates/fret-ui" }
-fret-workspace = { version = "0.1.0", path = "../fret-workspace" }
 wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]

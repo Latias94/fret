@@ -60,7 +60,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .gap(Space::N3)
     .items_start()
     .into_element(cx)
-    .into()
 }
 
 // endregion: example

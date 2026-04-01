@@ -1,18 +1,26 @@
+#[cfg(feature = "executor-integration")]
 use std::pin::Pin;
 use std::sync::Arc;
+#[cfg(feature = "executor-integration")]
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
+#[cfg(feature = "executor-integration")]
 use std::{fmt, future::Future};
 
 use fret_core::AppWindowId;
 use fret_core::Px;
+#[cfg(feature = "executor-integration")]
 use fret_executor::FutureSpawnerHandle;
 use fret_icons::IconId;
-use fret_runtime::{CommandId, DispatcherHandle, Model};
+#[cfg(feature = "executor-integration")]
+use fret_runtime::DispatcherHandle;
+use fret_runtime::{CommandId, Model};
 use fret_ui::action::UiActionHost;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SpacerProps};
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::{OverlayController, OverlayRequest, ToastAsyncQueueHandle, ToastStore};
+#[cfg(feature = "executor-integration")]
+use fret_ui_kit::ToastAsyncQueueHandle;
+use fret_ui_kit::{OverlayController, OverlayRequest, ToastStore};
 
 pub use fret_ui_kit::{
     ToastAction, ToastIconOverride, ToastIconOverrides, ToastId, ToastOffset, ToastPosition,
@@ -382,8 +390,11 @@ impl Toaster {
 #[derive(Clone)]
 pub struct Sonner {
     store: Model<ToastStore>,
+    #[cfg(feature = "executor-integration")]
     async_queue: ToastAsyncQueueHandle,
+    #[cfg(feature = "executor-integration")]
     dispatcher: Option<DispatcherHandle>,
+    #[cfg(feature = "executor-integration")]
     spawner: Option<FutureSpawnerHandle>,
 }
 
@@ -489,15 +500,18 @@ impl ToastMessageOptions {
 
 impl std::fmt::Debug for Sonner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Sonner")
-            .field("store", &"<model>")
-            .field("async_queue", &"<queue>")
-            .field(
+        let mut debug = f.debug_struct("Sonner");
+        debug.field("store", &"<model>");
+        #[cfg(feature = "executor-integration")]
+        {
+            debug.field("async_queue", &"<queue>");
+            debug.field(
                 "dispatcher",
                 &self.dispatcher.as_ref().map(|_| "<dispatcher>"),
-            )
-            .field("spawner", &self.spawner.as_ref().map(|_| "<spawner>"))
-            .finish()
+            );
+            debug.field("spawner", &self.spawner.as_ref().map(|_| "<spawner>"));
+        }
+        debug.finish()
     }
 }
 
@@ -505,8 +519,11 @@ impl Sonner {
     pub fn global<H: UiHost>(app: &mut H) -> Self {
         Self {
             store: OverlayController::toast_store(app),
+            #[cfg(feature = "executor-integration")]
             async_queue: fret_ui_kit::toast_async_queue(app),
+            #[cfg(feature = "executor-integration")]
             dispatcher: app.global::<DispatcherHandle>().cloned(),
+            #[cfg(feature = "executor-integration")]
             spawner: app.global::<FutureSpawnerHandle>().cloned(),
         }
     }
@@ -858,6 +875,7 @@ impl Sonner {
     /// Notes:
     /// - This requires installing a `FutureSpawnerHandle` as a global.
     /// - Completion is applied via a queue drained during the window overlays render pass.
+    #[cfg(feature = "executor-integration")]
     pub fn toast_promise_async<T, E, Fut>(
         &self,
         host: &mut dyn UiActionHost,
@@ -882,6 +900,7 @@ impl Sonner {
         )
     }
 
+    #[cfg(feature = "executor-integration")]
     pub fn toast_promise_async_with<T, E, Fut>(
         &self,
         host: &mut dyn UiActionHost,
@@ -910,6 +929,7 @@ impl Sonner {
     /// If `loading` is `None`, no loading toast is shown and the handle's `id()` is `None` (matching
     /// Sonner's behavior where `toast.promise(promise, { success/error })` can return `{ unwrap }`
     /// without an id when no `loading` toast exists).
+    #[cfg(feature = "executor-integration")]
     pub fn toast_promise_async_handle_with<T, E, Fut>(
         &self,
         host: &mut dyn UiActionHost,
@@ -1116,6 +1136,7 @@ impl ToastPromise {
     }
 }
 
+#[cfg(feature = "executor-integration")]
 #[derive(Clone)]
 pub struct ToastPromiseAsyncOptions<T, E> {
     success: Option<Arc<dyn Fn(&T) -> ToastRequest + Send + Sync + 'static>>,
@@ -1126,6 +1147,7 @@ pub struct ToastPromiseAsyncOptions<T, E> {
     description_error: Option<Arc<dyn Fn(&E) -> Arc<str> + Send + Sync + 'static>>,
 }
 
+#[cfg(feature = "executor-integration")]
 impl<T, E> fmt::Debug for ToastPromiseAsyncOptions<T, E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ToastPromiseAsyncOptions")
@@ -1148,6 +1170,7 @@ impl<T, E> fmt::Debug for ToastPromiseAsyncOptions<T, E> {
     }
 }
 
+#[cfg(feature = "executor-integration")]
 impl<T, E> Default for ToastPromiseAsyncOptions<T, E> {
     fn default() -> Self {
         Self {
@@ -1161,6 +1184,7 @@ impl<T, E> Default for ToastPromiseAsyncOptions<T, E> {
     }
 }
 
+#[cfg(feature = "executor-integration")]
 impl<T, E> ToastPromiseAsyncOptions<T, E> {
     pub fn new() -> Self {
         Self::default()
@@ -1226,6 +1250,7 @@ impl<T, E> ToastPromiseAsyncOptions<T, E> {
     }
 }
 
+#[cfg(feature = "executor-integration")]
 #[derive(Debug, Clone)]
 pub enum ToastPromiseUnwrapError<E> {
     MissingFutureSpawnerHandleGlobal,
@@ -1233,15 +1258,18 @@ pub enum ToastPromiseUnwrapError<E> {
     Rejected(E),
 }
 
+#[cfg(feature = "executor-integration")]
 struct ToastPromiseShared<T, E> {
     state: std::sync::Mutex<ToastPromiseSharedState<T, E>>,
 }
 
+#[cfg(feature = "executor-integration")]
 struct ToastPromiseSharedState<T, E> {
     result: Option<Result<T, ToastPromiseUnwrapError<E>>>,
     waker: Option<Waker>,
 }
 
+#[cfg(feature = "executor-integration")]
 impl<T, E> Default for ToastPromiseShared<T, E> {
     fn default() -> Self {
         Self {
@@ -1253,6 +1281,7 @@ impl<T, E> Default for ToastPromiseShared<T, E> {
     }
 }
 
+#[cfg(feature = "executor-integration")]
 impl<T, E> ToastPromiseShared<T, E> {
     fn complete(&self, result: Result<T, ToastPromiseUnwrapError<E>>) {
         let waker = {
@@ -1266,12 +1295,14 @@ impl<T, E> ToastPromiseShared<T, E> {
     }
 }
 
+#[cfg(feature = "executor-integration")]
 #[derive(Clone)]
 pub struct ToastPromiseHandle<T, E> {
     id: Option<ToastId>,
     shared: Arc<ToastPromiseShared<T, E>>,
 }
 
+#[cfg(feature = "executor-integration")]
 impl<T, E> fmt::Debug for ToastPromiseHandle<T, E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ToastPromiseHandle")
@@ -1280,6 +1311,7 @@ impl<T, E> fmt::Debug for ToastPromiseHandle<T, E> {
     }
 }
 
+#[cfg(feature = "executor-integration")]
 impl<T, E> ToastPromiseHandle<T, E> {
     pub fn id(&self) -> Option<ToastId> {
         self.id
@@ -1292,10 +1324,12 @@ impl<T, E> ToastPromiseHandle<T, E> {
     }
 }
 
+#[cfg(feature = "executor-integration")]
 pub struct ToastPromiseUnwrap<T, E> {
     shared: Arc<ToastPromiseShared<T, E>>,
 }
 
+#[cfg(feature = "executor-integration")]
 impl<T, E> Future for ToastPromiseUnwrap<T, E> {
     type Output = Result<T, ToastPromiseUnwrapError<E>>;
 
@@ -1343,10 +1377,13 @@ fn apply_toast_message_options(
 mod tests {
     use super::*;
     use std::sync::Arc;
+    #[cfg(feature = "executor-integration")]
     use std::task::{RawWaker, RawWakerVTable};
 
+    #[cfg(feature = "executor-integration")]
     use fret_executor::{FutureSpawner, FutureSpawnerHandle};
     use fret_runtime::FrameId;
+    #[cfg(feature = "executor-integration")]
     use fret_runtime::{
         DispatchPriority, Dispatcher, DispatcherHandle, ExecCapabilities, Runnable,
     };
@@ -1354,6 +1391,7 @@ mod tests {
     use fret_ui::element::ElementKind;
     use fret_ui::tree::UiTree;
 
+    #[cfg(feature = "executor-integration")]
     fn noop_waker() -> Waker {
         unsafe fn clone(_: *const ()) -> RawWaker {
             RawWaker::new(std::ptr::null(), &VTABLE)
@@ -1534,6 +1572,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "executor-integration")]
     fn toast_promise_handle_unwrap_reports_missing_spawner() {
         let window = AppWindowId::default();
         let mut app = fret_app::App::new();
@@ -1564,6 +1603,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "executor-integration")]
     fn toast_promise_handle_unwrap_reports_missing_dispatcher() {
         struct NoopSpawner;
         impl FutureSpawner for NoopSpawner {
@@ -1599,6 +1639,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "executor-integration")]
     fn toast_promise_handle_unwrap_resolves_ok_when_spawner_and_dispatcher_present() {
         struct InlineSpawner;
         impl FutureSpawner for InlineSpawner {

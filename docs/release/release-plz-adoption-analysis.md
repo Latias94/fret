@@ -8,7 +8,7 @@ This note follows the official `release-plz` setup flow and maps it to the curre
   - `https://release-plz.dev/docs/github/quickstart`
   - `https://release-plz.dev/docs/config`
 
-Date audited: 2026-02-08.
+Date audited: 2026-03-31.
 
 ## Workspace facts
 
@@ -19,79 +19,80 @@ Date audited: 2026-02-08.
 
 ## What should be released (v0.1 candidate)
 
-The first publish set should be limited to the public framework and its required internal dependencies.
+The first publish wave should distinguish between:
 
-Primary public surfaces:
+- the **user-facing entry set** we actually want to teach, and
+- the broader **publish closure** required to keep those entry crates and their supported optional
+  lanes valid on crates.io.
+
+User-facing entry set:
 
 - `fret`
+- `fret-framework`
+- `fret-bootstrap`
 - `fret-ui-kit`
 - `fret-ui-shadcn`
 - `fret-selector`
-
-Required transitive workspace crates for those surfaces:
-
-- `fret-a11y-accesskit`
-- `fret-app`
-- `fret-authoring`
-- `fret-canvas`
-- `fret-core`
-- `fret-dnd`
-- `fret-executor`
-- `fret-fonts`
-- `fret-i18n`
-- `fret-icons`
-- `fret-launch`
-- `fret-node`
-- `fret-platform`
-- `fret-platform-native`
-- `fret-platform-web`
 - `fret-query`
-- `fret-render`
-- `fret-render-core`
-- `fret-render-wgpu`
-- `fret-router`
-- `fret-runner-web`
-- `fret-runner-winit`
-- `fret-runtime`
-- `fret-ui`
-- `fret-ui-headless`
-- `fret-ui-app`
-- `fret-viewport-tooling`
+
+Actual publish closure:
+
+- use `release-plz.toml` as the source of truth,
+- keep `docs/release/v0.1.0-publish-order.txt` synced from
+  `python3 tools/release_closure_check.py --config release-plz.toml --write-order ...`,
+- the current closure is `49` crates as of `2026-03-31`,
+- expect the closure to include lower-level runtime/render/platform crates plus explicit optional
+  support crates such as:
+  - `fret-assets`
+  - `fret-router-ui`
+  - `fret-webview`
+  - `fret-webview-wry`
+  - `fret-window-style-profiles`
+  - `fret-chart`
+  - `delinea`
+  - icon-pack / UI-assets support crates used by published optional lanes
 
 ## What should NOT be released in v0.1
 
-Reason: app harnesses, incubating editor modules, diagnostics tools, or crates outside the minimal public story.
+Reason: app harnesses, tooling, or ecosystem surfaces that are still intentionally outside the
+first public teaching story.
 
 - `apps/*` crates (already mostly `publish = false`):
   - `fret-demo`, `fret-demo-web`, `fret-editor`, `fret-examples`, `fretboard`, `fret-ui-gallery`, `fret-ui-gallery-web`, `fret-svg-atlas-stress`
-- Incubating ecosystem/editor crates:
-  - `fret-docking`, `fret-code-editor*`, `fret-code-view`, `fret-markdown`, `fret-plot*`, `fret-chart`, `delinea`, `fret-ui-material3`, `fret-ui-ai`, `fret-undo`, `fret-gizmo`, `fret-workspace`, `fret-renderdoc`, `fret-bootstrap`, `fret-ui-assets`, `fret-i18n-fluent`, `fret-icons-lucide`, `fret-icons-radix`
+- Deferred ecosystem/editor/design-system crates:
+  - `fret-docking`
+  - `fret-code-editor*`
+  - `fret-code-view`
+  - `fret-markdown`
+  - `fret-ui-editor`
+  - `fret-ui-material3`
+  - `fret-ui-ai`
+  - `fret-undo`
+  - `fret-gizmo`
+  - `fret-workspace`
+  - `fret-node`
 
-Special note for `v0.1`:
-
-- `fret-node` and `fret-router` are included intentionally for the first public wave by product decision, even though they are still evolving.
-
-Current recommendation for v0.1:
-
-- Keep `fret` (ecosystem batteries-included entry points) out of the first publish wave.
-
-Reason:
-
-- `fret` currently depends on `fret-bootstrap` and related integration crates (`fret-ui-assets`, icon packs),
-  which are intentionally excluded from the narrow 0.1 release footprint.
-
-Note: some crates in this list are technically publishable, but excluded intentionally for a narrow and stable 0.1 release footprint.
+Note: some crates in this list are technically publishable, but they are intentionally excluded
+from the first public teaching surface until the owning story is stable enough to support.
 
 ## Important precondition before first publish
 
-Current manifests rely on path-only workspace dependencies (no explicit version requirements for many internal deps).
+Current release closure is now mechanically closed:
 
-This causes `cargo publish --dry-run` to fail before release:
+- `python3 tools/release_closure_check.py --config release-plz.toml` reports
+  `release scope: 49 crates`
+- `python3 tools/release_closure_check.py --config release-plz.toml` reports
+  `internal dependency issues: 0`
+- `metadata warnings: 0`
+- the publish order is deterministic and captured in
+  `docs/release/v0.1.0-publish-order.txt`
 
-- Example: `fret-framework` currently fails with
-  - `all dependencies must have a version requirement specified when publishing`
+Important note:
 
-Therefore, before enabling the release pipeline, all crates in the release set need publishable dependency declarations (path + version strategy compatible with crates.io).
+- `fret-chart` and `delinea` are intentionally in the publish closure because the supported
+  `fret-ui-shadcn/chart` lane remains publishable.
+- `fret-docking` stays out of the publish closure because docking now lives only on the owning
+  crate path and is no longer proxied through `fret`.
 
 ## Adopted release-plz strategy
 
@@ -125,14 +126,10 @@ Current workflow already includes:
 
 ## Recommended next steps
 
-1. (Done in this branch) Convert release-set manifests to publishable dependency version declarations.
-   - Internal workspace `path` dependencies in the current release whitelist now include explicit `version = "0.1.0"`.
-2. Mark all non-release crates explicitly as `publish = false` to avoid accidental publish attempts.
-3. Run a full local dry run:
+1. Keep internal workspace `path` dependencies in the release whitelist on explicit
+   `version = "0.1.0"` requirements.
+2. Run a full local dry run:
    - `release-plz update --config release-plz.toml --repo-url https://github.com/Latias94/fret`
-4. Decide whether `fret` is in wave-1 or wave-2:
-   - wave-1 => include `fret-bootstrap`/assets/icon crates in release scope;
-   - wave-2 => keep `fret` private until integration crates are ready.
-
-Note: this repo currently does not require publishing compatibility aliases.
+3. Run targeted `cargo publish --dry-run -p <crate>` checks for a few high-level crates in publish
+   order context (`fret`, `fret-ui-shadcn`, `fret-bootstrap`) to validate manifest packaging.
 4. After dry-run is clean, enable the workflow on `main` and test with `workflow_dispatch` first.

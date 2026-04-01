@@ -1,3 +1,4 @@
+use fret::component::prelude::*;
 use fret::{
     FretApp,
     advanced::prelude::*,

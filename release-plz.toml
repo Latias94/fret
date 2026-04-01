@@ -28,6 +28,12 @@ publish = true
 version_group = "fret-0-1"
 
 [[package]]
+name = "fret-assets"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
 name = "fret-authoring"
 release = true
 publish = true
@@ -148,13 +154,13 @@ publish = true
 version_group = "fret-0-1"
 
 [[package]]
-name = "fret-node"
+name = "fret-router"
 release = true
 publish = true
 version_group = "fret-0-1"
 
 [[package]]
-name = "fret-router"
+name = "fret-router-ui"
 release = true
 publish = true
 version_group = "fret-0-1"
@@ -262,7 +268,37 @@ publish = true
 version_group = "fret-0-1"
 
 [[package]]
+name = "delinea"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-chart"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
 name = "fret-ui-assets"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-webview"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-webview-wry"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-window-style-profiles"
 release = true
 publish = true
 version_group = "fret-0-1"

@@ -36,8 +36,6 @@ The canonical API is:
   stable memory `AssetRequest`s plus resolved bytes for the runtime asset lane.
 - `fret_fonts::ImportedFontAssetResolver` — mutable memory resolver for app/session-local imported
   fonts staged through the shared asset contract.
-- `fret_fonts::collect_supported_user_font_bytes(...)` — low-level raw-byte helper for callers that
-  intentionally still target `Effect::TextAddFontBytes`.
 - `fret_fonts::test_support::face_blobs(...)` (feature `test-support`) — test-only helper that
   converts a chosen face iterator into owned `Vec<u8>` blobs for deterministic conformance gates.
 
@@ -46,9 +44,8 @@ identity. Framework-owned startup baselines should publish those asset entries i
 runtime asset resolver and resolve startup bytes from that identity before renderer injection.
 Session-local imported fonts can now follow that same identity model through memory locators rather
 than bypassing the resolver contract. Byte-oriented callers should stay anchored on concrete
-bundled faces or intentionally opt into the raw-byte helper when they truly need
-`TextAddFontBytes`. The `test_support` module is intentionally scoped to tests and
-golden/conformance harnesses.
+bundled faces rather than reintroducing a separate runtime raw-byte lane. The `test_support`
+module is intentionally scoped to tests and golden/conformance harnesses.
 
 ## Size strategy (WASM)
 

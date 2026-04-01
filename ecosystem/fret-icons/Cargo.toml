@@ -11,7 +11,3 @@ documentation.workspace = true
 description = "Shared icon surface and icon primitives for Fret UI ecosystems."
 
 [dependencies]
-
-[dev-dependencies]
-fret-icons-lucide = { path = "../fret-icons-lucide" }
-fret-icons-radix = { path = "../fret-icons-radix" }

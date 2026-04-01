@@ -1779,7 +1779,6 @@ dependencies = [
  "fret-assets",
  "fret-bootstrap",
  "fret-core",
- "fret-docking",
  "fret-framework",
  "fret-icons",
  "fret-launch",
@@ -1789,12 +1788,8 @@ dependencies = [
  "fret-runtime",
  "fret-selector",
  "fret-ui",
- "fret-ui-ai",
- "fret-ui-editor",
  "fret-ui-kit",
- "fret-ui-material3",
  "fret-ui-shadcn",
- "fret-workspace",
  "slotmap",
  "thiserror 2.0.18",
  "time",
@@ -1867,7 +1862,6 @@ dependencies = [
  "fret-icons-lucide",
  "fret-icons-radix",
  "fret-launch",
- "fret-query",
  "fret-render",
  "fret-runtime",
  "fret-ui",
@@ -1988,6 +1982,7 @@ dependencies = [
  "fret-chart",
  "fret-code-view",
  "fret-core",
+ "fret-docking",
  "fret-executor",
  "fret-genui-core",
  "fret-genui-shadcn",
@@ -2358,10 +2353,6 @@ dependencies = [
 [[package]]
 name = "fret-icons"
 version = "0.1.0"
-dependencies = [
- "fret-icons-lucide",
- "fret-icons-radix",
-]
 
 [[package]]
 name = "fret-icons-lucide"
@@ -2370,6 +2361,7 @@ dependencies = [
  "fret-app",
  "fret-core",
  "fret-icons",
+ "fret-icons-radix",
  "rust-embed",
 ]
 

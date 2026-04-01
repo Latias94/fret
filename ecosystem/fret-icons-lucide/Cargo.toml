@@ -20,3 +20,6 @@ fret-icons = { version = "0.1.0", path = "../fret-icons" }
 fret-app = { version = "0.1.0", path = "../../crates/fret-app", optional = true }
 fret-core = { version = "0.1.0", path = "../../crates/fret-core", optional = true }
 rust-embed.workspace = true
+
+[dev-dependencies]
+fret-icons-radix = { version = "0.1.0", path = "../fret-icons-radix" }

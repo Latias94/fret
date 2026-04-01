@@ -1,3 +1,4 @@
+#![cfg(feature = "chart")]
 #![allow(clippy::needless_lifetimes)]
 
 #[path = "support/web_golden_shadcn.rs"]

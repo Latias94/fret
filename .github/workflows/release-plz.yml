@@ -23,6 +23,9 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Prepare release-plz checkout overrides
+        run: python3 tools/prepare_release_plz_checkout_overrides.py
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -51,6 +54,9 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Prepare release-plz checkout overrides
+        run: python3 tools/prepare_release_plz_checkout_overrides.py
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

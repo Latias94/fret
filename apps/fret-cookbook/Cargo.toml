@@ -22,6 +22,7 @@ time.workspace = true
 
 # Lab/optional example dependencies (feature-gated to keep cold compile time down).
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", default-features = false, optional = true }
+fret-docking = { path = "../../ecosystem/fret-docking", optional = true }
 fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", default-features = false, features = ["ui", "image-decode"], optional = true }
 fret-icons = { path = "../../ecosystem/fret-icons", optional = true }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide", default-features = false, optional = true }
@@ -47,12 +48,14 @@ fret-gizmo = { path = "../../ecosystem/fret-gizmo", optional = true }
 
 [features]
 default = []
-cookbook-diag = ["fret/diagnostics", "fret-bootstrap/diagnostics"]
+cookbook-diag = ["fret/diagnostics", "fret-bootstrap/diagnostics", "fret-bootstrap/diagnostics-canvas"]
 cookbook-assets = ["dep:fret-assets", "dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
 cookbook-renderer = ["dep:fret-launch"]
 cookbook-table = ["dep:fret-ui-kit"]
 cookbook-date-picker = ["dep:fret-ui-kit"]
 cookbook-image-assets = ["dep:fret-ui-assets"]
+# LocalState-first selector helpers used by selected cookbook examples.
+cookbook-state = ["fret/state-selector"]
 cookbook-query = ["fret/state-query"]
 cookbook-router = ["fret/router"]
 cookbook-undo = ["dep:fret-undo"]
@@ -66,7 +69,7 @@ cookbook-bootstrap = [
     "fret-bootstrap/ui-assets",
     "fret-bootstrap/icons-ui-semantic-lucide",
 ]
-cookbook-docking = ["cookbook-bootstrap", "fret/docking"]
+cookbook-docking = ["cookbook-bootstrap", "dep:fret-docking", "dep:fret-ui-kit"]
 cookbook-imui = [
     "dep:fret-imui",
     "dep:fret-genui-core",
@@ -162,7 +165,11 @@ required-features = ["cookbook-customv1"]
 
 [[example]]
 name = "markdown_and_code_basics"
-required-features = ["cookbook-markdown"]
+required-features = ["cookbook-markdown", "cookbook-state"]
+
+[[example]]
+name = "text_input_basics"
+required-features = ["cookbook-state"]
 
 [[example]]
 name = "canvas_pan_zoom_basics"
@@ -175,6 +182,10 @@ required-features = ["cookbook-chart"]
 [[example]]
 name = "gizmo_basics"
 required-features = ["cookbook-gizmo"]
+
+[[example]]
+name = "virtual_list_basics"
+required-features = ["cookbook-state"]
 
 [lints.rust]
 warnings = "allow"

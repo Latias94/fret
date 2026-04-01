@@ -11,6 +11,8 @@
 
 pub use crate::sonner::{
     Sonner, ToastAction, ToastIconOverride, ToastIconOverrides, ToastId, ToastMessageOptions,
-    ToastOffset, ToastPosition, ToastPromise, ToastPromiseAsyncOptions, ToastPromiseHandle,
-    ToastPromiseUnwrapError, ToastRequest, ToastVariant, Toaster,
+    ToastOffset, ToastPosition, ToastPromise, ToastRequest, ToastVariant, Toaster,
 };
+
+#[cfg(feature = "executor-integration")]
+pub use crate::sonner::{ToastPromiseAsyncOptions, ToastPromiseHandle, ToastPromiseUnwrapError};

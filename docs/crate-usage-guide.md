@@ -137,6 +137,10 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
+**Boundary note:** keep editor/workspace shell composition on owning crates such as
+`fret-workspace`; `fret` should stay focused on app-facing authoring, not editor-specific shell
+facades.
+
 **Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions, prefer `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary LocalState tracked reads, and use `local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` when app code only needs a borrowed projection without cloning the full slot. Keep the first-contact handler surface to `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For ordinary initialized locals inside `locals_with((...)).on::<A>(...)`, prefer `tx.value(&local)` for reads and keep `tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases only. For view-owned keyed lists, bind row payloads with `.action_payload(...)` and prefer `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path. If a widget already exposes its own `.on_activate(...)` hook, stay on that component-owned surface instead of importing the activation bridge just to attach a no-op or side effect override. Only add `use fret::app::AppActivateExt as _;` for activation-only surfaces that do not yet offer a narrower widget-owned app-facing helper, and keep the same action-first vocabulary there via `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` for shared `Model<T>` graphs and `cx.actions().payload_models::<A>(...)` when the same graph needs typed payload actions without reopening the deleted payload-carrier namespace. Treat lower-level payload helpers, raw `AppUi::on_action_notify*`, and low-level `.on_activate(cx.actions().listen(...))` glue as cookbook/reference-only host-side escape hatches; if you intentionally reopen that seam, keep it on `cx.actions().listen(...)` or import `AppActivateExt` explicitly for activation-only typed dispatch.
 
 `fret::app::AppActivateSurface` / `AppActivateExt` are intentionally narrow: they cover
@@ -281,8 +285,6 @@ authoring vocabulary through a hidden umbrella import.
 | Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
 | Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector_layout(...)`, raw `cx.data().selector(...)`, `cx.data().query(...)`) plus explicit `fret::selector::*` / `fret::query::*` secondary lanes. |
 | Add routing integration | `["router"]` | Exposes the explicit app-level router extension surface (`fret::router::*`). |
-| Add docking integration | `["docking"]` | Exposes the explicit docking surface (`fret::docking::{core::*, ...}`). |
-| Add editor theming integration | `["editor"]` | Keeps installed `fret-ui-editor` presets resilient to `FretApp` shadcn auto-theme resets; widgets still come from `fret-ui-editor`. |
 | Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
 | Add image/SVG caches | `["ui-assets"]` | Wires UI asset caches + budgets (compile/runtime cost). |
 | Enable layered `.fret/*` config | `["config-files"]` | Filesystem side effects; opt-in for embed/minimal builds. |
@@ -321,9 +323,13 @@ Notes:
 - `config-files` is opt-in because it reads layered `.fret/*` files (settings/keymap/menubar).
 - `ui-assets` is opt-in because it wires caches/budgets and can increase compile + runtime cost.
 - `icons` / `preload-icon-svgs` are opt-in (GPU-time tradeoff; apps can install custom packs).
-- `editor` is an app-integration feature only: it teaches `FretApp`'s shadcn auto-theme middleware
-  to replay any installed `fret-ui-editor` preset after host theme resets. Reusable editor
-  controls, layout primitives, and presets still live in `fret-ui-editor`.
+- `devloop` and `tracing` are kept only as advanced/maintainer aliases on `fret`; prefer the
+  owning crates (`fret-launch/dev-state`, `fret-bootstrap/tracing`) for new integrations.
+- Docking and editor-theming ecosystems should be used from their owning crates
+  (`fret-docking`, `fret-ui-editor`) instead of expecting `fret` root feature proxies.
+- Design-system- or domain-specific crates that do not form a stable `fret` root story
+  (for example Material 3 or AI UI ecosystems) should be used as direct crate dependencies
+  instead of expecting `fret` root feature proxies.
 
 ### `fret-framework`
 
@@ -458,6 +464,11 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 **Use it when:** you want a ready-to-use design-system surface (buttons, inputs, popovers, command palette, etc).
 
+**Optional heavy lanes:**
+
+- enable `fret-ui-shadcn/chart` only when you need the shadcn-aligned chart recipe surface
+- enable `fret-ui-shadcn/executor-integration` only when you need executor-backed async recipe helpers such as Sonner promise flows
+
 **Theme integration:**
 
 - Direct crate usage: prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`, then call
@@ -586,8 +597,17 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   `BootstrapBuilder::with_asset_startup(...)`,
 - icon pack registration (built-in packs or custom),
 - optional UI app driver wiring,
-- optional command palette integration,
+- optional command palette capability (toggle handling + per-window state + command gating),
 - optional diagnostics + tracing wiring.
+
+**Command palette note:** `fret-bootstrap/ui-app-command-palette` keeps the app-driver capability
+layer only. If you want the default shadcn `CommandDialog` presentation on top of that capability,
+enable `fret-bootstrap/ui-app-command-palette-shadcn` or use `fret`'s `command-palette` feature.
+
+**Diagnostics note:** `fret-bootstrap/diagnostics` now keeps the generic diagnostics/export path
+leaner. Enable `fret-bootstrap/diagnostics-canvas` only when you need retained canvas cache stats
+in diagnostics bundles. Enable `fret-bootstrap/diagnostics-ws` only when you need the devtools
+WebSocket transport bridge.
 
 Note: dev hotpatch is an internal maintainer workflow today and is not part of the user-facing
 onboarding path.
@@ -704,11 +724,11 @@ advanced retained/manual-assembly seams they require.
 
 Notes:
 
-- On the default `fret` path, enable `fret`'s `docking` feature and prefer the explicit
-  `fret::docking::*` seam.
-- Use `fret::docking::core::*` for dock graph/contracts (`DockNode`, `DockOp`, `PanelKey`, layout
-  shapes) and `fret::docking::{DockManager, DockPanelRegistry, handle_dock_op, ...}` for the UI +
-  runtime adoption helpers.
+- Prefer depending on `fret-docking` directly for docking adoption instead of expecting a `fret`
+  root feature proxy.
+- Use `fret_core::{DockNode, DockOp, PanelKey, ...}` / `fret_core::dock::*` for dock
+  graph/contracts and `fret_docking::{DockManager, DockPanelRegistry, handle_dock_op, ...}` for
+  the UI + runtime adoption helpers.
 - Keep docking explicit at the app boundary: panel registry, docking policy, and `dock_op` driver
   wiring stay app-owned/advanced instead of becoming part of `fret::app::prelude::*`.
 - Prefer teaching docking as an opt-in editor-grade capability, not as part of the small-app

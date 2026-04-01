@@ -1,3 +1,4 @@
+#![cfg(feature = "chart")]
 use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_ui::element::{AnyElement, LayoutStyle, Length};

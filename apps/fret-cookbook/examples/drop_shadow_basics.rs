@@ -12,6 +12,7 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
+use fret::component::prelude::*;
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::Point;
 use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectStep};

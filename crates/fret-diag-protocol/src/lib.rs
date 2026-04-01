@@ -1953,7 +1953,6 @@ pub enum UiPredicateV1 {
     /// Supported values currently mirror the debug snapshot surface:
     /// - `bundled_startup`
     /// - `asset_request`
-    /// - `raw_runtime_bytes`
     RendererFontSourceLaneSeen {
         lane: String,
     },

@@ -1126,24 +1126,6 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         self.diag_incoming_open_payloads.remove(&token);
                         self.incoming_open_path_payloads.remove(&token);
                     }
-                    Effect::TextAddFontBytes { fonts } => {
-                        let Some(renderer) = self.renderer.as_mut() else {
-                            continue;
-                        };
-
-                        let added =
-                            crate::runner::font_catalog::inject_font_blobs_and_refresh_catalog(
-                                &mut self.app,
-                                renderer,
-                                fonts,
-                                fret_runtime::FontFamilyDefaultsPolicy::None,
-                            );
-                        if added == 0 {
-                            continue;
-                        }
-
-                        self.request_redraw_all_windows();
-                    }
                     Effect::TextAddFontAssets { requests } => {
                         let Some(renderer) = self.renderer.as_mut() else {
                             continue;

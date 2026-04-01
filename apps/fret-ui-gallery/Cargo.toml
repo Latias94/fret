@@ -19,11 +19,11 @@ gallery-web-ime-harness = ["fret-fonts/emoji"]
 gallery-chart = [
     "dep:fret-chart",
     "dep:delinea",
+    "fret-ui-shadcn/chart",
 ]
 gallery-dev = [
     "gallery-ai",
     "gallery-chart",
-    "fret/ui-ai",
     "gallery-web-ime-harness",
     "dep:fret-ui-magic",
     "dep:fret-code-editor-view",
@@ -58,7 +58,7 @@ fret-code-editor-view = { path = "../../ecosystem/fret-code-editor-view", option
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
 fret = { path = "../../ecosystem/fret", features = ["router"] }
 fret-ui-headless = { path = "../../ecosystem/fret-ui-headless" }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "icons-ui-semantic-lucide", "diagnostics", "ui-app-driver", "ui-assets"] }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "icons-ui-semantic-lucide", "diagnostics", "diagnostics-canvas", "ui-app-driver", "ui-assets"] }
 fret-undo = { path = "../../ecosystem/fret-undo" }
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] }
 delinea = { path = "../../ecosystem/delinea", optional = true }

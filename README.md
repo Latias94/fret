@@ -168,9 +168,9 @@ impl View for TodoView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let draft = cx.state().local::<String>();
-        let enabled = !cx.state().watch(&draft).layout().value_or_default().trim().is_empty();
+        let enabled = !draft.layout_value(cx).trim().is_empty();
 
-        cx.actions().local_set::<act::Add, String>(&draft, String::new());
+        cx.actions().local(&draft).set::<act::Add>(String::new());
 
         let input = shadcn::Input::new(&draft)
             .a11y_label("New task")

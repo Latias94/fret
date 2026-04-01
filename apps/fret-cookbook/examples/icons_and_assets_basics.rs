@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret::component::prelude::*;
 use fret::{
     FretApp,
     advanced::prelude::*,
@@ -9,7 +10,7 @@ use fret::{
 };
 use fret_core::{ImageColorSpace, ImageId};
 use fret_icons::FrozenIconRegistry;
-use fret_ui::element::{ImageProps, LayoutStyle, SvgIconProps};
+use fret_ui::element::{ImageProps, LayoutStyle, Length, SvgIconProps};
 use fret_ui_assets::ui::{ImageSourceElementContextExt as _, SvgAssetElementContextExt as _};
 
 const TEST_ID_ROOT: &str = "cookbook.icons_and_assets_basics.root";

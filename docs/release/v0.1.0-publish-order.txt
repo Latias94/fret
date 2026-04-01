@@ -1,64 +1,72 @@
 # Release publish order
 
-01. fret-core
-02. fret-fonts
+01. fret-assets
+02. fret-core
 03. fret-i18n
 04. fret-icons
 05. fret-render-core
-06. fret-a11y-accesskit
-07. fret-diag-protocol
-08. fret-dnd
-09. fret-perf
-10. fret-platform
-11. fret-render-text
-12. fret-ui-headless
-13. fret-viewport-tooling
-14. fret-i18n-fluent
-15. fret-runtime
-16. fret-runner-winit
-17. fret-diag-ws
-18. fret-platform-native
-19. fret-render-wgpu
-20. fret-app
-21. fret-executor
-22. fret-interaction
-23. fret-platform-web
-24. fret-text-nav
-25. fret-render
-26. fret-icons-lucide
-27. fret-icons-radix
-28. fret-runner-web
-29. fret-ui
-30. fret-launch
-31. fret-canvas
-32. fret-query
-33. fret-selector
-34. fret-ui-app
-35. fret-framework
-36. fret-router
-37. fret-authoring
-38. fret-ui-kit
-39. fret-node
-40. fret-ui-assets
-41. fret-ui-shadcn
-42. fret-bootstrap
-43. fret
+06. fret-fonts
+07. delinea
+08. fret-a11y-accesskit
+09. fret-diag-protocol
+10. fret-dnd
+11. fret-perf
+12. fret-platform
+13. fret-ui-headless
+14. fret-viewport-tooling
+15. fret-i18n-fluent
+16. fret-render-text
+17. fret-runtime
+18. fret-runner-winit
+19. fret-diag-ws
+20. fret-platform-native
+21. fret-render-wgpu
+22. fret-app
+23. fret-executor
+24. fret-interaction
+25. fret-platform-web
+26. fret-text-nav
+27. fret-webview
+28. fret-window-style-profiles
+29. fret-render
+30. fret-icons-radix
+31. fret-runner-web
+32. fret-ui
+33. fret-webview-wry
+34. fret-icons-lucide
+35. fret-canvas
+36. fret-query
+37. fret-selector
+38. fret-ui-app
+39. fret-launch
+40. fret-router
+41. fret-authoring
+42. fret-framework
+43. fret-ui-kit
+44. fret-chart
+45. fret-router-ui
+46. fret-ui-assets
+47. fret-ui-shadcn
+48. fret-bootstrap
+49. fret
 
 # Commands
+cargo publish -p fret-assets
 cargo publish -p fret-core
-cargo publish -p fret-fonts
 cargo publish -p fret-i18n
 cargo publish -p fret-icons
 cargo publish -p fret-render-core
+cargo publish -p fret-fonts
+cargo publish -p delinea
 cargo publish -p fret-a11y-accesskit
 cargo publish -p fret-diag-protocol
 cargo publish -p fret-dnd
 cargo publish -p fret-perf
 cargo publish -p fret-platform
-cargo publish -p fret-render-text
 cargo publish -p fret-ui-headless
 cargo publish -p fret-viewport-tooling
 cargo publish -p fret-i18n-fluent
+cargo publish -p fret-render-text
 cargo publish -p fret-runtime
 cargo publish -p fret-runner-winit
 cargo publish -p fret-diag-ws
@@ -69,21 +77,25 @@ cargo publish -p fret-executor
 cargo publish -p fret-interaction
 cargo publish -p fret-platform-web
 cargo publish -p fret-text-nav
+cargo publish -p fret-webview
+cargo publish -p fret-window-style-profiles
 cargo publish -p fret-render
-cargo publish -p fret-icons-lucide
 cargo publish -p fret-icons-radix
 cargo publish -p fret-runner-web
 cargo publish -p fret-ui
-cargo publish -p fret-launch
+cargo publish -p fret-webview-wry
+cargo publish -p fret-icons-lucide
 cargo publish -p fret-canvas
 cargo publish -p fret-query
 cargo publish -p fret-selector
 cargo publish -p fret-ui-app
-cargo publish -p fret-framework
+cargo publish -p fret-launch
 cargo publish -p fret-router
 cargo publish -p fret-authoring
+cargo publish -p fret-framework
 cargo publish -p fret-ui-kit
-cargo publish -p fret-node
+cargo publish -p fret-chart
+cargo publish -p fret-router-ui
 cargo publish -p fret-ui-assets
 cargo publish -p fret-ui-shadcn
 cargo publish -p fret-bootstrap

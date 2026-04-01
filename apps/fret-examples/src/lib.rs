@@ -63,9 +63,10 @@ pub(crate) fn editor_theme_preset_from_env(
 
 /// Shared lower-level examples helper for editor surfaces hosted on a shadcn base theme.
 ///
-/// Use this on manual/non-`FretApp` surfaces that do not ride the `fret` facade's optional editor
-/// integration middleware. The ordering stays explicit when `WindowMetricsService` changes can
-/// trigger a host-theme reset: sync the host theme first, then replay the installed editor preset.
+/// Use this on manual/non-`FretApp` surfaces and on app code that keeps editor theming on the
+/// owning `fret-ui-editor` crate. The ordering stays explicit when `WindowMetricsService` changes
+/// can trigger a host-theme reset: sync the host theme first, then replay the installed editor
+/// preset.
 pub(crate) fn sync_shadcn_host_theme_then_reapply_editor_preset_on_window_metrics_change(
     app: &mut fret_app::App,
     window: fret_core::AppWindowId,
@@ -1421,10 +1422,10 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn app_facing_docking_examples_prefer_fret_docking_facade() {
+    fn app_facing_docking_examples_use_owning_fret_docking_crate() {
         for src in [CONTAINER_QUERIES_DOCKING_DEMO, DOCKING_DEMO] {
-            assert!(src.contains("use fret::docking::{"));
-            assert!(!src.contains("use fret_docking::{"));
+            assert!(src.contains("use fret_docking::{"));
+            assert!(!src.contains("use fret::docking::{"));
         }
     }
 

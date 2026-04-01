@@ -66,7 +66,8 @@
 //!   those names from `fret::app::prelude::*`
 //! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
 //!   plus `RouterUiStore::{back_on_action, forward_on_action}` history bindings
-//! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
+//! - depend on `fret-docking` directly for editor-grade docking workflows instead of expecting a
+//!   `fret` root feature proxy
 //! - use `fret::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`
 //!   for logical bundle/embedded assets; prefer `AssetBundleId::app(...)` /
 //!   `AssetBundleId::package(...)` over raw global strings; keep app-facing startup on
@@ -86,8 +87,6 @@
 //!   `resolve_svg_source_from_host_locator(...)` as the lower-level UI-ready source seams, and use
 //!   `fret::assets::resolve_reference(...)` / `resolve_locator_reference(...)` when a non-UI
 //!   integration truly needs the raw external reference
-//! - enable `editor` for opt-in app-level replay of installed `fret-ui-editor` presets after the
-//!   `FretApp` shadcn auto-theme middleware resets the host theme
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
 //!   curated default design-system surface; component families live on `shadcn::Button` /
 //!   `shadcn::Card`, `shadcn::app::*` and `shadcn::themes::*` are setup lanes rather than peer
@@ -276,12 +275,9 @@ pub(crate) enum AssetMount {
 pub mod actions;
 mod view;
 pub mod workspace_menu;
-pub mod workspace_shell;
 
 /// Explicit app-integration contracts for reusable ecosystem bundles.
 pub mod integration;
-
-mod pending_shortcut_overlay;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 mod app_entry;
@@ -574,50 +570,6 @@ pub mod router {
     }
 }
 
-/// Optional docking integration surface for advanced app code.
-///
-/// This keeps the docking story explicit:
-/// - docking data contracts remain in `fret-core`,
-/// - `fret-docking` remains the policy-heavy UI/runtime adoption layer,
-/// - `fret::docking` gives advanced app code one curated import lane without leaking docking types
-///   into `fret::app::prelude::*`.
-#[cfg(feature = "docking")]
-pub mod docking {
-    /// Raw docking core contracts for advanced or fully explicit use.
-    pub mod core {
-        pub use fret_core::dock::*;
-        pub use fret_core::{
-            DOCK_LAYOUT_VERSION, DockLayout, DockLayoutBuilder, DockLayoutFloatingWindow,
-            DockLayoutNode, DockLayoutValidationError, DockLayoutValidationErrorKind,
-            DockLayoutWindow, DockNodeId, DockOp, DockRect, DockWindowPlacement,
-            EditorDockLayoutSpec, PanelKey, SplitFractionsUpdate,
-        };
-    }
-
-    /// Raw docking UI/policy exports for advanced or fully explicit use.
-    pub mod ui {
-        pub use fret_docking::*;
-    }
-
-    /// Raw docking runtime integration helpers for advanced or fully explicit use.
-    pub mod runtime {
-        pub use fret_docking::runtime::*;
-    }
-
-    pub use fret_docking::runtime::{recenter_in_window_floatings, request_dock_invalidation};
-    pub use fret_docking::{
-        ActivatePanelOptions, DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx,
-        DockPanelFactoryRegistry, DockPanelRegistry, DockPanelRegistryBuilder,
-        DockPanelRegistryService, DockSpace, DockSpaceMount, DockViewportLayout,
-        DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingPolicy,
-        DockingPolicyService, DockingRuntime, DuplicateDockPanelKindError, ViewportPanel,
-        create_dock_space_node, create_dock_space_node_with_test_id,
-        handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
-        mount_dock_space, mount_dock_space_with_test_id, render_and_bind_dock_panels,
-        render_cached_panel_root,
-    };
-}
-
 /// Explicit advanced/manual-assembly imports for power users and integration code.
 pub mod advanced {
     /// Low-level view-runtime helpers kept off the default crate root.
@@ -631,7 +583,10 @@ pub mod advanced {
         pub use crate::view::view_record_engine_frame;
     }
 
-    /// Dev-only helpers (hotpatch/dev-state) for iteration workflows.
+    /// Dev-only helpers kept as an advanced compatibility lane for iteration workflows.
+    ///
+    /// Prefer the owning `fret-launch::dev_state::*` surface directly in first-party or advanced
+    /// code; `fret/devloop` exists mainly as a discoverable alias on the app facade.
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "devloop"))]
     pub mod dev {
         pub use fret_launch::dev_state::{
@@ -1104,6 +1059,9 @@ impl<S> UiAppDriver<S> {
     #[cfg(feature = "command-palette")]
     pub fn command_palette(mut self, enabled: bool) -> Self {
         self.inner = self.inner.command_palette(enabled);
+        if enabled {
+            self.inner = fret_bootstrap::with_shadcn_command_palette(self.inner);
+        }
         self
     }
 }
@@ -1399,30 +1357,12 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
     let Some(config) = app.global::<fret_ui_shadcn::app::InstallConfig>().copied() else {
         return;
     };
-    #[cfg(feature = "editor")]
-    {
-        let _ = fret_ui_editor::theme::sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
-            app,
-            changed,
-            |app| {
-                let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
-                    app,
-                    window,
-                    config.base_color,
-                    config.scheme,
-                );
-            },
-        );
-    }
-    #[cfg(not(feature = "editor"))]
-    {
-        let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
-            app,
-            window,
-            config.base_color,
-            config.scheme,
-        );
-    }
+    let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
+        app,
+        window,
+        config.base_color,
+        config.scheme,
+    );
 }
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
@@ -2077,11 +2017,6 @@ mod tests {
     fn shadcn_auto_theme_middleware_requires_app_install_config() {
         let mut app = KernelApp::new();
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Dark);
-        #[cfg(feature = "editor")]
-        fret_ui_editor::theme::install_editor_theme_preset_v1(
-            &mut app,
-            fret_ui_editor::theme::EditorThemePresetV1::Default,
-        );
 
         let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
         app.with_global_mut(WindowMetricsService::default, |svc, _app| {
@@ -2092,8 +2027,6 @@ mod tests {
         let mut state = ();
         let before_bg = Theme::global(&app).colors.surface_background;
         let before_rev = Theme::global(&app).revision();
-        #[cfg(feature = "editor")]
-        let editor_field_bg = Theme::global(&app).color_by_key("component.text_field.bg");
 
         super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
             &mut app,
@@ -2105,60 +2038,6 @@ mod tests {
 
         assert_eq!(Theme::global(&app).revision(), before_rev);
         assert_eq!(Theme::global(&app).colors.surface_background, before_bg);
-        #[cfg(feature = "editor")]
-        assert_eq!(
-            Theme::global(&app).color_by_key("component.text_field.bg"),
-            editor_field_bg
-        );
-    }
-
-    #[cfg(feature = "editor")]
-    #[test]
-    fn shadcn_auto_theme_middleware_reapplies_installed_editor_preset_once() {
-        let mut app = KernelApp::new();
-        shadcn::app::install_with_theme(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Dark);
-        fret_ui_editor::theme::install_editor_theme_preset_v1(
-            &mut app,
-            fret_ui_editor::theme::EditorThemePresetV1::Default,
-        );
-
-        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
-        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
-            svc.set_color_scheme(window, Some(ColorScheme::Light));
-        });
-
-        let mut ui = UiTree::<KernelApp>::default();
-        let mut state = ();
-        let editor_field_bg = Theme::global(&app).color_by_key("component.text_field.bg");
-        let host_bg_before = Theme::global(&app).colors.surface_background;
-
-        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
-            &mut app,
-            window,
-            &mut ui,
-            &mut state,
-            &[TypeId::of::<WindowMetricsService>()],
-        );
-
-        assert_ne!(
-            Theme::global(&app).colors.surface_background,
-            host_bg_before
-        );
-        assert_eq!(
-            Theme::global(&app).color_by_key("component.text_field.bg"),
-            editor_field_bg
-        );
-
-        let rev_after = Theme::global(&app).revision();
-        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
-            &mut app,
-            window,
-            &mut ui,
-            &mut state,
-            &[TypeId::of::<WindowMetricsService>()],
-        );
-
-        assert_eq!(Theme::global(&app).revision(), rev_after);
     }
 }
 
@@ -2574,25 +2453,6 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn readme_and_rustdoc_expose_docking_as_explicit_optional_surface() {
-        assert!(CRATE_README.contains("- `docking`: enable the explicit advanced docking surface"));
-        assert!(
-            CRATE_README.contains("`fret::docking::{core::*, DockManager, handle_dock_op, ...}`")
-        );
-
-        let rustdoc = crate_rustdoc();
-        assert!(rustdoc.contains(
-            "//! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`"
-        ));
-        assert!(LIB_RS.contains("pub mod docking {"));
-        assert!(
-            LIB_RS.contains("/// Raw docking core contracts for advanced or fully explicit use.")
-        );
-        assert!(LIB_RS.contains(
-            "/// Raw docking runtime integration helpers for advanced or fully explicit use."
-        ));
-    }
-
     #[test]
     fn readme_and_rustdoc_expose_explicit_assets_surface() {
         assert!(CRATE_README.contains("`fret::assets::{...}`"));
@@ -2652,18 +2512,6 @@ mod authoring_surface_policy_tests {
         );
         assert!(public_surface.contains("pub mod assets {"));
         assert!(!public_surface.contains("pub use fret_runtime::register_bundle_asset_entries;"));
-    }
-
-    #[test]
-    fn readme_and_rustdoc_expose_editor_as_opt_in_integration_feature() {
-        assert!(CRATE_README.contains(
-            "- `editor`: keep installed `fret-ui-editor` presets resilient to `FretApp` shadcn theme resets."
-        ));
-
-        let rustdoc = crate_rustdoc();
-        assert!(rustdoc.contains(
-            "//! - enable `editor` for opt-in app-level replay of installed `fret-ui-editor` presets"
-        ));
     }
 
     #[test]
@@ -3124,22 +2972,6 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn usage_docs_expose_docking_as_explicit_extension_surface() {
-        assert!(CRATE_USAGE_GUIDE.contains("| Add docking integration | `[\"docking\"]` |"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::docking::{core::*, ...}`"));
-        assert!(CRATE_USAGE_GUIDE.contains("enable `fret`'s `docking` feature"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::docking::*`"));
-        assert!(CRATE_USAGE_GUIDE.contains("part of `fret::app::prelude::*`"));
-    }
-
-    #[test]
-    fn usage_docs_expose_editor_as_opt_in_app_integration() {
-        assert!(CRATE_USAGE_GUIDE.contains("| Add editor theming integration | `[\"editor\"]` |"));
-        assert!(CRATE_USAGE_GUIDE.contains("installed `fret-ui-editor` presets"));
-        assert!(CRATE_USAGE_GUIDE.contains("widgets still come from `fret-ui-editor`"));
-    }
-
-    #[test]
     fn usage_docs_expose_curated_component_surface() {
         assert!(CRATE_USAGE_GUIDE.contains("`use fret::component::prelude::*;`"));
         assert!(CRATE_USAGE_GUIDE.contains("`ComponentCx`"));
@@ -3461,14 +3293,14 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn root_surface_omits_workspace_shell_shortcuts() {
+    fn root_surface_omits_workspace_shell_from_the_fret_facade() {
         let root_header = root_surface_header_source();
         let public_surface = crate_public_surface_source();
 
         assert!(!root_header.contains(
             "pub use workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu};"
         ));
-        assert!(public_surface.contains("pub mod workspace_shell;"));
+        assert!(!public_surface.contains("pub mod workspace_shell;"));
         assert!(!app_prelude_exports_symbol("workspace_shell_model"));
         assert!(!app_prelude_exports_symbol(
             "workspace_shell_model_default_menu"
@@ -3503,7 +3335,6 @@ mod authoring_surface_policy_tests {
             "semantics",
             "style",
             "workspace_menu",
-            "workspace_shell",
         ]
         .into_iter()
         .map(str::to_owned)

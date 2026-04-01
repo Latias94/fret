@@ -1,16 +1,37 @@
 use fret_diag_protocol::DiagTransportMessageV1;
 
-#[cfg(feature = "diagnostics-ws")]
+#[cfg(not(target_arch = "wasm32"))]
 use fret_diag_ws::client::{ClientKindV1, DevtoolsWsClient, DevtoolsWsClientConfig};
+
+#[cfg(target_arch = "wasm32")]
+use fret_diag_ws::client::{
+    ClientKindV1, DevtoolsWsClient, DevtoolsWsClientConfig, devtools_ws_config_from_window_query,
+};
+
+pub(crate) fn devtools_ws_config() -> (Option<String>, Option<String>) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        devtools_ws_config_from_window_query()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let ws_url = std::env::var("FRET_DEVTOOLS_WS")
+            .ok()
+            .filter(|v| !v.trim().is_empty());
+        let token = std::env::var("FRET_DEVTOOLS_TOKEN")
+            .ok()
+            .filter(|v| !v.trim().is_empty());
+        (ws_url, token)
+    }
+}
 
 #[derive(Debug, Default)]
 pub(crate) struct UiDiagnosticsWsBridge {
-    #[cfg(feature = "diagnostics-ws")]
     client: Option<DevtoolsWsClient>,
 }
 
 impl UiDiagnosticsWsBridge {
-    #[cfg(feature = "diagnostics-ws")]
     pub(crate) fn ensure_connected(
         &mut self,
         ws_url: Option<&str>,
@@ -33,17 +54,14 @@ impl UiDiagnosticsWsBridge {
             ClientKindV1::NativeApp
         };
         let mut caps = vec![
-            // Backwards-compatible (legacy, un-namespaced) control plane capabilities.
             "inspect".to_string(),
             "pick".to_string(),
             "scripts".to_string(),
             "bundles".to_string(),
-            // Namespaced control plane capabilities (recommended).
             "devtools.inspect".to_string(),
             "devtools.pick".to_string(),
             "devtools.scripts".to_string(),
             "devtools.bundles".to_string(),
-            // Runner/diagnostics capabilities (used for fail-fast gating).
             "diag.script_v2".to_string(),
             "diag.pointer_kind_touch".to_string(),
             "diag.pointer_kind_pen".to_string(),
@@ -89,17 +107,6 @@ impl UiDiagnosticsWsBridge {
         self.client.as_ref()
     }
 
-    #[cfg(not(feature = "diagnostics-ws"))]
-    pub(crate) fn ensure_connected(
-        &mut self,
-        _ws_url: Option<&str>,
-        _token: Option<&str>,
-        _screenshots_enabled: bool,
-    ) -> Option<()> {
-        None
-    }
-
-    #[cfg(feature = "diagnostics-ws")]
     pub(crate) fn drain_inbox(
         &mut self,
         ws_url: Option<&str>,
@@ -116,17 +123,6 @@ impl UiDiagnosticsWsBridge {
         }
     }
 
-    #[cfg(not(feature = "diagnostics-ws"))]
-    pub(crate) fn drain_inbox(
-        &mut self,
-        _ws_url: Option<&str>,
-        _token: Option<&str>,
-        _screenshots_enabled: bool,
-        _out: &mut Vec<DiagTransportMessageV1>,
-    ) {
-    }
-
-    #[cfg(feature = "diagnostics-ws")]
     pub(crate) fn send(
         &mut self,
         ws_url: Option<&str>,
@@ -138,15 +134,5 @@ impl UiDiagnosticsWsBridge {
             return;
         };
         client.send(msg);
-    }
-
-    #[cfg(not(feature = "diagnostics-ws"))]
-    pub(crate) fn send(
-        &mut self,
-        _ws_url: Option<&str>,
-        _token: Option<&str>,
-        _screenshots_enabled: bool,
-        _msg: DiagTransportMessageV1,
-    ) {
     }
 }

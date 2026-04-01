@@ -1,23 +1,19 @@
 use std::sync::Arc;
 
-use fret::docking::core::{Axis, DockNode, DockNodeId, DockOp, PanelKey};
-use fret::shadcn::raw::prelude::{CachedSubtreeExt, CachedSubtreeProps};
-use fret::{
-    advanced::prelude::*,
-    docking::{
-        self, DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx,
-        DockPanelRegistryBuilder, DockPanelRegistryService, DockingPolicy, DockingPolicyService,
-        create_dock_space_node_with_test_id, render_and_bind_dock_panels,
-    },
-    integration::InstallIntoApp,
-    shadcn,
-};
+use fret::{advanced::prelude::*, component::prelude::*, integration::InstallIntoApp, shadcn};
 use fret_app::{CommandMeta, CommandScope};
-use fret_core::{Color, PanelKind, Px};
+use fret_core::{Axis, Color, DockNode, DockNodeId, DockOp, PanelKey, PanelKind, Px};
+use fret_docking::{
+    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
+    DockPanelRegistryService, DockingPolicy, DockingPolicyService,
+    create_dock_space_node_with_test_id, handle_dock_op, render_and_bind_dock_panels,
+};
+use fret_docking::runtime::request_dock_invalidation;
 use fret_runtime::CommandId;
 use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SemanticsProps};
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{ElementContext, UiHost, UiTree};
+use fret_ui_kit::prelude::{CachedSubtreeExt, CachedSubtreeProps};
 
 const ROOT_NAME: &str = "cookbook-docking-basics";
 
@@ -36,7 +32,7 @@ const CMD_ACTIVATE_HIERARCHY: &str = "cookbook.docking.activate_hierarchy";
 const CMD_ACTIVATE_INSPECTOR: &str = "cookbook.docking.activate_inspector";
 const CMD_ACTIVATE_EDITOR: &str = "cookbook.docking.activate_editor";
 const CMD_ACTIVATE_CONSOLE: &str = "cookbook.docking.activate_console";
-const PANEL_DESCRIPTION: &str = "Dock content is app-owned, while reusable panel contributions aggregate through fret::docking::DockPanelFactory over the fret-docking ecosystem layer.";
+const PANEL_DESCRIPTION: &str = "Dock content is app-owned, while reusable panel contributions aggregate through fret_docking::DockPanelFactory over the fret-docking ecosystem layer.";
 
 fn install_commands(app: &mut KernelApp) {
     let scope = CommandScope::Widget;
@@ -455,7 +451,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut DockingBasicsWindowStat
             test_id: None,
             ..Default::default()
         },
-        |_cx| vec![root],
+        |_cx| root,
     )]
     .into()
 }
@@ -475,7 +471,7 @@ fn on_command(
             reset_dock_layout(dock, window)
         });
         st.layout_ids = ids;
-        docking::request_dock_invalidation(app, [window]);
+        request_dock_invalidation(app, [window]);
         return;
     }
 
@@ -499,8 +495,8 @@ fn on_command(
     };
 
     // Apply directly (not via Effect) to keep this example self-contained.
-    let _ = docking::handle_dock_op(app, op);
-    docking::request_dock_invalidation(app, [window]);
+    let _ = handle_dock_op(app, op);
+    request_dock_invalidation(app, [window]);
 }
 
 fn on_dock_op(app: &mut KernelApp, op: DockOp) {
@@ -510,7 +506,7 @@ fn on_dock_op(app: &mut KernelApp, op: DockOp) {
     // - `handle_dock_op` applies pure graph ops and translates tear-off requests into window
     //   create requests.
     // - This cookbook example installs a policy that disables tear-off.
-    let _ = docking::handle_dock_op(app, op);
+    let _ = handle_dock_op(app, op);
 }
 
 fn configure_driver(

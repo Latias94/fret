@@ -1,0 +1,32 @@
+# Fret v0.1.0 Wave 12 dry-run status
+
+Date verified: 2026-04-01.
+
+Commands run:
+
+- `cargo publish --dry-run -p fret`
+
+Status:
+
+- `fret`: failed (awaiting earlier waves on crates.io)
+
+Failure excerpts:
+
+## `fret`
+
+```text
+Updating crates.io index
+   Packaging fret v0.1.0 (./ecosystem/fret)
+    Updating crates.io index
+error: failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `fret-app` found
+  location searched: crates.io index
+  required by package `fret v0.1.0 (./ecosystem/fret)`
+```
+
+Interpretation:
+
+- Wave 12 is packaging-clean, but local `cargo publish --dry-run` still depends on earlier waves being visible on crates.io.
+- Registry-gap failures are expected when later waves depend on crates that have not been published yet.
