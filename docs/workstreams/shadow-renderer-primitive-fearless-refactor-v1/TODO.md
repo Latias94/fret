@@ -8,6 +8,7 @@ Related:
 
 - Design: `docs/workstreams/shadow-renderer-primitive-fearless-refactor-v1/DESIGN.md`
 - Milestones: `docs/workstreams/shadow-renderer-primitive-fearless-refactor-v1/MILESTONES.md`
+- ADR: `docs/adr/0318-rounded-rect-shadow-scene-primitive-v1.md`
 
 Tracking legend:
 
@@ -36,12 +37,13 @@ Tracking legend:
 
 ## B. Contract design
 
-- [ ] SRPFR-adr-010 Draft the ADR for a first-class rounded-rect shadow scene primitive.
+- [x] SRPFR-adr-010 Draft the ADR for a first-class rounded-rect shadow scene primitive.
   - Scope:
     - exact op shape,
     - ordering semantics,
     - clipping/transform semantics,
     - degradation rules for unsupported backends.
+  - Landed as `docs/adr/0318-rounded-rect-shadow-scene-primitive-v1.md`.
 
 - [ ] SRPFR-adr-011 Refresh ADR alignment notes once the contract lands.
   - Expected rows:

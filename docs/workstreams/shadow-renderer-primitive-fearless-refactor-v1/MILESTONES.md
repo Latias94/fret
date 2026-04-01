@@ -8,6 +8,7 @@ Related:
 
 - Design: `docs/workstreams/shadow-renderer-primitive-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/shadow-renderer-primitive-fearless-refactor-v1/TODO.md`
+- ADR: `docs/adr/0318-rounded-rect-shadow-scene-primitive-v1.md`
 
 ## M0 - Root-cause freeze
 
@@ -22,7 +23,8 @@ Exit criteria:
 
 ## M1 - Contract lock
 
-Status note (2026-04-01): open.
+Status note (2026-04-01): in progress. The first ADR draft now exists, but the contract is not yet
+accepted and the related ADR alignment notes have not been refreshed.
 
 Exit criteria:
 

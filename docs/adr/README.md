@@ -30,6 +30,11 @@ ADR or adding a new ADR) before scaling feature surface area.
 
 ### P0 (Lock before scaling the UI kit)
 
+- **Rounded-rect box-shadow scene primitive**
+  - Proposed: `docs/adr/0318-rounded-rect-shadow-scene-primitive-v1.md`
+  - Decide: the first-class scene-op shape for geometric box shadows, its clip/transform/order
+    semantics, and how renderer-owned degradation differs from ADR 0286 effect shadows.
+
 - **Renderer v3: postprocessing substrate + effect semantics**
   - Proposed: `docs/adr/0116-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`,
     `docs/adr/0117-effect-layers-and-backdrop-filters-scene-semantics-v1.md`

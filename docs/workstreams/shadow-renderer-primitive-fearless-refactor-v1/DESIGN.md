@@ -9,6 +9,7 @@ Related:
 - Portable softness follow-on: `docs/workstreams/shadow-portable-softness-fearless-refactor-v1/DESIGN.md`
 - Shadow surface closure lane: `docs/workstreams/shadow-surface-fearless-refactor-v1/DESIGN.md`
 - Blur effect workstream: `docs/workstreams/renderer-drop-shadow-effect-v1/renderer-drop-shadow-effect-v1.md`
+- ADR: `docs/adr/0318-rounded-rect-shadow-scene-primitive-v1.md`
 
 ## Context
 
