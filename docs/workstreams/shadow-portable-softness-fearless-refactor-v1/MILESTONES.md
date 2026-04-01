@@ -46,12 +46,14 @@ Exit criteria:
 ## M3 - Renderer review evidence
 
 Status note (2026-04-01): complete. Representative elevated surfaces now have a curated screenshot
-suite so renderer-level shadow review is reproducible instead of ad hoc.
+suite so renderer-level shadow review is reproducible instead of ad hoc, and `todo_demo` now also
+has a focused screenshot repro for app-local composition review.
 
 Exit criteria:
 
 - A named diag suite exists for representative shadow surfaces.
 - The suite includes at least one non-overlay surface and one overlay/toast surface.
+- A focused app-local repro exists when composition amplifies the renderer fallback.
 
 ## M4 - Automated renderer parity
 

@@ -77,6 +77,38 @@ Portable shadow layers should use a **normalized alpha budget**:
 
 This is a fidelity improvement inside the existing `ShadowStyle` contract, not a new public API.
 
+## Algorithmic Boundary After GPUI/Zed Review
+
+The portable painter is now **budget-correct** for the existing `ShadowStyle` contract, but that
+does **not** make it equivalent to a modern GPU shadow implementation.
+
+Reviewing the pinned `repo-ref/zed` renderer shows a materially different architecture:
+
+- `BoxShadow` API values are lowered into a dedicated `Shadow` scene primitive instead of expanded
+  CPU-side quads.
+- the WGPU backend renders shadows through a dedicated shadow pipeline,
+- and the shader computes shadow coverage from rounded-rect distance plus gaussian blur terms.
+
+This means the current Fret portable painter should be treated as:
+
+- a portable fallback with bounded opacity and stable footprint,
+- suitable for mechanism-layer `ShadowStyle`,
+- but **not** the final renderer-quality answer for elevated surfaces when perceptual softness is a
+  product requirement.
+
+In practice, local composition can still amplify the portable fallback's limitations. The current
+`todo_demo` was one such example:
+
+- the main card used `shadow_xl`,
+- the footer painted a full-bleed tinted bottom band,
+- and that combination made the bottom edge read flatter and more rectangular than intended.
+
+This workstream therefore treats two conclusions as simultaneously true:
+
+1. the portable painter needed alpha-budget correction and now has stronger mechanism gates,
+2. renderer-level shadow quality still points toward a future dedicated shadow primitive / effect
+   path, closer to the GPUI/Zed model.
+
 ## Evidence Anchors
 
 - Portable painter: `crates/fret-ui/src/paint.rs`
@@ -84,6 +116,10 @@ This is a fidelity improvement inside the existing `ShadowStyle` contract, not a
 - Prior closure lane: `docs/workstreams/shadow-surface-fearless-refactor-v1/DESIGN.md`
 - Effect-backed blur path: `docs/workstreams/renderer-drop-shadow-effect-v1/renderer-drop-shadow-effect-v1.md`
 - Shared control shadow gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+- Demo-local composition evidence: `apps/fret-examples/src/todo_demo.rs`
+- GPUI/Zed primitive path: `repo-ref/zed/crates/gpui/src/window.rs`
+- GPUI/Zed scene primitive: `repo-ref/zed/crates/gpui/src/scene.rs`
+- GPUI/Zed shader shadow path: `repo-ref/zed/crates/gpui_wgpu/src/shaders.wgsl`
 
 ## Follow-up After v1
 

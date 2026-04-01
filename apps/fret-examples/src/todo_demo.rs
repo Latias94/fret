@@ -219,7 +219,7 @@ impl View for TodoDemoView {
         let border = theme.color_token("border");
         let card = theme.color_token("card");
         let destructive = theme.color_token("destructive");
-        let footer_bg = alpha(muted, 0.5);
+        let footer_bg = alpha(muted, 0.30);
         let success = Color::from_srgb_hex_rgb(0x22_c5_5e);
         let title_icon = ui::v_flex(|cx| {
             let icon_el = icon::icon_with(
@@ -514,21 +514,12 @@ impl View for TodoDemoView {
 
                     if total_count > 0 {
                         sections.push(
-                            ui::v_flex(|cx| {
-                                ui::children![
-                                    cx;
-                                    shadcn::Separator::new().into_element(cx),
-                                    ui::container(|cx| ui::single(cx, footer))
-                                        .px(Space::N6)
-                                        .py(Space::N3p5)
-                                        .bg(ColorRef::Color(footer_bg))
-                                        .w_full()
-                                        .into_element(cx),
-                                ]
-                            })
-                            .gap(Space::N0)
-                            .w_full()
-                            .into_element(cx),
+                            ui::container(|cx| ui::single(cx, footer))
+                                .px(Space::N6)
+                                .py(Space::N3p5)
+                                .bg(ColorRef::Color(footer_bg))
+                                .w_full()
+                                .into_element(cx),
                         );
                     }
 
@@ -541,7 +532,7 @@ impl View for TodoDemoView {
         .border_1()
         .border_color(ColorRef::Color(border))
         .rounded(Radius::Lg)
-        .shadow_xl()
+        .shadow_lg()
         .overflow_hidden()
         .w_full()
         .max_w(Px(448.0))

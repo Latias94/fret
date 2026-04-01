@@ -43,6 +43,12 @@ Tracking legend:
 - [x] SPSFR-doc-021 Update shadcn alignment audit notes so shared shadow lanes are not blamed for
   the remaining subjective hardness.
 
+- [x] SPSFR-doc-022 Record the post-review algorithmic boundary explicitly.
+  - Result: portable `ShadowStyle` is now treated as a bounded fallback, while GPUI/Zed-style
+    renderer primitives remain the long-term fidelity direction.
+  - The note also records that `todo_demo` amplified the issue locally through `shadow_xl` plus a
+    full-bleed tinted footer band.
+
 ## D. Follow-on quality gates
 
 - [x] SPSFR-gate-030 Add a stronger softness-oriented gate for portable `ShadowStyle`.
@@ -70,3 +76,6 @@ Tracking legend:
   - Candidate paths:
     - screenshot diff on a bounded ROI for representative elevated surfaces,
     - or renderer readback assertions over a deterministic shadow strip/demo scene.
+
+- [x] SPSFR-diag-042 Add a focused `todo_demo` screenshot repro for local shadow/composition review.
+  - Landed as `tools/diag-scripts/tooling/todo/todo-shadow-screenshot.json`.
