@@ -433,7 +433,6 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     } = props;
     let graph = binding.graph_model();
     let view_state = binding.view_state_model();
-    let controller = binding.controller();
 
     let PaintOnlySurfaceModels {
         drag,
@@ -521,9 +520,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                 cx,
                 element,
                 SurfaceShellParams {
-                    graph: graph.clone(),
-                    view_state: view_state.clone(),
-                    controller: controller.clone(),
+                    binding: binding.clone(),
                     pointer_region,
                     canvas,
                     measured_geometry_present: measured_geometry.is_some(),
@@ -650,7 +647,7 @@ mod tests {
     use crate::runtime::store::NodeGraphStore;
     use crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX;
     use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
-    use crate::ui::{MeasuredGeometryStore, NodeGraphController};
+    use crate::ui::{MeasuredGeometryStore, NodeGraphController, NodeGraphSurfaceBinding};
     use serde_json::Value;
 
     #[derive(Default)]
@@ -1034,7 +1031,7 @@ mod tests {
     }
 
     #[test]
-    fn commit_graph_transaction_syncs_graph_and_view_models_through_controller() {
+    fn commit_graph_transaction_syncs_graph_and_view_models_through_binding() {
         let mut host = TestActionHostImpl::default();
         let mut graph_value = Graph::new(GraphId::from_u128(5));
         let node = NodeId::from_u128(99);
@@ -1048,6 +1045,7 @@ mod tests {
             NodeGraphViewState::default(),
         ));
         let controller = NodeGraphController::new(store.clone());
+        let binding = test_binding(&graph, &view_state, &controller);
 
         let tx = host
             .models
@@ -1056,13 +1054,7 @@ mod tests {
             })
             .expect("build transaction");
 
-        assert!(commit_graph_transaction(
-            &mut host,
-            &graph,
-            &view_state,
-            &controller,
-            &tx,
-        ));
+        assert!(commit_graph_transaction(&mut host, &binding, &tx));
 
         let graph_pos = host
             .models
@@ -1089,7 +1081,7 @@ mod tests {
     }
 
     #[test]
-    fn commit_node_drag_transaction_notifies_store_callbacks_through_controller() {
+    fn commit_node_drag_transaction_notifies_store_callbacks_through_binding() {
         #[derive(Clone)]
         struct Recorder {
             commits: Rc<RefCell<Vec<(Option<String>, usize)>>>,
@@ -1124,6 +1116,7 @@ mod tests {
             NodeGraphViewState::default(),
         ));
         let controller = NodeGraphController::new(store.clone());
+        let binding = test_binding(&graph, &view_state, &controller);
         let commits: Rc<RefCell<Vec<(Option<String>, usize)>>> = Rc::new(RefCell::new(Vec::new()));
         let _callbacks_token = host
             .models
@@ -1144,13 +1137,7 @@ mod tests {
             })
             .expect("build transaction");
 
-        assert!(commit_node_drag_transaction(
-            &mut host,
-            &graph,
-            &view_state,
-            &controller,
-            &tx,
-        ));
+        assert!(commit_node_drag_transaction(&mut host, &binding, &tx));
 
         let callback_commits = commits.borrow();
         assert_eq!(callback_commits.len(), 1);
@@ -1159,7 +1146,7 @@ mod tests {
     }
 
     #[test]
-    fn declarative_node_drag_commit_supports_undo_and_redo_through_controller() {
+    fn declarative_node_drag_commit_supports_undo_and_redo_through_binding() {
         let node_a = NodeId::from_u128(601);
         let node_b = NodeId::from_u128(602);
         let mut fixture = DeclarativeControllerFixture::new_two_nodes(
@@ -1181,9 +1168,7 @@ mod tests {
 
         assert!(commit_node_drag_transaction(
             &mut fixture.host,
-            &fixture.graph,
-            &fixture.view_state,
-            &fixture.controller,
+            &fixture.binding,
             &tx,
         ));
 
@@ -1199,12 +1184,8 @@ mod tests {
         assert_eq!(committed_pos, CanvasPoint { x: 15.0, y: 18.0 });
 
         let undo = fixture
-            .controller
-            .undo_and_sync_models_action_host(
-                &mut fixture.host,
-                &fixture.graph,
-                &fixture.view_state,
-            )
+            .binding
+            .undo_action_host(&mut fixture.host)
             .unwrap()
             .expect("did undo");
         assert!(!undo.committed.ops.is_empty());
@@ -1228,12 +1209,8 @@ mod tests {
         assert_eq!(store_flags, (false, true));
 
         let redo = fixture
-            .controller
-            .redo_and_sync_models_action_host(
-                &mut fixture.host,
-                &fixture.graph,
-                &fixture.view_state,
-            )
+            .binding
+            .redo_action_host(&mut fixture.host)
             .unwrap()
             .expect("did redo");
         assert!(!redo.committed.ops.is_empty());
@@ -1314,6 +1291,7 @@ mod tests {
         graph: Model<Graph>,
         view_state: Model<NodeGraphViewState>,
         store: Model<NodeGraphStore>,
+        binding: NodeGraphSurfaceBinding,
         controller: NodeGraphController,
     }
 
@@ -1336,11 +1314,17 @@ mod tests {
                 .models
                 .insert(NodeGraphStore::new(graph_value, initial_view));
             let controller = NodeGraphController::new(store.clone());
+            let binding = NodeGraphSurfaceBinding::from_models(
+                graph.clone(),
+                view_state.clone(),
+                controller.clone(),
+            );
             Self {
                 host,
                 graph,
                 view_state,
                 store,
+                binding,
                 controller,
             }
         }
@@ -1376,8 +1360,16 @@ mod tests {
         assert_eq!(host.redraw_requests, vec![action_cx.window]);
     }
 
+    fn test_binding(
+        graph: &Model<Graph>,
+        view_state: &Model<NodeGraphViewState>,
+        controller: &NodeGraphController,
+    ) -> NodeGraphSurfaceBinding {
+        NodeGraphSurfaceBinding::from_models(graph.clone(), view_state.clone(), controller.clone())
+    }
+
     #[test]
-    fn commit_pending_selection_action_host_notifies_selection_callbacks_through_controller() {
+    fn commit_pending_selection_action_host_notifies_selection_callbacks_through_binding() {
         let node_a = NodeId::from_u128(9801);
         let node_b = NodeId::from_u128(9802);
         let initial_view = NodeGraphViewState {
@@ -1401,8 +1393,7 @@ mod tests {
 
         assert!(commit_pending_selection_action_host(
             &mut fixture.host,
-            &fixture.view_state,
-            &fixture.controller,
+            &fixture.binding,
             &pending,
         ));
 
@@ -1410,7 +1401,7 @@ mod tests {
     }
 
     #[test]
-    fn commit_marquee_selection_action_host_notifies_selection_callbacks_through_controller() {
+    fn commit_marquee_selection_action_host_notifies_selection_callbacks_through_binding() {
         let node_a = NodeId::from_u128(9901);
         let node_b = NodeId::from_u128(9902);
         let edge = EdgeId::new();
@@ -1441,8 +1432,7 @@ mod tests {
 
         assert!(commit_marquee_selection_action_host(
             &mut fixture.host,
-            &fixture.view_state,
-            &fixture.controller,
+            &fixture.binding,
             &marquee,
         ));
 
@@ -1495,9 +1485,7 @@ mod tests {
             &marquee,
             &node_drag,
             &pending,
-            &fixture.graph,
-            &fixture.view_state,
-            &fixture.controller,
+            &fixture.binding,
         ));
         assert_pointer_session_finished(&fixture.host, action_cx);
         assert_single_selection_change(&trace, vec![node_b]);
@@ -1522,6 +1510,7 @@ mod tests {
             view_value,
         ));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
 
         assert!(!handle_declarative_pointer_up_action_host(
             &mut host,
@@ -1536,9 +1525,7 @@ mod tests {
             &marquee,
             &node_drag,
             &pending,
-            &graph,
-            &view_state,
-            &controller,
+            &binding,
         ));
         assert!(
             host.models
@@ -1570,6 +1557,7 @@ mod tests {
             view_value,
         ));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
 
         assert!(handle_declarative_pointer_up_action_host(
             &mut host,
@@ -1584,9 +1572,7 @@ mod tests {
             &marquee,
             &node_drag,
             &pending,
-            &graph,
-            &view_state,
-            &controller,
+            &binding,
         ));
         assert!(
             host.models
@@ -1648,9 +1634,7 @@ mod tests {
             &node_drag,
             &pending,
             &marquee,
-            &fixture.graph,
-            &fixture.view_state,
-            &fixture.controller,
+            &fixture.binding,
         );
 
         assert_eq!(
@@ -1702,9 +1686,7 @@ mod tests {
             &node_drag,
             &pending,
             &marquee,
-            &fixture.graph,
-            &fixture.view_state,
-            &fixture.controller,
+            &fixture.binding,
         );
 
         assert_eq!(
@@ -1736,18 +1718,13 @@ mod tests {
             view_value,
         ));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
         let node_drag = host.models.insert(None::<NodeDragState>);
         let marquee = host.models.insert(None::<MarqueeDragState>);
         let pending = host.models.insert(None::<PendingSelectionState>);
 
         let outcome = complete_left_pointer_release_action_host(
-            &mut host,
-            &node_drag,
-            &pending,
-            &marquee,
-            &graph,
-            &view_state,
-            &controller,
+            &mut host, &node_drag, &pending, &marquee, &binding,
         );
 
         assert_eq!(outcome, LeftPointerReleaseOutcome::None);
@@ -1786,9 +1763,7 @@ mod tests {
             &mut fixture.host,
             &node_drag,
             &pending,
-            &fixture.graph,
-            &fixture.view_state,
-            &fixture.controller,
+            &fixture.binding,
         );
 
         assert_eq!(
@@ -1834,10 +1809,12 @@ mod tests {
         graph_value
             .nodes
             .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
+        let graph = host.models.insert(graph_value.clone());
         let store = host
             .models
             .insert(NodeGraphStore::new(graph_value, view_value));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
         let pending = host.models.insert(Some(PendingSelectionState {
             nodes: Arc::from([node_b]),
             clear_edges: true,
@@ -1845,10 +1822,7 @@ mod tests {
         }));
 
         let outcome = handle_pending_selection_left_pointer_release_action_host(
-            &mut host,
-            &pending,
-            &view_state,
-            &controller,
+            &mut host, &pending, &binding,
         );
 
         assert_eq!(
@@ -1880,11 +1854,13 @@ mod tests {
             ..Default::default()
         };
         let view_state = host.models.insert(view_value.clone());
+        let graph = host.models.insert(Graph::new(GraphId::from_u128(9949)));
         let store = host.models.insert(NodeGraphStore::new(
             Graph::new(GraphId::from_u128(9949)),
             view_value,
         ));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
         let marquee = host.models.insert(Some(MarqueeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(4.0), Px(4.0)),
@@ -1900,11 +1876,7 @@ mod tests {
         }));
 
         let outcome = handle_marquee_left_pointer_release_action_host(
-            &mut host,
-            &marquee,
-            &pending,
-            &view_state,
-            &controller,
+            &mut host, &marquee, &pending, &binding,
         );
 
         assert_eq!(
@@ -1954,6 +1926,7 @@ mod tests {
             .models
             .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
         let controller = NodeGraphController::new(store.clone());
+        let binding = test_binding(&graph, &view_state, &controller);
         let trace = install_declarative_callback_trace(&mut host, &store);
         let node_drag = NodeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
@@ -1967,14 +1940,8 @@ mod tests {
             clear_groups: false,
         };
 
-        let outcome = complete_node_drag_release_action_host(
-            &mut host,
-            &graph,
-            &view_state,
-            &controller,
-            &node_drag,
-            Some(&pending),
-        );
+        let outcome =
+            complete_node_drag_release_action_host(&mut host, &binding, &node_drag, Some(&pending));
 
         assert!(outcome.selection_committed);
         assert!(!outcome.drag_committed);
@@ -2257,6 +2224,8 @@ mod tests {
             .models
             .insert(NodeGraphStore::new(graph_value, view_value));
         let controller = NodeGraphController::new(store);
+        let graph = host.models.insert(Graph::new(GraphId::from_u128(9973)));
+        let binding = test_binding(&graph, &view_state, &controller);
         let node_drag = host.models.insert(Some(NodeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -2280,13 +2249,7 @@ mod tests {
         );
 
         let outcome = handle_node_drag_pointer_move_action_host(
-            &mut host,
-            &node_drag,
-            &pending,
-            &hovered,
-            &view_state,
-            &controller,
-            mv,
+            &mut host, &node_drag, &pending, &hovered, &binding, mv,
         );
 
         assert_eq!(
@@ -2331,6 +2294,8 @@ mod tests {
             view_value,
         ));
         let controller = NodeGraphController::new(store);
+        let graph = host.models.insert(Graph::new(GraphId::from_u128(9976)));
+        let binding = test_binding(&graph, &view_state, &controller);
         let node_drag = host.models.insert(Some(NodeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -2350,13 +2315,7 @@ mod tests {
         );
 
         let outcome = handle_node_drag_pointer_move_action_host(
-            &mut host,
-            &node_drag,
-            &pending,
-            &hovered,
-            &view_state,
-            &controller,
-            mv,
+            &mut host, &node_drag, &pending, &hovered, &binding, mv,
         );
 
         assert_eq!(
@@ -2565,16 +2524,17 @@ mod tests {
             ..Default::default()
         };
         let view_state = host.models.insert(view_value.clone());
+        let graph = host.models.insert(Graph::new(GraphId::from_u128(9964)));
         let store = host.models.insert(NodeGraphStore::new(
             Graph::new(GraphId::from_u128(9964)),
             view_value,
         ));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
 
         assert!(apply_declarative_diag_view_preset_action_host(
             &mut host,
-            &view_state,
-            &controller,
+            &binding,
             DeclarativeDiagViewPreset::OffsetPartialMarquee,
         ));
         host.models
@@ -2605,6 +2565,7 @@ mod tests {
             view_value,
         ));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
         let mut portal_bounds_state = PortalBoundsStore::default();
         portal_bounds_state.pending_fit_to_portals = true;
         portal_bounds_state.nodes_canvas_bounds.insert(
@@ -2622,9 +2583,7 @@ mod tests {
         assert!(handle_declarative_diag_key_action_host(
             &mut host,
             DeclarativeDiagKeyAction::DisablePortals,
-            &graph,
-            &view_state,
-            &controller,
+            &binding,
             &portal_bounds,
             &portal_debug,
             &diag_paint_overrides,
@@ -2651,17 +2610,18 @@ mod tests {
             ..Default::default()
         };
         let view_state = host.models.insert(view_value.clone());
+        let graph = host.models.insert(Graph::new(GraphId::from_u128(9966)));
         let store = host.models.insert(NodeGraphStore::new(
             Graph::new(GraphId::from_u128(9966)),
             view_value,
         ));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
 
         assert!(handle_declarative_keyboard_zoom_action_host(
             &mut host,
             DeclarativeKeyboardZoomAction::Reset,
-            &view_state,
-            &controller,
+            &binding,
             0.1,
             8.0,
         ));
@@ -2697,6 +2657,7 @@ mod tests {
             view_value,
         ));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
         let portal_bounds = host.models.insert(PortalBoundsStore::default());
         let portal_debug = host.models.insert(PortalDebugFlags::default());
         let diag_paint_overrides_enabled = host.models.insert(false);
@@ -2705,9 +2666,7 @@ mod tests {
         assert!(handle_declarative_diag_key_action_host(
             &mut host,
             DeclarativeDiagKeyAction::TogglePaintOverrides,
-            &graph,
-            &view_state,
-            &controller,
+            &binding,
             &portal_bounds,
             &portal_debug,
             &diag_paint_overrides,
@@ -2921,10 +2880,12 @@ mod tests {
                 color: None,
             },
         );
+        let graph = host.models.insert(graph_value.clone());
         let store = host
             .models
             .insert(NodeGraphStore::new(graph_value, view_value));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
         let pending = PendingSelectionState {
             nodes: Arc::from([node_b]),
             clear_edges: false,
@@ -2932,10 +2893,7 @@ mod tests {
         };
 
         assert!(commit_pending_selection_action_host(
-            &mut host,
-            &view_state,
-            &controller,
-            &pending,
+            &mut host, &binding, &pending,
         ));
 
         let selection = host
@@ -3031,10 +2989,12 @@ mod tests {
                 color: None,
             },
         );
+        let graph = host.models.insert(graph_value.clone());
         let store = host
             .models
             .insert(NodeGraphStore::new(graph_value, view_value));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
         let pending = PendingSelectionState {
             nodes: Arc::from([]),
             clear_edges: true,
@@ -3042,10 +3002,7 @@ mod tests {
         };
 
         assert!(commit_pending_selection_action_host(
-            &mut host,
-            &view_state,
-            &controller,
-            &pending,
+            &mut host, &binding, &pending,
         ));
 
         let selection = host
@@ -4223,10 +4180,12 @@ mod tests {
                 color: None,
             },
         );
+        let graph = host.models.insert(graph_value.clone());
         let store = host
             .models
             .insert(NodeGraphStore::new(graph_value, view_value));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
         let marquee = MarqueeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -4237,10 +4196,7 @@ mod tests {
         };
 
         assert!(commit_marquee_selection_action_host(
-            &mut host,
-            &view_state,
-            &controller,
-            &marquee,
+            &mut host, &binding, &marquee,
         ));
 
         let selection = host
@@ -4336,10 +4292,12 @@ mod tests {
                 color: None,
             },
         );
+        let graph = host.models.insert(graph_value.clone());
         let store = host
             .models
             .insert(NodeGraphStore::new(graph_value, view_value));
         let controller = NodeGraphController::new(store);
+        let binding = test_binding(&graph, &view_state, &controller);
         let marquee = MarqueeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -4350,10 +4308,7 @@ mod tests {
         };
 
         assert!(commit_marquee_selection_action_host(
-            &mut host,
-            &view_state,
-            &controller,
-            &marquee,
+            &mut host, &binding, &marquee,
         ));
 
         let selection = host

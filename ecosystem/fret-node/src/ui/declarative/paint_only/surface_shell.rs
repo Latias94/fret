@@ -1,10 +1,7 @@
-use fret_runtime::Model;
 use fret_ui::element::{AnyElement, PointerRegionProps};
 use fret_ui::{ElementContext, UiHost};
 
-use crate::core::Graph;
-use crate::io::NodeGraphViewState;
-use crate::ui::NodeGraphController;
+use crate::ui::NodeGraphSurfaceBinding;
 
 use super::{
     KeyHandlerParams, PaintOnlySurfaceModels, PinchHandlerParams, PointerDownHandlerParams,
@@ -16,9 +13,7 @@ use super::{
 };
 
 pub(super) struct SurfaceShellParams {
-    pub(super) graph: Model<Graph>,
-    pub(super) view_state: Model<NodeGraphViewState>,
-    pub(super) controller: NodeGraphController,
+    pub(super) binding: NodeGraphSurfaceBinding,
     pub(super) pointer_region: PointerRegionProps,
     pub(super) canvas: crate::ui::declarative::paint_only::CanvasProps,
     pub(super) measured_geometry_present: bool,
@@ -40,9 +35,7 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
     params: SurfaceShellParams,
 ) -> Vec<AnyElement> {
     let SurfaceShellParams {
-        graph,
-        view_state,
-        controller,
+        binding,
         pointer_region,
         canvas,
         measured_geometry_present,
@@ -76,6 +69,9 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
         hover_anchor_store,
         authoritative_surface_boundary: _,
     } = surface_models;
+    let graph = binding.graph_model();
+    let view_state = binding.view_state_model();
+    let controller = binding.controller();
 
     if let Some(bounds) = cx.last_bounds_for_element(element) {
         let _ = cx.app.models_mut().update(&grid_cache, |state| {
@@ -90,9 +86,7 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
         marquee_drag: marquee_drag.clone(),
         node_drag: node_drag.clone(),
         pending_selection: pending_selection.clone(),
-        graph: graph.clone(),
-        view_state: view_state.clone(),
-        controller: controller.clone(),
+        binding: binding.clone(),
         portal_bounds_store: portal_bounds_store.clone(),
         portal_debug_flags: portal_debug_flags.clone(),
         diag_keys_enabled: prepared_frame.diag_keys_enabled,
@@ -122,8 +116,7 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
         marquee_drag: marquee_drag.clone(),
         node_drag: node_drag.clone(),
         pending_selection: pending_selection.clone(),
-        view_state: view_state.clone(),
-        controller: controller.clone(),
+        binding: binding.clone(),
         grid_cache: grid_cache.clone(),
         derived_cache: derived_cache.clone(),
         hovered_node: hovered_node.clone(),
@@ -136,9 +129,7 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
         marquee_drag: marquee_drag.clone(),
         node_drag: node_drag.clone(),
         pending_selection: pending_selection.clone(),
-        graph: graph.clone(),
-        view_state: view_state.clone(),
-        controller: controller.clone(),
+        binding: binding.clone(),
     });
 
     let on_pointer_cancel = build_pointer_cancel_handler(PointerFinishHandlerParams {
@@ -147,14 +138,11 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
         marquee_drag: marquee_drag.clone(),
         node_drag: node_drag.clone(),
         pending_selection: pending_selection.clone(),
-        graph: graph.clone(),
-        view_state: view_state.clone(),
-        controller: controller.clone(),
+        binding: binding.clone(),
     });
 
     let on_wheel = build_wheel_handler(WheelHandlerParams {
-        view_state: view_state.clone(),
-        controller: controller.clone(),
+        binding: binding.clone(),
         grid_cache: grid_cache.clone(),
         wheel_zoom,
         min_zoom,
@@ -162,8 +150,7 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
     });
 
     let on_pinch = build_pinch_handler(PinchHandlerParams {
-        view_state: view_state.clone(),
-        controller: controller.clone(),
+        binding: binding.clone(),
         grid_cache: grid_cache.clone(),
         pinch_zoom_speed,
         min_zoom,

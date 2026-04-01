@@ -126,25 +126,23 @@ pub(super) fn build_diag_normalize_visible_node_transaction(graph: &Graph) -> Gr
 
 fn commit_diag_graph_transaction_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
-    graph: &Model<Graph>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     build_tx: fn(&Graph) -> GraphTransaction,
 ) -> bool {
-    let tx = host.models_mut().read(graph, build_tx).ok();
+    let graph = binding.graph_model();
+    let tx = host.models_mut().read(&graph, build_tx).ok();
     if let Some(tx) = tx.as_ref() {
-        let _ = commit_graph_transaction(host, graph, view_state, controller, tx);
+        let _ = commit_graph_transaction(host, binding, tx);
     }
     true
 }
 
 pub(super) fn apply_declarative_diag_view_preset_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     preset: DeclarativeDiagViewPreset,
 ) -> bool {
-    update_view_state_action_host(host, view_state, controller, |state| {
+    update_view_state_action_host(host, binding, |state| {
         match preset {
             DeclarativeDiagViewPreset::CenteredSelectionOnDrag => {
                 state.pan.x = 380.0;
@@ -168,10 +166,11 @@ pub(super) fn apply_declarative_diag_view_preset_action_host(
 
 fn toggle_diag_paint_overrides_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
-    graph: &Model<Graph>,
+    binding: &NodeGraphSurfaceBinding,
     diag_paint_overrides: &Arc<NodeGraphPaintOverridesMap>,
     diag_paint_overrides_enabled: &Model<bool>,
 ) -> bool {
+    let graph = binding.graph_model();
     let enable_next = host
         .models_mut()
         .read(diag_paint_overrides_enabled, |state| !*state)
@@ -183,7 +182,7 @@ fn toggle_diag_paint_overrides_action_host(
 
     let edge_id = host
         .models_mut()
-        .read(graph, |graph| graph.edges.keys().next().copied())
+        .read(&graph, |graph: &Graph| graph.edges.keys().next().copied())
         .ok()
         .flatten();
 
@@ -226,9 +225,7 @@ fn toggle_diag_paint_overrides_action_host(
 pub(super) fn handle_declarative_diag_key_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     action: DeclarativeDiagKeyAction,
-    graph: &Model<Graph>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     portal_bounds_store: &Model<PortalBoundsStore>,
     portal_debug_flags: &Model<PortalDebugFlags>,
     diag_paint_overrides: &Arc<NodeGraphPaintOverridesMap>,
@@ -237,23 +234,18 @@ pub(super) fn handle_declarative_diag_key_action_host(
     match action {
         DeclarativeDiagKeyAction::NudgeVisibleNode => commit_diag_graph_transaction_action_host(
             host,
-            graph,
-            view_state,
-            controller,
+            binding,
             build_diag_nudge_visible_node_transaction,
         ),
         DeclarativeDiagKeyAction::NormalizeVisibleNodeCentered => {
             commit_diag_graph_transaction_action_host(
                 host,
-                graph,
-                view_state,
-                controller,
+                binding,
                 build_diag_normalize_visible_node_transaction,
             );
             let _ = apply_declarative_diag_view_preset_action_host(
                 host,
-                view_state,
-                controller,
+                binding,
                 DeclarativeDiagViewPreset::CenteredSelectionOnDrag,
             );
             true
@@ -261,15 +253,12 @@ pub(super) fn handle_declarative_diag_key_action_host(
         DeclarativeDiagKeyAction::NormalizeVisibleNodeForMarquee => {
             commit_diag_graph_transaction_action_host(
                 host,
-                graph,
-                view_state,
-                controller,
+                binding,
                 build_diag_normalize_visible_node_transaction,
             );
             let _ = apply_declarative_diag_view_preset_action_host(
                 host,
-                view_state,
-                controller,
+                binding,
                 DeclarativeDiagViewPreset::OffsetPartialMarquee,
             );
             true
@@ -298,7 +287,7 @@ pub(super) fn handle_declarative_diag_key_action_host(
         }
         DeclarativeDiagKeyAction::TogglePaintOverrides => toggle_diag_paint_overrides_action_host(
             host,
-            graph,
+            binding,
             diag_paint_overrides,
             diag_paint_overrides_enabled,
         ),
@@ -308,13 +297,12 @@ pub(super) fn handle_declarative_diag_key_action_host(
 pub(super) fn handle_declarative_keyboard_zoom_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     action: DeclarativeKeyboardZoomAction,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     min_zoom: f32,
     max_zoom: f32,
 ) -> bool {
     const KB_ZOOM_STEP_MUL: f32 = 1.1;
-    update_view_state_action_host(host, view_state, controller, |state| {
+    update_view_state_action_host(host, binding, |state| {
         let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
         state.zoom = match action {
             DeclarativeKeyboardZoomAction::ZoomIn => {

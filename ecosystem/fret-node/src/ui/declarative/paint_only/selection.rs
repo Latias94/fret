@@ -2,15 +2,15 @@ use super::*;
 
 fn update_selection_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     f: impl FnOnce(
         &mut Vec<crate::core::NodeId>,
         &mut Vec<crate::core::EdgeId>,
         &mut Vec<crate::core::GroupId>,
     ),
 ) -> bool {
-    let Ok(state) = host.models_mut().read(view_state, |state| state.clone()) else {
+    let view_state = binding.view_state_model();
+    let Ok(state) = host.models_mut().read(&view_state, |state| state.clone()) else {
         return false;
     };
     let mut selected_nodes = state.selected_nodes;
@@ -22,14 +22,8 @@ fn update_selection_action_host(
         &mut selected_groups,
     );
 
-    controller
-        .set_selection_and_sync_view_model_action_host(
-            host,
-            view_state,
-            selected_nodes,
-            selected_edges,
-            selected_groups,
-        )
+    binding
+        .set_selection_action_host(host, selected_nodes, selected_edges, selected_groups)
         .is_ok()
 }
 
@@ -122,8 +116,7 @@ pub(super) fn build_click_selection_preview_nodes(
 
 pub(super) fn commit_pending_selection_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     pending: &PendingSelectionState,
 ) -> bool {
     let nodes = pending.nodes.clone();
@@ -131,8 +124,7 @@ pub(super) fn commit_pending_selection_action_host(
     let clear_groups = pending.clear_groups;
     update_selection_action_host(
         host,
-        view_state,
-        controller,
+        binding,
         move |selected_nodes, selected_edges, selected_groups| {
             selected_nodes.clear();
             selected_nodes.extend(nodes.iter().copied());
@@ -148,8 +140,7 @@ pub(super) fn commit_pending_selection_action_host(
 
 pub(super) fn commit_marquee_selection_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     marquee: &MarqueeDragState,
 ) -> bool {
     let pending = PendingSelectionState {
@@ -157,5 +148,5 @@ pub(super) fn commit_marquee_selection_action_host(
         clear_edges: !marquee.toggle,
         clear_groups: !marquee.toggle,
     };
-    commit_pending_selection_action_host(host, view_state, controller, &pending)
+    commit_pending_selection_action_host(host, binding, &pending)
 }

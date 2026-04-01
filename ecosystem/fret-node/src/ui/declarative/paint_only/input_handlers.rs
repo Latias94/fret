@@ -9,9 +9,9 @@ use fret_ui::action::{
     PointerUpCx, WheelCx,
 };
 
-use crate::core::{Graph, NodeId};
+use crate::core::NodeId;
 use crate::io::NodeGraphViewState;
-use crate::ui::NodeGraphController;
+use crate::ui::NodeGraphSurfaceBinding;
 use crate::ui::paint_overrides::NodeGraphPaintOverridesMap;
 
 use super::{
@@ -38,9 +38,7 @@ pub(super) struct KeyHandlerParams {
     pub(super) marquee_drag: Model<Option<MarqueeDragState>>,
     pub(super) node_drag: Model<Option<NodeDragState>>,
     pub(super) pending_selection: Model<Option<PendingSelectionState>>,
-    pub(super) graph: Model<Graph>,
-    pub(super) view_state: Model<NodeGraphViewState>,
-    pub(super) controller: NodeGraphController,
+    pub(super) binding: NodeGraphSurfaceBinding,
     pub(super) portal_bounds_store: Model<PortalBoundsStore>,
     pub(super) portal_debug_flags: Model<PortalDebugFlags>,
     pub(super) diag_keys_enabled: bool,
@@ -69,8 +67,7 @@ pub(super) struct PointerMoveHandlerParams {
     pub(super) marquee_drag: Model<Option<MarqueeDragState>>,
     pub(super) node_drag: Model<Option<NodeDragState>>,
     pub(super) pending_selection: Model<Option<PendingSelectionState>>,
-    pub(super) view_state: Model<NodeGraphViewState>,
-    pub(super) controller: NodeGraphController,
+    pub(super) binding: NodeGraphSurfaceBinding,
     pub(super) grid_cache: Model<GridPaintCacheState>,
     pub(super) derived_cache: Model<DerivedGeometryCacheState>,
     pub(super) hovered_node: HoveredNodeModel,
@@ -83,14 +80,11 @@ pub(super) struct PointerFinishHandlerParams {
     pub(super) marquee_drag: Model<Option<MarqueeDragState>>,
     pub(super) node_drag: Model<Option<NodeDragState>>,
     pub(super) pending_selection: Model<Option<PendingSelectionState>>,
-    pub(super) graph: Model<Graph>,
-    pub(super) view_state: Model<NodeGraphViewState>,
-    pub(super) controller: NodeGraphController,
+    pub(super) binding: NodeGraphSurfaceBinding,
 }
 
 pub(super) struct WheelHandlerParams {
-    pub(super) view_state: Model<NodeGraphViewState>,
-    pub(super) controller: NodeGraphController,
+    pub(super) binding: NodeGraphSurfaceBinding,
     pub(super) grid_cache: Model<GridPaintCacheState>,
     pub(super) wheel_zoom: super::NodeGraphWheelZoomConfig,
     pub(super) min_zoom: f32,
@@ -98,8 +92,7 @@ pub(super) struct WheelHandlerParams {
 }
 
 pub(super) struct PinchHandlerParams {
-    pub(super) view_state: Model<NodeGraphViewState>,
-    pub(super) controller: NodeGraphController,
+    pub(super) binding: NodeGraphSurfaceBinding,
     pub(super) grid_cache: Model<GridPaintCacheState>,
     pub(super) pinch_zoom_speed: f32,
     pub(super) min_zoom: f32,
@@ -135,9 +128,7 @@ pub(super) fn build_key_down_capture_handler(params: KeyHandlerParams) -> OnKeyD
             let handled = handle_declarative_diag_key_action_host(
                 host,
                 action,
-                &params.graph,
-                &params.view_state,
-                &params.controller,
+                &params.binding,
                 &params.portal_bounds_store,
                 &params.portal_debug_flags,
                 &params.diag_paint_overrides_value,
@@ -155,8 +146,7 @@ pub(super) fn build_key_down_capture_handler(params: KeyHandlerParams) -> OnKeyD
         let handled = handle_declarative_keyboard_zoom_action_host(
             host,
             action,
-            &params.view_state,
-            &params.controller,
+            &params.binding,
             params.min_zoom,
             params.max_zoom,
         );
@@ -224,6 +214,7 @@ pub(super) fn build_pointer_down_handler(params: PointerDownHandlerParams) -> On
 
 pub(super) fn build_pointer_move_handler(params: PointerMoveHandlerParams) -> OnPointerMove {
     Arc::new(move |host, action_cx: ActionCx, mv: PointerMoveCx| {
+        let view_state = params.binding.view_state_model();
         let bounds = host.bounds();
         let _ = host.models_mut().update(&params.grid_cache, |state| {
             if state.bounds != bounds {
@@ -242,8 +233,7 @@ pub(super) fn build_pointer_move_handler(params: PointerMoveHandlerParams) -> On
                 &params.node_drag,
                 &params.pending_selection,
                 &params.hovered_node,
-                &params.view_state,
-                &params.controller,
+                &params.binding,
                 mv,
             ) {
                 if outcome.capture_pointer {
@@ -263,7 +253,7 @@ pub(super) fn build_pointer_move_handler(params: PointerMoveHandlerParams) -> On
                 host,
                 &params.marquee_drag,
                 &params.hovered_node,
-                &params.view_state,
+                &view_state,
                 &params.derived_cache,
                 mv,
                 bounds,
@@ -283,7 +273,7 @@ pub(super) fn build_pointer_move_handler(params: PointerMoveHandlerParams) -> On
             let changed = update_hovered_node_pointer_move_action_host(
                 host,
                 &params.hovered_node,
-                &params.view_state,
+                &view_state,
                 &params.derived_cache,
                 &params.hit_scratch,
                 mv,
@@ -309,10 +299,9 @@ pub(super) fn build_pointer_move_handler(params: PointerMoveHandlerParams) -> On
             return false;
         }
 
-        let updated =
-            update_view_state_action_host(host, &params.view_state, &params.controller, |state| {
-                apply_pan_by_screen_delta(state, dx, dy);
-            });
+        let updated = update_view_state_action_host(host, &params.binding, |state| {
+            apply_pan_by_screen_delta(state, dx, dy);
+        });
         if !updated {
             return false;
         }
@@ -340,9 +329,7 @@ pub(super) fn build_pointer_up_handler(params: PointerFinishHandlerParams) -> On
             &params.marquee_drag,
             &params.node_drag,
             &params.pending_selection,
-            &params.graph,
-            &params.view_state,
-            &params.controller,
+            &params.binding,
         )
     })
 }
@@ -382,19 +369,18 @@ pub(super) fn build_wheel_handler(params: WheelHandlerParams) -> OnWheel {
                 state.bounds = bounds;
             }
         });
-        let updated =
-            update_view_state_action_host(host, &params.view_state, &params.controller, |state| {
-                let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
-                let new_zoom = (zoom * factor).clamp(params.min_zoom, params.max_zoom);
-                apply_zoom_about_screen_point(
-                    state,
-                    bounds,
-                    wheel.position,
-                    new_zoom,
-                    params.min_zoom,
-                    params.max_zoom,
-                );
-            });
+        let updated = update_view_state_action_host(host, &params.binding, |state| {
+            let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
+            let new_zoom = (zoom * factor).clamp(params.min_zoom, params.max_zoom);
+            apply_zoom_about_screen_point(
+                state,
+                bounds,
+                wheel.position,
+                new_zoom,
+                params.min_zoom,
+                params.max_zoom,
+            );
+        });
         if !updated {
             return false;
         }
@@ -420,20 +406,19 @@ pub(super) fn build_pinch_handler(params: PinchHandlerParams) -> OnPinchGesture 
                 state.bounds = bounds;
             }
         });
-        let updated =
-            update_view_state_action_host(host, &params.view_state, &params.controller, |state| {
-                let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
-                let factor = (1.0 + delta).max(1.0e-6);
-                let new_zoom = (zoom * factor).clamp(params.min_zoom, params.max_zoom);
-                apply_zoom_about_screen_point(
-                    state,
-                    bounds,
-                    pinch.position,
-                    new_zoom,
-                    params.min_zoom,
-                    params.max_zoom,
-                );
-            });
+        let updated = update_view_state_action_host(host, &params.binding, |state| {
+            let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
+            let factor = (1.0 + delta).max(1.0e-6);
+            let new_zoom = (zoom * factor).clamp(params.min_zoom, params.max_zoom);
+            apply_zoom_about_screen_point(
+                state,
+                bounds,
+                pinch.position,
+                new_zoom,
+                params.min_zoom,
+                params.max_zoom,
+            );
+        });
         if !updated {
             return false;
         }

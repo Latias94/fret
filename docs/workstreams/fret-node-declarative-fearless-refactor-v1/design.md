@@ -38,6 +38,9 @@ something else.
   - now also mirrors routine bound-store edit/sync/history helpers (`dispatch_transaction*`,
     `submit_transaction*`, `replace_*_action_host`, `set_selection_action_host`,
     `undo_action_host`, `redo_action_host`),
+  - is now also the routine declarative `paint_only` action-hook seam for commit/selection/diag
+    flows, so internal declarative orchestration stops re-introducing controller-only triplets for
+    ordinary bound-surface work,
   - should be enough for routine app-facing viewport authoring without dropping to
     `binding.controller()` for normal instance-style hooks.
 - `node_graph_surface(...)`

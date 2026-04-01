@@ -48,30 +48,27 @@ impl DeclarativeInteractionCancelMode {
 
 pub(super) fn complete_node_drag_release_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
-    graph: &Model<Graph>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     node_drag: &NodeDragState,
     pending_selection: Option<&PendingSelectionState>,
 ) -> NodeDragReleaseOutcome {
+    let graph = binding.graph_model();
+    let view_state = binding.view_state_model();
     let view = host
         .models_mut()
-        .read(view_state, view_from_state)
+        .read(&view_state, view_from_state)
         .ok()
         .unwrap_or_default();
     let drag_commit_delta = node_drag_commit_delta(view, node_drag);
-    let selection_committed = pending_selection.is_some_and(|pending| {
-        commit_pending_selection_action_host(host, view_state, controller, pending)
-    });
+    let selection_committed = pending_selection
+        .is_some_and(|pending| commit_pending_selection_action_host(host, binding, pending));
     let drag_committed = if let Some((dx, dy)) = drag_commit_delta {
         host.models_mut()
-            .read(graph, |graph| {
+            .read(&graph, |graph| {
                 build_node_drag_transaction(graph, node_drag.nodes_sorted.as_ref(), dx, dy)
             })
             .ok()
-            .is_some_and(|tx| {
-                commit_node_drag_transaction(host, graph, view_state, controller, &tx)
-            })
+            .is_some_and(|tx| commit_node_drag_transaction(host, binding, &tx))
     } else {
         false
     };
@@ -85,9 +82,7 @@ pub(super) fn handle_node_drag_left_pointer_release_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     node_drag: &Model<Option<NodeDragState>>,
     pending_selection: &Model<Option<PendingSelectionState>>,
-    graph: &Model<Graph>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
 ) -> Option<LeftPointerReleaseOutcome> {
     let node_drag_value = host
         .models_mut()
@@ -105,9 +100,7 @@ pub(super) fn handle_node_drag_left_pointer_release_action_host(
         .flatten();
     let outcome = complete_node_drag_release_action_host(
         host,
-        graph,
-        view_state,
-        controller,
+        binding,
         &node_drag_value,
         pending_selection_value.as_ref(),
     );
@@ -121,8 +114,7 @@ pub(super) fn handle_node_drag_left_pointer_release_action_host(
 pub(super) fn handle_pending_selection_left_pointer_release_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     pending_selection: &Model<Option<PendingSelectionState>>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
 ) -> Option<LeftPointerReleaseOutcome> {
     let pending_selection_value = host
         .models_mut()
@@ -133,12 +125,8 @@ pub(super) fn handle_pending_selection_left_pointer_release_action_host(
         return None;
     };
 
-    let selection_committed = commit_pending_selection_action_host(
-        host,
-        view_state,
-        controller,
-        &pending_selection_value,
-    );
+    let selection_committed =
+        commit_pending_selection_action_host(host, binding, &pending_selection_value);
     let _ = host
         .models_mut()
         .update(pending_selection, |state| *state = None);
@@ -151,8 +139,7 @@ pub(super) fn handle_marquee_left_pointer_release_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     marquee: &Model<Option<MarqueeDragState>>,
     pending_selection: &Model<Option<PendingSelectionState>>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
 ) -> Option<LeftPointerReleaseOutcome> {
     let marquee_value = host
         .models_mut()
@@ -164,7 +151,7 @@ pub(super) fn handle_marquee_left_pointer_release_action_host(
     };
 
     let selection_committed = if marquee_value.active || !marquee_value.toggle {
-        commit_marquee_selection_action_host(host, view_state, controller, &marquee_value)
+        commit_marquee_selection_action_host(host, binding, &marquee_value)
     } else {
         false
     };
@@ -182,38 +169,25 @@ pub(super) fn complete_left_pointer_release_action_host(
     node_drag: &Model<Option<NodeDragState>>,
     pending_selection: &Model<Option<PendingSelectionState>>,
     marquee: &Model<Option<MarqueeDragState>>,
-    graph: &Model<Graph>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
 ) -> LeftPointerReleaseOutcome {
     if let Some(release) = handle_node_drag_left_pointer_release_action_host(
         host,
         node_drag,
         pending_selection,
-        graph,
-        view_state,
-        controller,
+        binding,
     ) {
         return release;
     }
 
-    if let Some(release) = handle_pending_selection_left_pointer_release_action_host(
-        host,
-        pending_selection,
-        view_state,
-        controller,
-    ) {
+    if let Some(release) =
+        handle_pending_selection_left_pointer_release_action_host(host, pending_selection, binding)
+    {
         return release;
     }
 
-    handle_marquee_left_pointer_release_action_host(
-        host,
-        marquee,
-        pending_selection,
-        view_state,
-        controller,
-    )
-    .unwrap_or(LeftPointerReleaseOutcome::None)
+    handle_marquee_left_pointer_release_action_host(host, marquee, pending_selection, binding)
+        .unwrap_or(LeftPointerReleaseOutcome::None)
 }
 
 fn cancel_declarative_interactions_action_host(
@@ -332,9 +306,7 @@ pub(super) fn handle_declarative_pointer_up_action_host(
     marquee: &Model<Option<MarqueeDragState>>,
     node_drag: &Model<Option<NodeDragState>>,
     pending_selection: &Model<Option<PendingSelectionState>>,
-    graph: &Model<Graph>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
 ) -> bool {
     if up.button != pan_button {
         if up.button != MouseButton::Left {
@@ -346,9 +318,7 @@ pub(super) fn handle_declarative_pointer_up_action_host(
             node_drag,
             pending_selection,
             marquee,
-            graph,
-            view_state,
-            controller,
+            binding,
         );
         if !release.is_handled() {
             return false;

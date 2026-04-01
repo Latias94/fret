@@ -285,6 +285,9 @@ points rather than direct graph mutation.
     `set_selection_action_host`, `undo_action_host`, `redo_action_host`), so object-safe app hooks
     can keep model synchronization on the binding surface instead of reaching for controller-only
     plumbing.
+  - Declarative `paint_only` routine action hooks now also take the binding-first path: transaction
+    commit, selection commit, diagnostics presets, keyboard zoom, and pointer release/move helpers
+    no longer thread `graph + view_state + controller` triplets for ordinary bound-surface work.
   - Controlled mode now has an explicit full-replace-first policy: replacing the authoritative graph
     document is treated as a reset + re-sync operation, while diff-first replace helpers remain a
     deferred follow-up rather than the default contract.

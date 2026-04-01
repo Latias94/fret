@@ -37,43 +37,37 @@ pub(super) fn build_node_drag_transaction(
 
 pub(super) fn commit_graph_transaction(
     host: &mut dyn fret_ui::action::UiActionHost,
-    graph: &Model<Graph>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     tx: &GraphTransaction,
 ) -> bool {
     if tx.is_empty() {
         return true;
     }
 
-    controller
-        .dispatch_transaction_and_sync_models_action_host(host, graph, view_state, tx)
-        .is_ok()
+    binding.dispatch_transaction_action_host(host, tx).is_ok()
 }
 
 pub(super) fn commit_node_drag_transaction(
     host: &mut dyn fret_ui::action::UiActionHost,
-    graph: &Model<Graph>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     tx: &GraphTransaction,
 ) -> bool {
-    commit_graph_transaction(host, graph, view_state, controller, tx)
+    commit_graph_transaction(host, binding, tx)
 }
 
 pub(super) fn update_view_state_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     f: impl FnOnce(&mut NodeGraphViewState),
 ) -> bool {
-    let Ok(mut next_view_state) = host.models_mut().read(view_state, |state| state.clone()) else {
+    let view_state = binding.view_state_model();
+    let Ok(mut next_view_state) = host.models_mut().read(&view_state, |state| state.clone()) else {
         return false;
     };
     f(&mut next_view_state);
 
-    controller
-        .replace_view_state_and_sync_model_action_host(host, view_state, next_view_state)
+    binding
+        .replace_view_state_action_host(host, next_view_state)
         .is_ok()
 }
 

@@ -17,10 +17,10 @@ pub(super) fn handle_node_drag_pointer_move_action_host(
     node_drag: &Model<Option<NodeDragState>>,
     pending_selection: &Model<Option<PendingSelectionState>>,
     hovered: &Model<Option<crate::core::NodeId>>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
+    binding: &NodeGraphSurfaceBinding,
     mv: fret_ui::action::PointerMoveCx,
 ) -> Option<NodeDragPointerMoveOutcome> {
+    let view_state = binding.view_state_model();
     let node_drag_value = host
         .models_mut()
         .read(node_drag, |state| state.clone())
@@ -44,7 +44,7 @@ pub(super) fn handle_node_drag_pointer_move_action_host(
 
     let interaction = host
         .models_mut()
-        .read(view_state, |state| state.interaction.clone())
+        .read(&view_state, |state| state.interaction.clone())
         .ok()
         .unwrap_or_default();
     let should_activate = pointer_crossed_threshold(
@@ -61,12 +61,7 @@ pub(super) fn handle_node_drag_pointer_move_action_host(
             .ok()
             .flatten();
         if let Some(pending_selection_value) = pending_selection_value.as_ref() {
-            let _ = commit_pending_selection_action_host(
-                host,
-                view_state,
-                controller,
-                pending_selection_value,
-            );
+            let _ = commit_pending_selection_action_host(host, binding, pending_selection_value);
             let _ = host
                 .models_mut()
                 .update(pending_selection, |state| *state = None);

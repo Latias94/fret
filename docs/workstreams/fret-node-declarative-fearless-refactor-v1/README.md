@@ -258,6 +258,9 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
   (`dispatch_transaction*`, `submit_transaction*`, `replace_*_action_host`,
   `set_selection_action_host`, `undo_action_host`, `redo_action_host`), so object-safe app hooks
   no longer need to bypass the binding for routine bound-store coordination,
+- declarative `paint_only` routine action hooks now also consume the binding facade for transaction
+  commit, selection commit, keyboard zoom, diagnostics presets, and pointer release/move flows, so
+  internal declarative orchestration starts from the same binding-first contract taught to apps,
 - retained rename / portal / blackboard / compatibility glue now also prefers controller-owned
   transaction submission when a controller/store exists,
 - the retained legacy demo now routes its canvas / rename overlay / blackboard / portal / minimap
