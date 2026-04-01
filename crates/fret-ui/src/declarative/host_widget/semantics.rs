@@ -480,6 +480,9 @@ impl ElementHostWidget {
             if let Some(required) = decoration.required {
                 cx.set_required(required);
             }
+            if let Some(invalid) = decoration.invalid {
+                cx.set_invalid(Some(invalid));
+            }
             if let Some(hidden) = decoration.hidden {
                 cx.set_hidden(hidden);
             }

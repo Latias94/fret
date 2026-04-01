@@ -522,6 +522,7 @@ fn render_native_select<H: UiHost>(
                     test_id: trigger_test_id_for_trigger.clone(),
                     expanded: Some(is_open),
                     required,
+                    invalid: aria_invalid.then_some(fret_core::SemanticsInvalid::True),
                     labelled_by_element: if has_a11y_label_for_trigger {
                         None
                     } else {
@@ -1058,6 +1059,55 @@ mod tests {
             .expect("native select semantics node");
         assert_eq!(node.role, SemanticsRole::ComboBox);
         assert!(node.flags.required);
+    }
+
+    #[test]
+    fn native_select_aria_invalid_exposes_invalid_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "native-select-invalid-semantics",
+            |cx| {
+                vec![
+                    NativeSelect::new(value.clone(), open.clone())
+                        .option(NativeSelectOption::new("a", "A"))
+                        .aria_invalid(true)
+                        .a11y_label("Favorite fruit")
+                        .trigger_test_id("invalid-native-select")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("invalid-native-select"))
+            .expect("native select semantics node");
+        assert_eq!(node.role, SemanticsRole::ComboBox);
+        assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
     }
 
     #[test]

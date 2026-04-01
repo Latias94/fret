@@ -696,6 +696,7 @@ impl Switch {
                 };
 
                 let mut a11y = switch_a11y(a11y_label, on);
+                a11y.invalid = aria_invalid.then_some(fret_core::SemanticsInvalid::True);
                 if let Some(label) = labelled_by_element {
                     a11y.labelled_by_element = Some(label.0);
                 }
@@ -1166,6 +1167,50 @@ mod tests {
             .expect("switch semantics node");
         assert_eq!(node.role, fret_core::SemanticsRole::Switch);
         assert!(node.flags.required);
+    }
+
+    #[test]
+    fn switch_aria_invalid_exposes_invalid_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-switch-invalid-semantics",
+            |cx| {
+                vec![
+                    Switch::from_checked(true)
+                        .aria_invalid(true)
+                        .a11y_label("Airplane mode")
+                        .test_id("invalid-switch")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("invalid-switch"))
+            .expect("switch semantics node");
+        assert_eq!(node.role, fret_core::SemanticsRole::Switch);
+        assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
     }
 
     #[test]

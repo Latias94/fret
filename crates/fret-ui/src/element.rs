@@ -800,6 +800,7 @@ pub struct SemanticsDecoration {
     pub disabled: Option<bool>,
     pub read_only: Option<bool>,
     pub required: Option<bool>,
+    pub invalid: Option<fret_core::SemanticsInvalid>,
     pub hidden: Option<bool>,
     pub visited: Option<bool>,
     pub multiselectable: Option<bool>,
@@ -856,6 +857,7 @@ impl SemanticsDecoration {
             disabled: other.disabled.or(self.disabled),
             read_only: other.read_only.or(self.read_only),
             required: other.required.or(self.required),
+            invalid: other.invalid.or(self.invalid),
             hidden: other.hidden.or(self.hidden),
             visited: other.visited.or(self.visited),
             multiselectable: other.multiselectable.or(self.multiselectable),
@@ -927,6 +929,11 @@ impl SemanticsDecoration {
 
     pub fn required(mut self, required: bool) -> Self {
         self.required = Some(required);
+        self
+    }
+
+    pub fn invalid(mut self, invalid: fret_core::SemanticsInvalid) -> Self {
+        self.invalid = Some(invalid);
         self
     }
 
