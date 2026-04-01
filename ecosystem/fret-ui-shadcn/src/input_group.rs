@@ -16,7 +16,7 @@ use fret_ui::element::{
     PointerRegionProps, PressableA11y, PressableProps, SemanticsDecoration, TextAreaProps,
     TextInputProps, TextProps,
 };
-use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost, focus_visible};
+use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -1280,14 +1280,13 @@ impl InputGroup {
         });
 
         let animated_control_id = animated_control_id.expect("input_group control element id");
-        let focus_visible_for_control = cx.is_focused_element(animated_control_id)
-            && focus_visible::is_focus_visible(cx.app, Some(cx.window));
+        let focused_for_control = cx.is_focused_element(animated_control_id);
 
         let duration = crate::overlay_motion::shadcn_motion_duration_150(cx);
         let ease = crate::overlay_motion::shadcn_ease;
         let target_border_color = if aria_invalid {
             border_color
-        } else if focus_visible_for_control {
+        } else if focused_for_control {
             focus_border_color.unwrap_or(border_color)
         } else {
             border_color
@@ -1306,7 +1305,7 @@ impl InputGroup {
             cx,
             animated_control_id,
             "input-group-ring-alpha",
-            if focus_visible_for_control { 1.0 } else { 0.0 },
+            if focused_for_control { 1.0 } else { 0.0 },
             duration,
             ease,
         );
@@ -1331,7 +1330,7 @@ impl InputGroup {
             focus_ring: ring,
             focus_border_color: None,
             focus_within: false,
-            focus_ring_always_paint: ring_alpha.animating || ring_alpha.value > 1e-4,
+            focus_ring_always_paint: focused_for_control || ring_alpha.animating,
             corner_radii: root_corner_radii,
             ..Default::default()
         });
@@ -3045,7 +3044,7 @@ mod tests {
         use std::rc::Rc;
         use std::time::Duration;
 
-        use fret_core::{Event, FrameId, KeyCode, Rect, Size};
+        use fret_core::{FrameId, Rect, Size};
         use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 
         let window = AppWindowId::default();
@@ -3121,26 +3120,18 @@ mod tests {
             "expected ring alpha to start at 0, got {a0}"
         );
 
-        // Focus the inner control and enable focus-visible via a navigation key.
+        // Pointer focus should already start the border/ring transition, even before
+        // `focus-visible` is enabled.
         let focusable = ui
             .first_focusable_descendant_including_declarative(&mut app, window, root)
             .expect("focusable input group control");
         ui.set_focus(Some(focusable));
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::KeyDown {
-                key: KeyCode::Tab,
-                modifiers: Modifiers::default(),
-                repeat: false,
-            },
-        );
         assert!(
-            fret_ui::focus_visible::is_focus_visible(&mut app, Some(window)),
-            "sanity: focus-visible should be enabled after navigation key"
+            !fret_ui::focus_visible::is_focus_visible(&mut app, Some(window)),
+            "sanity: pointer focus should not force focus-visible"
         );
 
-        // Frame 2: ring should be in-between (not snapped).
+        // Frame 2: ring should be in-between (not snapped) even without focus-visible.
         app.set_frame_id(FrameId(2));
         let _ = render_frame(
             &mut ui,
@@ -3153,9 +3144,14 @@ mod tests {
             always_paint_out.clone(),
         );
         let a1 = ring_alpha_out.get().expect("a1");
+        let always_paint_focus = always_paint_out.get().expect("always_paint_focus");
         assert!(
             a1 > 0.0,
             "expected ring alpha to start animating in, got {a1}"
+        );
+        assert!(
+            always_paint_focus,
+            "expected focused input group to keep painting the ring while active"
         );
 
         // Advance frames until the default 150ms transition settles.
