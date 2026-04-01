@@ -1,0 +1,85 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: Calendar demo shadow screenshot",
+    "tags": ["ui-gallery", "calendar", "shadcn", "shadow", "screenshot"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_FIXED_TODAY": "2026-05-15"
+    }
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 1800
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 15 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "calendar" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-calendar" }
+      },
+      "timeout_frames": 1800
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-calendar" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-calendar" }
+      },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery.calendar.demo.nav-prev" }
+      },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-calendar-demo-content" },
+      "delta_y": -160.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "padding_insets_px": {
+        "left_px": 16.0,
+        "top_px": 16.0,
+        "right_px": 16.0,
+        "bottom_px": 40.0
+      },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-calendar-demo-content" },
+        "padding_px": 4.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 8 },
+    { "type": "capture_bundle", "label": "ui-gallery-calendar-demo-shadow" },
+    { "type": "capture_screenshot", "label": "ui-gallery-calendar-demo-shadow" }
+  ]
+}

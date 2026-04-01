@@ -93,10 +93,19 @@ This lane now also has a deterministic mechanism-level softness-profile gate:
 - full-overlap darkness stays within the recipe-owned alpha budget under layer compositing,
 - and outer bands remain lighter than the full stack.
 
-The remaining open quality question after that is **renderer-level visual parity**:
+Renderer-level visual review is now also reproducible via a curated screenshot suite:
+
+- `tools/diag-scripts/suites/ui-gallery-shadow-surface-screenshots/suite.json`
+- current representative surfaces:
+  - `Card` demo (`shadow-sm`)
+  - `Calendar` demo root (`shadow-sm`)
+  - `Sonner` demo open toast (generic toast baseline)
+
+The remaining open quality question after that is **automated renderer-level visual parity**:
 
 - footprint parity is already covered,
 - alpha-budget sanity is covered,
 - mechanism-level softness profile is covered,
+- screenshot-backed review evidence now exists for representative elevated surfaces,
 - but CSS-like perceptual falloff under actual renderer compositing still needs a dedicated
-  readback or screenshot gate if we want to claim stronger visual fidelity later.
+  readback or screenshot-diff gate if we want to claim stronger visual fidelity later.

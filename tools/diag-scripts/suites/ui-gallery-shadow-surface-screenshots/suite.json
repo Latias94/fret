@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-demo-shadow-screenshot.json",
+    "tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-screenshot.json",
+    "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-demo-layout-collapse-screenshots.json"
+  ]
+}

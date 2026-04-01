@@ -42,3 +42,23 @@ layer compositing.
 Exit criteria:
 
 - At least one deterministic softness-oriented gate exists beyond footprint-only evidence.
+
+## M3 - Renderer review evidence
+
+Status note (2026-04-01): complete. Representative elevated surfaces now have a curated screenshot
+suite so renderer-level shadow review is reproducible instead of ad hoc.
+
+Exit criteria:
+
+- A named diag suite exists for representative shadow surfaces.
+- The suite includes at least one non-overlay surface and one overlay/toast surface.
+
+## M4 - Automated renderer parity
+
+Status note (2026-04-01): still open. Screenshot evidence now exists, but there is no automated
+renderer-level pixel/readback gate for perceptual shadow softness yet.
+
+Exit criteria:
+
+- At least one renderer-level screenshot-diff or readback gate exists for representative shadow
+  surfaces.

@@ -53,3 +53,20 @@ Tracking legend:
     - outer bands stay lighter than the full-overlap stack.
   - This is intentionally stronger than footprint-only evidence, while still staying deterministic
     and backend-independent.
+
+## E. Renderer evidence follow-on
+
+- [x] SPSFR-diag-040 Add a curated screenshot repro suite for representative shadow surfaces.
+  - Landed as `tools/diag-scripts/suites/ui-gallery-shadow-surface-screenshots/suite.json`.
+  - Current suite members:
+    - `tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-screenshot.json`
+    - `tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-demo-shadow-screenshot.json`
+    - `tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-demo-layout-collapse-screenshots.json`
+  - This is renderer-level review evidence, not yet an automated screenshot-diff or pixel-threshold
+    gate.
+
+- [ ] SPSFR-gate-041 Add an automated renderer-level shadow comparison gate once screenshot ROI /
+  pixel-diff policy is ready.
+  - Candidate paths:
+    - screenshot diff on a bounded ROI for representative elevated surfaces,
+    - or renderer readback assertions over a deterministic shadow strip/demo scene.
