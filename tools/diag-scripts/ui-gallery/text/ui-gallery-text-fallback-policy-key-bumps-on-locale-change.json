@@ -6,7 +6,6 @@
     "target_hints": ["fret-ui-gallery"],
     "env_defaults": {
       "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1",
-      "FRET_UI_GALLERY_DISABLE_WINDOWS_COMMON_FALLBACK_OVERRIDE": "1",
       "FRET_TEXT_FONT_TRACE_ALL": "1",
       "FRET_UI_GALLERY_START_PAGE": "text_mixed_script_fallback"
     }

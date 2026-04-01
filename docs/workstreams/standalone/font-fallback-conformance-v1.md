@@ -80,9 +80,9 @@ Expected:
 - The script starts on `text_mixed_script_fallback`, captures a BEFORE bundle, triggers
   `app.locale.switch_next` via the default `primary+alt+l` shortcut, then captures an AFTER
   bundle. This page lives on the lightweight text harness surface, so the launch command must
-  include `--features gallery-web-ime-harness`. On Windows, the script opts out of the UI
-  Gallery's curated common-fallback override so the run exercises the framework-owned native
-  `platform_default` hybrid baseline directly.
+  include `--features gallery-web-ime-harness`. The run now exercises the framework-owned native
+  `platform_default` hybrid baseline directly; there is no longer a UI Gallery-local Windows
+  fallback override on this path.
 - The gate asserts:
   - `system_fonts_enabled` is `true` in both captures.
   - `common_fallback_injection` stays `platform_default` and `prefer_common_fallback` stays
