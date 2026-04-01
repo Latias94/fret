@@ -302,7 +302,42 @@ pub fn paint_ripple(
 mod tests {
     use super::{paint_ripple, paint_shadow, paint_state_layer};
     use crate::element::{ShadowLayerStyle, ShadowStyle};
-    use fret_core::{Color, Corners, DrawOrder, Paint, Px, Rect, Scene, SceneOp, Size};
+    use fret_core::{Color, Corners, DrawOrder, Paint, Point, Px, Rect, Scene, SceneOp, Size};
+
+    fn point_in_rect(point: Point, rect: Rect) -> bool {
+        point.x.0 >= rect.origin.x.0
+            && point.x.0 < rect.origin.x.0 + rect.size.width.0
+            && point.y.0 >= rect.origin.y.0
+            && point.y.0 < rect.origin.y.0 + rect.size.height.0
+    }
+
+    fn quad_alphas_covering_point(scene: &Scene, point: Point) -> Vec<f32> {
+        let mut alphas = Vec::new();
+        for op in scene.ops() {
+            let SceneOp::Quad {
+                rect, background, ..
+            } = op
+            else {
+                continue;
+            };
+            if !point_in_rect(point, *rect) {
+                continue;
+            }
+            let Paint::Solid(color) = background.paint else {
+                continue;
+            };
+            alphas.push(color.a.clamp(0.0, 1.0));
+        }
+        alphas
+    }
+
+    fn composite_black_darkness_over_white(alphas: &[f32]) -> f32 {
+        let mut brightness = 1.0_f32;
+        for alpha in alphas {
+            brightness *= 1.0 - alpha.clamp(0.0, 1.0);
+        }
+        1.0 - brightness
+    }
 
     #[test]
     fn paint_state_layer_emits_single_quad_with_expected_alpha() {
@@ -510,5 +545,81 @@ mod tests {
             panic!("expected solid paint");
         };
         assert!((color.a - 0.15).abs() <= 1e-6);
+    }
+
+    #[test]
+    fn paint_shadow_softness_profile_darkens_monotonically_toward_edge() {
+        let mut scene = Scene::default();
+        paint_shadow(
+            &mut scene,
+            DrawOrder(0),
+            Rect::new(
+                fret_core::Point::new(Px(10.0), Px(10.0)),
+                Size::new(Px(20.0), Px(12.0)),
+            ),
+            ShadowStyle {
+                primary: ShadowLayerStyle {
+                    color: Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 0.2,
+                    },
+                    offset_x: Px(0.0),
+                    offset_y: Px(0.0),
+                    blur: Px(3.0),
+                    spread: Px(0.0),
+                },
+                secondary: None,
+                corner_radii: Corners::all(Px(0.0)),
+            },
+        );
+
+        let y = Px(16.0);
+        let outside_alphas = quad_alphas_covering_point(&scene, Point::new(Px(6.5), y));
+        let band_1_alphas = quad_alphas_covering_point(&scene, Point::new(Px(7.5), y));
+        let band_2_alphas = quad_alphas_covering_point(&scene, Point::new(Px(8.5), y));
+        let band_3_alphas = quad_alphas_covering_point(&scene, Point::new(Px(9.5), y));
+        let full_overlap_alphas = quad_alphas_covering_point(&scene, Point::new(Px(10.5), y));
+
+        let outside = composite_black_darkness_over_white(&outside_alphas);
+        let band_1 = composite_black_darkness_over_white(&band_1_alphas);
+        let band_2 = composite_black_darkness_over_white(&band_2_alphas);
+        let band_3 = composite_black_darkness_over_white(&band_3_alphas);
+        let full_overlap = composite_black_darkness_over_white(&full_overlap_alphas);
+        let linear_alpha_budget: f32 = full_overlap_alphas.iter().sum();
+        let expected_full_overlap = 1.0
+            - full_overlap_alphas
+                .iter()
+                .fold(1.0_f32, |brightness, alpha| brightness * (1.0 - alpha));
+
+        assert!(
+            outside <= 1e-6,
+            "expected no shadow outside the blur footprint, got darkness={outside}"
+        );
+        assert!(
+            outside_alphas.is_empty(),
+            "expected no shadow layers outside the blur footprint, got {outside_alphas:?}"
+        );
+        assert!(
+            band_1 > outside && band_2 > band_1 && band_3 > band_2,
+            "expected darkness to increase toward the edge, got outside={outside} band1={band_1} band2={band_2} band3={band_3}"
+        );
+        assert!(
+            (linear_alpha_budget - 0.2).abs() <= 1e-6,
+            "expected full-overlap layers to preserve the recipe alpha budget, got {linear_alpha_budget}"
+        );
+        assert!(
+            (full_overlap - expected_full_overlap).abs() <= 1e-6,
+            "expected full-overlap darkness to follow the layer compositing model, got actual={full_overlap} expected={expected_full_overlap}"
+        );
+        assert!(
+            full_overlap < linear_alpha_budget,
+            "expected composited full-overlap darkness to stay below the linear alpha budget, got darkness={full_overlap} budget={linear_alpha_budget}"
+        );
+        assert!(
+            band_3 < full_overlap,
+            "expected the outer softness profile to stay lighter than full overlap, got band3={band_3} full={full_overlap}"
+        );
     }
 }

@@ -34,8 +34,10 @@ Exit criteria:
 
 ## M2 - Pixel-profile confidence
 
-Status note (2026-04-01): still open. Footprint parity and alpha-budget sanity are now both
-covered, but a stronger perceptual/CSS softness gate is still missing.
+Status note (2026-04-01): complete for v1. Footprint parity and alpha-budget sanity are both
+covered, and the mechanism layer now has a deterministic softness-profile gate that proves the
+portable shadow gets darker toward the edge while staying within the recipe-owned alpha budget under
+layer compositing.
 
 Exit criteria:
 

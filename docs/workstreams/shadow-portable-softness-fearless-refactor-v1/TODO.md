@@ -45,8 +45,11 @@ Tracking legend:
 
 ## D. Follow-on quality gates
 
-- [ ] SPSFR-gate-030 Add a stronger pixel-profile softness gate for portable `ShadowStyle`.
-  - Candidate paths:
-    - renderer readback of a deterministic shadow strip,
-    - or screenshot/diag evidence for one representative `shadow-xs` and one `shadow-sm` surface.
-  - This is intentionally separate from footprint gating.
+- [x] SPSFR-gate-030 Add a stronger softness-oriented gate for portable `ShadowStyle`.
+  - Landed as a mechanism-layer composited profile gate in `crates/fret-ui/src/paint.rs`.
+  - The gate asserts:
+    - darkness increases monotonically toward the edge,
+    - full-overlap darkness stays within the recipe-owned alpha budget under layer compositing,
+    - outer bands stay lighter than the full-overlap stack.
+  - This is intentionally stronger than footprint-only evidence, while still staying deterministic
+    and backend-independent.

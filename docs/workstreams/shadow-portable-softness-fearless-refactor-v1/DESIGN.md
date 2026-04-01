@@ -87,9 +87,16 @@ This is a fidelity improvement inside the existing `ShadowStyle` contract, not a
 
 ## Follow-up After v1
 
-The remaining open quality question after alpha normalization is **pixel-profile parity**:
+This lane now also has a deterministic mechanism-level softness-profile gate:
+
+- the profile darkens monotonically toward the edge,
+- full-overlap darkness stays within the recipe-owned alpha budget under layer compositing,
+- and outer bands remain lighter than the full stack.
+
+The remaining open quality question after that is **renderer-level visual parity**:
 
 - footprint parity is already covered,
-- alpha-budget sanity is covered here,
-- but CSS-like softness/perceptual falloff still needs a dedicated renderer/readback or screenshot
-  gate if we want to claim stronger visual fidelity later.
+- alpha-budget sanity is covered,
+- mechanism-level softness profile is covered,
+- but CSS-like perceptual falloff under actual renderer compositing still needs a dedicated
+  readback or screenshot gate if we want to claim stronger visual fidelity later.
