@@ -38,6 +38,7 @@ Unless a document says otherwise:
 ## Sources of Truth
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
+- Shadcn recipe focus + builder render closure (active maintenance lane for text-entry chrome and builder single-render discipline): `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/DESIGN.md`, `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/TODO.md`, and `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/MILESTONES.md`
 - Action-first authoring + view runtime refactor (closed lane): `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
   - Closeout read: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`, and the post-closeout Todo/scaffold interpretation addendum `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO_LADDER_AUDIT_2026-03-20.md`
