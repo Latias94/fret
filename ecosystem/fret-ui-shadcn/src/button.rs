@@ -37,6 +37,7 @@ pub struct ButtonStyle {
     pub background: OverrideSlot<ColorRef>,
     pub foreground: OverrideSlot<ColorRef>,
     pub border_color: OverrideSlot<ColorRef>,
+    pub focus_ring_color: OverrideSlot<ColorRef>,
 }
 
 impl ButtonStyle {
@@ -55,6 +56,14 @@ impl ButtonStyle {
         self
     }
 
+    pub fn focus_ring_color(
+        mut self,
+        focus_ring_color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.focus_ring_color = Some(focus_ring_color);
+        self
+    }
+
     pub fn merged(mut self, other: Self) -> Self {
         if other.background.is_some() {
             self.background = other.background;
@@ -65,8 +74,22 @@ impl ButtonStyle {
         if other.border_color.is_some() {
             self.border_color = other.border_color;
         }
+        if other.focus_ring_color.is_some() {
+            self.focus_ring_color = other.focus_ring_color;
+        }
         self
     }
+}
+
+pub(crate) fn outline_trigger_invalid_style(theme: &ThemeSnapshot) -> ButtonStyle {
+    let border_color = theme.color_token("destructive");
+    let ring_color = crate::theme_variants::invalid_control_ring_color(theme, border_color);
+
+    ButtonStyle::default()
+        .border_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            border_color,
+        ))))
+        .focus_ring_color(WidgetStateProperty::new(Some(ColorRef::Color(ring_color))))
 }
 
 #[derive(Debug, Clone)]
@@ -1196,6 +1219,13 @@ impl Button {
                 };
 
                 let mut focus_ring = decl_style::focus_ring(&theme, focus_radius);
+                if let Some(ring_color) = style_override
+                    .focus_ring_color
+                    .as_ref()
+                    .and_then(|slot| slot.resolve(states).as_ref())
+                {
+                    focus_ring.color = ring_color.resolve(&theme);
+                }
                 focus_ring.color.a = (focus_ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
                 if let Some(offset_color) = focus_ring.offset_color {
                     focus_ring.offset_color = Some(Color {

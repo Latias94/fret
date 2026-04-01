@@ -5,7 +5,7 @@ use std::sync::Arc;
 use fret_core::{FontWeight, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -18,7 +18,7 @@ use fret_ui_kit::{
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::bool_model::IntoBoolModel;
-use crate::button::{Button, ButtonStyle, ButtonVariant};
+use crate::button::{Button, ButtonStyle, ButtonVariant, outline_trigger_invalid_style};
 use crate::calendar::Calendar;
 use crate::calendar_month_model::IntoCalendarMonthModel;
 use crate::optional_date_model::IntoOptionalDateModel;
@@ -269,6 +269,7 @@ impl DatePicker {
                 .into_element_with(
                     cx,
                     move |cx| {
+                        let theme = Theme::global(&*cx.app).snapshot();
                         let mut button = Button::new(button_text.clone())
                             .variant(ButtonVariant::Outline)
                             .toggle_model(open_trigger.clone())
@@ -290,6 +291,9 @@ impl DatePicker {
                                     fallback: ColorFallback::ThemeTextMuted,
                                 })),
                             ));
+                        }
+                        if aria_invalid {
+                            button = button.style(outline_trigger_invalid_style(&theme));
                         }
                         if let Some(test_id) = trigger_test_id.clone() {
                             button = button.test_id(test_id);
@@ -497,6 +501,19 @@ mod tests {
         }
     }
 
+    fn find_pressable_chrome(el: &AnyElement) -> Option<fret_ui::element::ContainerProps> {
+        match &el.kind {
+            fret_ui::element::ElementKind::Pressable(_) => el.children.first().and_then(|child| {
+                if let fret_ui::element::ElementKind::Container(props) = &child.kind {
+                    Some(props.clone())
+                } else {
+                    None
+                }
+            }),
+            _ => el.children.iter().find_map(find_pressable_chrome),
+        }
+    }
+
     #[test]
     fn date_picker_focuses_selected_day_on_open() {
         let window = AppWindowId::default();
@@ -689,6 +706,57 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("required-date-picker-trigger"))
             .expect("date picker trigger semantics");
         assert!(node.flags.required);
+    }
+
+    #[test]
+    fn date_picker_invalid_trigger_uses_destructive_border_and_ring() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(200.0)),
+        );
+
+        let invalid = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "date-picker-invalid-trigger-chrome",
+            |cx| {
+                let open = cx.app.models_mut().insert(false);
+                let month = cx
+                    .app
+                    .models_mut()
+                    .insert(CalendarMonth::new(2026, Month::March));
+                let selected = cx.app.models_mut().insert(None::<Date>);
+
+                DatePicker::new(open, month, selected)
+                    .aria_invalid(true)
+                    .into_element(cx)
+            },
+        );
+
+        let theme = Theme::global(&app).snapshot();
+        let expected_border = theme.color_token("destructive");
+        let mut expected_ring =
+            crate::theme_variants::invalid_control_ring_color(&theme, expected_border);
+        expected_ring.a = 0.0;
+
+        let pressable = find_first_pressable(&invalid).expect("date picker trigger pressable");
+        let chrome = find_pressable_chrome(&invalid).expect("date picker trigger chrome");
+
+        assert_eq!(chrome.border_color, Some(expected_border));
+        assert_eq!(
+            pressable.focus_ring.expect("focus ring").color,
+            expected_ring
+        );
     }
 
     #[test]

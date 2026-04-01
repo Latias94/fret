@@ -19,7 +19,10 @@ use fret_ui_kit::{WidgetStateProperty, ui};
 use time::{Date, Duration, OffsetDateTime, Weekday};
 
 use crate::bool_model::IntoBoolModel;
-use crate::button::{Button, ButtonSize, ButtonStyle, ButtonVariant, button_text_style};
+use crate::button::{
+    Button, ButtonSize, ButtonStyle, ButtonVariant, button_text_style,
+    outline_trigger_invalid_style,
+};
 use crate::calendar::Calendar;
 use crate::calendar_month_model::IntoCalendarMonthModel;
 use crate::optional_date_model::IntoOptionalDateModel;
@@ -297,6 +300,9 @@ impl DatePickerWithPresets {
                                 ButtonStyle::default()
                                     .foreground(WidgetStateProperty::new(Some(muted_fg))),
                             );
+                        }
+                        if aria_invalid {
+                            button = button.style(outline_trigger_invalid_style(&theme));
                         }
                         if let Some(test_id) = trigger_test_id.clone() {
                             button = button.test_id(test_id);
