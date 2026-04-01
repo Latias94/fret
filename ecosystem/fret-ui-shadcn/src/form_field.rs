@@ -218,6 +218,7 @@ fn form_decorate_control_element(
                 let mut ring = ring;
                 ring.corner_radii = props.chrome.corner_radii;
                 props.chrome.border_color = destructive;
+                props.chrome.border_color_focused = destructive;
                 props.chrome.focus_ring = Some(ring);
             }
         }
@@ -226,5 +227,75 @@ fn form_decorate_control_element(
                 form_decorate_control_element(child, a11y_label, invalid, destructive, ring);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::Theme;
+    use fret_ui::element::ElementKind;
+    use fret_ui_headless::form_state::FormState;
+
+    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
+    use crate::textarea::Textarea;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(220.0)),
+        )
+    }
+
+    fn find_text_area_props(el: &AnyElement) -> Option<&fret_ui::element::TextAreaProps> {
+        if let ElementKind::TextArea(props) = &el.kind {
+            return Some(props);
+        }
+        el.children.iter().find_map(find_text_area_props)
+    }
+
+    #[test]
+    fn form_field_invalid_textarea_uses_destructive_border_for_focused_state() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(String::new());
+        let field_id: Arc<str> = Arc::from("bio");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "form-field-invalid-textarea",
+            |cx| {
+                FormField::new(
+                    form_state.clone(),
+                    field_id.clone(),
+                    [Textarea::new(model.clone()).into_element(cx)],
+                )
+                .label("Bio")
+                .into_element(cx)
+            },
+        );
+
+        let destructive = Theme::global(&app).color_token("destructive");
+        let props = find_text_area_props(&el).expect("expected textarea inside form field");
+        assert_eq!(props.chrome.border_color, destructive);
+        assert_eq!(props.chrome.border_color_focused, destructive);
+        assert!(
+            props.chrome.focus_ring.is_some(),
+            "expected invalid textarea to receive destructive focus ring decoration"
+        );
     }
 }
