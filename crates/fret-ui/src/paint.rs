@@ -61,6 +61,10 @@ fn color_with_alpha(mut color: Color, alpha: f32) -> Color {
     color
 }
 
+fn shadow_alpha_weight(step_index: usize) -> f32 {
+    1.0 / (1.0 + step_index as f32)
+}
+
 fn paint_shadow_layer(
     scene: &mut Scene,
     order: DrawOrder,
@@ -85,9 +89,21 @@ fn paint_shadow_layer(
     // Approximate blur by drawing multiple expanded quads with alpha falloff. Keep the number of
     // steps bounded, but preserve the correct outer footprint (`spread + blur`) by using fractional
     // expansion steps when `blur` exceeds the cap.
+    //
+    // Normalize the per-step weights so extra softness layers redistribute opacity instead of
+    // implicitly increasing the total alpha budget. This keeps low-radius shadows from looking
+    // disproportionately dark/hard simply because they use multiple overlap quads.
     let max_steps = 32_f32;
     let steps = blur.ceil().clamp(0.0, max_steps) as usize;
     let denom = (steps as f32).max(1.0);
+    let alpha_weight_sum = if steps == 0 {
+        1.0
+    } else {
+        (0..=steps)
+            .map(shadow_alpha_weight)
+            .sum::<f32>()
+            .max(f32::EPSILON)
+    };
 
     for i in (0..=steps).rev() {
         let t = i as f32 / denom;
@@ -105,7 +121,7 @@ fn paint_shadow_layer(
         let alpha = if steps == 0 {
             layer.color.a
         } else {
-            layer.color.a / (1.0 + i as f32)
+            layer.color.a * (shadow_alpha_weight(i) / alpha_weight_sum)
         };
         let background = color_with_alpha(layer.color, alpha);
 
@@ -284,8 +300,9 @@ pub fn paint_ripple(
 
 #[cfg(test)]
 mod tests {
-    use super::{paint_ripple, paint_state_layer};
-    use fret_core::{Color, Corners, DrawOrder, Paint, Px, Rect, Scene, Size};
+    use super::{paint_ripple, paint_shadow, paint_state_layer};
+    use crate::element::{ShadowLayerStyle, ShadowStyle};
+    use fret_core::{Color, Corners, DrawOrder, Paint, Px, Rect, Scene, SceneOp, Size};
 
     #[test]
     fn paint_state_layer_emits_single_quad_with_expected_alpha() {
@@ -404,5 +421,94 @@ mod tests {
             }
             _ => panic!("expected quad"),
         }
+    }
+
+    #[test]
+    fn paint_shadow_normalizes_alpha_budget_across_softness_layers() {
+        let mut scene = Scene::default();
+        paint_shadow(
+            &mut scene,
+            DrawOrder(0),
+            Rect::new(
+                fret_core::Point::new(Px(10.0), Px(10.0)),
+                Size::new(Px(20.0), Px(12.0)),
+            ),
+            ShadowStyle {
+                primary: ShadowLayerStyle {
+                    color: Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 0.2,
+                    },
+                    offset_x: Px(0.0),
+                    offset_y: Px(1.0),
+                    blur: Px(3.0),
+                    spread: Px(0.0),
+                },
+                secondary: None,
+                corner_radii: Corners::all(Px(4.0)),
+            },
+        );
+
+        let mut alphas = Vec::new();
+        for op in scene.ops() {
+            let SceneOp::Quad { background, .. } = op else {
+                continue;
+            };
+            let Paint::Solid(color) = background.paint else {
+                panic!("expected solid shadow paint");
+            };
+            alphas.push(color.a);
+        }
+
+        assert_eq!(alphas.len(), 4, "blur=3 should emit four shadow layers");
+        let total_alpha: f32 = alphas.iter().sum();
+        assert!(
+            (total_alpha - 0.2).abs() <= 1e-6,
+            "expected normalized shadow alpha budget, got total={total_alpha}"
+        );
+        assert!(
+            alphas[0] < alphas[1] && alphas[1] < alphas[2] && alphas[2] < alphas[3],
+            "expected outer-to-inner shadow alphas to increase smoothly, got {alphas:?}"
+        );
+    }
+
+    #[test]
+    fn paint_shadow_zero_blur_keeps_single_layer_alpha() {
+        let mut scene = Scene::default();
+        paint_shadow(
+            &mut scene,
+            DrawOrder(0),
+            Rect::new(
+                fret_core::Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(8.0), Px(8.0)),
+            ),
+            ShadowStyle {
+                primary: ShadowLayerStyle {
+                    color: Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 0.15,
+                    },
+                    offset_x: Px(0.0),
+                    offset_y: Px(1.0),
+                    blur: Px(0.0),
+                    spread: Px(0.0),
+                },
+                secondary: None,
+                corner_radii: Corners::all(Px(2.0)),
+            },
+        );
+
+        assert_eq!(scene.ops().len(), 1);
+        let SceneOp::Quad { background, .. } = scene.ops()[0] else {
+            panic!("expected quad");
+        };
+        let Paint::Solid(color) = background.paint else {
+            panic!("expected solid paint");
+        };
+        assert!((color.a - 0.15).abs() <= 1e-6);
     }
 }

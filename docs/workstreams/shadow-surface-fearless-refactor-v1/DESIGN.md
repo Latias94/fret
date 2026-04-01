@@ -4,6 +4,10 @@ Status: Complete (v1 closure landed; future upgrades need a new workstream or AD
 
 Last updated: 2026-04-01
 
+Portable painter fidelity follow-on:
+
+- `docs/workstreams/shadow-portable-softness-fearless-refactor-v1/DESIGN.md`
+
 ## Context
 
 Fret currently has two shadow stories:
@@ -147,6 +151,8 @@ That is exactly the kind of ambiguity that turns a safe pre-open-source cleanup 
    - a gate exists,
    - and non-shadcn consumers have been audited.
 5. A contract change to `ShadowStyle` itself requires an ADR update or superseding ADR.
+6. Portable painter fidelity follow-ons after v1 should be tracked separately from preset/token
+   alignment work so "token drift" and "renderer softness drift" do not get conflated again.
 
 ## Target v1 Architecture
 

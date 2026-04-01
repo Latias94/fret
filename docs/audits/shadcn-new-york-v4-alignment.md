@@ -60,6 +60,14 @@ Recent breadth wins:
   InputOtp row geometry (slot sizes + gaps).
 - **Recurring layout families**: `textarea-*`, `empty-*`, `resizable-*`, `native-select-*` now have baseline layout gates.
 - **Field + date + skeleton edges**: `field-responsive`, `button-as-child`, `date-picker-with-range`, `skeleton-*` now have web-vs-fret layout gates.
+- **Shared control elevation**: `button-demo`, `button-group-demo` leaf buttons,
+  `input-group-demo`, `input-demo`, `textarea-demo`, `select-demo`, and `native-select-demo` now
+  have dedicated light/dark shadow footprint gates for the shared `shadow-xs` lane, so common
+  control elevation is checked directly against the checked-in web baseline instead of being
+  inferred from border/ring parity alone.
+  - Remaining subjective "hard shadow" reports should now be treated as a portable painter
+    fidelity question, not a shared shadcn token/recipe drift question. Follow-on:
+    `docs/workstreams/shadow-portable-softness-fearless-refactor-v1/DESIGN.md`
 - **Block-ish text semantics**: `CardTitle` and form field label/title no longer force `nowrap`; wrapping is now driven by the parent width (matching upstream which uses `leading-*` but not `whitespace-nowrap`).
 - **Card shadow footprint**: `card-demo` now has dedicated light/dark shadow footprint gates, and
   the shared `shadow-sm` preset was realigned to the current `new-york-v4` web source/golden
@@ -173,6 +181,23 @@ Conformance gates:
 - Trigger chrome + focus ring: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_select_scrollable_trigger_chrome_matches`, `web_vs_fret_select_demo_aria_invalid_border_color_matches`, `web_vs_fret_select_demo_focus_ring_matches`, `web_vs_fret_select_demo_aria_invalid_focus_ring_matches`).
 - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_overlay_placement_matches`, `web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches`).
 - Scroll buttons + viewport inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_listbox_option_insets_match`, `web_vs_fret_select_scrollable_small_viewport_listbox_option_insets_match`).
+
+### `NativeSelect`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/native-select.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/native_select.rs`
+- Notes:
+  - Trigger chrome intentionally follows the shared input taxonomy (`border-input`, `shadow-xs`,
+    `focus-visible:ring-[3px]`) instead of inventing a separate elevation lane.
+  - The trigger shadow is painted by the outer chrome wrapper while the inner surface owns
+    background/border, matching the same split used by `Input` / `Textarea`.
+- Conformance gates:
+  - Layout + chevron geometry: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/native_select.rs`
+    (`web_vs_fret_layout_native_select_heights_match_web_fixtures`,
+    `web_vs_fret_layout_native_select_chevron_matches_web_fixtures`).
+  - Trigger shadow footprint: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_native_select_demo_shadow_matches_web_light`,
+    `web_vs_fret_native_select_demo_shadow_matches_web_dark`).
 
 ### `DropdownMenu`
 
@@ -519,6 +544,9 @@ Conformance gates:
 - Conformance gates:
   - Chrome + layout gap: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_button_group_demo_button_chrome_matches`).
+  - Leaf button shadow footprint: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_demo_shadow_matches_web_light`,
+    `web_vs_fret_button_group_demo_shadow_matches_web_dark`).
   - Split button separator: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_button_group_split_chrome_matches`).
   - Vertical orientation: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`

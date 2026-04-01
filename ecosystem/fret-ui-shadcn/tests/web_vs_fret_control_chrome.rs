@@ -766,6 +766,125 @@ fn web_vs_fret_button_group_demo_button_chrome_matches() {
     );
 }
 
+fn assert_button_group_demo_shadow_matches(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden("button-group-demo");
+    let theme = web
+        .themes
+        .get(web_theme_name)
+        .expect("missing requested theme in web golden");
+
+    let web_go_back = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("aria-label").is_some_and(|v| v == "Go Back")
+    })
+    .expect("web go back button");
+    let web_archive = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Archive")
+    })
+    .expect("web archive button");
+    let web_report = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Report")
+    })
+    .expect("web report button");
+
+    let expected_go_back = web_drop_shadow_insets(web_go_back);
+    let expected_archive = web_drop_shadow_insets(web_archive);
+    let expected_report = web_drop_shadow_insets(web_report);
+
+    let (snap, scene) = render_and_paint_with_theme_scheme(scheme, |cx| {
+        let go_back = shadcn::Button::new("Go Back")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
+            .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
+            .into();
+
+        let archive = shadcn::Button::new("Archive")
+            .variant(shadcn::ButtonVariant::Outline)
+            .into();
+        let report = shadcn::Button::new("Report")
+            .variant(shadcn::ButtonVariant::Outline)
+            .into();
+
+        let snooze = shadcn::Button::new("Snooze")
+            .variant(shadcn::ButtonVariant::Outline)
+            .into();
+        let more_options = shadcn::Button::new("More Options")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
+            .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
+            .into();
+
+        let top = shadcn::ButtonGroup::new(vec![
+            shadcn::ButtonGroup::new(vec![go_back]).into(),
+            shadcn::ButtonGroup::new(vec![archive, report]).into(),
+            shadcn::ButtonGroup::new(vec![snooze, more_options]).into(),
+        ]);
+
+        vec![top.into_element(cx)]
+    });
+
+    let go_back = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Go Back"))
+        .expect("fret Go Back button semantics node");
+    let archive = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Archive"))
+        .expect("fret Archive button semantics node");
+    let report = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Report"))
+        .expect("fret Report button semantics node");
+
+    let quad_go_back = find_best_quad(&scene, go_back.bounds).expect("painted quad for Go Back");
+    let quad_archive = find_best_quad(&scene, archive.bounds).expect("painted quad for Archive");
+    let quad_report = find_best_quad(&scene, report.bounds).expect("painted quad for Report");
+
+    let go_back_candidates = fret_drop_shadow_insets_candidates(&scene, quad_go_back.rect);
+    let archive_candidates = fret_drop_shadow_insets_candidates(&scene, quad_archive.rect);
+    let report_candidates = fret_drop_shadow_insets_candidates(&scene, quad_report.rect);
+
+    assert_shadow_insets_match(
+        "button-group-demo.go-back",
+        web_theme_name,
+        &expected_go_back,
+        &go_back_candidates,
+    );
+    assert_shadow_insets_match(
+        "button-group-demo.archive",
+        web_theme_name,
+        &expected_archive,
+        &archive_candidates,
+    );
+    assert_shadow_insets_match(
+        "button-group-demo.report",
+        web_theme_name,
+        &expected_report,
+        &report_candidates,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_shadow_matches_web_light() {
+    assert_button_group_demo_shadow_matches(
+        "light",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_shadow_matches_web_dark() {
+    assert_button_group_demo_shadow_matches(
+        "dark",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 #[test]
 fn web_vs_fret_button_group_split_chrome_matches() {
     let web = read_web_golden("button-group-split");
@@ -3151,6 +3270,61 @@ fn web_vs_fret_input_demo_control_chrome_matches() {
     }
 }
 
+fn assert_input_demo_shadow_matches(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden("input-demo");
+    let theme = web
+        .themes
+        .get(web_theme_name)
+        .expect("missing requested theme in web golden");
+
+    let web_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input node");
+    let expected = web_drop_shadow_insets(web_input);
+
+    let (snap, scene) = render_and_paint_with_theme_scheme(scheme, |cx| {
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            shadcn::Input::new(model)
+                .a11y_label("InputShadow")
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(Px(web_input.rect.w))
+                        .h_px(Px(web_input.rect.h)),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::TextField && n.label.as_deref() == Some("InputShadow"))
+        .expect("fret input semantics node");
+
+    let quad = find_best_quad(&scene, input.bounds).expect("painted quad for input");
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+
+    assert_shadow_insets_match("input-demo", web_theme_name, &expected, &candidates);
+}
+
+#[test]
+fn web_vs_fret_input_demo_shadow_matches_web_light() {
+    assert_input_demo_shadow_matches(
+        "light",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_demo_shadow_matches_web_dark() {
+    assert_input_demo_shadow_matches(
+        "dark",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 #[test]
 fn web_vs_fret_input_demo_aria_invalid_border_color_matches() {
     let web = read_web_golden("input-demo.invalid");
@@ -3250,6 +3424,87 @@ fn web_vs_fret_input_group_demo_aria_invalid_border_color_matches() {
         quad.border_color,
         web_border_color,
         0.03,
+    );
+}
+
+fn assert_input_group_demo_shadow_matches(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden("input-group-demo");
+    let theme = web
+        .themes
+        .get(web_theme_name)
+        .expect("missing requested theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|class| class.contains("group/input-group"))
+            && contains_text(n, "12 results")
+    })
+    .expect("web input-group node");
+    let expected = web_drop_shadow_insets(web_group);
+    let web_w = web_group.rect.w;
+    let web_h = web_group.rect.h;
+
+    let (_snap, scene) = render_and_paint_in_bounds_with_theme_scheme(
+        CoreSize::new(Px(web_w), Px(web_h)),
+        scheme,
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+
+            let leading =
+                vec![cx.opacity(0.5, move |cx| vec![decl_icon::icon(cx, ids::ui::SEARCH)])];
+            let trailing = vec![cx.text_props(fret_ui::element::TextProps {
+                layout: fret_ui::element::LayoutStyle::default(),
+                text: Arc::from("12 results"),
+                style: None,
+                color: None,
+                wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+            })];
+
+            vec![
+                shadcn::InputGroup::new(model)
+                    .leading(leading)
+                    .trailing(trailing)
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(Px(web_w))
+                            .h_px(Px(web_h)),
+                    )
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_w), Px(web_h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for input-group");
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+
+    assert_shadow_insets_match("input-group-demo", web_theme_name, &expected, &candidates);
+}
+
+#[test]
+fn web_vs_fret_input_group_demo_shadow_matches_web_light() {
+    assert_input_group_demo_shadow_matches(
+        "light",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_group_demo_shadow_matches_web_dark() {
+    assert_input_group_demo_shadow_matches(
+        "dark",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
     );
 }
 
@@ -3852,6 +4107,65 @@ fn web_vs_fret_button_demo_control_chrome_matches() {
     }
 }
 
+fn assert_button_demo_shadow_matches(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden("button-demo");
+    let theme = web
+        .themes
+        .get(web_theme_name)
+        .expect("missing requested theme in web golden");
+
+    let web_button = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.text.as_deref() == Some("Button")
+    })
+    .expect("web button node");
+    let expected = web_drop_shadow_insets(web_button);
+    let web_w = web_button.rect.w;
+    let web_h = web_button.rect.h;
+
+    let (snap, scene) = render_and_paint_with_theme_scheme(scheme, |cx| {
+        vec![
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(Px(web_w))
+                        .h_px(Px(web_h)),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let button = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Button"))
+        .expect("fret button semantics node");
+
+    let quad = find_best_quad(&scene, button.bounds).expect("painted quad for button");
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+
+    assert_shadow_insets_match("button-demo", web_theme_name, &expected, &candidates);
+}
+
+#[test]
+fn web_vs_fret_button_demo_shadow_matches_web_light() {
+    assert_button_demo_shadow_matches(
+        "light",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_demo_shadow_matches_web_dark() {
+    assert_button_demo_shadow_matches(
+        "dark",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 #[test]
 fn web_vs_fret_button_demo_focus_ring_matches() {
     let web = read_web_golden("button-demo.focus");
@@ -4327,6 +4641,64 @@ fn web_vs_fret_textarea_demo_control_chrome_matches() {
     }
 }
 
+fn assert_textarea_demo_shadow_matches(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden("textarea-demo");
+    let theme = web
+        .themes
+        .get(web_theme_name)
+        .expect("missing requested theme in web golden");
+
+    let web_textarea =
+        find_first(&theme.root, &|n| n.tag == "textarea").expect("web textarea node");
+    let expected = web_drop_shadow_insets(web_textarea);
+
+    let (snap, scene) = render_and_paint_with_theme_scheme(scheme, |cx| {
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            shadcn::Textarea::new(model)
+                .a11y_label("TextareaShadow")
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(Px(web_textarea.rect.w))
+                        .h_px(Px(web_textarea.rect.h)),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let textarea = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::TextField && n.label.as_deref() == Some("TextareaShadow")
+        })
+        .expect("fret textarea semantics node");
+
+    let quad = find_best_quad(&scene, textarea.bounds).expect("painted quad for textarea");
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+
+    assert_shadow_insets_match("textarea-demo", web_theme_name, &expected, &candidates);
+}
+
+#[test]
+fn web_vs_fret_textarea_demo_shadow_matches_web_light() {
+    assert_textarea_demo_shadow_matches(
+        "light",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_textarea_demo_shadow_matches_web_dark() {
+    assert_textarea_demo_shadow_matches(
+        "dark",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 #[test]
 fn web_vs_fret_textarea_demo_aria_invalid_border_color_matches() {
     let web = read_web_golden("textarea-demo.invalid");
@@ -4546,6 +4918,67 @@ fn web_vs_fret_select_scrollable_trigger_chrome_matches() {
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("select radius[{idx}]"), *corner, web_radius, 1.0);
     }
+}
+
+fn assert_select_demo_shadow_matches(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden("select-demo");
+    let theme = web
+        .themes
+        .get(web_theme_name)
+        .expect("missing requested theme in web golden");
+
+    let web_trigger = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("role").is_some_and(|v| v == "combobox")
+    })
+    .expect("web select trigger node");
+    let expected = web_drop_shadow_insets(web_trigger);
+
+    let (snap, scene) = render_and_paint_with_theme_scheme(scheme, |cx| {
+        let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+        let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+        vec![
+            shadcn::Select::new(model, open)
+                .a11y_label("SelectShadow")
+                .item(shadcn::SelectItem::new("one", "One"))
+                .item(shadcn::SelectItem::new("two", "Two"))
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(Px(web_trigger.rect.w))
+                        .h_px(Px(web_trigger.rect.h)),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let select = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some("SelectShadow"))
+        .expect("fret select semantics node");
+
+    let quad = find_best_quad(&scene, select.bounds).expect("painted quad for select trigger");
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+
+    assert_shadow_insets_match("select-demo", web_theme_name, &expected, &candidates);
+}
+
+#[test]
+fn web_vs_fret_select_demo_shadow_matches_web_light() {
+    assert_select_demo_shadow_matches(
+        "light",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_shadow_matches_web_dark() {
+    assert_select_demo_shadow_matches(
+        "dark",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
+    );
 }
 
 #[test]
@@ -5338,6 +5771,77 @@ fn web_vs_fret_select_demo_aria_invalid_focus_ring_matches() {
         ring_quad.border_color,
         &expected_ring_color,
         0.06,
+    );
+}
+
+fn assert_native_select_demo_shadow_matches(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden("native-select-demo");
+    let theme = web
+        .themes
+        .get(web_theme_name)
+        .expect("missing requested theme in web golden");
+
+    let web_select = find_first(&theme.root, &|n| {
+        n.tag == "select"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|class| class.contains("shadow-xs"))
+    })
+    .expect("web native select node");
+    let expected = web_drop_shadow_insets(web_select);
+
+    let (snap, scene) = render_and_paint_with_theme_scheme(scheme, |cx| {
+        let value: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+        let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+        vec![
+            shadcn::native_select(value, open)
+                .a11y_label("NativeSelectShadow")
+                .placeholder("Select status")
+                .options([
+                    shadcn::NativeSelectOption::placeholder("Select status"),
+                    shadcn::NativeSelectOption::new("todo", "Todo"),
+                    shadcn::NativeSelectOption::new("in-progress", "In Progress"),
+                    shadcn::NativeSelectOption::new("done", "Done"),
+                ])
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(Px(web_select.rect.w))
+                        .h_px(Px(web_select.rect.h)),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let select = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some("NativeSelectShadow")
+        })
+        .expect("fret native select semantics node");
+
+    let quad = find_best_quad(&scene, select.bounds).expect("painted quad for native select");
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+
+    assert_shadow_insets_match("native-select-demo", web_theme_name, &expected, &candidates);
+}
+
+#[test]
+fn web_vs_fret_native_select_demo_shadow_matches_web_light() {
+    assert_native_select_demo_shadow_matches(
+        "light",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_native_select_demo_shadow_matches_web_dark() {
+    assert_native_select_demo_shadow_matches(
+        "dark",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
     );
 }
 
