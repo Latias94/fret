@@ -113,6 +113,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: root `ui::*` now re-exports `NodeGraphFitViewOptions` /
     `NodeGraphSetViewportOptions` from a dedicated store-first module, while `view_queue.rs` keeps
     queue-only animation overrides crate-internal.
+- [x] Keep `NodeGraphSurfaceBinding` complete enough for routine instance-style viewport authoring.
+  - Progress: binding now mirrors `set_viewport*`, `set_center_in_bounds*`,
+    and `fit_view_nodes_in_bounds*` with both option-bearing and action-host variants, so ordinary
+    viewport hooks no longer need to drop to `binding.controller()`.
 - [ ] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes
       an internal detail of the controller.
   - Progress: retained canvas / minimap composition can now bind through `NodeGraphController`, so

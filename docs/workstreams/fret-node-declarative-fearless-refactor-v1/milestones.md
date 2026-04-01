@@ -276,6 +276,10 @@ points rather than direct graph mutation.
     `replace_view_state`, `set_selection`, `outgoers`, `incomers`, `connected_edges`,
     `port_connections`, `node_connections`, `undo`, `redo`), while `binding.controller()` stays available as the advanced
     escape hatch.
+  - `NodeGraphSurfaceBinding` now also mirrors the full common store-first viewport helper family
+    (`set_viewport*`, `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, including option-bearing
+    and action-host variants), so routine app-facing viewport hooks can stay on the instance-style
+    binding surface instead of dropping to `binding.controller()`.
   - Controlled mode now has an explicit full-replace-first policy: replacing the authoritative graph
     document is treated as a reset + re-sync operation, while diff-first replace helpers remain a
     deferred follow-up rather than the default contract.

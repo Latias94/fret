@@ -30,6 +30,13 @@ something else.
   - keeps public viewport options store-first (`min/max zoom`, `padding`, `include_hidden_nodes`)
     instead of exposing retained queue animation overrides,
   - owns transaction-safe graph commits and query helpers.
+- `NodeGraphSurfaceBinding`
+  - remains the instance-style app-facing bundle for declarative surfaces,
+  - now mirrors the full common store-first viewport helper family (`set_viewport*`,
+    `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, including action-host and option-bearing
+    variants),
+  - should be enough for routine app-facing viewport authoring without dropping to
+    `binding.controller()`.
 - `node_graph_surface(...)`
   - remains the recommended lightweight declarative authoring surface,
   - should keep converging toward the editor-grade path rather than staying a "lite demo only"

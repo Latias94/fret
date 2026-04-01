@@ -249,9 +249,11 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
 - diagnostics-only paint-only graph hotkeys now also build/commit transactions instead of teaching
   direct `Graph` mutation,
 - it can sync external graph/view models from store after commits,
-- `NodeGraphSurfaceBinding` now also exposes object-safe viewport entry points for declarative
-  action hooks (`set_viewport_action_host`, `fit_view_nodes_in_bounds_action_host`) so first-party
-  controls do not need to teach raw view queues,
+- `NodeGraphSurfaceBinding` now also exposes the full store-first viewport helper family for
+  declarative action hooks and common instance-style app code (`set_viewport*`,
+  `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, including option-bearing variants), so
+  first-party controls do not need to teach raw view queues or drop to `binding.controller()` for
+  routine viewport work,
 - retained rename / portal / blackboard / compatibility glue now also prefers controller-owned
   transaction submission when a controller/store exists,
 - the retained legacy demo now routes its canvas / rename overlay / blackboard / portal / minimap
@@ -269,12 +271,11 @@ widgets now stay crate-internal for compatibility harnesses, focused retained te
 migration glue.
 Queue-first APIs such as `NodeGraphEditQueue` are no longer public app-facing seams. Raw edit/view
 transport is crate-internal only, and the temporary `NodeGraphViewportHelper` facade is deleted, so
-app-facing composition
-should call
-`NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes_in_bounds*}` directly,
-while declarative action hooks should prefer
-`NodeGraphSurfaceBinding::{set_viewport_action_host, fit_view_nodes_in_bounds_action_host}` over
-owning raw transport queues.
+app-facing composition can stay on either the instance-style
+`NodeGraphSurfaceBinding::{set_viewport*, set_center_in_bounds*, fit_view_nodes_in_bounds*}` family
+or the lower-level `NodeGraphController::{set_viewport*, set_center_in_bounds*,
+fit_view_nodes_in_bounds*}` surface, while declarative action hooks should prefer the matching
+`NodeGraphSurfaceBinding::*_action_host(...)` helpers over owning raw transport queues.
 
 `fret_node::ui::advanced::*` is now deleted, and root `fret_node::ui::*` no longer exposes the raw
 queue/helper surfaces. First-party demos stay controller/binding-first, while retained/test callers
@@ -417,9 +418,9 @@ For new editor surfaces, teach and copy this shape first:
 1. create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`,
 2. render `node_graph_surface(cx, binding.surface_props())` for the default surface props,
 3. use the binding itself for common app-facing helpers (`viewport`, `graph_snapshot`,
-   `view_state_snapshot`, `set_viewport`, `fit_view_nodes_in_bounds`, `replace_document`,
-   `replace_graph`, `replace_view_state`, `set_selection`, `outgoers`, `incomers`,
-   `connected_edges`, `port_connections`, `node_connections`, `undo`, `redo`),
+   `view_state_snapshot`, `set_viewport`, `set_center_in_bounds`, `fit_view_nodes_in_bounds`,
+   `replace_document`, `replace_graph`, `replace_view_state`, `set_selection`, `outgoers`,
+   `incomers`, `connected_edges`, `port_connections`, `node_connections`, `undo`, `redo`),
 4. drop to `binding.controller()` only for advanced helpers or retained/compat composition,
 5. treat raw graph/view models as advanced seams rather than the default teaching surface.
 

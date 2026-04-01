@@ -129,6 +129,20 @@ mod surface_policy_tests {
     }
 
     #[test]
+    fn binding_surface_covers_instance_style_viewport_helpers() {
+        assert!(UI_BINDING_RS.contains("pub fn set_viewport_with_options<"));
+        assert!(UI_BINDING_RS.contains("pub fn set_viewport_with_options_action_host("));
+        assert!(UI_BINDING_RS.contains("pub fn set_center_in_bounds<"));
+        assert!(UI_BINDING_RS.contains("pub fn set_center_in_bounds_action_host("));
+        assert!(UI_BINDING_RS.contains("pub fn set_center_in_bounds_with_options<"));
+        assert!(UI_BINDING_RS.contains("pub fn set_center_in_bounds_with_options_action_host("));
+        assert!(UI_BINDING_RS.contains("pub fn fit_view_nodes_in_bounds_with_options<"));
+        assert!(
+            UI_BINDING_RS.contains("pub fn fit_view_nodes_in_bounds_with_options_action_host(")
+        );
+    }
+
+    #[test]
     fn root_ui_surface_re_exports_store_first_viewport_option_types_but_not_raw_view_queue_module()
     {
         assert!(UI_MOD_RS.contains("mod view_queue;"));
