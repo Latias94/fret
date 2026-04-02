@@ -1363,11 +1363,7 @@ pub struct NodeGraphViewStateFileV1 {
 
 impl NodeGraphViewStateFileV1 {
     /// Wraps state for a graph.
-    pub fn new(graph_id: GraphId, state: NodeGraphViewState) -> Self {
-        Self::new_with_editor_config(graph_id, state, NodeGraphEditorConfig::default())
-    }
-
-    pub fn new_with_editor_config(
+    pub fn new(
         graph_id: GraphId,
         state: NodeGraphViewState,
         editor_config: NodeGraphEditorConfig,
@@ -1646,24 +1642,22 @@ mod tests {
         editor_config.interaction.selection_on_drag = true;
         editor_config.runtime_tuning.only_render_visible_elements = false;
 
-        let file = NodeGraphViewStateFileV1::new_with_editor_config(
-            graph_id,
-            state.clone(),
-            editor_config.clone(),
-        );
+        let file = NodeGraphViewStateFileV1::new(graph_id, state.clone(), editor_config.clone());
         file.save_json(&path).unwrap();
 
         let root: serde_json::Value =
             serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
         assert_eq!(root.get("state_version").and_then(|v| v.as_u64()), Some(2));
-        assert!(root
-            .get("state")
-            .and_then(|v| v.get("interaction"))
-            .is_none());
-        assert!(root
-            .get("state")
-            .and_then(|v| v.get("runtime_tuning"))
-            .is_none());
+        assert!(
+            root.get("state")
+                .and_then(|v| v.get("interaction"))
+                .is_none()
+        );
+        assert!(
+            root.get("state")
+                .and_then(|v| v.get("runtime_tuning"))
+                .is_none()
+        );
         assert_eq!(
             root.get("interaction")
                 .and_then(|v| v.get("selection_on_drag"))
@@ -1778,7 +1772,11 @@ mod tests {
         let other = GraphId::new();
         let path = temp_path("view_state_wrong_graph_id", graph_id);
 
-        let file = NodeGraphViewStateFileV1::new(graph_id, NodeGraphViewState::default());
+        let file = NodeGraphViewStateFileV1::new(
+            graph_id,
+            NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
+        );
         file.save_json(&path).unwrap();
 
         let err = NodeGraphViewStateFileV1::load_json(&path, other).unwrap_err();

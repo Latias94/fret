@@ -744,11 +744,7 @@ impl NodeGraphDomainDemoDriver {
             return;
         };
 
-        let file = NodeGraphViewStateFileV1::new_with_editor_config(
-            persist.graph_id,
-            state,
-            editor_config,
-        );
+        let file = NodeGraphViewStateFileV1::new(persist.graph_id, state, editor_config);
         if let Err(err) = file.save_json(&persist.path) {
             tracing::warn!(?err, "failed to save node graph view state");
         }
