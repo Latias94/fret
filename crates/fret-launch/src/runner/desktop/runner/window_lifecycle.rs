@@ -4,11 +4,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn create_os_window(
         &mut self,
         event_loop: &dyn ActiveEventLoop,
-        spec: WindowCreateSpec,
+        mut spec: WindowCreateSpec,
         style: WindowStyleRequest,
         _parent_window: Option<winit::raw_window_handle::RawWindowHandle>,
         caps: &PlatformCapabilities,
     ) -> Result<(Arc<dyn Window>, Option<accessibility::WinitAccessibility>), RunnerError> {
+        spec.normalize_size_constraints();
+
         let accessibility_enabled = self.config.accessibility_enabled
             && std::env::var_os("FRET_A11Y_DISABLE").is_none_or(|v| v.is_empty());
 
@@ -23,6 +25,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             } else {
                 spec.visible
             });
+        if let Some(min_size) = spec.min_size {
+            attrs = attrs.with_min_surface_size(winit::dpi::LogicalSize::new(
+                min_size.width,
+                min_size.height,
+            ));
+        }
+        if let Some(max_size) = spec.max_size {
+            attrs = attrs.with_max_surface_size(winit::dpi::LogicalSize::new(
+                max_size.width,
+                max_size.height,
+            ));
+        }
+        if let Some(resize_increments) = spec.resize_increments {
+            attrs = attrs.with_surface_resize_increments(winit::dpi::LogicalSize::new(
+                resize_increments.width,
+                resize_increments.height,
+            ));
+        }
         if let Some(resizable) = style.resizable {
             attrs = attrs.with_resizable(resizable);
         }
@@ -158,6 +178,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     .filter_map(|m| Some((m.position()?, m.current_video_mode()?.size()))),
             );
         }
+
+        spec.normalize_size_constraints();
 
         if spec.position.is_none() {
             // For dock tear-off, initially place near the cursor; we will refine the position
