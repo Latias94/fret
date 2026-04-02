@@ -1,6 +1,6 @@
 ---
 name: fret-skills-playbook
-description: "This skill should be used when the user asks to \"write or update a skill\", \"define regression gates\", \"add a diag script\", or \"standardize `test_id` conventions\". Provides shared conventions for layering decisions (mechanism vs policy), regression gate types, diag scripts, and evidence discipline."
+description: "This skill should be used when the user asks to \"write or update a skill\", \"define regression gates\", \"add a diag script\", or \"standardize `test_id` conventions\". Provides shared conventions for execution-mode selection, layering decisions (mechanism vs policy), regression gate types, diag scripts, and evidence discipline."
 ---
 
 # Fret skills playbook (shared conventions)
@@ -33,6 +33,7 @@ Defaults if unclear:
 
 ## Quick start
 
+- Read `references/execution-mode-selection.md` when deciding whether the task should stay fast, become a quick slice, or move into a workstream.
 - Use the “deliverables 3-pack” for any non-trivial change:
   - Repro (smallest target or script)
   - Gate (test/script/perf)
@@ -51,7 +52,28 @@ Use this rule of thumb:
 If the change is “interaction policy” (dismiss rules, focus restore, keyboard nav rules), it almost never belongs in
 `crates/fret-ui`.
 
-### 2) The deliverables 3-pack (Repro + Gate + Evidence)
+### 2) Pick the execution mode before you edit
+
+Use this three-mode rule:
+
+- **Fast**
+  - Use when the task is trivial, local, and does not change a repo-level invariant.
+  - Typical examples: wording/docs cleanup, a narrow obvious fix, small refactors that stay inside one surface and do not need state tracking.
+  - Leave a concise proof in the final response or commit notes, but do not create workstream state just to justify a tiny change.
+- **Quick slice**
+  - Default for most non-trivial engineering work.
+  - Use when one bounded slice can land with one smallest repro, one gate, and one evidence set, without needing a new lane.
+  - This is the normal mode for bug fixes, parity adjustments, focused refactors, and small framework evolution that is still easy to review in one pass.
+- **Workstream**
+  - Use when the task spans multiple slices/sessions, changes a hard-to-reverse contract, needs ADR/alignment updates, or must leave explicit continuation/closeout state.
+  - When the lane already exists, use `fret-workstream-lifecycle` and reopen it with the assumptions-first pass before editing code.
+
+Escalate mode instead of stretching the lower mode:
+
+- `Fast` → `Quick slice` when the task needs a real regression artifact.
+- `Quick slice` → `Workstream` when scope, handoff needs, or contract risk stop being obvious.
+
+### 3) The deliverables 3-pack (Repro + Gate + Evidence)
 
 Every non-trivial change should leave these three deliverables:
 
@@ -61,12 +83,12 @@ Every non-trivial change should leave these three deliverables:
   - `fretboard diag` script for event sequences/state machines, and/or
   - perf gate/baseline when perf is the goal.
 - **Evidence**: 1–3 evidence anchors (file paths + key functions/tests/scripts) so reviewers can verify quickly.
-  - Prefer the smallest deterministic proof:
+- Prefer the smallest deterministic proof:
     - geometry assertions or `capture_layout_sidecar` for layout ownership/size negotiation
     - `capture_screenshot` for visible chrome/clipping/focus rings
     - `capture_bundle` for interaction state machines and shareable run context
 
-### 3) `test_id` conventions (automation stability)
+### 4) `test_id` conventions (automation stability)
 
 Goal: scripts should select **intent-level** targets, not pixel coordinates.
 
@@ -79,7 +101,7 @@ Goal: scripts should select **intent-level** targets, not pixel coordinates.
   - `ui-gallery-docking-tab-bar-drag-anchor`
 - Avoid using list indices as ids; use model ids or stable row/item keys.
 
-### 4) Diag script conventions (reviewable and gate-friendly)
+### 5) Diag script conventions (reviewable and gate-friendly)
 
 - Prefer schema v2 for new scripts.
 - Prefer selectors by `test_id`.
@@ -90,7 +112,7 @@ Goal: scripts should select **intent-level** targets, not pixel coordinates.
 - When proving layout ownership or size negotiation, add `capture_layout_sidecar` before falling back to screenshots.
 - For first-party component pages, prefer the canonical nested corpus under `tools/diag-scripts/ui-gallery/<family>/`.
 
-### 5) Evidence discipline (make it reversible)
+### 6) Evidence discipline (make it reversible)
 
 When you fix a tricky issue, record:
 
@@ -99,7 +121,7 @@ When you fix a tricky issue, record:
 - the smallest script/test added,
 - the conclusion (“what changed” + “why it’s correct”).
 
-### 6) Skill testing discipline (triggering + behavior)
+### 7) Skill testing discipline (triggering + behavior)
 
 When creating or refreshing a skill, run a small manual test set before calling it done:
 
@@ -113,7 +135,7 @@ When creating or refreshing a skill, run a small manual test set before calling 
 - 1 failure path when applicable:
   - missing tool, missing repo-ref mirror, or unsupported platform leads to a bounded fallback instead of hand-wavy output
 
-### 7) External app repos (framework users)
+### 8) External app repos (framework users)
 
 If you are using these skills outside the Fret mono-repo:
 
@@ -132,6 +154,7 @@ Minimum deliverables (3-pack):
 
 ## Evidence anchors
 
+- Execution-mode selection note: `references/execution-mode-selection.md`
 - Layering and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
 - Crate/layer usage map: `docs/crate-usage-guide.md`
 - Canonical shadcn migration status: `docs/shadcn-declarative-progress.md`

@@ -183,7 +183,7 @@ Common adjacent pulls:
 
 - `fret-repo-orientation`: Find the right layer/crate fast (mono-repo vs external app repo), choose the smallest runnable target, and keep contract-first navigation.
 - `fret-workstream-lifecycle`: Manage the lifecycle of a workstream lane: create the minimal doc set, reopen existing lanes with an assumptions-first evidence pass, keep status explicit, decide continue vs follow-on, and close out with gates/evidence.
-- `fret-skills-playbook`: Shared conventions for layering decisions, regression gates, `test_id`/diag script style, and evidence discipline across all skills.
+- `fret-skills-playbook`: Shared conventions for execution-mode selection, layering decisions, regression gates, `test_id`/diag script style, and evidence discipline across all skills.
 - `fret-external-app-mode`: Use the skills from an external app repo (outside the mono-repo): what works without `tools/` and `fretboard`, and how to keep anchors and tooling usable via a Fret checkout.
 - `fret-app-ui-builder`: Product-oriented golden path: pick a baseline style, apply token overrides, compose shadcn recipes, and leave diag/perf gates early.
 - `fret-ui-review`: Review/audit Fret UI code for framework-aligned UX correctness (tokens, focus-visible, overlays, commands gating, `test_id`, and regression gates).
