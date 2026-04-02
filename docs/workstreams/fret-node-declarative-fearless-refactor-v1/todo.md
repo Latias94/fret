@@ -91,6 +91,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     relying on a follow-up retained-widget builder seam.
   - Retained test fixtures now insert host-owned default editor-config models explicitly instead of
     relying on widget-local fallbacks.
+  - Retained widget test harnesses now also expose combined `graph + view + editor_config` helpers,
+    so focused conformance gates can stay explicit about editor-config ownership without repeating
+    the same host/model setup block in every file.
 - [x] Delete the temporary `cfg(test)` bridge that mirrors `NodeGraphEditorConfig` back into
       `NodeGraphViewState` for old tests.
   - `NodeGraphViewState` test helpers now stay pure view-state.

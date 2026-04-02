@@ -8,7 +8,7 @@ use crate::core::CanvasPoint;
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    NullServices, TestUiHostImpl, make_host_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_size,
 };
 
@@ -53,12 +53,10 @@ fn fit_view_on_mount_frames_all_nodes_once() {
     graph_value.nodes.get_mut(&b).expect("node b exists").pos = CanvasPoint { x: 5000.0, y: 0.0 };
 
     // Expected viewport by direct framing (immediate).
-    let mut host_expected = TestUiHostImpl::default();
-    let graph_expected = host_expected.models.insert(graph_value.clone());
-    let view_expected = insert_view(&mut host_expected);
-    let editor_config_expected = insert_editor_config_with(&mut host_expected, |state| {
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (mut host_expected, graph_expected, view_expected, editor_config_expected) =
+        make_host_graph_view_editor_config_with(graph_value.clone(), |state| {
+            state.interaction.frame_view_duration_ms = 0;
+        });
     let mut canvas_expected = new_canvas!(
         host_expected,
         graph_expected,
@@ -69,12 +67,10 @@ fn fit_view_on_mount_frames_all_nodes_once() {
     let expected = canvas_expected.sync_view_state(&mut host_expected);
 
     // Actual via one-shot fit-view on mount (layout).
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(graph_value, |state| {
+            state.interaction.frame_view_duration_ms = 0;
+        });
 
     let mut canvas = new_canvas!(host, graph.clone(), view, editor_config).with_fit_view_on_mount();
 

@@ -140,6 +140,9 @@ runtime tuning.
     `NodeGraphCanvas::new(...)`, `NodeGraphCanvas::new_with_middleware(...)`, and
     `NodeGraphSurfaceCompatRetainedProps::new(...)` no longer manufacture default config
     ownership internally.
+  - retained widget test harnesses now also provide combined `graph + view + editor_config`
+    setup helpers, keeping explicit editor-config ownership visible in conformance tests without
+    leaving repeated host/model bootstrap blocks as accidental public teaching surface.
 
 ### Done criteria
 

@@ -197,10 +197,68 @@ pub(crate) fn insert_graph_view(
     let view = insert_view(host);
     (graph, view)
 }
+
+pub(crate) fn insert_graph_view_editor_config(
+    host: &mut TestUiHostImpl,
+    graph_value: Graph,
+) -> (
+    Model<Graph>,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
+    let (graph, view) = insert_graph_view(host, graph_value);
+    let editor_config = insert_editor_config(host);
+    (graph, view, editor_config)
+}
+
+pub(crate) fn insert_graph_view_editor_config_with(
+    host: &mut TestUiHostImpl,
+    graph_value: Graph,
+    configure: impl FnOnce(&mut NodeGraphEditorConfig),
+) -> (
+    Model<Graph>,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
+    let (graph, view, editor_config) = insert_graph_view_editor_config(host, graph_value);
+    let _ = editor_config.update(host, |state, _cx| {
+        configure(state);
+    });
+    (graph, view, editor_config)
+}
+
 pub(crate) fn make_host_graph_view(
     graph_value: Graph,
 ) -> (TestUiHostImpl, Model<Graph>, Model<NodeGraphViewState>) {
     let mut host = TestUiHostImpl::default();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
     (host, graph, view)
+}
+
+pub(crate) fn make_host_graph_view_editor_config(
+    graph_value: Graph,
+) -> (
+    TestUiHostImpl,
+    Model<Graph>,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
+    let mut host = TestUiHostImpl::default();
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    (host, graph, view, editor_config)
+}
+
+pub(crate) fn make_host_graph_view_editor_config_with(
+    graph_value: Graph,
+    configure: impl FnOnce(&mut NodeGraphEditorConfig),
+) -> (
+    TestUiHostImpl,
+    Model<Graph>,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
+    let mut host = TestUiHostImpl::default();
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, configure);
+    (host, graph, view, editor_config)
 }

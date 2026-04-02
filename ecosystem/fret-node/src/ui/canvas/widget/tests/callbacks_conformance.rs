@@ -14,8 +14,9 @@ use crate::runtime::callbacks::{
 
 use super::prelude::{cancel, node_drag, pan_zoom, pending_drag, pointer_up, wire_drag};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_graph_view,
-    make_host_graph_view, make_test_graph_two_nodes_with_ports_spaced_x,
+    NullServices, TestUiHostImpl, event_cx, insert_graph_view,
+    insert_graph_view_editor_config_with, make_host_graph_view_editor_config_with,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::ui::canvas::state::{
     NodeDrag, PendingNodeDrag, PendingNodeSelectAction, PendingWireDrag, WireDrag, WireDragKind,
@@ -108,10 +109,10 @@ fn click_connect_emits_connect_start_and_committed_end() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.connect_on_click = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.connect_on_click = true;
+        });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -171,10 +172,10 @@ fn escape_cancel_emits_connect_end_canceled() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.connect_on_click = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.connect_on_click = true;
+        });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -498,10 +499,10 @@ fn node_drag_start_and_escape_cancel_emits_node_drag_end_canceled() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.nodes_draggable = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.nodes_draggable = true;
+        });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -551,12 +552,12 @@ fn pan_inertia_emits_move_end_after_inertia_stops() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.pan_inertia.enabled = true;
-        state.interaction.pan_inertia.decay_per_s = 200.0;
-        state.interaction.pan_inertia.min_speed = 1.0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.pan_inertia.enabled = true;
+            state.interaction.pan_inertia.decay_per_s = 200.0;
+            state.interaction.pan_inertia.min_speed = 1.0;
+        });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -739,12 +740,12 @@ fn wheel_zoom_emits_move_start_and_debounced_move_end() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_scroll = true;
-        state.interaction.zoom_on_scroll_speed = 1.0;
-        state.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.zoom_on_scroll = true;
+            state.interaction.zoom_on_scroll_speed = 1.0;
+            state.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
+        });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -795,11 +796,11 @@ fn pinch_zoom_emits_move_start_and_debounced_move_end() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_pinch = true;
-        state.interaction.zoom_on_pinch_speed = 1.0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.zoom_on_pinch = true;
+            state.interaction.zoom_on_pinch_speed = 1.0;
+        });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -849,13 +850,13 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_scroll = false;
-        state.interaction.pan_on_scroll = true;
-        state.interaction.pan_on_scroll_speed = 1.0;
-        state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.zoom_on_scroll = false;
+            state.interaction.pan_on_scroll = true;
+            state.interaction.pan_on_scroll_speed = 1.0;
+            state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+        });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -903,10 +904,10 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
 
 #[test]
 fn double_click_background_zoom_emits_move_start_and_move_end() {
-    let (mut host, graph, view) = make_host_graph_view(Graph::default());
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_double_click = true;
-    });
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(Graph::default(), |state| {
+            state.interaction.zoom_on_double_click = true;
+        });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -940,13 +941,13 @@ fn double_click_background_zoom_emits_move_start_and_move_end() {
 
 #[test]
 fn wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom() {
-    let (mut host, graph, view) = make_host_graph_view(Graph::default());
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_scroll = false;
-        state.interaction.pan_on_scroll = true;
-        state.interaction.pan_on_scroll_speed = 1.0;
-        state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
-    });
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(Graph::default(), |state| {
+            state.interaction.zoom_on_scroll = false;
+            state.interaction.pan_on_scroll = true;
+            state.interaction.pan_on_scroll_speed = 1.0;
+            state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+        });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };

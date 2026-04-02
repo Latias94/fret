@@ -5,7 +5,7 @@ use crate::io::NodeGraphSelectionMode;
 
 use super::prelude::{left_click, marquee};
 use super::{
-    NullServices, event_cx, insert_editor_config_with, make_host_graph_view,
+    NullServices, event_cx, make_host_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_size,
 };
 use crate::ui::canvas::state::ViewSnapshot;
@@ -14,13 +14,13 @@ use crate::ui::canvas::state::ViewSnapshot;
 fn marquee_partial_selects_intersecting_nodes() {
     let (mut graph_value, a, b) = make_test_graph_two_nodes_with_size();
     graph_value.nodes.get_mut(&b).expect("node b exists").pos = CanvasPoint { x: 1000.0, y: 0.0 };
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.elements_selectable = true;
-        state.interaction.selection_on_drag = true;
-        state.interaction.pane_click_distance = 0.0;
-        state.interaction.selection_mode = NodeGraphSelectionMode::Partial;
-    });
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(graph_value, |state| {
+            state.interaction.elements_selectable = true;
+            state.interaction.selection_on_drag = true;
+            state.interaction.pane_click_distance = 0.0;
+            state.interaction.selection_mode = NodeGraphSelectionMode::Partial;
+        });
 
     let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot: ViewSnapshot = canvas.sync_view_state(&mut host);
@@ -69,13 +69,13 @@ fn marquee_partial_selects_intersecting_nodes() {
 fn marquee_full_requires_nodes_to_be_fully_contained() {
     let (mut graph_value, a, b) = make_test_graph_two_nodes_with_size();
     graph_value.nodes.get_mut(&b).expect("node b exists").pos = CanvasPoint { x: 1000.0, y: 0.0 };
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.elements_selectable = true;
-        state.interaction.selection_on_drag = true;
-        state.interaction.pane_click_distance = 0.0;
-        state.interaction.selection_mode = NodeGraphSelectionMode::Full;
-    });
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(graph_value, |state| {
+            state.interaction.elements_selectable = true;
+            state.interaction.selection_on_drag = true;
+            state.interaction.pane_click_distance = 0.0;
+            state.interaction.selection_mode = NodeGraphSelectionMode::Full;
+        });
 
     let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot: ViewSnapshot = canvas.sync_view_state(&mut host);

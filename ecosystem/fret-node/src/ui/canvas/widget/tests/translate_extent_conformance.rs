@@ -6,7 +6,7 @@ use crate::ui::canvas::widget::view_queue::{
     NodeGraphViewQueue, NodeGraphViewQueueSetViewportOptions,
 };
 
-use super::{insert_editor_config_with, make_host_graph_view, make_test_graph_two_nodes_with_size};
+use super::{make_host_graph_view_editor_config_with, make_test_graph_two_nodes_with_size};
 
 fn rect_contains(outer: Rect, inner: Rect, eps: f32) -> bool {
     let outer_x0 = outer.origin.x.0;
@@ -41,9 +41,6 @@ fn set_viewport_clamps_pan_to_translate_extent() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
 
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
-    let queue = host.models.insert(NodeGraphViewQueue::default());
-
     let extent = CanvasRect {
         origin: CanvasPoint { x: 0.0, y: 0.0 },
         size: CanvasSize {
@@ -51,9 +48,11 @@ fn set_viewport_clamps_pan_to_translate_extent() {
             height: 1000.0,
         },
     };
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.translate_extent = Some(extent);
-    });
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(graph_value, |state| {
+            state.interaction.translate_extent = Some(extent);
+        });
+    let queue = host.models.insert(NodeGraphViewQueue::default());
 
     let mut canvas = new_canvas!(host, graph, view, editor_config).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
@@ -102,9 +101,6 @@ fn set_viewport_clamps_pan_to_translate_extent_at_zoom() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
 
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
-    let queue = host.models.insert(NodeGraphViewQueue::default());
-
     let extent = CanvasRect {
         origin: CanvasPoint { x: 0.0, y: 0.0 },
         size: CanvasSize {
@@ -112,9 +108,11 @@ fn set_viewport_clamps_pan_to_translate_extent_at_zoom() {
             height: 1000.0,
         },
     };
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.translate_extent = Some(extent);
-    });
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(graph_value, |state| {
+            state.interaction.translate_extent = Some(extent);
+        });
+    let queue = host.models.insert(NodeGraphViewQueue::default());
 
     let mut canvas = new_canvas!(host, graph, view, editor_config).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
@@ -160,9 +158,6 @@ fn translate_extent_centers_when_viewport_is_larger_than_extent() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
 
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
-    let queue = host.models.insert(NodeGraphViewQueue::default());
-
     let extent = CanvasRect {
         origin: CanvasPoint { x: 10.0, y: 20.0 },
         size: CanvasSize {
@@ -170,9 +165,11 @@ fn translate_extent_centers_when_viewport_is_larger_than_extent() {
             height: 200.0,
         },
     };
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.translate_extent = Some(extent);
-    });
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(graph_value, |state| {
+            state.interaction.translate_extent = Some(extent);
+        });
+    let queue = host.models.insert(NodeGraphViewQueue::default());
 
     let mut canvas = new_canvas!(host, graph, view, editor_config).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);

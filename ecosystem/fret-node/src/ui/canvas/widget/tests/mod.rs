@@ -134,6 +134,11 @@ use harness::{
     make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
     read_node_pos,
 };
+#[allow(unused_imports)]
+use harness::{
+    insert_graph_view_editor_config, insert_graph_view_editor_config_with,
+    make_host_graph_view_editor_config, make_host_graph_view_editor_config_with,
+};
 
 use prelude::{NodeDrag, NodeGraphCanvas, ViewSnapshot, WireDrag, WireDragKind};
 
@@ -334,12 +339,12 @@ fn space_to_pan_starts_left_mouse_panning_and_updates_viewport() {
 fn pan_activation_key_code_must_match_to_enable_space_to_pan() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.space_to_pan = true;
-        state.interaction.pan_activation_key_code =
-            Some(crate::io::NodeGraphKeyCode(fret_core::KeyCode::KeyP));
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.space_to_pan = true;
+            state.interaction.pan_activation_key_code =
+                Some(crate::io::NodeGraphKeyCode(fret_core::KeyCode::KeyP));
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
@@ -395,11 +400,11 @@ fn pan_activation_key_code_must_match_to_enable_space_to_pan() {
 fn pan_activation_key_code_none_disables_space_to_pan_activation() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.space_to_pan = true;
-        state.interaction.pan_activation_key_code = None;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.space_to_pan = true;
+            state.interaction.pan_activation_key_code = None;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
@@ -435,12 +440,12 @@ fn pan_activation_key_code_none_disables_space_to_pan_activation() {
 fn pan_on_scroll_mode_horizontal_ignores_vertical_wheel_delta() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.pan_on_scroll = true;
-        state.interaction.pan_on_scroll_speed = 1.0;
-        state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Horizontal;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.pan_on_scroll = true;
+            state.interaction.pan_on_scroll_speed = 1.0;
+            state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Horizontal;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
@@ -489,12 +494,12 @@ fn pan_on_scroll_mode_horizontal_ignores_vertical_wheel_delta() {
 fn pan_on_scroll_shift_maps_vertical_wheel_to_horizontal_on_windows() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.pan_on_scroll = true;
-        state.interaction.pan_on_scroll_speed = 1.0;
-        state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.pan_on_scroll = true;
+            state.interaction.pan_on_scroll_speed = 1.0;
+            state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
@@ -534,14 +539,14 @@ fn pan_on_scroll_shift_maps_vertical_wheel_to_horizontal_on_windows() {
 fn space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.pan_on_scroll = false;
-        state.interaction.pan_on_scroll_speed = 1.0;
-        state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
-        state.interaction.zoom_on_scroll = false;
-        state.interaction.space_to_pan = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.pan_on_scroll = false;
+            state.interaction.pan_on_scroll_speed = 1.0;
+            state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+            state.interaction.zoom_on_scroll = false;
+            state.interaction.space_to_pan = true;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
@@ -599,11 +604,11 @@ fn space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled() {
 fn pinch_gesture_zooms_in_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_pinch = true;
-        state.interaction.zoom_on_pinch_speed = 1.0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.zoom_on_pinch = true;
+            state.interaction.zoom_on_pinch_speed = 1.0;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
@@ -645,10 +650,10 @@ fn pinch_gesture_zooms_in_about_pointer() {
 fn pinch_gesture_respects_toggle() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_pinch = false;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.zoom_on_pinch = false;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
@@ -684,12 +689,12 @@ fn pinch_gesture_respects_toggle() {
 fn wheel_zoom_zooms_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_scroll = true;
-        state.interaction.zoom_on_scroll_speed = 1.0;
-        state.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.zoom_on_scroll = true;
+            state.interaction.zoom_on_scroll_speed = 1.0;
+            state.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
@@ -790,11 +795,11 @@ fn delete_key_defaults_to_backspace() {
 fn disable_keyboard_a11y_does_not_block_delete_shortcut() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.disable_keyboard_a11y = true;
-        state.interaction.delete_key = crate::io::NodeGraphDeleteKey::BackspaceOrDelete;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.disable_keyboard_a11y = true;
+            state.interaction.delete_key = crate::io::NodeGraphDeleteKey::BackspaceOrDelete;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
@@ -836,10 +841,10 @@ fn disable_keyboard_a11y_does_not_block_delete_shortcut() {
 fn disable_keyboard_a11y_blocks_tab_focus_traversal() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.disable_keyboard_a11y = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.disable_keyboard_a11y = true;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
@@ -877,10 +882,10 @@ fn disable_keyboard_a11y_blocks_tab_focus_traversal() {
 fn double_click_background_zooms_in_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_double_click = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.zoom_on_double_click = true;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
@@ -925,10 +930,10 @@ fn double_click_background_zooms_in_about_pointer() {
 fn shift_double_click_background_zooms_out_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_double_click = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.zoom_on_double_click = true;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
