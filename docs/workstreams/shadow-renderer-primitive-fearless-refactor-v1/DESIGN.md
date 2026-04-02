@@ -1,8 +1,8 @@
 # Shadow Renderer Primitive (Fearless Refactor v1) — Design
 
-Status: Draft
+Status: Complete (v1 primitive lane landed; future backend-specific upgrades need a follow-on workstream or ADR)
 
-Last updated: 2026-04-01
+Last updated: 2026-04-02
 
 Related:
 
@@ -13,15 +13,22 @@ Related:
 
 ## Context
 
+Status note (2026-04-02): the default `ShadowStyle -> SceneOp::ShadowRRect -> analytic wgpu`
+path is now landed, the explicit scene-level quad fallback helper is in place, representative
+evidence is recorded, and first-party consumer audits no longer assume the old quad-expanded
+representation. Future backend-specific adoption can reuse the scene-level fallback helper without
+reopening UI-layer default lowering.
+
 Fret now has three distinct shadow realities:
 
 1. `ShadowStyle` is the stable mechanism surface for container and recipe-owned elevation.
 2. `DropShadowV1` is a bounded effect-step for content-derived blur under `EffectMode::FilterContent`.
-3. The default `ShadowStyle` lowering path in `crates/fret-ui/src/paint.rs` still expands each shadow
-   layer into multiple `SceneOp::Quad` operations with alpha falloff.
+3. The historical fallback in `crates/fret-ui/src/paint.rs` expands each shadow layer into multiple
+   `SceneOp::Quad` operations with alpha falloff.
 
 The recent portable-softness lane corrected the alpha budget problem in the quad expansion path, but
-that lane intentionally did not claim that the fallback painter is the final renderer-quality answer.
+that lane intentionally did not claim that the fallback painter was the final renderer-quality
+answer.
 
 Pinned GPUI/Zed review confirms the more modern architecture:
 
@@ -37,10 +44,16 @@ that shape and delete the wrong layering once the replacement is proven.
 
 The main problem is no longer "our shadow presets are wrong."
 
-The remaining structural problem is that **box shadow geometry is still hidden inside UI-layer quad
-expansion instead of being a first-class scene primitive**.
+The workstream started because **box shadow geometry was hidden inside UI-layer quad expansion
+instead of being a first-class scene primitive**.
 
-That creates five concrete issues:
+That default-path structural gap is now closed on the integrated wgpu renderer, but the same root
+cause still matters for two remaining reasons:
+
+1. non-native backends still need an explicit, documented degradation lane,
+2. the repo still needs durable evidence proving why the primitive path is the correct default.
+
+That created five concrete issues:
 
 1. Quality is capped by the fallback algorithm.
    - Large-radius shadows still read more rectangular or harder than a dedicated shader path.
@@ -58,7 +71,7 @@ That creates five concrete issues:
 
 1. Add a first-class scene primitive for rounded-rect box shadows.
 2. Keep `ShadowStyle` as the mechanism/authoring contract for container chrome.
-3. Move the default integrated renderer (`fret-render-wgpu`) to a dedicated shadow pipeline for
+3. Move the default integrated renderer (`fret-render-wgpu`) to a dedicated renderer-owned path for
    `ShadowStyle`-backed box shadows.
 4. Keep a deterministic fallback for backends that cannot or do not yet implement the primitive.
 5. Delete UI-layer multi-quad expansion as the default path once the primitive is proven.
@@ -165,11 +178,11 @@ Expected properties:
 ### 4. Backend fallback path
 
 Backends that do not yet implement the primitive may degrade deterministically by replaying the
-existing portable quad approximation.
+historical portable quad approximation.
 
 Important ownership rule:
 
-- that fallback should live in renderer-facing lowering or a shared renderer fallback helper,
+- that fallback must remain explicit and non-default,
 - not in the container paint path as the primary representation of shadow.
 
 ### 5. Delete-ready cleanup target
@@ -226,4 +239,5 @@ Minimum deliverables for this lane:
 - core scene + renderer implementation
 - conformance gate(s) for the primitive
 - screenshot evidence for representative elevated surfaces
-- cleanup note proving the UI-layer multi-quad path is no longer the default
+- cleanup note proving the UI-layer multi-quad path is no longer the default and now survives only
+  as an explicit fallback helper

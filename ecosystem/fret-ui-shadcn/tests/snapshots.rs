@@ -98,6 +98,14 @@ enum SnapSceneOp {
         border_color: SnapColor,
         corner_radii: SnapCorners,
     },
+    ShadowRRect {
+        rect: SnapRect,
+        corner_radii: SnapCorners,
+        offset: SnapPoint,
+        spread: f32,
+        blur_radius: f32,
+        color: SnapColor,
+    },
     Image {
         rect: SnapRect,
         fit: String,
@@ -370,6 +378,22 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             border: snap_edges(border),
             border_color: snap_paint(border_paint.paint),
             corner_radii: snap_corners(corner_radii),
+        },
+        SceneOp::ShadowRRect {
+            rect,
+            corner_radii,
+            offset,
+            spread,
+            blur_radius,
+            color,
+            ..
+        } => SnapSceneOp::ShadowRRect {
+            rect: snap_rect(rect),
+            corner_radii: snap_corners(corner_radii),
+            offset: snap_point(offset),
+            spread: round3(spread.0),
+            blur_radius: round3(blur_radius.0),
+            color: snap_color(color),
         },
         SceneOp::Image {
             rect, fit, opacity, ..

@@ -1,8 +1,8 @@
 # Shadow Renderer Primitive (Fearless Refactor v1) — Milestones
 
-Status: Draft
+Status: Complete (primitive default path, fallback closure, and evidence lane landed)
 
-Last updated: 2026-04-01
+Last updated: 2026-04-02
 
 Related:
 
@@ -45,9 +45,9 @@ Exit criteria:
 
 ## M3 - UI migration and fallback cleanup
 
-Status note (2026-04-01): in progress. `ShadowStyle` now lowers to the new scene primitive and the
-old UI-layer multi-quad expansion is no longer the default path, but explicit non-native fallback
-documentation/cleanup is still pending.
+Status note (2026-04-02): complete for the UI/default-path lane. `ShadowStyle` now lowers to the
+new scene primitive, the old UI-layer multi-quad expansion is no longer the default path, and the
+historical approximation now survives only as the explicit `paint_shadow_quad_fallback(...)` helper.
 
 Exit criteria:
 
@@ -57,7 +57,11 @@ Exit criteria:
 
 ## M4 - Evidence and closure
 
-Status note (2026-04-01): open.
+Status note (2026-04-02): complete. The op-count/perf evidence is landed (`24 ShadowRRect` ops vs
+`276` fallback quads on a representative 12-card `shadow_lg` surface), representative screenshot
+evidence now exists for `Card`, `Calendar`, `Sonner`, and `todo_demo`, the explicit scene-level
+fallback helper is documented, and the first-party consumer audit is closed through snapshot +
+shadow-inset consumers plus targeted `Card` / `Calendar` / `Sonner` parity gates.
 
 Exit criteria:
 

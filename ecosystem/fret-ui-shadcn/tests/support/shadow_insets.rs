@@ -1,4 +1,4 @@
-use fret_core::{Color, Paint, Rect, Scene, SceneOp};
+use fret_core::{Color, Corners, DrawOrder, Paint, Point, Px, Rect, Scene, SceneOp, Size};
 use std::cmp::Ordering;
 
 #[derive(Debug, Clone, Copy)]
@@ -247,6 +247,34 @@ fn rect_intersection_area(a: Rect, b: Rect) -> f32 {
     w * h
 }
 
+fn rect_expand(rect: Rect, delta: f32) -> Rect {
+    if delta >= 0.0 {
+        Rect::new(
+            Point::new(Px(rect.origin.x.0 - delta), Px(rect.origin.y.0 - delta)),
+            Size::new(
+                Px(rect.size.width.0 + delta * 2.0),
+                Px(rect.size.height.0 + delta * 2.0),
+            ),
+        )
+    } else {
+        let d = -delta;
+        Rect::new(
+            Point::new(Px(rect.origin.x.0 + d), Px(rect.origin.y.0 + d)),
+            Size::new(
+                Px((rect.size.width.0 - d * 2.0).max(0.0)),
+                Px((rect.size.height.0 - d * 2.0).max(0.0)),
+            ),
+        )
+    }
+}
+
+fn shadow_rrect_outer_rect(rect: Rect, offset: Point, spread: f32, blur_radius: f32) -> Rect {
+    let mut outer = rect_expand(rect, spread + blur_radius.max(0.0));
+    outer.origin.x = Px(outer.origin.x.0 + offset.x.0);
+    outer.origin.y = Px(outer.origin.y.0 + offset.y.0);
+    outer
+}
+
 fn paint_solid_color(paint: fret_core::scene::PaintBindingV1) -> Color {
     match paint.paint {
         Paint::Solid(color) => color,
@@ -266,38 +294,101 @@ pub(crate) fn fret_drop_shadow_insets_candidates(
     let mut out = Vec::new();
 
     for op in scene.ops() {
-        let SceneOp::Quad {
-            rect,
-            background,
-            border,
-            ..
-        } = *op
-        else {
-            continue;
-        };
+        match *op {
+            SceneOp::Quad {
+                rect,
+                background,
+                border,
+                ..
+            } => {
+                let background = paint_solid_color(background);
+                let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
+                if has_border(&border) {
+                    continue;
+                }
+                if background.a <= 0.0001 || background.a >= 0.95 {
+                    continue;
+                }
+                if rect_intersection_area(rect, panel_rect) / panel_area <= 0.01 {
+                    continue;
+                }
+                let insets = shadow_insets_for_rect(panel_rect, rect);
+                let extends_outside = insets.left < -0.01
+                    || insets.top < -0.01
+                    || insets.right > 0.01
+                    || insets.bottom > 0.01;
+                if !extends_outside {
+                    continue;
+                }
 
-        let background = paint_solid_color(background);
-        let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
-        if has_border(&border) {
-            continue;
-        }
-        if background.a <= 0.0001 || background.a >= 0.95 {
-            continue;
-        }
-        if rect_intersection_area(rect, panel_rect) / panel_area <= 0.01 {
-            continue;
-        }
-        let insets = shadow_insets_for_rect(panel_rect, rect);
-        let extends_outside = insets.left < -0.01
-            || insets.top < -0.01
-            || insets.right > 0.01
-            || insets.bottom > 0.01;
-        if !extends_outside {
-            continue;
-        }
+                out.push(insets);
+            }
+            SceneOp::ShadowRRect {
+                rect,
+                offset,
+                spread,
+                blur_radius,
+                color,
+                ..
+            } => {
+                if color.a <= 0.0001 {
+                    continue;
+                }
+                let outer_rect =
+                    shadow_rrect_outer_rect(rect, offset, spread.0, blur_radius.0.max(0.0));
+                if rect_intersection_area(outer_rect, panel_rect) / panel_area <= 0.01 {
+                    continue;
+                }
+                let insets = shadow_insets_for_rect(panel_rect, outer_rect);
+                let extends_outside = insets.left < -0.01
+                    || insets.top < -0.01
+                    || insets.right > 0.01
+                    || insets.bottom > 0.01;
+                if !extends_outside {
+                    continue;
+                }
 
-        out.push(insets);
+                out.push(insets);
+            }
+            _ => {}
+        }
     }
 
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fret_drop_shadow_insets_candidates_include_shadow_rrect_ops() {
+        let panel = Rect::new(
+            Point::new(Px(10.0), Px(10.0)),
+            Size::new(Px(30.0), Px(20.0)),
+        );
+        let mut scene = Scene::default();
+        scene.push(SceneOp::ShadowRRect {
+            order: DrawOrder(0),
+            rect: panel,
+            corner_radii: Corners::all(Px(8.0)),
+            offset: Point::new(Px(0.0), Px(1.0)),
+            spread: Px(0.0),
+            blur_radius: Px(3.0),
+            color: Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.12,
+            },
+        });
+
+        let candidates = fret_drop_shadow_insets_candidates(&scene, panel);
+        assert_eq!(candidates.len(), 1);
+        let shadow = candidates[0];
+        assert!((shadow.left - -3.0).abs() <= 0.01);
+        assert!((shadow.top - -2.0).abs() <= 0.01);
+        assert!((shadow.right - 3.0).abs() <= 0.01);
+        assert!((shadow.bottom - 4.0).abs() <= 0.01);
+    }
 }

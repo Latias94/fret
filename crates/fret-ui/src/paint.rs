@@ -1,4 +1,5 @@
 use crate::element::{RingPlacement, RingStyle, ShadowLayerStyle, ShadowStyle};
+use fret_core::scene::shadow_rrect_fallback_quads;
 use fret_core::{Color, Corners, DrawOrder, Edges, Paint, Point, Px, Rect, Scene, SceneOp, Size};
 
 fn corners_inflate(mut corners: Corners, delta: Px) -> Corners {
@@ -38,6 +39,26 @@ fn rect_deflate(rect: Rect, delta: Px) -> Rect {
         fret_core::Point::new(Px(rect.origin.x.0 + d), Px(rect.origin.y.0 + d)),
         Size::new(Px(w), Px(h)),
     )
+}
+
+fn paint_shadow_layer_quad_fallback(
+    scene: &mut Scene,
+    order: DrawOrder,
+    bounds: Rect,
+    layer: ShadowLayerStyle,
+    corner_radii: Corners,
+) {
+    for op in shadow_rrect_fallback_quads(
+        order,
+        bounds,
+        corner_radii,
+        Point::new(layer.offset_x, layer.offset_y),
+        layer.spread,
+        layer.blur,
+        layer.color,
+    ) {
+        scene.push(op);
+    }
 }
 
 fn paint_shadow_layer(
@@ -82,6 +103,22 @@ pub fn paint_shadow(scene: &mut Scene, order: DrawOrder, bounds: Rect, shadow: S
     paint_shadow_layer(scene, order, bounds, shadow.primary, shadow.corner_radii);
     if let Some(layer) = shadow.secondary {
         paint_shadow_layer(scene, order, bounds, layer, shadow.corner_radii);
+    }
+}
+
+/// Paint the historical bounded multi-quad shadow approximation as an explicit fallback lane.
+///
+/// This keeps deterministic degradation available for backends that do not yet implement
+/// `SceneOp::ShadowRRect`, but it is intentionally no longer the default `ShadowStyle` lowering.
+pub fn paint_shadow_quad_fallback(
+    scene: &mut Scene,
+    order: DrawOrder,
+    bounds: Rect,
+    shadow: ShadowStyle,
+) {
+    paint_shadow_layer_quad_fallback(scene, order, bounds, shadow.primary, shadow.corner_radii);
+    if let Some(layer) = shadow.secondary {
+        paint_shadow_layer_quad_fallback(scene, order, bounds, layer, shadow.corner_radii);
     }
 }
 
@@ -238,9 +275,39 @@ pub fn paint_ripple(
 
 #[cfg(test)]
 mod tests {
-    use super::{paint_ripple, paint_shadow, paint_state_layer};
+    use super::{paint_ripple, paint_shadow, paint_shadow_quad_fallback, paint_state_layer};
     use crate::element::{ShadowLayerStyle, ShadowStyle};
     use fret_core::{Color, Corners, DrawOrder, Paint, Point, Px, Rect, Scene, SceneOp, Size};
+
+    fn representative_shadow_lg(radius: Px) -> ShadowStyle {
+        ShadowStyle {
+            primary: ShadowLayerStyle {
+                color: Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.10,
+                },
+                offset_x: Px(0.0),
+                offset_y: Px(10.0),
+                blur: Px(15.0),
+                spread: Px(-3.0),
+            },
+            secondary: Some(ShadowLayerStyle {
+                color: Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.10,
+                },
+                offset_x: Px(0.0),
+                offset_y: Px(4.0),
+                blur: Px(6.0),
+                spread: Px(-4.0),
+            }),
+            corner_radii: Corners::all(radius),
+        }
+    }
 
     #[test]
     fn paint_state_layer_emits_single_quad_with_expected_alpha() {
@@ -478,5 +545,100 @@ mod tests {
         assert_eq!(secondary_blur, Px(4.0));
         assert_eq!(secondary_spread, Px(1.0));
         assert_eq!(secondary_color.a, 0.08);
+    }
+
+    #[test]
+    fn paint_shadow_quad_fallback_keeps_bounded_multi_quad_profile() {
+        let mut scene = Scene::default();
+        paint_shadow_quad_fallback(
+            &mut scene,
+            DrawOrder(0),
+            Rect::new(
+                Point::new(Px(20.0), Px(10.0)),
+                Size::new(Px(40.0), Px(24.0)),
+            ),
+            ShadowStyle {
+                primary: ShadowLayerStyle {
+                    color: Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 0.18,
+                    },
+                    offset_x: Px(0.0),
+                    offset_y: Px(2.0),
+                    blur: Px(4.0),
+                    spread: Px(1.0),
+                },
+                secondary: None,
+                corner_radii: Corners::all(Px(6.0)),
+            },
+        );
+
+        assert_eq!(scene.ops().len(), 5);
+        let SceneOp::Quad {
+            rect: outer_rect,
+            background: outer_background,
+            corner_radii: outer_radii,
+            ..
+        } = scene.ops()[0]
+        else {
+            panic!("expected outer fallback quad");
+        };
+        let SceneOp::Quad {
+            rect: inner_rect,
+            background: inner_background,
+            corner_radii: inner_radii,
+            ..
+        } = scene.ops()[4]
+        else {
+            panic!("expected inner fallback quad");
+        };
+
+        let Paint::Solid(outer_color) = outer_background.paint else {
+            panic!("expected solid outer fallback paint");
+        };
+        let Paint::Solid(inner_color) = inner_background.paint else {
+            panic!("expected solid inner fallback paint");
+        };
+
+        assert!(outer_rect.size.width.0 > inner_rect.size.width.0);
+        assert!(outer_rect.size.height.0 > inner_rect.size.height.0);
+        assert!(outer_radii.top_left.0 > inner_radii.top_left.0);
+        assert!(outer_color.a < inner_color.a);
+    }
+
+    #[test]
+    fn paint_shadow_shadow_heavy_surface_reduces_scene_ops_vs_quad_fallback() {
+        let shadow = representative_shadow_lg(Px(12.0));
+        let mut primitive_scene = Scene::default();
+        let mut fallback_scene = Scene::default();
+
+        for row in 0..3 {
+            for col in 0..4 {
+                let rect = Rect::new(
+                    Point::new(Px(32.0 + col as f32 * 168.0), Px(48.0 + row as f32 * 132.0)),
+                    Size::new(Px(132.0), Px(92.0)),
+                );
+                paint_shadow(&mut primitive_scene, DrawOrder(0), rect, shadow);
+                paint_shadow_quad_fallback(&mut fallback_scene, DrawOrder(0), rect, shadow);
+            }
+        }
+
+        assert_eq!(primitive_scene.ops().len(), 24);
+        assert_eq!(fallback_scene.ops().len(), 276);
+        assert!(
+            primitive_scene
+                .ops()
+                .iter()
+                .all(|op| matches!(op, SceneOp::ShadowRRect { .. }))
+        );
+        assert!(
+            fallback_scene
+                .ops()
+                .iter()
+                .all(|op| matches!(op, SceneOp::Quad { .. }))
+        );
+        assert!(fallback_scene.ops().len() / primitive_scene.ops().len() >= 11);
     }
 }

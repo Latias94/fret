@@ -1,8 +1,8 @@
 # Shadow Renderer Primitive (Fearless Refactor v1) — TODO
 
-Status: Draft
+Status: Complete (primitive default path, explicit fallback, and first-party consumer audit landed)
 
-Last updated: 2026-04-01
+Last updated: 2026-04-02
 
 Related:
 
@@ -80,9 +80,14 @@ Tracking legend:
   - Result: the primitive now rides the existing scene draw clip/mask/transform/opacity stacks,
     with focused GPU conformance in `crates/fret-render-wgpu/tests/shadow_rrect_conformance.rs`.
 
-- [ ] SRPFR-fallback-033 Decide and implement the non-native fallback path.
-  - Requirement: fallback may replay the normalized quad approximation, but it must not keep
-    `fret-ui::paint_shadow` as the default representation of box shadow.
+- [x] SRPFR-fallback-033 Decide and implement the non-native fallback path.
+  - Result: the non-default degradation lane now lives at the scene layer via
+    `shadow_rrect_fallback_quads(...)` and
+    `SceneRecording::push_shadow_rrect_quad_fallback(...)`, while `fret-ui` retains only the
+    explicit `paint_shadow_quad_fallback(...)` compatibility helper.
+  - Evidence:
+    - `crates/fret-core/src/scene/shadow.rs`
+    - `crates/fret-ui/src/paint.rs`
 
 ## E. UI/runtime migration
 
@@ -92,10 +97,22 @@ Tracking legend:
     - `crates/fret-ui/src/paint.rs`
     - `crates/fret-ui/src/declarative/tests/layout/container.rs`
 
-- [ ] SRPFR-ui-041 Keep the existing quad approximation only as an explicit fallback helper after the
+- [x] SRPFR-ui-041 Keep the existing quad approximation only as an explicit fallback helper after the
   primitive lands.
+  - Result: `crates/fret-ui/src/paint.rs` now keeps the historical multi-quad path only as
+    `paint_shadow_quad_fallback(...)`; the default `paint_shadow(...)` path remains one
+    `SceneOp::ShadowRRect` per logical layer.
 
-- [ ] SRPFR-ui-042 Audit first-party consumers for assumptions tied to the old expanded-quad path.
+- [x] SRPFR-ui-042 Audit first-party consumers for assumptions tied to the old expanded-quad path.
+  - Result: first-party snapshot serialization and shadow-inset extraction now accept
+    `SceneOp::ShadowRRect`, and targeted parity gates confirm the `Card`, `Calendar`, and `Sonner`
+    consumers no longer depend on the historical expanded-quad shape.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/tests/snapshots.rs`
+    - `ecosystem/fret-ui-shadcn/tests/support/shadow_insets.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_calendar.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/sonner.rs`
 
 ## F. Gates and evidence
 
@@ -106,15 +123,24 @@ Tracking legend:
     - blur footprint + content-hole + rounded-corner shape + positive spread + clip-stack behavior:
       `crates/fret-render-wgpu/tests/shadow_rrect_conformance.rs`
 
-- [ ] SRPFR-diag-051 Extend screenshot evidence to representative elevated surfaces:
+- [x] SRPFR-diag-051 Extend screenshot evidence to representative elevated surfaces:
   - `Card`
   - `Calendar`
   - `Sonner`
   - `todo_demo`
+  - Evidence:
+    - `target/fret-diag/shadow-card-20260402/screenshots/1775089240729-ui-gallery-card-demo/window-4294967297-tick-36-frame-37.png`
+    - `target/fret-diag/shadow-calendar-20260402/screenshots/1775089413759-ui-gallery-calendar-demo-shadow/window-4294967297-tick-36-frame-37.png`
+    - `target/fret-diag/shadow-sonner-20260402/screenshots/1775089661544-ui-gallery-sonner-docs.01-demo/window-4294967297-tick-12-frame-13.png`
+    - `target/fret-diag/shadow-todo-20260402/screenshots/1775089623373-todo-demo-shadow/window-4294967297-tick-14-frame-14.png`
 
-- [ ] SRPFR-perf-052 Add at least one perf/op-count comparison on a shadow-heavy surface.
-  - Goal: prove the primitive is reviewably better than quad expansion, or explicitly record the
-    tradeoff if quality is improved at equal/slightly higher cost.
+- [x] SRPFR-perf-052 Add at least one perf/op-count comparison on a shadow-heavy surface.
+  - Result: the focused `fret-ui` gate now proves that a representative 12-card `shadow_lg`
+    surface lowers to `24` `SceneOp::ShadowRRect` entries on the primitive path versus `276`
+    `SceneOp::Quad` entries on the historical fallback path.
+  - Evidence:
+    - `crates/fret-ui/src/paint.rs` (`paint_shadow_quad_fallback`)
+    - `crates/fret-ui/src/paint.rs` (`paint_shadow_shadow_heavy_surface_reduces_scene_ops_vs_quad_fallback`)
 
 ## G. Cleanup
 
@@ -123,5 +149,7 @@ Tracking legend:
   - Result: `crates/fret-ui/src/paint.rs` no longer expands default `ShadowStyle` layers into many
     quads; default lowering now emits `SceneOp::ShadowRRect`.
 
-- [ ] SRPFR-cleanup-061 Update shadow workstreams so they point to the primitive lane as the next
+- [x] SRPFR-cleanup-061 Update shadow workstreams so they point to the primitive lane as the next
   fidelity closure step instead of suggesting more painter tuning.
+  - Result: the design workstream now reflects the landed default primitive path and records the
+    historical multi-quad painter only as an explicit fallback lane.
