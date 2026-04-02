@@ -23,7 +23,7 @@ pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::upstream_demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .description(
-            "Copyable minimal usage for the framework-agnostic `Form` + `FormField` surface.",
+            "Copyable minimal usage for the framework-agnostic `Form` + `FormField` surface, including field-level `required` ownership on `FormField::required(true)`.",
         )
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let demo = DocSection::build(cx, "Demo", demo)
@@ -50,7 +50,7 @@ pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Start with an upstream-aligned FormDemo, then provide a copyable Usage section and gallery recipes for composing Input/Textarea/Checkbox/Switch/FieldSet.",
+            "Start with an upstream-aligned FormDemo, then provide a copyable Usage section and gallery recipes for composing Input/Textarea/Checkbox/Switch/FieldSet while keeping field-level required semantics on `FormField`.",
         ),
         vec![
             upstream_demo,

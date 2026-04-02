@@ -3271,6 +3271,79 @@ fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn form_docs_keep_field_level_required_on_form_field() {
+    for (relative_path, required_markers, forbidden_markers) in [
+        (
+            "src/ui/snippets/form/usage.rs",
+            vec![
+                "FormField::new(",
+                ".label(\"Username\").required(true).description(",
+            ],
+            Vec::<&str>::new(),
+        ),
+        (
+            "src/ui/snippets/form/upstream_demo.rs",
+            vec![
+                "letusername_field=shadcn::FormField::new(",
+                ".label(\"Username\").required(true).description(",
+                "letemail_field=shadcn::FormField::new(",
+                ".label(\"Email\").required(true).description(",
+                "letbio_field=shadcn::FormField::new(",
+                ".label(\"Bio\").required(true).description(",
+                "letnotify_field=shadcn::FormField::new(",
+                ".label(\"Notifymeabout...\").required(true).into_element(cx)",
+                "letsidebar_field=shadcn::FormField::new(",
+                ".decorate_control(false).required(true).into_element(cx)",
+                "letdob_field=shadcn::FormField::new(",
+                ".label(\"Dateofbirth\").required(true).description(",
+            ],
+            Vec::<&str>::new(),
+        ),
+        (
+            "src/ui/snippets/form/notes.rs",
+            vec![
+                "FormField::required(true)",
+                "disabled",
+                "read_only",
+            ],
+            Vec::<&str>::new(),
+        ),
+        (
+            "src/ui/pages/form.rs",
+            vec![
+                "field-level `required` ownership on `FormField::required(true)`",
+                "keeping field-level required semantics on `FormField`",
+            ],
+            Vec::<&str>::new(),
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing form-field required ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{} reintroduced control-local required teaching `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
 fn form_page_and_notes_teach_rtl_as_a_fret_follow_up() {
     let form_page = read("src/ui/pages/form.rs");
     assert!(

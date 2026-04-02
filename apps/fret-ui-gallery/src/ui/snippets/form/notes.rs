@@ -20,6 +20,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 "Fret keeps the shadcn taxonomy (`Form`, `FormField`, `FormItem`, etc.) but maps it onto framework-agnostic field primitives instead of mirroring `react-hook-form` literally; `FormControl` stays a transparent single-control wrapper rather than a layout column.",
             ).into_element(cx),
             shadcn::raw::typography::muted(
+                "Field-level required semantics belong on `FormField::required(true)`; keep control-local interaction state such as `disabled` and `read_only` on the concrete control builder.",
+            ).into_element(cx),
+            shadcn::raw::typography::muted(
                 "There is no standalone upstream `Form` RTL component page/example; Gallery keeps `RTL` as a focused Fret follow-up that validates logical text alignment and explicit horizontal field composition under `DirectionProvider(Rtl)`.",
             ).into_element(cx),
             shadcn::raw::typography::muted(
