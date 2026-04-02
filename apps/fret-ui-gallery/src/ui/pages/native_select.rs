@@ -23,6 +23,7 @@ pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`native_select(model, open)` is the default controlled authoring helper, while `new_controllable(...)` stays available for controlled/uncontrolled bridging and default-value/open setup.",
         "`options(...)` and `optgroups(...)` are the source-aligned structured equivalent of upstream `NativeSelectOption` and `NativeSelectOptGroup` children, so no extra generic children API is needed here.",
         "`size(...)`, `disabled(...)`, `required(...)`, `aria_invalid(...)`, `control_id(...)`, `placeholder(...)`, and `a11y_label(...)` cover the documented control surface.",
+        "Invalid semantics stay on the native-select control itself via root `aria_invalid(true)`; surrounding field/error composition remains caller-owned when product copy needs it.",
         "Trigger chrome, chevron icon, default heights (`default` / `sm`), and invalid/focus states remain recipe-owned; surrounding width caps and form/page layout remain caller-owned.",
         "True backend-native parity remains deferred until platform-native select widgets are in scope.",
     ]);
@@ -60,7 +61,9 @@ pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-native-select-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let invalid = DocSection::build(cx, "Invalid", invalid)
-        .description("Show validation state with `aria_invalid(true)`.")
+        .description(
+            "Invalid state uses root `aria_invalid(true)` on the native-select control; surrounding error copy stays caller-owned when needed.",
+        )
         .test_id_prefix("ui-gallery-native-select-invalid")
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)

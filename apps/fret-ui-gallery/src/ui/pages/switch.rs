@@ -51,7 +51,9 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-switch-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let invalid = DocSection::build(cx, "Invalid", invalid)
-        .description("Invalid state uses `aria_invalid` on the control and `Field::invalid(true)` on the composition.")
+        .description(
+            "Invalid state uses root `Switch::aria_invalid(true)` on the control and caller-owned `Field::invalid(true)` on the composition.",
+        )
         .test_id_prefix("ui-gallery-switch-invalid")
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let sizes = DocSection::build(cx, "Size", sizes)

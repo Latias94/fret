@@ -3301,11 +3301,7 @@ fn form_docs_keep_field_level_required_on_form_field() {
         ),
         (
             "src/ui/snippets/form/notes.rs",
-            vec![
-                "FormField::required(true)",
-                "disabled",
-                "read_only",
-            ],
+            vec!["FormField::required(true)", "disabled", "read_only"],
             Vec::<&str>::new(),
         ),
         (
@@ -3444,6 +3440,51 @@ fn select_and_combobox_docs_keep_invalid_ownership_on_the_root_surface() {
             assert!(
                 !normalized.contains(&marker),
                 "{} reintroduced invalid teaching drift `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn switch_and_native_select_docs_keep_invalid_ownership_on_the_control_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/switch/invalid.rs",
+            vec![
+                "shadcn::Switch::new(checked)",
+                ".aria_invalid(true)",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/switch.rs",
+            vec![
+                "Invalid state uses root `Switch::aria_invalid(true)` on the control and caller-owned `Field::invalid(true)` on the composition.",
+            ],
+        ),
+        (
+            "src/ui/snippets/native_select/invalid.rs",
+            vec!["shadcn::native_select(value,open)", ".aria_invalid(true)"],
+        ),
+        (
+            "src/ui/pages/native_select.rs",
+            vec![
+                "Invalid semantics stay on the native-select control itself via root `aria_invalid(true)`; surrounding field/error composition remains caller-owned when product copy needs it.",
+                "Invalid state uses root `aria_invalid(true)` on the native-select control; surrounding error copy stays caller-owned when needed.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing switch/native-select invalid ownership marker `{}`",
                 path.display(),
                 marker
             );
