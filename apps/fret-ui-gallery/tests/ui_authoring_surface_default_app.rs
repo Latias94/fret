@@ -3493,6 +3493,50 @@ fn switch_and_native_select_docs_keep_invalid_ownership_on_the_control_surface()
 }
 
 #[test]
+fn select_combobox_switch_and_native_select_docs_keep_required_ownership_on_the_root_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/pages/select.rs",
+            vec![
+                "`Select::required(true)` now forwards required semantics to the trigger combobox node; this stays root-owned and does not require a broader generic children API.",
+            ],
+        ),
+        (
+            "src/ui/pages/combobox.rs",
+            vec![
+                "`Combobox::required(true)` now covers both the closed trigger surface and the open search input surface, so required semantics follow the actual combobox node across states without widening the recipe to a generic children API.",
+            ],
+        ),
+        (
+            "src/ui/pages/switch.rs",
+            vec![
+                "`Switch::required(true)` keeps required semantics on the root control surface; surrounding `Field` / label composition stays caller-owned and does not need a wrapper-level required API.",
+            ],
+        ),
+        (
+            "src/ui/pages/native_select.rs",
+            vec![
+                "`required(true)` stays on the root native-select control surface; callers do not need a surrounding field wrapper just to forward required semantics.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing required ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
 fn form_page_and_notes_teach_rtl_as_a_fret_follow_up() {
     let form_page = read("src/ui/pages/form.rs");
     assert!(
