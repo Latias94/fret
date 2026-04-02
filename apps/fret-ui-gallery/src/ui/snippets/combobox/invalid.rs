@@ -21,15 +21,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let invalid_combo = shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox invalid")
+        .aria_invalid(true)
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-invalid")
         .items(base_items())
         .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
-        .input(
-            shadcn::ComboboxInput::new()
-                .placeholder("Select required option")
-                .aria_invalid(true),
-        )
+        .input(shadcn::ComboboxInput::new().placeholder("Select required option"))
         .into_element(cx);
 
     invalid_combo

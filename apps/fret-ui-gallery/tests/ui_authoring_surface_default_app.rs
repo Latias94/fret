@@ -3386,6 +3386,72 @@ fn form_docs_keep_invalid_decoration_and_opt_out_owned_by_form_field() {
 }
 
 #[test]
+fn select_and_combobox_docs_keep_invalid_ownership_on_the_root_surface() {
+    for (relative_path, required_markers, forbidden_markers) in [
+        (
+            "src/ui/snippets/select/invalid.rs",
+            vec![
+                ".aria_invalid(invalid)",
+                "shadcn::Field::new(children)",
+                "FieldError::new(\"Please select a fruit.\")",
+            ],
+            Vec::<&str>::new(),
+        ),
+        (
+            "src/ui/pages/select.rs",
+            vec![
+                "Invalid state uses root `Select::aria_invalid(...)` for trigger chrome/semantics, then pairs it with caller-owned `Field` error copy.",
+            ],
+            Vec::<&str>::new(),
+        ),
+        (
+            "src/ui/snippets/combobox/invalid.rs",
+            vec![
+                "shadcn::Combobox::new(value.clone(),open.clone())",
+                ".aria_invalid(true)",
+                ".input(shadcn::ComboboxInput::new().placeholder(\"Select required option\"))",
+            ],
+            vec![
+                ".input(shadcn::ComboboxInput::new().placeholder(\"Select required option\").aria_invalid(true))",
+            ],
+        ),
+        (
+            "src/ui/pages/combobox.rs",
+            vec![
+                "Invalid state uses root `Combobox::aria_invalid(true)` so invalid chrome and semantics stay on the combobox surface, then pairs it with caller-owned field/error copy.",
+                "`Combobox::aria_invalid(true)` is the root invalid lane; callers should not restate invalid state on `ComboboxInput` just to get trigger/search chrome.",
+                "For invalid visuals, use root `Combobox::aria_invalid(true)` and pair it with caller-owned field-level error copy.",
+            ],
+            Vec::<&str>::new(),
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing invalid ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{} reintroduced invalid teaching drift `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
 fn form_page_and_notes_teach_rtl_as_a_fret_follow_up() {
     let form_page = read("src/ui/pages/form.rs");
     assert!(
