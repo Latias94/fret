@@ -39,6 +39,23 @@ closeout records.
 - `EVIDENCE_AND_GATES.md` beats guessed commands from memory.
 - `TARGET_INTERFACE_STATE.md` beats early brainstorming language in `DESIGN.md` when both exist.
 
+## Assumptions-first reopen
+
+After reading the sources above, do not jump straight to code edits or user questions.
+
+First, write a small assumptions set:
+
+- 3-7 assumptions,
+- each with evidence,
+- each with confidence:
+  - `Confident`
+  - `Likely`
+  - `Unclear`
+
+Only escalate `Unclear` or conflicting assumptions to the user.
+
+This keeps continuation work codebase-first instead of interview-first.
+
 ## Continue vs follow-on
 
 Continue the existing lane when:

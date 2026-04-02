@@ -1,6 +1,6 @@
 ---
 name: fret-workstream-lifecycle
-description: "This skill should be used when the user asks to \"start a new workstream\", \"resume a fearless refactor lane\", \"record workstream progress\", \"split a narrow follow-on\", or \"close out a lane\". Provides a lightweight workstream lifecycle for Fret: scaffold the right docs, keep lane state explicit, attach repro/gate/evidence to each slice, and leave closeout notes without reopening scope by accident."
+description: "This skill should be used when the user asks to \"start a new workstream\", \"resume a fearless refactor lane\", \"record workstream progress\", \"split a narrow follow-on\", or \"close out a lane\". Provides a lightweight workstream lifecycle for Fret: scaffold the right docs, keep lane state explicit, resume existing lanes with an assumptions-first evidence pass, attach repro/gate/evidence to each slice, and leave closeout notes without reopening scope by accident."
 ---
 
 # Fret workstream lifecycle (create, run, close out)
@@ -33,9 +33,10 @@ Defaults if unclear:
 
 1. Read `references/workstream-skeleton.md`.
 2. Read `references/workstream-state-resolution.md`.
-3. Read `docs/workstreams/standalone/workstream-state-v1.md`.
-4. Open `docs/roadmap.md`, `docs/workstreams/README.md`, and `docs/todo-tracker.md`.
-5. If the lane already exists, resolve its current state before editing code.
+3. Read `references/workstream-assumptions-first.md`.
+4. Read `docs/workstreams/standalone/workstream-state-v1.md`.
+5. Open `docs/roadmap.md`, `docs/workstreams/README.md`, and `docs/todo-tracker.md`.
+6. If the lane already exists, resolve its current state before editing code.
 
 ## Workflow
 
@@ -84,7 +85,27 @@ Read the lane in this order:
 
 If a closeout note conflicts with an older TODO, the closeout note wins.
 
-### 4) Record progress as bounded state, not chat history
+### 4) Resume with assumptions first, not questions first
+
+Before asking the user to clarify anything, write a small assumptions set:
+
+- 3-7 assumptions,
+- each with evidence anchors,
+- each with confidence:
+  - `Confident`
+  - `Likely`
+  - `Unclear`,
+- and each with the consequence if it is wrong.
+
+Use this to drive continuation:
+
+- `Confident` and `Likely` assumptions should let you keep moving without re-asking settled questions.
+- `Unclear` assumptions are the only ones that should normally go back to the user.
+- If the assumptions point to a closed or historical lane, bias toward a narrower follow-on rather than reopening the old folder.
+
+This keeps large workstream folders codebase-first instead of interview-first.
+
+### 5) Record progress as bounded state, not chat history
 
 After each meaningful slice:
 
@@ -95,7 +116,7 @@ After each meaningful slice:
 
 Do not dump whole session transcripts into the lane.
 
-### 5) Tie each slice to repro, gate, and evidence
+### 6) Tie each slice to repro, gate, and evidence
 
 Every non-trivial slice should name:
 
@@ -105,7 +126,7 @@ Every non-trivial slice should name:
 
 If the lane changes a hard contract, update ADR/alignment docs too.
 
-### 6) Close out explicitly
+### 7) Close out explicitly
 
 When the lane is no longer an active execution surface:
 
@@ -122,6 +143,7 @@ When the lane is no longer an active execution surface:
 - Minimum deliverables (3-pack): Repro, Gate, Evidence. See `fret-skills-playbook`.
 - Lane state is explicit.
 - `WORKSTREAM.json` reflects the current lane status and first-open doc set when the lane uses a dedicated directory.
+- Existing-lane continuation starts from an assumptions-first evidence pass rather than re-asking settled questions.
 - The next maintainer can tell whether to continue the lane or open a follow-on.
 - A closed lane stays closed unless fresh evidence explicitly justifies a new follow-on.
 
@@ -130,6 +152,7 @@ When the lane is no longer an active execution surface:
 - Repo-wide execution stance: `docs/roadmap.md`
 - Workstream catalog + status-note rules: `docs/workstreams/README.md`
 - Machine-readable lane state contract: `docs/workstreams/standalone/workstream-state-v1.md`
+- Assumptions-first resume note: `references/workstream-assumptions-first.md`
 - Review findings / cross-lane backlog: `docs/todo-tracker.md`
 - Foundation-first loop: `docs/foundation-first-workflow.md`
 - Diagnostics platform workstream example: `docs/workstreams/diag-fearless-refactor-v2/README.md`
@@ -151,7 +174,7 @@ When the lane is no longer an active execution surface:
 
 - Example: continue an active lane
   - User says: "Continue `ui-focus-overlay-fearless-refactor-v1`."
-  - Actions: resolve the current state, pick one smallest slice from `TODO.md` / `MILESTONES.md`, run the named gates, and update the lane docs.
+  - Actions: resolve the current state, write the assumptions set with evidence/confidence, pick one smallest slice from `TODO.md` / `MILESTONES.md`, run the named gates, and update the lane docs.
   - Result: one landable step with explicit evidence.
 
 ## Troubleshooting
@@ -160,6 +183,8 @@ When the lane is no longer an active execution surface:
   - Fix: resolve repo stance first, then lane positioning, then execution docs; ignore deep audits until the current state is clear.
 - Symptom: `TODO.md` and a closeout note disagree.
   - Fix: prefer the latest closeout/status note and the roadmap stance over an older TODO checklist.
+- Symptom: the agent starts asking broad lane questions before reading enough.
+  - Fix: write the assumptions set first; escalate only the `Unclear` items.
 - Symptom: a new request almost fits an old lane.
   - Fix: ask whether continuing the old folder would blur ownership; if yes, create a narrow follow-on.
 
@@ -167,6 +192,7 @@ When the lane is no longer an active execution surface:
 
 - Treating every markdown file in a workstream folder as equally authoritative.
 - Reopening a closed lane because an old checklist still exists.
+- Asking the user to restate lane state that current docs already answer.
 - Recording whole conversations instead of bounded decisions/evidence.
 - Adding many companion docs before the lane has a real first slice.
 
