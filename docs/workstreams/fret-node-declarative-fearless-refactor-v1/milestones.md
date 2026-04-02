@@ -128,6 +128,11 @@ runtime tuning.
   `NodeGraphInteractionState` for compatibility.
 - Persistence ownership is now explicit: the file wrapper writes pure view-state under `state`, with
   `interaction` / `runtime_tuning` stored as wrapper-owned fields in `state_version = 2`.
+- App/example authoring also follows the split:
+  - retained canvas can mirror `NodeGraphEditorConfig`,
+  - tuning/controls overlays read explicit editor-config seams,
+  - example persistence restores and saves `NodeGraphViewStateFileV1` through
+    `new_with_editor_config(...)`.
 
 ### Done criteria
 
@@ -136,6 +141,8 @@ runtime tuning.
 - The resulting shapes make it harder to persist accidental performance knobs as if they were view
   semantics.
 - Controlled sync and diagnostics still have a stable data contract.
+- The remaining compatibility residue is explicit and bounded to test-only bridges; it is no longer
+  taught by examples or release-facing runtime paths.
 
 ### Required regression protection
 
@@ -148,6 +155,10 @@ runtime tuning.
 - `ecosystem/fret-node/src/runtime/store.rs`
 - `ecosystem/fret-node/src/runtime/tests.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/view_state/sync.rs`
+- `ecosystem/fret-node/src/ui/controller_store_sync.rs`
+- `apps/fret-examples/src/node_graph_legacy_demo.rs`
+- `apps/fret-examples/src/node_graph_domain_demo.rs`
+- `apps/fret-examples/src/node_graph_tuning_overlay.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/runtime/store.rs`
 - `ecosystem/fret-node/src/runtime/tests.rs`

@@ -233,7 +233,7 @@ impl NodeGraphController {
     ) -> bool {
         let target = models
             .read(&self.store, |store| {
-                let interaction = &store.view_state().interaction;
+                let interaction = store.interaction();
                 let node_origin = interaction.node_origin.normalized();
                 let padding = normalize_fit_view_padding(
                     options.padding.unwrap_or(interaction.frame_view_padding),
@@ -303,7 +303,7 @@ impl NodeGraphController {
     ) -> bool {
         let target = models
             .read(&self.store, |store| {
-                let interaction = &store.view_state().interaction;
+                let interaction = store.interaction();
                 let padding = normalize_fit_view_padding(
                     options.padding.unwrap_or(interaction.frame_view_padding),
                 );

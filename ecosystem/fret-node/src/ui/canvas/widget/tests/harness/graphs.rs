@@ -2,7 +2,7 @@ use crate::core::{
     CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey, Port, PortCapacity,
     PortDirection, PortId, PortKey, PortKind,
 };
-use crate::io::NodeGraphViewState;
+use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use fret_runtime::Model;
 use serde_json::Value;
 
@@ -172,6 +172,21 @@ pub(crate) fn read_node_pos(
 
 pub(crate) fn insert_view(host: &mut TestUiHostImpl) -> Model<NodeGraphViewState> {
     host.models.insert(NodeGraphViewState::default())
+}
+
+pub(crate) fn insert_editor_config(host: &mut TestUiHostImpl) -> Model<NodeGraphEditorConfig> {
+    host.models.insert(NodeGraphEditorConfig::default())
+}
+
+pub(crate) fn insert_editor_config_with(
+    host: &mut TestUiHostImpl,
+    configure: impl FnOnce(&mut NodeGraphEditorConfig),
+) -> Model<NodeGraphEditorConfig> {
+    let editor_config = insert_editor_config(host);
+    let _ = editor_config.update(host, |state, _cx| {
+        configure(state);
+    });
+    editor_config
 }
 
 pub(crate) fn insert_graph_view(

@@ -49,7 +49,7 @@ Execution companion: `design.md` (surface map + next worktree order).
 
 ## M2 - State boundary split
 
-- [ ] Shrink `NodeGraphViewState` to true view state only:
+- [x] Shrink `NodeGraphViewState` to true view state only in non-test/runtime builds:
   - pan
   - zoom
   - selected nodes/edges/groups
@@ -73,6 +73,21 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Update store code and tests so the new boundary is explicit in subscriptions and controlled
       synchronization.
 - [x] Add focused tests for serialization migration and store behavior after the split.
+- [x] Move app/example persistence and overlay authoring to the explicit `NodeGraphEditorConfig`
+      seam.
+  - `node_graph_legacy_demo` / `node_graph_domain_demo` now load and save
+    `NodeGraphViewStateFileV1` through `new_with_editor_config(...)`.
+  - `NodeGraphTuningOverlay` now reads/writes `NodeGraphEditorConfig` instead of mutating
+    `NodeGraphViewState`.
+  - `NodeGraphControlsOverlay`, retained canvas, and declarative bindings now consume an explicit
+    editor-config mirror where the app surface owns one.
+- [ ] Delete the temporary `cfg(test)` bridge that mirrors `NodeGraphEditorConfig` back into
+      `NodeGraphViewState` for old tests.
+  - Remaining bridge touch points:
+    - `ecosystem/fret-node/src/io/mod.rs`
+    - `ecosystem/fret-node/src/runtime/store.rs`
+    - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
+    - retained/declarative test-only fallbacks that still read `view_state.interaction`
 
 ## M3 - Controller / instance facade
 

@@ -1114,7 +1114,7 @@ fn store_replace_view_state_emits_view_changed_event() {
 }
 
 #[test]
-fn store_replace_view_state_notifies_selectors_for_runtime_tuning_only_changes() {
+fn store_replace_editor_config_notifies_selectors_for_runtime_tuning_only_changes() {
     use std::cell::RefCell;
     use std::rc::Rc;
 
@@ -1131,26 +1131,17 @@ fn store_replace_view_state_notifies_selectors_for_runtime_tuning_only_changes()
     let runtime_flags: Rc<RefCell<Vec<bool>>> = Rc::new(RefCell::new(Vec::new()));
     let runtime_flags2 = runtime_flags.clone();
     store.subscribe_selector(
-        |s| {
-            s.view_state
-                .resolved_interaction_state()
-                .only_render_visible_elements
-        },
+        |s| s.runtime_tuning.only_render_visible_elements,
         move |value| runtime_flags2.borrow_mut().push(*value),
     );
 
-    let mut vs = store.view_state().clone();
-    vs.runtime_tuning.only_render_visible_elements = false;
-    store.replace_view_state(vs);
+    let mut editor_config = store.editor_config();
+    editor_config.runtime_tuning.only_render_visible_elements = false;
+    store.replace_editor_config(editor_config);
 
     assert!(events.borrow().is_empty());
     assert_eq!(runtime_flags.borrow().as_slice(), &[false]);
-    assert!(
-        !store
-            .view_state()
-            .runtime_tuning
-            .only_render_visible_elements
-    );
+    assert!(!store.runtime_tuning().only_render_visible_elements);
 }
 
 #[test]

@@ -10,7 +10,9 @@ use crate::ui::edge_types::NodeGraphEdgeTypes;
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+};
 
 #[derive(Default)]
 struct CaptureServices {
@@ -234,10 +236,12 @@ fn capture_step_marker_axes(place_dx_zero: bool) -> (Point, Point, Point, Point,
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = false;
+        state.interaction.frame_view_duration_ms = 0;
+    });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let edge_types = NodeGraphEdgeTypes::new().with_fallback(|_g, _e, _style, mut h| {
@@ -249,7 +253,8 @@ fn capture_step_marker_axes(place_dx_zero: bool) -> (Point, Point, Point, Point,
     let mut canvas = NodeGraphCanvas::new(graph, view)
         .with_presenter(StepRoutePresenter)
         .with_edge_types(edge_types)
-        .with_style(style);
+        .with_style(style)
+        .with_editor_config_model(editor_config);
 
     let mut from = Point::new(Px(0.0), Px(0.0));
     let mut to = Point::new(Px(0.0), Px(0.0));

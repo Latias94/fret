@@ -12,8 +12,7 @@ use fret_node::Graph;
 use fret_node::GraphId;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
-use fret_node::io::NodeGraphViewState;
-use fret_node::io::NodeGraphViewStateFileV1;
+use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState, NodeGraphViewStateFileV1};
 use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::rules::{
     ConnectDecision, ConnectPlan, DiagnosticSeverity, DiagnosticTarget, InsertNodeTemplate,
@@ -50,6 +49,7 @@ struct NodeGraphDemoModels {
     controller: NodeGraphController,
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
+    editor_config: fret_runtime::Model<NodeGraphEditorConfig>,
     overlays: fret_runtime::Model<NodeGraphOverlayState>,
     group_rename_text: fret_runtime::Model<String>,
 }
@@ -737,11 +737,18 @@ impl NodeGraphDomainDemoDriver {
             return;
         };
 
-        let Ok(state) = models.store.read_ref(app, |s| s.view_state().clone()) else {
+        let Ok((state, editor_config)) = models
+            .store
+            .read_ref(app, |s| (s.view_state().clone(), s.editor_config()))
+        else {
             return;
         };
 
-        let file = NodeGraphViewStateFileV1::new(persist.graph_id, state);
+        let file = NodeGraphViewStateFileV1::new_with_editor_config(
+            persist.graph_id,
+            state,
+            editor_config,
+        );
         if let Err(err) = file.save_json(&persist.path) {
             tracing::warn!(?err, "failed to save node graph view state");
         }
@@ -766,6 +773,7 @@ impl NodeGraphDomainDemoDriver {
 
         let graph = models.graph.clone();
         let view = models.view.clone();
+        let editor_config = models.editor_config.clone();
         let overlays = models.overlays.clone();
         let group_rename_text = models.group_rename_text.clone();
         let controller = models.controller.clone();
@@ -819,6 +827,7 @@ impl NodeGraphDomainDemoDriver {
         let presenter = DemoTypedPresenter::default();
         let canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_controller(controller.clone())
+            .with_editor_config_model(editor_config)
             .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_style(style.clone())
@@ -929,7 +938,7 @@ fn handle_model_changes(
     let Some(models) = context.app.global::<NodeGraphDemoModels>() else {
         return;
     };
-    if changed.contains(&models.view.id()) {
+    if changed.contains(&models.view.id()) || changed.contains(&models.editor_config.id()) {
         driver.pending_view_state_save = true;
     }
     if driver.pending_view_state_save {
@@ -1084,21 +1093,35 @@ pub fn run() -> anyhow::Result<()> {
     let graph_id = GraphId::from_u128(0x1350_0000_0000_0000_0000_0000_0000_00A2);
     let graph_value = build_demo_graph(graph_id);
     let view_state_path = fret_node::io::default_project_view_state_path(graph_value.graph_id);
-    let mut view_value =
+    let (mut view_value, editor_config) =
         match NodeGraphViewStateFileV1::load_json_if_exists(&view_state_path, graph_value.graph_id)
         {
-            Ok(Some(file)) => file.state,
-            Ok(None) => NodeGraphViewState::default(),
+            Ok(Some(file)) => (
+                file.state,
+                NodeGraphEditorConfig {
+                    interaction: file.interaction,
+                    runtime_tuning: file.runtime_tuning,
+                },
+            ),
+            Ok(None) => (
+                NodeGraphViewState::default(),
+                NodeGraphEditorConfig::default(),
+            ),
             Err(err) => {
                 tracing::warn!(?err, "failed to load node graph view state; using defaults");
-                NodeGraphViewState::default()
+                (
+                    NodeGraphViewState::default(),
+                    NodeGraphEditorConfig::default(),
+                )
             }
         };
     view_value.sanitize_for_graph(&graph_value);
 
-    let store_value = NodeGraphStore::new(graph_value, view_value);
+    let store_value =
+        NodeGraphStore::new_with_editor_config(graph_value, view_value, editor_config);
     let graph = app.models_mut().insert(store_value.graph().clone());
     let view = app.models_mut().insert(store_value.view_state().clone());
+    let editor_config = app.models_mut().insert(store_value.editor_config());
     let store = app.models_mut().insert(store_value);
     let controller = NodeGraphController::new(store.clone());
     let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
@@ -1108,6 +1131,7 @@ pub fn run() -> anyhow::Result<()> {
         controller,
         graph,
         view,
+        editor_config,
         overlays,
         group_rename_text,
     });

@@ -18,7 +18,7 @@ use crate::core::{
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, NodeGraphPresenter};
 
 use super::prelude::NodeGraphCanvas;
-use super::{TestUiHostImpl, insert_graph_view};
+use super::{TestUiHostImpl, insert_editor_config_with, insert_graph_view};
 
 #[derive(Default)]
 struct CountingServices {
@@ -243,15 +243,15 @@ fn make_graph_chain_edges(edge_count: usize, spacing: f32) -> Graph {
 fn paint_cache_prune_releases_old_path_and_text_entries() {
     let mut host = TestUiHostImpl::default();
     let (graph, view) = insert_graph_view(&mut host, make_graph_chain_edges(220, 80.0));
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.runtime_tuning.paint_cache_prune.max_age_frames = 2;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.paint_cache_prune.max_age_frames = 2;
         // Use a large entry budget so this test is primarily driven by max_age eviction.
-        s.runtime_tuning.paint_cache_prune.max_entries = 10_000;
+        state.runtime_tuning.paint_cache_prune.max_entries = 10_000;
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_presenter(UniqueEdgeLabelPresenter);
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_presenter(UniqueEdgeLabelPresenter)
+        .with_editor_config_model(editor_config);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

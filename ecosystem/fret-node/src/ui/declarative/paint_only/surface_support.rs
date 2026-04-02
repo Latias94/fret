@@ -69,6 +69,38 @@ pub(super) fn read_authoritative_graph_in_models<T>(
     models.read(&store, |store| f(store.graph())).ok()
 }
 
+pub(super) fn read_authoritative_interaction_config_in_models<T>(
+    models: &mut fret_runtime::ModelStore,
+    binding: &NodeGraphSurfaceBinding,
+    f: impl FnOnce(&crate::io::NodeGraphInteractionConfig) -> T,
+) -> Option<T> {
+    let store = binding.store_model();
+    models.read(&store, |store| f(store.interaction())).ok()
+}
+
+pub(super) fn read_authoritative_runtime_tuning_in_models<T>(
+    models: &mut fret_runtime::ModelStore,
+    binding: &NodeGraphSurfaceBinding,
+    f: impl FnOnce(&crate::io::NodeGraphRuntimeTuning) -> T,
+) -> Option<T> {
+    let store = binding.store_model();
+    models.read(&store, |store| f(store.runtime_tuning())).ok()
+}
+
+pub(super) fn read_authoritative_interaction_state_in_models<T>(
+    models: &mut fret_runtime::ModelStore,
+    binding: &NodeGraphSurfaceBinding,
+    f: impl FnOnce(&crate::io::NodeGraphInteractionState) -> T,
+) -> Option<T> {
+    let store = binding.store_model();
+    models
+        .read(&store, |store| {
+            let interaction = store.resolved_interaction_state();
+            f(&interaction)
+        })
+        .ok()
+}
+
 pub(super) fn sync_authoritative_surface_boundary_in_models(
     models: &mut fret_runtime::ModelStore,
     boundary: &Model<Option<AuthoritativeSurfaceBoundarySnapshot>>,

@@ -1,4 +1,5 @@
 use super::*;
+use super::surface_support::read_authoritative_interaction_config_in_models;
 
 #[derive(Debug, Clone)]
 pub(super) struct LeftPointerDownSnapshot {
@@ -53,16 +54,17 @@ pub(super) fn read_left_pointer_down_snapshot_action_host(
     down: fret_ui::action::PointerDownCx,
     bounds: Rect,
 ) -> LeftPointerDownSnapshot {
-    let (interaction, base_selection, node_click_distance_screen_px, view) =
-        read_authoritative_view_state_action_host(host, binding, |state| {
-            (
-                state.interaction.clone(),
-                state.selected_nodes.clone(),
-                state.interaction.node_click_distance,
-                view_from_state(state),
-            )
-        })
-        .unwrap_or((Default::default(), Vec::new(), 6.0, PanZoom2D::default()));
+    let interaction = read_authoritative_interaction_config_in_models(
+        host.models_mut(),
+        binding,
+        Clone::clone,
+    )
+    .unwrap_or_default();
+    let (base_selection, view) = read_authoritative_view_state_action_host(host, binding, |state| {
+        (state.selected_nodes.clone(), view_from_state(state))
+    })
+    .unwrap_or((Vec::new(), PanZoom2D::default()));
+    let node_click_distance_screen_px = interaction.node_click_distance;
 
     let (geom, index) = host
         .models_mut()

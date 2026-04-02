@@ -1,4 +1,5 @@
 use super::*;
+use crate::io::NodeGraphEditorConfig;
 
 impl NodeGraphController {
     pub fn dispatch_transaction<H: UiHost>(
@@ -72,6 +73,22 @@ impl NodeGraphController {
         view_state: &Model<NodeGraphViewState>,
     ) -> bool {
         self.sync_models_from_store_in_models(host.models_mut(), graph, view_state)
+    }
+
+    pub fn sync_editor_config_model_from_store<H: UiHost>(
+        &self,
+        host: &mut H,
+        editor_config: &Model<NodeGraphEditorConfig>,
+    ) -> bool {
+        self.sync_editor_config_model_from_store_in_models(host.models_mut(), editor_config)
+    }
+
+    pub fn sync_editor_config_model_from_store_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        editor_config: &Model<NodeGraphEditorConfig>,
+    ) -> bool {
+        self.sync_editor_config_model_from_store_in_models(host.models_mut(), editor_config)
     }
 
     pub fn dispatch_transaction_and_sync_models<H: UiHost>(
@@ -186,6 +203,14 @@ impl NodeGraphController {
         self.replace_graph_in_models(host.models_mut(), graph)
     }
 
+    pub fn replace_graph_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        graph: Graph,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_graph_in_models(host.models_mut(), graph)
+    }
+
     pub fn replace_document<H: UiHost>(
         &self,
         host: &mut H,
@@ -195,6 +220,21 @@ impl NodeGraphController {
         self.replace_document_in_models(host.models_mut(), graph, view_state)
     }
 
+    pub fn replace_document_with_editor_config<H: UiHost>(
+        &self,
+        host: &mut H,
+        graph: Graph,
+        view_state: NodeGraphViewState,
+        editor_config: NodeGraphEditorConfig,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_document_with_editor_config_in_models(
+            host.models_mut(),
+            graph,
+            view_state,
+            editor_config,
+        )
+    }
+
     pub fn replace_document_action_host(
         &self,
         host: &mut dyn UiActionHost,
@@ -202,6 +242,21 @@ impl NodeGraphController {
         view_state: NodeGraphViewState,
     ) -> Result<(), NodeGraphControllerError> {
         self.replace_document_in_models(host.models_mut(), graph, view_state)
+    }
+
+    pub fn replace_document_with_editor_config_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        graph: Graph,
+        view_state: NodeGraphViewState,
+        editor_config: NodeGraphEditorConfig,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_document_with_editor_config_in_models(
+            host.models_mut(),
+            graph,
+            view_state,
+            editor_config,
+        )
     }
 
     pub fn replace_graph_and_sync_models<H: UiHost>(
@@ -266,12 +321,28 @@ impl NodeGraphController {
         self.replace_view_state_in_models(host.models_mut(), view_state)
     }
 
+    pub fn replace_editor_config<H: UiHost>(
+        &self,
+        host: &mut H,
+        editor_config: NodeGraphEditorConfig,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_editor_config_in_models(host.models_mut(), editor_config)
+    }
+
     pub fn replace_view_state_action_host(
         &self,
         host: &mut dyn UiActionHost,
         view_state: NodeGraphViewState,
     ) -> Result<(), NodeGraphControllerError> {
         self.replace_view_state_in_models(host.models_mut(), view_state)
+    }
+
+    pub fn replace_editor_config_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        editor_config: NodeGraphEditorConfig,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_editor_config_in_models(host.models_mut(), editor_config)
     }
 
     pub fn sync_view_state_model_from_store<H: UiHost>(
@@ -318,6 +389,18 @@ impl NodeGraphController {
         Ok(())
     }
 
+    pub fn replace_editor_config_and_sync_model<H: UiHost>(
+        &self,
+        host: &mut H,
+        editor_config_model: &Model<NodeGraphEditorConfig>,
+        next_editor_config: NodeGraphEditorConfig,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_editor_config_in_models(host.models_mut(), next_editor_config)?;
+        let _ = self
+            .sync_editor_config_model_from_store_in_models(host.models_mut(), editor_config_model);
+        Ok(())
+    }
+
     pub fn replace_view_state_and_sync_model_action_host(
         &self,
         host: &mut dyn UiActionHost,
@@ -327,6 +410,18 @@ impl NodeGraphController {
         self.replace_view_state_in_models(host.models_mut(), next_view_state)?;
         let _ =
             self.sync_view_state_model_from_store_in_models(host.models_mut(), view_state_model);
+        Ok(())
+    }
+
+    pub fn replace_editor_config_and_sync_model_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        editor_config_model: &Model<NodeGraphEditorConfig>,
+        next_editor_config: NodeGraphEditorConfig,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_editor_config_in_models(host.models_mut(), next_editor_config)?;
+        let _ = self
+            .sync_editor_config_model_from_store_in_models(host.models_mut(), editor_config_model);
         Ok(())
     }
 
@@ -461,6 +556,22 @@ impl NodeGraphController {
         graph_synced && view_synced
     }
 
+    fn sync_editor_config_model_from_store_in_models(
+        &self,
+        models: &mut ModelStore,
+        editor_config: &Model<NodeGraphEditorConfig>,
+    ) -> bool {
+        let Ok(next_editor_config) = models.read(&self.store, NodeGraphStore::editor_config) else {
+            return false;
+        };
+
+        models
+            .update(editor_config, |state| {
+                *state = next_editor_config;
+            })
+            .is_ok()
+    }
+
     fn sync_view_state_model_from_store_in_models(
         &self,
         models: &mut ModelStore,
@@ -495,9 +606,25 @@ impl NodeGraphController {
         graph: Graph,
         view_state: NodeGraphViewState,
     ) -> Result<(), NodeGraphControllerError> {
+        self.replace_document_with_editor_config_in_models(
+            models,
+            graph,
+            view_state,
+            NodeGraphEditorConfig::default(),
+        )
+    }
+
+    fn replace_document_with_editor_config_in_models(
+        &self,
+        models: &mut ModelStore,
+        graph: Graph,
+        view_state: NodeGraphViewState,
+        editor_config: NodeGraphEditorConfig,
+    ) -> Result<(), NodeGraphControllerError> {
         match models.update(&self.store, |store| {
             store.replace_graph(graph);
             store.replace_view_state(view_state);
+            store.replace_editor_config(editor_config);
             store.clear_history();
         }) {
             Ok(()) => Ok(()),
@@ -511,6 +638,19 @@ impl NodeGraphController {
         view_state: NodeGraphViewState,
     ) -> Result<(), NodeGraphControllerError> {
         match models.update(&self.store, |store| store.replace_view_state(view_state)) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
+        }
+    }
+
+    fn replace_editor_config_in_models(
+        &self,
+        models: &mut ModelStore,
+        editor_config: NodeGraphEditorConfig,
+    ) -> Result<(), NodeGraphControllerError> {
+        match models.update(&self.store, |store| {
+            store.replace_editor_config(editor_config)
+        }) {
             Ok(()) => Ok(()),
             Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
         }

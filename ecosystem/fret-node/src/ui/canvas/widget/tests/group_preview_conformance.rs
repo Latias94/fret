@@ -9,7 +9,7 @@ use crate::ui::canvas::state::{GroupDrag, GroupResize};
 
 use super::prelude::{NodeGraphCanvas, group_resize};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_view,
+    NullServices, TestUiHostImpl, event_cx, insert_editor_config, insert_view,
     make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
@@ -310,7 +310,9 @@ fn group_drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let editor_config = insert_editor_config(&mut host);
+    let mut canvas =
+        NodeGraphCanvas::new(graph.clone(), view).with_editor_config_model(editor_config.clone());
 
     let snapshot0 = canvas.sync_view_state(&mut host);
     let _ = canvas.canvas_derived(&host, &snapshot0);
@@ -413,8 +415,8 @@ fn group_drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
     drop(index2);
 
     // If the base spatial index key changes, the preview cache must be invalidated and rebuilt.
-    let _ = view.update(&mut host, |s, _cx| {
-        s.runtime_tuning.spatial_index.edge_aabb_pad_screen_px = 200.0;
+    let _ = editor_config.update(&mut host, |state, _cx| {
+        state.runtime_tuning.spatial_index.edge_aabb_pad_screen_px = 200.0;
     });
     let snapshot1 = canvas.sync_view_state(&mut host);
     let _ = canvas.canvas_derived(&host, &snapshot1);

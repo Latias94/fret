@@ -3,7 +3,7 @@
 //! This is intentionally small and headless-safe.
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
+use crate::io::{NodeGraphInteractionConfig, NodeGraphRuntimeTuning, NodeGraphViewState};
 use crate::runtime::changes::NodeGraphChanges;
 
 /// Subscription token returned by [`crate::runtime::store::NodeGraphStore::subscribe`].
@@ -21,6 +21,8 @@ impl SubscriptionToken {
 pub struct NodeGraphStoreSnapshot<'a> {
     pub graph: &'a crate::core::Graph,
     pub view_state: &'a crate::io::NodeGraphViewState,
+    pub interaction: &'a NodeGraphInteractionConfig,
+    pub runtime_tuning: &'a NodeGraphRuntimeTuning,
     pub history: &'a crate::ops::GraphHistory,
 }
 
@@ -30,9 +32,8 @@ pub struct NodeGraphStoreSnapshot<'a> {
 /// their node/edge arrays). In fret-node, view-state is intentionally separate from the serialized
 /// graph document.
 ///
-/// Only viewport/selection changes are surfaced here. Other persisted view-state fields such as
-/// draw order, interaction config, and runtime tuning are observable through selector
-/// subscriptions on [`NodeGraphStoreSnapshot`].
+/// Only viewport/selection changes are surfaced here. Other persisted editor configuration is
+/// observable through selector subscriptions on [`NodeGraphStoreSnapshot`].
 #[derive(Debug, Clone)]
 pub enum ViewChange {
     Viewport {

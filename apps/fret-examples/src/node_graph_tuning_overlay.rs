@@ -6,7 +6,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::{UiHost, retained_bridge::*};
 
 use fret_node::io::{
-    NodeGraphConnectionMode, NodeGraphDragHandleMode, NodeGraphViewState,
+    NodeGraphConnectionMode, NodeGraphDragHandleMode, NodeGraphEditorConfig,
     NodeGraphZoomActivationKey,
 };
 use fret_node::runtime::store::NodeGraphStore;
@@ -64,7 +64,7 @@ struct TuningLayout {
 
 pub struct NodeGraphTuningOverlay {
     canvas_node: fret_core::NodeId,
-    view_state: Model<NodeGraphViewState>,
+    editor_config: Model<NodeGraphEditorConfig>,
     store: Option<Model<NodeGraphStore>>,
     style: NodeGraphStyle,
     commands: Option<NodeGraphTuningCommands>,
@@ -77,12 +77,12 @@ pub struct NodeGraphTuningOverlay {
 impl NodeGraphTuningOverlay {
     pub fn new(
         canvas_node: fret_core::NodeId,
-        view_state: Model<NodeGraphViewState>,
+        editor_config: Model<NodeGraphEditorConfig>,
         style: NodeGraphStyle,
     ) -> Self {
         Self {
             canvas_node,
-            view_state,
+            editor_config,
             store: None,
             style,
             commands: None,
@@ -100,6 +100,19 @@ impl NodeGraphTuningOverlay {
     pub fn with_commands(mut self, commands: NodeGraphTuningCommands) -> Self {
         self.commands = Some(commands);
         self
+    }
+
+    fn read_editor_config<H: UiHost>(&self, host: &H) -> NodeGraphEditorConfig {
+        if let Some(store) = self.store.as_ref() {
+            if let Ok(state) = store.read_ref(host, NodeGraphStore::editor_config) {
+                return state;
+            }
+        }
+
+        self.editor_config
+            .read_ref(host, |state| state.clone())
+            .ok()
+            .unwrap_or_default()
     }
 
     fn compute_layout(&self, bounds: Rect) -> TuningLayout {
@@ -478,24 +491,25 @@ impl NodeGraphTuningOverlay {
             }
         }
 
-        let apply = |s: &mut NodeGraphViewState| match hit {
+        let mut next = self.read_editor_config(host);
+        match hit {
             TuningHit::ToggleMode => {
-                s.interaction.connection_mode = match s.interaction.connection_mode {
+                next.interaction.connection_mode = match next.interaction.connection_mode {
                     NodeGraphConnectionMode::Strict => NodeGraphConnectionMode::Loose,
                     NodeGraphConnectionMode::Loose => NodeGraphConnectionMode::Strict,
                 };
             }
             TuningHit::TogglePanOnScroll => {
-                s.interaction.pan_on_scroll = !s.interaction.pan_on_scroll;
+                next.interaction.pan_on_scroll = !next.interaction.pan_on_scroll;
             }
             TuningHit::TogglePanInertia => {
-                s.interaction.pan_inertia.enabled = !s.interaction.pan_inertia.enabled;
+                next.interaction.pan_inertia.enabled = !next.interaction.pan_inertia.enabled;
             }
             TuningHit::ToggleZoomOnScroll => {
-                s.interaction.zoom_on_scroll = !s.interaction.zoom_on_scroll;
+                next.interaction.zoom_on_scroll = !next.interaction.zoom_on_scroll;
             }
             TuningHit::CycleZoomActivationKey => {
-                s.interaction.zoom_activation_key = match s.interaction.zoom_activation_key {
+                next.interaction.zoom_activation_key = match next.interaction.zoom_activation_key {
                     NodeGraphZoomActivationKey::CtrlOrMeta => NodeGraphZoomActivationKey::None,
                     NodeGraphZoomActivationKey::None => NodeGraphZoomActivationKey::Shift,
                     NodeGraphZoomActivationKey::Shift => NodeGraphZoomActivationKey::Alt,
@@ -503,56 +517,59 @@ impl NodeGraphTuningOverlay {
                 };
             }
             TuningHit::ConnRadiusDec => {
-                s.interaction.connection_radius =
-                    (s.interaction.connection_radius - 1.0 * step_scale).clamp(0.0, 96.0);
+                next.interaction.connection_radius =
+                    (next.interaction.connection_radius - 1.0 * step_scale).clamp(0.0, 96.0);
             }
             TuningHit::ConnRadiusInc => {
-                s.interaction.connection_radius =
-                    (s.interaction.connection_radius + 1.0 * step_scale).clamp(0.0, 96.0);
+                next.interaction.connection_radius =
+                    (next.interaction.connection_radius + 1.0 * step_scale).clamp(0.0, 96.0);
             }
             TuningHit::EdgeWidthDec => {
-                s.interaction.edge_interaction_width =
-                    (s.interaction.edge_interaction_width - 1.0 * step_scale).clamp(1.0, 96.0);
+                next.interaction.edge_interaction_width =
+                    (next.interaction.edge_interaction_width - 1.0 * step_scale).clamp(1.0, 96.0);
             }
             TuningHit::EdgeWidthInc => {
-                s.interaction.edge_interaction_width =
-                    (s.interaction.edge_interaction_width + 1.0 * step_scale).clamp(1.0, 96.0);
+                next.interaction.edge_interaction_width =
+                    (next.interaction.edge_interaction_width + 1.0 * step_scale).clamp(1.0, 96.0);
             }
             TuningHit::ConnThresholdDec => {
-                s.interaction.connection_drag_threshold =
-                    (s.interaction.connection_drag_threshold - 0.5 * step_scale).clamp(0.0, 24.0);
+                next.interaction.connection_drag_threshold =
+                    (next.interaction.connection_drag_threshold - 0.5 * step_scale)
+                        .clamp(0.0, 24.0);
             }
             TuningHit::ConnThresholdInc => {
-                s.interaction.connection_drag_threshold =
-                    (s.interaction.connection_drag_threshold + 0.5 * step_scale).clamp(0.0, 24.0);
+                next.interaction.connection_drag_threshold =
+                    (next.interaction.connection_drag_threshold + 0.5 * step_scale)
+                        .clamp(0.0, 24.0);
             }
             TuningHit::ToggleConnectOnClick => {
-                s.interaction.connect_on_click = !s.interaction.connect_on_click;
+                next.interaction.connect_on_click = !next.interaction.connect_on_click;
             }
             TuningHit::NodeDragThresholdDec => {
-                s.interaction.node_drag_threshold =
-                    (s.interaction.node_drag_threshold - 0.5 * step_scale).clamp(0.0, 24.0);
+                next.interaction.node_drag_threshold =
+                    (next.interaction.node_drag_threshold - 0.5 * step_scale).clamp(0.0, 24.0);
             }
             TuningHit::NodeDragThresholdInc => {
-                s.interaction.node_drag_threshold =
-                    (s.interaction.node_drag_threshold + 0.5 * step_scale).clamp(0.0, 24.0);
+                next.interaction.node_drag_threshold =
+                    (next.interaction.node_drag_threshold + 0.5 * step_scale).clamp(0.0, 24.0);
             }
             TuningHit::ToggleNodeDragHandle => {
-                s.interaction.node_drag_handle_mode = match s.interaction.node_drag_handle_mode {
-                    NodeGraphDragHandleMode::Any => NodeGraphDragHandleMode::Header,
-                    NodeGraphDragHandleMode::Header => NodeGraphDragHandleMode::Any,
-                };
+                next.interaction.node_drag_handle_mode =
+                    match next.interaction.node_drag_handle_mode {
+                        NodeGraphDragHandleMode::Any => NodeGraphDragHandleMode::Header,
+                        NodeGraphDragHandleMode::Header => NodeGraphDragHandleMode::Any,
+                    };
             }
             TuningHit::NodeClickDistanceDec => {
-                s.interaction.node_click_distance =
-                    (s.interaction.node_click_distance - 0.5 * step_scale).clamp(0.0, 24.0);
+                next.interaction.node_click_distance =
+                    (next.interaction.node_click_distance - 0.5 * step_scale).clamp(0.0, 24.0);
             }
             TuningHit::NodeClickDistanceInc => {
-                s.interaction.node_click_distance =
-                    (s.interaction.node_click_distance + 0.5 * step_scale).clamp(0.0, 24.0);
+                next.interaction.node_click_distance =
+                    (next.interaction.node_click_distance + 0.5 * step_scale).clamp(0.0, 24.0);
             }
             TuningHit::ToggleTranslateExtent => {
-                s.interaction.translate_extent = if s.interaction.translate_extent.is_some() {
+                next.interaction.translate_extent = if next.interaction.translate_extent.is_some() {
                     None
                 } else {
                     Some(default_translate_extent())
@@ -560,22 +577,22 @@ impl NodeGraphTuningOverlay {
             }
             TuningHit::TranslateExtentDec => {
                 let delta = 200.0 * step_scale;
-                let cur = s
+                let cur = next
                     .interaction
                     .translate_extent
                     .unwrap_or_else(default_translate_extent);
-                s.interaction.translate_extent = Some(resize_extent(cur, -delta));
+                next.interaction.translate_extent = Some(resize_extent(cur, -delta));
             }
             TuningHit::TranslateExtentInc => {
                 let delta = 200.0 * step_scale;
-                let cur = s
+                let cur = next
                     .interaction
                     .translate_extent
                     .unwrap_or_else(default_translate_extent);
-                s.interaction.translate_extent = Some(resize_extent(cur, delta));
+                next.interaction.translate_extent = Some(resize_extent(cur, delta));
             }
             TuningHit::ToggleNodeExtent => {
-                s.interaction.node_extent = if s.interaction.node_extent.is_some() {
+                next.interaction.node_extent = if next.interaction.node_extent.is_some() {
                     None
                 } else {
                     Some(default_node_extent())
@@ -583,52 +600,60 @@ impl NodeGraphTuningOverlay {
             }
             TuningHit::NodeExtentDec => {
                 let delta = 200.0 * step_scale;
-                let cur = s
+                let cur = next
                     .interaction
                     .node_extent
                     .unwrap_or_else(default_node_extent);
-                s.interaction.node_extent = Some(resize_extent(cur, -delta));
+                next.interaction.node_extent = Some(resize_extent(cur, -delta));
             }
             TuningHit::NodeExtentInc => {
                 let delta = 200.0 * step_scale;
-                let cur = s
+                let cur = next
                     .interaction
                     .node_extent
                     .unwrap_or_else(default_node_extent);
-                s.interaction.node_extent = Some(resize_extent(cur, delta));
+                next.interaction.node_extent = Some(resize_extent(cur, delta));
             }
             TuningHit::AutoPanMarginDec => {
-                s.interaction.auto_pan.margin =
-                    (s.interaction.auto_pan.margin - 2.0 * step_scale).clamp(0.0, 128.0);
+                next.interaction.auto_pan.margin =
+                    (next.interaction.auto_pan.margin - 2.0 * step_scale).clamp(0.0, 128.0);
             }
             TuningHit::AutoPanMarginInc => {
-                s.interaction.auto_pan.margin =
-                    (s.interaction.auto_pan.margin + 2.0 * step_scale).clamp(0.0, 128.0);
+                next.interaction.auto_pan.margin =
+                    (next.interaction.auto_pan.margin + 2.0 * step_scale).clamp(0.0, 128.0);
             }
             TuningHit::AutoPanSpeedDec => {
-                s.interaction.auto_pan.speed =
-                    (s.interaction.auto_pan.speed - 50.0 * step_scale).clamp(0.0, 4000.0);
+                next.interaction.auto_pan.speed =
+                    (next.interaction.auto_pan.speed - 50.0 * step_scale).clamp(0.0, 4000.0);
             }
             TuningHit::AutoPanSpeedInc => {
-                s.interaction.auto_pan.speed =
-                    (s.interaction.auto_pan.speed + 50.0 * step_scale).clamp(0.0, 4000.0);
+                next.interaction.auto_pan.speed =
+                    (next.interaction.auto_pan.speed + 50.0 * step_scale).clamp(0.0, 4000.0);
             }
             TuningHit::ToggleEdgesReconnectable => {
-                s.interaction.edges_reconnectable = !s.interaction.edges_reconnectable;
+                next.interaction.edges_reconnectable = !next.interaction.edges_reconnectable;
             }
             TuningHit::ResetGraph
             | TuningHit::SpawnStress1k
             | TuningHit::SpawnStress5k
-            | TuningHit::SpawnStress10k => {}
-        };
+            | TuningHit::SpawnStress10k => return,
+        }
 
         if let Some(store) = self.store.as_ref() {
-            let _ = store.update(host, |store, _cx| {
-                store.update_view_state(apply);
-            });
-        } else {
-            let _ = self.view_state.update(host, |s, _cx| apply(s));
+            let next_for_store = next.clone();
+            if store
+                .update(host, move |store, _cx| {
+                    store.replace_editor_config(next_for_store.clone());
+                })
+                .is_err()
+            {
+                return;
+            }
         }
+
+        let _ = self.editor_config.update(host, |state, _cx| {
+            *state = next;
+        });
     }
 
     fn command_for_hit(&self, hit: TuningHit) -> Option<CommandId> {
@@ -754,16 +779,15 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        cx.observe_model(&self.view_state, Invalidation::Paint);
+        cx.observe_model(&self.editor_config, Invalidation::Paint);
+        if let Some(store) = self.store.as_ref() {
+            cx.observe_model(store, Invalidation::Paint);
+        }
         for id in self.text_blobs.drain(..) {
             cx.services.text().release(id);
         }
 
-        let state = self
-            .view_state
-            .read_ref(cx.app, |s| s.clone())
-            .ok()
-            .unwrap_or_default();
+        let state = self.read_editor_config(cx.app);
         let layout = self.compute_layout(cx.bounds);
 
         let corner = self.style.paint.context_menu_corner_radius;

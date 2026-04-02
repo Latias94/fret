@@ -1,6 +1,21 @@
 use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    pub(in super::super::super) fn update_editor_config<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        f: impl FnOnce(&mut NodeGraphEditorConfig),
+    ) {
+        if let Some(store) = self.store.as_ref() {
+            let _ = store.update(host, |store, _cx| store.update_editor_config(f));
+        } else if let Some(editor_config) = self.editor_config_model.as_ref() {
+            let _ = editor_config.update(host, |state, _cx| f(state));
+        } else {
+            f(&mut self.editor_config);
+        }
+        self.sync_view_state(host);
+    }
+
     pub(in super::super::super) fn update_view_state<H: UiHost>(
         &mut self,
         host: &mut H,
@@ -18,6 +33,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let bounds = self.interaction.last_bounds.unwrap_or_default();
         let style = self.style.clone();
+        let translate_extent = self.editor_config_snapshot(host).interaction.translate_extent;
         if let Some(store) = self.store.as_ref() {
             let _ = store.update(host, |store, _cx| {
                 store.update_view_state(|s| {
@@ -31,7 +47,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     };
                     s.zoom = zoom;
 
-                    if let Some(extent) = s.interaction.translate_extent {
+                    if let Some(extent) = translate_extent {
                         s.pan = Self::clamp_pan_to_translate_extent(s.pan, zoom, bounds, extent);
                     }
                 });
@@ -48,7 +64,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 };
                 s.zoom = zoom;
 
-                if let Some(extent) = s.interaction.translate_extent {
+                if let Some(extent) = translate_extent {
                     s.pan = Self::clamp_pan_to_translate_extent(s.pan, zoom, bounds, extent);
                 }
             });

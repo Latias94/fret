@@ -9,7 +9,9 @@ use crate::ui::edge_types::{EdgeCustomPath, EdgePathInput, NodeGraphEdgeTypes};
 use crate::ui::presenter::EdgeMarker;
 
 use super::prelude::path_start_end_tangents;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+};
 
 #[derive(Default)]
 struct CaptureServices {
@@ -152,10 +154,12 @@ fn custom_edge_marker_falls_back_to_from_to_tangent_when_path_has_no_tangents() 
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = false;
+        state.interaction.frame_view_duration_ms = 0;
+    });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let edge_types = NodeGraphEdgeTypes::new()
@@ -171,7 +175,9 @@ fn custom_edge_marker_falls_back_to_from_to_tangent_when_path_has_no_tangents() 
             })
         });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_edge_types(edge_types);
+    let mut canvas = NodeGraphCanvas::new(graph, view)
+        .with_edge_types(edge_types)
+        .with_editor_config_model(editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
     let from = geom.port_center(a_out).expect("from port center");

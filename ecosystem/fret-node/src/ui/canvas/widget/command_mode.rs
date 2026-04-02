@@ -11,7 +11,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             NodeGraphConnectionMode::Loose => NodeGraphConnectionMode::Strict,
         };
 
-        self.update_view_state(cx.app, |s| {
+        self.update_editor_config(cx.app, |s| {
             s.interaction.connection_mode = next;
         });
         self.show_toast(

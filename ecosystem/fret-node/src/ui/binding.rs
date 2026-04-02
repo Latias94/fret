@@ -4,7 +4,7 @@ use fret_ui::action::UiActionHost;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
 use crate::core::{CanvasPoint, EdgeId, Graph, GroupId, NodeId};
-use crate::io::NodeGraphViewState;
+use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use crate::ops::GraphTransaction;
 use crate::runtime::lookups::HandleConnection;
 use crate::runtime::store::{DispatchOutcome, NodeGraphStore};
@@ -31,18 +31,40 @@ mod binding_viewport;
 pub struct NodeGraphSurfaceBinding {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,
+    editor_config: Option<Model<NodeGraphEditorConfig>>,
     store: Model<NodeGraphStore>,
 }
 
 impl NodeGraphSurfaceBinding {
     /// Creates the default store-backed binding for declarative node-graph surfaces.
     pub fn new(models: &mut ModelStore, graph: Graph, view_state: NodeGraphViewState) -> Self {
+        Self::new_with_editor_config(
+            models,
+            graph,
+            view_state,
+            NodeGraphEditorConfig::default(),
+        )
+    }
+
+    /// Creates a store-backed binding with an explicit editor configuration payload.
+    pub fn new_with_editor_config(
+        models: &mut ModelStore,
+        graph: Graph,
+        view_state: NodeGraphViewState,
+        editor_config: NodeGraphEditorConfig,
+    ) -> Self {
         let graph_model = models.insert(graph.clone());
         let view_state_model = models.insert(view_state.clone());
-        let store = models.insert(NodeGraphStore::new(graph, view_state));
-        Self::from_models_and_controller(
+        let editor_config_model = models.insert(editor_config.clone());
+        let store = models.insert(NodeGraphStore::new_with_editor_config(
+            graph,
+            view_state,
+            editor_config,
+        ));
+        Self::from_models_and_controller_with_editor_config(
             graph_model,
             view_state_model,
+            editor_config_model,
             NodeGraphController::new(store),
         )
     }
@@ -51,12 +73,15 @@ impl NodeGraphSurfaceBinding {
     pub fn from_store(models: &mut ModelStore, store: NodeGraphStore) -> Self {
         let graph = store.graph().clone();
         let view_state = store.view_state().clone();
+        let editor_config = store.editor_config();
         let store_model = models.insert(store);
         let graph_model = models.insert(graph);
         let view_state_model = models.insert(view_state);
-        Self::from_models_and_controller(
+        let editor_config_model = models.insert(editor_config);
+        Self::from_models_and_controller_with_editor_config(
             graph_model,
             view_state_model,
+            editor_config_model,
             NodeGraphController::new(store_model),
         )
     }
@@ -70,6 +95,21 @@ impl NodeGraphSurfaceBinding {
         Self {
             graph,
             view_state,
+            editor_config: None,
+            store: controller.store(),
+        }
+    }
+
+    pub fn from_models_and_controller_with_editor_config(
+        graph: Model<Graph>,
+        view_state: Model<NodeGraphViewState>,
+        editor_config: Model<NodeGraphEditorConfig>,
+        controller: NodeGraphController,
+    ) -> Self {
+        Self {
+            graph,
+            view_state,
+            editor_config: Some(editor_config),
             store: controller.store(),
         }
     }
@@ -80,6 +120,10 @@ impl NodeGraphSurfaceBinding {
 
     pub fn view_state_model(&self) -> Model<NodeGraphViewState> {
         self.view_state.clone()
+    }
+
+    pub fn editor_config_model(&self) -> Option<Model<NodeGraphEditorConfig>> {
+        self.editor_config.clone()
     }
 
     /// Advanced lower-level seam for callers that need explicit controller ownership.
@@ -102,6 +146,9 @@ impl NodeGraphSurfaceBinding {
     pub fn observe<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) {
         cx.observe_model(&self.graph, Invalidation::Paint);
         cx.observe_model(&self.view_state, Invalidation::Paint);
+        if let Some(editor_config) = self.editor_config.as_ref() {
+            cx.observe_model(editor_config, Invalidation::Paint);
+        }
     }
 }
 

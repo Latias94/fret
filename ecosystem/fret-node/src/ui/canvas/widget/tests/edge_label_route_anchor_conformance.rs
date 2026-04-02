@@ -10,7 +10,9 @@ use crate::core::{Edge, EdgeId, EdgeKind};
 use crate::ui::presenter::{EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+};
 
 #[derive(Default)]
 struct CaptureServices;
@@ -320,11 +322,13 @@ fn capture_label_origin_for_route(route: EdgeRouteKind, zoom: f32) -> (Point, Po
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = false;
+        state.interaction.frame_view_duration_ms = 0;
+        state.interaction.bezier_hit_test_steps = 8;
+    });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = zoom;
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
-        s.interaction.bezier_hit_test_steps = 8;
     });
 
     let label: Arc<str> = Arc::<str>::from("EdgeLabel");
@@ -332,7 +336,9 @@ fn capture_label_origin_for_route(route: EdgeRouteKind, zoom: f32) -> (Point, Po
         label: Arc::clone(&label),
         route,
     };
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(presenter);
+    let mut canvas = NodeGraphCanvas::new(graph, view)
+        .with_presenter(presenter)
+        .with_editor_config_model(editor_config);
 
     // Use non-default tokens so the test catches any accidental hard-coded constants.
     canvas.style.paint.edge_label_offset = 37.0;

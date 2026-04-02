@@ -52,7 +52,7 @@ use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,
     Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
-use crate::io::NodeGraphViewState;
+use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use crate::ops::GraphOp;
 use crate::runtime::callbacks::{
     NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks, SelectionChange,
@@ -2318,7 +2318,7 @@ fn apply_declarative_diag_view_preset_action_host_offset_partial_marquee_clears_
         Graph::new(GraphId::from_u128(9964)),
         view_value,
     ));
-    let controller = NodeGraphController::new(store);
+    let controller = NodeGraphController::new(store.clone());
     let binding = test_binding(&graph, &view_state, &controller);
 
     assert!(apply_declarative_diag_view_preset_action_host(
@@ -2331,16 +2331,20 @@ fn apply_declarative_diag_view_preset_action_host_offset_partial_marquee_clears_
             assert_eq!(state.pan.x, 540.0);
             assert_eq!(state.pan.y, 290.0);
             assert_eq!(state.zoom, 1.0);
-            assert!(state.interaction.selection_on_drag);
-            assert_eq!(
-                state.interaction.selection_mode,
-                crate::io::NodeGraphSelectionMode::Partial
-            );
             assert!(state.selected_nodes.is_empty());
             assert!(state.selected_edges.is_empty());
             assert!(state.selected_groups.is_empty());
         })
         .expect("view readable");
+    host.models
+        .read(&store, |state| {
+            assert!(state.interaction().selection_on_drag);
+            assert_eq!(
+                state.interaction().selection_mode,
+                crate::io::NodeGraphSelectionMode::Partial
+            );
+        })
+        .expect("store readable");
 }
 
 #[test]
@@ -3516,13 +3520,15 @@ fn derived_geometry_cache_key_changes_when_presenter_revision_changes() {
         draw_order: vec![node],
         ..NodeGraphViewState::default()
     };
-    let interaction = view_state.resolved_interaction_state();
+    let editor_config = NodeGraphEditorConfig::default();
+    let interaction = editor_config.resolved_interaction_state();
+    let node_origin = editor_config.interaction.node_origin;
     let style = crate::ui::style::NodeGraphStyle::default();
 
     let derived_a = derived_geometry_cache_key(
         91,
         view_state.zoom,
-        view_state.interaction.node_origin,
+        node_origin,
         &view_state.draw_order,
         &interaction,
         &style,
@@ -3533,7 +3539,7 @@ fn derived_geometry_cache_key_changes_when_presenter_revision_changes() {
     let derived_b = derived_geometry_cache_key(
         91,
         view_state.zoom,
-        view_state.interaction.node_origin,
+        node_origin,
         &view_state.draw_order,
         &interaction,
         &style,
@@ -3674,15 +3680,17 @@ fn authoritative_selection_changes_keep_paint_cache_keys_stable() {
         fret_core::Size::new(Px(1280.0), Px(720.0)),
     );
     let graph_rev = 41;
+    let editor_config = NodeGraphEditorConfig::default();
+    let node_origin = editor_config.interaction.node_origin;
 
     let grid_a = grid_cache_key(bounds, view_from_state(&base_view), &style);
     let grid_b = grid_cache_key(bounds, view_from_state(&selection_only_view), &style);
-    let interaction_a = base_view.resolved_interaction_state();
-    let interaction_b = selection_only_view.resolved_interaction_state();
+    let interaction_a = editor_config.resolved_interaction_state();
+    let interaction_b = interaction_a.clone();
     let derived_a = derived_geometry_cache_key(
         graph_rev,
         base_view.zoom,
-        base_view.interaction.node_origin,
+        node_origin,
         &base_view.draw_order,
         &interaction_a,
         &style,
@@ -3693,7 +3701,7 @@ fn authoritative_selection_changes_keep_paint_cache_keys_stable() {
     let derived_b = derived_geometry_cache_key(
         graph_rev,
         selection_only_view.zoom,
-        selection_only_view.interaction.node_origin,
+        node_origin,
         &selection_only_view.draw_order,
         &interaction_b,
         &style,
@@ -3706,28 +3714,28 @@ fn authoritative_selection_changes_keep_paint_cache_keys_stable() {
     let nodes_a = nodes_cache_key(
         graph_rev,
         base_view.zoom,
-        base_view.interaction.node_origin,
+        node_origin,
         draw_order_hash_a,
         derived_a.0,
     );
     let nodes_b = nodes_cache_key(
         graph_rev,
         selection_only_view.zoom,
-        selection_only_view.interaction.node_origin,
+        node_origin,
         draw_order_hash_b,
         derived_b.0,
     );
     let edges_a = edges_cache_key(
         graph_rev,
         base_view.zoom,
-        base_view.interaction.node_origin,
+        node_origin,
         draw_order_hash_a,
         derived_a.0,
     );
     let edges_b = edges_cache_key(
         graph_rev,
         selection_only_view.zoom,
-        selection_only_view.interaction.node_origin,
+        node_origin,
         draw_order_hash_b,
         derived_b.0,
     );
@@ -3753,14 +3761,16 @@ fn authoritative_graph_replacement_invalidates_only_graph_dependent_paint_cache_
         Point::new(Px(10.0), Px(20.0)),
         fret_core::Size::new(Px(1024.0), Px(768.0)),
     );
-    let interaction = view_state.resolved_interaction_state();
+    let editor_config = NodeGraphEditorConfig::default();
+    let interaction = editor_config.resolved_interaction_state();
+    let node_origin = editor_config.interaction.node_origin;
     let draw_order_hash = stable_hash_u64(2, &view_state.draw_order);
 
     let grid_before = grid_cache_key(bounds, view_from_state(&view_state), &style);
     let derived_before = derived_geometry_cache_key(
         73,
         view_state.zoom,
-        view_state.interaction.node_origin,
+        node_origin,
         &view_state.draw_order,
         &interaction,
         &style,
@@ -3771,14 +3781,14 @@ fn authoritative_graph_replacement_invalidates_only_graph_dependent_paint_cache_
     let nodes_before = nodes_cache_key(
         73,
         view_state.zoom,
-        view_state.interaction.node_origin,
+        node_origin,
         draw_order_hash,
         derived_before.0,
     );
     let edges_before = edges_cache_key(
         73,
         view_state.zoom,
-        view_state.interaction.node_origin,
+        node_origin,
         draw_order_hash,
         derived_before.0,
     );
@@ -3787,7 +3797,7 @@ fn authoritative_graph_replacement_invalidates_only_graph_dependent_paint_cache_
     let derived_after = derived_geometry_cache_key(
         74,
         view_state.zoom,
-        view_state.interaction.node_origin,
+        node_origin,
         &view_state.draw_order,
         &interaction,
         &style,
@@ -3798,14 +3808,14 @@ fn authoritative_graph_replacement_invalidates_only_graph_dependent_paint_cache_
     let nodes_after = nodes_cache_key(
         74,
         view_state.zoom,
-        view_state.interaction.node_origin,
+        node_origin,
         draw_order_hash,
         derived_after.0,
     );
     let edges_after = edges_cache_key(
         74,
         view_state.zoom,
-        view_state.interaction.node_origin,
+        node_origin,
         draw_order_hash,
         derived_after.0,
     );

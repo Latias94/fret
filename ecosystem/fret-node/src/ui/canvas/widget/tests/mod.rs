@@ -115,8 +115,9 @@ mod viewport_animation_conformance;
 mod z_order_conformance;
 
 use harness::{
-    NullServices, TestUiHostImpl, command_cx, event_cx, insert_graph_view, insert_view,
-    make_host_graph_view, make_test_graph_two_nodes, make_test_graph_two_nodes_with_ports,
+    NullServices, TestUiHostImpl, command_cx, event_cx, insert_editor_config,
+    insert_editor_config_with, insert_graph_view, insert_view, make_host_graph_view,
+    make_test_graph_two_nodes, make_test_graph_two_nodes_with_ports,
     make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
     read_node_pos,
 };

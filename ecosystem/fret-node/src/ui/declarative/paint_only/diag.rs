@@ -1,4 +1,5 @@
 use super::*;
+use super::transactions::update_editor_config_action_host;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DeclarativeDiagViewPreset {
@@ -141,26 +142,33 @@ pub(super) fn apply_declarative_diag_view_preset_action_host(
     binding: &NodeGraphSurfaceBinding,
     preset: DeclarativeDiagViewPreset,
 ) -> bool {
-    update_view_state_action_host(host, binding, |state| {
+    let view_updated = update_view_state_action_host(host, binding, |state| {
         match preset {
             DeclarativeDiagViewPreset::CenteredSelectionOnDrag => {
                 state.pan.x = 380.0;
                 state.pan.y = 290.0;
                 state.zoom = 1.0;
-                state.interaction.selection_on_drag = true;
             }
             DeclarativeDiagViewPreset::OffsetPartialMarquee => {
                 state.pan.x = 540.0;
                 state.pan.y = 290.0;
                 state.zoom = 1.0;
-                state.interaction.selection_on_drag = true;
-                state.interaction.selection_mode = crate::io::NodeGraphSelectionMode::Partial;
             }
         }
         state.selected_nodes.clear();
         state.selected_edges.clear();
         state.selected_groups.clear();
-    })
+    });
+    let config_updated = update_editor_config_action_host(host, binding, |state| match preset {
+        DeclarativeDiagViewPreset::CenteredSelectionOnDrag => {
+            state.interaction.selection_on_drag = true;
+        }
+        DeclarativeDiagViewPreset::OffsetPartialMarquee => {
+            state.interaction.selection_on_drag = true;
+            state.interaction.selection_mode = crate::io::NodeGraphSelectionMode::Partial;
+        }
+    });
+    view_updated && config_updated
 }
 
 fn toggle_diag_paint_overrides_action_host(

@@ -10,7 +10,10 @@ use crate::core::{Graph, PortId};
 use crate::ui::NodeGraphCanvas;
 use crate::ui::presenter::NodeGraphPresenter;
 
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
+use super::{
+    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_size,
+};
 
 struct CountingPresenter {
     node_title_calls: Arc<AtomicUsize>,
@@ -76,16 +79,20 @@ fn only_render_visible_elements_controls_render_culling_work() {
         let mut host = TestUiHostImpl::default();
         let graph = host.models.insert(graph_value.clone());
         let view = insert_view(&mut host);
+        let editor_config = insert_editor_config_with(&mut host, |state| {
+            state.runtime_tuning.only_render_visible_elements = true;
+            state.interaction.frame_view_duration_ms = 0;
+        });
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
-            s.runtime_tuning.only_render_visible_elements = true;
-            s.interaction.frame_view_duration_ms = 0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(CountingPresenter {
-            node_title_calls: counts.clone(),
-        });
+        let mut canvas = NodeGraphCanvas::new(graph, view)
+            .with_presenter(CountingPresenter {
+                node_title_calls: counts.clone(),
+            })
+            .with_editor_config_model(editor_config);
         let mut tree = UiTree::<TestUiHostImpl>::default();
         let mut services = NullServices::default();
         paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
@@ -100,16 +107,20 @@ fn only_render_visible_elements_controls_render_culling_work() {
         let mut host = TestUiHostImpl::default();
         let graph = host.models.insert(graph_value);
         let view = insert_view(&mut host);
+        let editor_config = insert_editor_config_with(&mut host, |state| {
+            state.runtime_tuning.only_render_visible_elements = false;
+            state.interaction.frame_view_duration_ms = 0;
+        });
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
-            s.runtime_tuning.only_render_visible_elements = false;
-            s.interaction.frame_view_duration_ms = 0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(CountingPresenter {
-            node_title_calls: counts.clone(),
-        });
+        let mut canvas = NodeGraphCanvas::new(graph, view)
+            .with_presenter(CountingPresenter {
+                node_title_calls: counts.clone(),
+            })
+            .with_editor_config_model(editor_config);
         let mut tree = UiTree::<TestUiHostImpl>::default();
         let mut services = NullServices::default();
         paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);

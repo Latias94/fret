@@ -842,6 +842,9 @@ pub(super) fn sync_derived_cache<H: UiHost>(
     graph_rev: u64,
     view_for_paint: PanZoom2D,
     view_value: &NodeGraphViewState,
+    interaction_config: &crate::io::NodeGraphInteractionConfig,
+    interaction_state: &crate::io::NodeGraphInteractionState,
+    runtime_tuning: crate::io::NodeGraphRuntimeTuning,
     style_tokens: &NodeGraphStyle,
     presenter_rev: u64,
     measured_geometry: Option<&Arc<MeasuredGeometryStore>>,
@@ -856,9 +859,9 @@ pub(super) fn sync_derived_cache<H: UiHost>(
     let key = derived_geometry_cache_key(
         graph_rev,
         view_for_paint.zoom,
-        view_value.interaction.node_origin,
+        interaction_config.node_origin,
         &view_value.draw_order,
-        &view_value.resolved_interaction_state(),
+        interaction_state,
         style_tokens,
         presenter_rev,
         geometry_overrides_rev,
@@ -874,16 +877,17 @@ pub(super) fn sync_derived_cache<H: UiHost>(
                 let geom = build_canvas_geometry_with_overrides(
                     graph_value,
                     view_value,
+                    interaction_config.node_origin,
                     style_tokens,
                     zoom,
                     measured_geometry,
                     geometry_overrides,
                 );
 
-                let tuning = view_value.runtime_tuning.spatial_index;
+                let tuning = runtime_tuning.spatial_index;
                 let edge_aabb_pad_screen_px = tuning
                     .edge_aabb_pad_screen_px
-                    .max(view_value.interaction.edge_interaction_width)
+                    .max(interaction_config.edge_interaction_width)
                     .max(max_edge_interaction_width_override_px)
                     .max(style_tokens.geometry.wire_width)
                     .max(0.0);
@@ -1035,6 +1039,7 @@ pub(super) fn sync_edges_cache<H: UiHost>(
 fn build_canvas_geometry_with_overrides(
     graph_value: &Graph,
     view_value: &NodeGraphViewState,
+    node_origin: crate::io::NodeGraphNodeOrigin,
     style_tokens: &NodeGraphStyle,
     zoom: f32,
     measured_geometry: Option<&Arc<MeasuredGeometryStore>>,
@@ -1050,7 +1055,7 @@ fn build_canvas_geometry_with_overrides(
             &view_value.draw_order,
             style_tokens,
             zoom,
-            view_value.interaction.node_origin,
+            node_origin,
             &mut presenter,
             geometry_overrides,
         )
@@ -1061,7 +1066,7 @@ fn build_canvas_geometry_with_overrides(
             &view_value.draw_order,
             style_tokens,
             zoom,
-            view_value.interaction.node_origin,
+            node_origin,
             &mut presenter,
             geometry_overrides,
         )

@@ -7,7 +7,10 @@ use fret_ui::{Invalidation, Theme, UiTree};
 
 use crate::ui::{NodeGraphCanvas, NodeGraphGeometryOverridesMap, NodeGraphGeometryOverridesRef};
 
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports,
+};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -58,17 +61,21 @@ fn geometry_overrides_revision_rebuilds_derived_geometry_and_spatial_index_witho
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = false;
+        state.interaction.frame_view_duration_ms = 0;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let overrides_map = Arc::new(NodeGraphGeometryOverridesMap::default());
     let overrides: NodeGraphGeometryOverridesRef = overrides_map.clone();
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view).with_geometry_overrides(overrides);
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
+        .with_geometry_overrides(overrides)
+        .with_editor_config_model(editor_config);
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = NullServices::default();

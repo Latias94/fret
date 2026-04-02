@@ -98,3 +98,20 @@ pub(super) fn update_view_state_ui_host<H: UiHost>(
     let _ = binding.sync_from_store(host);
     true
 }
+
+pub(super) fn update_editor_config_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    binding: &NodeGraphSurfaceBinding,
+    f: impl FnOnce(&mut crate::io::NodeGraphEditorConfig),
+) -> bool {
+    let store = binding.store_model();
+    if host
+        .models_mut()
+        .update(&store, move |store| store.update_editor_config(f))
+        .is_err()
+    {
+        return false;
+    }
+    let _ = binding.sync_from_store_action_host(host);
+    true
+}

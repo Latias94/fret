@@ -24,7 +24,7 @@ use crate::core::{
     PortDirection, PortId,
 };
 use crate::interaction::NodeGraphConnectionMode;
-use crate::io::{NodeGraphInteractionState, NodeGraphViewState};
+use crate::io::{NodeGraphEditorConfig, NodeGraphInteractionState, NodeGraphViewState};
 use crate::ops::{
     GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction, IdRemapSeed,
     IdRemapper, PasteTuning, apply_transaction,
@@ -416,6 +416,8 @@ pub type NodeGraphCanvas = NodeGraphCanvasWith<NoopNodeGraphCanvasMiddleware>;
 pub struct NodeGraphCanvasWith<M> {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,
+    editor_config: NodeGraphEditorConfig,
+    editor_config_model: Option<Model<NodeGraphEditorConfig>>,
     store: Option<Model<NodeGraphStore>>,
     store_rev: Option<u64>,
     presenter: Box<dyn NodeGraphPresenter>,

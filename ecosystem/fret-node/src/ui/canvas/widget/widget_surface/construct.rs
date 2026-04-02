@@ -10,6 +10,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         Self {
             graph,
             view_state,
+            editor_config: NodeGraphEditorConfig::default(),
+            editor_config_model: None,
             store: None,
             store_rev: None,
             presenter: Box::new(FallbackMeasuredNodeGraphPresenter::new(
@@ -73,6 +75,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         NodeGraphCanvasWith {
             graph: self.graph,
             view_state: self.view_state,
+            editor_config: self.editor_config,
+            editor_config_model: self.editor_config_model,
             store: self.store,
             store_rev: self.store_rev,
             presenter: self.presenter,

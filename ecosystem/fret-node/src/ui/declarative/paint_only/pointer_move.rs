@@ -1,4 +1,5 @@
 use super::*;
+use super::surface_support::read_authoritative_interaction_config_in_models;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct NodeDragPointerMoveOutcome {
@@ -41,9 +42,12 @@ pub(super) fn handle_node_drag_pointer_move_action_host(
         });
     }
 
-    let interaction =
-        read_authoritative_view_state_action_host(host, binding, |state| state.interaction.clone())
-            .unwrap_or_default();
+    let interaction = read_authoritative_interaction_config_in_models(
+        host.models_mut(),
+        binding,
+        Clone::clone,
+    )
+    .unwrap_or_default();
     let should_activate = pointer_crossed_threshold(
         node_drag_value.start_screen,
         mv.position,
@@ -98,11 +102,14 @@ pub(super) fn handle_marquee_pointer_move_action_host(
         .read(marquee, |state| state.clone())
         .ok()
         .flatten()?;
-    let (interaction, view): (crate::io::NodeGraphInteractionConfig, PanZoom2D) =
-        read_authoritative_view_state_action_host(host, binding, |state| {
-            (state.interaction.clone(), view_from_state(state))
-        })
-        .unwrap_or((Default::default(), PanZoom2D::default()));
+    let interaction = read_authoritative_interaction_config_in_models(
+        host.models_mut(),
+        binding,
+        Clone::clone,
+    )
+    .unwrap_or_default();
+    let view = read_authoritative_view_state_action_host(host, binding, view_from_state)
+        .unwrap_or_default();
 
     if !interaction.elements_selectable {
         let _ = host.models_mut().update(marquee, |state| *state = None);
@@ -168,14 +175,9 @@ pub(super) fn update_hovered_node_pointer_move_action_host(
     mv: fret_ui::action::PointerMoveCx,
     bounds: Rect,
 ) -> bool {
-    let (node_click_distance_screen_px, view) =
-        read_authoritative_view_state_action_host(host, binding, |state| {
-            (
-                state.interaction.node_click_distance,
-                view_from_state(state),
-            )
-        })
-        .unwrap_or((6.0, PanZoom2D::default()));
+    let node_click_distance_screen_px = interaction_node_click_distance(host, binding);
+    let view = read_authoritative_view_state_action_host(host, binding, view_from_state)
+        .unwrap_or_default();
 
     let (geom, index) = host
         .models_mut()
@@ -215,4 +217,14 @@ pub(super) fn update_hovered_node_pointer_move_action_host(
         })
         .ok()
         .unwrap_or(false)
+}
+
+fn interaction_node_click_distance(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    binding: &NodeGraphSurfaceBinding,
+) -> f32 {
+    read_authoritative_interaction_config_in_models(host.models_mut(), binding, |state| {
+        state.node_click_distance
+    })
+    .unwrap_or(6.0)
 }

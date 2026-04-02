@@ -18,6 +18,9 @@ use super::{
     sync_authoritative_surface_boundary_in_models, sync_derived_cache, sync_edges_cache,
     sync_grid_cache, sync_nodes_cache, view_from_state,
 };
+use super::surface_support::{
+    read_authoritative_interaction_config_in_models, read_authoritative_runtime_tuning_in_models,
+};
 
 #[derive(Clone)]
 pub(super) struct PreparedPaintOnlySurfaceFrame {
@@ -167,7 +170,21 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         .unwrap_or(0);
 
     let draw_order_hash = stable_hash_u64(2, &view_value.draw_order);
-    let node_origin = view_value.interaction.node_origin;
+    let interaction_config = read_authoritative_interaction_config_in_models(
+        cx.app.models_mut(),
+        binding,
+        Clone::clone,
+    )
+    .unwrap_or_default();
+    let runtime_tuning = read_authoritative_runtime_tuning_in_models(
+        cx.app.models_mut(),
+        binding,
+        |state| *state,
+    )
+    .unwrap_or_default();
+    let interaction_state =
+        crate::io::NodeGraphInteractionState::from_parts(&interaction_config, &runtime_tuning);
+    let node_origin = interaction_config.node_origin;
 
     let mut portal_measured_geometry_state_value = cx
         .get_model_cloned(portal_measured_geometry_state, Invalidation::Paint)
@@ -208,6 +225,9 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         graph_rev,
         view_for_paint,
         &view_value,
+        &interaction_config,
+        &interaction_state,
+        runtime_tuning,
         &style_tokens,
         presenter_rev,
         measured_geometry.as_ref(),

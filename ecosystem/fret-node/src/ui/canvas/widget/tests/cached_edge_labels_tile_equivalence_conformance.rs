@@ -10,7 +10,9 @@ use crate::ui::presenter::EdgeRenderHint;
 use crate::ui::presenter::{EdgeMarker, EdgeRouteKind, NodeGraphPresenter};
 use crate::ui::style::NodeGraphStyle;
 
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+};
 
 use std::sync::Arc;
 
@@ -192,11 +194,13 @@ fn capture_edge_label_for_bounds(bounds: Rect) -> (Rect, Point, usize) {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = true;
+        state.interaction.frame_view_duration_ms = 0;
+        state.interaction.bezier_hit_test_steps = 8;
+    });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.runtime_tuning.only_render_visible_elements = true;
-        s.interaction.frame_view_duration_ms = 0;
-        s.interaction.bezier_hit_test_steps = 8;
     });
 
     let label: Arc<str> = Arc::<str>::from("EdgeLabel");
@@ -222,7 +226,8 @@ fn capture_edge_label_for_bounds(bounds: Rect) -> (Rect, Point, usize) {
 
     let mut canvas = NodeGraphCanvas::new(graph, view)
         .with_presenter(presenter)
-        .with_edge_types(edge_types);
+        .with_edge_types(edge_types)
+        .with_editor_config_model(editor_config);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);

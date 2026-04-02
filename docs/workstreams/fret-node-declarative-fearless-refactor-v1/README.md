@@ -129,17 +129,21 @@ update rather than an incidental refactor.
     committed edit flows and converge behind a clearer controller/instance surface.
 
 - **Overgrown view-state boundary**
-  - The first M2 slice is now landed: `NodeGraphViewState` persists `interaction`
-    (`NodeGraphInteractionConfig`) separately from `runtime_tuning`
-    (`NodeGraphRuntimeTuning`), while runtime/widget code still resolves a combined
-    `NodeGraphInteractionState` for compatibility.
+  - The non-test M2 closure is now landed: runtime `NodeGraphViewState` is pure view state
+    (pan/zoom/selection/draw order), while persisted/editor-owned interaction policy lives in
+    `NodeGraphEditorConfig` (`NodeGraphInteractionConfig` + `NodeGraphRuntimeTuning`).
+  - Runtime/widget code still resolves a combined `NodeGraphInteractionState`, but it is now
+    assembled from `NodeGraphEditorConfig` / store-owned seams instead of being stored inside
+    release `NodeGraphViewState`.
   - Store selector subscriptions now observe non-viewport view-state changes (draw order,
     interaction config, runtime tuning) without emitting misleading empty `ViewChanged` events.
   - Persistence ownership is now explicit: `NodeGraphViewStateFileV1` writes pure view-state in
     `state`, with `interaction` and `runtime_tuning` promoted to wrapper-owned fields.
-  - Full closure is still unresolved: in-memory `NodeGraphViewState` still carries persisted
-    interaction policy alongside pure view state, and the long-term runtime ownership story is not
-    final.
+  - Example surfaces now follow that split too: retained canvas mirrors an explicit
+    `NodeGraphEditorConfig`, tuning/controls overlays consume the editor-config seam, and
+    view-state persistence saves the wrapper payload instead of mutating `NodeGraphViewState`.
+  - The remaining compatibility residue is test-only: `cfg(test)` bridges still mirror editor
+    config back into `NodeGraphViewState` so older tests keep compiling while the suite migrates.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing
@@ -166,15 +170,18 @@ convergence slices.
   - `ecosystem/fret-node/src/ui/controller.rs`
   - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` focused controller/store-backed tests
 
-### H2. `NodeGraphViewState` still persists more than true view state
+### H2. Test-only compatibility bridges still obscure the pure view-state boundary
 
-- The first extraction slice is landed: runtime-heavy knobs now live in
-  `NodeGraphRuntimeTuning`, separate from `NodeGraphInteractionConfig`.
-- The remaining hazard is that persisted interaction policy still lives inside `NodeGraphViewState`,
-  so the final ?pure view state only? boundary is not closed yet.
+- Release/runtime `NodeGraphViewState` is now pure view state; the remaining hazard is narrower:
+  old tests still rely on a `cfg(test)` bridge that mirrors `NodeGraphEditorConfig` back into
+  `NodeGraphViewState`.
+- That bridge is intentionally temporary and should be deleted once the remaining tests and helper
+  surfaces are moved to the explicit editor-config seam.
 - Evidence:
   - `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphViewState`, `NodeGraphInteractionConfig`,
     `NodeGraphRuntimeTuning`, `NodeGraphInteractionState`)
+  - `ecosystem/fret-node/src/runtime/store.rs`
+  - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
   - `ecosystem/fret-node/src/ui/canvas/widget/view_state/sync.rs`
   - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md` (`M2`)
 

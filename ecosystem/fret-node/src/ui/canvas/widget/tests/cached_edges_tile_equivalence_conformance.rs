@@ -8,7 +8,9 @@ use crate::ui::NodeGraphCanvas;
 use crate::ui::edge_types::{EdgeCustomPath, EdgePathInput, NodeGraphEdgeTypes};
 use crate::ui::presenter::EdgeMarker;
 
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+};
 
 #[derive(Default)]
 struct CaptureServices {
@@ -145,10 +147,12 @@ fn capture_edge_wire_and_markers_for_bounds(bounds: Rect) -> (Vec<Vec<PathComman
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = true;
+        state.interaction.frame_view_duration_ms = 0;
+    });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.runtime_tuning.only_render_visible_elements = true;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let edge_types = NodeGraphEdgeTypes::new()
@@ -167,7 +171,9 @@ fn capture_edge_wire_and_markers_for_bounds(bounds: Rect) -> (Vec<Vec<PathComman
             })
         });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_edge_types(edge_types);
+    let mut canvas = NodeGraphCanvas::new(graph, view)
+        .with_edge_types(edge_types)
+        .with_editor_config_model(editor_config);
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = CaptureServices::default();
 

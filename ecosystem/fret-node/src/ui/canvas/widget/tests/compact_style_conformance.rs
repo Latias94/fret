@@ -6,7 +6,10 @@ use crate::core::CanvasPoint;
 
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
+use super::{
+    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_size,
+};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -62,16 +65,20 @@ fn paint_uses_node_corner_radius_from_style() {
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = false;
+        state.interaction.frame_view_duration_ms = 0;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let style = NodeGraphStyle::default().with_compact_node_style();
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_style(style.clone());
+    let mut canvas = NodeGraphCanvas::new(graph, view)
+        .with_style(style.clone())
+        .with_editor_config_model(editor_config);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
