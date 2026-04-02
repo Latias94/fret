@@ -3668,6 +3668,92 @@ fn checkbox_radio_input_and_textarea_docs_keep_invalid_ownership_on_the_control_
 }
 
 #[test]
+fn date_picker_and_input_otp_docs_keep_required_ownership_on_the_control_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/date_picker/compact_builder.rs",
+            vec![
+                "shadcn::DatePicker::new(open,month,selected)",
+                ".required(true)",
+                ".test_id_prefix(\"ui-gallery-date-picker-compact-builder\")",
+            ],
+        ),
+        (
+            "src/ui/pages/date_picker.rs",
+            vec![
+                "root `DatePicker::required(true)` semantics on the trigger.",
+                "including root trigger-level form semantics such as `DatePicker::required(true)`.",
+            ],
+        ),
+        (
+            "src/ui/snippets/input_otp/form.rs",
+            vec![
+                "shadcn::InputOTP::new(otp)",
+                ".control_id(CONTROL_ID)",
+                ".required(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/input_otp.rs",
+            vec![
+                "`InputOTP::required(true)` keeps required semantics on the hidden root OTP control; any visible required marker remains caller-owned label composition around the projected slots.",
+                "including group-level slot sizing and root `InputOTP::required(true)` on the docs-shaped parts lane.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing required ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn input_otp_docs_keep_invalid_ownership_on_slots_with_caller_owned_error_copy() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/input_otp/invalid.rs",
+            vec![
+                "shadcn::InputOTP::new(value)",
+                "shadcn::InputOTPSlot::new(0).aria_invalid(true)",
+                "shadcn::InputOTPSlot::new(5).aria_invalid(true)",
+                "shadcn::FieldError::new(\"Invalidcode.Pleasetryagain.\")",
+            ],
+        ),
+        (
+            "src/ui/pages/input_otp.rs",
+            vec![
+                "`InputOTPSlot::aria_invalid(true)` mirrors the upstream slot-level invalid lane, while root `control_id(...)`, `labelled_by_element(...)`, `a11y_label(...)`, and `required(...)` cover form association and accessibility.",
+                "Invalid state mirrors upstream slot-level `InputOTPSlot::aria_invalid(true)` and keeps error copy caller-owned via `FieldError` composition.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing invalid ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
 fn form_page_and_notes_teach_rtl_as_a_fret_follow_up() {
     let form_page = read("src/ui/pages/form.rs");
     assert!(
