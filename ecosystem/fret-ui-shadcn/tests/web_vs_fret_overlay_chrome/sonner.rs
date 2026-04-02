@@ -36,14 +36,14 @@ fn fret_first_toast_bounds(snap: &fret_core::SemanticsSnapshot) -> Rect {
 fn run_sonner_open_scene(
     theme: &WebGoldenTheme,
     scheme: shadcn::themes::ShadcnColorScheme,
-    dispatch_toast: impl FnOnce(
-        &shadcn::Sonner,
-        &mut dyn fret_ui::action::UiActionHost,
-        AppWindowId,
-    ),
+    dispatch_toast: impl FnOnce(&shadcn::Sonner, &mut dyn fret_ui::action::UiActionHost, AppWindowId),
 ) -> (fret_core::SemanticsSnapshot, Scene) {
-    let bounds = bounds_for_theme_viewport(theme)
-        .unwrap_or_else(|| bounds_for_viewport(WebViewport { w: 1440.0, h: 900.0 }));
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
+        bounds_for_viewport(WebViewport {
+            w: 1440.0,
+            h: 900.0,
+        })
+    });
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -99,10 +99,7 @@ fn assert_sonner_demo_shadow_matches(
     let (snap, scene) = run_sonner_open_scene(theme, scheme, |sonner, host, window| {
         let opts = shadcn::ToastMessageOptions::new()
             .description("Sunday, December 03, 2023 at 9:00 AM")
-            .action(
-                "Undo",
-                fret_runtime::CommandId::new("sonner.toast.undo"),
-            );
+            .action("Undo", fret_runtime::CommandId::new("sonner.toast.undo"));
         let _ = sonner.toast_message(host, window, "Event has been created", opts);
     });
 

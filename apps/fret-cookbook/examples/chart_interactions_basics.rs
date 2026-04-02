@@ -296,9 +296,7 @@ fn chart_canvas(cx: &mut UiCx<'_>, st: &ChartInteractionsWindowState) -> AnyElem
 
     cx.cached_subtree_with(
         CachedSubtreeProps::default().contained_layout(true),
-        |cx: &mut UiCx<'_>| {
-        vec![cx.retained_subtree(props)]
-        },
+        |cx: &mut UiCx<'_>| vec![cx.retained_subtree(props)],
     )
 }
 

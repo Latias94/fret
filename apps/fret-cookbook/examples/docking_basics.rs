@@ -3,12 +3,12 @@ use std::sync::Arc;
 use fret::{advanced::prelude::*, component::prelude::*, integration::InstallIntoApp, shadcn};
 use fret_app::{CommandMeta, CommandScope};
 use fret_core::{Axis, Color, DockNode, DockNodeId, DockOp, PanelKey, PanelKind, Px};
+use fret_docking::runtime::request_dock_invalidation;
 use fret_docking::{
     DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
     DockPanelRegistryService, DockingPolicy, DockingPolicyService,
     create_dock_space_node_with_test_id, handle_dock_op, render_and_bind_dock_panels,
 };
-use fret_docking::runtime::request_dock_invalidation;
 use fret_runtime::CommandId;
 use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SemanticsProps};
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
