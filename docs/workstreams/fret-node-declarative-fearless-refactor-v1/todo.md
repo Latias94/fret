@@ -64,10 +64,11 @@ Execution companion: `design.md` (surface map + next worktree order).
   - cache prune tuning
   - expensive runtime knobs
 - [x] Land the first persisted split slice:
-  - `NodeGraphViewState.interaction` now stores `NodeGraphInteractionConfig`
-  - `NodeGraphViewState.runtime_tuning` now stores `NodeGraphRuntimeTuning`
-  - runtime/widget code still resolves `NodeGraphInteractionState` for compatibility
-  - legacy serialized `interaction` payloads migrate at load time
+  - `NodeGraphViewStateFileV1.state` now stores pure `NodeGraphViewState`
+  - wrapper-owned `interaction` stores `NodeGraphInteractionConfig`
+  - wrapper-owned `runtime_tuning` stores `NodeGraphRuntimeTuning`
+  - runtime/widget code resolves `NodeGraphInteractionState` from explicit editor-config seams
+  - legacy serialized `interaction` payloads still migrate at load time
 - [x] Decide where these new types live and who owns persistence for them.
 - [x] Design the migration/compat strategy for existing serialized `NodeGraphViewState` payloads.
 - [x] Update store code and tests so the new boundary is explicit in subscriptions and controlled

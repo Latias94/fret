@@ -108,7 +108,7 @@ make compatibility paths explicit instead of accidental.
 
 ## M2 - State boundary split
 
-Status target: architectural refactor with compatibility plan
+Status target: architectural refactor landed; follow-on cleanup only
 
 ### Goal
 
@@ -123,9 +123,9 @@ runtime tuning.
   - runtime tuning.
 - A serialization compatibility plan for existing persisted data.
 - Store/runtime wiring updated to use the new boundaries without breaking the editor contract.
-- First landed slice: `NodeGraphViewState` persists `NodeGraphInteractionConfig` +
-  `NodeGraphRuntimeTuning`, while widget/runtime snapshots still resolve a combined
-  `NodeGraphInteractionState` for compatibility.
+- Landed slice: `NodeGraphViewState` is pure view state, while the file wrapper persists
+  `NodeGraphInteractionConfig` + `NodeGraphRuntimeTuning`, and widget/runtime snapshots still
+  resolve a combined `NodeGraphInteractionState` from explicit editor-config seams.
 - Persistence ownership is now explicit: the file wrapper writes pure view-state under `state`, with
   `interaction` / `runtime_tuning` stored as wrapper-owned fields in `state_version = 2`.
 - App/example authoring also follows the split:
@@ -141,8 +141,8 @@ runtime tuning.
 - The resulting shapes make it harder to persist accidental performance knobs as if they were view
   semantics.
 - Controlled sync and diagnostics still have a stable data contract.
-- The remaining compatibility residue is explicit and bounded to test-only bridges; it is no longer
-  taught by examples or release-facing runtime paths.
+- The previous test-only compatibility bridge is removed; examples, runtime paths, and tests now all
+  use explicit editor-config seams.
 
 ### Required regression protection
 

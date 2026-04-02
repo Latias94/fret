@@ -49,7 +49,8 @@ However, the overall authoring story is still not fully converged:
 
 - the public recommendation is split between paint-only and retained-backed paths,
 - the declarative surface is not yet the transaction-safe editor-grade path,
-- `NodeGraphViewState` currently mixes pure view state with interaction policy and runtime tuning,
+- the pure view-state vs editor-config split is now landed in code, but the authoring story still
+  needs to teach that boundary consistently,
 - runtime capabilities are spread across store, queues, lookups, commands, and helpers without one
   obvious app-facing facade pair (`NodeGraphSurfaceBinding` + `NodeGraphController`),
 - some workstream content has become too implementation-local and no longer helps reviewers decide
@@ -142,8 +143,8 @@ update rather than an incidental refactor.
   - Example surfaces now follow that split too: retained canvas mirrors an explicit
     `NodeGraphEditorConfig`, tuning/controls overlays consume the editor-config seam, and
     view-state persistence saves the wrapper payload instead of mutating `NodeGraphViewState`.
-  - The remaining compatibility residue is test-only: `cfg(test)` bridges still mirror editor
-    config back into `NodeGraphViewState` so older tests keep compiling while the suite migrates.
+  - The last test-only compatibility bridge is now removed: retained/declarative tests bind
+    explicit editor-config seams instead of mirroring editor config back into `NodeGraphViewState`.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing
