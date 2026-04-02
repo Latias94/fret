@@ -4,7 +4,6 @@ use crate::core::CanvasPoint;
 
 use crate::ui::canvas::widget::view_queue::{NodeGraphViewQueue, NodeGraphViewQueueFitViewOptions};
 
-use super::prelude::NodeGraphCanvas;
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
 
 #[test]
@@ -22,7 +21,7 @@ fn fit_view_options_min_zoom_clamps() {
     let view = insert_view(&mut host);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_view_queue(queue.clone());
+    let mut canvas = new_canvas!(host, graph, view).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
     canvas.style.geometry.min_zoom = 0.01;
     canvas.style.geometry.max_zoom = 10.0;
@@ -59,7 +58,7 @@ fn fit_view_options_max_zoom_clamps() {
     let view = insert_view(&mut host);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_view_queue(queue.clone());
+    let mut canvas = new_canvas!(host, graph, view).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
     canvas.style.geometry.min_zoom = 0.01;
     canvas.style.geometry.max_zoom = 10.0;
@@ -97,7 +96,7 @@ fn fit_view_options_include_hidden_nodes_controls_framing() {
     let mut host_expected = TestUiHostImpl::default();
     let graph_expected = host_expected.models.insert(graph_value.clone());
     let view_expected = insert_view(&mut host_expected);
-    let mut canvas_expected = NodeGraphCanvas::new(graph_expected, view_expected);
+    let mut canvas_expected = new_canvas!(host_expected, graph_expected, view_expected);
     assert!(canvas_expected.frame_nodes_in_view(&mut host_expected, None, bounds, &[a]));
     let expected_excluding_hidden = canvas_expected.sync_view_state(&mut host_expected);
 
@@ -105,7 +104,7 @@ fn fit_view_options_include_hidden_nodes_controls_framing() {
     let mut host_expected2 = TestUiHostImpl::default();
     let graph_expected2 = host_expected2.models.insert(graph_value.clone());
     let view_expected2 = insert_view(&mut host_expected2);
-    let mut canvas_expected2 = NodeGraphCanvas::new(graph_expected2, view_expected2);
+    let mut canvas_expected2 = new_canvas!(host_expected2, graph_expected2, view_expected2);
     let opts = NodeGraphViewQueueFitViewOptions {
         duration_ms: Some(0),
         include_hidden_nodes: true,
@@ -126,7 +125,7 @@ fn fit_view_options_include_hidden_nodes_controls_framing() {
     let view = insert_view(&mut host);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_view_queue(queue.clone());
+    let mut canvas = new_canvas!(host, graph, view).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
 
     let _ = queue.update(&mut host, |q, _cx| q.push_frame_nodes(vec![a, b]));
@@ -141,7 +140,7 @@ fn fit_view_options_include_hidden_nodes_controls_framing() {
     let graph2 = host2.models.insert(graph_value);
     let view2 = insert_view(&mut host2);
     let queue2 = host2.models.insert(NodeGraphViewQueue::default());
-    let mut canvas2 = NodeGraphCanvas::new(graph2, view2).with_view_queue(queue2.clone());
+    let mut canvas2 = new_canvas!(host2, graph2, view2).with_view_queue(queue2.clone());
     canvas2.interaction.last_bounds = Some(bounds);
 
     let opts2 = NodeGraphViewQueueFitViewOptions {

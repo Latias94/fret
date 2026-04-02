@@ -177,9 +177,7 @@ fn edge_label_border_uses_edge_render_hint_color_override() {
         color: override_color,
     };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_presenter(presenter)
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_presenter(presenter);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

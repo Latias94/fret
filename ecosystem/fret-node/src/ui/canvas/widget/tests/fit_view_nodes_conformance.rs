@@ -4,7 +4,6 @@ use crate::core::CanvasPoint;
 
 use crate::ui::canvas::widget::view_queue::NodeGraphViewQueue;
 
-use super::prelude::NodeGraphCanvas;
 use super::{
     TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size,
 };
@@ -26,8 +25,12 @@ fn frame_nodes_via_view_queue_matches_direct_framing() {
     let editor_config_expected = insert_editor_config_with(&mut host_expected, |state| {
         state.interaction.frame_view_duration_ms = 0;
     });
-    let mut canvas_expected = NodeGraphCanvas::new(graph_expected, view_expected)
-        .with_editor_config_model(editor_config_expected);
+    let mut canvas_expected = new_canvas!(
+        host_expected,
+        graph_expected,
+        view_expected,
+        editor_config_expected
+    );
     assert!(canvas_expected.frame_nodes_in_view(&mut host_expected, None, bounds, &[a]));
     let expected = canvas_expected.sync_view_state(&mut host_expected);
 
@@ -40,9 +43,7 @@ fn frame_nodes_via_view_queue_matches_direct_framing() {
     });
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_view_queue(queue.clone())
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
 
     let _ = queue.update(&mut host, |q, _cx| {

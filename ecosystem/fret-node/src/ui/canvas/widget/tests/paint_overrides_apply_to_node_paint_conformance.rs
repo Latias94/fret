@@ -57,7 +57,7 @@ fn paint_overrides_can_override_node_body_border_and_header_paint_bindings() {
     let view = insert_view(&mut host);
 
     let overrides = Arc::new(NodeGraphPaintOverridesMap::default());
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_paint_overrides(overrides.clone());
+    let mut canvas = new_canvas!(host, graph, view).with_paint_overrides(overrides.clone());
 
     let body_paint = PaintBindingV1::with_eval_space(
         Paint::Solid(Color::from_srgb_hex_rgb(0x12_34_56)),

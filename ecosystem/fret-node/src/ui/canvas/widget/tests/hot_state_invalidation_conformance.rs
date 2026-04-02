@@ -3,7 +3,6 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 use crate::rules::{DiagnosticSeverity, EdgeEndpoint};
 
-use super::prelude::NodeGraphCanvas;
 use super::{
     TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
 };
@@ -15,7 +14,7 @@ fn hover_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_index()
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 
@@ -68,8 +67,7 @@ fn selection_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_ind
         s.draw_order = vec![a, b];
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 
@@ -142,7 +140,7 @@ fn presenter_geometry_revision_rebuilds_canvas_derived_geometry_and_spatial_inde
         h_bits: h_bits.clone(),
     };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(presenter);
+    let mut canvas = new_canvas!(host, graph, view).with_presenter(presenter);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
     let rect0 = geom0.nodes.get(&a).expect("node must exist").rect;

@@ -149,8 +149,7 @@ fn skin_port_chrome_hints_apply_fill_stroke_and_inner_scale_paint_only() {
     });
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_editor_config_model(editor_config)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style)
         .with_skin(Arc::new(PortHintSkin { target: a_out }));
 
@@ -275,8 +274,7 @@ fn skin_port_shape_hint_renders_path_ops_for_non_circle_shapes() {
     });
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_editor_config_model(editor_config)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style)
         .with_skin(Arc::new(PortShapeHintSkin {
             target: a_out,
@@ -381,8 +379,7 @@ fn preset_exec_ports_use_triangle_shape_and_emit_path_ops() {
 
     let skin = NodeGraphPresetSkinV1::new_builtin(NodeGraphPresetFamily::WorkflowClean);
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_editor_config_model(editor_config)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style)
         .with_skin(skin);
 

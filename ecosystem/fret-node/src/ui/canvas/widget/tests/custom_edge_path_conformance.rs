@@ -43,7 +43,7 @@ fn hit_testing_uses_custom_edge_path() {
         },
     );
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_edge_types(edge_types);
+    let mut canvas = new_canvas!(host, graph, view).with_edge_types(edge_types);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(1200.0), Px(800.0)),
@@ -145,7 +145,7 @@ fn spatial_index_includes_custom_edge_path_bounds() {
         },
     );
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_edge_types(edge_types);
+    let mut canvas = new_canvas!(host, graph, view).with_edge_types(edge_types);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(1200.0), Px(800.0)),
@@ -246,7 +246,7 @@ fn custom_edge_path_generation_is_deterministic_for_identical_inputs() {
         },
     );
 
-    let mut canvas = NodeGraphCanvas::new(graph, view_state).with_edge_types(edge_types);
+    let mut canvas = new_canvas!(host, graph, view_state).with_edge_types(edge_types);
     let snapshot = canvas.sync_view_state(&mut host);
     let zoom = snapshot.zoom;
     assert!((zoom - 1.25).abs() <= 1.0e-6);

@@ -1,9 +1,6 @@
 use fret_core::{Point, Px, Rect, Size};
 
-use super::{
-    NodeGraphCanvas, insert_editor_config_with, make_host_graph_view,
-    make_test_graph_two_nodes_with_size,
-};
+use super::{insert_editor_config_with, make_host_graph_view, make_test_graph_two_nodes_with_size};
 
 #[test]
 fn render_metrics_report_culling_reduction_when_enabled() {
@@ -27,7 +24,7 @@ fn render_metrics_report_culling_reduction_when_enabled() {
             s.zoom = 1.0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+        let mut canvas = new_canvas!(host, graph, view, editor_config);
         canvas.debug_render_metrics_for_bounds(&mut host, bounds)
     };
 
@@ -42,7 +39,7 @@ fn render_metrics_report_culling_reduction_when_enabled() {
             s.zoom = 1.0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+        let mut canvas = new_canvas!(host, graph, view, editor_config);
         canvas.debug_render_metrics_for_bounds(&mut host, bounds)
     };
 

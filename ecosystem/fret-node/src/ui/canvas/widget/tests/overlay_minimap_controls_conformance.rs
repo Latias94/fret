@@ -23,7 +23,7 @@ use crate::ui::{
     NodeGraphMiniMapOverlay, NodeGraphStyle,
 };
 
-use super::{NullServices, TestUiHostImpl, insert_graph_view, insert_view};
+use super::{NullServices, TestUiHostImpl, insert_editor_config, insert_graph_view, insert_view};
 
 #[derive(Clone)]
 struct PointerDownCounter {
@@ -134,7 +134,8 @@ fn controls_overlay_pointer_events_fall_through_outside_panel() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
     let view = insert_view(&mut host);
-    let controls = NodeGraphControlsOverlay::new(underlay, view, test_style());
+    let editor_config = insert_editor_config(&mut host);
+    let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, test_style());
     let controls_node = ui.create_node_retained(controls);
 
     let editor = ui.create_node_retained(NodeGraphEditor::new());
@@ -171,7 +172,8 @@ fn controls_overlay_blocks_canvas_input_within_panel_even_off_button() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
     let view = insert_view(&mut host);
-    let controls = NodeGraphControlsOverlay::new(underlay, view, style);
+    let editor_config = insert_editor_config(&mut host);
+    let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, style);
     let controls_node = ui.create_node_retained(controls);
 
     let editor = ui.create_node_retained(NodeGraphEditor::new());
@@ -216,7 +218,8 @@ fn controls_overlay_button_click_requests_focus_to_canvas_node() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
     let view = insert_view(&mut host);
-    let controls = NodeGraphControlsOverlay::new(underlay, view, style);
+    let editor_config = insert_editor_config(&mut host);
+    let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, style);
     let controls_node = ui.create_node_retained(controls);
 
     let editor = ui.create_node_retained(NodeGraphEditor::new());
@@ -277,7 +280,8 @@ fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_re
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
     let view = insert_view(&mut host);
-    let controls = NodeGraphControlsOverlay::new(underlay, view, test_style());
+    let editor_config = insert_editor_config(&mut host);
+    let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, test_style());
     let controls_node = ui.create_node_retained(controls);
 
     let editor = ui.create_node_retained(NodeGraphEditor::new());
@@ -339,8 +343,9 @@ fn controls_overlay_supports_command_binding_overrides_for_b_layer_wiring() {
     bindings.zoom_in =
         NodeGraphControlsCommandBinding::Command(CommandId::from("node_graph.custom.zoom_in"));
 
-    let controls =
-        NodeGraphControlsOverlay::new(underlay, view, test_style()).with_bindings(bindings);
+    let editor_config = insert_editor_config(&mut host);
+    let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, test_style())
+        .with_bindings(bindings);
     let controls_node = ui.create_node_retained(controls);
 
     let editor = ui.create_node_retained(NodeGraphEditor::new());
@@ -412,7 +417,8 @@ fn controls_overlay_escape_returns_focus_to_canvas_without_dispatching_command()
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
     let view = insert_view(&mut host);
-    let controls = NodeGraphControlsOverlay::new(underlay, view, test_style());
+    let editor_config = insert_editor_config(&mut host);
+    let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, test_style());
     let controls_node = ui.create_node_retained(controls);
 
     let editor = ui.create_node_retained(NodeGraphEditor::new());
@@ -468,7 +474,9 @@ fn tab_focus_traversal_reaches_controls_then_minimap_and_escape_returns_to_canva
     let underlay = ui.create_node_retained(FocusableUnderlay::default());
 
     let view = insert_view(&mut host);
-    let controls = NodeGraphControlsOverlay::new(underlay, view.clone(), test_style());
+    let editor_config = insert_editor_config(&mut host);
+    let controls =
+        NodeGraphControlsOverlay::new(underlay, view.clone(), editor_config, test_style());
     let controls_node = ui.create_node_retained(controls);
 
     let style = test_style();
@@ -963,7 +971,8 @@ fn controls_overlay_contributes_semantics_test_id() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
 
     let view = insert_view(&mut host);
-    let controls = NodeGraphControlsOverlay::new(underlay, view, test_style());
+    let editor_config = insert_editor_config(&mut host);
+    let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, test_style());
     let controls_node = ui.create_node_retained(controls);
 
     let editor = ui.create_node_retained(NodeGraphEditor::new());

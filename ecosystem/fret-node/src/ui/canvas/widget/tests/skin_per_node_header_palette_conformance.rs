@@ -137,10 +137,9 @@ fn per_node_header_palette_draws_distinct_header_quads() {
     });
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style.clone())
-        .with_skin(Arc::new(HeaderPaletteSkin::default()))
-        .with_editor_config_model(editor_config);
+        .with_skin(Arc::new(HeaderPaletteSkin::default()));
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);

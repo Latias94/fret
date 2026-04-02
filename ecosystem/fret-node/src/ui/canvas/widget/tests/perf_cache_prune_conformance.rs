@@ -249,9 +249,8 @@ fn paint_cache_prune_releases_old_path_and_text_entries() {
         state.runtime_tuning.paint_cache_prune.max_entries = 10_000;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_presenter(UniqueEdgeLabelPresenter)
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config)
+        .with_presenter(UniqueEdgeLabelPresenter);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -292,7 +291,7 @@ fn static_scene_tile_cache_does_not_grow_unbounded_while_panning_across_many_til
     let mut host = TestUiHostImpl::default();
     let (graph, view) = insert_graph_view(&mut host, make_graph_chain_edges(80, 260.0));
     let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_presenter(UniqueEdgeLabelPresenter);
+        new_canvas!(host, graph, view.clone()).with_presenter(UniqueEdgeLabelPresenter);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

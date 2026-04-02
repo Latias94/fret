@@ -53,11 +53,13 @@ mod surface_policy_tests {
     const UI_BINDING_QUERIES_RS: &str = include_str!("ui/binding_queries.rs");
     const UI_BINDING_STORE_SYNC_RS: &str = include_str!("ui/binding_store_sync.rs");
     const UI_BINDING_VIEWPORT_RS: &str = include_str!("ui/binding_viewport.rs");
+    const UI_CANVAS_RS: &str = include_str!("ui/canvas/widget/widget_surface.rs");
     const UI_CANVAS_BUILDERS_RS: &str = include_str!("ui/canvas/widget/widget_surface/builders.rs");
     const UI_CONTROLLER_RS: &str = include_str!("ui/controller.rs");
     const UI_CONTROLLER_UPDATES_RS: &str = include_str!("ui/controller_updates.rs");
     const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
     const UI_MOD_RS: &str = include_str!("ui/mod.rs");
+    const UI_OVERLAY_CONTROLS_RS: &str = include_str!("ui/overlays/controls.rs");
     const UI_OVERLAY_GROUP_RENAME_RS: &str = include_str!("ui/overlays/group_rename.rs");
     const UI_OVERLAY_BLACKBOARD_RS: &str = include_str!("ui/overlays/blackboard.rs");
     const UI_VIEWPORT_OPTIONS_RS: &str = include_str!("ui/viewport_options.rs");
@@ -112,6 +114,10 @@ mod surface_policy_tests {
             COMPAT_RETAINED_RS
                 .contains("keeps retained authoring out of the downstream API surface")
         );
+        assert!(COMPAT_RETAINED_RS.contains("pub editor_config: Model<NodeGraphEditorConfig>,"));
+        assert!(COMPAT_RETAINED_RS.contains(
+            "pub fn new(\n        graph: Model<Graph>,\n        view_state: Model<NodeGraphViewState>,\n        editor_config: Model<NodeGraphEditorConfig>,\n    ) -> Self {"
+        ));
     }
 
     #[test]
@@ -244,9 +250,13 @@ mod surface_policy_tests {
 
     #[test]
     fn retained_public_widgets_keep_controller_only_binding_surface() {
+        assert!(UI_CANVAS_RS.contains(
+            "pub fn new(\n        graph: Model<Graph>,\n        view_state: Model<NodeGraphViewState>,\n        editor_config: Model<NodeGraphEditorConfig>,\n    ) -> Self {"
+        ));
         assert!(UI_CANVAS_BUILDERS_RS.contains(
             "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
         ));
+        assert!(!UI_CANVAS_BUILDERS_RS.contains("with_editor_config_model("));
         assert!(UI_CANVAS_BUILDERS_RS.contains("pub(crate) fn with_view_queue("));
         assert!(UI_CANVAS_BUILDERS_RS.contains("advanced retained composition seam"));
         assert!(UI_CANVAS_BUILDERS_RS.contains("crate-internal compatibility plumbing"));
@@ -276,6 +286,15 @@ mod surface_policy_tests {
         assert!(!MINIMAP_RS.contains("pub(crate) fn with_view_queue("));
         assert!(MINIMAP_RS.contains("public advanced retained seam"));
         assert!(MINIMAP_RS.contains("crate-internal compatibility plumbing"));
+    }
+
+    #[test]
+    fn controls_overlay_requires_explicit_editor_config_model() {
+        assert!(UI_OVERLAY_CONTROLS_RS.contains(
+            "pub fn new(\n        canvas_node: fret_core::NodeId,\n        view_state: Model<NodeGraphViewState>,\n        editor_config: Model<NodeGraphEditorConfig>,\n        style: NodeGraphStyle,\n    ) -> Self {"
+        ));
+        assert!(!UI_OVERLAY_CONTROLS_RS.contains("pub fn with_editor_config_model("));
+        assert!(NODE_GRAPH_LEGACY_DEMO_RS.contains("NodeGraphControlsOverlay::new("));
     }
 
     #[test]

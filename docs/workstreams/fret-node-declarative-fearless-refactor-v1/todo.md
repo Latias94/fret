@@ -82,6 +82,15 @@ Execution companion: `design.md` (surface map + next worktree order).
     `NodeGraphViewState`.
   - `NodeGraphControlsOverlay`, retained canvas, and declarative bindings now consume an explicit
     editor-config mirror where the app surface owns one.
+  - `NodeGraphControlsOverlay::new(...)` now requires the editor-config model directly instead of
+    teaching a follow-up `with_editor_config_model(...)` builder.
+- [x] Keep retained public compatibility constructors explicit about editor-config ownership.
+  - `NodeGraphCanvas::new(...)` / `new_with_middleware(...)` now require
+    `Model<NodeGraphEditorConfig>`.
+  - retained test fixtures now also inject editor-config ownership at construction time instead of
+    relying on a follow-up retained-widget builder seam.
+  - Retained test fixtures now insert host-owned default editor-config models explicitly instead of
+    relying on widget-local fallbacks.
 - [x] Delete the temporary `cfg(test)` bridge that mirrors `NodeGraphEditorConfig` back into
       `NodeGraphViewState` for old tests.
   - `NodeGraphViewState` test helpers now stay pure view-state.
@@ -189,6 +198,9 @@ Execution companion: `design.md` (surface map + next worktree order).
       controller-first rename / portal composition instead of requiring raw queue mutation at the
       app boundary, and `compat_retained` now takes a controller binding instead of exposing public
       `edit_queue` / `view_queue` transport props.
+    - `NodeGraphSurfaceCompatRetainedProps::new(...)` now also takes the editor-config model, so
+      the compatibility shell keeps the explicit editor-config seam when it hosts the retained
+      canvas internally.
     - `NodeGraphBlackboardOverlay` now supports controller-first retained symbol actions, while raw
       queue fallback remains crate-internal for compatibility harnesses and focused retained tests.
     - `apps/fret-examples/src/node_graph_legacy_demo.rs` now uses the same controller-first canvas /

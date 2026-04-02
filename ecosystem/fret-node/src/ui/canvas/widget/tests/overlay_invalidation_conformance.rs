@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::core::CanvasPoint;
 use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
 
-use super::prelude::NodeGraphCanvas;
 use super::{TestUiHostImpl, insert_graph_view, make_test_graph_two_nodes_with_ports_spaced_x};
 use crate::ui::canvas::state::{
     ContextMenuState, ContextMenuTarget, SearcherRowsMode, SearcherState,
@@ -16,7 +15,7 @@ fn overlay_state_changes_do_not_rebuild_derived_geometry_or_spatial_index() {
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone());
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 
@@ -77,7 +76,7 @@ fn overlay_hover_and_scroll_updates_do_not_rebuild_derived_geometry_or_spatial_i
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone());
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 

@@ -96,10 +96,9 @@ fn skin_node_ring_hints_draws_focused_ring_outside_node_rect() {
     });
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style.clone())
-        .with_skin(Arc::new(FocusRingSkin { node: a }))
-        .with_editor_config_model(editor_config);
+        .with_skin(Arc::new(FocusRingSkin { node: a }));
 
     // Focus is a UI-only interaction field, so we set it on the runtime interaction state.
     canvas.interaction.focused_node = Some(a);

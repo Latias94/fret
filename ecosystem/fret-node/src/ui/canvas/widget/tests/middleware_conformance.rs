@@ -11,7 +11,6 @@ use crate::ui::{
     NodeGraphCanvasMiddlewareCx,
 };
 
-use super::prelude::NodeGraphCanvas;
 use super::{
     NullServices, TestUiHostImpl, command_cx, insert_editor_config_with, insert_graph_view,
     make_test_graph_two_nodes, read_node_pos,
@@ -88,8 +87,7 @@ fn middleware_can_override_select_all_command() {
     })
     .unwrap();
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_editor_config_model(editor_config)
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config)
         .with_middleware(SelectAllOverride { target: a });
     canvas.sync_view_state(&mut host);
 
@@ -111,7 +109,7 @@ fn middleware_can_reject_commits_before_apply() {
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas =
-        NodeGraphCanvas::new(graph.clone(), view.clone()).with_middleware(RejectNudgeCommit);
+        new_canvas!(host, graph.clone(), view.clone()).with_middleware(RejectNudgeCommit);
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {

@@ -821,9 +821,8 @@ impl NodeGraphDomainDemoDriver {
             );
 
         let presenter = DemoTypedPresenter::default();
-        let canvas = NodeGraphCanvas::new(graph.clone(), view)
+        let canvas = NodeGraphCanvas::new(graph.clone(), view, editor_config)
             .with_controller(controller.clone())
-            .with_editor_config_model(editor_config)
             .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_style(style.clone())

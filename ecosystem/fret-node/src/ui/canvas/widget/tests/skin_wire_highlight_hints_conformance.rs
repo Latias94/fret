@@ -149,8 +149,7 @@ fn skin_wire_highlight_selected_draws_highlight_after_core() {
     });
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_editor_config_model(editor_config)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style)
         .with_presenter(EdgeColorPresenter { edge: edge_id })
         .with_skin(Arc::new(WireHighlightSkin {
@@ -242,8 +241,7 @@ fn skin_wire_highlight_hovered_draws_highlight_after_core() {
     });
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_editor_config_model(editor_config)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style)
         .with_presenter(EdgeColorPresenter { edge: edge_id })
         .with_skin(Arc::new(WireHighlightSkin {

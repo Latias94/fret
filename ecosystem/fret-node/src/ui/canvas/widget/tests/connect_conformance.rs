@@ -12,7 +12,7 @@ use crate::interaction::NodeGraphConnectionMode;
 use crate::rules::{ConnectPlan, EdgeEndpoint, InsertNodeTemplate, PortTemplate};
 use crate::ui::presenter::NodeGraphPresenter;
 
-use super::prelude::{NodeGraphCanvas, wire_drag};
+use super::prelude::wire_drag;
 use super::{
     NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
     make_test_graph_two_nodes_with_ports_spaced_x,
@@ -238,9 +238,8 @@ fn connect_drop_opens_conversion_picker_when_multiple_conversions() {
             ],
         };
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-            .with_editor_config_model(editor_config)
-            .with_presenter(presenter);
+        let mut canvas =
+            new_canvas!(host, graph.clone(), view.clone(), editor_config).with_presenter(presenter);
         let snapshot = canvas.sync_view_state(&mut host);
 
         let bounds = Rect::new(
@@ -314,9 +313,8 @@ fn connect_drop_auto_inserts_conversion_when_single_choice() {
             conversions: vec![make_conversion_template("test.conv")],
         };
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-            .with_editor_config_model(editor_config)
-            .with_presenter(presenter);
+        let mut canvas =
+            new_canvas!(host, graph.clone(), view.clone(), editor_config).with_presenter(presenter);
         let snapshot = canvas.sync_view_state(&mut host);
 
         let bounds = Rect::new(
@@ -428,8 +426,7 @@ fn reconnect_preserves_edge_identity_and_updates_endpoint() {
         state.interaction.edges_reconnectable = true;
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(

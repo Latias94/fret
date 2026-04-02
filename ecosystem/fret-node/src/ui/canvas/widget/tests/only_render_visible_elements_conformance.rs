@@ -88,11 +88,10 @@ fn only_render_visible_elements_controls_render_culling_work() {
             s.zoom = 1.0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view)
-            .with_presenter(CountingPresenter {
+        let mut canvas =
+            new_canvas!(host, graph, view, editor_config).with_presenter(CountingPresenter {
                 node_title_calls: counts.clone(),
-            })
-            .with_editor_config_model(editor_config);
+            });
         let mut tree = UiTree::<TestUiHostImpl>::default();
         let mut services = NullServices::default();
         paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
@@ -116,11 +115,10 @@ fn only_render_visible_elements_controls_render_culling_work() {
             s.zoom = 1.0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view)
-            .with_presenter(CountingPresenter {
+        let mut canvas =
+            new_canvas!(host, graph, view, editor_config).with_presenter(CountingPresenter {
                 node_title_calls: counts.clone(),
-            })
-            .with_editor_config_model(editor_config);
+            });
         let mut tree = UiTree::<TestUiHostImpl>::default();
         let mut services = NullServices::default();
         paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);

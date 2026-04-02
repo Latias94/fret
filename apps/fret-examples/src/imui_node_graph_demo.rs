@@ -7,13 +7,14 @@ use fret_node::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
-use fret_node::io::NodeGraphViewState;
+use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use fret_runtime::Model;
 use serde_json::Value;
 
 struct ImUiNodeGraphView {
     graph: Model<Graph>,
     view: Model<NodeGraphViewState>,
+    editor_config: Model<NodeGraphEditorConfig>,
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -29,12 +30,18 @@ impl View for ImUiNodeGraphView {
         let graph = demo_graph();
         let graph = app.models_mut().insert(graph);
         let view = app.models_mut().insert(NodeGraphViewState::default());
-        Self { graph, view }
+        let editor_config = app.models_mut().insert(NodeGraphEditorConfig::default());
+        Self {
+            graph,
+            view,
+            editor_config,
+        }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let graph = self.graph.clone();
         let view = self.view.clone();
+        let editor_config = self.editor_config.clone();
 
         fret_imui::imui(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
@@ -51,6 +58,7 @@ impl View for ImUiNodeGraphView {
                         fret_node::ui::declarative::NodeGraphSurfaceCompatRetainedProps::new(
                             graph.clone(),
                             view.clone(),
+                            editor_config.clone(),
                         );
                     surface_props.fit_view_on_mount = true;
                     let surface = fret_node::ui::declarative::node_graph_surface_compat_retained(

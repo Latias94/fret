@@ -233,8 +233,7 @@ fn skin_wire_outline_selected_draws_outline_path_before_core() {
         a: 0.3,
     };
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_editor_config_model(editor_config)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style)
         .with_presenter(EdgeColorPresenter { edge: edge_id })
         .with_skin(Arc::new(WireOutlineSkin {

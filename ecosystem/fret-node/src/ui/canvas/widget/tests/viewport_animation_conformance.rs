@@ -3,7 +3,6 @@ use fret_runtime::Effect;
 
 use crate::core::CanvasPoint;
 
-use super::prelude::NodeGraphCanvas;
 use super::{
     NullServices, event_cx, insert_editor_config_with, make_host_graph_view,
     make_test_graph_two_nodes,
@@ -21,7 +20,7 @@ fn frame_view_animates_over_timer_ticks_and_reaches_target() {
 
     let (mut host, graph, view) = make_host_graph_view(graph_value);
     let editor_config = insert_editor_config_with(&mut host, |_| {});
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
 
     let did = canvas.frame_nodes_in_view(&mut host, None, bounds, &[a, b]);
     assert!(did);
@@ -69,7 +68,7 @@ fn frame_view_animates_over_timer_ticks_and_reaches_target() {
     let editor_config2 = insert_editor_config_with(&mut host2, |state| {
         state.interaction.frame_view_duration_ms = 0;
     });
-    let mut canvas2 = NodeGraphCanvas::new(graph2, view2).with_editor_config_model(editor_config2);
+    let mut canvas2 = new_canvas!(host2, graph2, view2, editor_config2);
     let did = canvas2.frame_nodes_in_view(&mut host2, None, bounds, &[a, b]);
     assert!(did);
     let expected = canvas2.sync_view_state(&mut host2);

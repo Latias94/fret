@@ -49,7 +49,7 @@ fn color_mode_system_syncs_style_from_theme() {
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (mut host, graph, view) = make_host_graph_view(graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_color_mode(NodeGraphColorMode::System);
+    let mut canvas = new_canvas!(host, graph, view).with_color_mode(NodeGraphColorMode::System);
 
     let mut tree: UiTree<TestUiHostImpl> = UiTree::default();
     let mut services = NullServices::default();
@@ -71,7 +71,7 @@ fn color_mode_light_forces_light_palette() {
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (mut host, graph, view) = make_host_graph_view(graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_color_mode(NodeGraphColorMode::Light);
+    let mut canvas = new_canvas!(host, graph, view).with_color_mode(NodeGraphColorMode::Light);
 
     let mut tree: UiTree<TestUiHostImpl> = UiTree::default();
     let mut services = NullServices::default();
@@ -93,7 +93,7 @@ fn color_mode_dark_forces_dark_palette() {
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (mut host, graph, view) = make_host_graph_view(graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_color_mode(NodeGraphColorMode::Dark);
+    let mut canvas = new_canvas!(host, graph, view).with_color_mode(NodeGraphColorMode::Dark);
 
     let mut tree: UiTree<TestUiHostImpl> = UiTree::default();
     let mut services = NullServices::default();

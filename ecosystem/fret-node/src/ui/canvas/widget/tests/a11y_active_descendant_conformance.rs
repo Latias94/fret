@@ -63,7 +63,7 @@ fn canvas_active_descendant_points_to_focused_port_semantics_node() {
     internals.update(snap);
     set_internals_focus(&internals, Some(a), Some(a_in));
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_internals_store(internals.clone());
+    let mut canvas = new_canvas!(host, graph, view).with_internals_store(internals.clone());
     canvas.interaction.focused_node = Some(a);
     canvas.interaction.focused_port = Some(a_in);
     canvas.interaction.focused_edge = None;
@@ -111,7 +111,7 @@ fn canvas_active_descendant_points_to_focused_node_semantics_node() {
     internals.update(snap);
     set_internals_focus(&internals, Some(a), None);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_internals_store(internals.clone());
+    let mut canvas = new_canvas!(host, graph, view).with_internals_store(internals.clone());
     canvas.interaction.focused_node = Some(a);
     canvas.interaction.focused_port = None;
     canvas.interaction.focused_edge = None;

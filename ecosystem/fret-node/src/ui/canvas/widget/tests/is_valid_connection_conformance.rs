@@ -3,7 +3,6 @@ use fret_core::{Modifiers, Point, Px, Rect, Size};
 use crate::core::{CanvasPoint, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind};
 
 use super::prelude::wire_drag;
-use crate::ui::NodeGraphCanvas;
 
 use super::{
     NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
@@ -55,7 +54,7 @@ fn wire_drag_hover_tracks_invalid_port_in_strict_mode() {
         s.zoom = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let pos = geom.ports.get(&b_out).expect("b_out handle exists").center;
@@ -126,7 +125,7 @@ fn wire_drag_hover_tracks_non_connectable_end_port_as_invalid() {
         s.zoom = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let pos = geom.ports.get(&b_in).expect("b_in handle exists").center;
@@ -193,7 +192,7 @@ fn wire_drag_hover_marks_valid_target_port_as_valid() {
         s.zoom = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let pos = geom.ports.get(&b_in).expect("b_in handle exists").center;

@@ -12,7 +12,7 @@ use crate::core::{
 use crate::ui::canvas::state::{ContextMenuTarget, EdgeInsertDrag, PendingEdgeInsertDrag};
 use crate::ui::presenter::{EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 
-use super::prelude::{NodeGraphCanvas, edge_insert_drag};
+use super::prelude::edge_insert_drag;
 use super::{
     NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
     make_test_graph_two_nodes_with_ports_spaced_x,
@@ -57,8 +57,7 @@ fn edge_insert_drag_threshold_is_zoom_invariant_in_screen_space() {
             s.zoom = zoom;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-            .with_editor_config_model(editor_config.clone());
+        let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
         let snapshot = canvas.sync_view_state(&mut host);
         assert!((snapshot.zoom - zoom).abs() <= 1.0e-6);
 
@@ -126,7 +125,7 @@ fn edge_insert_left_up_does_not_open_picker_when_searcher_is_open() {
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
     canvas.open_edge_insert_node_picker(&mut host, None, edge_a, Point::new(Px(10.0), Px(10.0)));
     assert!(canvas.interaction.searcher.is_some());
 
@@ -406,8 +405,7 @@ fn double_click_edge_splits_lowest_edge_id_when_overlapping() {
         state.interaction.reroute_on_edge_double_click = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-        .with_editor_config_model(editor_config)
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config)
         .with_presenter(StraightPresenter);
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();

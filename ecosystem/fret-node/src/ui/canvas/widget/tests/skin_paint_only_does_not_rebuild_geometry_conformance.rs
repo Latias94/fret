@@ -113,9 +113,8 @@ fn skin_revision_bump_does_not_rebuild_geometry_or_spatial_index() {
     });
 
     let skin = Arc::new(PaintOnlySkin::default());
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-        .with_skin(skin.clone())
-        .with_editor_config_model(editor_config);
+    let mut canvas =
+        new_canvas!(host, graph.clone(), view.clone(), editor_config).with_skin(skin.clone());
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);

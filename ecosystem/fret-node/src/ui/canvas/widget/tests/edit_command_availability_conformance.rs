@@ -24,7 +24,7 @@ fn node_graph_blocks_edit_copy_without_selection() {
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let canvas = NodeGraphCanvas::new(graph, view);
+    let canvas = new_canvas!(host, graph, view);
     let tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
 
     let mut cx = availability_cx(&mut host, &tree);
@@ -45,7 +45,7 @@ fn node_graph_enables_edit_copy_with_selected_nodes() {
         state.selected_nodes = vec![a];
     });
 
-    let canvas = NodeGraphCanvas::new(graph, view);
+    let canvas = new_canvas!(host, graph, view);
     let tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
 
     let mut cx = availability_cx(&mut host, &tree);
@@ -66,7 +66,7 @@ fn node_graph_blocks_edit_copy_without_window() {
         state.selected_nodes = vec![a];
     });
 
-    let canvas = NodeGraphCanvas::new(graph, view);
+    let canvas = new_canvas!(host, graph, view);
     let tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
 
     let mut cx = availability_cx(&mut host, &tree);

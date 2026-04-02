@@ -186,9 +186,7 @@ fn wire_path_cache_key_includes_dash_pattern() {
     });
 
     let skin = Arc::new(DashSkin::new());
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_skin(skin.clone())
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_skin(skin.clone());
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = CountingServices::default();

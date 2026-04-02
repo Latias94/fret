@@ -2,7 +2,6 @@ use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::CanvasPoint;
 
-use super::prelude::NodeGraphCanvas;
 use super::{
     TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size,
 };
@@ -26,7 +25,7 @@ fn frame_view_padding_reduces_zoom_for_same_nodes() {
         state.interaction.frame_view_padding = 0.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     assert!(canvas.frame_nodes_in_view(&mut host, None, bounds, &[a, b]));
     let no_padding = canvas.sync_view_state(&mut host).zoom;
 
@@ -42,7 +41,7 @@ fn frame_view_padding_reduces_zoom_for_same_nodes() {
         state.interaction.frame_view_padding = 0.2;
     });
 
-    let mut canvas2 = NodeGraphCanvas::new(graph2, view2).with_editor_config_model(editor_config2);
+    let mut canvas2 = new_canvas!(host2, graph2, view2, editor_config2);
     assert!(canvas2.frame_nodes_in_view(&mut host2, None, bounds, &[a, b]));
     let with_padding = canvas2.sync_view_state(&mut host2).zoom;
 

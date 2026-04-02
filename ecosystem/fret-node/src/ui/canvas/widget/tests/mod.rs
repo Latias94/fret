@@ -18,6 +18,19 @@ use fret_runtime::{CommandId, DragSession, DragSessionId, Effect};
 use fret_ui::retained_bridge::Widget as _;
 use serde_json::Value;
 
+macro_rules! new_canvas {
+    ($host:ident, $graph:expr, $view:expr) => {
+        crate::ui::NodeGraphCanvas::new(
+            $graph,
+            $view,
+            crate::ui::canvas::widget::tests::harness::insert_editor_config(&mut $host),
+        )
+    };
+    ($host:ident, $graph:expr, $view:expr, $editor_config:expr) => {
+        crate::ui::NodeGraphCanvas::new($graph, $view, $editor_config)
+    };
+}
+
 mod a11y_active_descendant_conformance;
 mod background_style_conformance;
 mod cached_edge_labels_tile_equivalence_conformance;
@@ -160,7 +173,7 @@ fn middle_mouse_panning_tracks_screen_delta_under_render_transform() {
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -215,7 +228,7 @@ fn space_to_pan_starts_left_mouse_panning_and_updates_viewport() {
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -328,7 +341,7 @@ fn pan_activation_key_code_must_match_to_enable_space_to_pan() {
             Some(crate::io::NodeGraphKeyCode(fret_core::KeyCode::KeyP));
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -388,7 +401,7 @@ fn pan_activation_key_code_none_disables_space_to_pan_activation() {
         state.interaction.pan_activation_key_code = None;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -429,7 +442,7 @@ fn pan_on_scroll_mode_horizontal_ignores_vertical_wheel_delta() {
         state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Horizontal;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -483,7 +496,7 @@ fn pan_on_scroll_shift_maps_vertical_wheel_to_horizontal_on_windows() {
         state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -530,7 +543,7 @@ fn space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled() {
         state.interaction.space_to_pan = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -592,7 +605,7 @@ fn pinch_gesture_zooms_in_about_pointer() {
         state.interaction.zoom_on_pinch_speed = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -637,7 +650,7 @@ fn pinch_gesture_respects_toggle() {
         state.interaction.zoom_on_pinch = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -678,7 +691,7 @@ fn wheel_zoom_zooms_about_pointer() {
         state.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -715,7 +728,7 @@ fn delete_key_defaults_to_backspace() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -783,7 +796,7 @@ fn disable_keyboard_a11y_does_not_block_delete_shortcut() {
         state.interaction.delete_key = crate::io::NodeGraphDeleteKey::BackspaceOrDelete;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -828,7 +841,7 @@ fn disable_keyboard_a11y_blocks_tab_focus_traversal() {
         state.interaction.disable_keyboard_a11y = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -869,7 +882,7 @@ fn double_click_background_zooms_in_about_pointer() {
         state.interaction.zoom_on_double_click = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -917,7 +930,7 @@ fn shift_double_click_background_zooms_out_about_pointer() {
         state.interaction.zoom_on_double_click = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -1024,7 +1037,7 @@ fn internal_drag_drop_candidate_on_edge_splits_edge() {
 
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -1856,7 +1869,7 @@ fn node_drag_records_single_history_entry_for_multi_node_move() {
     let (graph_value, a, b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view);
     let snapshot = canvas.sync_view_state(&mut host);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -2016,7 +2029,7 @@ fn connect_bundle_records_single_history_entry() {
 
     let (graph_model, view) = insert_graph_view(&mut host, graph);
 
-    let mut canvas = NodeGraphCanvas::new(graph_model.clone(), view);
+    let mut canvas = new_canvas!(host, graph_model.clone(), view);
     let snapshot: ViewSnapshot = canvas.sync_view_state(&mut host);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -2066,7 +2079,7 @@ fn nudge_moves_selection_and_records_history_entry() {
     let (graph_value, a, b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2101,8 +2114,7 @@ fn nudge_multi_selection_respects_node_extent_by_selection_bounds() {
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let editor_config = insert_editor_config_with(&mut host, |_| {});
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-        .with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2172,7 +2184,7 @@ fn nudge_respects_per_node_extent_rect() {
 
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2318,8 +2330,7 @@ fn select_all_selects_nodes_groups_and_edges_and_respects_edge_selectable() {
     let (graph, view) = insert_graph_view(&mut host, graph);
 
     let editor_config = insert_editor_config_with(&mut host, |_| {});
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2384,8 +2395,7 @@ fn delete_selection_respects_node_deletable_and_keeps_undeletable_selected() {
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let editor_config = insert_editor_config_with(&mut host, |_| {});
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-        .with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2445,8 +2455,7 @@ fn delete_selection_respects_edge_deletable_and_keeps_undeletable_selected() {
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let editor_config = insert_editor_config_with(&mut host, |_| {});
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-        .with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2481,7 +2490,7 @@ fn align_left_moves_selected_nodes_and_records_history_entry() {
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2575,7 +2584,7 @@ fn align_right_respects_per_node_extent_rect() {
 
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2652,8 +2661,7 @@ fn align_center_x_preserves_alignment_under_node_extent_bounds() {
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let editor_config = insert_editor_config_with(&mut host, |_| {});
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-        .with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2797,8 +2805,7 @@ fn distribute_x_clamps_nodes_to_node_extent_rect_like_xyflow() {
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let editor_config = insert_editor_config_with(&mut host, |_| {});
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-        .with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2933,8 +2940,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_like_xyflow()
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let editor_config = insert_editor_config_with(&mut host, |_| {});
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-        .with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -3085,7 +3091,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_ext
 
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -3118,7 +3124,7 @@ fn focus_next_cycles_nodes_and_updates_selection() {
     let (graph_value, a, b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -3173,8 +3179,7 @@ fn focus_next_skips_unselectable_nodes() {
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let editor_config = insert_editor_config_with(&mut host, |_| {});
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -3207,7 +3212,7 @@ fn focus_next_port_cycles_ports_within_focused_node() {
     let (graph_value, a, a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -3245,7 +3250,7 @@ fn focus_next_port_filters_by_wire_direction() {
     let (graph_value, a, a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -3277,7 +3282,7 @@ fn activate_starts_and_commits_wire_drag() {
     let (graph_value, _a, _a_in, a_out, _b, b_in) = make_test_graph_two_nodes_with_ports();
     let (graph_model, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph_model.clone(), view);
+    let mut canvas = new_canvas!(host, graph_model.clone(), view);
     canvas.sync_view_state(&mut host);
 
     canvas.interaction.focused_port = Some(a_out);
@@ -3313,7 +3318,7 @@ fn focus_port_right_moves_to_neighbor_node() {
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone());
     canvas.sync_view_state(&mut host);
 
     canvas.interaction.focused_port = Some(a_out);
@@ -3335,7 +3340,7 @@ fn focus_port_left_moves_back() {
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone());
     canvas.sync_view_state(&mut host);
 
     canvas.interaction.focused_port = Some(b_in);

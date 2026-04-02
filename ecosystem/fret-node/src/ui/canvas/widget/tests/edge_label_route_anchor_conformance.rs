@@ -336,9 +336,7 @@ fn capture_label_origin_for_route(route: EdgeRouteKind, zoom: f32) -> (Point, Po
         label: Arc::clone(&label),
         route,
     };
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_presenter(presenter)
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_presenter(presenter);
 
     // Use non-default tokens so the test catches any accidental hard-coded constants.
     canvas.style.paint.edge_label_offset = 37.0;

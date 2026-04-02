@@ -60,7 +60,7 @@ fn port_hit_testing_is_screen_px_invariant_under_semantic_zoom() {
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone());
 
     let anchor_window = Point::new(Px(300.0), Px(200.0));
     let r_px = canvas.style.geometry.pin_radius.max(0.0);
@@ -147,9 +147,8 @@ fn edge_hit_testing_is_screen_px_invariant_under_semantic_zoom() {
     let editor_config = insert_editor_config_with(&mut host, |state| {
         state.interaction.edge_interaction_width = edge_slop_px;
     });
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_editor_config_model(editor_config)
-        .with_edge_types(edge_types);
+    let mut canvas =
+        new_canvas!(host, graph, view.clone(), editor_config).with_edge_types(edge_types);
 
     let anchor_window = Point::new(Px(320.0), Px(260.0));
 

@@ -14,7 +14,7 @@ use fret_ui::element::SemanticsProps;
 use fret_ui::retained_bridge::RetainedSubtreeProps;
 
 use crate::Graph;
-use crate::io::NodeGraphViewState;
+use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use crate::ui::{
     NodeGraphCanvas, NodeGraphController, NodeGraphEditor, NodeGraphInternalsStore,
     NodeGraphOverlayState,
@@ -24,6 +24,7 @@ use crate::ui::{
 pub struct NodeGraphSurfaceCompatRetainedProps {
     pub graph: Model<Graph>,
     pub view_state: Model<NodeGraphViewState>,
+    pub editor_config: Model<NodeGraphEditorConfig>,
     pub controller: Option<NodeGraphController>,
     pub overlays: Option<Model<NodeGraphOverlayState>>,
     pub internals: Option<Arc<NodeGraphInternalsStore>>,
@@ -32,10 +33,15 @@ pub struct NodeGraphSurfaceCompatRetainedProps {
 }
 
 impl NodeGraphSurfaceCompatRetainedProps {
-    pub fn new(graph: Model<Graph>, view_state: Model<NodeGraphViewState>) -> Self {
+    pub fn new(
+        graph: Model<Graph>,
+        view_state: Model<NodeGraphViewState>,
+        editor_config: Model<NodeGraphEditorConfig>,
+    ) -> Self {
         Self {
             graph,
             view_state,
+            editor_config,
             controller: None,
             overlays: None,
             internals: None,
@@ -59,6 +65,7 @@ pub fn node_graph_surface_compat_retained<H: UiHost + 'static>(
     let NodeGraphSurfaceCompatRetainedProps {
         graph,
         view_state,
+        editor_config,
         controller,
         overlays,
         internals,
@@ -71,7 +78,8 @@ pub fn node_graph_surface_compat_retained<H: UiHost + 'static>(
 
         let editor = ui.create_node_retained(NodeGraphEditor::new());
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view_state.clone());
+        let mut canvas =
+            NodeGraphCanvas::new(graph.clone(), view_state.clone(), editor_config.clone());
         if let Some(controller) = controller.clone() {
             canvas = canvas.with_controller(controller);
         }

@@ -104,10 +104,9 @@ fn skin_node_shadow_hint_emits_push_effect_drop_shadow() {
     };
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style)
-        .with_skin(Arc::new(ShadowSkin { node: a, shadow }))
-        .with_editor_config_model(editor_config);
+        .with_skin(Arc::new(ShadowSkin { node: a, shadow }));
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);

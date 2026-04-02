@@ -12,7 +12,6 @@ use crate::rules::{InsertNodeTemplate, PortTemplate};
 use crate::ui::presenter::{InsertNodeCandidate, NodeGraphPresenter};
 use crate::{core::Graph, ops::GraphOp};
 
-use super::prelude::NodeGraphCanvas;
 use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_test_graph_two_nodes};
 
 #[derive(Default)]
@@ -120,7 +119,7 @@ fn internal_drag_drop_candidate_off_edge_creates_node() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view);
     canvas.presenter = Box::<BackgroundInsertPresenter>::default();
 
     let bounds = Rect::new(
@@ -189,7 +188,7 @@ fn internal_drag_drop_reroute_candidate_off_edge_creates_node() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

@@ -57,8 +57,7 @@ fn double_click_edge_inserts_reroute_when_enabled() {
         state.interaction.reroute_on_edge_double_click = true;
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
     let mut cx = event_cx(
@@ -121,7 +120,7 @@ fn alt_double_click_edge_opens_insert_node_picker() {
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
     let mut cx = event_cx(
@@ -186,8 +185,7 @@ fn alt_double_click_edge_prefers_picker_over_reroute_when_both_enabled() {
         state.interaction.reroute_on_edge_double_click = true;
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
     let mut cx = event_cx(
@@ -257,8 +255,7 @@ fn alt_drag_edge_opens_insert_node_picker_when_enabled() {
         state.interaction.edge_insert_on_alt_drag = true;
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
     let mut cx = event_cx(

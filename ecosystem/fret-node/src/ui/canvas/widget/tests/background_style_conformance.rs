@@ -57,7 +57,7 @@ fn background_style_updates_do_not_rebuild_canvas_derived_geometry() {
     let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_style(style);
+    let mut canvas = new_canvas!(host, graph, view).with_style(style);
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
@@ -138,7 +138,7 @@ fn background_style_override_survives_color_mode_theme_sync() {
         grid_cross_size: 6.0,
     };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view)
         .with_color_mode(NodeGraphColorMode::System)
         .with_background_style(background);
 

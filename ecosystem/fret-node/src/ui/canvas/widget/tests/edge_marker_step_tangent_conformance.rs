@@ -250,11 +250,10 @@ fn capture_step_marker_axes(place_dx_zero: bool) -> (Point, Point, Point, Point,
         h
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_presenter(StepRoutePresenter)
         .with_edge_types(edge_types)
-        .with_style(style)
-        .with_editor_config_model(editor_config);
+        .with_style(style);
 
     let mut from = Point::new(Px(0.0), Px(0.0));
     let mut to = Point::new(Px(0.0), Px(0.0));

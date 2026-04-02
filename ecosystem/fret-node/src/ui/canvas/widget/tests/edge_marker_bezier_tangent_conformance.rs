@@ -209,11 +209,10 @@ fn bezier_markers_align_with_bezier_start_end_tangents() {
         h
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_presenter(BezierRoutePresenter)
         .with_edge_types(edge_types)
-        .with_style(style)
-        .with_editor_config_model(editor_config);
+        .with_style(style);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);

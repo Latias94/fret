@@ -231,14 +231,13 @@ fn edge_render_hint_is_resolved_in_stage_order_presenter_edge_types_skin() {
     });
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style)
         .with_presenter(StagePresenter {
             base_hint: presenter_hint.clone(),
         })
         .with_edge_types(edge_types)
-        .with_skin(skin)
-        .with_editor_config_model(editor_config);
+        .with_skin(skin);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let _ = bounds;

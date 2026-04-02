@@ -79,8 +79,7 @@ fn strict_requires_pointer_inside_pin_bounds_while_loose_accepts_radius() {
         state.interaction.connection_radius = 24.0;
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config.clone());
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
@@ -176,8 +175,7 @@ fn loose_mode_prefers_opposite_side_when_handles_overlap() {
         state.interaction.connection_radius = 48.0;
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
 
@@ -250,7 +248,7 @@ fn edge_hit_testing_tie_breaks_by_edge_id_when_distances_match() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
@@ -307,7 +305,7 @@ fn edge_hit_testing_tie_breaks_by_edge_id_when_custom_paths_overlap() {
             })
         });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_edge_types(edge_types);
+    let mut canvas = new_canvas!(host, graph, view).with_edge_types(edge_types);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let pos = geom
@@ -355,7 +353,7 @@ fn edge_focus_anchor_hit_testing_tie_breaks_by_edge_id_when_distances_match() {
         state.interaction.edges_reconnectable = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let route = canvas

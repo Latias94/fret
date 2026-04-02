@@ -85,9 +85,8 @@ fn paint_overrides_do_not_mutate_serialized_graph() {
     });
 
     let overrides = Arc::new(NodeGraphPaintOverridesMap::default());
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
-        .with_paint_overrides(overrides.clone())
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config)
+        .with_paint_overrides(overrides.clone());
 
     let baseline = graph
         .read_ref(&host, |g| serde_json::to_value(g).expect("serialize graph"))

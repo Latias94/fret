@@ -123,7 +123,7 @@ fn portal_measured_node_sizes_are_observed_by_canvas_internals_on_next_paint() {
     // surface: the canvas stays policy-light, while hosts can push measured geometry in.
     let presenter =
         MeasuredNodeGraphPresenter::new(DefaultNodeGraphPresenter::default(), measured.clone());
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone())
         .with_presenter(presenter)
         .with_internals_store(internals.clone());
 

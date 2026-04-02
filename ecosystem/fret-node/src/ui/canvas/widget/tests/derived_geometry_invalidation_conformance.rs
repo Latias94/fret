@@ -6,7 +6,6 @@ use crate::ui::measured::{
 };
 use crate::ui::{DefaultNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter};
 
-use super::prelude::NodeGraphCanvas;
 use super::{make_host_graph_view, make_test_graph_two_nodes_with_ports};
 
 #[test]
@@ -18,7 +17,7 @@ fn measured_geometry_revision_rebuilds_canvas_derived_geometry() {
     let presenter =
         MeasuredNodeGraphPresenter::new(DefaultNodeGraphPresenter::default(), measured.clone());
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(presenter);
+    let mut canvas = new_canvas!(host, graph, view).with_presenter(presenter);
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
@@ -57,7 +56,7 @@ fn measured_geometry_updates_within_epsilon_do_not_rebuild_canvas_derived_geomet
     let presenter =
         MeasuredNodeGraphPresenter::new(DefaultNodeGraphPresenter::default(), measured.clone());
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(presenter);
+    let mut canvas = new_canvas!(host, graph, view).with_presenter(presenter);
 
     let _ = measured.apply_exclusive_batch_if_changed(
         MeasuredGeometryExclusiveBatch {
@@ -101,7 +100,7 @@ fn pan_updates_do_not_rebuild_canvas_derived_geometry() {
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
     let (mut host, graph, view) = make_host_graph_view(graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone());
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);

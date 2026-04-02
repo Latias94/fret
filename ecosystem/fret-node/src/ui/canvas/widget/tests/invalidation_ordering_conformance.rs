@@ -64,7 +64,7 @@ fn measured_geometry_updates_are_observed_in_paint_without_layout() {
 
     let presenter =
         MeasuredNodeGraphPresenter::new(DefaultNodeGraphPresenter::default(), measured.clone());
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view)
         .with_presenter(presenter)
         .with_internals_store(internals.clone());
 

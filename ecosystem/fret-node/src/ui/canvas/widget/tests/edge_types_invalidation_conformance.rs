@@ -4,7 +4,6 @@ use fret_core::{PathCommand, Point, Px};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
 
-use super::prelude::NodeGraphCanvas;
 use super::prelude::path_midpoint_and_normal;
 use super::prelude::{HitTestCtx, HitTestScratch};
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
@@ -33,7 +32,7 @@ fn edge_types_updates_invalidate_spatial_index_and_hit_testing_uses_new_custom_p
     let view = insert_view(&mut host);
 
     // Start with no `edgeTypes` (no custom paths).
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 

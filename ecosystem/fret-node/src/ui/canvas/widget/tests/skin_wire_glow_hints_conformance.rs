@@ -80,9 +80,7 @@ fn skin_wire_glow_selected_emits_push_effect_drop_shadow() {
     });
 
     let skin = NodeGraphPresetSkinV1::new_builtin(NodeGraphPresetFamily::WorkflowClean);
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_skin(skin)
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_skin(skin);
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = NullServices::default();

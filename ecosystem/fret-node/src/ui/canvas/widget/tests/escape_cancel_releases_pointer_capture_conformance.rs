@@ -1,6 +1,5 @@
 use fret_core::{Point, Px, Rect, Size};
 
-use super::prelude::NodeGraphCanvas;
 use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_test_graph_two_nodes};
 
 #[test]
@@ -9,7 +8,7 @@ fn escape_cancel_releases_pointer_capture_during_panning() {
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),

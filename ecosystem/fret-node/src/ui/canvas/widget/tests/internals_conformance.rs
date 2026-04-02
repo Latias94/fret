@@ -63,7 +63,7 @@ fn internals_store_is_stable_across_identical_paint() {
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view)
         .with_internals_store(internals.clone())
         .with_measured_output_store(measured.clone());
 
@@ -93,7 +93,7 @@ fn pan_updates_internals_without_rebuilding_geometry_or_measured_output() {
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone())
         .with_internals_store(internals.clone())
         .with_measured_output_store(measured.clone());
 
@@ -158,7 +158,7 @@ fn semantic_zoom_keeps_node_sizes_constant_in_window_space() {
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+    let mut canvas = new_canvas!(host, graph, view.clone())
         .with_internals_store(internals.clone())
         .with_measured_output_store(measured.clone());
 
@@ -203,7 +203,7 @@ fn bounds_origin_updates_internals_transform() {
     let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_internals_store(internals.clone());
+    let mut canvas = new_canvas!(host, graph, view).with_internals_store(internals.clone());
 
     let mut services = NullServices::default();
     let b0 = bounds_at(0.0, 0.0);
@@ -245,7 +245,7 @@ fn graph_edit_rebuilds_geometry_and_updates_internals() {
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone())
         .with_internals_store(internals.clone())
         .with_measured_output_store(measured.clone());
 
@@ -310,8 +310,7 @@ fn spatial_index_tuning_rebuilds_index_without_rebuilding_geometry() {
     let (mut host, graph, view) = make_host_graph_view(graph_value);
     let editor_config = insert_editor_config_with(&mut host, |_| {});
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-        .with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);

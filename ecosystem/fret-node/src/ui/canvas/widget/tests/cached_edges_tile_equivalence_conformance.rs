@@ -171,9 +171,7 @@ fn capture_edge_wire_and_markers_for_bounds(bounds: Rect) -> (Vec<Vec<PathComman
             })
         });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_edge_types(edge_types)
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_edge_types(edge_types);
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = CaptureServices::default();
 

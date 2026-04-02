@@ -59,8 +59,12 @@ fn fit_view_on_mount_frames_all_nodes_once() {
     let editor_config_expected = insert_editor_config_with(&mut host_expected, |state| {
         state.interaction.frame_view_duration_ms = 0;
     });
-    let mut canvas_expected = NodeGraphCanvas::new(graph_expected, view_expected)
-        .with_editor_config_model(editor_config_expected);
+    let mut canvas_expected = new_canvas!(
+        host_expected,
+        graph_expected,
+        view_expected,
+        editor_config_expected
+    );
     assert!(canvas_expected.frame_nodes_in_view(&mut host_expected, None, bounds, &[a, b]));
     let expected = canvas_expected.sync_view_state(&mut host_expected);
 
@@ -72,9 +76,7 @@ fn fit_view_on_mount_frames_all_nodes_once() {
         state.interaction.frame_view_duration_ms = 0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
-        .with_fit_view_on_mount()
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config).with_fit_view_on_mount();
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = NullServices::default();

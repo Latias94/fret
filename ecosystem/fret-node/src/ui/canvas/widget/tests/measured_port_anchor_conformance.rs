@@ -57,9 +57,8 @@ fn measured_port_anchor_hint_updates_hit_testing_in_strict_mode() {
         state.interaction.connection_mode = NodeGraphConnectionMode::Strict;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_editor_config_model(editor_config)
-        .with_presenter(presenter);
+    let mut canvas =
+        new_canvas!(host, graph, view.clone(), editor_config).with_presenter(presenter);
 
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, _index0) = canvas.canvas_derived(&host, &snapshot0);
@@ -119,7 +118,7 @@ fn measured_port_anchor_hint_is_scaled_in_canvas_space_by_zoom() {
     let presenter =
         MeasuredNodeGraphPresenter::new(DefaultNodeGraphPresenter::default(), measured.clone());
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_presenter(presenter);
+    let mut canvas = new_canvas!(host, graph, view.clone()).with_presenter(presenter);
 
     let hint = make_hint(140.0, 60.0);
     let _ = measured.apply_exclusive_batch_if_changed(

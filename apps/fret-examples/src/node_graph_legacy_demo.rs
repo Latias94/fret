@@ -1714,9 +1714,8 @@ impl NodeGraphDemoDriver {
             Vec::new()
         };
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view, editor_config.clone())
             .with_controller(controller.clone())
-            .with_editor_config_model(editor_config.clone())
             .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_edge_types(edge_types)
@@ -1826,10 +1825,13 @@ impl NodeGraphDemoDriver {
             .unwrap_or_else(|| Arc::new(NodeGraphDemoOverlayToggles::new()));
 
         let controls_node = if toggles.controls_in_panel() {
-            let controls_overlay =
-                NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone())
-                    .with_editor_config_model(editor_config.clone())
-                    .in_panel_bounds();
+            let controls_overlay = NodeGraphControlsOverlay::new(
+                canvas_node,
+                models.view.clone(),
+                editor_config.clone(),
+                style.clone(),
+            )
+            .in_panel_bounds();
             let controls_overlay_node = ui.create_node_retained(controls_overlay);
 
             let controls_panel = NodeGraphPanel::new(NodeGraphPanelPosition::TopRight)
@@ -1838,9 +1840,12 @@ impl NodeGraphDemoDriver {
             ui.set_children(controls_node, vec![controls_overlay_node]);
             Some(controls_node)
         } else {
-            let controls_overlay =
-                NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone())
-                    .with_editor_config_model(editor_config.clone());
+            let controls_overlay = NodeGraphControlsOverlay::new(
+                canvas_node,
+                models.view.clone(),
+                editor_config.clone(),
+                style.clone(),
+            );
             Some(ui.create_node_retained(controls_overlay))
         };
 
@@ -2537,6 +2542,7 @@ fn render(
                             fret_node::ui::declarative::NodeGraphSurfaceCompatRetainedProps::new(
                                 models.graph.clone(),
                                 models.view.clone(),
+                                models.editor_config.clone(),
                             );
                         surface_props.controller = Some(models.controller.clone());
                         surface_props.overlays = Some(models.overlays.clone());

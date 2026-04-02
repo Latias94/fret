@@ -86,9 +86,7 @@ fn elevate_nodes_on_select_draws_selected_node_body_last() {
         s.selected_nodes = vec![a];
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_editor_config_model(editor_config)
-        .with_presenter(TestPresenter);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_presenter(TestPresenter);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let rect_a = geom.nodes.get(&a).expect("node a exists").rect;
@@ -346,9 +344,8 @@ fn elevate_edges_on_select_controls_selection_z_order() {
             s.selected_edges = vec![edge_low];
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view)
-            .with_editor_config_model(editor_config)
-            .with_presenter(EdgeColorPresenter {
+        let mut canvas =
+            new_canvas!(host, graph, view, editor_config).with_presenter(EdgeColorPresenter {
                 red: edge_low,
                 green: edge_high,
             });
@@ -598,8 +595,7 @@ fn elevate_edges_on_select_controls_selection_z_order_for_custom_paths() {
             s.selected_edges = vec![edge_low];
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view)
-            .with_editor_config_model(editor_config)
+        let mut canvas = new_canvas!(host, graph, view, editor_config)
             .with_presenter(EdgeColorPresenter {
                 red: edge_low,
                 green: edge_high,

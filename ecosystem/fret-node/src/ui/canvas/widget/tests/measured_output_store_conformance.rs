@@ -62,7 +62,7 @@ fn measured_output_store_matches_internals_query_surfaces() {
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone())
         .with_internals_store(internals.clone())
         .with_measured_output_store(measured.clone());
 

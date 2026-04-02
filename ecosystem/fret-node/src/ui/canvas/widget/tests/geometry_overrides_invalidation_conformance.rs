@@ -73,9 +73,8 @@ fn geometry_overrides_revision_rebuilds_derived_geometry_and_spatial_index_witho
     let overrides_map = Arc::new(NodeGraphGeometryOverridesMap::default());
     let overrides: NodeGraphGeometryOverridesRef = overrides_map.clone();
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
-        .with_geometry_overrides(overrides)
-        .with_editor_config_model(editor_config);
+    let mut canvas =
+        new_canvas!(host, graph.clone(), view, editor_config).with_geometry_overrides(overrides);
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = NullServices::default();

@@ -2,7 +2,6 @@ use fret_runtime::CommandId;
 use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::{CanvasPoint, CanvasSize};
-use crate::ui::NodeGraphCanvas;
 use crate::ui::commands::{
     CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_NUDGE_UP,
 };
@@ -24,8 +23,7 @@ fn nudge_screen_px_step_is_zoom_invariant() {
     .unwrap();
     let editor_config = insert_editor_config_with(&mut host, |_| {});
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     let mut services = NullServices::default();
@@ -58,8 +56,7 @@ fn nudge_grid_step_uses_snap_grid_even_when_snap_to_grid_is_disabled() {
     })
     .unwrap();
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     let mut services = NullServices::default();
@@ -96,8 +93,7 @@ fn nudge_grid_fast_step_moves_ten_cells_by_default() {
     })
     .unwrap();
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     let mut services = NullServices::default();

@@ -1,6 +1,6 @@
 use fret_core::{Modifiers, Point, Px, Rect, Size};
 
-use super::prelude::{NodeGraphCanvas, pending_drag, pending_wire_drag};
+use super::prelude::{pending_drag, pending_wire_drag};
 use super::{
     NullServices, event_cx, insert_editor_config_with, make_host_graph_view,
     make_test_graph_two_nodes_with_ports,
@@ -33,8 +33,7 @@ fn node_drag_threshold_is_zoom_invariant_in_screen_space() {
             s.zoom = zoom;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-            .with_editor_config_model(editor_config.clone());
+        let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
         let snapshot = canvas.sync_view_state(&mut host);
         assert!((snapshot.zoom - zoom).abs() <= 1.0e-6);
 
@@ -113,8 +112,7 @@ fn connection_drag_threshold_is_zoom_invariant_in_screen_space() {
             s.zoom = zoom;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-            .with_editor_config_model(editor_config.clone());
+        let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
         let snapshot = canvas.sync_view_state(&mut host);
         assert!((snapshot.zoom - zoom).abs() <= 1.0e-6);
 

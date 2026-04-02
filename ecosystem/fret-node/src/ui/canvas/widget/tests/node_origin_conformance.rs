@@ -1,4 +1,3 @@
-use super::prelude::NodeGraphCanvas;
 use super::{insert_editor_config_with, make_host_graph_view, make_test_graph_two_nodes_with_size};
 
 #[test]
@@ -14,7 +13,7 @@ fn node_origin_center_shifts_node_rect_origin() {
         s.zoom = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
 

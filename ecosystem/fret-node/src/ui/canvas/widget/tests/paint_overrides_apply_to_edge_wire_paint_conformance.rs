@@ -70,7 +70,7 @@ fn paint_overrides_can_override_edge_wire_paint_binding() {
     let view = insert_view(&mut host);
 
     let overrides = Arc::new(NodeGraphPaintOverridesMap::default());
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_paint_overrides(overrides.clone());
+    let mut canvas = new_canvas!(host, graph, view).with_paint_overrides(overrides.clone());
 
     let paint = PaintBindingV1::with_eval_space(
         Paint::Solid(Color::from_srgb_hex_rgb(0xff_33_66)),

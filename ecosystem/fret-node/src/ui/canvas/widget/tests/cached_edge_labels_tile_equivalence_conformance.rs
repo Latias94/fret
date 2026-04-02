@@ -224,10 +224,9 @@ fn capture_edge_label_for_bounds(bounds: Rect) -> (Rect, Point, usize) {
             })
         });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_presenter(presenter)
-        .with_edge_types(edge_types)
-        .with_editor_config_model(editor_config);
+        .with_edge_types(edge_types);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);

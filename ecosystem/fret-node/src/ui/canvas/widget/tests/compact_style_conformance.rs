@@ -76,9 +76,7 @@ fn paint_uses_node_corner_radius_from_style() {
     });
 
     let style = NodeGraphStyle::default().with_compact_node_style();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_style(style.clone())
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_style(style.clone());
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);

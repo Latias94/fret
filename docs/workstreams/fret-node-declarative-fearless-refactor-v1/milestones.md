@@ -130,11 +130,16 @@ runtime tuning.
   `interaction` / `runtime_tuning` stored as wrapper-owned fields in `state_version = 2`.
 - App/example authoring also follows the split:
   - retained canvas can mirror `NodeGraphEditorConfig`,
-  - tuning/controls overlays read explicit editor-config seams,
+  - tuning/controls overlays read explicit editor-config seams, with
+    `NodeGraphControlsOverlay::new(...)` now taking the editor-config model directly,
   - example persistence restores and saves `NodeGraphViewStateFileV1` through
     `new(...)`.
   - advanced binding seams now also require explicit editor-config mirrors, so controlled sync no
     longer falls back to default config when graph/view/controller mirrors are caller-owned.
+  - retained compatibility constructors now also require explicit editor-config models:
+    `NodeGraphCanvas::new(...)`, `NodeGraphCanvas::new_with_middleware(...)`, and
+    `NodeGraphSurfaceCompatRetainedProps::new(...)` no longer manufacture default config
+    ownership internally.
 
 ### Done criteria
 
@@ -145,6 +150,8 @@ runtime tuning.
 - Controlled sync and diagnostics still have a stable data contract.
 - The previous test-only compatibility bridge is removed; examples, runtime paths, and tests now all
   use explicit editor-config seams.
+- Retained public compatibility widgets no longer hide default editor-config ownership behind their
+  constructor boundary.
 
 ### Required regression protection
 
@@ -439,7 +446,8 @@ real editors.
 
 - Retained portal + rename overlay glue now has a controller-first path
   (`NodeGraphPortalHost::with_controller`, `NodeGraphOverlayHost::new(...).with_controller(...)`),
-  and `compat_retained` now relies on a controller binding instead of public queue transport props.
+  and `compat_retained` now relies on a controller binding plus explicit editor-config model
+  instead of public queue transport props or retained-only default policy payloads.
 - `node_graph_domain_demo` and `compat_retained` now exercise that path, reducing how often new
   app-facing examples need to teach raw `edit_queue` mutation.
 - The retained widget test harness is back in sync with the latest `fret-ui` retained bridge

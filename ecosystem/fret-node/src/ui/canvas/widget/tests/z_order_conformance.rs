@@ -3,7 +3,6 @@ use crate::core::{
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 
-use super::prelude::NodeGraphCanvas;
 use super::{TestUiHostImpl, insert_view};
 
 #[test]
@@ -161,7 +160,7 @@ fn edges_are_sorted_by_endpoint_z_order() {
         s.draw_order = vec![a, b, c];
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, index) = canvas.canvas_derived(&host, &snapshot);
     let render = canvas.collect_render_data(

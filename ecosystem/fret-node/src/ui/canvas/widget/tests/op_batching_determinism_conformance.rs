@@ -11,7 +11,7 @@ use crate::ui::{
     NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareCx,
 };
 
-use super::prelude::{NodeGraphCanvas, node_drag, pointer_up};
+use super::prelude::{node_drag, pointer_up};
 use super::{NullServices, TestUiHostImpl, event_cx, insert_view};
 use crate::ui::canvas::state::NodeDrag;
 
@@ -117,7 +117,7 @@ fn node_drag_end_batches_group_rect_ops_in_sorted_group_id_order() {
     let view = insert_view(&mut host);
 
     let mut canvas =
-        NodeGraphCanvas::new(graph, view).with_middleware(CaptureGroupRectCommitOrder::default());
+        new_canvas!(host, graph, view).with_middleware(CaptureGroupRectCommitOrder::default());
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {

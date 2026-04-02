@@ -480,9 +480,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
             let editor = ui.create_node_retained(NodeGraphEditor::new());
-            let canvas = NodeGraphCanvas::new(binding.graph_model(), binding.view_state_model())
-                .with_controller(controller.clone())
-                .with_fit_view_on_mount();
+            let canvas = NodeGraphCanvas::new(
+                binding.graph_model(),
+                binding.view_state_model(),
+                binding.editor_config_model(),
+            )
+            .with_controller(controller.clone())
+            .with_fit_view_on_mount();
             let canvas_node = ui.create_node_retained(canvas);
             let bounds_node = ui.create_node_retained(BoundsRecorder::new(bounds.clone()));
             ui.set_children(editor, vec![canvas_node, bounds_node]);

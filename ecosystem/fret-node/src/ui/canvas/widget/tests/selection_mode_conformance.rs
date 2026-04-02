@@ -3,7 +3,7 @@ use fret_core::{Modifiers, Point, Px, Rect, Size};
 use crate::core::CanvasPoint;
 use crate::io::NodeGraphSelectionMode;
 
-use super::prelude::{NodeGraphCanvas, left_click, marquee};
+use super::prelude::{left_click, marquee};
 use super::{
     NullServices, event_cx, insert_editor_config_with, make_host_graph_view,
     make_test_graph_two_nodes_with_size,
@@ -22,8 +22,7 @@ fn marquee_partial_selects_intersecting_nodes() {
         state.interaction.selection_mode = NodeGraphSelectionMode::Partial;
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot: ViewSnapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -78,8 +77,7 @@ fn marquee_full_requires_nodes_to_be_fully_contained() {
         state.interaction.selection_mode = NodeGraphSelectionMode::Full;
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot: ViewSnapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(

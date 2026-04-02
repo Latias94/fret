@@ -97,7 +97,7 @@ fn pick_target_port_loose_can_select_same_side_when_closer() {
         state.interaction.connection_radius = 80.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let c_handle = geom.ports.get(&c_out).expect("port handle");
@@ -163,7 +163,7 @@ fn pick_target_port_strict_rejects_same_side_even_when_inside_bounds() {
         state.interaction.connection_radius = 80.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let c_handle = geom.ports.get(&c_out).expect("port handle");
@@ -193,9 +193,8 @@ fn strict_rejects_out_to_out_but_loose_commits_out_to_out_when_forced() {
         state.interaction.connection_mode = NodeGraphConnectionMode::Strict;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
-        .with_presenter(SimplePresenter)
-        .with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config.clone())
+        .with_presenter(SimplePresenter);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),

@@ -72,7 +72,7 @@ fn paint_overrides_can_drive_edge_marker_paint_binding() {
     let view = insert_view(&mut host);
 
     let overrides = Arc::new(NodeGraphPaintOverridesMap::default());
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_paint_overrides(overrides.clone());
+    let mut canvas = new_canvas!(host, graph, view).with_paint_overrides(overrides.clone());
 
     // Ensure the edge has both markers so the scene should contain:
     // - 1 wire path (paint override)

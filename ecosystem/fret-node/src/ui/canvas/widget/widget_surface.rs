@@ -14,7 +14,16 @@ mod runtime;
 mod sync;
 
 impl NodeGraphCanvasWith<NoopNodeGraphCanvasMiddleware> {
-    pub fn new(graph: Model<Graph>, view_state: Model<NodeGraphViewState>) -> Self {
-        Self::new_with_middleware(graph, view_state, NoopNodeGraphCanvasMiddleware)
+    pub fn new(
+        graph: Model<Graph>,
+        view_state: Model<NodeGraphViewState>,
+        editor_config: Model<NodeGraphEditorConfig>,
+    ) -> Self {
+        Self::new_with_middleware(
+            graph,
+            view_state,
+            editor_config,
+            NoopNodeGraphCanvasMiddleware,
+        )
     }
 }

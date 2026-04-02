@@ -166,9 +166,7 @@ fn capture_arrow_axis_lengths_for_zoom(zoom: f32) -> Vec<f32> {
         h
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_edge_types(edge_types)
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_edge_types(edge_types);
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = CaptureServices::default();

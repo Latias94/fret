@@ -12,9 +12,7 @@ use crate::runtime::callbacks::{
     NodeGraphGestureCallbacks, NodeGraphViewCallbacks, ViewportMoveEnd, ViewportMoveStart,
 };
 
-use super::prelude::{
-    NodeGraphCanvas, cancel, node_drag, pan_zoom, pending_drag, pointer_up, wire_drag,
-};
+use super::prelude::{cancel, node_drag, pan_zoom, pending_drag, pointer_up, wire_drag};
 use super::{
     NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_graph_view,
     make_host_graph_view, make_test_graph_two_nodes_with_ports_spaced_x,
@@ -118,9 +116,8 @@ fn click_connect_emits_connect_start_and_committed_end() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-        .with_editor_config_model(editor_config)
-        .with_callbacks(recorder);
+    let mut canvas =
+        new_canvas!(host, graph.clone(), view.clone(), editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -182,9 +179,7 @@ fn escape_cancel_emits_connect_end_canceled() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_editor_config_model(editor_config)
-        .with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -226,7 +221,7 @@ fn rejected_drop_emits_connect_end_rejected() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone()).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -320,7 +315,7 @@ fn reconnect_emits_reconnect_start_and_committed_end() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone()).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -388,7 +383,7 @@ fn reconnect_escape_cancel_emits_reconnect_end_canceled() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone()).with_callbacks(recorder);
 
     canvas.interaction.wire_drag = Some(WireDrag {
         kind: WireDragKind::Reconnect {
@@ -425,7 +420,7 @@ fn panning_emits_move_start_and_move_end() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone()).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -471,7 +466,7 @@ fn escape_cancel_panning_emits_move_end_canceled() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone()).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -511,9 +506,7 @@ fn node_drag_start_and_escape_cancel_emits_node_drag_end_canceled() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_editor_config_model(editor_config)
-        .with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -568,9 +561,7 @@ fn pan_inertia_emits_move_end_after_inertia_stops() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_editor_config_model(editor_config)
-        .with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -646,7 +637,7 @@ fn node_drag_pointer_up_emits_node_drag_end_committed() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone()).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {
@@ -707,7 +698,7 @@ fn node_drag_move_emits_on_node_drag() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone()).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {
@@ -758,9 +749,7 @@ fn wheel_zoom_emits_move_start_and_debounced_move_end() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_editor_config_model(editor_config)
-        .with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -815,9 +804,7 @@ fn pinch_zoom_emits_move_start_and_debounced_move_end() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_editor_config_model(editor_config)
-        .with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -873,9 +860,7 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_editor_config_model(editor_config)
-        .with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -926,9 +911,7 @@ fn double_click_background_zoom_emits_move_start_and_move_end() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_editor_config_model(editor_config)
-        .with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config).with_callbacks(recorder);
     let bounds = make_bounds();
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
@@ -968,9 +951,8 @@ fn wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom() {
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
-        .with_editor_config_model(editor_config.clone())
-        .with_callbacks(recorder);
+    let mut canvas =
+        new_canvas!(host, graph, view.clone(), editor_config.clone()).with_callbacks(recorder);
     let bounds = make_bounds();
     let mut services = NullServices::default();
 

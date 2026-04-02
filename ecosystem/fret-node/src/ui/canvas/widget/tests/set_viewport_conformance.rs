@@ -5,7 +5,6 @@ use crate::ui::canvas::widget::view_queue::{
     NodeGraphViewQueue, NodeGraphViewQueueSetViewportOptions,
 };
 
-use super::prelude::NodeGraphCanvas;
 use super::{make_host_graph_view, make_test_graph_two_nodes_with_size};
 
 #[test]
@@ -20,7 +19,7 @@ fn set_viewport_via_view_queue_updates_pan_and_zoom() {
     let (mut host, graph, view) = make_host_graph_view(graph_value);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_view_queue(queue.clone());
+    let mut canvas = new_canvas!(host, graph, view).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
 
     let pan = CanvasPoint { x: 123.0, y: -45.0 };
@@ -56,7 +55,7 @@ fn set_viewport_via_view_queue_clamps_zoom_to_style_limits() {
         s.zoom = 0.5;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_view_queue(queue.clone());
+    let mut canvas = new_canvas!(host, graph, view).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
     canvas.style.geometry.min_zoom = 0.5;
     canvas.style.geometry.max_zoom = 1.0;

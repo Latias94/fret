@@ -290,7 +290,7 @@ fn clamp_context_menu_origin_keeps_menu_rect_inside_visible_canvas_rect() {
         s.zoom = 2.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let viewport = NodeGraphCanvas::viewport_from_snapshot(bounds(), &snapshot);
@@ -319,7 +319,7 @@ fn clamp_searcher_origin_keeps_rect_inside_visible_canvas_rect() {
         s.zoom = 0.75;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let viewport = NodeGraphCanvas::viewport_from_snapshot(bounds(), &snapshot);

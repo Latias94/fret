@@ -7,7 +7,7 @@ use crate::core::{
 
 use crate::rules::EdgeEndpoint;
 
-use super::prelude::{NodeGraphCanvas, edge_drag};
+use super::prelude::edge_drag;
 use super::{NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view};
 use crate::ui::canvas::state::{EdgeDrag, WireDragKind};
 
@@ -136,7 +136,7 @@ fn edge_drag_prefers_from_endpoint_when_port_centers_are_equidistant() {
         s.zoom = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let geom = canvas.canvas_geometry(&host, &snapshot);
@@ -205,8 +205,7 @@ fn edge_reconnect_radius_is_zoom_invariant_in_screen_space() {
 
         // Inside radius: should start wire-drag.
         {
-            let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-                .with_editor_config_model(editor_config.clone());
+            let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
             let snapshot = canvas.sync_view_state(&mut host);
             let geom = canvas.canvas_geometry(&host, &snapshot);
             let from_center = geom.port_center(out).expect("from port center");
@@ -245,8 +244,7 @@ fn edge_reconnect_radius_is_zoom_invariant_in_screen_space() {
 
         // Outside radius: should not start wire-drag, edge_drag stays active.
         {
-            let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-                .with_editor_config_model(editor_config.clone());
+            let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
             let snapshot = canvas.sync_view_state(&mut host);
             let geom = canvas.canvas_geometry(&host, &snapshot);
             let from_center = geom.port_center(out).expect("from port center");

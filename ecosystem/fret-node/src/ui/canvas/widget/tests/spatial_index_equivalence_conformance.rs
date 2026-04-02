@@ -192,7 +192,7 @@ fn spatial_index_hit_port_matches_slow_scan() {
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, index) = canvas.canvas_derived(&host, &snapshot);
 
@@ -245,8 +245,7 @@ fn spatial_index_hit_edge_matches_slow_scan() {
         state.interaction.edges_reconnectable = true;
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, index) = canvas.canvas_derived(&host, &snapshot);
 
@@ -313,8 +312,7 @@ fn spatial_index_edge_focus_anchor_hit_testing_matches_slow_scan() {
         state.interaction.edges_reconnectable = true;
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, index) = canvas.canvas_derived(&host, &snapshot);
 

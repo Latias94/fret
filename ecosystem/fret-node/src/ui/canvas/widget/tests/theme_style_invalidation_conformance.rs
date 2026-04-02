@@ -70,9 +70,8 @@ fn theme_palette_updates_do_not_rebuild_canvas_geometry_in_system_mode() {
         s.zoom = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_color_mode(NodeGraphColorMode::System)
-        .with_editor_config_model(editor_config);
+    let mut canvas =
+        new_canvas!(host, graph, view, editor_config).with_color_mode(NodeGraphColorMode::System);
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = NullServices::default();
@@ -125,9 +124,8 @@ fn theme_metric_updates_rebuild_canvas_geometry_in_system_mode() {
         s.zoom = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_color_mode(NodeGraphColorMode::System)
-        .with_editor_config_model(editor_config);
+    let mut canvas =
+        new_canvas!(host, graph, view, editor_config).with_color_mode(NodeGraphColorMode::System);
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = NullServices::default();

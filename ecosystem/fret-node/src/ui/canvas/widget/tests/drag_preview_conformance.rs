@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Point, Px, Rect, Size};
 
-use super::prelude::{DragPreviewKind, NodeGraphCanvas};
+use super::prelude::DragPreviewKind;
 use super::{
     TestUiHostImpl, insert_editor_config, insert_view,
     make_test_graph_two_nodes_with_ports_spaced_x,
@@ -21,8 +21,7 @@ fn drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
     let editor_config = insert_editor_config(&mut host);
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config.clone());
+    let mut canvas = new_canvas!(host, graph, view, editor_config.clone());
 
     // Ensure base geometry + spatial index caches exist (drag previews are keyed off base_index_key).
     let snapshot0 = canvas.sync_view_state(&mut host);
@@ -143,7 +142,7 @@ fn drag_preview_updates_node_rect_port_centers_and_edge_index() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (base_geom, base_index) = canvas.canvas_derived(&host, &snapshot);

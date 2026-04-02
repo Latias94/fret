@@ -6,7 +6,6 @@ use crate::ui::canvas::widget::view_queue::{
     NodeGraphViewQueue, NodeGraphViewQueueSetViewportOptions,
 };
 
-use super::prelude::NodeGraphCanvas;
 use super::{insert_editor_config_with, make_host_graph_view, make_test_graph_two_nodes_with_size};
 
 fn rect_contains(outer: Rect, inner: Rect, eps: f32) -> bool {
@@ -56,9 +55,7 @@ fn set_viewport_clamps_pan_to_translate_extent() {
         state.interaction.translate_extent = Some(extent);
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_view_queue(queue.clone())
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
 
     // At zoom=1, the viewport is 800x600 canvas units. With a 1000x1000 extent starting at 0,0:
@@ -119,9 +116,7 @@ fn set_viewport_clamps_pan_to_translate_extent_at_zoom() {
         state.interaction.translate_extent = Some(extent);
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_view_queue(queue.clone())
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
 
     // At zoom=2, the viewport is 400x300 canvas units:
@@ -179,9 +174,7 @@ fn translate_extent_centers_when_viewport_is_larger_than_extent() {
         state.interaction.translate_extent = Some(extent);
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_view_queue(queue.clone())
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
 
     // Force the request to be non-noop relative to the default viewport so the view queue drains.

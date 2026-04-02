@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use super::prelude::NodeGraphCanvas;
 use super::{
     TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
 };
@@ -19,8 +18,7 @@ fn selection_updates_do_not_rebuild_geometry_when_elevate_nodes_on_select_is_ena
         s.draw_order = vec![a, b];
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 
@@ -55,8 +53,7 @@ fn draw_order_updates_rebuild_derived_geometry_and_spatial_index() {
         s.draw_order = vec![a, b];
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 

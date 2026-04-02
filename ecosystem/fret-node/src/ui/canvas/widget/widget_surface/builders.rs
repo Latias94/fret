@@ -31,11 +31,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self
     }
 
-    pub fn with_editor_config_model(mut self, editor_config: Model<NodeGraphEditorConfig>) -> Self {
-        self.editor_config_model = Some(editor_config);
-        self
-    }
-
     pub fn with_close_command(mut self, command: CommandId) -> Self {
         self.close_command = Some(command);
         self
