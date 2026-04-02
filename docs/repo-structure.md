@@ -25,6 +25,8 @@ Notes:
 - `target/` is generated and should remain out of VCS.
 - `themes/` holds shared theme and preset JSON assets that are loaded by demos and ecosystem crates.
 - `goldens/` holds golden/reference data for web parity, headless conformance, and fixture-driven tests.
+- `local/` is an ignored workspace scratch area for generated sample apps and scaffold compile checks.
+- `.tmp/` is disposable local scratch space and should not carry source-of-truth artifacts.
 - `.fret/` is local state + debug artifacts by default, but project-scoped config files like
   `.fret/settings.json` / `.fret/keymap.json` / `.fret/menubar.json` / `.fret/layout.json` may be checked into VCS (ADR 0014).
 - Crate layer boundaries (core vs backends vs apps) are locked in `docs/adr/0092-crate-structure-core-backends-apps.md`.

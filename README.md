@@ -203,9 +203,7 @@ Reference implementation:
 - Template guide: [`docs/first-hour.md`](./docs/first-hour.md)
 - Example taxonomy: [`docs/examples/README.md`](./docs/examples/README.md)
 
-![Fret gallery 01](screenshots/gallery-01.png)
-![Fret gallery 02](screenshots/gallery-02.png)
-![Fret gallery 03](screenshots/gallery-03.png)
+![Fret UI screenshot](screenshots/ui.png)
 
 ## Ecosystem Coverage (Incubating)
 
