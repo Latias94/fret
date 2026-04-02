@@ -35,6 +35,7 @@ pub struct FormField {
     label: Option<Arc<str>>,
     description: Option<Arc<str>>,
     control: Vec<AnyElement>,
+    required: bool,
     error_visibility: FormErrorVisibility,
     decorate_control: bool,
 }
@@ -51,6 +52,7 @@ impl FormField {
             label: None,
             description: None,
             control: control.into(),
+            required: false,
             error_visibility: FormErrorVisibility::default(),
             decorate_control: true,
         }
@@ -71,8 +73,14 @@ impl FormField {
         self
     }
 
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
     /// When enabled (default), `FormField` attempts to decorate common controls:
     /// - sets `a11y_label` on text inputs if missing
+    /// - propagates required semantics when `FormField::required(true)` is set
     /// - switches border/focus styling to `destructive` when an error is visible
     pub fn decorate_control(mut self, enabled: bool) -> Self {
         self.decorate_control = enabled;
@@ -104,6 +112,7 @@ impl FormField {
         };
 
         let invalid = show_error && error.is_some();
+        let required = self.required;
 
         let mut children: Vec<AnyElement> = Vec::new();
         if let Some(label) = self.label.as_ref() {
@@ -132,6 +141,7 @@ impl FormField {
             form_decorate_control_elements(
                 &mut control,
                 a11y_label.as_ref(),
+                required,
                 invalid,
                 destructive,
                 default_ring,
@@ -159,6 +169,7 @@ impl FormField {
 fn form_decorate_control_elements(
     elements: &mut [AnyElement],
     a11y_label: Option<&Arc<str>>,
+    required: bool,
     invalid: bool,
     destructive: Color,
     default_ring: fret_ui::element::RingStyle,
@@ -169,6 +180,7 @@ fn form_decorate_control_elements(
         form_decorate_control_element(
             el,
             a11y_label,
+            required,
             invalid,
             destructive,
             default_ring,
@@ -214,6 +226,7 @@ fn container_shadow_looks_like_focus_ring(props: &ContainerProps) -> bool {
 fn form_decorate_control_element(
     element: &mut AnyElement,
     a11y_label: Option<&Arc<str>>,
+    required: bool,
     invalid: bool,
     destructive: Color,
     default_ring: fret_ui::element::RingStyle,
@@ -224,6 +237,9 @@ fn form_decorate_control_element(
         ElementKind::Pressable(props) => {
             if props.a11y.label.is_none() {
                 props.a11y.label = a11y_label.cloned();
+            }
+            if required {
+                props.a11y.required = true;
             }
             if invalid {
                 props.a11y.invalid = Some(fret_core::SemanticsInvalid::True);
@@ -262,6 +278,7 @@ fn form_decorate_control_element(
                 form_decorate_control_element(
                     child,
                     a11y_label,
+                    required,
                     invalid,
                     destructive,
                     default_ring,
@@ -271,6 +288,9 @@ fn form_decorate_control_element(
             }
         }
         ElementKind::Semantics(props) => {
+            if required && props.role == fret_core::SemanticsRole::RadioGroup {
+                props.required = true;
+            }
             if invalid && props.role == fret_core::SemanticsRole::RadioGroup {
                 props.invalid = Some(fret_core::SemanticsInvalid::True);
             }
@@ -279,6 +299,7 @@ fn form_decorate_control_element(
                 form_decorate_control_element(
                     child,
                     a11y_label,
+                    required,
                     invalid,
                     destructive,
                     default_ring,
@@ -344,6 +365,7 @@ fn form_decorate_control_element(
                 form_decorate_control_element(
                     child,
                     a11y_label,
+                    required,
                     invalid,
                     destructive,
                     default_ring,
@@ -355,6 +377,9 @@ fn form_decorate_control_element(
         ElementKind::TextInput(props) => {
             if props.a11y_label.is_none() {
                 props.a11y_label = a11y_label.cloned();
+            }
+            if required {
+                props.a11y_required = true;
             }
             if invalid {
                 let mut ring = ring;
@@ -368,6 +393,9 @@ fn form_decorate_control_element(
         ElementKind::TextArea(props) => {
             if props.a11y_label.is_none() {
                 props.a11y_label = a11y_label.cloned();
+            }
+            if required {
+                props.a11y_required = true;
             }
             if invalid {
                 let mut ring = ring;
@@ -383,6 +411,7 @@ fn form_decorate_control_element(
                 form_decorate_control_element(
                     child,
                     a11y_label,
+                    required,
                     invalid,
                     destructive,
                     default_ring,
@@ -1556,5 +1585,621 @@ mod tests {
             control.flags.invalid,
             Some(fret_core::SemanticsInvalid::True)
         );
+    }
+
+    #[test]
+    fn form_field_required_input_marks_text_input_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(String::new());
+        let field_id: Arc<str> = Arc::from("name");
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "form-field-required-input",
+            |cx| {
+                FormField::new(
+                    form_state.clone(),
+                    field_id.clone(),
+                    [Input::new(model.clone()).into_element(cx)],
+                )
+                .label("Name")
+                .required(true)
+                .into_element(cx)
+            },
+        );
+
+        let props = find_text_input_props(&el).expect("expected text input inside form field");
+        assert!(props.a11y_required);
+    }
+
+    #[test]
+    fn form_field_required_textarea_marks_text_area_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(String::new());
+        let field_id: Arc<str> = Arc::from("bio");
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "form-field-required-textarea",
+            |cx| {
+                FormField::new(
+                    form_state.clone(),
+                    field_id.clone(),
+                    [Textarea::new(model.clone()).into_element(cx)],
+                )
+                .label("Bio")
+                .required(true)
+                .into_element(cx)
+            },
+        );
+
+        let props = find_text_area_props(&el).expect("expected textarea inside form field");
+        assert!(props.a11y_required);
+    }
+
+    #[test]
+    fn form_field_required_input_group_marks_built_in_input_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(String::new());
+        let field_id: Arc<str> = Arc::from("email");
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "form-field-required-input-group",
+            |cx| {
+                FormField::new(
+                    form_state.clone(),
+                    field_id.clone(),
+                    [InputGroup::new(model.clone())
+                        .placeholder("name@example.com")
+                        .into_element(cx)],
+                )
+                .label("Email")
+                .required(true)
+                .into_element(cx)
+            },
+        );
+
+        let props = find_text_input_props(&el).expect("expected input group built-in text input");
+        assert!(props.a11y_required);
+    }
+
+    #[test]
+    fn form_field_required_input_otp_marks_hidden_input_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(String::new());
+        let field_id: Arc<str> = Arc::from("verification_code");
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "form-field-required-input-otp",
+            |cx| {
+                FormField::new(
+                    form_state.clone(),
+                    field_id.clone(),
+                    [InputOtp::new(model.clone())
+                        .length(6)
+                        .test_id_prefix("otp")
+                        .into_element(cx)],
+                )
+                .label("Verification code")
+                .required(true)
+                .into_element(cx)
+            },
+        );
+
+        let props = find_text_input_props(&el).expect("expected hidden otp input");
+        assert!(props.a11y_required);
+    }
+
+    #[test]
+    fn form_field_required_select_marks_trigger_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let field_id: Arc<str> = Arc::from("country");
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-required-select",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [Select::new(model.clone(), open.clone())
+                            .items([
+                                SelectItem::new("cn", "China"),
+                                SelectItem::new("jp", "Japan"),
+                            ])
+                            .trigger_test_id("form-field-required-select-trigger")
+                            .into_element(cx)],
+                    )
+                    .label("Country")
+                    .required(true)
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-required-select-trigger"))
+            .expect("select trigger semantics");
+        assert_eq!(trigger.role, fret_core::SemanticsRole::ComboBox);
+        assert!(trigger.flags.required);
+    }
+
+    #[test]
+    fn form_field_required_combobox_marks_trigger_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let field_id: Arc<str> = Arc::from("framework");
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-required-combobox",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [Combobox::new(model.clone(), open.clone())
+                            .test_id_prefix("form-field-required-combobox")
+                            .items(vec![
+                                ComboboxItem::new("fret", "Fret"),
+                                ComboboxItem::new("gpui", "GPUI"),
+                            ])
+                            .into_element(cx)],
+                    )
+                    .label("Framework")
+                    .required(true)
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-required-combobox-trigger"))
+            .expect("combobox trigger semantics");
+        assert_eq!(trigger.role, fret_core::SemanticsRole::ComboBox);
+        assert!(trigger.flags.required);
+    }
+
+    #[test]
+    fn form_field_required_radio_group_marks_group_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let field_id: Arc<str> = Arc::from("plan");
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-required-radio-group",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [RadioGroup::new(model.clone())
+                            .a11y_label("Plan")
+                            .item(RadioGroupItem::new("free", "Free"))
+                            .item(RadioGroupItem::new("pro", "Pro"))
+                            .into_element(cx)],
+                    )
+                    .label("Plan")
+                    .required(true)
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let group = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::RadioGroup && n.label.as_deref() == Some("Plan")
+            })
+            .expect("radio group semantics");
+        assert!(group.flags.required);
+    }
+
+    #[test]
+    fn form_field_required_date_picker_marks_trigger_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(None::<Date>);
+        let field_id: Arc<str> = Arc::from("due_date");
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-required-date-picker",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [
+                            DatePicker::new(open.clone(), month.clone(), selected.clone())
+                                .test_id_prefix("form-field-required-date-picker")
+                                .into_element(cx),
+                        ],
+                    )
+                    .label("Due date")
+                    .required(true)
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-required-date-picker-trigger"))
+            .expect("date picker trigger semantics");
+        assert!(trigger.flags.required);
+    }
+
+    #[test]
+    fn form_field_required_date_picker_with_presets_marks_trigger_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(None::<Date>);
+        let field_id: Arc<str> = Arc::from("ship_date");
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root =
+            fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds(),
+                "form-field-required-date-picker-with-presets",
+                |cx| {
+                    vec![
+                        FormField::new(
+                            form_state.clone(),
+                            field_id.clone(),
+                            [DatePickerWithPresets::new(
+                                open.clone(),
+                                month.clone(),
+                                selected.clone(),
+                            )
+                            .test_id_prefix("form-field-required-date-picker-with-presets")
+                            .into_element(cx)],
+                        )
+                        .label("Ship date")
+                        .required(true)
+                        .into_element(cx),
+                    ]
+                },
+            );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.test_id.as_deref() == Some("form-field-required-date-picker-with-presets-trigger")
+            })
+            .expect("date picker with presets trigger semantics");
+        assert!(trigger.flags.required);
+    }
+
+    #[test]
+    fn form_field_required_date_range_picker_marks_trigger_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(DateRangeSelection::default());
+        let field_id: Arc<str> = Arc::from("travel_dates");
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-required-date-range-picker",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [
+                            DateRangePicker::new(open.clone(), month.clone(), selected.clone())
+                                .test_id_prefix("form-field-required-date-range-picker")
+                                .into_element(cx),
+                        ],
+                    )
+                    .label("Travel dates")
+                    .required(true)
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-required-date-range-picker-trigger"))
+            .expect("date range picker trigger semantics");
+        assert!(trigger.flags.required);
+    }
+
+    #[test]
+    fn form_field_required_checkbox_marks_control_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(false);
+        let field_id: Arc<str> = Arc::from("accept_terms");
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-required-checkbox",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [Checkbox::new(model.clone())
+                            .test_id("form-field-required-checkbox")
+                            .into_element(cx)],
+                    )
+                    .label("Accept terms")
+                    .required(true)
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let control = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-required-checkbox"))
+            .expect("checkbox semantics");
+        assert_eq!(control.role, fret_core::SemanticsRole::Checkbox);
+        assert!(control.flags.required);
+    }
+
+    #[test]
+    fn form_field_required_switch_marks_control_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(false);
+        let field_id: Arc<str> = Arc::from("airplane_mode");
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-required-switch",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [Switch::new(model.clone())
+                            .test_id("form-field-required-switch")
+                            .into_element(cx)],
+                    )
+                    .label("Airplane mode")
+                    .required(true)
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let control = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-required-switch"))
+            .expect("switch semantics");
+        assert_eq!(control.role, fret_core::SemanticsRole::Switch);
+        assert!(control.flags.required);
+    }
+
+    #[test]
+    fn form_field_required_native_select_marks_trigger_semantics_required() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let field_id: Arc<str> = Arc::from("country");
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-required-native-select",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [NativeSelect::new(value.clone(), open.clone())
+                            .option(NativeSelectOption::new("cn", "China"))
+                            .trigger_test_id("form-field-required-native-select")
+                            .into_element(cx)],
+                    )
+                    .label("Country")
+                    .required(true)
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let control = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-required-native-select"))
+            .expect("native select semantics");
+        assert_eq!(control.role, fret_core::SemanticsRole::ComboBox);
+        assert!(control.flags.required);
     }
 }
