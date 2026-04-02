@@ -36,18 +36,8 @@ pub struct NodeGraphSurfaceBinding {
 }
 
 impl NodeGraphSurfaceBinding {
-    /// Creates the default store-backed binding for declarative node-graph surfaces.
-    pub fn new(models: &mut ModelStore, graph: Graph, view_state: NodeGraphViewState) -> Self {
-        Self::new_with_editor_config(
-            models,
-            graph,
-            view_state,
-            NodeGraphEditorConfig::default(),
-        )
-    }
-
     /// Creates a store-backed binding with an explicit editor configuration payload.
-    pub fn new_with_editor_config(
+    pub fn new(
         models: &mut ModelStore,
         graph: Graph,
         view_state: NodeGraphViewState,
@@ -159,7 +149,7 @@ mod tests {
         CanvasPoint, CanvasRect, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey, StickyNote,
         StickyNoteId,
     };
-    use crate::io::NodeGraphViewState;
+    use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
     use crate::ops::{GraphOp, GraphTransaction};
     use crate::runtime::fit_view::{
         FitViewComputeOptions, compute_fit_view_target_for_canvas_rect,
@@ -235,7 +225,12 @@ mod tests {
             ..NodeGraphViewState::default()
         };
 
-        let binding = NodeGraphSurfaceBinding::new(&mut models, graph.clone(), view_state.clone());
+        let binding = NodeGraphSurfaceBinding::new(
+            &mut models,
+            graph.clone(),
+            view_state.clone(),
+            NodeGraphEditorConfig::default(),
+        );
 
         let graph_id = models
             .read(&binding.graph_model(), |value| value.graph_id)
@@ -287,6 +282,7 @@ mod tests {
             &mut host.models,
             Graph::new(GraphId::from_u128(0x9003)),
             NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
         );
 
         let note_id = StickyNoteId::from_u128(0x9004);
@@ -354,6 +350,7 @@ mod tests {
             &mut host.models,
             Graph::new(GraphId::from_u128(0x9005)),
             NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
         );
 
         let node_id = NodeId::from_u128(0x9006);
@@ -393,6 +390,7 @@ mod tests {
             &mut host.models,
             Graph::new(GraphId::from_u128(0x9007)),
             NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
         );
 
         let next = NodeGraphViewState {
@@ -420,6 +418,7 @@ mod tests {
             &mut host.models,
             Graph::new(GraphId::from_u128(0x9008)),
             NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
         );
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),

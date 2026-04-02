@@ -464,7 +464,7 @@ Concretely:
 
 For new editor surfaces, teach and copy this shape first:
 
-1. create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`,
+1. create one `NodeGraphSurfaceBinding::new(models, graph, view_state, editor_config)`,
 2. render `node_graph_surface(cx, binding.surface_props())` for the default surface props,
 3. use the binding itself for common app-facing helpers (`viewport`, `graph_snapshot`,
    `view_state_snapshot`, `set_viewport`, `set_center_in_bounds`, `fit_view_nodes_in_bounds`,
