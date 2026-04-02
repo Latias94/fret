@@ -47,6 +47,12 @@ jobs:
       - name: Check consumption profiles (portable)
         run: python3 tools/check_consumption_profiles.py
 
+      - name: Check repo-local skills
+        run: python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
+
+      - name: Check workstream state files
+        run: python3 tools/check_workstream_state.py
+
   cargo-deny-licenses:
     name: cargo-deny (licenses/sources/advisories)
     runs-on: ubuntu-latest

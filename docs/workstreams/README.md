@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-03-31
+Catalog updated: 2026-04-02
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
 - Dedicated directories: 192
-- Standalone markdown files: 45 (see `docs/workstreams/standalone/README.md`)
+- Standalone markdown files: 46 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
 ## Promotion Rule
@@ -34,6 +34,29 @@ git log -1 --format=%cs -- docs/workstreams/<path>
 git log --format='%cs %h %s' -- docs/workstreams/<path>
 git log --since='2026-01-01' --name-only -- docs/workstreams
 ```
+
+## Machine-readable Lane State
+
+Dedicated workstream directories may include:
+
+- `docs/workstreams/<slug>/WORKSTREAM.json`
+
+Use this as a first-open summary after the repo-wide stance docs and before reading a large lane
+folder in detail.
+
+The state file should answer:
+
+- whether the lane is active, maintenance, closed, or historical,
+- which docs are authoritative right now,
+- which repro/gate surfaces are still canonical,
+- and whether future work should continue here or start as a narrower follow-on.
+
+This file is not a second source of truth. If it drifts from a closeout audit or explicit status
+note, the markdown authority wins and the state file should be refreshed.
+
+Format note:
+
+- `docs/workstreams/standalone/workstream-state-v1.md`
 
 ## Historical Status Note Rule
 
@@ -383,5 +406,6 @@ Rule:
 
 ## Standalone Bucket
 
-- `docs/workstreams/standalone/README.md` — first 2026-03-12, latest 2026-03-12, 44 markdown docs
+- `docs/workstreams/standalone/README.md` — first 2026-03-12, latest 2026-03-12, 45 markdown docs
+- `docs/workstreams/standalone/workstream-state-v1.md` — shared machine-readable lane-state convention
 - Use this folder for compact loose notes that still do not justify a dedicated subdirectory.

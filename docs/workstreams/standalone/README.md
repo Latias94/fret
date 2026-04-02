@@ -1,19 +1,22 @@
 # Standalone Workstreams
 
-Catalog updated: 2026-03-31
+Catalog updated: 2026-04-02
 Moved under `docs/workstreams/standalone/`: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
 Entries annotated with `history:` point to the pre-reorg tracked path for git lookup only; they are
 not current browse targets.
 
-This folder now holds compact workstreams that do not yet need their own dedicated subdirectories.
+This folder now holds compact workstreams and a small number of shared workstream-adjacent
+convention notes that do not yet need their own dedicated subdirectories.
 There are no remaining obvious same-prefix multi-file bundles in `standalone/`; those were promoted
 back into dedicated folders on 2026-03-12.
 
 ## Rules
 
 - Keep single-file workstreams here.
+- Keep shared workflow conventions here only when they remain single-file and tightly tied to the
+  workstream system itself.
 - Promote a note into `docs/workstreams/<slug>/` once it gains TODO/milestone companions or enough
   supporting material that reviewers need one stable directory to inspect the track end to end.
 - Use git history, not filesystem mtimes, as the canonical archive date source.
@@ -94,4 +97,5 @@ Use them for rationale, parity, and migration history, not as the first stop for
 - `ui-perf-resize-path-v1.md` — first 2026-02-09, latest 2026-02-19 (history: `docs/workstreams/ui-perf-resize-path-v1.md`)
 - `ui-perf-setter-idempotency-v1.md` — first 2026-02-09, latest 2026-02-09 (history: `docs/workstreams/ui-perf-setter-idempotency-v1.md`)
 - `viewport-gizmo.md` — first 2026-01-10, latest 2026-02-11 (history: `docs/workstreams/viewport-gizmo.md`)
+- `workstream-state-v1.md` — shared machine-readable lane-state convention
 - `xyflow-gap-analysis.md` — first 2026-02-12, latest 2026-02-16 (history: `docs/workstreams/xyflow-gap-analysis.md`)

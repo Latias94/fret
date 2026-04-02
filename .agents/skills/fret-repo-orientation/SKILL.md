@@ -85,7 +85,7 @@ In the mono-repo:
 - UI authoring substrate: `crates/fret-ui/src/elements/cx.rs` (`ElementContext`)
 - shadcn recipes: `ecosystem/fret-ui-shadcn/src/`
 - kit primitives: `ecosystem/fret-ui-kit/src/primitives/`
-- dev/diag CLI entry: `apps/fretboard/src/cli.rs`
+- fretboard root/help surface: `apps/fretboard/src/main.rs`, `apps/fretboard/src/cli/help.rs`, `apps/fretboard/src/diag.rs`
 - diag protocol types: `crates/fret-diag-protocol`
 
 Quick search patterns:
