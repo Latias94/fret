@@ -2168,6 +2168,60 @@ mod tests {
     }
 
     #[test]
+    fn outline_button_invalid_style_overrides_border_and_focus_ring() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "outline-button-invalid-style",
+            |cx| {
+                let theme = Theme::global(&*cx.app).snapshot();
+                Button::new("Outline")
+                    .variant(ButtonVariant::Outline)
+                    .style(outline_trigger_invalid_style(&theme))
+                    .into_element(cx)
+            },
+        );
+
+        let ElementKind::Pressable(pressable) = &element.kind else {
+            panic!("expected outline invalid button to render as a Pressable");
+        };
+        let chrome = element
+            .children
+            .first()
+            .expect("expected pressable to contain chrome container");
+        let ElementKind::Container(chrome_props) = &chrome.kind else {
+            panic!("expected chrome container element");
+        };
+
+        let theme = Theme::global(&app).snapshot();
+        let expected_border = theme.color_token("destructive");
+        let mut expected_ring =
+            crate::theme_variants::invalid_control_ring_color(&theme, expected_border);
+        expected_ring.a = 0.0;
+
+        assert_eq!(chrome_props.border_color, Some(expected_border));
+        assert_eq!(
+            pressable.focus_ring.as_ref().expect("focus ring").color,
+            expected_ring
+        );
+    }
+
+    #[test]
     fn button_focus_ring_alpha_tweens_in_and_out_like_a_transition() {
         use std::cell::Cell;
         use std::rc::Rc;
