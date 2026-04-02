@@ -415,6 +415,7 @@ mod tests {
     use std::time::Duration;
     use time::{Date, Month};
 
+    use crate::checkbox::Checkbox;
     use crate::combobox::{Combobox, ComboboxItem};
     use crate::date_picker::DatePicker;
     use crate::date_picker_with_presets::DatePickerWithPresets;
@@ -422,9 +423,11 @@ mod tests {
     use crate::input::Input;
     use crate::input_group::InputGroup;
     use crate::input_otp::InputOtp;
+    use crate::native_select::{NativeSelect, NativeSelectOption};
     use crate::radio_group::{RadioGroup, RadioGroupItem};
     use crate::select::{Select, SelectItem};
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
+    use crate::switch::Switch;
     use crate::textarea::Textarea;
 
     fn bounds() -> Rect {
@@ -1325,6 +1328,232 @@ mod tests {
             .expect("date range picker trigger semantics");
         assert_eq!(
             trigger.flags.invalid,
+            Some(fret_core::SemanticsInvalid::True)
+        );
+    }
+
+    #[test]
+    fn form_field_invalid_checkbox_marks_control_semantics_invalid() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(false);
+        let field_id: Arc<str> = Arc::from("accept_terms");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-invalid-checkbox",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [Checkbox::new(model.clone())
+                            .test_id("form-field-checkbox")
+                            .into_element(cx)],
+                    )
+                    .label("Accept terms")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let control = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-checkbox"))
+            .expect("checkbox semantics");
+        assert_eq!(control.role, fret_core::SemanticsRole::Checkbox);
+        assert_eq!(
+            control.flags.invalid,
+            Some(fret_core::SemanticsInvalid::True)
+        );
+    }
+
+    #[test]
+    fn form_field_invalid_checkbox_uses_destructive_chrome() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(false);
+        let field_id: Arc<str> = Arc::from("accept_terms");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "form-field-invalid-checkbox-chrome",
+            |cx| {
+                FormField::new(
+                    form_state.clone(),
+                    field_id.clone(),
+                    [Checkbox::new(model.clone())
+                        .test_id("form-field-checkbox")
+                        .into_element(cx)],
+                )
+                .label("Accept terms")
+                .into_element(cx)
+            },
+        );
+
+        let control =
+            find_element_by_test_id(&el, "form-field-checkbox").expect("checkbox element");
+        let pressable = find_first_pressable(control).expect("checkbox pressable");
+        let chrome = find_pressable_chrome(control).expect("checkbox chrome");
+
+        let theme = Theme::global(&app).snapshot();
+        let expected_border = theme.color_token("destructive");
+        let mut expected_ring =
+            crate::theme_variants::invalid_control_ring_color(&theme, expected_border);
+        expected_ring.a = 0.0;
+
+        assert_eq!(chrome.border_color, Some(expected_border));
+        assert_eq!(
+            pressable.focus_ring.expect("focus ring").color,
+            expected_ring
+        );
+    }
+
+    #[test]
+    fn form_field_invalid_switch_marks_control_semantics_invalid() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let model = app.models_mut().insert(false);
+        let field_id: Arc<str> = Arc::from("airplane_mode");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-invalid-switch",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [Switch::new(model.clone())
+                            .test_id("form-field-switch")
+                            .into_element(cx)],
+                    )
+                    .label("Airplane mode")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let control = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-switch"))
+            .expect("switch semantics");
+        assert_eq!(control.role, fret_core::SemanticsRole::Switch);
+        assert_eq!(
+            control.flags.invalid,
+            Some(fret_core::SemanticsInvalid::True)
+        );
+    }
+
+    #[test]
+    fn form_field_invalid_native_select_marks_trigger_semantics_invalid() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let field_id: Arc<str> = Arc::from("country");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-invalid-native-select",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [NativeSelect::new(value.clone(), open.clone())
+                            .option(NativeSelectOption::new("cn", "China"))
+                            .trigger_test_id("form-field-native-select")
+                            .into_element(cx)],
+                    )
+                    .label("Country")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let control = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-native-select"))
+            .expect("native select semantics");
+        assert_eq!(control.role, fret_core::SemanticsRole::ComboBox);
+        assert_eq!(
+            control.flags.invalid,
             Some(fret_core::SemanticsInvalid::True)
         );
     }
