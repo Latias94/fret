@@ -46,11 +46,7 @@ impl NodeGraphSurfaceBinding {
         let graph_model = models.insert(graph.clone());
         let view_state_model = models.insert(view_state.clone());
         let editor_config_model = models.insert(editor_config.clone());
-        let store = models.insert(NodeGraphStore::new_with_editor_config(
-            graph,
-            view_state,
-            editor_config,
-        ));
+        let store = models.insert(NodeGraphStore::new(graph, view_state, editor_config));
         Self::from_models_and_controller_with_editor_config(
             graph_model,
             view_state_model,
@@ -152,7 +148,7 @@ mod tests {
     use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
     use crate::ops::{GraphOp, GraphTransaction};
     use crate::runtime::fit_view::{
-        FitViewComputeOptions, compute_fit_view_target_for_canvas_rect,
+        compute_fit_view_target_for_canvas_rect, FitViewComputeOptions,
     };
     use crate::runtime::store::NodeGraphStore;
     use crate::ui::NodeGraphFitViewOptions;
@@ -256,7 +252,11 @@ mod tests {
             zoom: 0.75,
             ..NodeGraphViewState::default()
         };
-        let store = NodeGraphStore::new(graph.clone(), view_state.clone());
+        let store = NodeGraphStore::new(
+            graph.clone(),
+            view_state.clone(),
+            NodeGraphEditorConfig::default(),
+        );
 
         let binding = NodeGraphSurfaceBinding::from_store(&mut models, store);
 
@@ -313,34 +313,30 @@ mod tests {
         ));
         assert!(outcome.changes.nodes.is_empty());
         assert!(outcome.changes.edges.is_empty());
-        assert!(
-            host.models
-                .read(&binding.graph_model(), |graph| graph
-                    .sticky_notes
-                    .contains_key(&note_id))
-                .expect("graph model readable")
-        );
+        assert!(host
+            .models
+            .read(&binding.graph_model(), |graph| graph
+                .sticky_notes
+                .contains_key(&note_id))
+            .expect("graph model readable"));
 
         let undo = binding.undo_action_host(&mut host).expect("undo succeeds");
         assert!(undo.is_some());
-        assert!(
-            !host
-                .models
-                .read(&binding.graph_model(), |graph| graph
-                    .sticky_notes
-                    .contains_key(&note_id))
-                .expect("graph model readable")
-        );
+        assert!(!host
+            .models
+            .read(&binding.graph_model(), |graph| graph
+                .sticky_notes
+                .contains_key(&note_id))
+            .expect("graph model readable"));
 
         let redo = binding.redo_action_host(&mut host).expect("redo succeeds");
         assert!(redo.is_some());
-        assert!(
-            host.models
-                .read(&binding.graph_model(), |graph| graph
-                    .sticky_notes
-                    .contains_key(&note_id))
-                .expect("graph model readable")
-        );
+        assert!(host
+            .models
+            .read(&binding.graph_model(), |graph| graph
+                .sticky_notes
+                .contains_key(&note_id))
+            .expect("graph model readable"));
     }
 
     #[test]
@@ -362,13 +358,12 @@ mod tests {
         binding
             .replace_graph_action_host(&mut host, graph)
             .expect("replace graph succeeds");
-        assert!(
-            host.models
-                .read(&binding.graph_model(), |value| value
-                    .nodes
-                    .contains_key(&node_id))
-                .expect("graph model readable")
-        );
+        assert!(host
+            .models
+            .read(&binding.graph_model(), |value| value
+                .nodes
+                .contains_key(&node_id))
+            .expect("graph model readable"));
 
         binding
             .set_selection_action_host(&mut host, vec![node_id], Vec::new(), Vec::new())

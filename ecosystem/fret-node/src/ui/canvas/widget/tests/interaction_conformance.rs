@@ -1489,13 +1489,11 @@ fn marquee_selects_connected_edges_for_selected_nodes_with_store() {
     store_editor_config.interaction.box_select_edges =
         crate::io::NodeGraphBoxSelectEdges::Connected;
 
-    let store = host
-        .models
-        .insert(NodeGraphStore::new_with_editor_config(
-            graph_value,
-            store_view,
-            store_editor_config,
-        ));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        store_view,
+        store_editor_config,
+    ));
     let graph = host.models.insert(Graph::default());
     let view = insert_view(&mut host);
 
@@ -2506,13 +2504,11 @@ fn ctrl_click_port_yanks_edges_and_starts_reconnect_with_store() {
     store_editor_config.interaction.edges_reconnectable = true;
     store_editor_config.interaction.connect_on_click = false;
 
-    let store = host
-        .models
-        .insert(NodeGraphStore::new_with_editor_config(
-            graph_value.clone(),
-            store_view,
-            store_editor_config,
-        ));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value.clone(),
+        store_view,
+        store_editor_config,
+    ));
     let graph = host.models.insert(Graph::default());
     let view = insert_view(&mut host);
 

@@ -2781,7 +2781,7 @@ pub fn run() -> anyhow::Result<()> {
     };
     view_value.sanitize_for_graph(&graph_value);
 
-    let store_value = NodeGraphStore::with_profile_and_editor_config(
+    let store_value = NodeGraphStore::with_profile(
         graph_value,
         view_value,
         editor_config,

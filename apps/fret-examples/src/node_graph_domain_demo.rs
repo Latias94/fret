@@ -1117,8 +1117,7 @@ pub fn run() -> anyhow::Result<()> {
         };
     view_value.sanitize_for_graph(&graph_value);
 
-    let store_value =
-        NodeGraphStore::new_with_editor_config(graph_value, view_value, editor_config);
+    let store_value = NodeGraphStore::new(graph_value, view_value, editor_config);
     let graph = app.models_mut().insert(store_value.graph().clone());
     let view = app.models_mut().insert(store_value.view_state().clone());
     let editor_config = app.models_mut().insert(store_value.editor_config());

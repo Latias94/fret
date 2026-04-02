@@ -90,13 +90,8 @@ impl std::fmt::Debug for NodeGraphStore {
 }
 
 impl NodeGraphStore {
-    /// Creates a store without a profile pipeline (raw ops apply + undo/redo).
-    pub fn new(graph: Graph, view_state: NodeGraphViewState) -> Self {
-        Self::new_with_editor_config(graph, view_state, NodeGraphEditorConfig::default())
-    }
-
     /// Creates a store with an explicit editor configuration payload.
-    pub fn new_with_editor_config(
+    pub fn new(
         graph: Graph,
         mut view_state: NodeGraphViewState,
         editor_config: NodeGraphEditorConfig,
@@ -124,22 +119,10 @@ impl NodeGraphStore {
     pub fn with_profile(
         graph: Graph,
         view_state: NodeGraphViewState,
-        profile: Box<dyn GraphProfile>,
-    ) -> Self {
-        Self::with_profile_and_editor_config(
-            graph,
-            view_state,
-            NodeGraphEditorConfig::default(),
-            profile,
-        )
-    }
-
-    pub fn with_profile_and_editor_config(
-        graph: Graph,
-        mut view_state: NodeGraphViewState,
         editor_config: NodeGraphEditorConfig,
         profile: Box<dyn GraphProfile>,
     ) -> Self {
+        let mut view_state = view_state;
         view_state.sanitize_for_graph(&graph);
         let mut lookups = NodeGraphLookups::default();
         lookups.rebuild_from(&graph);

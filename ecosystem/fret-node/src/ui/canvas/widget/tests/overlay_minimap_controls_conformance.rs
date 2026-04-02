@@ -1,5 +1,5 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px,
@@ -10,8 +10,8 @@ use fret_runtime::{
     BindingV1, CommandId, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService,
     PlatformCapabilities,
 };
-use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::UiTree;
+use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
 use crate::core::{Graph, GraphId};
 use crate::io::NodeGraphViewState;
@@ -23,7 +23,7 @@ use crate::ui::{
     NodeGraphMiniMapOverlay, NodeGraphStyle,
 };
 
-use super::{insert_graph_view, insert_view, NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_graph_view, insert_view};
 
 #[derive(Clone)]
 struct PointerDownCounter {
@@ -268,8 +268,8 @@ fn controls_overlay_button_click_requests_focus_to_canvas_node() {
 }
 
 #[test]
-fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_returns_focus_to_canvas(
-) {
+fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_returns_focus_to_canvas()
+ {
     let mut host = TestUiHostImpl::default();
     let mut services = NullServices::default();
     let mut ui = UiTree::<TestUiHostImpl>::default();
@@ -600,6 +600,7 @@ fn minimap_drag_updates_view_state_and_store_when_attached() {
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
+        crate::io::NodeGraphEditorConfig::default(),
     ));
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
@@ -723,6 +724,7 @@ fn minimap_supports_controller_navigation_binding_without_transport_state_on_con
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
+        crate::io::NodeGraphEditorConfig::default(),
     ));
     let controller = NodeGraphController::new(store.clone());
 
@@ -825,6 +827,7 @@ fn minimap_keyboard_pan_updates_view_state_and_store_when_attached() {
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
+        crate::io::NodeGraphEditorConfig::default(),
     ));
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
@@ -891,6 +894,7 @@ fn minimap_keyboard_zoom_updates_view_state_and_store_zoom_about_center() {
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
+        crate::io::NodeGraphEditorConfig::default(),
     ));
 
     let internals = Arc::new(NodeGraphInternalsStore::new());

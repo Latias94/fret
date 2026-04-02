@@ -1,16 +1,20 @@
 use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port};
 use crate::io::NodeGraphViewState;
-use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
+use crate::ops::{apply_transaction, GraphOp, GraphTransaction};
 use crate::runtime::apply::{apply_edge_changes, apply_node_changes};
 use crate::runtime::callbacks::{
-    ConnectionChange, NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks,
-    connection_changes_from_transaction, install_callbacks,
+    connection_changes_from_transaction, install_callbacks, ConnectionChange,
+    NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks,
 };
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
 use crate::runtime::events::NodeGraphStoreEvent;
 use crate::runtime::lookups::{ConnectionSide, NodeGraphLookups};
 use crate::runtime::middleware::NodeGraphStoreMiddleware;
 use crate::runtime::store::NodeGraphStore;
+
+fn default_editor_config() -> crate::io::NodeGraphEditorConfig {
+    crate::io::NodeGraphEditorConfig::default()
+}
 
 fn make_graph() -> (
     Graph,
@@ -297,7 +301,7 @@ fn store_lookups_update_after_dispatch_transaction() {
     let (mut g, _a, _b, out_port, in_port, eid) = make_graph();
     g.edges.clear();
 
-    let mut store = NodeGraphStore::new(g, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g, NodeGraphViewState::default(), default_editor_config());
     assert!(store.lookups().edge_lookup.is_empty());
 
     let tx = GraphTransaction {
@@ -382,7 +386,7 @@ fn install_callbacks_receives_graph_and_view_events() {
     impl NodeGraphGestureCallbacks for Recorder {}
 
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
 
     let log: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -433,7 +437,11 @@ fn controlled_graph_can_apply_store_changes_via_callbacks() {
     impl NodeGraphGestureCallbacks for ControlledApply {}
 
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0.clone(), NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(
+        g0.clone(),
+        NodeGraphViewState::default(),
+        default_editor_config(),
+    );
 
     let controlled = Rc::new(RefCell::new(g0));
     let _token = install_callbacks(
@@ -546,7 +554,7 @@ fn install_callbacks_calls_viewport_selection_and_connection_hooks() {
         },
     );
 
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
 
     let log: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -651,7 +659,7 @@ fn install_callbacks_calls_delete_hooks_for_remove_node() {
     impl NodeGraphGestureCallbacks for Recorder {}
 
     let (g0, a, _b, _out_port, _in_port, eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
 
     let nodes_deleted: Rc<RefCell<Vec<NodeId>>> = Rc::new(RefCell::new(Vec::new()));
     let edges_deleted: Rc<RefCell<Vec<EdgeId>>> = Rc::new(RefCell::new(Vec::new()));
@@ -684,7 +692,7 @@ fn install_callbacks_calls_delete_hooks_for_remove_node() {
 #[test]
 fn store_dispatch_changes_records_history_and_supports_undo() {
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
 
     let changes = NodeGraphChanges {
         nodes: vec![NodeChange::Position {
@@ -747,6 +755,7 @@ fn store_does_not_commit_rejected_profile_edits() {
     let mut store = NodeGraphStore::with_profile(
         g0.clone(),
         NodeGraphViewState::default(),
+        default_editor_config(),
         Box::new(RejectProfile),
     );
 
@@ -811,7 +820,11 @@ fn store_rejects_non_finite_transactions() {
         }],
     };
 
-    let mut store = NodeGraphStore::new(g.clone(), NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(
+        g.clone(),
+        NodeGraphViewState::default(),
+        default_editor_config(),
+    );
     let err = store.dispatch_transaction(&tx).expect_err("reject");
     let crate::runtime::store::DispatchError::Apply(crate::profile::ApplyPipelineError::Rejected {
         diagnostics,
@@ -858,7 +871,11 @@ fn store_rejects_invalid_size_transactions() {
         }],
     };
 
-    let mut store = NodeGraphStore::new(g.clone(), NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(
+        g.clone(),
+        NodeGraphViewState::default(),
+        default_editor_config(),
+    );
     let err = store.dispatch_transaction(&tx).expect_err("reject");
     let crate::runtime::store::DispatchError::Apply(crate::profile::ApplyPipelineError::Rejected {
         diagnostics,
@@ -890,7 +907,8 @@ fn store_middleware_can_rewrite_transactions() {
     }
 
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default()).with_middleware(DropOps);
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config())
+        .with_middleware(DropOps);
 
     let tx = GraphTransaction {
         label: None,
@@ -937,8 +955,12 @@ fn store_middleware_can_reject_transactions() {
     }
 
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store =
-        NodeGraphStore::new(g0.clone(), NodeGraphViewState::default()).with_middleware(RejectAll);
+    let mut store = NodeGraphStore::new(
+        g0.clone(),
+        NodeGraphViewState::default(),
+        default_editor_config(),
+    )
+    .with_middleware(RejectAll);
 
     let tx = GraphTransaction {
         label: None,
@@ -971,7 +993,7 @@ fn store_subscription_receives_graph_and_view_events_and_can_unsubscribe() {
     use std::rc::Rc;
 
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
 
     let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
     let events2 = events.clone();
@@ -1015,7 +1037,7 @@ fn store_selector_subscription_dedupes_and_tracks_graph_and_view_projections() {
     use std::rc::Rc;
 
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
 
     let node_counts: Rc<RefCell<Vec<usize>>> = Rc::new(RefCell::new(Vec::new()));
     let node_counts2 = node_counts.clone();
@@ -1074,7 +1096,7 @@ fn store_selector_diff_provides_prev_and_next() {
     use std::rc::Rc;
 
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
 
     let deltas: Rc<RefCell<Vec<(usize, usize)>>> = Rc::new(RefCell::new(Vec::new()));
     let deltas2 = deltas.clone();
@@ -1096,7 +1118,7 @@ fn store_replace_view_state_emits_view_changed_event() {
     use std::rc::Rc;
 
     let (g0, _a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
 
     let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
     let events2 = events.clone();
@@ -1119,7 +1141,7 @@ fn store_replace_editor_config_notifies_selectors_for_runtime_tuning_only_change
     use std::rc::Rc;
 
     let (g0, _a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
 
     let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
     let events2 = events.clone();
@@ -1150,7 +1172,7 @@ fn store_update_view_state_notifies_selectors_for_draw_order_only_changes() {
     use std::rc::Rc;
 
     let (g0, a, b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
 
     let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
     let events2 = events.clone();
@@ -1178,7 +1200,7 @@ fn store_update_view_state_notifies_selectors_for_draw_order_only_changes() {
 #[test]
 fn store_graph_revision_stays_stable_for_view_only_updates() {
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
     let before = store.graph_revision();
 
     store.set_viewport(CanvasPoint { x: 3.0, y: 4.0 }, 1.5);
@@ -1196,7 +1218,7 @@ fn store_graph_revision_stays_stable_for_view_only_updates() {
 #[test]
 fn store_graph_revision_advances_for_graph_mutations() {
     let (g0, _a, _b, _out_port, _in_port, _eid) = make_graph();
-    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
     let node_id = NodeId::new();
     let before = store.graph_revision();
 

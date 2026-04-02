@@ -5,7 +5,8 @@ impl NodeGraphSurfaceBinding {
     /// Re-syncs the graph/view mirrors from the authoritative store.
     pub fn sync_from_store<H: UiHost>(&self, host: &mut H) -> bool {
         let controller = self.controller();
-        let graph_view_synced = controller.sync_models_from_store(host, &self.graph, &self.view_state);
+        let graph_view_synced =
+            controller.sync_models_from_store(host, &self.graph, &self.view_state);
         let config_synced = self.editor_config.as_ref().is_none_or(|editor_config| {
             controller.sync_editor_config_model_from_store(host, editor_config)
         });
@@ -41,7 +42,9 @@ impl NodeGraphSurfaceBinding {
         host: &mut dyn UiActionHost,
         tx: &GraphTransaction,
     ) -> Result<DispatchOutcome, NodeGraphControllerError> {
-        let outcome = self.controller().dispatch_transaction_action_host(host, tx)?;
+        let outcome = self
+            .controller()
+            .dispatch_transaction_action_host(host, tx)?;
         let _ = self.sync_from_store_action_host(host);
         Ok(outcome)
     }
@@ -131,12 +134,13 @@ impl NodeGraphSurfaceBinding {
         } else {
             NodeGraphEditorConfig::default()
         };
-        self.controller().replace_document_with_editor_config_action_host(
-            host,
-            graph,
-            view_state,
-            editor_config,
-        )?;
+        self.controller()
+            .replace_document_with_editor_config_action_host(
+                host,
+                graph,
+                view_state,
+                editor_config,
+            )?;
         let _ = self.sync_from_store_action_host(host);
         Ok(())
     }
@@ -159,7 +163,8 @@ impl NodeGraphSurfaceBinding {
         host: &mut dyn UiActionHost,
         view_state: NodeGraphViewState,
     ) -> Result<(), NodeGraphControllerError> {
-        self.controller().replace_view_state_action_host(host, view_state)?;
+        self.controller()
+            .replace_view_state_action_host(host, view_state)?;
         let _ = self.sync_from_store_action_host(host);
         Ok(())
     }
@@ -172,7 +177,8 @@ impl NodeGraphSurfaceBinding {
         edges: Vec<EdgeId>,
         groups: Vec<GroupId>,
     ) -> Result<(), NodeGraphControllerError> {
-        self.controller().set_selection(host, nodes, edges, groups)?;
+        self.controller()
+            .set_selection(host, nodes, edges, groups)?;
         let _ = self.sync_from_store(host);
         Ok(())
     }
