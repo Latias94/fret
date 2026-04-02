@@ -3754,6 +3754,111 @@ fn input_otp_docs_keep_invalid_ownership_on_slots_with_caller_owned_error_copy()
 }
 
 #[test]
+fn label_input_group_and_slider_docs_keep_label_association_on_the_control_registry_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/label/usage.rs",
+            vec![
+                "let control_id = ControlId::from(\"ui-gallery-label-usage\");",
+                "shadcn::Label::new(\"Your email address\").for_control(control_id.clone())",
+                "shadcn::Input::new(email).placeholder(\"you@example.com\").control_id(control_id)",
+            ],
+        ),
+        (
+            "src/ui/pages/label.rs",
+            vec![
+                "`Label::for_control(...)` plus a control-side `control_id(...)` is the Fret bridge for the upstream `htmlFor` / `id` pairing and keeps click-to-focus behavior out of page code.",
+            ],
+        ),
+        (
+            "src/ui/snippets/input_group/label.rs",
+            vec![
+                "let username_id = ControlId::from(\"ui-gallery-input-group-label-username\");",
+                "let email_id = ControlId::from(\"ui-gallery-input-group-label-email\");",
+                ".control_id(username_id.clone())",
+                ".for_control(username_id.clone())",
+                ".control_id(email_id.clone())",
+                ".for_control(email_id.clone())",
+            ],
+        ),
+        (
+            "src/ui/pages/input_group.rs",
+            vec![
+                "Use `Label::for_control` + `InputGroup::control_id` so label clicks focus the control and preserve `labelled-by` semantics.",
+            ],
+        ),
+        (
+            "src/ui/snippets/slider/label.rs",
+            vec![
+                "let control_id = ControlId::from(\"ui-gallery-slider-label\");",
+                ".control_id(control_id.clone())",
+                ".test_id_prefix(\"ui-gallery-slider-label\")",
+                ".for_control(control_id.clone())",
+            ],
+        ),
+        (
+            "src/ui/pages/slider.rs",
+            vec![
+                "Use `FieldLabel::for_control`, `Slider::control_id`, and `Slider::test_id_prefix` on top of `slider(model)` to focus the active thumb and keep derived automation anchors stable.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing label-association ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn field_docs_keep_label_and_invalid_ownership_on_field_parts() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/field/validation_and_errors.rs",
+            vec![
+                "let email_id = \"ui-gallery-field-validation-email\";",
+                "shadcn::FieldLabel::new(\"Email\").for_control(email_id)",
+                "shadcn::Input::new(email_invalid).control_id(email_id)",
+                ".aria_invalid(true)",
+                "shadcn::FieldError::new(\"Enteravalidemailaddress.\").for_control(email_id)",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/field.rs",
+            vec![
+                "Associate labels via `FieldLabel::for_control(...)` plus matching control ids; when parts need a shared field-local association context, use `Field::build(...)`.",
+                "Use `FieldError` immediately after the control or inside `FieldContent`, and pair invalid styling with control-level `aria_invalid(true)`.",
+                "Keyboard, labeling, grouping, and invalid-state guidance.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing field ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
 fn form_page_and_notes_teach_rtl_as_a_fret_follow_up() {
     let form_page = read("src/ui/pages/form.rs");
     assert!(
