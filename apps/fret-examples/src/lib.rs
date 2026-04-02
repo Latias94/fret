@@ -689,7 +689,7 @@ mod authoring_surface_policy_tests {
         assert!(!TODO_DEMO.contains("advanced::prelude::*"));
         assert!(!TODO_DEMO.contains("KernelApp"));
         assert!(!TODO_DEMO.contains("AppWindowId"));
-        assert!(TODO_DEMO.contains("fn init(app: &mut App, _window: WindowId) -> Self"));
+        assert!(TODO_DEMO.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(TODO_DEMO.contains("ui::single(cx, todo_page(theme, responsive, card))"));
         assert!(TODO_DEMO.contains("fn todo_page("));
         assert!(TODO_DEMO.contains("responsive: TodoResponsiveLayout,"));
@@ -697,20 +697,25 @@ mod authoring_surface_policy_tests {
         assert!(!TODO_DEMO.contains("todo_page(theme, card).into_element(cx).into()"));
         assert_avoids_legacy_conversion_names(TODO_DEMO);
         assert!(TODO_DEMO.contains("struct TodoLocals {"));
-        assert!(TODO_DEMO.contains("struct TodoDemoView {"));
-        assert!(TODO_DEMO.contains("locals: TodoLocals,"));
-        assert!(TODO_DEMO.contains("fn init(app: &mut App, _window: WindowId) -> Self"));
-        assert!(TODO_DEMO.contains("locals: TodoLocals::new(app),"));
-        assert!(TODO_DEMO.contains("let locals = &self.locals;"));
+        assert!(TODO_DEMO.contains("fn new(cx: &mut AppUi<'_, '_>) -> Self {"));
+        assert!(TODO_DEMO.contains("struct TodoDemoView;"));
+        assert!(TODO_DEMO.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
+        assert!(TODO_DEMO.contains("let locals = TodoLocals::new(cx);"));
         assert!(TODO_DEMO.contains("locals.bind_actions(cx);"));
-        assert!(
-            TODO_DEMO.contains("LocalState::from_model(app.models_mut().insert(String::new()))")
-        );
+        assert!(TODO_DEMO.contains("draft: cx.state().local::<String>(),"));
+        assert!(TODO_DEMO.contains("filter: cx.state().local_init(|| TodoFilter::All),"));
+        assert!(TODO_DEMO.contains("next_id: cx.state().local_init(|| 4u64),"));
+        assert!(TODO_DEMO.contains("todos: cx.state().local_init(|| {"));
         assert!(TODO_DEMO.contains("fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {"));
         assert!(TODO_DEMO.contains(".setup(fret_icons_lucide::app::install)"));
+        assert!(TODO_DEMO.contains(".window_min_size(TODO_WINDOW_MIN_SIZE)"));
+        assert!(TODO_DEMO.contains(".window_position_logical(TODO_WINDOW_POSITION_LOGICAL)"));
+        assert!(TODO_DEMO.contains(".window_resize_increments(TODO_WINDOW_RESIZE_INCREMENTS)"));
+        assert!(TODO_DEMO.contains("ui::for_each_keyed_with_cx("));
         assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
         assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
-        assert!(!TODO_DEMO.contains("TodoLocals::new(cx)"));
+        assert!(!TODO_DEMO.contains("TodoLocals::new(app)"));
+        assert!(!TODO_DEMO.contains("LocalState::from_model(app.models_mut().insert("));
     }
 
     #[test]
@@ -718,16 +723,14 @@ mod authoring_surface_policy_tests {
         assert_uses_default_app_surface(SIMPLE_TODO_DEMO);
         assert_avoids_legacy_conversion_names(SIMPLE_TODO_DEMO);
         assert!(SIMPLE_TODO_DEMO.contains("struct TodoLocals {"));
-        assert!(SIMPLE_TODO_DEMO.contains("struct SimpleTodoView {"));
-        assert!(SIMPLE_TODO_DEMO.contains("locals: TodoLocals,"));
-        assert!(SIMPLE_TODO_DEMO.contains("fn init(app: &mut App, _window: WindowId) -> Self"));
-        assert!(SIMPLE_TODO_DEMO.contains("locals: TodoLocals::new(app),"));
-        assert!(SIMPLE_TODO_DEMO.contains("let locals = &self.locals;"));
+        assert!(SIMPLE_TODO_DEMO.contains("fn new(cx: &mut AppUi<'_, '_>) -> Self {"));
+        assert!(SIMPLE_TODO_DEMO.contains("struct SimpleTodoView;"));
+        assert!(SIMPLE_TODO_DEMO.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
+        assert!(SIMPLE_TODO_DEMO.contains("let locals = TodoLocals::new(cx);"));
         assert!(SIMPLE_TODO_DEMO.contains("locals.bind_actions(cx);"));
-        assert!(
-            SIMPLE_TODO_DEMO
-                .contains("LocalState::from_model(app.models_mut().insert(String::new()))")
-        );
+        assert!(SIMPLE_TODO_DEMO.contains("draft: cx.state().local::<String>(),"));
+        assert!(SIMPLE_TODO_DEMO.contains("next_id: cx.state().local_init(|| 3u64),"));
+        assert!(SIMPLE_TODO_DEMO.contains("todos: cx.state().local_init(|| {"));
         assert!(SIMPLE_TODO_DEMO.contains(".local(&self.todos)"));
         assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
         assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Remove>(|rows, id| {"));
@@ -740,7 +743,8 @@ mod authoring_surface_policy_tests {
         assert!(!SIMPLE_TODO_DEMO.contains("CommandId"));
         assert!(!SIMPLE_TODO_DEMO.contains("UiTree<App>"));
         assert!(!SIMPLE_TODO_DEMO.contains("Model<"));
-        assert!(!SIMPLE_TODO_DEMO.contains("TodoLocals::new(cx)"));
+        assert!(!SIMPLE_TODO_DEMO.contains("TodoLocals::new(app)"));
+        assert!(!SIMPLE_TODO_DEMO.contains("LocalState::from_model(app.models_mut().insert("));
     }
 
     #[test]
@@ -2021,14 +2025,16 @@ mod authoring_surface_policy_tests {
             TODO_DEMO,
             &[
                 "struct TodoLocals {",
-                "struct TodoDemoView {",
-                "locals: TodoLocals,",
-                "locals: TodoLocals::new(app),",
-                "let locals = &self.locals;",
+                "fn new(cx: &mut AppUi<'_, '_>) -> Self {",
+                "struct TodoDemoView;",
+                "let locals = TodoLocals::new(cx);",
                 "locals.bind_actions(cx);",
                 "let todos = locals.todos.layout_value(cx);",
                 "let draft_value = locals.draft.layout_value(cx);",
-                "LocalState::from_model(app.models_mut().insert(String::new()))",
+                "draft: cx.state().local::<String>(),",
+                "filter: cx.state().local_init(|| TodoFilter::All),",
+                "next_id: cx.state().local_init(|| 4u64),",
+                "todos: cx.state().local_init(|| {",
                 ".locals_with((&self.draft, &self.next_id, &self.todos))",
                 ".on::<act::Add>(|tx, (draft, next_id, todos)| {",
                 "let text = tx.value(&draft).trim().to_string();",
@@ -2048,7 +2054,7 @@ mod authoring_surface_policy_tests {
                 "draft_state.layout(cx).value_or_default()",
                 "tx.value_or_else(&draft_state, String::new)",
                 "tx.value_or(&next_id_state, 1)",
-                "TodoLocals::new(cx)",
+                "TodoLocals::new(app)",
             ],
         );
 

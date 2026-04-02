@@ -256,14 +256,6 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
 "#
     };
 
-    let palette_button = if opts.command_palette {
-        r#"
-                shadcn::Button::new("Command palette")
-                    .action("app.command_palette"),"#
-    } else {
-        ""
-    };
-
     let install_icons = match opts.icon_pack {
         IconPack::Radix => {
             r#"    fret_icons_radix::app::install(app);
@@ -374,24 +366,24 @@ struct TodoLocals {
 }
 
 impl TodoLocals {
-    fn new(app: &mut App) -> Self {
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
         Self {
-            draft: LocalState::from_model(app.models_mut().insert(String::new())),
-            filter: LocalState::from_model(app.models_mut().insert(TodoFilter::All)),
-            next_id: LocalState::from_model(app.models_mut().insert(3u64)),
-            tip_nonce: LocalState::from_model(app.models_mut().insert(0u64)),
-            todos: LocalState::from_model(app.models_mut().insert(vec![
+            draft: cx.state().local::<String>(),
+            filter: cx.state().local_init(|| TodoFilter::All),
+            next_id: cx.state().local_init(|| 3u64),
+            tip_nonce: cx.state().local_init(|| 0u64),
+            todos: cx.state().local_init(|| vec![
                     TodoRow {
                         id: 1,
                         done: false,
-                        text: Arc::from("Try the shadcn New York style"),
+                        text: Arc::from("Draft the Friday release checklist"),
                     },
                     TodoRow {
                         id: 2,
                         done: true,
-                        text: Arc::from("Validate selector derived state"),
+                        text: Arc::from("Reply to the design review notes"),
                     },
-                ])),
+                ]),
         }
     }
 
@@ -459,21 +451,17 @@ impl TodoLocals {
     }
 }
 
-struct TodoView {
-    locals: TodoLocals,
-}
+struct TodoView;
 
 impl View for TodoView {
-    fn init(app: &mut App, _window: WindowId) -> Self {
-        Self {
-            locals: TodoLocals::new(app),
-        }
+    fn init(_app: &mut App, _window: WindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
-        let locals = &self.locals;
+        let locals = TodoLocals::new(cx);
         locals.bind_actions(cx);
 
         let draft_value = locals.draft.layout_value(cx);
@@ -524,13 +512,16 @@ impl View for TodoView {
         let tip_nonce_value = locals.tip_nonce.paint_value(cx);
         let tip_handle = cx.data().query(tip_key(tip_nonce_value), tip_policy(), move |_token| {
                 #[cfg(not(target_arch = "wasm32"))]
-                std::thread::sleep(Duration::from_millis(150));
+                std::thread::sleep(Duration::from_millis(120));
+
+                const TIPS: &[&str] = &[
+                    "Finish one active task before adding another.",
+                    "Break the next large item into a single concrete step.",
+                    "Delete stale tasks when they stop being real work.",
+                ];
 
                 Ok(TipData {
-                    text: Arc::from(format!(
-                        "Tip fetched at {:?}",
-                        std::time::SystemTime::now()
-                    )),
+                    text: Arc::from(TIPS[(tip_nonce_value as usize) % TIPS.len()]),
                 })
             });
 
@@ -539,29 +530,32 @@ impl View for TodoView {
         let (tip_text, tip_color_key): (Arc<str>, &'static str) = if tip_state.is_loading()
             || tip_state.is_idle()
         {
-            (Arc::from("Tip: loading…"), "muted-foreground")
+            (Arc::from("Loading a focus note..."), "muted-foreground")
         } else if tip_state.is_error() {
             let err = tip_state
                 .error
                 .as_ref()
                 .map(|e| e.to_string())
                 .unwrap_or_else(|| String::from("unknown error"));
-            (Arc::from(format!("Tip error: {err}")), "destructive")
+            (Arc::from(format!("Could not load a focus note: {err}")), "destructive")
         } else {
             let text = tip_state
                 .data
                 .as_ref()
                 .map(|d| d.text.clone())
-                .unwrap_or_else(|| Arc::<str>::from("<no tip>"));
+                .unwrap_or_else(|| Arc::<str>::from("<no note>"));
             (text, "muted-foreground")
         };
         let tip_color = theme.color_token(tip_color_key);
 
-        let progress = shadcn::Badge::new(format!("{}/{} done", derived.completed, derived.total))
-            .variant(shadcn::BadgeVariant::Secondary);
+        let progress_label = if derived.total == 0 {
+            "No tasks yet".to_string()
+        } else {
+            format!("{} of {} done", derived.completed, derived.total)
+        };
 
-        let active = shadcn::Badge::new(format!("{} active", derived.active))
-            .variant(shadcn::BadgeVariant::Outline);
+        let progress_badge = shadcn::Badge::new(progress_label)
+            .variant(shadcn::BadgeVariant::Secondary);
 
         let summary = ui::text(status_text)
             .text_sm()
@@ -570,13 +564,19 @@ impl View for TodoView {
         let title_block = ui::v_flex(|cx| {
             ui::children![
                 cx;
-                shadcn::card_title("Todo"),
+                shadcn::card_title("My tasks"),
                 summary,
             ]
         })
         .gap(Space::N1)
         .flex_1()
         .min_w_0();
+
+        let header = ui::h_flex(|cx| ui::children![cx; title_block, progress_badge])
+            .gap(Space::N3)
+            .items_center()
+            .justify_between()
+            .w_full();
 
         let clear_done_btn = shadcn::Button::new("Clear done")
             .variant(shadcn::ButtonVariant::Ghost)
@@ -616,22 +616,40 @@ __ADD_BTN_DEF__
         .gap(Space::N1)
         .items_center();
 
-        let tip_line = ui::h_flex(|cx| {
-            ui::children![
-                cx;
-                ui::text(tip_text.clone())
-                    .text_sm()
-                    .text_color(ColorRef::Color(tip_color))
-                    .flex_1()
-                    .min_w_0(),
-                shadcn::Button::new("Refresh tip")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Sm)
-                    .action(act::RefreshTip),
-            ]
+        let tip_callout = ui::container(|cx| {
+            ui::single(
+                cx,
+                ui::h_flex(|cx| {
+                    ui::children![
+                        cx;
+                        ui::v_flex(|cx| {
+                            ui::children![
+                                cx;
+                                shadcn::Label::new("Focus note"),
+                                ui::text(tip_text.clone())
+                                    .text_sm()
+                                    .text_color(ColorRef::Color(tip_color)),
+                            ]
+                        })
+                        .gap(Space::N1)
+                        .flex_1()
+                        .min_w_0(),
+                        shadcn::Button::new("Another note")
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::Sm)
+                            .action(act::RefreshTip),
+                    ]
+                })
+                .gap(Space::N3)
+                .items_center()
+                .w_full(),
+            )
         })
-        .gap(Space::N2)
-        .items_center()
+        .rounded(Radius::Md)
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_token("border")))
+        .bg(ColorRef::Color(theme.color_token("muted")))
+        .p(Space::N3)
         .w_full();
 
         let rows_body = ui::v_flex(|cx| {
@@ -682,15 +700,26 @@ __ADD_BTN_DEF__
             .w_full();
 
         let content = ui::v_flex(|cx| ui::children![cx;
-            tip_line,
             input_row,
             rows,
-__PALETTE_BUTTON__
+            tip_callout,
         ])
         .gap(Space::N4)
         .w_full();
 
-        let footer_right = ui::h_flex(|cx| ui::children![cx; progress, active, clear_done_btn])
+        let footer_summary = if derived.total == 0 {
+            "No tasks yet".to_string()
+        } else {
+            format!("{} active / {} completed", derived.active, derived.completed)
+        };
+
+        let footer_right = ui::h_flex(|cx| ui::children![
+            cx;
+            ui::text(footer_summary)
+                .text_sm()
+                .text_color(ColorRef::Color(muted_foreground)),
+            clear_done_btn
+        ])
             .gap(Space::N2)
             .items_center();
 
@@ -703,7 +732,7 @@ __PALETTE_BUTTON__
         let card = shadcn::card(|cx| {
             ui::children![cx;
                 shadcn::card_header(|cx| {
-                    ui::children![cx; title_block]
+                    ui::children![cx; header]
                 }),
                 shadcn::card_content(|cx| ui::single(cx, content)),
                 shadcn::card_footer(|cx| ui::children![cx; footer]),
@@ -814,7 +843,6 @@ __BUILDER_SUFFIX__        .run()
         .replace("__ICON_IMPORT__", icon_import)
         .replace("__INSTALL_APP_BINDING__", install_app_binding)
         .replace("__INSTALL_ICONS__", install_icons)
-        .replace("__PALETTE_BUTTON__", palette_button)
         .replace("__PACKAGE_NAME__", package_name)
 }
 
@@ -983,11 +1011,11 @@ struct TodoLocals {
 }
 
 impl TodoLocals {
-    fn new(app: &mut App) -> Self {
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
         Self {
-            draft: LocalState::from_model(app.models_mut().insert(String::new())),
-            next_id: LocalState::from_model(app.models_mut().insert(3u64)),
-            todos: LocalState::from_model(app.models_mut().insert(vec![
+            draft: cx.state().local::<String>(),
+            next_id: cx.state().local_init(|| 3u64),
+            todos: cx.state().local_init(|| vec![
                     TodoRow {
                         id: 1,
                         done: false,
@@ -998,7 +1026,7 @@ impl TodoLocals {
                         done: true,
                         text: Arc::from("Use payload actions for row toggles"),
                     },
-                ])),
+                ]),
         }
     }
 
@@ -1050,21 +1078,17 @@ impl TodoLocals {
     }
 }
 
-struct TodoView {
-    locals: TodoLocals,
-}
+struct TodoView;
 
 impl View for TodoView {
-    fn init(app: &mut App, _window: WindowId) -> Self {
-        Self {
-            locals: TodoLocals::new(app),
-        }
+    fn init(_app: &mut App, _window: WindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
-        let locals = &self.locals;
+        let locals = TodoLocals::new(cx);
         locals.bind_actions(cx);
 
         let todos = locals.todos.layout_value(cx);
@@ -1407,13 +1431,21 @@ cargo run --release
 {icons_line}{palette_line}
 {ui_assets_line}
 - Ladder position: third rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
+- Product posture: a deletable product baseline first, with selector/query slices kept visible but secondary
 - Authoring: view runtime + typed actions + grouped view locals (action-first, v2)
-- Hooks: selector + query (v1)
+- Hooks: one selector projection + one query-backed focus note
 - State: LocalState-first (`draft`, `filter`, `todos`, id counter, query nonce). Prefer explicit `Model<T>` graphs only when shared ownership or cross-view coordination is the point.
 - Default entrypoints: keep one or two trivial local slots inline; when a view owns several related `LocalState<T>` slots, prefer a small `*Locals` bundle with `new(cx)` and optional `bind_actions(&self, cx)`. Inside that bundle, use `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for grouped LocalState transactions, use `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()` for single-local writes, bind keyed-row payloads via `.action_payload(...)`, use `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path, and use `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` and lower-level payload helpers as cookbook/reference-only host-side glue.
 - Read tracked state values near the top of `render()` before building nested card/layout sections.
 - For App-only effects, prefer `cx.actions().transient::<A>(...)` in the handler and consume the transient via `cx.effects().take_transient(...)` in `render()`.
+
+## First cuts if you want a smaller app
+
+- Delete the query-backed focus note first if you do not need async state yet (`tip_nonce`, `tip_key`, `tip_policy`, `RefreshTip`, `tip_handle`, `tip_callout`).
+- Delete filters next if your first version only needs one task list (`TodoFilter`, filter actions, filter chips, selector dependency on `filter`).
+- If you remove both slices, replace `TodoDerived` with direct reads from `locals.todos` and drop the `state` feature from `Cargo.toml`.
+
 ## Next steps
 
 - Edit UI in `src/main.rs`
@@ -1577,7 +1609,7 @@ mod tests {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("icons::{icon, IconId},"));
         assert!(src.contains("style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},"));
-        assert!(src.contains("fn init(app: &mut App, _window: WindowId) -> Self"));
+        assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(!src.contains("cx: &mut UiCx<'_>,"));
         assert!(src.contains("impl UiChild"));
@@ -1598,18 +1630,23 @@ mod tests {
         assert!(src.contains("shadcn::card(|cx| {"));
         assert!(src.contains("shadcn::card_header(|cx| {"));
         assert!(src.contains("shadcn::card_content(|cx| ui::single(cx, content))"));
-        assert!(src.contains("shadcn::card_title(\"Todo\")"));
+        assert!(src.contains("shadcn::card_title(\"My tasks\")"));
         assert!(src.contains("let summary = ui::text(status_text)"));
+        assert!(src.contains("let progress_label = if derived.total == 0 {"));
+        assert!(src.contains("let progress_badge = shadcn::Badge::new(progress_label)"));
         assert!(!src.contains("shadcn::Card::build(|cx, out| {"));
         assert!(!src.contains("shadcn::CardHeader::build(|cx, out| {"));
         assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("struct TodoLocals {"));
-        assert!(src.contains("struct TodoView {"));
-        assert!(src.contains("locals: TodoLocals,"));
-        assert!(src.contains("locals: TodoLocals::new(app),"));
-        assert!(src.contains("let locals = &self.locals;"));
+        assert!(src.contains("fn new(cx: &mut AppUi<'_, '_>) -> Self {"));
+        assert!(src.contains("struct TodoView;"));
+        assert!(src.contains("let locals = TodoLocals::new(cx);"));
         assert!(src.contains("locals.bind_actions(cx);"));
-        assert!(src.contains("LocalState::from_model(app.models_mut().insert(String::new()))"));
+        assert!(src.contains("draft: cx.state().local::<String>(),"));
+        assert!(src.contains("filter: cx.state().local_init(|| TodoFilter::All),"));
+        assert!(src.contains("next_id: cx.state().local_init(|| 3u64),"));
+        assert!(src.contains("tip_nonce: cx.state().local_init(|| 0u64),"));
+        assert!(src.contains("todos: cx.state().local_init(|| vec!["));
         assert!(src.contains(".locals_with((&self.draft, &self.next_id, &self.todos))"));
         assert!(src.contains(".on::<act::Add>(|tx, (draft, next_id, todos)| {"));
         assert!(src.contains(".locals_with(&self.todos)"));
@@ -1641,6 +1678,8 @@ mod tests {
         );
         assert!(src.contains("cx.data().query("));
         assert!(src.contains("let tip_state = tip_handle.read_layout(cx);"));
+        assert!(src.contains("shadcn::Label::new(\"Focus note\")"));
+        assert!(src.contains("shadcn::Button::new(\"Another note\")"));
         assert!(!src.contains("tip_handle.layout(cx).value_or_default()"));
         assert!(src.contains("query::{QueryKey, QueryPolicy},"));
         assert!(src.contains("if tip_state.is_loading()"));
@@ -1657,14 +1696,17 @@ mod tests {
         assert!(!src.contains("use fret_query::{QueryKey, QueryPolicy, QueryStatus};"));
         assert!(!src.contains("use fret_selector::ui::DepsBuilder;"));
         assert!(!src.contains("clone_model()"));
+        assert!(!src.contains("TodoLocals::new(app)"));
+        assert!(!src.contains("LocalState::from_model(app.models_mut().insert("));
+        assert!(!src.contains("shadcn::Button::new(\"Command palette\")"));
         assert!(!src.contains("deps.model_rev(&deps_todos_model);"));
         assert!(!src.contains("deps.model_rev(&deps_filter_model);"));
         assert!(!src.contains("cx.watch_model(&todos_model).layout().value_or_default();"));
         assert!(!src.contains("cx.watch_model(&filter_model).layout().value_or(TodoFilter::All);"));
-        assert!(src.contains("let locals = &self.locals;"));
         assert!(src.contains("let draft_value = locals.draft.layout_value(cx);"));
         assert!(src.contains("let filter_value = locals.filter.layout_value(cx);"));
         assert!(src.contains("let tip_nonce_value = locals.tip_nonce.paint_value(cx);"));
+        assert!(src.contains("let footer_summary = if derived.total == 0 {"));
         assert!(!src.contains("draft_state.layout(cx).value_or_default()"));
         assert!(!src.contains("filter_state.layout(cx).value_or(TodoFilter::All)"));
         assert!(!src.contains("bind_todo_actions("));
@@ -1680,7 +1722,7 @@ mod tests {
         assert!(src.contains(") -> impl UiChild {"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
         assert!(!src.contains("Model<bool>"));
-        assert!(src.contains(".models_mut().insert("));
+        assert!(!src.contains(".models_mut().insert("));
         assert!(!src.contains("decl_style::container_props"));
         assert!(!src.contains(".refine_style("));
         assert!(!src.contains(".refine_layout("));
@@ -1710,7 +1752,7 @@ mod tests {
         let src = hello_template_main_rs("hello-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("use fret::style::Space;"));
-        assert!(src.contains("fn init(app: &mut App, _window: WindowId) -> Self"));
+        assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("ui::v_flex("));
         assert!(!src.contains("ui::v_flex( |"));
@@ -1734,7 +1776,7 @@ mod tests {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("icons::{icon, IconId},"));
         assert!(src.contains("style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},"));
-        assert!(src.contains("fn init(app: &mut App, _window: WindowId) -> Self"));
+        assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("impl UiChild"));
         assert!(src.contains("ui::children!["));
@@ -1757,12 +1799,13 @@ mod tests {
         assert!(!src.contains("shadcn::CardHeader::build(|cx, out| {"));
         assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("struct TodoLocals {"));
-        assert!(src.contains("struct TodoView {"));
-        assert!(src.contains("locals: TodoLocals,"));
-        assert!(src.contains("locals: TodoLocals::new(app),"));
-        assert!(src.contains("let locals = &self.locals;"));
+        assert!(src.contains("fn new(cx: &mut AppUi<'_, '_>) -> Self {"));
+        assert!(src.contains("struct TodoView;"));
+        assert!(src.contains("let locals = TodoLocals::new(cx);"));
         assert!(src.contains("locals.bind_actions(cx);"));
-        assert!(src.contains("LocalState::from_model(app.models_mut().insert(String::new()))"));
+        assert!(src.contains("draft: cx.state().local::<String>(),"));
+        assert!(src.contains("next_id: cx.state().local_init(|| 3u64),"));
+        assert!(src.contains("todos: cx.state().local_init(|| vec!["));
         assert!(src.contains(".locals_with((&self.draft, &self.next_id, &self.todos))"));
         assert!(src.contains(".on::<act::Add>(|tx, (draft, next_id, todos)| {"));
         assert!(src.contains(".locals_with(&self.todos)"));
@@ -1775,7 +1818,6 @@ mod tests {
         assert!(src.contains(".local(&self.todos)"));
         assert!(src.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
-        assert!(src.contains("let locals = &self.locals;"));
         assert!(src.contains("let todos = locals.todos.layout_value(cx);"));
         assert!(src.contains("let draft_value = locals.draft.layout_value(cx);"));
         assert!(!src.contains("todos_state.layout(cx).value_or_default()"));
@@ -1792,6 +1834,8 @@ mod tests {
         assert!(src.contains(") -> impl UiChild {"));
         assert!(src.contains("shadcn::Input::new(&locals.draft)"));
         assert!(src.contains("shadcn::Checkbox::from_checked(row.done)"));
+        assert!(!src.contains("TodoLocals::new(app)"));
+        assert!(!src.contains("LocalState::from_model(app.models_mut().insert("));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
         assert!(!src.contains("Model<bool>"));
         assert!(!src.contains("fret_query"));
@@ -1911,6 +1955,10 @@ mod tests {
         assert!(todo.contains("`cx.effects().take_transient(...)`"));
         assert!(todo.contains("State: LocalState-first"));
         assert!(todo.contains("third rung of the default onboarding path"));
+        assert!(todo.contains("Product posture: a deletable product baseline first"));
+        assert!(todo.contains("Delete the query-backed focus note first"));
+        assert!(todo.contains("Delete filters next"));
+        assert!(todo.contains("replace `TodoDerived` with direct reads from `locals.todos`"));
         assert!(todo.contains("bind keyed-row payloads via `.action_payload(...)`"));
         assert!(todo.contains("`cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path"));
         assert!(!todo.contains("`payload_locals::<A>(...)`"));

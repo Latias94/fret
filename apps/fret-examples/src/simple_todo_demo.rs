@@ -45,22 +45,24 @@ struct TodoLocals {
 }
 
 impl TodoLocals {
-    fn new(app: &mut App) -> Self {
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
         Self {
-            draft: LocalState::from_model(app.models_mut().insert(String::new())),
-            next_id: LocalState::from_model(app.models_mut().insert(3u64)),
-            todos: LocalState::from_model(app.models_mut().insert(vec![
-                TodoRow {
-                    id: 1,
-                    done: false,
-                    text: Arc::from("Use keyed rows for dynamic lists"),
-                },
-                TodoRow {
-                    id: 2,
-                    done: true,
-                    text: Arc::from("Keep the default lane on typed payload actions"),
-                },
-            ])),
+            draft: cx.state().local::<String>(),
+            next_id: cx.state().local_init(|| 3u64),
+            todos: cx.state().local_init(|| {
+                vec![
+                    TodoRow {
+                        id: 1,
+                        done: false,
+                        text: Arc::from("Use keyed rows for dynamic lists"),
+                    },
+                    TodoRow {
+                        id: 2,
+                        done: true,
+                        text: Arc::from("Keep the default lane on typed payload actions"),
+                    },
+                ]
+            }),
         }
     }
 
@@ -120,21 +122,17 @@ impl TodoLocals {
     }
 }
 
-struct SimpleTodoView {
-    locals: TodoLocals,
-}
+struct SimpleTodoView;
 
 impl View for SimpleTodoView {
-    fn init(app: &mut App, _window: WindowId) -> Self {
-        Self {
-            locals: TodoLocals::new(app),
-        }
+    fn init(_app: &mut App, _window: WindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
-        let locals = &self.locals;
+        let locals = TodoLocals::new(cx);
         locals.bind_actions(cx);
 
         let todos = locals.todos.layout_value(cx);

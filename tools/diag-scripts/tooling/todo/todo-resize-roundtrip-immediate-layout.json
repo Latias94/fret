@@ -48,6 +48,10 @@
         "eps_px": 1.0
       }
     },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "todo-resize-roundtrip-immediate-layout.layout"
+    },
     { "type": "capture_bundle", "label": "todo-resize-roundtrip-immediate-layout" },
     { "type": "capture_screenshot", "label": "todo-resize-roundtrip-immediate-layout" }
   ]

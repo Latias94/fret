@@ -14,7 +14,7 @@ use fret_core::{
     TextPaintStyle, TextSpan,
 };
 use fret_ui::Invalidation;
-use fret_ui::element::{HoverRegionProps, StyledTextProps};
+use fret_ui::element::{AnyElement, HoverRegionProps, StyledTextProps};
 use fret_ui_kit::declarative::{
     ViewportQueryHysteresis, primary_pointer_can_hover, style as decl_style, viewport_tailwind,
     viewport_width_at_least,
@@ -48,6 +48,10 @@ const TEST_ID_FILTER_COMPLETED: &str = "todo_demo.filter.completed";
 const TEST_ID_DONE_PREFIX: &str = "todo_demo.done.";
 const TEST_ID_ROW_PREFIX: &str = "todo_demo.row.";
 const TEST_ID_REMOVE_PREFIX: &str = "todo_demo.remove.";
+const TODO_WINDOW_SIZE: (f64, f64) = (560.0, 660.0);
+const TODO_WINDOW_MIN_SIZE: (f64, f64) = (420.0, 560.0);
+const TODO_WINDOW_POSITION_LOGICAL: (i32, i32) = (120, 96);
+const TODO_WINDOW_RESIZE_INCREMENTS: (f64, f64) = (20.0, 20.0);
 const TODO_COMPACT_WIDTH: Px = Px(560.0);
 const TODO_COMPACT_HEIGHT: Px = Px(640.0);
 const TODO_ROOMY_HEIGHT: Px = Px(760.0);
@@ -56,6 +60,7 @@ const TODO_ROOMY_HEIGHT: Px = Px(760.0);
 struct TodoResponsiveLayout {
     page_padding: Space,
     page_top_padding: Space,
+    center_card_vertically: bool,
     section_padding_x: Space,
     stack_footer: bool,
     always_show_row_actions: bool,
@@ -73,6 +78,7 @@ impl TodoResponsiveLayout {
         let compact_width = viewport_width.0 < TODO_COMPACT_WIDTH.0;
         let compact_height = viewport_height.0 < TODO_COMPACT_HEIGHT.0;
         let roomy_height = viewport_height.0 >= TODO_ROOMY_HEIGHT.0;
+        let center_card_vertically = !compact_width && !compact_height;
 
         let page_padding = if compact_width || compact_height {
             Space::N3
@@ -101,6 +107,7 @@ impl TodoResponsiveLayout {
         Self {
             page_padding,
             page_top_padding,
+            center_card_vertically,
             section_padding_x,
             stack_footer: compact_width,
             always_show_row_actions: !can_hover || !wide_breakpoint_active,
@@ -150,28 +157,30 @@ struct TodoLocals {
 }
 
 impl TodoLocals {
-    fn new(app: &mut App) -> Self {
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
         Self {
-            draft: LocalState::from_model(app.models_mut().insert(String::new())),
-            filter: LocalState::from_model(app.models_mut().insert(TodoFilter::All)),
-            next_id: LocalState::from_model(app.models_mut().insert(4u64)),
-            todos: LocalState::from_model(app.models_mut().insert(vec![
-                TodoRow {
-                    id: 1,
-                    done: true,
-                    text: Arc::from("学习 React Hooks"),
-                },
-                TodoRow {
-                    id: 2,
-                    done: true,
-                    text: Arc::from("掌握 Tailwind CSS"),
-                },
-                TodoRow {
-                    id: 3,
-                    done: false,
-                    text: Arc::from("构建现代化 Todo 应用"),
-                },
-            ])),
+            draft: cx.state().local::<String>(),
+            filter: cx.state().local_init(|| TodoFilter::All),
+            next_id: cx.state().local_init(|| 4u64),
+            todos: cx.state().local_init(|| {
+                vec![
+                    TodoRow {
+                        id: 1,
+                        done: true,
+                        text: Arc::from("学习 React Hooks"),
+                    },
+                    TodoRow {
+                        id: 2,
+                        done: true,
+                        text: Arc::from("掌握 Tailwind CSS"),
+                    },
+                    TodoRow {
+                        id: 3,
+                        done: false,
+                        text: Arc::from("构建现代化 Todo 应用"),
+                    },
+                ]
+            }),
         }
     }
 
@@ -241,20 +250,16 @@ impl TodoLocals {
     }
 }
 
-struct TodoDemoView {
-    locals: TodoLocals,
-}
+struct TodoDemoView;
 
 impl View for TodoDemoView {
-    fn init(app: &mut App, _window: WindowId) -> Self {
-        Self {
-            locals: TodoLocals::new(app),
-        }
+    fn init(_app: &mut App, _window: WindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
-        let locals = &self.locals;
+        let locals = TodoLocals::new(cx);
         locals.bind_actions(cx);
         let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
         let wide_breakpoint_active = viewport_width_at_least(
@@ -485,13 +490,13 @@ impl View for TodoDemoView {
                 ];
             }
 
-            ui::for_each_keyed(
+            ui::for_each_keyed_with_cx(
                 cx,
                 &filtered_todos,
                 |row| row.id,
-                |row| {
+                |cx, row| {
                     let theme = theme.clone();
-                    todo_row(theme, row, responsive.always_show_row_actions)
+                    todo_row(cx, theme, row, responsive.always_show_row_actions)
                 },
             )
         })
@@ -530,29 +535,14 @@ impl View for TodoDemoView {
         .items_center()
         .wrap();
 
-        let clear_done_style = shadcn::raw::button::ButtonStyle::default()
-            .background(
-                WidgetStateProperty::new(Some(ColorRef::Color(Color::TRANSPARENT)))
-                    .when(
-                        WidgetStates::HOVERED,
-                        Some(ColorRef::Color(alpha(destructive, 0.10))),
-                    )
-                    .when(
-                        WidgetStates::ACTIVE,
-                        Some(ColorRef::Color(alpha(destructive, 0.16))),
-                    ),
-            )
-            .foreground(
-                WidgetStateProperty::new(Some(ColorRef::Color(muted_foreground)))
-                    .when(WidgetStates::HOVERED, Some(ColorRef::Color(destructive)))
-                    .when(WidgetStates::ACTIVE, Some(ColorRef::Color(destructive))),
-            );
-
         let clear_done_btn = shadcn::Button::new("清除已完成")
             .variant(shadcn::ButtonVariant::Ghost)
             .size(shadcn::ButtonSize::Xs)
             .corner_radii_override(Corners::all(Px(9999.0)))
-            .style(clear_done_style)
+            .style(subtle_destructive_button_style(
+                muted_foreground,
+                destructive,
+            ))
             .disabled(!has_completed)
             .action(act::ClearDone)
             .refine_style(footer_pill_chrome())
@@ -596,37 +586,38 @@ impl View for TodoDemoView {
                 cx,
                 ui::v_flex(|cx| {
                     let mut sections = vec![
-                        ui::container(|cx| ui::single(cx, header))
-                            .px(responsive.section_padding_x)
-                            .pt(Space::N6)
-                            .pb(Space::N4)
-                            .w_full()
-                            .into_element(cx),
-                        ui::container(|cx| ui::single(cx, input_row))
-                            .px(responsive.section_padding_x)
-                            .pb(Space::N4)
-                            .w_full()
-                            .into_element(cx),
-                        ui::container(|cx| ui::single(cx, rows))
-                            .px(responsive.section_padding_x)
-                            .pb(Space::N2)
-                            .w_full()
+                        todo_card_section(
+                            header,
+                            responsive.section_padding_x,
+                            Space::N6,
+                            Space::N4,
+                        )
+                        .into_element(cx),
+                        todo_card_section(
+                            input_row,
+                            responsive.section_padding_x,
+                            Space::N0,
+                            Space::N4,
+                        )
+                        .into_element(cx),
+                        todo_card_section(rows, responsive.section_padding_x, Space::N0, Space::N2)
                             .into_element(cx),
                     ];
 
                     if total_count > 0 {
                         sections.push(
-                            ui::container(|cx| ui::single(cx, footer))
-                                .px(responsive.section_padding_x)
-                                .py(Space::N3p5)
-                                .bg(ColorRef::Color(footer_bg))
-                                .w_full()
-                                .into_element(cx),
+                            todo_card_footer_section(
+                                footer,
+                                responsive.section_padding_x,
+                                footer_bg,
+                            )
+                            .into_element(cx),
                         );
                     }
 
                     sections
                 })
+                .items_stretch()
                 .w_full(),
             )
         })
@@ -650,19 +641,26 @@ fn todo_page(
     responsive: TodoResponsiveLayout,
     content: impl UiChild,
 ) -> impl UiChild {
+    let page_top_padding = if responsive.center_card_vertically {
+        responsive.page_padding
+    } else {
+        responsive.page_top_padding
+    };
     ui::container(move |cx| {
-        ui::single(
-            cx,
-            ui::v_flex(move |cx| ui::single(cx, content))
-                .w_full()
-                .h_full()
-                .justify_start()
-                .items_center(),
-        )
+        let content_column = ui::v_flex(move |cx| ui::single(cx, content))
+            .w_full()
+            .h_full()
+            .items_center();
+        let content_column = if responsive.center_card_vertically {
+            content_column.justify_center()
+        } else {
+            content_column.justify_start()
+        };
+        ui::single(cx, content_column)
     })
     .bg(ColorRef::Color(theme.color_token("background")))
     .px(responsive.page_padding)
-    .pt(responsive.page_top_padding)
+    .pt(page_top_padding)
     .pb(responsive.page_padding)
     .w_full()
     .h_full()
@@ -693,7 +691,12 @@ fn filter_chip(
     })
 }
 
-fn todo_row(theme: ThemeSnapshot, row: &TodoRow, always_show_remove_action: bool) -> impl UiChild {
+fn todo_row(
+    cx: &mut fret_ui::ElementContext<'_, App>,
+    theme: ThemeSnapshot,
+    row: &TodoRow,
+    always_show_remove_action: bool,
+) -> AnyElement {
     let row_done = row.done;
     let row_id = row.id;
     let row_text = row.text.clone();
@@ -706,168 +709,148 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRow, always_show_remove_action: bool
     let success = Color::from_srgb_hex_rgb(0x22_c5_5e);
     let done_surface = Color::from_srgb_hex_rgb(0xf8_fa_fc);
     let hover_border = alpha(theme.color_token("primary"), 0.20);
-    let mut destructive_hover_bg = destructive;
-    destructive_hover_bg.a = 0.10;
-    let mut destructive_active_bg = destructive;
-    destructive_active_bg.a = 0.16;
 
-    ui::container(move |cx| {
-        let mut hover = HoverRegionProps::default();
-        hover.layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
-        let hover_region = cx.hover_region(hover, move |cx, hovered| {
-            let toggle_visual = if row_done {
-                ui::v_flex(|cx| {
-                    let icon_el = icon::icon_with(
-                        cx,
-                        IconId::new("lucide.check"),
-                        Some(Px(14.0)),
-                        Some(ColorRef::Color(primary_foreground)),
-                    );
-                    ui::single(cx, icon_el)
-                })
-                .w_px(Px(20.0))
-                .h_px(Px(20.0))
-                .justify_center()
-                .items_center()
-                .bg(ColorRef::Color(success))
-                .rounded(Radius::Full)
-                .into_element(cx)
-            } else {
-                icon::icon_with(
+    let mut hover = HoverRegionProps::default();
+    hover.layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+    let hover_region = cx.hover_region(hover, move |cx, hovered| {
+        let toggle_visual = if row_done {
+            ui::v_flex(|cx| {
+                let icon_el = icon::icon_with(
                     cx,
-                    IconId::new("lucide.circle"),
-                    Some(Px(20.0)),
-                    Some(ColorRef::Color(muted_foreground)),
-                )
-            };
-
-            let toggle = shadcn::Button::new("")
-                .variant(shadcn::ButtonVariant::Ghost)
-                .size(shadcn::ButtonSize::IconSm)
-                .corner_radii_override(Corners::all(Px(9999.0)))
-                .action(act::Toggle)
-                .action_payload(row_id)
-                .a11y_label(if row_done {
-                    "标记为未完成"
-                } else {
-                    "标记为已完成"
-                })
-                .children([toggle_visual])
-                .test_id(format!("{TEST_ID_DONE_PREFIX}{row_id}"));
-
-            let text = if row_done {
-                let rich = rich_strikethrough(&row_text, muted_foreground);
-                let style = typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
-                    .resolve(&theme);
-                cx.styled_text_props(StyledTextProps {
-                    layout: decl_style::layout_style(
-                        &theme,
-                        LayoutRefinement::default().flex_1().min_w_0(),
-                    ),
-                    rich,
-                    style: Some(style),
-                    color: Some(muted_foreground),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Ellipsis,
-                    align: TextAlign::Start,
-                    ink_overflow: Default::default(),
-                })
-            } else {
-                ui::text(row_text.clone())
-                    .truncate()
-                    .text_sm()
-                    .font_medium()
-                    .flex_1()
-                    .min_w_0()
-                    .text_color(ColorRef::Color(foreground))
-                    .into_element(cx)
-            };
-
-            let leading = ui::h_flex(|cx| ui::children![cx; toggle, text])
-                .gap(Space::N3)
-                .items_center()
-                .flex_1()
-                .min_w_0();
-
-            let delete_style = shadcn::raw::button::ButtonStyle::default()
-                .background(
-                    WidgetStateProperty::new(Some(ColorRef::Color(Color::TRANSPARENT)))
-                        .when(
-                            WidgetStates::HOVERED,
-                            Some(ColorRef::Color(destructive_hover_bg)),
-                        )
-                        .when(
-                            WidgetStates::ACTIVE,
-                            Some(ColorRef::Color(destructive_active_bg)),
-                        ),
-                )
-                .foreground(
-                    WidgetStateProperty::new(Some(ColorRef::Color(muted_foreground)))
-                        .when(WidgetStates::HOVERED, Some(ColorRef::Color(destructive)))
-                        .when(WidgetStates::ACTIVE, Some(ColorRef::Color(destructive))),
+                    IconId::new("lucide.check"),
+                    Some(Px(14.0)),
+                    Some(ColorRef::Color(primary_foreground)),
                 );
+                ui::single(cx, icon_el)
+            })
+            .w_px(Px(20.0))
+            .h_px(Px(20.0))
+            .justify_center()
+            .items_center()
+            .bg(ColorRef::Color(success))
+            .rounded(Radius::Full)
+            .into_element(cx)
+        } else {
+            icon::icon_with(
+                cx,
+                IconId::new("lucide.circle"),
+                Some(Px(20.0)),
+                Some(ColorRef::Color(muted_foreground)),
+            )
+        };
 
-            let remove_button = shadcn::Button::new("")
-                .variant(shadcn::ButtonVariant::Ghost)
-                .size(shadcn::ButtonSize::IconSm)
-                .corner_radii_override(Corners::all(Px(10.0)))
-                .style(delete_style)
-                .action(act::Remove)
-                .action_payload(row_id)
-                .a11y_label("删除任务")
-                .children([icon::icon_with(
-                    cx,
-                    IconId::new("lucide.trash-2"),
-                    Some(Px(16.0)),
-                    Some(ColorRef::Color(muted_foreground)),
-                )])
-                .test_id(format!("{TEST_ID_REMOVE_PREFIX}{row_id}"));
-
-            let remove_visible = always_show_remove_action || hovered;
-            let remove = cx.interactivity_gate(true, remove_visible, move |cx| {
-                vec![
-                    cx.opacity(if remove_visible { 1.0 } else { 0.0 }, move |cx| {
-                        vec![remove_button.into_element(cx)]
-                    }),
-                ]
-            });
-
-            let row = ui::h_flex(|cx| ui::children![cx; leading, remove])
-                .gap(Space::N2)
-                .items_center()
-                .justify_between()
-                .bg(ColorRef::Color(if row_done {
-                    done_surface
-                } else {
-                    background
-                }))
-                .border_1()
-                .border_color(ColorRef::Color(if row_done {
-                    Color::TRANSPARENT
-                } else if hovered {
-                    hover_border
-                } else {
-                    border
-                }))
-                .rounded(Radius::Lg)
-                .p(Space::N3p5)
-                .w_full()
-                .test_id(format!("{TEST_ID_ROW_PREFIX}{row_id}"));
-
-            let row = if row_done {
-                row.shadow_none()
-            } else if hovered {
-                row.shadow_md()
+        let toggle = shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Ghost)
+            .size(shadcn::ButtonSize::IconSm)
+            .corner_radii_override(Corners::all(Px(9999.0)))
+            .action(act::Toggle)
+            .action_payload(row_id)
+            .a11y_label(if row_done {
+                "标记为未完成"
             } else {
-                row.shadow_sm()
-            };
+                "标记为已完成"
+            })
+            .children([toggle_visual])
+            .test_id(format!("{TEST_ID_DONE_PREFIX}{row_id}"));
 
-            vec![row.into_element(cx)]
+        let text = if row_done {
+            let rich = rich_strikethrough(&row_text, muted_foreground);
+            let style = typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
+                .resolve(&theme);
+            cx.styled_text_props(StyledTextProps {
+                layout: decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default().flex_1().min_w_0(),
+                ),
+                rich,
+                style: Some(style),
+                color: Some(muted_foreground),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Ellipsis,
+                align: TextAlign::Start,
+                ink_overflow: Default::default(),
+            })
+        } else {
+            ui::text(row_text.clone())
+                .truncate()
+                .text_sm()
+                .font_medium()
+                .flex_1()
+                .min_w_0()
+                .text_color(ColorRef::Color(foreground))
+                .into_element(cx)
+        };
+
+        let leading = ui::h_flex(|cx| ui::children![cx; toggle, text])
+            .gap(Space::N3)
+            .items_center()
+            .flex_1()
+            .min_w_0();
+
+        let remove_button = shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Ghost)
+            .size(shadcn::ButtonSize::IconSm)
+            .corner_radii_override(Corners::all(Px(10.0)))
+            .style(subtle_destructive_button_style(
+                muted_foreground,
+                destructive,
+            ))
+            .action(act::Remove)
+            .action_payload(row_id)
+            .a11y_label("删除任务")
+            .children([icon::icon_with(
+                cx,
+                IconId::new("lucide.trash-2"),
+                Some(Px(16.0)),
+                Some(ColorRef::Color(muted_foreground)),
+            )])
+            .test_id(format!("{TEST_ID_REMOVE_PREFIX}{row_id}"));
+
+        let remove_visible = always_show_remove_action || hovered;
+        let remove = cx.interactivity_gate(true, remove_visible, move |cx| {
+            vec![
+                cx.opacity(if remove_visible { 1.0 } else { 0.0 }, move |cx| {
+                    vec![remove_button.into_element(cx)]
+                }),
+            ]
         });
 
-        ui::single(cx, hover_region)
-    })
-    .w_full()
+        let row = ui::h_flex(|cx| ui::children![cx; leading, remove])
+            .gap(Space::N2)
+            .items_center()
+            .justify_between()
+            .bg(ColorRef::Color(if row_done {
+                done_surface
+            } else {
+                background
+            }))
+            .border_1()
+            .border_color(ColorRef::Color(if row_done {
+                Color::TRANSPARENT
+            } else if hovered {
+                hover_border
+            } else {
+                border
+            }))
+            .rounded(Radius::Lg)
+            .p(Space::N3p5)
+            .w_full()
+            .test_id(format!("{TEST_ID_ROW_PREFIX}{row_id}"));
+
+        let row = if row_done {
+            row.shadow_none()
+        } else if hovered {
+            row.shadow_md()
+        } else {
+            row.shadow_sm()
+        };
+
+        vec![row.into_element(cx)]
+    });
+
+    ui::container(move |cx| ui::single(cx, hover_region))
+        .w_full()
+        .into_element(cx)
 }
 
 fn footer_pill_chrome() -> ChromeRefinement {
@@ -876,6 +859,54 @@ fn footer_pill_chrome() -> ChromeRefinement {
 
 fn footer_pill_layout() -> LayoutRefinement {
     LayoutRefinement::default().h_px(MetricRef::Px(Px(28.0)))
+}
+
+fn todo_card_section(
+    content: impl UiChild,
+    padding_x: Space,
+    pt: Space,
+    pb: Space,
+) -> impl UiChild {
+    ui::container(move |cx| ui::single(cx, content))
+        .px(padding_x)
+        .pt(pt)
+        .pb(pb)
+        .w_full()
+}
+
+fn todo_card_footer_section(
+    content: impl UiChild,
+    padding_x: Space,
+    background: Color,
+) -> impl UiChild {
+    ui::container(move |cx| ui::single(cx, content))
+        .px(padding_x)
+        .py(Space::N3p5)
+        .bg(ColorRef::Color(background))
+        .w_full()
+}
+
+fn subtle_destructive_button_style(
+    muted_foreground: Color,
+    destructive: Color,
+) -> shadcn::raw::button::ButtonStyle {
+    shadcn::raw::button::ButtonStyle::default()
+        .background(
+            WidgetStateProperty::new(Some(ColorRef::Color(Color::TRANSPARENT)))
+                .when(
+                    WidgetStates::HOVERED,
+                    Some(ColorRef::Color(alpha(destructive, 0.10))),
+                )
+                .when(
+                    WidgetStates::ACTIVE,
+                    Some(ColorRef::Color(alpha(destructive, 0.16))),
+                ),
+        )
+        .foreground(
+            WidgetStateProperty::new(Some(ColorRef::Color(muted_foreground)))
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(destructive)))
+                .when(WidgetStates::ACTIVE, Some(ColorRef::Color(destructive))),
+        )
 }
 
 fn alpha(mut color: Color, a: f32) -> Color {
@@ -900,8 +931,10 @@ fn rich_strikethrough(text: &Arc<str>, strike_color: Color) -> AttributedText {
 
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("todo-demo")
-        .window("todo-demo", (560.0, 660.0))
-        .window_min_size((420.0, 560.0))
+        .window("todo-demo", TODO_WINDOW_SIZE)
+        .window_min_size(TODO_WINDOW_MIN_SIZE)
+        .window_position_logical(TODO_WINDOW_POSITION_LOGICAL)
+        .window_resize_increments(TODO_WINDOW_RESIZE_INCREMENTS)
         .config_files(false)
         .setup(fret_icons_lucide::app::install)
         .setup(install_demo_theme)
@@ -952,6 +985,7 @@ mod tests {
 
         assert_eq!(compact.page_padding, Space::N3);
         assert_eq!(compact.section_padding_x, Space::N4);
+        assert!(!compact.center_card_vertically);
         assert!(compact.stack_footer);
         assert!(compact.always_show_row_actions);
     }
@@ -966,6 +1000,15 @@ mod tests {
         assert!(roomy.card_max_height.0 > compact.card_max_height.0);
         assert!(roomy.rows_max_height.0 > compact.rows_max_height.0);
         assert!(!roomy.always_show_row_actions);
+    }
+
+    #[test]
+    fn todo_demo_responsive_layout_centers_card_once_viewport_is_large_enough() {
+        let compact = TodoResponsiveLayout::from_viewport(Px(520.0), Px(620.0), true, false);
+        let regular = TodoResponsiveLayout::from_viewport(Px(560.0), Px(660.0), true, true);
+
+        assert!(!compact.center_card_vertically);
+        assert!(regular.center_card_vertically);
     }
 
     #[test]
