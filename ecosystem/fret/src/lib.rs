@@ -280,8 +280,8 @@ pub(crate) enum AssetMount {
 }
 
 pub mod actions;
+pub mod in_window_menubar;
 mod view;
-pub mod workspace_menu;
 
 /// Explicit app-integration contracts for reusable ecosystem bundles.
 pub mod integration;
@@ -3317,6 +3317,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("ThemeSnapshot"));
         assert!(!app_prelude_exports_symbol("actions"));
         assert!(!app_prelude_exports_symbol("workspace_menu"));
+        assert!(!app_prelude_exports_symbol("in_window_menubar"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(!app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
@@ -3545,7 +3546,7 @@ mod authoring_surface_policy_tests {
             "overlay",
             "semantics",
             "style",
-            "workspace_menu",
+            "in_window_menubar",
         ]
         .into_iter()
         .map(str::to_owned)
@@ -3555,6 +3556,7 @@ mod authoring_surface_policy_tests {
             actual, expected,
             "root-level public modules should stay on the curated explicit-lane budget"
         );
+        assert!(!root_header.contains("pub mod workspace_menu;"));
         assert!(!root_header.contains("pub mod view;"));
         assert!(!root_header.contains("pub mod dev {"));
     }

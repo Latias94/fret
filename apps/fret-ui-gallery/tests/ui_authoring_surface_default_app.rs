@@ -226,7 +226,7 @@ fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
     let action_first_view_normalized = action_first_view.split_whitespace().collect::<String>();
 
     assert!(!menubar.contains("fret::prelude"));
-    assert!(menubar.contains("use fret::workspace_menu::{"));
+    assert!(menubar.contains("use fret::in_window_menubar::{"));
 
     assert!(!action_first_view.contains("use fret::prelude::*;"));
     assert!(action_first_view.contains("use fret::advanced::prelude::*;"));

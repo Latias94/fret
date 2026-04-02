@@ -1,3 +1,5 @@
+//! In-window menubar bridge built from runtime menu data and UI-kit primitives.
+
 use std::sync::Arc;
 
 use fret_core::{
