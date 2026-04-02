@@ -6,7 +6,9 @@ use fret_ui::{Invalidation, UiTree};
 
 use crate::ui::{NodeChromeHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, NodeRingHint};
 
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes};
+use super::{
+    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes,
+};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -85,16 +87,19 @@ fn skin_node_ring_hints_draws_focused_ring_outside_node_rect() {
     let (graph_value, a, _b) = make_test_graph_two_nodes();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = false;
+        state.interaction.frame_view_duration_ms = 0;
+    });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let style = NodeGraphStyle::default();
     let mut canvas = NodeGraphCanvas::new(graph, view)
         .with_style(style.clone())
-        .with_skin(Arc::new(FocusRingSkin { node: a }));
+        .with_skin(Arc::new(FocusRingSkin { node: a }))
+        .with_editor_config_model(editor_config);
 
     // Focus is a UI-only interaction field, so we set it on the runtime interaction state.
     canvas.interaction.focused_node = Some(a);

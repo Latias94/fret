@@ -5,7 +5,9 @@ use crate::core::CanvasPoint;
 use crate::ui::canvas::widget::view_queue::NodeGraphViewQueue;
 
 use super::prelude::NodeGraphCanvas;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
+use super::{
+    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size,
+};
 
 #[test]
 fn frame_nodes_via_view_queue_matches_direct_framing() {
@@ -21,10 +23,11 @@ fn frame_nodes_via_view_queue_matches_direct_framing() {
     let mut host_expected = TestUiHostImpl::default();
     let graph_expected = host_expected.models.insert(graph_value.clone());
     let view_expected = insert_view(&mut host_expected);
-    let _ = view_expected.update(&mut host_expected, |s, _cx| {
-        s.interaction.frame_view_duration_ms = 0;
+    let editor_config_expected = insert_editor_config_with(&mut host_expected, |state| {
+        state.interaction.frame_view_duration_ms = 0;
     });
-    let mut canvas_expected = NodeGraphCanvas::new(graph_expected, view_expected);
+    let mut canvas_expected = NodeGraphCanvas::new(graph_expected, view_expected)
+        .with_editor_config_model(editor_config_expected);
     assert!(canvas_expected.frame_nodes_in_view(&mut host_expected, None, bounds, &[a]));
     let expected = canvas_expected.sync_view_state(&mut host_expected);
 
@@ -32,12 +35,14 @@ fn frame_nodes_via_view_queue_matches_direct_framing() {
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.frame_view_duration_ms = 0;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.frame_view_duration_ms = 0;
     });
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_view_queue(queue.clone());
+    let mut canvas = NodeGraphCanvas::new(graph, view)
+        .with_view_queue(queue.clone())
+        .with_editor_config_model(editor_config);
     canvas.interaction.last_bounds = Some(bounds);
 
     let _ = queue.update(&mut host, |q, _cx| {

@@ -10,7 +10,10 @@ use crate::ui::{
     EdgePaintOverrideV1, NodeGraphCanvas, NodeGraphPaintOverridesMap, NodePaintOverrideV1,
 };
 
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports,
+};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -72,16 +75,19 @@ fn paint_overrides_do_not_mutate_serialized_graph() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = false;
+        state.interaction.frame_view_duration_ms = 0;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let overrides = Arc::new(NodeGraphPaintOverridesMap::default());
-    let mut canvas =
-        NodeGraphCanvas::new(graph.clone(), view).with_paint_overrides(overrides.clone());
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
+        .with_paint_overrides(overrides.clone())
+        .with_editor_config_model(editor_config);
 
     let baseline = graph
         .read_ref(&host, |g| serde_json::to_value(g).expect("serialize graph"))

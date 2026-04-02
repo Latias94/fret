@@ -8,8 +8,8 @@ use crate::ui::commands::{
 };
 
 use super::{
-    NullServices, TestUiHostImpl, command_cx, make_host_graph_view, make_test_graph_two_nodes,
-    read_node_pos,
+    NullServices, TestUiHostImpl, command_cx, insert_editor_config_with, make_host_graph_view,
+    make_test_graph_two_nodes, read_node_pos,
 };
 
 #[test]
@@ -22,8 +22,10 @@ fn nudge_screen_px_step_is_zoom_invariant() {
         s.selected_nodes = vec![a];
     })
     .unwrap();
+    let editor_config = insert_editor_config_with(&mut host, |_| {});
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas =
+        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
     canvas.sync_view_state(&mut host);
 
     let mut services = NullServices::default();
@@ -41,20 +43,23 @@ fn nudge_screen_px_step_is_zoom_invariant() {
 fn nudge_grid_step_uses_snap_grid_even_when_snap_to_grid_is_disabled() {
     let (graph_value, a, _b) = make_test_graph_two_nodes();
     let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.snap_to_grid = false;
+        state.interaction.snap_grid = CanvasSize {
+            width: 16.0,
+            height: 12.0,
+        };
+        state.interaction.nudge_step_mode = crate::io::NodeGraphNudgeStepMode::Grid;
+    });
 
     view.update(&mut host, |s, _cx| {
         s.zoom = 2.0;
         s.selected_nodes = vec![a];
-        s.interaction.snap_to_grid = false;
-        s.interaction.snap_grid = CanvasSize {
-            width: 16.0,
-            height: 12.0,
-        };
-        s.interaction.nudge_step_mode = crate::io::NodeGraphNudgeStepMode::Grid;
     })
     .unwrap();
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas =
+        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
     canvas.sync_view_state(&mut host);
 
     let mut services = NullServices::default();
@@ -76,20 +81,23 @@ fn nudge_grid_step_uses_snap_grid_even_when_snap_to_grid_is_disabled() {
 fn nudge_grid_fast_step_moves_ten_cells_by_default() {
     let (graph_value, a, _b) = make_test_graph_two_nodes();
     let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.snap_to_grid = false;
+        state.interaction.snap_grid = CanvasSize {
+            width: 16.0,
+            height: 12.0,
+        };
+        state.interaction.nudge_step_mode = crate::io::NodeGraphNudgeStepMode::Grid;
+    });
 
     view.update(&mut host, |s, _cx| {
         s.zoom = 0.5;
         s.selected_nodes = vec![a];
-        s.interaction.snap_to_grid = false;
-        s.interaction.snap_grid = CanvasSize {
-            width: 16.0,
-            height: 12.0,
-        };
-        s.interaction.nudge_step_mode = crate::io::NodeGraphNudgeStepMode::Grid;
     })
     .unwrap();
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas =
+        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
     canvas.sync_view_state(&mut host);
 
     let mut services = NullServices::default();

@@ -10,7 +10,9 @@ use fret_ui::{Invalidation, UiTree};
 
 use crate::ui::{NodeChromeHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, NodeShadowHint};
 
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes};
+use super::{
+    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes,
+};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -80,10 +82,12 @@ fn skin_node_shadow_hint_emits_push_effect_drop_shadow() {
     let (graph_value, a, _b) = make_test_graph_two_nodes();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = false;
+        state.interaction.frame_view_duration_ms = 0;
+    });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let shadow = NodeShadowHint {
@@ -102,7 +106,8 @@ fn skin_node_shadow_hint_emits_push_effect_drop_shadow() {
     let style = NodeGraphStyle::default();
     let mut canvas = NodeGraphCanvas::new(graph, view)
         .with_style(style)
-        .with_skin(Arc::new(ShadowSkin { node: a, shadow }));
+        .with_skin(Arc::new(ShadowSkin { node: a, shadow }))
+        .with_editor_config_model(editor_config);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);

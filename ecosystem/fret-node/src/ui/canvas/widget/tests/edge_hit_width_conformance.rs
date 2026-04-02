@@ -42,9 +42,11 @@ fn run_case(zoom: f32, edge_interaction_width: f32, wire_width: f32) -> (bool, b
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.edge_interaction_width = edge_interaction_width;
+    });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = zoom;
-        s.interaction.edge_interaction_width = edge_interaction_width;
     });
 
     let edge_types = crate::ui::NodeGraphEdgeTypes::new().with_fallback(|_g, _e, _style, mut h| {
@@ -52,7 +54,9 @@ fn run_case(zoom: f32, edge_interaction_width: f32, wire_width: f32) -> (bool, b
         h
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_edge_types(edge_types);
+    let mut canvas = NodeGraphCanvas::new(graph, view)
+        .with_edge_types(edge_types)
+        .with_editor_config_model(editor_config);
     canvas.style.geometry.wire_width = wire_width;
 
     let mut services = NullServices::default();

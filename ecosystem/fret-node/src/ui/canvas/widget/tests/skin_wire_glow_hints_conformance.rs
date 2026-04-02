@@ -9,7 +9,8 @@ use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind};
 use crate::ui::{NodeGraphCanvas, NodeGraphPresetFamily, NodeGraphPresetSkinV1};
 
 use super::{
-    NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x,
+    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
 fn paint_once(
@@ -68,16 +69,20 @@ fn skin_wire_glow_selected_emits_push_effect_drop_shadow() {
     );
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = false;
+        state.interaction.frame_view_duration_ms = 0;
+    });
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;
         s.selected_edges = vec![edge_id];
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let skin = NodeGraphPresetSkinV1::new_builtin(NodeGraphPresetFamily::WorkflowClean);
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_skin(skin);
+    let mut canvas = NodeGraphCanvas::new(graph, view)
+        .with_skin(skin)
+        .with_editor_config_model(editor_config);
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = NullServices::default();

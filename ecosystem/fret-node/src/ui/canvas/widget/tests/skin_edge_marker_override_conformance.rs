@@ -10,7 +10,9 @@ use crate::ui::edge_types::NodeGraphEdgeTypes;
 use crate::ui::presenter::EdgeMarker;
 use crate::ui::skin::{EdgeChromeHint, NodeGraphSkin};
 
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+};
 
 #[derive(Default)]
 struct CaptureServices {
@@ -189,10 +191,12 @@ fn skin_edge_chrome_hint_can_override_edge_markers_after_edge_types() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.runtime_tuning.only_render_visible_elements = false;
+        state.interaction.frame_view_duration_ms = 0;
+    });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let edge_types = NodeGraphEdgeTypes::new().with_fallback(|_g, _e, _style, mut h| {
@@ -201,7 +205,9 @@ fn skin_edge_chrome_hint_can_override_edge_markers_after_edge_types() {
         h
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone()).with_edge_types(edge_types);
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+        .with_edge_types(edge_types)
+        .with_editor_config_model(editor_config.clone());
     let mut tree = UiTree::<TestUiHostImpl>::default();
 
     let mut services = CaptureServices::default();
@@ -226,7 +232,8 @@ fn skin_edge_chrome_hint_can_override_edge_markers_after_edge_types() {
         .with_skin(Arc::new(MarkerChromeSkin {
             start: EdgeMarker::arrow(24.0),
             end: EdgeMarker::arrow(24.0),
-        }));
+        }))
+        .with_editor_config_model(editor_config);
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = CaptureServices::default();
