@@ -3344,6 +3344,48 @@ fn form_docs_keep_field_level_required_on_form_field() {
 }
 
 #[test]
+fn form_docs_keep_invalid_decoration_and_opt_out_owned_by_form_field() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/form/upstream_demo.rs",
+            vec![
+                "letsidebar_field=shadcn::FormField::new(",
+                ".decorate_control(false).required(true).into_element(cx)",
+            ],
+        ),
+        (
+            "src/ui/snippets/form/notes.rs",
+            vec![
+                "Invalid decoration also belongs to `FormField`",
+                "`FormState` drives the wrapper-level invalid styling and message visibility",
+                "`decorate_control(false)` is the escape hatch",
+            ],
+        ),
+        (
+            "src/ui/pages/form.rs",
+            vec![
+                "wrapper-owned invalid decoration from `FormState`",
+                "`FormState`-driven invalid decoration on `FormField`",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing form-field invalid ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
 fn form_page_and_notes_teach_rtl_as_a_fret_follow_up() {
     let form_page = read("src/ui/pages/form.rs");
     assert!(
