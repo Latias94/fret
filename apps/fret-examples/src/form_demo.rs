@@ -294,6 +294,7 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                         vec![shadcn::Input::new(name.clone_model()).into_element(cx)],
                     )
                     .label("Name")
+                    .required(true)
                     .into_element(cx),
                     shadcn::FormField::new(
                         form_state.clone_model(),
@@ -301,6 +302,7 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                         vec![shadcn::Input::new(email.clone_model()).into_element(cx)],
                     )
                     .label("Email")
+                    .required(true)
                     .into_element(cx),
                     shadcn::FormField::new(
                         form_state.clone_model(),
@@ -318,6 +320,7 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                         ],
                     )
                     .label("Role")
+                    .required(true)
                     .into_element(cx),
                     shadcn::FormField::new(
                         form_state.clone_model(),
@@ -336,6 +339,7 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                         ],
                     )
                     .label("Start date")
+                    .required(true)
                     .into_element(cx),
                 ])
                 .into_element(cx)

@@ -18,6 +18,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .into_element(cx)],
     )
     .label("Username")
+    .required(true)
     .description("This is your public display name.")
     .into_element(cx);
 
