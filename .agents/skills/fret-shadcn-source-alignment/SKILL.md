@@ -1,6 +1,6 @@
 ---
 name: fret-shadcn-source-alignment
-description: "Align shadcn/ui v4 + Radix behavior and composition to Fret. Default visual parity targets the current `new-york-v4` registry source unless the user names another style; semantics still follow Radix/Base UI. Use when user says \"align shadcn\", \"parity mismatch\", \"match Radix\", \"port shadcn v4\", or reports issues like \"items-stretch\", \"w-full\", \"hit box too big\", or layout/interaction drift. Maps fixes to the correct layer (mechanism vs policy vs recipe) and locks outcomes with focused tests and `fretboard diag` scripts."
+description: "Align shadcn/ui v4 + Radix behavior and composition to Fret. Default visual parity targets the current `new-york-v4` registry source unless the user names another style; semantics still follow Radix/Base UI. Use when user says \"align shadcn\", \"parity mismatch\", \"match Radix\", \"port shadcn v4\", or reports issues like \"items-stretch\", \"w-full\", \"hit box too big\", or layout/interaction drift. Maps fixes to the correct layer (mechanism vs policy vs recipe) and locks outcomes with goal-backward proof notes, focused tests, and `fretboard diag` scripts."
 ---
 
 # Shadcn / Radix source alignment
@@ -83,8 +83,14 @@ Default-style ownership check before changing a recipe:
 2. Decide which Fret authoring surface is the target (`fret` facade vs direct `fret_ui_shadcn` vs recipe internals) before copying imports or helper patterns.
 3. Compare against upstream docs/source (shadcn for composition + sizing; Radix for semantics).
 4. If app code is paying for per-row `Model<T>` or surrogate buttons just to keep the intended widget, run `references/public-surface-parity.md` before widening helpers.
-5. Land a gate: a small invariant test and/or a `tools/diag-scripts/*.json` scripted repro with stable `test_id`.
-6. Compare against a mature in-tree exemplar when available.
+5. Write a compact parity proof note:
+   - `Truth`
+   - `Artifacts`
+   - `Wiring`
+   - `Proof`
+   - `Residual risk`
+6. Land a gate: a small invariant test and/or a `tools/diag-scripts/*.json` scripted repro with stable `test_id`.
+7. Compare against a mature in-tree exemplar when available.
 
 ## Workflow
 
@@ -222,6 +228,22 @@ Precedence rule:
 
 See `references/reference-stack-and-renderer-notes.md` for the detailed mapping and renderer guidance.
 
+### 2.5) Write the parity proof note before editing recipes or runtime
+
+Before touching code, write a small verification note:
+
+- `Truth`: 3-5 observable parity outcomes that must be true when the fix is real
+- `Artifacts`: which component, recipe, snippet, diag script, or test must exist
+- `Wiring`: which surface must actually consume those artifacts
+- `Proof`: the smallest gate/evidence pair that proves the truth
+- `Residual risk`: what is still not fully covered
+
+If the mismatch affects first-party teaching surfaces, include at least one teaching-surface truth as
+well as one runtime/behavior truth.
+
+Do not treat “the recipe now looks more like upstream” or “a registry snapshot matches” as proof by
+itself. Parity only counts when the relevant truth is wired and gated.
+
 ### 3) Align the outcome, not just the implementation shape
 
 - Match semantics, dismissal, focus, typeahead, and sizing outcomes first.
@@ -254,6 +276,7 @@ overflow constraints.
 - `capture_layout_sidecar` when you need to prove layout-tree structure or size negotiation
 - `capture_screenshot` when human-reviewable visual evidence is part of parity
 - semantics/a11y assertions when accessibility is involved
+- Choose the gate against the parity truths, not against the diff shape.
 
 See `references/a11y-responsive-and-gates.md` for detailed gate guidance and high-value target areas.
 
@@ -261,6 +284,7 @@ See `references/a11y-responsive-and-gates.md` for detailed gate guidance and hig
 
 - Minimum deliverables (3-pack): Repro, Gate, Evidence. See `fret-skills-playbook`.
 - A clear layer mapping in the change.
+- The highest-risk parity claim is written as `Truth / Artifacts / Wiring / Proof / Residual risk`.
 - At least one regression artifact:
   - state-machine mismatch ⇒ `tools/diag-scripts/*.json` repro with stable `test_id`
   - layout/style mismatch ⇒ deterministic invariant test
@@ -279,6 +303,7 @@ Prefer bounded, fast gates:
 ## Evidence anchors
 
 - Layers and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
+- Goal-backward verification note: `.agents/skills/fret-skills-playbook/references/goal-backward-verification.md`
 - Reference stack (APG/Radix/Floating/cmdk): `docs/reference-stack-ui-behavior.md`
 - Crate/layer usage map: `docs/crate-usage-guide.md`
 - Shadcn parity tracker (canonical; treat older audits as historical): `docs/shadcn-declarative-progress.md`

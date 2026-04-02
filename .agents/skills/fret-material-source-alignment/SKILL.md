@@ -1,6 +1,6 @@
 ---
 name: fret-material-source-alignment
-description: "This skill should be used when the user asks to \"align Material 3 components\", \"port Material 3 (Expressive)\", \"match MUI/Compose Material behavior\", or \"build a Material design-system layer\" for Fret. It provides a source-of-truth workflow that treats Material spec + MUI + Compose Material3 + Base UI as parallel references with explicit axis-based precedence, prefers local `repo-ref/` mirrors when available, and maps changes to the correct Fret layer with targeted tests and `fretboard diag` scripted repros."
+description: "This skill should be used when the user asks to \"align Material 3 components\", \"port Material 3 (Expressive)\", \"match MUI/Compose Material behavior\", or \"build a Material design-system layer\" for Fret. It provides a source-of-truth workflow that treats Material spec + MUI + Compose Material3 + Base UI as parallel references with explicit axis-based precedence, prefers local `repo-ref/` mirrors when available, and maps changes to the correct Fret layer with goal-backward proof notes, targeted tests, and `fretboard diag` scripted repros."
 ---
 
 # Material 3 (Expressive) source alignment
@@ -92,7 +92,13 @@ When in doubt, prefer caller-owned for width/flex/grid negotiation and container
 2. Decide default-style ownership before touching recipe defaults: is the styling intrinsic to the component, or negotiated by the surrounding page/container?
 3. Inspect one mature in-tree exemplar before inventing a new parity workflow.
 4. Read the two reference notes listed below and map the mismatch to the correct Fret layer.
-5. Land a gate (test and/or `tools/diag-scripts/*.json`) with stable `test_id`.
+5. Write a compact parity proof note:
+   - `Truth`
+   - `Artifacts`
+   - `Wiring`
+   - `Proof`
+   - `Residual risk`
+6. Land a gate (test and/or `tools/diag-scripts/*.json`) with stable `test_id`.
 
 ## Workflow
 
@@ -127,6 +133,22 @@ Precedence rule:
   - docs/demo grouping or public teaching flow → the corresponding upstream docs/demo surface for the chosen family.
 - Do not collapse all disputes into one linear ordering. State which axis you are aligning before editing: `chrome`, `semantics`, `docs surface`, or `teaching surface`.
 - When both MUI and Compose local mirrors exist, inspect both before changing shared Material foundation code.
+
+### 1.5) Write the parity proof note before editing foundation or recipes
+
+Before touching code, write a small verification note:
+
+- `Truth`: 3-5 observable Material outcomes that must be true when the fix is real
+- `Artifacts`: which component, foundation helper, snippet, diag script, or test must exist
+- `Wiring`: which consumer or surface must actually use those artifacts
+- `Proof`: the smallest gate/evidence pair that proves the truth
+- `Residual risk`: what still is not fully covered
+
+If the mismatch affects both Material foundation code and first-party examples, include at least one
+truth for each layer.
+
+Do not treat “token values now match the spec” or “the component code looks closer to MUI/Compose”
+as proof by itself. Material parity only counts when the relevant truth is wired and gated.
 
 ### 2) Map the work to the right Fret layer (non-negotiable)
 
@@ -192,6 +214,7 @@ Always leave the 3-pack:
 - Repro (smallest surface),
 - Gate (test/script),
 - Evidence (anchors + exact commands).
+- Choose the gate against the truth set, not against the edit list.
 
 ### 3.5) Prefer existing script/test patterns over inventing new ones
 
@@ -222,6 +245,7 @@ Good starting places:
 
 - Minimum deliverables (3-pack): Repro, Gate, Evidence.
 - A clear layer mapping in the change (no Material policy pushed into `crates/*` unless it is truly a mechanism).
+- The highest-risk parity claim is written as `Truth / Artifacts / Wiring / Proof / Residual risk`.
 - At least one regression artifact:
   - **state machine / overlay / motion** mismatch ⇒ diag script with stable `test_id`,
   - **layout / token / scene** mismatch ⇒ deterministic invariant test or scene/geometry assertion,
@@ -244,6 +268,7 @@ Prefer bounded, fast gates that catch regressions without compiling the entire w
 ## Evidence anchors
 
 - Layering and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
+- Goal-backward verification note: `.agents/skills/fret-skills-playbook/references/goal-backward-verification.md`
 - Material workstream context: `docs/workstreams/material3/material3-refactor-plan.md`, `docs/workstreams/material3/material3-todo.md`
 - Material mechanism/foundation ADR: `docs/adr/0226-material3-state-layer-and-ripple-primitives.md`
 - Reference notes:
