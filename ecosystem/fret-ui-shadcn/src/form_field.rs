@@ -410,10 +410,15 @@ mod tests {
     use fret_ui::ThemeConfig;
     use fret_ui::element::{ContainerProps, ElementKind};
     use fret_ui::tree::UiTree;
+    use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
     use fret_ui_headless::form_state::FormState;
     use std::time::Duration;
+    use time::{Date, Month};
 
     use crate::combobox::{Combobox, ComboboxItem};
+    use crate::date_picker::DatePicker;
+    use crate::date_picker_with_presets::DatePickerWithPresets;
+    use crate::date_range_picker::DateRangePicker;
     use crate::input::Input;
     use crate::input_group::InputGroup;
     use crate::input_otp::InputOtp;
@@ -453,18 +458,44 @@ mod tests {
     }
 
     fn find_element_by_test_id<'a>(el: &'a AnyElement, test_id: &str) -> Option<&'a AnyElement> {
-        if el
+        let semantics_test_id = el
             .semantics_decoration
             .as_ref()
             .and_then(|d| d.test_id.as_deref())
-            == Some(test_id)
-        {
+            == Some(test_id);
+        let pressable_test_id = matches!(
+            &el.kind,
+            ElementKind::Pressable(props) if props.a11y.test_id.as_deref() == Some(test_id)
+        );
+
+        if semantics_test_id || pressable_test_id {
             return Some(el);
         }
 
         el.children
             .iter()
             .find_map(|child| find_element_by_test_id(child, test_id))
+    }
+
+    fn find_first_pressable(el: &AnyElement) -> Option<&fret_ui::element::PressableProps> {
+        if let ElementKind::Pressable(props) = &el.kind {
+            return Some(props);
+        }
+
+        el.children.iter().find_map(find_first_pressable)
+    }
+
+    fn find_pressable_chrome(el: &AnyElement) -> Option<&ContainerProps> {
+        match &el.kind {
+            ElementKind::Pressable(_) => el.children.first().and_then(|child| {
+                if let ElementKind::Container(props) = &child.kind {
+                    Some(props)
+                } else {
+                    None
+                }
+            }),
+            _ => el.children.iter().find_map(find_pressable_chrome),
+        }
     }
 
     fn find_slot_border_color(el: &AnyElement, test_id: &str) -> Option<Color> {
@@ -1043,5 +1074,258 @@ mod tests {
             })
             .expect("radio group semantics");
         assert_eq!(group.flags.invalid, Some(fret_core::SemanticsInvalid::True));
+    }
+
+    #[test]
+    fn form_field_invalid_date_picker_marks_trigger_semantics_invalid() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(None::<Date>);
+        let field_id: Arc<str> = Arc::from("due_date");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-invalid-date-picker",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [
+                            DatePicker::new(open.clone(), month.clone(), selected.clone())
+                                .test_id_prefix("form-field-date-picker")
+                                .into_element(cx),
+                        ],
+                    )
+                    .label("Due date")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-date-picker-trigger"))
+            .expect("date picker trigger semantics");
+        assert_eq!(
+            trigger.flags.invalid,
+            Some(fret_core::SemanticsInvalid::True)
+        );
+    }
+
+    #[test]
+    fn form_field_invalid_date_picker_uses_destructive_trigger_chrome() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let form_state = app.models_mut().insert(FormState::default());
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(None::<Date>);
+        let field_id: Arc<str> = Arc::from("due_date");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "form-field-invalid-date-picker-chrome",
+            |cx| {
+                FormField::new(
+                    form_state.clone(),
+                    field_id.clone(),
+                    [
+                        DatePicker::new(open.clone(), month.clone(), selected.clone())
+                            .test_id_prefix("form-field-date-picker")
+                            .into_element(cx),
+                    ],
+                )
+                .label("Due date")
+                .into_element(cx)
+            },
+        );
+
+        let trigger = find_element_by_test_id(&el, "form-field-date-picker-trigger")
+            .expect("date picker trigger element");
+        let pressable = find_first_pressable(trigger).expect("date picker trigger pressable");
+        let chrome = find_pressable_chrome(trigger).expect("date picker trigger chrome");
+
+        let theme = Theme::global(&app).snapshot();
+        let expected_border = theme.color_token("destructive");
+        let mut expected_ring =
+            crate::theme_variants::invalid_control_ring_color(&theme, expected_border);
+        expected_ring.a = 0.0;
+
+        assert_eq!(chrome.border_color, Some(expected_border));
+        assert_eq!(
+            pressable.focus_ring.expect("focus ring").color,
+            expected_ring
+        );
+    }
+
+    #[test]
+    fn form_field_invalid_date_picker_with_presets_marks_trigger_semantics_invalid() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(None::<Date>);
+        let field_id: Arc<str> = Arc::from("ship_date");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root =
+            fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds(),
+                "form-field-invalid-date-picker-with-presets",
+                |cx| {
+                    vec![
+                        FormField::new(
+                            form_state.clone(),
+                            field_id.clone(),
+                            [DatePickerWithPresets::new(
+                                open.clone(),
+                                month.clone(),
+                                selected.clone(),
+                            )
+                            .test_id_prefix("form-field-date-picker-with-presets")
+                            .into_element(cx)],
+                        )
+                        .label("Ship date")
+                        .into_element(cx),
+                    ]
+                },
+            );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-date-picker-with-presets-trigger"))
+            .expect("date picker with presets trigger semantics");
+        assert_eq!(
+            trigger.flags.invalid,
+            Some(fret_core::SemanticsInvalid::True)
+        );
+    }
+
+    #[test]
+    fn form_field_invalid_date_range_picker_marks_trigger_semantics_invalid() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut services = FakeServices;
+        let form_state = app.models_mut().insert(FormState::default());
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(DateRangeSelection::default());
+        let field_id: Arc<str> = Arc::from("travel_dates");
+        let error: Arc<str> = Arc::from("Required");
+
+        let _ = app.models_mut().update(&form_state, |st| {
+            st.touch(field_id.clone());
+            st.set_error(field_id.clone(), error.clone());
+        });
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "form-field-invalid-date-range-picker",
+            |cx| {
+                vec![
+                    FormField::new(
+                        form_state.clone(),
+                        field_id.clone(),
+                        [
+                            DateRangePicker::new(open.clone(), month.clone(), selected.clone())
+                                .test_id_prefix("form-field-date-range-picker")
+                                .into_element(cx),
+                        ],
+                    )
+                    .label("Travel dates")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("form-field-date-range-picker-trigger"))
+            .expect("date range picker trigger semantics");
+        assert_eq!(
+            trigger.flags.invalid,
+            Some(fret_core::SemanticsInvalid::True)
+        );
     }
 }
