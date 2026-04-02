@@ -32,6 +32,10 @@ use style_aware_services::StyleAwareServices;
 mod test_assert;
 use test_assert::assert_close_px;
 
+#[path = "support/shadow_insets.rs"]
+mod shadow_insets;
+use shadow_insets::{assert_shadow_insets_match, fret_drop_shadow_insets_candidates};
+
 fn run_fret_root_with_ui_and_services(
     bounds: Rect,
     services: &mut dyn fret_core::UiServices,
@@ -597,6 +601,17 @@ fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> Option<Paint
     }
 
     best
+}
+
+fn web_drop_shadow_insets(node: &WebNode) -> Vec<shadow_insets::ShadowInsets> {
+    let box_shadow = node
+        .computed_style
+        .get("boxShadow")
+        .map(String::as_str)
+        .unwrap_or("");
+    shadow_insets::shadow_insets_from_box_shadow(box_shadow, |color| {
+        parse_css_color(color).map(|rgba| rgba.a)
+    })
 }
 
 #[derive(Clone, Copy)]
@@ -1787,6 +1802,75 @@ fn web_vs_fret_calendar_demo_day_grid_geometry_and_a11y_labels_match_web_targete
         node_bounds.origin.y,
         web_day.rect.y,
         3.0,
+    );
+}
+
+fn assert_calendar_demo_shadow_matches(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden("calendar-demo");
+    let theme = web_theme_named(&web, web_theme_name);
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (_snap, scene) = render_calendar_in_bounds_with_scene_and_scheme(bounds, scheme, |cx| {
+        use fret_ui_headless::calendar::CalendarMonth;
+        use time::{Month, Weekday};
+
+        let theme = Theme::global(&*cx.app).clone();
+        let border = theme.color_token("border");
+        let month: Model<CalendarMonth> = cx
+            .app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::January));
+        let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+
+        vec![
+            shadcn::Calendar::new(month, selected)
+                .week_start(Weekday::Sunday)
+                .disable_outside_days(false)
+                .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+                .refine_style(
+                    fret_ui_kit::ChromeRefinement::default()
+                        .rounded(fret_ui_kit::Radius::Md)
+                        .border_1()
+                        .border_color(fret_ui_kit::ColorRef::Color(border))
+                        .shadow_sm(),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let target = Rect::new(
+        Point::new(Px(web_rdp_root.rect.x), Px(web_rdp_root.rect.y)),
+        CoreSize::new(Px(web_rdp_root.rect.w), Px(web_rdp_root.rect.h)),
+    );
+    let quad =
+        find_best_opaque_background_quad(&scene, target).expect("painted background quad for root");
+    let expected = web_drop_shadow_insets(web_rdp_root);
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+
+    assert_shadow_insets_match("calendar-demo", web_theme_name, &expected, &candidates);
+}
+
+#[test]
+fn web_vs_fret_calendar_demo_shadow_matches_web_light() {
+    assert_calendar_demo_shadow_matches(
+        "light",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_demo_shadow_matches_web_dark() {
+    assert_calendar_demo_shadow_matches(
+        "dark",
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
     );
 }
 

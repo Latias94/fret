@@ -78,7 +78,7 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .max_w(Px(980.0))
         .no_shell();
     let compact_builder = DocSection::build(cx, "Compact Builder (Fret)", compact_builder)
-        .description("Fret shorthand for the same recipe when you want the default trigger + popover chrome bundled behind `DatePicker::new(...)`, including control-id/test-id wiring and `required(...)` semantics on the trigger.")
+        .description("Fret shorthand for the same recipe when you want the default trigger + popover chrome bundled behind `DatePicker::new(...)`, including control-id/test-id wiring and root `DatePicker::required(true)` semantics on the trigger.")
         .code_rust_from_file_region(snippets::compact_builder::SOURCE, "example")
         .max_w(Px(980.0))
         .no_shell();
@@ -99,7 +99,7 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the shadcn Date Picker docs flow first: Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL. `With Presets` stays as the upstream registry follow-up; `Compact Builder (Fret)`, `Label Association`, and `With Dropdowns` remain focused Fret/gallery extensions, including trigger-level form semantics such as `required(...)`.",
+            "Preview follows the shadcn Date Picker docs flow first: Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL. `With Presets` stays as the upstream registry follow-up; `Compact Builder (Fret)`, `Label Association`, and `With Dropdowns` remain focused Fret/gallery extensions, including root trigger-level form semantics such as `DatePicker::required(true)`.",
         ),
         vec![
             demo,

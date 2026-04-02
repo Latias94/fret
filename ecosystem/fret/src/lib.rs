@@ -54,6 +54,13 @@
 //! }
 //! ```
 //!
+//! For user-facing demos, add `.window_min_size((...))` when the layout should stay above a
+//! readable breakpoint during manual resize.
+//! Use `.window_position_logical((...))` / `.window_resize_increments((...))` when startup
+//! placement or stepwise resizing is part of the product surface.
+//! For multi-window apps that rely on fallback-created auxiliary windows, configure
+//! `.with_default_window(...)` and related `with_default_window_*` methods on `UiAppBuilder`.
+//!
 //! Optional ecosystem extensions stay explicit:
 //!
 //! - enable `state` for grouped selector/query helpers on `AppUi`; prefer
@@ -1111,6 +1118,78 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
+    pub fn with_main_window_min_size(self, size: (f64, f64)) -> Self {
+        Self {
+            inner: self.inner.with_main_window_min_size(size),
+        }
+    }
+
+    pub fn with_main_window_max_size(self, size: (f64, f64)) -> Self {
+        Self {
+            inner: self.inner.with_main_window_max_size(size),
+        }
+    }
+
+    pub fn with_main_window_resize_increments(self, size: (f64, f64)) -> Self {
+        Self {
+            inner: self.inner.with_main_window_resize_increments(size),
+        }
+    }
+
+    pub fn with_main_window_position_logical(self, position: (i32, i32)) -> Self {
+        Self {
+            inner: self.inner.with_main_window_position_logical(position),
+        }
+    }
+
+    pub fn with_main_window_position_physical(self, position: (i32, i32)) -> Self {
+        Self {
+            inner: self.inner.with_main_window_position_physical(position),
+        }
+    }
+
+    pub fn with_main_window_resizable(self, resizable: bool) -> Self {
+        Self {
+            inner: self.inner.with_main_window_resizable(resizable),
+        }
+    }
+
+    pub fn with_default_window(self, title: impl Into<String>, size: (f64, f64)) -> Self {
+        Self {
+            inner: self.inner.with_default_window(title, size),
+        }
+    }
+
+    pub fn with_default_window_min_size(self, size: (f64, f64)) -> Self {
+        Self {
+            inner: self.inner.with_default_window_min_size(size),
+        }
+    }
+
+    pub fn with_default_window_max_size(self, size: (f64, f64)) -> Self {
+        Self {
+            inner: self.inner.with_default_window_max_size(size),
+        }
+    }
+
+    pub fn with_default_window_resize_increments(self, size: (f64, f64)) -> Self {
+        Self {
+            inner: self.inner.with_default_window_resize_increments(size),
+        }
+    }
+
+    pub fn with_default_window_position_logical(self, position: (i32, i32)) -> Self {
+        Self {
+            inner: self.inner.with_default_window_position_logical(position),
+        }
+    }
+
+    pub fn with_default_window_position_physical(self, position: (i32, i32)) -> Self {
+        Self {
+            inner: self.inner.with_default_window_position_physical(position),
+        }
+    }
+
     pub fn configure(self, f: impl FnOnce(&mut fret_launch::WinitRunnerConfig)) -> Self {
         Self {
             inner: self.inner.configure(f),
@@ -1553,6 +1632,10 @@ mod builder_surface_tests {
     fn app_builder_view_with_hooks_smoke() {
         let _builder = FretApp::new("builder-view-smoke")
             .window("Builder View Smoke", (640.0, 480.0))
+            .window_min_size((420.0, 320.0))
+            .window_max_size((900.0, 700.0))
+            .window_resize_increments((24.0, 16.0))
+            .window_position_logical((120, 180))
             .setup(install_bundle_fixture)
             .install(install)
             .view_with_hooks::<SmokeView>(|driver| {
@@ -1572,6 +1655,24 @@ mod builder_surface_tests {
                 assert_eq!(config.main_window_title, "Builder View Smoke");
                 assert_eq!(config.main_window_size.width, 640.0);
                 assert_eq!(config.main_window_size.height, 480.0);
+                assert_eq!(
+                    config.main_window_min_size,
+                    Some(fret_launch::WindowLogicalSize::new(420.0, 320.0))
+                );
+                assert_eq!(
+                    config.main_window_max_size,
+                    Some(fret_launch::WindowLogicalSize::new(900.0, 700.0))
+                );
+                assert_eq!(
+                    config.main_window_resize_increments,
+                    Some(fret_launch::WindowLogicalSize::new(24.0, 16.0))
+                );
+                assert_eq!(
+                    config.main_window_position,
+                    Some(fret_launch::WindowPosition::Logical(
+                        fret_core::WindowLogicalPosition { x: 120, y: 180 }
+                    ))
+                );
             })
             .setup_with(|_app| {})
             .install_custom_effects(install_custom_effects)
@@ -1592,6 +1693,77 @@ mod builder_surface_tests {
             })
             .setup_with(|_app| {})
             .on_gpu_ready(|_app, _context, _renderer| {});
+    }
+
+    #[test]
+    fn app_builder_default_main_window_can_still_apply_constraints() {
+        let _builder = AppPreludeFretApp::new("builder-view-constrained-default-main-window")
+            .minimal_defaults()
+            .window_min_size((420.0, 560.0))
+            .window_resize_increments((32.0, 24.0))
+            .window_position_physical((40, 80))
+            .window_resizable(false)
+            .view::<SmokeView>()
+            .expect("view should build")
+            .configure(|config| {
+                assert_eq!(
+                    config.main_window_title,
+                    "builder-view-constrained-default-main-window"
+                );
+                assert_eq!(config.main_window_size.width, 960.0);
+                assert_eq!(config.main_window_size.height, 720.0);
+                assert_eq!(
+                    config.main_window_min_size,
+                    Some(fret_launch::WindowLogicalSize::new(420.0, 560.0))
+                );
+                assert_eq!(
+                    config.main_window_resize_increments,
+                    Some(fret_launch::WindowLogicalSize::new(32.0, 24.0))
+                );
+                assert_eq!(
+                    config.main_window_position,
+                    Some(fret_launch::WindowPosition::Physical(
+                        fret_launch::WindowPhysicalPosition::new(40, 80)
+                    ))
+                );
+                assert_eq!(config.main_window_style.resizable, Some(false));
+            });
+    }
+
+    #[test]
+    fn ui_app_builder_can_configure_default_aux_window_surface() {
+        let _builder = AppPreludeFretApp::new("builder-view-default-aux-window")
+            .minimal_defaults()
+            .view::<SmokeView>()
+            .expect("view should build")
+            .with_default_window("Aux Window", (460.0, 340.0))
+            .with_default_window_min_size((320.0, 240.0))
+            .with_default_window_max_size((900.0, 700.0))
+            .with_default_window_resize_increments((18.0, 18.0))
+            .with_default_window_position_logical((90, 120))
+            .configure(|config| {
+                assert_eq!(config.default_window_title, "Aux Window");
+                assert_eq!(config.default_window_size.width, 460.0);
+                assert_eq!(config.default_window_size.height, 340.0);
+                assert_eq!(
+                    config.default_window_min_size,
+                    Some(fret_launch::WindowLogicalSize::new(320.0, 240.0))
+                );
+                assert_eq!(
+                    config.default_window_max_size,
+                    Some(fret_launch::WindowLogicalSize::new(900.0, 700.0))
+                );
+                assert_eq!(
+                    config.default_window_resize_increments,
+                    Some(fret_launch::WindowLogicalSize::new(18.0, 18.0))
+                );
+                assert_eq!(
+                    config.default_window_position,
+                    Some(fret_launch::WindowPosition::Logical(
+                        fret_core::WindowLogicalPosition { x: 90, y: 120 }
+                    ))
+                );
+            });
     }
 
     #[test]
@@ -1940,12 +2112,52 @@ mod builder_surface_tests {
             configure_hook_driver,
         )
         .with_main_window("Advanced UI App Hooks Smoke", (720.0, 420.0))
+        .with_main_window_min_size((520.0, 360.0))
+        .with_main_window_resize_increments((20.0, 20.0))
+        .with_main_window_position_physical((300, 220))
+        .with_main_window_resizable(false)
+        .with_default_window("Advanced Aux Window", (480.0, 320.0))
+        .with_default_window_min_size((360.0, 240.0))
+        .with_default_window_resize_increments((12.0, 12.0))
+        .with_default_window_position_physical((44, 55))
         .setup(install_bundle_fixture)
         .install(install)
         .configure(|config| {
             assert_eq!(config.main_window_title, "Advanced UI App Hooks Smoke");
             assert_eq!(config.main_window_size.width, 720.0);
             assert_eq!(config.main_window_size.height, 420.0);
+            assert_eq!(
+                config.main_window_min_size,
+                Some(fret_launch::WindowLogicalSize::new(520.0, 360.0))
+            );
+            assert_eq!(
+                config.main_window_resize_increments,
+                Some(fret_launch::WindowLogicalSize::new(20.0, 20.0))
+            );
+            assert_eq!(
+                config.main_window_position,
+                Some(fret_launch::WindowPosition::Physical(
+                    fret_launch::WindowPhysicalPosition::new(300, 220)
+                ))
+            );
+            assert_eq!(config.main_window_style.resizable, Some(false));
+            assert_eq!(config.default_window_title, "Advanced Aux Window");
+            assert_eq!(config.default_window_size.width, 480.0);
+            assert_eq!(config.default_window_size.height, 320.0);
+            assert_eq!(
+                config.default_window_min_size,
+                Some(fret_launch::WindowLogicalSize::new(360.0, 240.0))
+            );
+            assert_eq!(
+                config.default_window_resize_increments,
+                Some(fret_launch::WindowLogicalSize::new(12.0, 12.0))
+            );
+            assert_eq!(
+                config.default_window_position,
+                Some(fret_launch::WindowPosition::Physical(
+                    fret_launch::WindowPhysicalPosition::new(44, 55)
+                ))
+            );
         });
     }
 }
@@ -2452,7 +2664,6 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("QueryHandle"));
     }
 
-    #[test]
     #[test]
     fn readme_and_rustdoc_expose_explicit_assets_surface() {
         assert!(CRATE_README.contains("`fret::assets::{...}`"));

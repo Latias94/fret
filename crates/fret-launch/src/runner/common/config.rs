@@ -12,6 +12,12 @@ use crate::RunnerError;
 pub struct WinitRunnerConfig {
     pub main_window_title: String,
     pub main_window_size: super::WindowLogicalSize,
+    /// Optional minimum logical surface size applied to the main OS window.
+    pub main_window_min_size: Option<super::WindowLogicalSize>,
+    /// Optional maximum logical surface size applied to the main OS window.
+    pub main_window_max_size: Option<super::WindowLogicalSize>,
+    /// Optional logical surface resize increments applied to the main OS window.
+    pub main_window_resize_increments: Option<super::WindowLogicalSize>,
     pub main_window_position: Option<super::WindowPosition>,
     /// Create-time style request for the main OS window.
     ///
@@ -21,6 +27,12 @@ pub struct WinitRunnerConfig {
     pub main_window_style: WindowStyleRequest,
     pub default_window_title: String,
     pub default_window_size: super::WindowLogicalSize,
+    /// Optional minimum logical surface size applied to fallback-created OS windows.
+    pub default_window_min_size: Option<super::WindowLogicalSize>,
+    /// Optional maximum logical surface size applied to fallback-created OS windows.
+    pub default_window_max_size: Option<super::WindowLogicalSize>,
+    /// Optional logical surface resize increments applied to fallback-created OS windows.
+    pub default_window_resize_increments: Option<super::WindowLogicalSize>,
     pub default_window_position: Option<super::WindowPosition>,
     /// Physical pixel offset applied when positioning a new window from an anchor point.
     pub new_window_anchor_offset: (f64, f64),
@@ -109,10 +121,16 @@ impl Default for WinitRunnerConfig {
         Self {
             main_window_title: "fret".to_string(),
             main_window_size: super::WindowLogicalSize::new(1280.0, 720.0),
+            main_window_min_size: None,
+            main_window_max_size: None,
+            main_window_resize_increments: None,
             main_window_position: None,
             main_window_style: WindowStyleRequest::default(),
             default_window_title: "fret".to_string(),
             default_window_size: super::WindowLogicalSize::new(640.0, 480.0),
+            default_window_min_size: None,
+            default_window_max_size: None,
+            default_window_resize_increments: None,
             default_window_position: None,
             new_window_anchor_offset: (-40.0, -20.0),
             exit_on_main_window_close: true,
@@ -148,9 +166,19 @@ impl WinitRunnerConfig {
     pub fn main_window_spec(&self) -> super::WindowCreateSpec {
         let mut spec =
             super::WindowCreateSpec::new(self.main_window_title.clone(), self.main_window_size);
+        if let Some(min_size) = self.main_window_min_size {
+            spec = spec.with_min_size(min_size);
+        }
+        if let Some(max_size) = self.main_window_max_size {
+            spec = spec.with_max_size(max_size);
+        }
+        if let Some(resize_increments) = self.main_window_resize_increments {
+            spec = spec.with_resize_increments(resize_increments);
+        }
         if let Some(position) = self.main_window_position {
             spec = spec.with_position(position);
         }
+        spec.normalize_size_constraints();
         spec
     }
 
@@ -161,9 +189,67 @@ impl WinitRunnerConfig {
             self.default_window_title.clone(),
             self.default_window_size,
         );
+        if let Some(min_size) = self.default_window_min_size {
+            spec = spec.with_min_size(min_size);
+        }
+        if let Some(max_size) = self.default_window_max_size {
+            spec = spec.with_max_size(max_size);
+        }
+        if let Some(resize_increments) = self.default_window_resize_increments {
+            spec = spec.with_resize_increments(resize_increments);
+        }
         if let Some(position) = self.default_window_position {
             spec = spec.with_position(position);
         }
+        spec.normalize_size_constraints();
         spec
+    }
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    use super::*;
+    use crate::WindowLogicalSize;
+
+    #[test]
+    fn main_window_spec_carries_size_constraints_and_clamps_initial_size() {
+        let config = WinitRunnerConfig {
+            main_window_size: WindowLogicalSize::new(320.0, 240.0),
+            main_window_min_size: Some(WindowLogicalSize::new(420.0, 560.0)),
+            main_window_max_size: Some(WindowLogicalSize::new(900.0, 700.0)),
+            main_window_resize_increments: Some(WindowLogicalSize::new(24.0, 16.0)),
+            ..Default::default()
+        };
+
+        let spec = config.main_window_spec();
+
+        assert_eq!(spec.size, WindowLogicalSize::new(420.0, 560.0));
+        assert_eq!(spec.min_size, Some(WindowLogicalSize::new(420.0, 560.0)));
+        assert_eq!(spec.max_size, Some(WindowLogicalSize::new(900.0, 700.0)));
+        assert_eq!(
+            spec.resize_increments,
+            Some(WindowLogicalSize::new(24.0, 16.0))
+        );
+    }
+
+    #[test]
+    fn default_window_spec_repairs_inverted_constraints() {
+        let config = WinitRunnerConfig {
+            default_window_size: WindowLogicalSize::new(1200.0, 900.0),
+            default_window_min_size: Some(WindowLogicalSize::new(460.0, 360.0)),
+            default_window_max_size: Some(WindowLogicalSize::new(420.0, 320.0)),
+            default_window_resize_increments: Some(WindowLogicalSize::new(18.0, 18.0)),
+            ..Default::default()
+        };
+
+        let spec = config.default_window_spec();
+
+        assert_eq!(spec.size, WindowLogicalSize::new(460.0, 360.0));
+        assert_eq!(spec.min_size, Some(WindowLogicalSize::new(460.0, 360.0)));
+        assert_eq!(spec.max_size, Some(WindowLogicalSize::new(460.0, 360.0)));
+        assert_eq!(
+            spec.resize_increments,
+            Some(WindowLogicalSize::new(18.0, 18.0))
+        );
     }
 }

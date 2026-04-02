@@ -1,5 +1,13 @@
 # shadcn/ui v4 Audit - Sonner (Toast)
 
+Status note (2026-04-01): this audit now treats toast shadow as a parity-gated part of the shared
+toast chrome story. The shadcn wrapper still contributes theme variables plus `.cn-toast` radius
+styling, but the shadow footprint itself comes from the generic toast fallback in
+`ecosystem/fret-ui-kit/src/window_overlays/render.rs`. That fallback is now source-aligned to the
+checked-in `new-york-v4` Sonner open-mode web baseline and protected by dedicated light/dark gates
+in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/sonner.rs`, so it is intentionally
+retained as an explicit shared baseline.
+
 ## Upstream references (non-normative)
 
 This document references optional local checkouts under `repo-ref/` for convenience.
@@ -74,12 +82,22 @@ Notes:
 - Pass: Newest-toasts ordering matches common UX (top stacks newest at top edge, bottom stacks newest at bottom edge).
 - Pass: `max_toasts` is supported per-window; eviction prefers non-pinned toasts.
 
+### Chrome
+
+- Pass: The shared toast fallback shadow now has dedicated light/dark footprint gates against the
+  checked-in `sonner-demo.open` web baseline.
+- Pass: The retained generic toast fallback in
+  `ecosystem/fret-ui-kit/src/window_overlays/render.rs` intentionally matches the current Sonner
+  baseline `rgba(0, 0, 0, 0.1) 0px 4px 12px 0px` instead of acting as an unreviewed placeholder.
+
 ## Conclusion
 
 - Result: This component does not currently indicate a missing mechanism-layer gap in the shadcn-facing surface.
 - Result: The main drift was in the shadcn recipe/documentation surface, not in the toast mechanism.
 - Result: `Toaster::new()` behaves like the upstream wrapper defaults, and the gallery page now
   mirrors the docs structure more directly instead of only mirroring the example subset.
+- Result: The shared toast fallback shadow is now evidence-backed, source-aligned, and intentionally
+  retained as the generic toast chrome baseline.
 - Result: Follow-up work should focus on richer async/app integration helpers or a lower-level
   custom-content toast primitive only if a concrete product need appears.
 
@@ -87,6 +105,7 @@ Notes:
 
 - `cargo test -p fret-ui-kit window_overlays::toast`
 - `cargo test -p fret-ui-shadcn --lib sonner`
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome web_vs_fret_sonner_demo_toast_shadow_matches_web_light web_vs_fret_sonner_demo_toast_shadow_matches_web_dark --status-level fail`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app sonner_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test sonner_docs_surface -- --nocapture`
 - `cargo check -p fret-ui-gallery --message-format short`

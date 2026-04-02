@@ -21,6 +21,10 @@ We want a **stable contract** that:
 - is renderer-agnostic and portable (no implicit GPU filters),
 - can later be upgraded to true blur without breaking authoring APIs.
 
+Since ADR 0286 later introduced a bounded blur-based effect step (`DropShadowV1`), this ADR needs
+to stay explicit about the portable baseline it governs instead of silently overlapping with the
+effect pipeline.
+
 ## Decision
 
 1) Introduce a low-level, declarative drop shadow primitive:
@@ -41,13 +45,28 @@ We want a **stable contract** that:
 - `fret-ui-kit` maps shadcn-like elevation levels to `ShadowStyle` using theme extension
   tokens under `component.shadow.*`.
 
+4) Adopt an explicit coexistence posture with ADR 0286:
+
+- `ShadowStyle` remains the portable baseline for box/container chrome and theme-token-driven
+  component presets.
+- `DropShadowV1` remains an explicit effect-step surface for content-derived blur where the caller
+  already owns effect bounds and `EffectMode::FilterContent`.
+- v1 MUST NOT silently translate generic `ContainerProps.shadow` / `ShadowPreset` usage into
+  `DropShadowV1`.
+
 ## Theme / Tokens
 
 Component recipes should resolve shadow parameters via extension keys:
 
+- `component.shadow.xs.offset_x`, `.offset_y`, `.spread`, `.softness`
 - `component.shadow.sm.offset_x`, `.offset_y`, `.spread`, `.softness`
 - `component.shadow.md.*`
 - `component.shadow.lg.*`
+- `component.shadow.xl.*`
+
+When a preset family is multi-layer, ecosystem themes may also seed secondary lanes such as
+`component.shadow.sm2.*`, `component.shadow.md2.*`, `component.shadow.lg2.*`, and
+`component.shadow.xl2.*`.
 
 Shadow color uses the semantic key `shadow` (best-effort fallback is opaque black; component code
 typically overrides alpha per level).
@@ -57,6 +76,7 @@ typically overrides alpha per level).
 - A general blur/filter pipeline for arbitrary primitives.
 - Inner shadows, inset shadows, or drop-shadows on arbitrary paths.
 - Physically correct shadows (this is a UI elevation affordance, not lighting).
+- The blur-based effect-backed shadow contract itself; that lives in ADR 0286.
 
 ## Consequences
 
@@ -64,4 +84,5 @@ typically overrides alpha per level).
 - The rendering backend can later replace the "layered quads" approximation with true blur, while
   keeping `ShadowStyle` stable (only the implementation changes).
 - Themes can tune elevation per platform/DPI by adjusting `component.shadow.*` extension tokens.
-
+- Portable component chrome keeps a deterministic baseline on every backend, while higher-fidelity
+  blur remains an explicit opt-in via `DropShadowV1` rather than an implicit renderer substitution.

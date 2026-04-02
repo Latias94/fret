@@ -119,6 +119,7 @@ pub(super) struct QuadInstance {
     pub(super) corner_radii: [f32; 4],
     pub(super) border: [f32; 4],
     pub(super) dash_params: [f32; 4],
+    pub(super) shadow_params: [f32; 4],
 }
 
 #[repr(C)]
@@ -992,6 +993,7 @@ pub(super) struct QuadPipelineKey {
     pub(super) dash_enabled: bool,
     pub(super) fill_material_sampled: bool,
     pub(super) border_material_sampled: bool,
+    pub(super) shadow_mode: bool,
 }
 
 #[derive(Clone, Copy)]

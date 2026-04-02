@@ -60,8 +60,22 @@ Recent breadth wins:
   InputOtp row geometry (slot sizes + gaps).
 - **Recurring layout families**: `textarea-*`, `empty-*`, `resizable-*`, `native-select-*` now have baseline layout gates.
 - **Field + date + skeleton edges**: `field-responsive`, `button-as-child`, `date-picker-with-range`, `skeleton-*` now have web-vs-fret layout gates.
+- **Shared control elevation**: `button-demo`, `button-group-demo` leaf buttons,
+  `input-group-demo`, `input-demo`, `textarea-demo`, `select-demo`, and `native-select-demo` now
+  have dedicated light/dark shadow footprint gates for the shared `shadow-xs` lane, so common
+  control elevation is checked directly against the checked-in web baseline instead of being
+  inferred from border/ring parity alone.
+  - Remaining subjective "hard shadow" reports should now be treated as a portable painter
+    fidelity question, not a shared shadcn token/recipe drift question. Follow-on:
+    `docs/workstreams/shadow-portable-softness-fearless-refactor-v1/DESIGN.md`
 - **Block-ish text semantics**: `CardTitle` and form field label/title no longer force `nowrap`; wrapping is now driven by the parent width (matching upstream which uses `leading-*` but not `whitespace-nowrap`).
+- **Card shadow footprint**: `card-demo` now has dedicated light/dark shadow footprint gates, and
+  the shared `shadow-sm` preset was realigned to the current `new-york-v4` web source/golden
+  outcome instead of the previous harder single-layer fallback.
 - **Calendar root chrome**: `calendar-01` now gates the calendar root background (painted quad color matches web).
+- **Calendar demo root elevation**: `calendar-demo` now has dedicated light/dark shadow footprint
+  gates for the caller-owned `rounded-md border shadow-sm` root chrome, so demo-level elevation is
+  checked directly rather than inferred from background quads alone.
 - **Calendar nested chrome**: `calendar-22.open` now gates the calendar root background when rendered in a popover
   (matches upstream `[[data-slot=popover-content]_&]:bg-transparent`; implemented via `surface_slot` context).
 - **DatePicker popover surface**: `DatePicker` / `DateRangePicker` now wrap the calendar in `PopoverContent` (matches upstream `w-auto p-0`),
@@ -70,10 +84,10 @@ Recent breadth wins:
 - **DatePicker open popover placement**: new shadcn-web `.open` goldens are now gated for
   `date-picker-demo.open`, `date-picker-with-presets.open`, and `date-picker-with-range.open` (portal rect + insets via the shared overlay placement harness).
 - **DatePicker nested overlay placement**: `date-picker-with-presets.select-open.open` now gates the Select listbox popper placement while the popover is open (ComboBox -> ListBox portal).
-- **Sonner (toast) depth gates**: `sonner-demo*` / `sonner-types*` have open-mode goldens and a deterministic geometry gate for the toast item rect, including the `sonner-types` variant matrix (`default/success/info/warning/error/promise-loading`) and `vp1440x240` constrained viewport variants.
+- **Sonner (toast) depth gates**: `sonner-demo*` / `sonner-types*` have open-mode goldens and a deterministic geometry gate for the toast item rect, including the `sonner-types` variant matrix (`default/success/info/warning/error/promise-loading`) and `vp1440x240` constrained viewport variants. `sonner-demo` also now has dedicated light/dark shadow footprint gates, proving the shared toast fallback baseline against the checked-in web outcome instead of leaving it as an unreviewed generic overlay shadow.
 - **DatePicker presets behavior (Tomorrow)**: `date-picker-with-presets.preset-tomorrow.open` now gates the selected-day ARIA label and the trigger’s `format(date, "PPP")` output (`January 16th, 2026` when extracted with `--freezeDate=2026-01-15`).
 - **Dashboard block shell**: `dashboard-01` now has a shell geometry gate (sidebar width + header inset geometry).
-- **Chart tooltip/legend wrapper**: initial `chart-tooltip-*` + `chart-*-legend` panel geometry gates (min-width + padding + line-height outcomes).
+- **Chart tooltip/legend wrapper**: `chart-tooltip-*` + `chart-*-legend` panel geometry gates (min-width + padding + line-height outcomes), plus a dedicated light/dark tooltip shadow footprint gate for the recipe-owned `shadow-xl` lane.
   - Tooltip variants now include `chart-tooltip-label-none`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`, `chart-tooltip-icons`,
     `chart-tooltip-formatter`, `chart-tooltip-advanced` (including internal item rows + “Total” row bounds).
   - Pie legend variant includes `chart-pie-legend` (recharts wrapper + shadcn `*:basis-1/4` layout).
@@ -167,6 +181,23 @@ Conformance gates:
 - Trigger chrome + focus ring: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_select_scrollable_trigger_chrome_matches`, `web_vs_fret_select_demo_aria_invalid_border_color_matches`, `web_vs_fret_select_demo_focus_ring_matches`, `web_vs_fret_select_demo_aria_invalid_focus_ring_matches`).
 - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_overlay_placement_matches`, `web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches`).
 - Scroll buttons + viewport inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_listbox_option_insets_match`, `web_vs_fret_select_scrollable_small_viewport_listbox_option_insets_match`).
+
+### `NativeSelect`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/native-select.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/native_select.rs`
+- Notes:
+  - Trigger chrome intentionally follows the shared input taxonomy (`border-input`, `shadow-xs`,
+    `focus-visible:ring-[3px]`) instead of inventing a separate elevation lane.
+  - The trigger shadow is painted by the outer chrome wrapper while the inner surface owns
+    background/border, matching the same split used by `Input` / `Textarea`.
+- Conformance gates:
+  - Layout + chevron geometry: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/native_select.rs`
+    (`web_vs_fret_layout_native_select_heights_match_web_fixtures`,
+    `web_vs_fret_layout_native_select_chevron_matches_web_fixtures`).
+  - Trigger shadow footprint: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_native_select_demo_shadow_matches_web_light`,
+    `web_vs_fret_native_select_demo_shadow_matches_web_dark`).
 
 ### `DropdownMenu`
 
@@ -513,6 +544,9 @@ Conformance gates:
 - Conformance gates:
   - Chrome + layout gap: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_button_group_demo_button_chrome_matches`).
+  - Leaf button shadow footprint: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_demo_shadow_matches_web_light`,
+    `web_vs_fret_button_group_demo_shadow_matches_web_dark`).
   - Split button separator: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_button_group_split_chrome_matches`).
   - Vertical orientation: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`

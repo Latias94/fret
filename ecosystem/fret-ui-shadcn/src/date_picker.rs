@@ -5,7 +5,7 @@ use std::sync::Arc;
 use fret_core::{FontWeight, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -18,7 +18,7 @@ use fret_ui_kit::{
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::bool_model::IntoBoolModel;
-use crate::button::{Button, ButtonStyle, ButtonVariant};
+use crate::button::{Button, ButtonStyle, ButtonVariant, outline_trigger_invalid_style};
 use crate::calendar::Calendar;
 use crate::calendar_month_model::IntoCalendarMonthModel;
 use crate::optional_date_model::IntoOptionalDateModel;
@@ -35,6 +35,7 @@ pub struct DatePicker {
     placeholder: Arc<str>,
     format_selected: Arc<dyn Fn(Date) -> Arc<str> + Send + Sync + 'static>,
     required: bool,
+    aria_invalid: bool,
     disabled: bool,
     show_outside_days: bool,
     disable_outside_days: bool,
@@ -55,6 +56,7 @@ impl std::fmt::Debug for DatePicker {
             .field("placeholder", &self.placeholder)
             .field("format_selected", &"<fn>")
             .field("required", &self.required)
+            .field("aria_invalid", &self.aria_invalid)
             .field("disabled", &self.disabled)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
@@ -80,6 +82,7 @@ impl DatePicker {
             placeholder: Arc::from("Pick a date"),
             format_selected: Arc::new(format_selected_ppp_en),
             required: false,
+            aria_invalid: false,
             disabled: false,
             show_outside_days: true,
             disable_outside_days: false,
@@ -180,6 +183,11 @@ impl DatePicker {
         self
     }
 
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -231,6 +239,7 @@ impl DatePicker {
             let open_trigger = open.clone();
             let close_on_select_open = self.close_on_select.then(|| open.clone());
             let required = self.required;
+            let aria_invalid = self.aria_invalid;
             let initial_focus_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
             let trigger_chrome = self.chrome.clone();
@@ -260,6 +269,7 @@ impl DatePicker {
                 .into_element_with(
                     cx,
                     move |cx| {
+                        let theme = Theme::global(&*cx.app).snapshot();
                         let mut button = Button::new(button_text.clone())
                             .variant(ButtonVariant::Outline)
                             .toggle_model(open_trigger.clone())
@@ -282,14 +292,23 @@ impl DatePicker {
                                 })),
                             ));
                         }
+                        if aria_invalid {
+                            button = button.style(outline_trigger_invalid_style(&theme));
+                        }
                         if let Some(test_id) = trigger_test_id.clone() {
                             button = button.test_id(test_id);
                         }
 
                         let mut trigger = button.into_element(cx);
-                        if required {
-                            trigger = trigger
-                                .attach_semantics(SemanticsDecoration::default().required(true));
+                        if required || aria_invalid {
+                            let mut decoration = SemanticsDecoration::default();
+                            if required {
+                                decoration = decoration.required(true);
+                            }
+                            if aria_invalid {
+                                decoration = decoration.invalid(fret_core::SemanticsInvalid::True);
+                            }
+                            trigger = trigger.attach_semantics(decoration);
                         }
                         trigger
                     },
@@ -479,6 +498,19 @@ mod tests {
         match &el.kind {
             fret_ui::element::ElementKind::Pressable(props) => Some(props.clone()),
             _ => el.children.iter().find_map(find_first_pressable),
+        }
+    }
+
+    fn find_pressable_chrome(el: &AnyElement) -> Option<fret_ui::element::ContainerProps> {
+        match &el.kind {
+            fret_ui::element::ElementKind::Pressable(_) => el.children.first().and_then(|child| {
+                if let fret_ui::element::ElementKind::Container(props) = &child.kind {
+                    Some(props.clone())
+                } else {
+                    None
+                }
+            }),
+            _ => el.children.iter().find_map(find_pressable_chrome),
         }
     }
 
@@ -674,5 +706,113 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("required-date-picker-trigger"))
             .expect("date picker trigger semantics");
         assert!(node.flags.required);
+    }
+
+    #[test]
+    fn date_picker_invalid_trigger_uses_destructive_border_and_ring() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(200.0)),
+        );
+
+        let invalid = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "date-picker-invalid-trigger-chrome",
+            |cx| {
+                let open = cx.app.models_mut().insert(false);
+                let month = cx
+                    .app
+                    .models_mut()
+                    .insert(CalendarMonth::new(2026, Month::March));
+                let selected = cx.app.models_mut().insert(None::<Date>);
+
+                DatePicker::new(open, month, selected)
+                    .aria_invalid(true)
+                    .into_element(cx)
+            },
+        );
+
+        let theme = Theme::global(&app).snapshot();
+        let expected_border = theme.color_token("destructive");
+        let mut expected_ring =
+            crate::theme_variants::invalid_control_ring_color(&theme, expected_border);
+        expected_ring.a = 0.0;
+
+        let pressable = find_first_pressable(&invalid).expect("date picker trigger pressable");
+        let chrome = find_pressable_chrome(&invalid).expect("date picker trigger chrome");
+
+        assert_eq!(chrome.border_color, Some(expected_border));
+        assert_eq!(
+            pressable.focus_ring.expect("focus ring").color,
+            expected_ring
+        );
+    }
+
+    #[test]
+    fn date_picker_aria_invalid_exposes_invalid_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(480.0), Px(240.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(None::<Date>);
+
+        app.set_frame_id(FrameId(1));
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        OverlayController::begin_frame(&mut app, window);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "date-picker-invalid-semantics",
+            |cx| {
+                vec![
+                    DatePicker::new(open.clone(), month.clone(), selected.clone())
+                        .aria_invalid(true)
+                        .test_id_prefix("invalid-date-picker")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("invalid-date-picker-trigger"))
+            .expect("date picker trigger semantics");
+        assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
     }
 }

@@ -51,7 +51,9 @@ pub(super) fn preview_combobox(
         .code_rust_from_file_region(snippets::groups::SOURCE, "example")
         .no_shell();
     let invalid = DocSection::build(cx, "Invalid", invalid)
-        .description("Invalid visual uses `aria_invalid(true)` on the combobox trigger.")
+        .description(
+            "Invalid state uses root `Combobox::aria_invalid(true)` so invalid chrome and semantics stay on the combobox surface, then pairs it with caller-owned field/error copy.",
+        )
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let disabled = DocSection::build(cx, "Disabled", disabled)
         .description("Disabled state should block open/selection and use muted styling.")
@@ -84,6 +86,7 @@ pub(super) fn preview_combobox(
         "`Combobox::new(value, open)` plus the direct builder chain (`.trigger(...).input(...).clear(...).content(...)`) is the default recipe root lane, while `into_element_parts(...)` stays the focused upstream-shaped patch seam on that same lane rather than a separate `compose()` story.",
         "`Combobox::responsive(true)` remains the viewport-driven follow-up for the responsive example instead of widening the default docs path.",
         "`Combobox::required(true)` now covers both the closed trigger surface and the open search input surface, so required semantics follow the actual combobox node across states without widening the recipe to a generic children API.",
+        "`Combobox::aria_invalid(true)` is the root invalid lane; callers should not restate invalid state on `ComboboxInput` just to get trigger/search chrome.",
         "Combobox is intentionally a Popover + Command recipe surface; the remaining work here is docs/public-surface drift rather than a `fret-ui` mechanism bug.",
         "Upstream nested children composition maps to typed parts in Fret: `ComboboxContent::new([ComboboxContentPart::...])`, `ComboboxList::{items,groups}`, and `ComboboxInput::children([InputGroupAddon...])` cover the documented lanes without widening the root to arbitrary generic children.",
         "No extra generic root `children(...)` / `compose()` / `asChild` API is warranted here: the documented upstream lanes are already represented by `ComboboxContent::new([...])`, `ComboboxList::{items,groups}`, `ComboboxInput::children([InputGroupAddon...])`, and `ComboboxItem::content(...)`.",
@@ -119,7 +122,7 @@ pub(super) fn preview_combobox(
         "Base UI lifecycle parity already covers `onValueChange`, `onOpenChange`, reason-aware open changes, and transition-complete callbacks.",
         "Multi-select chips is a recipe-level surface (`ComboboxChips`) built on top of Command + Popover primitives.",
         "`Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay after `API Reference` as explicit Fret follow-ups so the docs path remains readable without losing diagnostics coverage.",
-        "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
+        "For invalid visuals, use root `Combobox::aria_invalid(true)` and pair it with caller-owned field-level error copy.",
         "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
     ]);
     let notes = DocSection::build(cx, "Notes", notes)

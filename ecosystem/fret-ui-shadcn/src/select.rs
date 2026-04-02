@@ -2586,6 +2586,7 @@ fn select_impl<H: UiHost>(
                 ..Default::default()
             };
             props.a11y.required = required;
+            props.a11y.invalid = aria_invalid.then_some(fret_core::SemanticsInvalid::True);
             props.a11y.test_id = trigger_test_id_for_trigger.clone();
             if !has_a11y_label_for_trigger {
                 props.a11y.labelled_by_element =
@@ -5961,6 +5962,68 @@ mod tests {
             .expect("select trigger semantics");
         assert_eq!(trigger.role, SemanticsRole::ComboBox);
         assert!(trigger.flags.required);
+    }
+
+    #[test]
+    fn select_aria_invalid_exposes_invalid_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+            SelectItem::new("gamma", "Gamma"),
+        ];
+
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "select-invalid-semantics",
+            |cx| {
+                vec![
+                    Select::new(model, open)
+                        .items(items)
+                        .aria_invalid(true)
+                        .a11y_label("Favorite fruit")
+                        .trigger_test_id("invalid-select")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("invalid-select"))
+            .expect("select trigger semantics");
+        assert_eq!(trigger.role, SemanticsRole::ComboBox);
+        assert_eq!(
+            trigger.flags.invalid,
+            Some(fret_core::SemanticsInvalid::True)
+        );
     }
 
     #[test]

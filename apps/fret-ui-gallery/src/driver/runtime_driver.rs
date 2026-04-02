@@ -66,42 +66,6 @@ use router::{
     page_from_gallery_location,
 };
 
-#[cfg(target_os = "windows")]
-fn ui_gallery_windows_common_fallback_override_disabled() -> bool {
-    std::env::var("FRET_UI_GALLERY_DISABLE_WINDOWS_COMMON_FALLBACK_OVERRIDE")
-        .ok()
-        .is_some_and(|value| {
-            let value = value.trim();
-            !value.is_empty() && value != "0"
-        })
-}
-
-fn apply_ui_gallery_text_font_fallback_overrides(config: &mut fret_render::TextFontFamilyConfig) {
-    #[cfg(target_os = "windows")]
-    {
-        if ui_gallery_windows_common_fallback_override_disabled() {
-            return;
-        }
-
-        if config.common_fallback_injection
-            == fret_core::TextCommonFallbackInjection::PlatformDefault
-        {
-            // UI gallery demos intentionally include symbol glyphs (e.g. "⌘") to align with shadcn
-            // docs. On Windows, relying on system fallback can yield tofu squares. Prefer injecting
-            // the curated common fallback stack so missing glyphs can resolve via "Segoe UI Symbol"
-            // / "Segoe UI Emoji" when available. Diagnostics can opt out to exercise the true
-            // platform-default/system-fallback lane.
-            config.common_fallback_injection =
-                fret_core::TextCommonFallbackInjection::CommonFallback;
-        }
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = config;
-    }
-}
-
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 struct UiGalleryBundledFontAssetsRegistered(bool);
 
@@ -1168,9 +1132,6 @@ pub fn run() -> anyhow::Result<()> {
         })
         .with_default_diagnostics()
         .with_default_config_files_for_root(&project_root)?
-        .configure(|c| {
-            apply_ui_gallery_text_font_fallback_overrides(&mut c.text_font_families);
-        })
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .preload_icon_svgs_on_gpu_ready()
@@ -1201,9 +1162,6 @@ pub fn run_with_event_loop(event_loop: winit::event_loop::EventLoop) -> anyhow::
         })
         .with_default_diagnostics()
         .with_default_config_files_for_root(&project_root)?
-        .configure(|c| {
-            apply_ui_gallery_text_font_fallback_overrides(&mut c.text_font_families);
-        })
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .preload_icon_svgs_on_gpu_ready()

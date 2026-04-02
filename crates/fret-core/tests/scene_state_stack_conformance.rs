@@ -101,6 +101,7 @@ impl Interpreter {
             | SceneOp::PopCompositeGroup
             | SceneOp::Quad { .. }
             | SceneOp::StrokeRRect { .. }
+            | SceneOp::ShadowRRect { .. }
             | SceneOp::Image { .. }
             | SceneOp::ImageRegion { .. }
             | SceneOp::MaskImage { .. }

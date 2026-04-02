@@ -51,7 +51,7 @@ Deliverables:
   - cookbook `examples/`,
   - web demo selection.
 - A documented ownership split:
-  - `examples/README.md` is the Bevy-style portal,
+  - `docs/examples/README.md` is the single examples index,
   - runnable examples stay owned by cookbook/gallery/app crates rather than a root package.
 
 Exit criteria:

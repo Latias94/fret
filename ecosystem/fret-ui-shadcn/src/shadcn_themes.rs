@@ -146,6 +146,58 @@ fn seed_shadcn_motion_tokens(cfg: &mut ThemeConfig) {
         .or_insert(shadcn_ease);
 }
 
+fn seed_shadcn_shadow_tokens(cfg: &mut ThemeConfig) {
+    // Keep these values aligned with the reviewed `fret-ui-kit` shadow preset fallbacks so the
+    // shadcn theme owns the geometry explicitly instead of relying on hidden literals.
+    //
+    // Color posture remains intentionally simple for v1: one semantic `shadow` token and the
+    // preset helpers own their alpha ramps.
+    cfg.colors
+        .entry("shadow".to_string())
+        .or_insert_with(|| "#000000".to_string());
+
+    for (key, value) in [
+        ("component.shadow.xs.offset_x", 0.0),
+        ("component.shadow.xs.offset_y", 1.0),
+        ("component.shadow.xs.spread", 0.0),
+        ("component.shadow.xs.softness", 2.0),
+        ("component.shadow.sm.offset_x", 0.0),
+        ("component.shadow.sm.offset_y", 1.0),
+        ("component.shadow.sm.spread", 0.0),
+        ("component.shadow.sm.softness", 3.0),
+        ("component.shadow.sm2.offset_x", 0.0),
+        ("component.shadow.sm2.offset_y", 1.0),
+        ("component.shadow.sm2.spread", -1.0),
+        ("component.shadow.sm2.softness", 2.0),
+        ("component.shadow.md.offset_x", 0.0),
+        ("component.shadow.md.offset_y", 4.0),
+        ("component.shadow.md.spread", -1.0),
+        ("component.shadow.md.softness", 6.0),
+        ("component.shadow.md2.offset_x", 0.0),
+        ("component.shadow.md2.offset_y", 2.0),
+        ("component.shadow.md2.spread", -2.0),
+        ("component.shadow.md2.softness", 4.0),
+        ("component.shadow.lg.offset_x", 0.0),
+        ("component.shadow.lg.offset_y", 10.0),
+        ("component.shadow.lg.spread", -3.0),
+        ("component.shadow.lg.softness", 15.0),
+        ("component.shadow.lg2.offset_x", 0.0),
+        ("component.shadow.lg2.offset_y", 4.0),
+        ("component.shadow.lg2.spread", -4.0),
+        ("component.shadow.lg2.softness", 6.0),
+        ("component.shadow.xl.offset_x", 0.0),
+        ("component.shadow.xl.offset_y", 20.0),
+        ("component.shadow.xl.spread", -5.0),
+        ("component.shadow.xl.softness", 25.0),
+        ("component.shadow.xl2.offset_x", 0.0),
+        ("component.shadow.xl2.offset_y", 8.0),
+        ("component.shadow.xl2.spread", -6.0),
+        ("component.shadow.xl2.softness", 10.0),
+    ] {
+        cfg.metrics.entry(key.to_string()).or_insert(value);
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShadcnColorScheme {
     Light,
@@ -871,6 +923,7 @@ pub fn shadcn_new_york_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) 
         metrics,
         ..Default::default()
     };
+    seed_shadcn_shadow_tokens(&mut cfg);
     seed_shadcn_motion_tokens(&mut cfg);
     cfg
 }
@@ -1669,6 +1722,85 @@ mod tests {
                     cfg_dark.colors.get(key).cloned(),
                     Some(expected_dark),
                     "expected {key} to match primary-derived value in dark scheme"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn new_york_v4_seeds_shadow_tokens() {
+        for &base in ShadcnBaseColor::ALL {
+            for scheme in [ShadcnColorScheme::Light, ShadcnColorScheme::Dark] {
+                let cfg = shadcn_new_york_config(base, scheme);
+
+                assert_eq!(
+                    cfg.colors.get("shadow").cloned(),
+                    Some("#000000".to_string()),
+                    "expected shadcn new-york-v4 to seed a semantic shadow color for {base:?}/{scheme:?}"
+                );
+
+                for &(key, value) in &[
+                    ("component.shadow.xs.offset_x", 0.0),
+                    ("component.shadow.xs.offset_y", 1.0),
+                    ("component.shadow.xs.spread", 0.0),
+                    ("component.shadow.xs.softness", 2.0),
+                    ("component.shadow.sm.offset_x", 0.0),
+                    ("component.shadow.sm.offset_y", 1.0),
+                    ("component.shadow.sm.spread", 0.0),
+                    ("component.shadow.sm.softness", 3.0),
+                    ("component.shadow.sm2.offset_x", 0.0),
+                    ("component.shadow.sm2.offset_y", 1.0),
+                    ("component.shadow.sm2.spread", -1.0),
+                    ("component.shadow.sm2.softness", 2.0),
+                    ("component.shadow.md.offset_x", 0.0),
+                    ("component.shadow.md.offset_y", 4.0),
+                    ("component.shadow.md.spread", -1.0),
+                    ("component.shadow.md.softness", 6.0),
+                    ("component.shadow.md2.offset_x", 0.0),
+                    ("component.shadow.md2.offset_y", 2.0),
+                    ("component.shadow.md2.spread", -2.0),
+                    ("component.shadow.md2.softness", 4.0),
+                    ("component.shadow.lg.offset_x", 0.0),
+                    ("component.shadow.lg.offset_y", 10.0),
+                    ("component.shadow.lg.spread", -3.0),
+                    ("component.shadow.lg.softness", 15.0),
+                    ("component.shadow.lg2.offset_x", 0.0),
+                    ("component.shadow.lg2.offset_y", 4.0),
+                    ("component.shadow.lg2.spread", -4.0),
+                    ("component.shadow.lg2.softness", 6.0),
+                    ("component.shadow.xl.offset_x", 0.0),
+                    ("component.shadow.xl.offset_y", 20.0),
+                    ("component.shadow.xl.spread", -5.0),
+                    ("component.shadow.xl.softness", 25.0),
+                    ("component.shadow.xl2.offset_x", 0.0),
+                    ("component.shadow.xl2.offset_y", 8.0),
+                    ("component.shadow.xl2.spread", -6.0),
+                    ("component.shadow.xl2.softness", 10.0),
+                ] {
+                    assert_eq!(
+                        cfg.metrics.get(key).copied(),
+                        Some(value),
+                        "expected shadcn new-york-v4 to seed `{key}` for {base:?}/{scheme:?}"
+                    );
+                }
+
+                let mut app = fret_app::App::new();
+                apply_shadcn_new_york(&mut app, base, scheme);
+                let theme = Theme::global(&app);
+                assert_eq!(
+                    theme.color_by_key("shadow"),
+                    Some(fret_core::Color::from_srgb_hex_rgb(0x00_00_00)),
+                    "expected applied theme to resolve `shadow` for {base:?}/{scheme:?}"
+                );
+                assert_eq!(
+                    theme.metric_by_key("component.shadow.sm.softness"),
+                    Some(fret_core::Px(3.0)),
+                    "expected applied theme to resolve seeded shadow metrics for {base:?}/{scheme:?}"
+                );
+                assert_eq!(
+                    theme.metric_by_key("component.shadow.xl2.spread"),
+                    Some(fret_core::Px(-6.0)),
+                    "expected applied theme to resolve secondary xl spread for {base:?}/{scheme:?}"
                 );
             }
         }

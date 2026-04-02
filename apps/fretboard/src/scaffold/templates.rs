@@ -248,7 +248,7 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
         .rounded_md();
 "#
     } else {
-        r#"    let add_btn = shadcn::Button::new("Add")
+        r#"    let add_btn = shadcn::Button::new("Add task")
         .disabled(!add_enabled)
         .action(act::Add)
         .ui()
@@ -374,14 +374,13 @@ struct TodoLocals {
 }
 
 impl TodoLocals {
-    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+    fn new(app: &mut App) -> Self {
         Self {
-            draft: cx.state().local::<String>(),
-            filter: cx.state().local_init(|| TodoFilter::All),
-            next_id: cx.state().local_init(|| 3u64),
-            tip_nonce: cx.state().local_init(|| 0u64),
-            todos: cx.state().local_init(|| {
-                vec![
+            draft: LocalState::from_model(app.models_mut().insert(String::new())),
+            filter: LocalState::from_model(app.models_mut().insert(TodoFilter::All)),
+            next_id: LocalState::from_model(app.models_mut().insert(3u64)),
+            tip_nonce: LocalState::from_model(app.models_mut().insert(0u64)),
+            todos: LocalState::from_model(app.models_mut().insert(vec![
                     TodoRow {
                         id: 1,
                         done: false,
@@ -392,8 +391,7 @@ impl TodoLocals {
                         done: true,
                         text: Arc::from("Validate selector derived state"),
                     },
-                ]
-            }),
+                ])),
         }
     }
 
@@ -461,23 +459,28 @@ impl TodoLocals {
     }
 }
 
-struct TodoView;
+struct TodoView {
+    locals: TodoLocals,
+}
 
 impl View for TodoView {
-    fn init(_app: &mut App, _window: WindowId) -> Self {
-        Self
+    fn init(app: &mut App, _window: WindowId) -> Self {
+        Self {
+            locals: TodoLocals::new(app),
+        }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
-        let locals = TodoLocals::new(cx);
+        let locals = &self.locals;
         locals.bind_actions(cx);
 
         let draft_value = locals.draft.layout_value(cx);
         let filter_value = locals.filter.layout_value(cx);
 
         let add_enabled = !draft_value.trim().is_empty();
+        let muted_foreground = theme.color_token("muted-foreground");
 
         let derived: TodoDerived = cx
             .data()
@@ -505,6 +508,18 @@ impl View for TodoView {
                     completed,
                 }
             });
+
+        let status_text = if derived.total == 0 {
+            "Capture the next thing worth doing.".to_string()
+        } else if derived.active == 0 {
+            "Everything is done. Clear completed or add the next task.".to_string()
+        } else {
+            format!(
+                "{} task{} still in progress.",
+                derived.active,
+                if derived.active == 1 { "" } else { "s" }
+            )
+        };
 
         let tip_nonce_value = locals.tip_nonce.paint_value(cx);
         let tip_handle = cx.data().query(tip_key(tip_nonce_value), tip_policy(), move |_token| {
@@ -540,6 +555,7 @@ impl View for TodoView {
                 .unwrap_or_else(|| Arc::<str>::from("<no tip>"));
             (text, "muted-foreground")
         };
+        let tip_color = theme.color_token(tip_color_key);
 
         let progress = shadcn::Badge::new(format!("{}/{} done", derived.completed, derived.total))
             .variant(shadcn::BadgeVariant::Secondary);
@@ -547,23 +563,24 @@ impl View for TodoView {
         let active = shadcn::Badge::new(format!("{} active", derived.active))
             .variant(shadcn::BadgeVariant::Outline);
 
-        let tip = shadcn::Badge::new(tip_text.clone())
-            .variant(shadcn::BadgeVariant::Outline)
-            .ui()
-            .text_color(ColorRef::Color(theme.color_token(tip_color_key)));
+        let summary = ui::text(status_text)
+            .text_sm()
+            .text_color(ColorRef::Color(muted_foreground));
 
-        let refresh_tip_btn = shadcn::Button::new("Refresh tip")
-            .variant(shadcn::ButtonVariant::Secondary)
-            .action(act::RefreshTip)
-            .ui()
-            .rounded_md();
-
-        let stats = ui::h_flex(|cx| ui::children![cx; progress, active, tip, refresh_tip_btn])
-            .gap(Space::N2)
-            .items_center();
+        let title_block = ui::v_flex(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_title("Todo"),
+                summary,
+            ]
+        })
+        .gap(Space::N1)
+        .flex_1()
+        .min_w_0();
 
         let clear_done_btn = shadcn::Button::new("Clear done")
-            .variant(shadcn::ButtonVariant::Secondary)
+            .variant(shadcn::ButtonVariant::Ghost)
+            .size(shadcn::ButtonSize::Sm)
             .disabled(derived.completed == 0)
             .action(act::ClearDone)
             .ui()
@@ -572,11 +589,14 @@ impl View for TodoView {
 __ADD_BTN_DEF__
 
         let input = shadcn::Input::new(&locals.draft)
-            .placeholder("Add a task…")
-            .submit_action(act::Add);
+            .placeholder("Write a task and press Enter")
+            .submit_action(act::Add)
+            .ui()
+            .flex_1()
+            .min_w_0();
 
         let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
-            .gap(Space::N2)
+            .gap(Space::N3)
             .items_center()
             .w_full();
 
@@ -596,7 +616,25 @@ __ADD_BTN_DEF__
         .gap(Space::N1)
         .items_center();
 
-        let rows = ui::v_flex(|cx| {
+        let tip_line = ui::h_flex(|cx| {
+            ui::children![
+                cx;
+                ui::text(tip_text.clone())
+                    .text_sm()
+                    .text_color(ColorRef::Color(tip_color))
+                    .flex_1()
+                    .min_w_0(),
+                shadcn::Button::new("Refresh tip")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Sm)
+                    .action(act::RefreshTip),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .w_full();
+
+        let rows_body = ui::v_flex(|cx| {
             if derived.rows.is_empty() {
                 let text = match filter_value {
                     TodoFilter::All => "No tasks yet. Add one above.",
@@ -606,9 +644,23 @@ __ADD_BTN_DEF__
 
                 return ui::children![
                     cx;
-                    ui::text(text)
-                        .text_sm()
-                        .text_color(ColorRef::Color(theme_for_rows.color_token("muted-foreground")))
+                    ui::container(|cx| {
+                        ui::single(
+                            cx,
+                            ui::text(text)
+                                .text_sm()
+                                .text_color(ColorRef::Color(
+                                    theme_for_rows.color_token("muted-foreground"),
+                                )),
+                        )
+                    })
+                    .rounded(Radius::Md)
+                    .border_1()
+                    .border_color(ColorRef::Color(theme_for_rows.color_token("border")))
+                    .bg(ColorRef::Color(theme_for_rows.color_token("muted")))
+                    .p(Space::N5)
+                    .w_full()
+                    .into_element(cx)
                 ];
             }
 
@@ -618,28 +670,43 @@ __ADD_BTN_DEF__
             })
         })
         .gap(Space::N3)
-        .w_full();
+        .w_full()
+        .items_stretch();
+
+        let rows = ui::container(|cx| ui::single(cx, rows_body))
+            .rounded(Radius::Lg)
+            .border_1()
+            .border_color(ColorRef::Color(theme.color_token("border")))
+            .bg(ColorRef::Color(theme.color_token("background")))
+            .p(Space::N3)
+            .w_full();
 
         let content = ui::v_flex(|cx| ui::children![cx;
-            stats,
-            chips,
+            tip_line,
             input_row,
             rows,
-            clear_done_btn,
 __PALETTE_BUTTON__
         ])
         .gap(Space::N4)
         .w_full();
 
+        let footer_right = ui::h_flex(|cx| ui::children![cx; progress, active, clear_done_btn])
+            .gap(Space::N2)
+            .items_center();
+
+        let footer = ui::h_flex(|cx| ui::children![cx; chips, footer_right])
+            .gap(Space::N3)
+            .items_center()
+            .justify_between()
+            .w_full();
+
         let card = shadcn::card(|cx| {
             ui::children![cx;
                 shadcn::card_header(|cx| {
-                    ui::children![cx;
-                        shadcn::card_title("Todo"),
-                        shadcn::card_description("View runtime + grouped view locals + typed actions + selector + query (v1)."),
-                    ]
+                    ui::children![cx; title_block]
                 }),
                 shadcn::card_content(|cx| ui::single(cx, content)),
+                shadcn::card_footer(|cx| ui::children![cx; footer]),
             ]
         })
         .ui()
@@ -647,8 +714,9 @@ __PALETTE_BUTTON__
         .rounded(Radius::Lg)
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
+        .shadow_lg()
         .w_full()
-        .max_w(Px(520.0))
+        .max_w(Px(620.0))
         ;
 
         ui::single(cx, todo_page(theme, card))
@@ -699,6 +767,8 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChild {
     let text = ui::text(row.text.clone())
         .truncate()
         .text_sm()
+        .flex_1()
+        .min_w_0()
         .text_color(ColorRef::Color(if row.done {
             theme.color_token("muted-foreground")
         } else {
@@ -706,8 +776,18 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChild {
         }));
 
     ui::h_flex(|cx| ui::children![cx; checkbox, text])
-        .gap(Space::N2)
+        .gap(Space::N3)
         .items_center()
+        .bg(ColorRef::Color(if row.done {
+            theme.color_token("muted")
+        } else {
+            theme.color_token("background")
+        }))
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_token("border")))
+        .rounded(Radius::Md)
+        .p(Space::N3)
+        .shadow_sm()
         .w_full()
 }
 
@@ -841,7 +921,7 @@ pub(super) fn simple_todo_template_main_rs(package_name: &str, opts: ScaffoldOpt
         .rounded_md();
 "#
     } else {
-        r#"    let add_btn = shadcn::Button::new("Add")
+        r#"    let add_btn = shadcn::Button::new("Add task")
         .disabled(!add_enabled)
         .action(act::Add)
         .ui()
@@ -903,12 +983,11 @@ struct TodoLocals {
 }
 
 impl TodoLocals {
-    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+    fn new(app: &mut App) -> Self {
         Self {
-            draft: cx.state().local::<String>(),
-            next_id: cx.state().local_init(|| 3u64),
-            todos: cx.state().local_init(|| {
-                vec![
+            draft: LocalState::from_model(app.models_mut().insert(String::new())),
+            next_id: LocalState::from_model(app.models_mut().insert(3u64)),
+            todos: LocalState::from_model(app.models_mut().insert(vec![
                     TodoRow {
                         id: 1,
                         done: false,
@@ -919,8 +998,7 @@ impl TodoLocals {
                         done: true,
                         text: Arc::from("Use payload actions for row toggles"),
                     },
-                ]
-            }),
+                ])),
         }
     }
 
@@ -972,59 +1050,102 @@ impl TodoLocals {
     }
 }
 
-struct TodoView;
+struct TodoView {
+    locals: TodoLocals,
+}
 
 impl View for TodoView {
-    fn init(_app: &mut App, _window: WindowId) -> Self {
-        Self
+    fn init(app: &mut App, _window: WindowId) -> Self {
+        Self {
+            locals: TodoLocals::new(app),
+        }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
-        let locals = TodoLocals::new(cx);
+        let locals = &self.locals;
         locals.bind_actions(cx);
 
         let todos = locals.todos.layout_value(cx);
         let draft_value = locals.draft.layout_value(cx);
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
+        let active_count = total_count.saturating_sub(done_count);
         let add_enabled = !draft_value.trim().is_empty();
+        let muted_foreground = theme.color_token("muted-foreground");
+        let status_text = if total_count == 0 {
+            "Capture the next thing you need to do.".to_string()
+        } else if active_count == 0 {
+            "Everything is done. Clear completed or add something new.".to_string()
+        } else {
+            format!(
+                "{active_count} task{} left for today.",
+                if active_count == 1 { "" } else { "s" }
+            )
+        };
 
         let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
             .variant(shadcn::BadgeVariant::Secondary);
 
+        let summary = ui::text(status_text)
+            .text_sm()
+            .text_color(ColorRef::Color(muted_foreground));
+
+        let title_block = ui::v_flex(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_title("My tasks"),
+                summary,
+            ]
+        })
+        .gap(Space::N1)
+        .flex_1()
+        .min_w_0();
+
         let clear_done_btn = shadcn::Button::new("Clear done")
-            .variant(shadcn::ButtonVariant::Secondary)
+            .variant(shadcn::ButtonVariant::Ghost)
+            .size(shadcn::ButtonSize::Sm)
             .disabled(done_count == 0)
             .action(act::ClearDone)
             .ui()
             .rounded_md();
 
-        let header_actions = ui::h_flex(|cx| ui::children![cx; progress, clear_done_btn])
-            .gap(Space::N2)
-            .items_center();
-
 __ADD_BTN_DEF__
 
         let input = shadcn::Input::new(&locals.draft)
-            .placeholder("Add a task?")
-            .submit_action(act::Add);
+            .placeholder("Write a task and press Enter")
+            .submit_action(act::Add)
+            .ui()
+            .flex_1()
+            .min_w_0();
 
         let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
-            .gap(Space::N2)
+            .gap(Space::N3)
             .items_center()
             .w_full();
 
-        let rows = ui::v_flex(|cx| {
+        let rows_body = ui::v_flex(|cx| {
             if todos.is_empty() {
                 return ui::children![
                     cx;
-                    ui::text("No tasks yet. Add one above.")
-                        .text_sm()
-                        .text_color(ColorRef::Color(
-                            theme_for_rows.color_token("muted-foreground"),
-                        ))
+                    ui::container(|cx| {
+                        ui::single(
+                            cx,
+                            ui::text("No tasks yet. Add one above.")
+                                .text_sm()
+                                .text_color(ColorRef::Color(
+                                    theme_for_rows.color_token("muted-foreground"),
+                                )),
+                        )
+                    })
+                    .rounded(Radius::Md)
+                    .border_1()
+                    .border_color(ColorRef::Color(theme_for_rows.color_token("border")))
+                    .bg(ColorRef::Color(theme_for_rows.color_token("muted")))
+                    .p(Space::N5)
+                    .w_full()
+                    .into_element(cx)
                 ];
             }
 
@@ -1034,24 +1155,46 @@ __ADD_BTN_DEF__
             })
         })
         .gap(Space::N3)
-        .w_full();
+        .w_full()
+        .items_stretch();
+
+        let rows = ui::container(|cx| ui::single(cx, rows_body))
+            .rounded(Radius::Lg)
+            .border_1()
+            .border_color(ColorRef::Color(theme.color_token("border")))
+            .bg(ColorRef::Color(theme.color_token("background")))
+            .p(Space::N3)
+            .w_full();
 
         let content = ui::v_flex(|cx| ui::children![cx; input_row, rows])
             .gap(Space::N4)
             .w_full();
 
+        let footer_summary = ui::h_flex(|cx| {
+            ui::children![
+                cx;
+                progress,
+                ui::text(format!("{active_count} left"))
+                    .text_sm()
+                    .text_color(ColorRef::Color(muted_foreground)),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center();
+
+        let footer = ui::h_flex(|cx| ui::children![cx; footer_summary, clear_done_btn])
+            .gap(Space::N3)
+            .items_center()
+            .justify_between()
+            .w_full();
+
         let card = shadcn::card(|cx| {
             ui::children![cx;
                 shadcn::card_header(|cx| {
-                    ui::children![cx;
-                        shadcn::card_title("Simple Todo"),
-                        shadcn::card_description(
-                            "View runtime + grouped view locals + typed actions + local-state keyed lists (no selector/query).",
-                        ),
-                        header_actions,
-                    ]
+                    ui::children![cx; title_block]
                 }),
                 shadcn::card_content(|cx| ui::single(cx, content)),
+                shadcn::card_footer(|cx| ui::children![cx; footer]),
             ]
         })
         .ui()
@@ -1059,8 +1202,9 @@ __ADD_BTN_DEF__
         .rounded(Radius::Lg)
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
+        .shadow_lg()
         .w_full()
-        .max_w(Px(520.0))
+        .max_w(Px(620.0))
         ;
 
         let content = ui::v_flex(|cx| ui::children![cx;
@@ -1096,6 +1240,8 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
     let text = ui::text(row.text.clone())
         .truncate()
         .text_sm()
+        .flex_1()
+        .min_w_0()
         .text_color(ColorRef::Color(if row.done {
             theme.color_token("muted-foreground")
         } else {
@@ -1103,8 +1249,18 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
         }));
 
     ui::h_flex(|cx| ui::children![cx; checkbox, text])
-        .gap(Space::N2)
+        .gap(Space::N3)
         .items_center()
+        .bg(ColorRef::Color(if row.done {
+            theme.color_token("muted")
+        } else {
+            theme.color_token("background")
+        }))
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_token("border")))
+        .rounded(Radius::Md)
+        .p(Space::N3)
+        .shadow_sm()
         .w_full()
 }
 
@@ -1421,7 +1577,7 @@ mod tests {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("icons::{icon, IconId},"));
         assert!(src.contains("style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},"));
-        assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
+        assert!(src.contains("fn init(app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(!src.contains("cx: &mut UiCx<'_>,"));
         assert!(src.contains("impl UiChild"));
@@ -1443,15 +1599,17 @@ mod tests {
         assert!(src.contains("shadcn::card_header(|cx| {"));
         assert!(src.contains("shadcn::card_content(|cx| ui::single(cx, content))"));
         assert!(src.contains("shadcn::card_title(\"Todo\")"));
-        assert!(src.contains(
-            "shadcn::card_description(\"View runtime + grouped view locals + typed actions + selector + query (v1).\")"
-        ));
+        assert!(src.contains("let summary = ui::text(status_text)"));
         assert!(!src.contains("shadcn::Card::build(|cx, out| {"));
         assert!(!src.contains("shadcn::CardHeader::build(|cx, out| {"));
         assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("struct TodoLocals {"));
-        assert!(src.contains("let locals = TodoLocals::new(cx);"));
+        assert!(src.contains("struct TodoView {"));
+        assert!(src.contains("locals: TodoLocals,"));
+        assert!(src.contains("locals: TodoLocals::new(app),"));
+        assert!(src.contains("let locals = &self.locals;"));
         assert!(src.contains("locals.bind_actions(cx);"));
+        assert!(src.contains("LocalState::from_model(app.models_mut().insert(String::new()))"));
         assert!(src.contains(".locals_with((&self.draft, &self.next_id, &self.todos))"));
         assert!(src.contains(".on::<act::Add>(|tx, (draft, next_id, todos)| {"));
         assert!(src.contains(".locals_with(&self.todos)"));
@@ -1503,7 +1661,7 @@ mod tests {
         assert!(!src.contains("deps.model_rev(&deps_filter_model);"));
         assert!(!src.contains("cx.watch_model(&todos_model).layout().value_or_default();"));
         assert!(!src.contains("cx.watch_model(&filter_model).layout().value_or(TodoFilter::All);"));
-        assert!(src.contains("let locals = TodoLocals::new(cx);"));
+        assert!(src.contains("let locals = &self.locals;"));
         assert!(src.contains("let draft_value = locals.draft.layout_value(cx);"));
         assert!(src.contains("let filter_value = locals.filter.layout_value(cx);"));
         assert!(src.contains("let tip_nonce_value = locals.tip_nonce.paint_value(cx);"));
@@ -1522,7 +1680,7 @@ mod tests {
         assert!(src.contains(") -> impl UiChild {"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
         assert!(!src.contains("Model<bool>"));
-        assert!(!src.contains(".models_mut().insert("));
+        assert!(src.contains(".models_mut().insert("));
         assert!(!src.contains("decl_style::container_props"));
         assert!(!src.contains(".refine_style("));
         assert!(!src.contains(".refine_layout("));
@@ -1552,7 +1710,7 @@ mod tests {
         let src = hello_template_main_rs("hello-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("use fret::style::Space;"));
-        assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
+        assert!(src.contains("fn init(app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("ui::v_flex("));
         assert!(!src.contains("ui::v_flex( |"));
@@ -1576,7 +1734,7 @@ mod tests {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("icons::{icon, IconId},"));
         assert!(src.contains("style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},"));
-        assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
+        assert!(src.contains("fn init(app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("impl UiChild"));
         assert!(src.contains("ui::children!["));
@@ -1593,14 +1751,18 @@ mod tests {
         assert!(src.contains("shadcn::card(|cx| {"));
         assert!(src.contains("shadcn::card_header(|cx| {"));
         assert!(src.contains("shadcn::card_content(|cx| ui::single(cx, content))"));
-        assert!(src.contains("shadcn::card_title(\"Simple Todo\")"));
-        assert!(src.contains("shadcn::card_description("));
+        assert!(src.contains("shadcn::card_title(\"My tasks\")"));
+        assert!(src.contains("let summary = ui::text(status_text)"));
         assert!(!src.contains("shadcn::Card::build(|cx, out| {"));
         assert!(!src.contains("shadcn::CardHeader::build(|cx, out| {"));
         assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("struct TodoLocals {"));
-        assert!(src.contains("let locals = TodoLocals::new(cx);"));
+        assert!(src.contains("struct TodoView {"));
+        assert!(src.contains("locals: TodoLocals,"));
+        assert!(src.contains("locals: TodoLocals::new(app),"));
+        assert!(src.contains("let locals = &self.locals;"));
         assert!(src.contains("locals.bind_actions(cx);"));
+        assert!(src.contains("LocalState::from_model(app.models_mut().insert(String::new()))"));
         assert!(src.contains(".locals_with((&self.draft, &self.next_id, &self.todos))"));
         assert!(src.contains(".on::<act::Add>(|tx, (draft, next_id, todos)| {"));
         assert!(src.contains(".locals_with(&self.todos)"));
@@ -1613,7 +1775,7 @@ mod tests {
         assert!(src.contains(".local(&self.todos)"));
         assert!(src.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
-        assert!(src.contains("let locals = TodoLocals::new(cx);"));
+        assert!(src.contains("let locals = &self.locals;"));
         assert!(src.contains("let todos = locals.todos.layout_value(cx);"));
         assert!(src.contains("let draft_value = locals.draft.layout_value(cx);"));
         assert!(!src.contains("todos_state.layout(cx).value_or_default()"));

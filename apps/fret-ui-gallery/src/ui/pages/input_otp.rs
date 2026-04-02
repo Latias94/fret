@@ -27,6 +27,7 @@ pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`InputOTP::new(model)` owns the shared OTP value model; `length(...)` mirrors upstream `maxLength`.",
         "`pattern(...)` and `InputOtpPattern::{Digits, DigitsAndChars}` cover the documented filtering lane.",
         "`InputOTPSlot::aria_invalid(true)` mirrors the upstream slot-level invalid lane, while root `control_id(...)`, `labelled_by_element(...)`, `a11y_label(...)`, and `required(...)` cover form association and accessibility.",
+        "`InputOTP::required(true)` keeps required semantics on the hidden root OTP control; any visible required marker remains caller-owned label composition around the projected slots.",
         "`InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` already cover the docs-shaped composition bridge, so a separate generic children API is not needed here.",
     ]);
     let notes = doc_layout::notes_block([
@@ -69,7 +70,7 @@ pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("OTP input is model-controlled; this section echoes the current value.")
         .code_rust_from_file_region(snippets::controlled::SOURCE, "example");
     let invalid = DocSection::build(cx, "Invalid", invalid)
-        .description("Invalid state mirrors upstream slot-level `InputOTPSlot::aria_invalid(true)` plus field error messaging.")
+        .description("Invalid state mirrors upstream slot-level `InputOTPSlot::aria_invalid(true)` and keeps error copy caller-owned via `FieldError` composition.")
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let four_digits = DocSection::build(cx, "Four Digits", four_digits)
         .description("A common PIN/4-digit verification pattern.")
@@ -79,7 +80,7 @@ pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::alphanumeric::SOURCE, "example");
     let form = DocSection::build(cx, "Form", form)
         .description(
-            "Card + field composition aligned with the upstream verification form example, including group-level slot sizing on the docs-shaped parts lane.",
+            "Card + field composition aligned with the upstream verification form example, including group-level slot sizing and root `InputOTP::required(true)` on the docs-shaped parts lane.",
         )
         .code_rust_from_file_region(snippets::form::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)

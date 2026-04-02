@@ -466,19 +466,30 @@ pub fn shadow_xs(theme: &impl ThemeTokenRead, radius: Px) -> ShadowStyle {
 }
 
 pub fn shadow_sm(theme: &impl ThemeTokenRead, radius: Px) -> ShadowStyle {
-    let color = shadow_color(theme, 0.14);
+    // Tailwind default (`shadow-sm`):
+    // `0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)`
+    let color = shadow_color(theme, 0.10);
     let primary = shadow_layer_style(
         theme,
         "component.shadow.sm.offset_x",
         "component.shadow.sm.offset_y",
         "component.shadow.sm.spread",
         "component.shadow.sm.softness",
-        (Px(0.0), Px(2.0), Px(0.0), Px(2.0)),
+        (Px(0.0), Px(1.0), Px(0.0), Px(3.0)),
+        color,
+    );
+    let secondary = shadow_layer_style(
+        theme,
+        "component.shadow.sm2.offset_x",
+        "component.shadow.sm2.offset_y",
+        "component.shadow.sm2.spread",
+        "component.shadow.sm2.softness",
+        (Px(0.0), Px(1.0), Px(-1.0), Px(2.0)),
         color,
     );
     ShadowStyle {
         primary,
-        secondary: None,
+        secondary: Some(secondary),
         corner_radii: Corners::all(radius),
     }
 }

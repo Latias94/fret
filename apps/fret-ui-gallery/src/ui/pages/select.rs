@@ -110,7 +110,9 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-select-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let invalid = DocSection::build(cx, "Invalid", invalid)
-        .description("Invalid styling is typically shown with a Field + error message.")
+        .description(
+            "Invalid state uses root `Select::aria_invalid(...)` for trigger chrome/semantics, then pairs it with caller-owned `Field` error copy.",
+        )
         .test_id_prefix("ui-gallery-select-invalid")
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)

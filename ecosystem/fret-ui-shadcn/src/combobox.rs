@@ -1104,6 +1104,12 @@ impl Combobox {
         self
     }
 
+    /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
+        self
+    }
+
     pub fn required(mut self, required: bool) -> Self {
         self.required = required;
         self
@@ -1676,6 +1682,8 @@ fn combobox_with_patch<H: UiHost>(
                                         labelled_by_element.map(|id| id.0)
                                     },
                                     described_by_element: described_by_element.map(|id| id.0),
+                                    invalid: aria_invalid
+                                        .then_some(fret_core::SemanticsInvalid::True),
                                     ..Default::default()
                                 },
                                 ..Default::default()
@@ -2469,6 +2477,7 @@ fn combobox_with_patch<H: UiHost>(
                             test_id: trigger_test_id_for_trigger.clone(),
                             expanded: Some(is_open),
                             required,
+                            invalid: aria_invalid.then_some(fret_core::SemanticsInvalid::True),
                             labelled_by_element: if a11y_label_for_trigger.is_some() {
                                 None
                             } else {
@@ -4643,6 +4652,74 @@ mod tests {
             .expect("combobox search input semantics");
         assert_eq!(input.role, SemanticsRole::ComboBox);
         assert!(input.flags.required);
+    }
+
+    #[test]
+    fn combobox_aria_invalid_exposes_invalid_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let items = || {
+            vec![
+                ComboboxItem::new("alpha", "Alpha"),
+                ComboboxItem::new("beta", "Beta"),
+                ComboboxItem::new("gamma", "Gamma"),
+            ]
+        };
+
+        let render_invalid =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices| {
+                let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+                app.set_frame_id(next_frame);
+
+                fret_ui_kit::OverlayController::begin_frame(app, window);
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "combobox-invalid-semantics",
+                    |cx| {
+                        vec![
+                            Combobox::new(model.clone(), open.clone())
+                                .aria_invalid(true)
+                                .a11y_label("Favorite framework")
+                                .test_id_prefix("invalid-combobox")
+                                .items(items())
+                                .into_element(cx),
+                        ]
+                    },
+                );
+                ui.set_root(root);
+                fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        render_invalid(&mut ui, &mut app, &mut services);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("invalid-combobox-trigger"))
+            .expect("combobox trigger semantics");
+        assert_eq!(trigger.role, SemanticsRole::ComboBox);
+        assert_eq!(
+            trigger.flags.invalid,
+            Some(fret_core::SemanticsInvalid::True)
+        );
     }
 
     #[test]

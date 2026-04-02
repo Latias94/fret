@@ -341,6 +341,8 @@ pub struct UiRendererTextFallbackPolicySnapshotV1 {
     pub system_fonts_enabled: bool,
     #[serde(default)]
     pub prefer_common_fallback: bool,
+    #[serde(default)]
+    pub prefer_common_fallback_for_generics: bool,
 
     #[serde(default)]
     pub common_fallback_injection: UiTextCommonFallbackInjectionV1,
@@ -470,6 +472,7 @@ impl UiRendererTextFallbackPolicySnapshotV1 {
             fallback_policy_key: snapshot.fallback_policy_key,
             system_fonts_enabled: snapshot.system_fonts_enabled,
             prefer_common_fallback: snapshot.prefer_common_fallback,
+            prefer_common_fallback_for_generics: snapshot.prefer_common_fallback_for_generics,
             common_fallback_injection: injection_from_core(snapshot.common_fallback_injection),
             locale_bcp47,
             configured_ui_sans_families,

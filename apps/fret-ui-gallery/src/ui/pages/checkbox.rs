@@ -48,7 +48,7 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::checked_state::SOURCE, "example");
     let invalid_state = DocSection::build(cx, "Invalid State", invalid_state)
         .description(
-            "Invalid styling uses `aria_invalid` on the checkbox and destructive field text.",
+            "Invalid styling uses root `Checkbox::aria_invalid(...)` on the control and caller-owned `Field::invalid(...)` / destructive copy on the composition.",
         )
         .code_rust_from_file_region(snippets::invalid_state::SOURCE, "example");
     let basic = DocSection::build(cx, "Basic", basic)

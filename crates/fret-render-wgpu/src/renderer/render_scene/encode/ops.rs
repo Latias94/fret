@@ -361,6 +361,24 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                 style.dash,
             );
         }
+        SceneOp::ShadowRRect {
+            rect,
+            corner_radii,
+            offset,
+            spread,
+            blur_radius,
+            color,
+            ..
+        } => draw::encode_shadow_rrect(
+            renderer,
+            state,
+            rect,
+            corner_radii,
+            offset,
+            spread,
+            blur_radius,
+            color,
+        ),
         SceneOp::Image {
             rect,
             image,

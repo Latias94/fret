@@ -55,7 +55,7 @@ pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-radio-group-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let invalid = DocSection::build(cx, "Invalid", invalid)
-        .description("Use `aria_invalid(true)` on each item and `Field::invalid(true)` on the composed row for validation styling.")
+        .description("Use `RadioGroupItem::aria_invalid(true)` on each item and caller-owned `Field::invalid(true)` on each composed row for validation styling.")
         .test_id_prefix("ui-gallery-radio-group-invalid")
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)

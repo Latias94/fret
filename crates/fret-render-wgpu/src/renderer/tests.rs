@@ -19,7 +19,7 @@ use super::shaders::{
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
 use fret_core::PathService as _;
-use fret_core::geometry::{Point, Px, Transform2D};
+use fret_core::geometry::{Corners, Point, Px, Transform2D};
 use fret_core::{
     DrawOrder, FillStyle, PathCommand, PathConstraints, PathStyle, Rect, Scene, SceneOp, Size,
     ViewportFit,
@@ -659,6 +659,78 @@ fn image_fit_contain_encodes_centered_draw_rect() {
     assert_vertex(&verts[3], (0.0, 25.0), (0.0, 0.0));
     assert_vertex(&verts[4], (100.0, 75.0), (1.0, 1.0));
     assert_vertex(&verts[5], (0.0, 75.0), (0.0, 1.0));
+}
+
+#[test]
+fn shadow_rrect_encodes_shadow_quad_instance() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (128u32, 128u32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("shadow rrect encode test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::ShadowRRect {
+        order: DrawOrder(0),
+        rect: Rect::new(
+            Point::new(Px(20.0), Px(16.0)),
+            Size::new(Px(40.0), Px(24.0)),
+        ),
+        corner_radii: Corners::all(Px(8.0)),
+        offset: Point::new(Px(6.0), Px(4.0)),
+        spread: Px(3.0),
+        blur_radius: Px(7.0),
+        color: fret_core::scene::Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.4,
+        },
+    });
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        super::RenderSceneParams {
+            format,
+            target_view: &target_view,
+            scene: &scene,
+            clear: super::ClearColor::default(),
+            scale_factor: 1.0,
+            viewport_size,
+        },
+    );
+
+    let encoding = renderer.scene_encoding_state.cache();
+    let [super::types::OrderedDraw::Quad(draw)] = encoding.ordered_draws.as_slice() else {
+        panic!("expected exactly one quad draw");
+    };
+    assert!(
+        draw.pipeline.shadow_mode,
+        "shadow path must use shadow-mode pipeline"
+    );
+    assert_eq!(draw.instance_count, 1);
+
+    let inst = &encoding.instances[draw.first_instance as usize];
+    assert_eq!(inst.rect, [20.0, 16.0, 40.0, 24.0]);
+    assert_eq!(inst.corner_radii, [8.0, 8.0, 8.0, 8.0]);
+    assert_eq!(inst.shadow_params, [6.0, 4.0, 3.0, 7.0]);
+    assert_eq!(inst.border, [0.0; 4]);
 }
 
 #[test]

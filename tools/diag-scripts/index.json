@@ -3151,6 +3151,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-calendar-demo-shadow-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-demo-shadow-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadow-surface-screenshots"
+      ],
+      "tags": [
+        "calendar",
+        "screenshot",
+        "shadcn",
+        "shadow",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-canvas-cull-torture-pan-zoom",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-canvas-cull-torture-pan-zoom.json",
       "required_capabilities": [],
@@ -3178,7 +3197,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadow-surface-screenshots"
       ],
       "tags": [
         "card",
@@ -5054,7 +5074,7 @@
       "target_hints": [
         "Sets theme preset to zinc/light.",
         "Navigates to Command page and scrolls to the Docs Demo section.",
-        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. ⌘P) without tofu squares."
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
       ]
     },
     {
@@ -5077,7 +5097,7 @@
       "target_hints": [
         "Sets theme preset to zinc/dark.",
         "Navigates to Command page and scrolls to the Docs Demo section.",
-        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. ⌘P) without tofu squares."
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
       ]
     },
     {
@@ -7838,6 +7858,26 @@
         "ui-gallery"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-sonner-demo-layout-collapse-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-demo-layout-collapse-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadow-surface-screenshots"
+      ],
+      "tags": [
+        "layout",
+        "screenshot",
+        "shadcn",
+        "sonner",
+        "toast",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {

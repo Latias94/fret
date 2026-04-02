@@ -104,6 +104,11 @@ Regression gates:
   derived.
 - [x] Ensure bundled profiles participate in that model explicitly rather than through duplicated
   hard-coded family lists.
+- [x] Redefine native `platform_default` as a hybrid lane:
+  - [x] generic UI stacks keep a renderer-owned no-tofu baseline
+  - [x] named-family stacks stay on the system-fallback lane by default
+- [x] Remove first-party demo-local fallback patches that became unnecessary once the renderer
+  owns the native generic no-tofu baseline.
 - [x] Add a human-auditable bundled-profile / font-environment snapshot where useful.
 - [x] Confirm diagnostics bundles remain interpretable after the refactor:
   - [x] font trace
@@ -116,8 +121,10 @@ Regression gates:
 - [x] Add at least one scripted diagnostics repro for bundled-only fallback behavior after the
   reset.
 - [x] Add a native system-font mixed-script locale-switch conformance gate that proves
-  `fallback_policy_key`, traced `locale_bcp47`, and zero-missing-glyph evidence move together on
-  the platform-default/system-fallback lane rather than the curated common-fallback lane.
+  `fallback_policy_key`, traced `locale_bcp47`, zero-missing-glyph evidence, and the native
+  `platform_default` hybrid lane move together on the generic no-tofu mixed-script page.
+- [x] Rebaseline or move the native locale-switch diagnostics surface so it matches the post-refactor
+  hybrid contract (`platform_default` generic no-tofu lane vs named-family system-fallback lane).
 
 ## Exit criteria for calling the workstream "closed enough"
 
@@ -125,6 +132,8 @@ Regression gates:
 - [x] Bundled font roles and profile guarantees live in one manifest-backed surface.
 - [x] No-op rescan apply does not churn renderer caches or published keys.
 - [x] Bundled-only determinism is explicit rather than inferred from scattered family-name lists.
+- [x] First-party generic UI surfaces no longer need demo-local font overrides just to avoid tofu
+  on native startup.
 - [x] The remaining font docs can clearly distinguish:
   - [x] architecture/contracts
   - [x] execution tracker

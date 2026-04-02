@@ -255,6 +255,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .into_element(cx)],
     )
     .label("Username")
+    .required(true)
     .description("This is your public display name.")
     .into_element(cx)
     .test_id("ui-gallery-form-demo-username");
@@ -271,6 +272,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .into_element(cx)],
     )
     .label("Email")
+    .required(true)
     .description("You can manage email addresses in your email settings.")
     .into_element(cx)
     .test_id("ui-gallery-form-demo-email");
@@ -289,6 +291,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .into_element(cx)],
     )
     .label("Bio")
+    .required(true)
     .description("You can @mention other users and organizations.")
     .into_element(cx)
     .test_id("ui-gallery-form-demo-bio");
@@ -309,6 +312,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .into_element(cx)],
     )
     .label("Notify me about...")
+    .required(true)
     .into_element(cx)
     .test_id("ui-gallery-form-demo-notify-type");
 
@@ -441,6 +445,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .into_element(cx)],
     )
     .decorate_control(false)
+    .required(true)
     .into_element(cx)
     .test_id("ui-gallery-form-demo-sidebar");
 
@@ -483,6 +488,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             )],
     )
     .label("Date of birth")
+    .required(true)
     .description("Your date of birth is used to calculate your age.")
     .into_element(cx)
     .test_id("ui-gallery-form-demo-dob");

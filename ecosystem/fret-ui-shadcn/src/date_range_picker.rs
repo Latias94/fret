@@ -14,7 +14,10 @@ use fret_ui_kit::{WidgetStateProperty, ui};
 use time::{Date, Weekday};
 
 use crate::bool_model::IntoBoolModel;
-use crate::button::{Button, ButtonSize, ButtonStyle, ButtonVariant, button_text_style};
+use crate::button::{
+    Button, ButtonSize, ButtonStyle, ButtonVariant, button_text_style,
+    outline_trigger_invalid_style,
+};
 use crate::calendar_month_model::IntoCalendarMonthModel;
 use crate::calendar_range::CalendarRange;
 use crate::date_range_selection_model::IntoDateRangeSelectionModel;
@@ -32,6 +35,7 @@ pub struct DateRangePicker {
     pub placeholder: Arc<str>,
     pub week_start: Weekday,
     required: bool,
+    aria_invalid: bool,
     pub show_outside_days: bool,
     pub disable_outside_days: bool,
     pub disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
@@ -52,6 +56,7 @@ impl std::fmt::Debug for DateRangePicker {
             .field("placeholder", &self.placeholder)
             .field("week_start", &self.week_start)
             .field("required", &self.required)
+            .field("aria_invalid", &self.aria_invalid)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
             .field("disabled_predicate", &self.disabled_predicate.is_some())
@@ -76,6 +81,7 @@ impl DateRangePicker {
             placeholder: Arc::from("Pick a date"),
             week_start: Weekday::Sunday,
             required: false,
+            aria_invalid: false,
             show_outside_days: true,
             disable_outside_days: false,
             disabled_predicate: None,
@@ -126,6 +132,11 @@ impl DateRangePicker {
 
     pub fn required(mut self, required: bool) -> Self {
         self.required = required;
+        self
+    }
+
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
         self
     }
 
@@ -184,6 +195,7 @@ impl DateRangePicker {
             let open_trigger = open.clone();
             let close_on_select_open = self.close_on_select.then(|| open.clone());
             let required = self.required;
+            let aria_invalid = self.aria_invalid;
             let initial_focus_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
             let trigger_chrome = self.chrome.clone();
@@ -272,14 +284,23 @@ impl DateRangePicker {
                                     .foreground(WidgetStateProperty::new(Some(muted_fg))),
                             );
                         }
+                        if aria_invalid {
+                            button = button.style(outline_trigger_invalid_style(&theme));
+                        }
                         if let Some(test_id) = trigger_test_id.clone() {
                             button = button.test_id(test_id);
                         }
 
                         let mut trigger = button.into_element(cx);
-                        if required {
-                            trigger = trigger
-                                .attach_semantics(SemanticsDecoration::default().required(true));
+                        if required || aria_invalid {
+                            let mut decoration = SemanticsDecoration::default();
+                            if required {
+                                decoration = decoration.required(true);
+                            }
+                            if aria_invalid {
+                                decoration = decoration.invalid(fret_core::SemanticsInvalid::True);
+                            }
+                            trigger = trigger.attach_semantics(decoration);
                         }
                         trigger
                     },
@@ -711,5 +732,62 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("required-date-range-picker-trigger"))
             .expect("date range picker trigger semantics");
         assert!(node.flags.required);
+    }
+
+    #[test]
+    fn date_range_picker_aria_invalid_exposes_invalid_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(480.0), Px(240.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(DateRangeSelection::default());
+
+        app.set_frame_id(FrameId(1));
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        OverlayController::begin_frame(&mut app, window);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "date-range-picker-invalid-semantics",
+            |cx| {
+                vec![
+                    DateRangePicker::new(open.clone(), month.clone(), selected.clone())
+                        .aria_invalid(true)
+                        .test_id_prefix("invalid-date-range-picker")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("invalid-date-range-picker-trigger"))
+            .expect("date range picker trigger semantics");
+        assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
     }
 }

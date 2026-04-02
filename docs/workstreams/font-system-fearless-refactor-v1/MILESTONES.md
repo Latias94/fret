@@ -89,8 +89,10 @@ Deliverables:
 
 - updated fallback-policy diagnostics,
 - profile-aware mixed-script conformance coverage,
-- native mixed-script locale-switch conformance for system-font builds on the
-  platform-default/system-fallback lane,
+- native `platform_default` hybrid semantics (`generic -> no-tofu baseline`, `named -> system fallback`),
+- first-party demos no longer carrying app-local fallback patches just to render mixed-script UI,
+- a rebaselined native locale-switch conformance surface that validates the intended post-refactor
+  lane,
 - clear linkage back to the relevant ADRs and implementation-alignment notes.
 
 Exit criteria:
@@ -100,6 +102,5 @@ Exit criteria:
   - the renderer fallback-policy snapshot,
   - the font trace,
   - the published `TextFontStackKey`.
-- Native locale switching on the mixed-script fallback page can be proven by diagnostics evidence
-  alone without relying on ad-hoc settings UI or the UI Gallery's Windows-only curated fallback
-  override.
+- Native first-party generic UI surfaces start tofu-free without demo-local font patches, and the
+  remaining locale-switch diagnostics surface truthfully targets the intended post-refactor lane.

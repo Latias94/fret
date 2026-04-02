@@ -25,6 +25,7 @@ impl Renderer {
                         dash_enabled = key.dash_enabled,
                         fill_material_sampled = key.fill_material_sampled,
                         border_material_sampled = key.border_material_sampled,
+                        shadow_mode = key.shadow_mode,
                     )
                 })
                 .unwrap_or_else(tracing::Span::none);
@@ -68,6 +69,7 @@ impl Renderer {
                         0.0
                     },
                 ),
+                ("FRET_SHADOW_MODE", if key.shadow_mode { 1.0 } else { 0.0 }),
             ];
             let compilation_options = wgpu::PipelineCompilationOptions {
                 constants: &constants,

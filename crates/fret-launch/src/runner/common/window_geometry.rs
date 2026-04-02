@@ -10,6 +10,10 @@ impl WindowLogicalSize {
     pub const fn new(width: f64, height: f64) -> Self {
         Self { width, height }
     }
+
+    pub fn is_strictly_positive(&self) -> bool {
+        self.width > 0.0 && self.height > 0.0
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

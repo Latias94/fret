@@ -314,6 +314,7 @@ fn build_radio_item_element<H: UiHost>(
                 if let Some(test_id) = item_test_id.clone() {
                     props.a11y.test_id = Some(test_id);
                 }
+                props.a11y.invalid = aria_invalid.then_some(fret_core::SemanticsInvalid::True);
                 if let (Some(control_id), Some(control_registry)) = (
                     item_control_id.clone(),
                     control_registry_for_register.clone(),
@@ -1105,6 +1106,8 @@ impl RadioGroup {
                                         if let Some(test_id) = item_test_id.clone() {
                                             props.a11y.test_id = Some(test_id);
                                         }
+                                        props.a11y.invalid = aria_invalid
+                                            .then_some(fret_core::SemanticsInvalid::True);
                                         if let (Some(control_id), Some(control_registry)) = (
                                             item_control_id.clone(),
                                             control_registry_for_register.clone(),
@@ -1995,6 +1998,68 @@ mod tests {
             icon_border_colors.iter().any(|c| *c != destructive),
             "expected a non-invalid icon border quad that is not destructive"
         );
+    }
+
+    #[test]
+    fn radio_group_item_aria_invalid_exposes_invalid_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("invalid")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "radio-group-invalid-semantics",
+            |cx| {
+                vec![
+                    RadioGroup::new(model.clone())
+                        .a11y_label("Options")
+                        .test_id_prefix("radio-invalid")
+                        .item(RadioGroupItem::new("invalid", "Invalid").aria_invalid(true))
+                        .item(RadioGroupItem::new("valid", "Valid"))
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let invalid_item = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("radio-invalid-item-0"))
+            .expect("invalid radio item semantics");
+        let valid_item = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("radio-invalid-item-1"))
+            .expect("valid radio item semantics");
+        assert_eq!(
+            invalid_item.flags.invalid,
+            Some(fret_core::SemanticsInvalid::True)
+        );
+        assert_eq!(valid_item.flags.invalid, None);
     }
 
     #[test]

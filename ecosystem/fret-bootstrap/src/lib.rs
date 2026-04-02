@@ -661,7 +661,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self
     }
 
-    /// Configure the main window title and size (logical pixels).
+    /// Configure the main window title and initial size (logical pixels).
     pub fn with_main_window(mut self, title: impl Into<String>, size: (f64, f64)) -> Self {
         let title = title.into();
         let (width, height) = size;
@@ -679,6 +679,127 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
             config.main_window_size.height = height;
         });
 
+        self
+    }
+
+    /// Configure the minimum logical surface size for the main window.
+    pub fn with_main_window_min_size(mut self, size: (f64, f64)) -> Self {
+        let (width, height) = size;
+        self.inner = self.inner.configure(move |config| {
+            config.main_window_min_size = Some(fret_launch::WindowLogicalSize::new(width, height));
+        });
+        self
+    }
+
+    /// Configure the maximum logical surface size for the main window.
+    pub fn with_main_window_max_size(mut self, size: (f64, f64)) -> Self {
+        let (width, height) = size;
+        self.inner = self.inner.configure(move |config| {
+            config.main_window_max_size = Some(fret_launch::WindowLogicalSize::new(width, height));
+        });
+        self
+    }
+
+    /// Configure the surface resize increments for the main window.
+    pub fn with_main_window_resize_increments(mut self, size: (f64, f64)) -> Self {
+        let (width, height) = size;
+        self.inner = self.inner.configure(move |config| {
+            config.main_window_resize_increments =
+                Some(fret_launch::WindowLogicalSize::new(width, height));
+        });
+        self
+    }
+
+    /// Configure the initial logical screen position for the main window.
+    pub fn with_main_window_position_logical(mut self, position: (i32, i32)) -> Self {
+        let (x, y) = position;
+        self.inner = self.inner.configure(move |config| {
+            config.main_window_position = Some(fret_launch::WindowPosition::Logical(
+                fret_core::WindowLogicalPosition { x, y },
+            ));
+        });
+        self
+    }
+
+    /// Configure the initial physical screen position for the main window.
+    pub fn with_main_window_position_physical(mut self, position: (i32, i32)) -> Self {
+        let (x, y) = position;
+        self.inner = self.inner.configure(move |config| {
+            config.main_window_position = Some(fret_launch::WindowPosition::Physical(
+                fret_launch::WindowPhysicalPosition::new(x, y),
+            ));
+        });
+        self
+    }
+
+    /// Configure whether the main window can be resized by the OS chrome.
+    pub fn with_main_window_resizable(mut self, resizable: bool) -> Self {
+        self.inner = self.inner.configure(move |config| {
+            config.main_window_style.resizable = Some(resizable);
+        });
+        self
+    }
+
+    /// Configure the fallback title and initial size for newly created auxiliary windows.
+    pub fn with_default_window(mut self, title: impl Into<String>, size: (f64, f64)) -> Self {
+        let title = title.into();
+        let (width, height) = size;
+        self.inner = self.inner.configure(move |config| {
+            config.default_window_title = title.clone();
+            config.default_window_size = fret_launch::WindowLogicalSize::new(width, height);
+        });
+        self
+    }
+
+    /// Configure the minimum logical surface size for fallback-created auxiliary windows.
+    pub fn with_default_window_min_size(mut self, size: (f64, f64)) -> Self {
+        let (width, height) = size;
+        self.inner = self.inner.configure(move |config| {
+            config.default_window_min_size =
+                Some(fret_launch::WindowLogicalSize::new(width, height));
+        });
+        self
+    }
+
+    /// Configure the maximum logical surface size for fallback-created auxiliary windows.
+    pub fn with_default_window_max_size(mut self, size: (f64, f64)) -> Self {
+        let (width, height) = size;
+        self.inner = self.inner.configure(move |config| {
+            config.default_window_max_size =
+                Some(fret_launch::WindowLogicalSize::new(width, height));
+        });
+        self
+    }
+
+    /// Configure the surface resize increments for fallback-created auxiliary windows.
+    pub fn with_default_window_resize_increments(mut self, size: (f64, f64)) -> Self {
+        let (width, height) = size;
+        self.inner = self.inner.configure(move |config| {
+            config.default_window_resize_increments =
+                Some(fret_launch::WindowLogicalSize::new(width, height));
+        });
+        self
+    }
+
+    /// Configure the initial logical screen position for fallback-created auxiliary windows.
+    pub fn with_default_window_position_logical(mut self, position: (i32, i32)) -> Self {
+        let (x, y) = position;
+        self.inner = self.inner.configure(move |config| {
+            config.default_window_position = Some(fret_launch::WindowPosition::Logical(
+                fret_core::WindowLogicalPosition { x, y },
+            ));
+        });
+        self
+    }
+
+    /// Configure the initial physical screen position for fallback-created auxiliary windows.
+    pub fn with_default_window_position_physical(mut self, position: (i32, i32)) -> Self {
+        let (x, y) = position;
+        self.inner = self.inner.configure(move |config| {
+            config.default_window_position = Some(fret_launch::WindowPosition::Physical(
+                fret_launch::WindowPhysicalPosition::new(x, y),
+            ));
+        });
         self
     }
 

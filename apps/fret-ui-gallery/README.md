@@ -51,6 +51,11 @@ Lite mode smoke gate (first frame + basic navigation):
 
 - `cargo run -p fretboard -- diag suite ui-gallery-lite-smoke --launch -- cargo run -p fret-ui-gallery`
 
+Text/IME/fallback harness pages are feature-gated:
+
+- For scripts that start on `text_mixed_script_fallback` or `web_ime_harness`, launch with
+  `cargo run -p fret-ui-gallery --features gallery-web-ime-harness`
+
 ## Run (web / wasm32)
 
 Use the dedicated web harness:

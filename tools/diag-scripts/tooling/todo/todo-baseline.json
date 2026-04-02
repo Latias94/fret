@@ -60,6 +60,17 @@
       "type": "capture_bundle"
     },
     {
+      "target": {
+        "id": "todo_demo.row.4",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
       "button": "left",
       "target": {
         "id": "todo_demo.remove.4",

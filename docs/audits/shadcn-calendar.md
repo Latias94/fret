@@ -39,6 +39,9 @@ This audit compares Fret's shadcn-aligned `Calendar` against the upstream shadcn
 ### Layout & default-style ownership
 
 - Pass: Recipe-owned defaults match the upstream component source: the calendar owns its inner chrome (`bg-background`, padding, day-cell chrome, caption/nav layout) and keeps the card/popover background transparent when hosted inside those slots.
+- Pass: The `calendar-demo` caller-owned root chrome (`rounded-md border shadow-sm`) now has a
+  dedicated light/dark footprint gate, so that demo-level elevation is checked against web goldens
+  directly instead of being inferred from background geometry alone.
 - Pass: Example-level styling from the upstream docs stays caller-owned in Fret too: `rounded-lg border`, `p-0`, custom `--cell-size`, and field/popover width negotiation are applied in the gallery snippets rather than baked into `Calendar` defaults.
 - Pass: The calendar root remains intrinsic-width (`w-fit` outcome) by default; the earlier gallery demo stretch came from page-level layout authored at the call site, not from a recipe bug.
 - Pass: Single-month popup surfaces no longer reserve trailing whitespace: the transparent query-region wrapper now stays intrinsic unless the calendar actually needs multi-month container-width queries, so `PopoverContent(w-auto)` hugs the calendar root instead of a fill-width shim.
@@ -58,6 +61,8 @@ This audit compares Fret's shadcn-aligned `Calendar` against the upstream shadcn
 
 - `cargo nextest run -p fret-ui-shadcn --lib -E 'test(calendar_multiple_nav_buttons_render_svg_icons) | test(calendar_range_nav_buttons_render_svg_icons) | test(calendar_root_width_is_intrinsic_unless_caller_overrides_it)' --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web --status-level fail`
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_calendar web_vs_fret_calendar_demo_shadow_matches_web_light --status-level fail`
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_calendar web_vs_fret_calendar_demo_shadow_matches_web_dark --status-level fail`
 - `cargo nextest run -p fret-ui-gallery --lib gallery_calendar_core_examples_keep_upstream_aligned_targets_present --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --lib calendar_root_width_is_intrinsic_unless_caller_overrides_it --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --lib -E 'test(calendar_query_region_stays_intrinsic_for_single_month_and_fill_for_multi_month) | test(calendar_range_query_region_stays_intrinsic_for_single_month_and_fill_for_multi_month)' --status-level fail`

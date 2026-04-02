@@ -18,6 +18,7 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "`Switch::new(model)` is the Fret equivalent of the upstream `<Switch />`; `size(...)`, `disabled(...)`, `read_only(...)`, `required(...)`, `aria_invalid(...)`, `control_id(...)`, and `a11y_label(...)` cover the documented control surface, while `Label::for_control(...)` / `FieldLabel::for_control(...)` carry the upstream `htmlFor` teaching path.",
+        "`Switch::required(true)` keeps required semantics on the root control surface; surrounding `Field` / label composition stays caller-owned and does not need a wrapper-level required API.",
         "Track/thumb chrome and the intrinsic switch sizes remain recipe-owned because the upstream component source defines those defaults on the switch itself.",
         "Caller-owned layout stays explicit for `max-w-*`, stacked field groups, and surrounding page/grid negotiation; the recipe should not absorb those constraints.",
         "`Label::for_control(...)` covers the inline `Demo` / `Size` rows, and `FieldLabel::for_control(...)` plus `FieldLabel::wrap(...)` cover the description and choice-card compositions without widening `Switch` into a generic children API.",
@@ -51,7 +52,9 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-switch-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let invalid = DocSection::build(cx, "Invalid", invalid)
-        .description("Invalid state uses `aria_invalid` on the control and `Field::invalid(true)` on the composition.")
+        .description(
+            "Invalid state uses root `Switch::aria_invalid(true)` on the control and caller-owned `Field::invalid(true)` on the composition.",
+        )
         .test_id_prefix("ui-gallery-switch-invalid")
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let sizes = DocSection::build(cx, "Size", sizes)

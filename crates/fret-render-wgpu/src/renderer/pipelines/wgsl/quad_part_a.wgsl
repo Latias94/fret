@@ -73,6 +73,7 @@ override FRET_BORDER_PRESENT: u32 = 1u;
 override FRET_DASH_ENABLED: u32 = 0u;
 override FRET_FILL_MATERIAL_SAMPLED: u32 = 0u;
 override FRET_BORDER_MATERIAL_SAMPLED: u32 = 0u;
+override FRET_SHADOW_MODE: u32 = 0u;
 
 struct Paint {
   kind: u32,
@@ -101,6 +102,7 @@ struct QuadInstance {
   corner_radii: vec4<f32>,
   border: vec4<f32>,
   dash_params: vec4<f32>,
+  shadow_params: vec4<f32>,
 };
 
 struct QuadInstances {
@@ -137,6 +139,18 @@ fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
   return vec2<f32>(ndc_x, ndc_y);
 }
 
+fn shadow_draw_rect(inst: QuadInstance) -> vec4<f32> {
+  let spread = inst.shadow_params.z;
+  let blur_radius = max(inst.shadow_params.w, 0.0);
+  let source_origin = inst.rect.xy + inst.shadow_params.xy - vec2<f32>(spread);
+  let source_size = max(inst.rect.zw + vec2<f32>(2.0 * spread), vec2<f32>(0.0));
+  let margin = blur_radius * 3.0;
+  return vec4<f32>(
+    source_origin - vec2<f32>(margin),
+    source_size + vec2<f32>(2.0 * margin)
+  );
+}
+
 @vertex
 fn vs_main(
   @builtin(vertex_index) vertex_index: u32,
@@ -144,10 +158,11 @@ fn vs_main(
 ) -> VsOut {
   let inst = quad_instances.instances[instance_index];
   let rect = inst.rect;
+  let draw_rect = select(rect, shadow_draw_rect(inst), FRET_SHADOW_MODE != 0u);
   let transform0 = inst.transform0;
   let transform1 = inst.transform1;
   let uv = quad_vertex_xy(vertex_index);
-  let local_pos = rect.xy + uv * rect.zw;
+  let local_pos = draw_rect.xy + uv * draw_rect.zw;
   let pixel_pos = vec2<f32>(
     dot(transform0.xy, local_pos) + transform0.z,
     dot(transform1.xy, local_pos) + transform1.z

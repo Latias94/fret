@@ -12,6 +12,7 @@ mod image_object_fit;
 mod mask;
 mod paint;
 mod replay;
+mod shadow;
 mod stroke;
 mod validate;
 
@@ -23,6 +24,7 @@ pub use paint::{
     ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, PaintBindingV1,
     PaintEvalSpaceV1, RadialGradient, SweepGradient, TileMode,
 };
+pub use shadow::shadow_rrect_fallback_quads;
 pub use stroke::{DashPatternV1, StrokeStyleV1};
 pub use validate::{SceneValidationError, SceneValidationErrorKind};
 
@@ -788,6 +790,40 @@ impl SceneRecording {
                     corner_radii,
                 }
             }
+            SceneOp::ShadowRRect {
+                order,
+                rect,
+                mut corner_radii,
+                offset,
+                spread,
+                blur_radius,
+                color,
+            } => {
+                let max = rect.size.width.0.min(rect.size.height.0) * 0.5;
+                let max = if max.is_finite() { max.max(0.0) } else { 0.0 };
+                corner_radii.top_left = Px(corner_radii.top_left.0.max(0.0).min(max));
+                corner_radii.top_right = Px(corner_radii.top_right.0.max(0.0).min(max));
+                corner_radii.bottom_left = Px(corner_radii.bottom_left.0.max(0.0).min(max));
+                corner_radii.bottom_right = Px(corner_radii.bottom_right.0.max(0.0).min(max));
+
+                let blur_radius = if blur_radius.0.is_finite() {
+                    Px(blur_radius
+                        .0
+                        .clamp(0.0, SHADOW_RRECT_V1_MAX_BLUR_RADIUS_PX.0))
+                } else {
+                    Px(0.0)
+                };
+
+                SceneOp::ShadowRRect {
+                    order,
+                    rect,
+                    corner_radii,
+                    offset,
+                    spread,
+                    blur_radius,
+                    color,
+                }
+            }
             SceneOp::PushEffect {
                 bounds,
                 mode,
@@ -1068,6 +1104,21 @@ pub enum SceneOp {
         style: StrokeStyleV1,
     },
 
+    /// Draw a single rounded-rect box shadow layer.
+    ///
+    /// This is a first-class geometric shadow primitive for container chrome. Unlike
+    /// `EffectStep::DropShadowV1`, it is not content-derived and does not require a FilterContent
+    /// intermediate.
+    ShadowRRect {
+        order: DrawOrder,
+        rect: Rect,
+        corner_radii: Corners,
+        offset: Point,
+        spread: Px,
+        blur_radius: Px,
+        color: Color,
+    },
+
     Image {
         order: DrawOrder,
         rect: Rect,
@@ -1158,6 +1209,8 @@ impl UvRect {
         v1: 1.0,
     };
 }
+
+pub const SHADOW_RRECT_V1_MAX_BLUR_RADIUS_PX: crate::Px = crate::Px(64.0);
 
 #[cfg(test)]
 mod tests {
@@ -1330,6 +1383,54 @@ mod tests {
             border_paint: Paint::Solid(Color::TRANSPARENT).into(),
             corner_radii: Corners::all(Px(0.0)),
         });
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::NonFiniteOpData,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn push_shadow_rrect_clamps_blur_and_preserves_base_corner_radii() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::ShadowRRect {
+            order: DrawOrder(0),
+            rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(12.0))),
+            corner_radii: Corners::all(Px(9999.0)),
+            offset: Point::new(Px(0.0), Px(4.0)),
+            spread: Px(-4.0),
+            blur_radius: Px(4096.0),
+            color: Color::TRANSPARENT,
+        });
+
+        let SceneOp::ShadowRRect {
+            corner_radii,
+            blur_radius,
+            ..
+        } = scene.ops()[0]
+        else {
+            panic!("expected shadow rrect");
+        };
+
+        assert_eq!(blur_radius, SHADOW_RRECT_V1_MAX_BLUR_RADIUS_PX);
+        assert_eq!(corner_radii, Corners::all(Px(6.0)));
+    }
+
+    #[test]
+    fn validate_rejects_nonfinite_shadow_rrect_data() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::ShadowRRect {
+            order: DrawOrder(0),
+            rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+            corner_radii: Corners::all(Px(4.0)),
+            offset: Point::new(Px(f32::NAN), Px(0.0)),
+            spread: Px(0.0),
+            blur_radius: Px(8.0),
+            color: Color::TRANSPARENT,
+        });
+
         assert!(matches!(
             scene.validate(),
             Err(SceneValidationError {

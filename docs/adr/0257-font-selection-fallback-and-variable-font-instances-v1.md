@@ -157,13 +157,20 @@ Font selection uses three layers:
      behavior when system fonts are present.
 3) **Curated/override fallbacks** (`TextFontFamilyConfig.common_fallback` and bundled tiers):
    - used to keep wasm deterministic and to allow apps to enforce “no tofu” baselines.
-   - controlled by `TextFontFamilyConfig.common_fallback_injection` (platform default prefers system fallback on desktop).
+   - controlled by `TextFontFamilyConfig.common_fallback_injection`.
+   - bundled-only / wasm `platform_default` injects the common fallback baseline into both generic
+     and named-family stacks.
+   - native system-font `platform_default` is a hybrid lane: named-family stacks stay on the
+     system-fallback path, while generic UI families (`Ui` / `Serif` / `Monospace`) receive a
+     renderer-owned no-tofu baseline so first-party apps do not need demo-local fallback patches.
 
 Implementation note:
 
 - The renderer’s explicit per-style “common fallback stack suffix” (used for named-family shaping) is derived from the
   configured/curated candidate list by filtering to families that actually resolve in the current font DB, and is kept
   bounded via `FRET_TEXT_COMMON_FALLBACK_MAX_FAMILIES` (default: `64`).
+- Diagnostics should surface the hybrid lane explicitly: “named families prefer common fallback”
+  and “generic UI families prefer common fallback” are separate facts.
 
 The effective fallback policy (including locale) must participate in `TextFontStackKey` so cached text cannot reuse
 stale selection behavior.

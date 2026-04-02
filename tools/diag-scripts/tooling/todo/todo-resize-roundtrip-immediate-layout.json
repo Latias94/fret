@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Todo resize roundtrip immediate layout",
+    "tags": ["todo_demo", "responsive", "resize_roundtrip", "immediate_layout"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 680.0, "height_px": 760.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "todo_demo.root" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 560.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 680.0, "height_px": 760.0 },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "todo_demo.root" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "todo_demo.clear_done" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "todo_demo.filter.completed" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    { "type": "capture_bundle", "label": "todo-resize-roundtrip-immediate-layout" },
+    { "type": "capture_screenshot", "label": "todo-resize-roundtrip-immediate-layout" }
+  ]
+}

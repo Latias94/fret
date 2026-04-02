@@ -652,11 +652,116 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>, pixel_pos: vec2<f32>) -> ve
   return vec4<f32>(0.0);
 }
 
+fn shadow_gaussian(x: f32, sigma: f32) -> f32 {
+  return exp(-(x * x) / (2.0 * sigma * sigma)) / (sqrt(2.0 * 3.141592653589793) * sigma);
+}
+
+fn shadow_erf(v: vec2<f32>) -> vec2<f32> {
+  let s = sign(v);
+  let a = abs(v);
+  let r1 = 1.0 + (0.278393 + (0.230389 + (0.000972 + 0.078108 * a) * a) * a) * a;
+  let r2 = r1 * r1;
+  return s - s / (r2 * r2);
+}
+
+fn shadow_blur_along_x(
+  x: f32,
+  y: f32,
+  sigma: f32,
+  corner_radius: f32,
+  half_size: vec2<f32>,
+) -> f32 {
+  let delta = min(half_size.y - corner_radius - abs(y), 0.0);
+  let curved =
+    half_size.x - corner_radius + sqrt(max(0.0, corner_radius * corner_radius - delta * delta));
+  let integral =
+    0.5 + 0.5 * shadow_erf((x + vec2<f32>(-curved, curved)) * (sqrt(0.5) / sigma));
+  return integral.y - integral.x;
+}
+
+fn shadow_source_rect(inst: QuadInstance, base_rect: vec4<f32>) -> vec4<f32> {
+  let spread = inst.shadow_params.z;
+  return vec4<f32>(
+    base_rect.xy + inst.shadow_params.xy - vec2<f32>(spread),
+    max(base_rect.zw + vec2<f32>(2.0 * spread), vec2<f32>(0.0))
+  );
+}
+
+fn shadow_source_radii(
+  base_radii: vec4<f32>,
+  source_size: vec2<f32>,
+  spread: f32,
+) -> vec4<f32> {
+  let max_radius = max(min(source_size.x, source_size.y) * 0.5, 0.0);
+  return clamp(base_radii + vec4<f32>(spread), vec4<f32>(0.0), vec4<f32>(max_radius));
+}
+
+fn shadow_blurred_alpha(
+  point: vec2<f32>,
+  source_rect: vec4<f32>,
+  source_radii: vec4<f32>,
+  sigma: f32,
+) -> f32 {
+  // Four midpoint samples are sufficient for small soft shadows, but shadcn-style `shadow-lg` /
+  // `shadow-xl` profiles combine large blur radii with negative spread. That makes corner error
+  // more visible along the bottom shoulder. Eight midpoint samples remain cheap while tracking a
+  // higher-sample reference much more closely for those profiles.
+  let sample_count = 8.0;
+  let half_size = source_rect.zw * 0.5;
+  let center = source_rect.xy + half_size;
+  let center_to_point = point - center;
+  let corner_radius = pick_corner_radius(center_to_point, source_radii);
+
+  let low = center_to_point.y - half_size.y;
+  let high = center_to_point.y + half_size.y;
+  let start = clamp(-3.0 * sigma, low, high);
+  let end = clamp(3.0 * sigma, low, high);
+  let step = (end - start) / sample_count;
+
+  var y = start + step * 0.5;
+  var alpha = 0.0;
+  for (var i = 0; i < 8; i = i + 1) {
+    let blur =
+      shadow_blur_along_x(center_to_point.x, center_to_point.y - y, sigma, corner_radius, half_size);
+    alpha = alpha + blur * shadow_gaussian(y, sigma) * step;
+    y = y + step;
+  }
+
+  return clamp(alpha, 0.0, 1.0);
+}
+
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let mask = mask_alpha(input.pixel_pos);
   let inst = quad_instances.instances[input.instance_index];
+
+  if (FRET_SHADOW_MODE != 0u) {
+    let base_rect = input.rect;
+    let source_rect = shadow_source_rect(inst, base_rect);
+    if (source_rect.z <= 0.0 || source_rect.w <= 0.0) {
+      return vec4<f32>(0.0);
+    }
+
+    let spread = inst.shadow_params.z;
+    let blur_radius = max(inst.shadow_params.w, 0.0);
+    let source_radii = shadow_source_radii(input.corner_radii, source_rect.zw, spread);
+    let source_sdf = quad_sdf(input.local_pos, source_rect.xy, source_rect.zw, source_radii);
+    let hard_source_alpha = sdf_coverage_smooth(source_sdf);
+    let blurred_alpha = shadow_blurred_alpha(
+      input.local_pos,
+      source_rect,
+      source_radii,
+      max(blur_radius, 1e-3)
+    );
+    let shadow_alpha = select(blurred_alpha, hard_source_alpha, blur_radius <= 1e-3);
+
+    let content_sdf = quad_sdf(input.local_pos, base_rect.xy, base_rect.zw, input.corner_radii);
+    let content_alpha = sdf_coverage_smooth(content_sdf);
+    let shadow_only_alpha = shadow_alpha * (1.0 - content_alpha);
+    let out = inst.fill_paint.params0 * shadow_only_alpha * clip * mask;
+    return encode_output_premul(out);
+  }
 
   let outer_sdf = quad_sdf(input.local_pos, input.rect.xy, input.rect.zw, input.corner_radii);
 

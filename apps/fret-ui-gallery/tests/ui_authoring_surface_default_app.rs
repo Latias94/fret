@@ -3271,6 +3271,594 @@ fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn form_docs_keep_field_level_required_on_form_field() {
+    for (relative_path, required_markers, forbidden_markers) in [
+        (
+            "src/ui/snippets/form/usage.rs",
+            vec![
+                "FormField::new(",
+                ".label(\"Username\").required(true).description(",
+            ],
+            Vec::<&str>::new(),
+        ),
+        (
+            "src/ui/snippets/form/upstream_demo.rs",
+            vec![
+                "letusername_field=shadcn::FormField::new(",
+                ".label(\"Username\").required(true).description(",
+                "letemail_field=shadcn::FormField::new(",
+                ".label(\"Email\").required(true).description(",
+                "letbio_field=shadcn::FormField::new(",
+                ".label(\"Bio\").required(true).description(",
+                "letnotify_field=shadcn::FormField::new(",
+                ".label(\"Notifymeabout...\").required(true).into_element(cx)",
+                "letsidebar_field=shadcn::FormField::new(",
+                ".decorate_control(false).required(true).into_element(cx)",
+                "letdob_field=shadcn::FormField::new(",
+                ".label(\"Dateofbirth\").required(true).description(",
+            ],
+            Vec::<&str>::new(),
+        ),
+        (
+            "src/ui/snippets/form/notes.rs",
+            vec!["FormField::required(true)", "disabled", "read_only"],
+            Vec::<&str>::new(),
+        ),
+        (
+            "src/ui/pages/form.rs",
+            vec![
+                "field-level `required` ownership on `FormField::required(true)`",
+                "keeping field-level required semantics on `FormField`",
+            ],
+            Vec::<&str>::new(),
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing form-field required ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{} reintroduced control-local required teaching `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn form_docs_keep_invalid_decoration_and_opt_out_owned_by_form_field() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/form/upstream_demo.rs",
+            vec![
+                "letsidebar_field=shadcn::FormField::new(",
+                ".decorate_control(false).required(true).into_element(cx)",
+            ],
+        ),
+        (
+            "src/ui/snippets/form/notes.rs",
+            vec![
+                "Invalid decoration also belongs to `FormField`",
+                "`FormState` drives the wrapper-level invalid styling and message visibility",
+                "`decorate_control(false)` is the escape hatch",
+            ],
+        ),
+        (
+            "src/ui/pages/form.rs",
+            vec![
+                "wrapper-owned invalid decoration from `FormState`",
+                "`FormState`-driven invalid decoration on `FormField`",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing form-field invalid ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn select_and_combobox_docs_keep_invalid_ownership_on_the_root_surface() {
+    for (relative_path, required_markers, forbidden_markers) in [
+        (
+            "src/ui/snippets/select/invalid.rs",
+            vec![
+                ".aria_invalid(invalid)",
+                "shadcn::Field::new(children)",
+                "FieldError::new(\"Please select a fruit.\")",
+            ],
+            Vec::<&str>::new(),
+        ),
+        (
+            "src/ui/pages/select.rs",
+            vec![
+                "Invalid state uses root `Select::aria_invalid(...)` for trigger chrome/semantics, then pairs it with caller-owned `Field` error copy.",
+            ],
+            Vec::<&str>::new(),
+        ),
+        (
+            "src/ui/snippets/combobox/invalid.rs",
+            vec![
+                "shadcn::Combobox::new(value.clone(),open.clone())",
+                ".aria_invalid(true)",
+                ".input(shadcn::ComboboxInput::new().placeholder(\"Select required option\"))",
+            ],
+            vec![
+                ".input(shadcn::ComboboxInput::new().placeholder(\"Select required option\").aria_invalid(true))",
+            ],
+        ),
+        (
+            "src/ui/pages/combobox.rs",
+            vec![
+                "Invalid state uses root `Combobox::aria_invalid(true)` so invalid chrome and semantics stay on the combobox surface, then pairs it with caller-owned field/error copy.",
+                "`Combobox::aria_invalid(true)` is the root invalid lane; callers should not restate invalid state on `ComboboxInput` just to get trigger/search chrome.",
+                "For invalid visuals, use root `Combobox::aria_invalid(true)` and pair it with caller-owned field-level error copy.",
+            ],
+            Vec::<&str>::new(),
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing invalid ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{} reintroduced invalid teaching drift `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn switch_and_native_select_docs_keep_invalid_ownership_on_the_control_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/switch/invalid.rs",
+            vec![
+                "shadcn::Switch::new(checked)",
+                ".aria_invalid(true)",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/switch.rs",
+            vec![
+                "Invalid state uses root `Switch::aria_invalid(true)` on the control and caller-owned `Field::invalid(true)` on the composition.",
+            ],
+        ),
+        (
+            "src/ui/snippets/native_select/invalid.rs",
+            vec!["shadcn::native_select(value,open)", ".aria_invalid(true)"],
+        ),
+        (
+            "src/ui/pages/native_select.rs",
+            vec![
+                "Invalid semantics stay on the native-select control itself via root `aria_invalid(true)`; surrounding field/error composition remains caller-owned when product copy needs it.",
+                "Invalid state uses root `aria_invalid(true)` on the native-select control; surrounding error copy stays caller-owned when needed.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing switch/native-select invalid ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn select_combobox_switch_and_native_select_docs_keep_required_ownership_on_the_root_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/pages/select.rs",
+            vec![
+                "`Select::required(true)` now forwards required semantics to the trigger combobox node; this stays root-owned and does not require a broader generic children API.",
+            ],
+        ),
+        (
+            "src/ui/pages/combobox.rs",
+            vec![
+                "`Combobox::required(true)` now covers both the closed trigger surface and the open search input surface, so required semantics follow the actual combobox node across states without widening the recipe to a generic children API.",
+            ],
+        ),
+        (
+            "src/ui/pages/switch.rs",
+            vec![
+                "`Switch::required(true)` keeps required semantics on the root control surface; surrounding `Field` / label composition stays caller-owned and does not need a wrapper-level required API.",
+            ],
+        ),
+        (
+            "src/ui/pages/native_select.rs",
+            vec![
+                "`required(true)` stays on the root native-select control surface; callers do not need a surrounding field wrapper just to forward required semantics.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing required ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/pages/checkbox.rs",
+            vec![
+                "`Checkbox::required(true)` now maps the upstream required semantics (`aria-required`) onto the checkbox control itself; the docs path still composes field labels/descriptions externally instead of widening the checkbox to a children API.",
+            ],
+        ),
+        (
+            "src/ui/pages/radio_group.rs",
+            vec![
+                "`RadioGroup::required(true)` now marks the group root as required, matching the upstream group-level required semantics instead of scattering the state across individual radio items.",
+            ],
+        ),
+        (
+            "src/ui/snippets/input/required.rs",
+            vec![
+                "shadcn::Input::new(value)",
+                ".control_id(required_id)",
+                ".required(true)",
+                "shadcn::raw::typography::muted(\"*\")",
+            ],
+        ),
+        (
+            "src/ui/pages/input.rs",
+            vec![
+                "`Input::required(true)` keeps required semantics on the input control itself; any visible required marker remains caller-owned label composition.",
+                "Use root `Input::required(true)` on the input and keep the visible required marker caller-owned in the label.",
+            ],
+        ),
+        (
+            "src/ui/pages/textarea.rs",
+            vec![
+                "`Textarea::required(true)` keeps required semantics on the textarea control itself; any visible required marker stays caller-owned label composition.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing required ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn checkbox_radio_input_and_textarea_docs_keep_invalid_ownership_on_the_control_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/checkbox/invalid_state.rs",
+            vec![
+                "shadcn::Checkbox::new(invalid)",
+                ".aria_invalid(!invalid_checked)",
+                ".invalid(!invalid_checked)",
+            ],
+        ),
+        (
+            "src/ui/pages/checkbox.rs",
+            vec![
+                "Invalid styling uses root `Checkbox::aria_invalid(...)` on the control and caller-owned `Field::invalid(...)` / destructive copy on the composition.",
+            ],
+        ),
+        (
+            "src/ui/snippets/radio_group/invalid.rs",
+            vec![
+                "shadcn::RadioGroupItem::new(\"email\",\"Emailonly\").aria_invalid(true)",
+                "shadcn::RadioGroupItem::new(\"sms\",\"SMSonly\").aria_invalid(true)",
+                "shadcn::RadioGroupItem::new(\"both\",\"BothEmail&SMS\").aria_invalid(true)",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/radio_group.rs",
+            vec![
+                "Use `RadioGroupItem::aria_invalid(true)` on each item and caller-owned `Field::invalid(true)` on each composed row for validation styling.",
+            ],
+        ),
+        (
+            "src/ui/snippets/input/invalid.rs",
+            vec![
+                "shadcn::Input::new(value)",
+                ".aria_invalid(true)",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/input.rs",
+            vec![
+                "Use root `Input::aria_invalid(true)` on the input and caller-owned `Field::invalid(true)` on the surrounding `Field`.",
+            ],
+        ),
+        (
+            "src/ui/snippets/textarea/invalid.rs",
+            vec![
+                "shadcn::Textarea::new(value)",
+                ".aria_invalid(true)",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/textarea.rs",
+            vec![
+                "Invalid state uses root `Textarea::aria_invalid(true)` on the control and caller-owned `Field::invalid(true)` on the composition.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing invalid ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn date_picker_and_input_otp_docs_keep_required_ownership_on_the_control_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/date_picker/compact_builder.rs",
+            vec![
+                "shadcn::DatePicker::new(open,month,selected)",
+                ".required(true)",
+                ".test_id_prefix(\"ui-gallery-date-picker-compact-builder\")",
+            ],
+        ),
+        (
+            "src/ui/pages/date_picker.rs",
+            vec![
+                "root `DatePicker::required(true)` semantics on the trigger.",
+                "including root trigger-level form semantics such as `DatePicker::required(true)`.",
+            ],
+        ),
+        (
+            "src/ui/snippets/input_otp/form.rs",
+            vec![
+                "shadcn::InputOTP::new(otp)",
+                ".control_id(CONTROL_ID)",
+                ".required(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/input_otp.rs",
+            vec![
+                "`InputOTP::required(true)` keeps required semantics on the hidden root OTP control; any visible required marker remains caller-owned label composition around the projected slots.",
+                "including group-level slot sizing and root `InputOTP::required(true)` on the docs-shaped parts lane.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing required ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn input_otp_docs_keep_invalid_ownership_on_slots_with_caller_owned_error_copy() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/input_otp/invalid.rs",
+            vec![
+                "shadcn::InputOTP::new(value)",
+                "shadcn::InputOTPSlot::new(0).aria_invalid(true)",
+                "shadcn::InputOTPSlot::new(5).aria_invalid(true)",
+                "shadcn::FieldError::new(\"Invalidcode.Pleasetryagain.\")",
+            ],
+        ),
+        (
+            "src/ui/pages/input_otp.rs",
+            vec![
+                "`InputOTPSlot::aria_invalid(true)` mirrors the upstream slot-level invalid lane, while root `control_id(...)`, `labelled_by_element(...)`, `a11y_label(...)`, and `required(...)` cover form association and accessibility.",
+                "Invalid state mirrors upstream slot-level `InputOTPSlot::aria_invalid(true)` and keeps error copy caller-owned via `FieldError` composition.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing invalid ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn label_input_group_and_slider_docs_keep_label_association_on_the_control_registry_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/label/usage.rs",
+            vec![
+                "let control_id = ControlId::from(\"ui-gallery-label-usage\");",
+                "shadcn::Label::new(\"Your email address\").for_control(control_id.clone())",
+                "shadcn::Input::new(email).placeholder(\"you@example.com\").control_id(control_id)",
+            ],
+        ),
+        (
+            "src/ui/pages/label.rs",
+            vec![
+                "`Label::for_control(...)` plus a control-side `control_id(...)` is the Fret bridge for the upstream `htmlFor` / `id` pairing and keeps click-to-focus behavior out of page code.",
+            ],
+        ),
+        (
+            "src/ui/snippets/input_group/label.rs",
+            vec![
+                "let username_id = ControlId::from(\"ui-gallery-input-group-label-username\");",
+                "let email_id = ControlId::from(\"ui-gallery-input-group-label-email\");",
+                ".control_id(username_id.clone())",
+                ".for_control(username_id.clone())",
+                ".control_id(email_id.clone())",
+                ".for_control(email_id.clone())",
+            ],
+        ),
+        (
+            "src/ui/pages/input_group.rs",
+            vec![
+                "Use `Label::for_control` + `InputGroup::control_id` so label clicks focus the control and preserve `labelled-by` semantics.",
+            ],
+        ),
+        (
+            "src/ui/snippets/slider/label.rs",
+            vec![
+                "let control_id = ControlId::from(\"ui-gallery-slider-label\");",
+                ".control_id(control_id.clone())",
+                ".test_id_prefix(\"ui-gallery-slider-label\")",
+                ".for_control(control_id.clone())",
+            ],
+        ),
+        (
+            "src/ui/pages/slider.rs",
+            vec![
+                "Use `FieldLabel::for_control`, `Slider::control_id`, and `Slider::test_id_prefix` on top of `slider(model)` to focus the active thumb and keep derived automation anchors stable.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing label-association ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn field_docs_keep_label_and_invalid_ownership_on_field_parts() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/field/validation_and_errors.rs",
+            vec![
+                "let email_id = \"ui-gallery-field-validation-email\";",
+                "shadcn::FieldLabel::new(\"Email\").for_control(email_id)",
+                "shadcn::Input::new(email_invalid).control_id(email_id)",
+                ".aria_invalid(true)",
+                "shadcn::FieldError::new(\"Enteravalidemailaddress.\").for_control(email_id)",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/field.rs",
+            vec![
+                "Associate labels via `FieldLabel::for_control(...)` plus matching control ids; when parts need a shared field-local association context, use `Field::build(...)`.",
+                "Use `FieldError` immediately after the control or inside `FieldContent`, and pair invalid styling with control-level `aria_invalid(true)`.",
+                "Keyboard, labeling, grouping, and invalid-state guidance.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing field ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
 fn form_page_and_notes_teach_rtl_as_a_fret_follow_up() {
     let form_page = read("src/ui/pages/form.rs");
     assert!(

@@ -168,10 +168,7 @@ pub(super) fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCan
 }
 
 #[cfg(not(feature = "diagnostics-canvas"))]
-pub(super) fn canvas_cache_stats_for_window(
-    _app: &App,
-    _window: u64,
-) -> Vec<UiCanvasCacheEntryV1> {
+pub(super) fn canvas_cache_stats_for_window(_app: &App, _window: u64) -> Vec<UiCanvasCacheEntryV1> {
     Vec::new()
 }
 

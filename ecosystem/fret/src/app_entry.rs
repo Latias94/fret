@@ -11,6 +11,18 @@ use crate::{
 
 type AppSetupHook = Box<dyn FnOnce(&mut crate::app::App)>;
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+#[derive(Default)]
+struct MainWindowConfig {
+    title: Option<String>,
+    size: Option<(f64, f64)>,
+    min_size: Option<(f64, f64)>,
+    max_size: Option<(f64, f64)>,
+    resize_increments: Option<(f64, f64)>,
+    position: Option<fret_launch::WindowPosition>,
+    resizable: Option<bool>,
+}
+
 /// Builder-chain facade for creating and running a desktop-first Fret UI app.
 ///
 /// Notes:
@@ -20,7 +32,7 @@ type AppSetupHook = Box<dyn FnOnce(&mut crate::app::App)>;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub struct FretApp {
     root_name: &'static str,
-    main_window: Option<(String, (f64, f64))>,
+    main_window: MainWindowConfig,
     defaults: Defaults,
     command_palette: bool,
     asset_mounts: Vec<AssetMount>,
@@ -36,7 +48,7 @@ impl FretApp {
     pub fn new(root_name: &'static str) -> Self {
         Self {
             root_name,
-            main_window: None,
+            main_window: MainWindowConfig::default(),
             defaults: Defaults::default(),
             command_palette: false,
             asset_mounts: Vec::new(),
@@ -177,9 +189,52 @@ impl FretApp {
         self
     }
 
-    /// Configure the main window (title + size).
+    /// Configure the main window title and initial size.
     pub fn window(mut self, title: impl Into<String>, size: (f64, f64)) -> Self {
-        self.main_window = Some((title.into(), size));
+        self.main_window.title = Some(title.into());
+        self.main_window.size = Some(size);
+        self
+    }
+
+    /// Configure the minimum logical surface size for the main window.
+    pub fn window_min_size(mut self, size: (f64, f64)) -> Self {
+        self.main_window.min_size = Some(size);
+        self
+    }
+
+    /// Configure the maximum logical surface size for the main window.
+    pub fn window_max_size(mut self, size: (f64, f64)) -> Self {
+        self.main_window.max_size = Some(size);
+        self
+    }
+
+    /// Configure the logical surface resize increments for the main window.
+    pub fn window_resize_increments(mut self, size: (f64, f64)) -> Self {
+        self.main_window.resize_increments = Some(size);
+        self
+    }
+
+    /// Configure the initial logical screen position for the main window.
+    pub fn window_position_logical(mut self, position: (i32, i32)) -> Self {
+        let (x, y) = position;
+        self.main_window.position = Some(fret_launch::WindowPosition::Logical(
+            fret_core::WindowLogicalPosition { x, y },
+        ));
+        self
+    }
+
+    /// Configure the initial physical screen position for the main window.
+    pub fn window_position_physical(mut self, position: (i32, i32)) -> Self {
+        let (x, y) = position;
+        self.main_window.position = Some(fret_launch::WindowPosition::Physical(
+            fret_launch::WindowPhysicalPosition::new(x, y),
+        ));
+        self
+    }
+
+    /// Configure whether the main window can be resized by the OS chrome.
+    pub fn window_resizable(mut self, resizable: bool) -> Self {
+        self.main_window.resizable = Some(resizable);
         self
     }
 
@@ -262,7 +317,7 @@ impl FretApp {
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 fn finish_builder<S: 'static>(
     root_name: &'static str,
-    main_window: Option<(String, (f64, f64))>,
+    main_window: MainWindowConfig,
     defaults: Defaults,
     asset_mounts: Vec<AssetMount>,
     setup_hooks: Vec<AppSetupHook>,
@@ -291,14 +346,36 @@ fn finish_builder<S: 'static>(
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 fn apply_main_window<S: 'static>(
     root_name: &'static str,
-    main_window: Option<(String, (f64, f64))>,
+    main_window: MainWindowConfig,
     builder: UiAppBuilder<S>,
 ) -> UiAppBuilder<S> {
-    if let Some((title, size)) = main_window {
-        return builder.with_main_window(title, size);
-    }
+    let title = main_window.title.unwrap_or_else(|| root_name.to_string());
+    let size = main_window.size.unwrap_or((960.0, 720.0));
 
-    builder.with_main_window(root_name, (960.0, 720.0))
+    let mut builder = builder.with_main_window(title, size);
+    if let Some(min_size) = main_window.min_size {
+        builder = builder.with_main_window_min_size(min_size);
+    }
+    if let Some(max_size) = main_window.max_size {
+        builder = builder.with_main_window_max_size(max_size);
+    }
+    if let Some(resize_increments) = main_window.resize_increments {
+        builder = builder.with_main_window_resize_increments(resize_increments);
+    }
+    if let Some(position) = main_window.position {
+        builder = match position {
+            fret_launch::WindowPosition::Logical(pos) => {
+                builder.with_main_window_position_logical((pos.x, pos.y))
+            }
+            fret_launch::WindowPosition::Physical(pos) => {
+                builder.with_main_window_position_physical((pos.x, pos.y))
+            }
+        };
+    }
+    if let Some(resizable) = main_window.resizable {
+        builder = builder.with_main_window_resizable(resizable);
+    }
+    builder
 }
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]

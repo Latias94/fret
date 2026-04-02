@@ -16,7 +16,7 @@ use fret_ui::element::{
     PointerRegionProps, PressableA11y, PressableProps, SemanticsDecoration, TextAreaProps,
     TextInputProps, TextProps,
 };
-use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost, focus_visible};
+use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -515,6 +515,26 @@ impl InputGroup {
         let required = self.required;
         let border_width_override = self.border_width_override;
         let corner_radii_override = self.corner_radii_override;
+        let custom_control_invalid = aria_invalid.then_some(fret_core::SemanticsInvalid::True);
+        let stamp_custom_control = |mut custom_control: AnyElement| {
+            if let Some(test_id) = control_test_id.clone() {
+                custom_control = custom_control.test_id(test_id);
+            }
+            if let Some(label) = a11y_label.clone() {
+                custom_control = custom_control.a11y_label(label);
+            }
+            if required || custom_control_invalid.is_some() {
+                let mut decoration = SemanticsDecoration::default();
+                if required {
+                    decoration = decoration.required(true);
+                }
+                if let Some(invalid) = custom_control_invalid {
+                    decoration = decoration.invalid(invalid);
+                }
+                custom_control = custom_control.attach_semantics(decoration);
+            }
+            custom_control
+        };
 
         let mut root_border = Edges::all(resolved.border_width);
         if let Some(border) = border_width_override.top {
@@ -674,19 +694,8 @@ impl InputGroup {
             };
 
             if is_block_layout {
-                let is_custom_control = custom_control.is_some();
-                let mut control_el = if let Some(mut custom_control) = custom_control {
-                    if let Some(test_id) = control_test_id.clone() {
-                        custom_control = custom_control.test_id(test_id);
-                    }
-                    if let Some(label) = a11y_label.clone() {
-                        custom_control = custom_control.a11y_label(label);
-                    }
-                    if required {
-                        custom_control = custom_control
-                            .attach_semantics(SemanticsDecoration::default().required(true));
-                    }
-                    custom_control
+                let mut control_el = if let Some(custom_control) = custom_control {
+                    stamp_custom_control(custom_control)
                 } else {
                     match control {
                         InputGroupControlKind::Input => {
@@ -731,6 +740,7 @@ impl InputGroup {
                             let mut input = TextInputProps::new(model.clone());
                             input.a11y_label = a11y_label.clone();
                             input.a11y_required = required;
+                            input.a11y_invalid = custom_control_invalid;
                             input.test_id = control_test_id.clone();
                             input.placeholder = placeholder.clone();
                             input.submit_command = submit_command;
@@ -773,6 +783,7 @@ impl InputGroup {
                             let mut props = TextAreaProps::new(model.clone());
                             props.a11y_label = a11y_label.clone();
                             props.a11y_required = required;
+                            props.a11y_invalid = custom_control_invalid;
                             props.test_id = control_test_id.clone();
                             props.placeholder = placeholder.clone();
                             props.enabled = !disabled;
@@ -835,19 +846,13 @@ impl InputGroup {
                         .ok()
                         .flatten();
 
-                    if labelled_by_element.is_some()
-                        || described_by_element.is_some()
-                        || (is_custom_control && required)
-                    {
+                    if labelled_by_element.is_some() || described_by_element.is_some() {
                         let mut decoration = SemanticsDecoration::default();
                         if let Some(label) = labelled_by_element {
                             decoration = decoration.labelled_by_element(label.0);
                         }
                         if let Some(desc) = described_by_element {
                             decoration = decoration.described_by_element(desc.0);
-                        }
-                        if is_custom_control && required {
-                            decoration = decoration.required(true);
                         }
                         control_el = control_el.attach_semantics(decoration);
                     }
@@ -1083,19 +1088,8 @@ impl InputGroup {
                 animated_control_id = Some(control_element_id);
                 vec![layout]
             } else {
-                let is_custom_control = custom_control.is_some();
-                let mut control_el = if let Some(mut custom_control) = custom_control {
-                    if let Some(test_id) = control_test_id.clone() {
-                        custom_control = custom_control.test_id(test_id);
-                    }
-                    if let Some(label) = a11y_label.clone() {
-                        custom_control = custom_control.a11y_label(label);
-                    }
-                    if required {
-                        custom_control = custom_control
-                            .attach_semantics(SemanticsDecoration::default().required(true));
-                    }
-                    custom_control
+                let mut control_el = if let Some(custom_control) = custom_control {
+                    stamp_custom_control(custom_control)
                 } else {
                     let (resolved_pad_inline_start, resolved_pad_inline_end) =
                         rtl::inline_start_end_pair(
@@ -1137,6 +1131,7 @@ impl InputGroup {
                     let mut input = TextInputProps::new(model.clone());
                     input.a11y_label = a11y_label.clone();
                     input.a11y_required = required;
+                    input.a11y_invalid = custom_control_invalid;
                     input.test_id = control_test_id.clone();
                     input.placeholder = placeholder.clone();
                     input.submit_command = submit_command;
@@ -1201,19 +1196,13 @@ impl InputGroup {
                         .ok()
                         .flatten();
 
-                    if labelled_by_element.is_some()
-                        || described_by_element.is_some()
-                        || (is_custom_control && required)
-                    {
+                    if labelled_by_element.is_some() || described_by_element.is_some() {
                         let mut decoration = SemanticsDecoration::default();
                         if let Some(label) = labelled_by_element {
                             decoration = decoration.labelled_by_element(label.0);
                         }
                         if let Some(desc) = described_by_element {
                             decoration = decoration.described_by_element(desc.0);
-                        }
-                        if is_custom_control && required {
-                            decoration = decoration.required(true);
                         }
                         control_el = control_el.attach_semantics(decoration);
                     }
@@ -1280,14 +1269,13 @@ impl InputGroup {
         });
 
         let animated_control_id = animated_control_id.expect("input_group control element id");
-        let focus_visible_for_control = cx.is_focused_element(animated_control_id)
-            && focus_visible::is_focus_visible(cx.app, Some(cx.window));
+        let focused_for_control = cx.is_focused_element(animated_control_id);
 
         let duration = crate::overlay_motion::shadcn_motion_duration_150(cx);
         let ease = crate::overlay_motion::shadcn_ease;
         let target_border_color = if aria_invalid {
             border_color
-        } else if focus_visible_for_control {
+        } else if focused_for_control {
             focus_border_color.unwrap_or(border_color)
         } else {
             border_color
@@ -1306,7 +1294,7 @@ impl InputGroup {
             cx,
             animated_control_id,
             "input-group-ring-alpha",
-            if focus_visible_for_control { 1.0 } else { 0.0 },
+            if focused_for_control { 1.0 } else { 0.0 },
             duration,
             ease,
         );
@@ -1331,7 +1319,7 @@ impl InputGroup {
             focus_ring: ring,
             focus_border_color: None,
             focus_within: false,
-            focus_ring_always_paint: ring_alpha.animating || ring_alpha.value > 1e-4,
+            focus_ring_always_paint: focused_for_control || ring_alpha.animating,
             corner_radii: root_corner_radii,
             ..Default::default()
         });
@@ -2469,6 +2457,72 @@ mod tests {
     }
 
     #[test]
+    fn input_group_aria_invalid_exposes_invalid_semantics_for_builtin_input() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+        let model: Model<String> = app.models_mut().insert(String::new());
+        let bounds = bounds();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "input-group-invalid-semantics",
+            |cx| {
+                vec![
+                    InputGroup::new(model.clone())
+                        .aria_invalid(true)
+                        .a11y_label("Email")
+                        .control_test_id("invalid-input-group-control")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("invalid-input-group-control"))
+            .expect("input group control semantics node");
+        assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
+    }
+
+    #[test]
+    fn input_group_block_layout_applies_invalid_to_builtin_input_control() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_invalid_block_input",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model)
+                    .aria_invalid(true)
+                    .block_start([cx.text("hint")])
+                    .into_element(cx);
+
+                let props = find_text_input(&el).expect("expected text input in InputGroup");
+                assert_eq!(props.a11y_invalid, Some(fret_core::SemanticsInvalid::True));
+            },
+        );
+    }
+
+    #[test]
     fn input_group_parts_apply_required_to_textarea_control() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2489,6 +2543,33 @@ mod tests {
 
                 let props = find_text_area(&el).expect("expected text area in InputGroup");
                 assert!(props.a11y_required);
+            },
+        );
+    }
+
+    #[test]
+    fn input_group_parts_apply_invalid_to_textarea_control() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_parts_invalid_textarea",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model).into_element_parts(cx, |_cx| {
+                    vec![InputGroupPart::textarea(
+                        InputGroupTextarea::new()
+                            .aria_invalid(true)
+                            .test_id("textarea"),
+                    )]
+                });
+
+                let props = find_text_area(&el).expect("expected text area in InputGroup");
+                assert_eq!(props.a11y_invalid, Some(fret_core::SemanticsInvalid::True));
             },
         );
     }
@@ -2563,6 +2644,52 @@ mod tests {
                 );
             },
         );
+    }
+
+    #[test]
+    fn input_group_custom_control_exposes_invalid_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+        let bounds = bounds();
+        let model: Model<String> = app.models_mut().insert(String::new());
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "input-group-custom-invalid-semantics",
+            |cx| {
+                let custom = cx
+                    .text_area(TextAreaProps::new(model.clone()))
+                    .a11y_role(SemanticsRole::TextField);
+                vec![
+                    InputGroup::new(model.clone())
+                        .custom_textarea(custom)
+                        .aria_invalid(true)
+                        .a11y_label("Custom control")
+                        .control_test_id("invalid-custom-input-group-control")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("invalid-custom-input-group-control"))
+            .expect("input group custom control semantics node");
+        assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
     }
 
     #[test]
@@ -3045,7 +3172,7 @@ mod tests {
         use std::rc::Rc;
         use std::time::Duration;
 
-        use fret_core::{Event, FrameId, KeyCode, Rect, Size};
+        use fret_core::{FrameId, Rect, Size};
         use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 
         let window = AppWindowId::default();
@@ -3121,26 +3248,18 @@ mod tests {
             "expected ring alpha to start at 0, got {a0}"
         );
 
-        // Focus the inner control and enable focus-visible via a navigation key.
+        // Pointer focus should already start the border/ring transition, even before
+        // `focus-visible` is enabled.
         let focusable = ui
             .first_focusable_descendant_including_declarative(&mut app, window, root)
             .expect("focusable input group control");
         ui.set_focus(Some(focusable));
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::KeyDown {
-                key: KeyCode::Tab,
-                modifiers: Modifiers::default(),
-                repeat: false,
-            },
-        );
         assert!(
-            fret_ui::focus_visible::is_focus_visible(&mut app, Some(window)),
-            "sanity: focus-visible should be enabled after navigation key"
+            !fret_ui::focus_visible::is_focus_visible(&mut app, Some(window)),
+            "sanity: pointer focus should not force focus-visible"
         );
 
-        // Frame 2: ring should be in-between (not snapped).
+        // Frame 2: ring should be in-between (not snapped) even without focus-visible.
         app.set_frame_id(FrameId(2));
         let _ = render_frame(
             &mut ui,
@@ -3153,9 +3272,14 @@ mod tests {
             always_paint_out.clone(),
         );
         let a1 = ring_alpha_out.get().expect("a1");
+        let always_paint_focus = always_paint_out.get().expect("always_paint_focus");
         assert!(
             a1 > 0.0,
             "expected ring alpha to start animating in, got {a1}"
+        );
+        assert!(
+            always_paint_focus,
+            "expected focused input group to keep painting the ring while active"
         );
 
         // Advance frames until the default 150ms transition settles.

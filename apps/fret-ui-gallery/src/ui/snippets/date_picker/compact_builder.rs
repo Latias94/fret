@@ -14,6 +14,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     shadcn::DatePicker::new(open, month, selected)
         .placeholder("Pick a date")
+        .required(true)
         .test_id_prefix("ui-gallery-date-picker-compact-builder")
         .refine_layout(LayoutRefinement::default().w_px(Px(280.0)))
         .into_element(cx)

@@ -19,7 +19,10 @@ use fret_ui_kit::{WidgetStateProperty, ui};
 use time::{Date, Duration, OffsetDateTime, Weekday};
 
 use crate::bool_model::IntoBoolModel;
-use crate::button::{Button, ButtonSize, ButtonStyle, ButtonVariant, button_text_style};
+use crate::button::{
+    Button, ButtonSize, ButtonStyle, ButtonVariant, button_text_style,
+    outline_trigger_invalid_style,
+};
 use crate::calendar::Calendar;
 use crate::calendar_month_model::IntoCalendarMonthModel;
 use crate::optional_date_model::IntoOptionalDateModel;
@@ -42,6 +45,7 @@ pub struct DatePickerWithPresets {
     placeholder: Arc<str>,
     today_override: Option<Date>,
     required: bool,
+    aria_invalid: bool,
     disabled: bool,
     show_outside_days: bool,
     disable_outside_days: bool,
@@ -62,6 +66,7 @@ impl std::fmt::Debug for DatePickerWithPresets {
             .field("placeholder", &self.placeholder)
             .field("today_override", &self.today_override)
             .field("required", &self.required)
+            .field("aria_invalid", &self.aria_invalid)
             .field("disabled", &self.disabled)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
@@ -87,6 +92,7 @@ impl DatePickerWithPresets {
             placeholder: Arc::from("Pick a date"),
             today_override: None,
             required: false,
+            aria_invalid: false,
             disabled: false,
             show_outside_days: true,
             disable_outside_days: false,
@@ -146,6 +152,11 @@ impl DatePickerWithPresets {
         self
     }
 
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -202,6 +213,7 @@ impl DatePickerWithPresets {
             let open_trigger = open.clone();
             let close_on_select_open = self.close_on_select.then(|| open.clone());
             let required = self.required;
+            let aria_invalid = self.aria_invalid;
             let initial_focus_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
             let trigger_test_id = test_id_prefix
@@ -289,14 +301,23 @@ impl DatePickerWithPresets {
                                     .foreground(WidgetStateProperty::new(Some(muted_fg))),
                             );
                         }
+                        if aria_invalid {
+                            button = button.style(outline_trigger_invalid_style(&theme));
+                        }
                         if let Some(test_id) = trigger_test_id.clone() {
                             button = button.test_id(test_id);
                         }
 
                         let mut trigger = button.into_element(cx);
-                        if required {
-                            trigger = trigger
-                                .attach_semantics(SemanticsDecoration::default().required(true));
+                        if required || aria_invalid {
+                            let mut decoration = SemanticsDecoration::default();
+                            if required {
+                                decoration = decoration.required(true);
+                            }
+                            if aria_invalid {
+                                decoration = decoration.invalid(fret_core::SemanticsInvalid::True);
+                            }
+                            trigger = trigger.attach_semantics(decoration);
                         }
                         trigger
                     },
@@ -787,5 +808,62 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("required-date-picker-with-presets-trigger"))
             .expect("date picker with presets trigger semantics");
         assert!(node.flags.required);
+    }
+
+    #[test]
+    fn date_picker_with_presets_aria_invalid_exposes_invalid_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(480.0), Px(260.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::March));
+        let selected = app.models_mut().insert(None::<Date>);
+
+        app.set_frame_id(FrameId(1));
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        OverlayController::begin_frame(&mut app, window);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "date-picker-with-presets-invalid-semantics",
+            |cx| {
+                vec![
+                    DatePickerWithPresets::new(open.clone(), month.clone(), selected.clone())
+                        .aria_invalid(true)
+                        .test_id_prefix("invalid-date-picker-with-presets")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("invalid-date-picker-with-presets-trigger"))
+            .expect("date picker with presets trigger semantics");
+        assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
     }
 }
