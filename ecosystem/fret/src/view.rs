@@ -1574,6 +1574,26 @@ fn action_listener(f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnA
     Arc::new(move |host, action_cx, _reason| f(host, action_cx))
 }
 
+#[cfg(debug_assertions)]
+#[derive(Default)]
+struct UseStateRenderPassDiagnostics {
+    last_render_pass_id: u64,
+    calls_in_render_pass: u32,
+}
+
+#[cfg(debug_assertions)]
+fn note_use_state_call_in_render_pass(
+    diagnostics: &mut UseStateRenderPassDiagnostics,
+    render_pass_id: u64,
+) -> bool {
+    if diagnostics.last_render_pass_id != render_pass_id {
+        diagnostics.last_render_pass_id = render_pass_id;
+        diagnostics.calls_in_render_pass = 0;
+    }
+    diagnostics.calls_in_render_pass = diagnostics.calls_in_render_pass.saturating_add(1);
+    diagnostics.calls_in_render_pass == 2
+}
+
 #[derive(Default)]
 struct UiCxActionHooksFrameSlot {
     frame_id: Option<fret_runtime::FrameId>,
@@ -2317,9 +2337,7 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
             struct UseStateSlot<T> {
                 model: Option<Model<T>>,
                 #[cfg(debug_assertions)]
-                last_frame_id: u64,
-                #[cfg(debug_assertions)]
-                calls_in_frame: u32,
+                diagnostics: UseStateRenderPassDiagnostics,
             }
 
             impl<T> Default for UseStateSlot<T> {
@@ -2327,25 +2345,18 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
                     Self {
                         model: None,
                         #[cfg(debug_assertions)]
-                        last_frame_id: 0,
-                        #[cfg(debug_assertions)]
-                        calls_in_frame: 0,
+                        diagnostics: UseStateRenderPassDiagnostics::default(),
                     }
                 }
             }
 
             #[cfg(debug_assertions)]
             {
-                let frame_id = cx.frame_id.0;
+                let render_pass_id = cx.render_pass_id();
                 cx.root_state(UseStateSlot::<T>::default, |slot| {
-                    if slot.last_frame_id != frame_id {
-                        slot.last_frame_id = frame_id;
-                        slot.calls_in_frame = 0;
-                    }
-                    slot.calls_in_frame = slot.calls_in_frame.saturating_add(1);
-                    if slot.calls_in_frame == 2 {
+                    if note_use_state_call_in_render_pass(&mut slot.diagnostics, render_pass_id) {
                         eprintln!(
-                            "use_state called multiple times per frame at the same callsite ({}:{}:{}); wrap in `cx.keyed(...)` to avoid state collisions",
+                            "use_state called multiple times in the same render pass at the same callsite ({}:{}:{}); wrap in `cx.keyed(...)` to avoid state collisions",
                             callsite.file(),
                             callsite.line(),
                             callsite.column()
@@ -2370,6 +2381,7 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
         })
     }
 
+    #[track_caller]
     fn local_with<T>(&mut self, init: impl FnOnce() -> T) -> LocalState<T>
     where
         T: Any,
@@ -2576,9 +2588,11 @@ mod tests {
     use super::{
         AppActivateExt, AppActivateSurface, AppUiRenderRootState, LocalActionCapture, LocalState,
         LocalStateTxn, OnActivate, UiCxActionsExt as _, View, ViewWindowState, action_listener,
-        dispatch_action_listener, dispatch_payload_action_listener, render_root_with_app_ui,
-        view_init_window, view_view,
+        dispatch_action_listener, dispatch_payload_action_listener,
+        note_use_state_call_in_render_pass, render_root_with_app_ui, view_init_window, view_view,
     };
+    #[cfg(debug_assertions)]
+    use super::UseStateRenderPassDiagnostics;
     use std::any::Any;
     use std::sync::{
         Arc,
@@ -3353,6 +3367,27 @@ mod tests {
             "notify should force the cached manual AppUi root to rerender on the next frame"
         );
         assert_eq!(st.last_seen_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn use_state_repeated_call_diagnostics_reset_between_render_passes() {
+        let mut diagnostics = UseStateRenderPassDiagnostics::default();
+
+        assert!(!note_use_state_call_in_render_pass(&mut diagnostics, 11));
+        assert!(note_use_state_call_in_render_pass(&mut diagnostics, 11));
+        assert!(!note_use_state_call_in_render_pass(&mut diagnostics, 12));
+        assert!(note_use_state_call_in_render_pass(&mut diagnostics, 12));
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn use_state_repeated_call_diagnostics_only_warn_on_second_call_in_one_pass() {
+        let mut diagnostics = UseStateRenderPassDiagnostics::default();
+
+        assert!(!note_use_state_call_in_render_pass(&mut diagnostics, 41));
+        assert!(note_use_state_call_in_render_pass(&mut diagnostics, 41));
+        assert!(!note_use_state_call_in_render_pass(&mut diagnostics, 42));
     }
 
     #[test]

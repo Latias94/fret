@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::panic::Location;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use smallvec::SmallVec;
@@ -59,6 +60,7 @@ pub struct ElementContext<'a, H: UiHost> {
     pub window: AppWindowId,
     pub frame_id: FrameId,
     pub bounds: Rect,
+    render_pass_id: u64,
     window_state: &'a mut WindowElementState,
     stack: Vec<GlobalElementId>,
     callsite_counters: Vec<CallsiteCounters>,
@@ -66,6 +68,12 @@ pub struct ElementContext<'a, H: UiHost> {
 }
 
 type CallsiteCounters = SmallVec<[(u64, u32); 16]>;
+
+static NEXT_RENDER_PASS_ID: AtomicU64 = AtomicU64::new(1);
+
+fn next_render_pass_id() -> u64 {
+    NEXT_RENDER_PASS_ID.fetch_add(1, Ordering::Relaxed)
+}
 
 #[derive(Debug)]
 struct ProvidedState<T> {
@@ -139,6 +147,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             window,
             frame_id,
             bounds,
+            render_pass_id: next_render_pass_id(),
             window_state,
             stack: vec![root],
             callsite_counters: vec![CallsiteCounters::new()],
@@ -184,11 +193,17 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             window,
             frame_id,
             bounds,
+            render_pass_id: next_render_pass_id(),
             window_state,
             stack: vec![root],
             callsite_counters: vec![CallsiteCounters::new()],
             view_cache_should_reuse: None,
         }
+    }
+
+    #[doc(hidden)]
+    pub fn render_pass_id(&self) -> u64 {
+        self.render_pass_id
     }
 
     pub fn root_id(&self) -> GlobalElementId {
