@@ -1,11 +1,11 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Point, Px, Rect, Size};
 use fret_runtime::ModelsHost as _;
+use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::Invalidation;
 use fret_ui::UiTree;
-use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
 use crate::core::{Graph, GraphId, Symbol, SymbolId};
 use crate::ops::{GraphOp, GraphTransaction};
@@ -15,7 +15,7 @@ use crate::ui::{
     SymbolRenameOverlay,
 };
 
-use super::{NullServices, TestUiHostImpl, insert_graph_view};
+use super::{insert_graph_view, NullServices, TestUiHostImpl};
 
 #[derive(Clone)]
 struct PointerDownCounter {

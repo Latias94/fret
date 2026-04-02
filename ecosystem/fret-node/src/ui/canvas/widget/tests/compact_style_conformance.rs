@@ -7,8 +7,8 @@ use crate::core::CanvasPoint;
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_size,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size, NullServices,
+    TestUiHostImpl,
 };
 
 fn paint_once(

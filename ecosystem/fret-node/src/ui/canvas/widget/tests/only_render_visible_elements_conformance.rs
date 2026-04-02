@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use fret_core::{AppWindowId, NodeId as UiNodeId, Point, Px, Rect, Scene, Size, Transform2D};
 use fret_ui::retained_bridge::Widget as _;
@@ -7,12 +7,12 @@ use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Graph, PortId};
 
-use crate::ui::NodeGraphCanvas;
 use crate::ui::presenter::NodeGraphPresenter;
+use crate::ui::NodeGraphCanvas;
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_size,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size, NullServices,
+    TestUiHostImpl,
 };
 
 struct CountingPresenter {

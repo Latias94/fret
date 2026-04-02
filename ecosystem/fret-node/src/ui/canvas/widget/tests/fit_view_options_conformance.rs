@@ -5,7 +5,7 @@ use crate::core::CanvasPoint;
 use crate::ui::canvas::widget::view_queue::{NodeGraphViewQueue, NodeGraphViewQueueFitViewOptions};
 
 use super::prelude::NodeGraphCanvas;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
+use super::{insert_view, make_test_graph_two_nodes_with_size, TestUiHostImpl};
 
 #[test]
 fn fit_view_options_min_zoom_clamps() {

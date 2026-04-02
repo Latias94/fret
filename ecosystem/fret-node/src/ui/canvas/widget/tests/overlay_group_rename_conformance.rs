@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, Point, PointerEvent, PointerType, Px,
@@ -19,7 +19,7 @@ use crate::ui::{
     NodeGraphOverlayState, NodeGraphStyle,
 };
 
-use super::{NullServices, TestUiHostImpl, insert_graph_view};
+use super::{insert_graph_view, NullServices, TestUiHostImpl};
 
 #[derive(Clone)]
 struct PointerDownCounter {

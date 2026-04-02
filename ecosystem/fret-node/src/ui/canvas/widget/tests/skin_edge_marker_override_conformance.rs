@@ -5,13 +5,13 @@ use fret_ui::{Invalidation, UiTree};
 use std::sync::Arc;
 
 use crate::core::{Edge, EdgeId, EdgeKind, Graph};
-use crate::ui::NodeGraphCanvas;
 use crate::ui::edge_types::NodeGraphEdgeTypes;
 use crate::ui::presenter::EdgeMarker;
 use crate::ui::skin::{EdgeChromeHint, NodeGraphSkin};
+use crate::ui::NodeGraphCanvas;
 
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports, TestUiHostImpl,
 };
 
 #[derive(Default)]

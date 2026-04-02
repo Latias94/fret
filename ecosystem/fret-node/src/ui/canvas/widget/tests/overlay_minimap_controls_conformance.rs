@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px,
@@ -10,8 +10,8 @@ use fret_runtime::{
     BindingV1, CommandId, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService,
     PlatformCapabilities,
 };
-use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+use fret_ui::UiTree;
 
 use crate::core::{Graph, GraphId};
 use crate::io::NodeGraphViewState;
@@ -23,7 +23,7 @@ use crate::ui::{
     NodeGraphMiniMapOverlay, NodeGraphStyle,
 };
 
-use super::{NullServices, TestUiHostImpl, insert_graph_view, insert_view};
+use super::{insert_graph_view, insert_view, NullServices, TestUiHostImpl};
 
 #[derive(Clone)]
 struct PointerDownCounter {
@@ -268,8 +268,8 @@ fn controls_overlay_button_click_requests_focus_to_canvas_node() {
 }
 
 #[test]
-fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_returns_focus_to_canvas()
- {
+fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_returns_focus_to_canvas(
+) {
     let mut host = TestUiHostImpl::default();
     let mut services = NullServices::default();
     let mut ui = UiTree::<TestUiHostImpl>::default();

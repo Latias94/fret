@@ -7,8 +7,8 @@ use crate::ui::NodeGraphCanvas;
 
 use super::prelude::{cubic_bezier, wire_ctrl_points};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_view,
-    make_test_graph_two_nodes_with_ports_spaced_x,
+    event_cx, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x, NullServices, TestUiHostImpl,
 };
 
 fn bounds() -> Rect {
@@ -52,12 +52,13 @@ fn double_click_edge_inserts_reroute_when_enabled() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_double_click = true;
-        s.interaction.reroute_on_edge_double_click = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_double_click = true;
+        state.interaction.reroute_on_edge_double_click = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas =
+        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
     let mut cx = event_cx(
@@ -84,14 +85,12 @@ fn double_click_edge_inserts_reroute_when_enabled() {
     let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
     assert_eq!(nodes_len, 3);
     assert_eq!(edges_len, 2);
-    assert!(
-        graph
-            .read_ref(cx.app, |g| g
-                .nodes
-                .values()
-                .any(|n| n.kind.0 == crate::REROUTE_KIND))
-            .unwrap_or(false)
-    );
+    assert!(graph
+        .read_ref(cx.app, |g| g
+            .nodes
+            .values()
+            .any(|n| n.kind.0 == crate::REROUTE_KIND))
+        .unwrap_or(false));
 
     let after = canvas.sync_view_state(cx.app);
     assert_eq!(after.selected_edges.len(), 0);
@@ -180,12 +179,13 @@ fn alt_double_click_edge_prefers_picker_over_reroute_when_both_enabled() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_double_click = true;
-        s.interaction.reroute_on_edge_double_click = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_double_click = true;
+        state.interaction.reroute_on_edge_double_click = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas =
+        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
     let mut cx = event_cx(
@@ -251,11 +251,12 @@ fn alt_drag_edge_opens_insert_node_picker_when_enabled() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edge_insert_on_alt_drag = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.edge_insert_on_alt_drag = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas =
+        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
     let mut cx = event_cx(

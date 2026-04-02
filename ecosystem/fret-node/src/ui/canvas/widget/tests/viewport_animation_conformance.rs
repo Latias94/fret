@@ -5,8 +5,8 @@ use crate::core::CanvasPoint;
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    NullServices, event_cx, insert_editor_config_with, make_host_graph_view,
-    make_test_graph_two_nodes,
+    event_cx, insert_editor_config_with, make_host_graph_view, make_test_graph_two_nodes,
+    NullServices,
 };
 
 #[test]

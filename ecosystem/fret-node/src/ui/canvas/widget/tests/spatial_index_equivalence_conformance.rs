@@ -6,7 +6,10 @@ use crate::core::{Edge, EdgeId, EdgeKind, Graph, PortId};
 use crate::ui::canvas::geometry::CanvasGeometry;
 
 use super::prelude::*;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports_spaced_x,
+    TestUiHostImpl,
+};
 
 fn hit_port_slow(geom: &CanvasGeometry, pos: Point) -> Option<PortId> {
     let mut best: Option<(PortId, u32)> = None;
@@ -237,12 +240,13 @@ fn spatial_index_hit_edge_matches_slow_scan() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edge_interaction_width = 24.0;
-        s.interaction.edges_reconnectable = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.edge_interaction_width = 24.0;
+        state.interaction.edges_reconnectable = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas =
+        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, index) = canvas.canvas_derived(&host, &snapshot);
 
@@ -305,11 +309,12 @@ fn spatial_index_edge_focus_anchor_hit_testing_matches_slow_scan() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edges_reconnectable = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.edges_reconnectable = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas =
+        NodeGraphCanvas::new(graph.clone(), view.clone()).with_editor_config_model(editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, index) = canvas.canvas_derived(&host, &snapshot);
 

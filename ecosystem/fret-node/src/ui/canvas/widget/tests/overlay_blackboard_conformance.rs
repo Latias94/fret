@@ -1,17 +1,17 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use fret_core::{
     AppWindowId, Event, Modifiers, MouseButton, Point, PointerEvent, PointerType, Px, Rect, Size,
 };
 use fret_runtime::ModelsHost as _;
-use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+use fret_ui::UiTree;
 
+use crate::core::{symbol_ref_node_data, SYMBOL_REF_NODE_KIND};
 use crate::core::{
     CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey, Symbol, SymbolId,
 };
-use crate::core::{SYMBOL_REF_NODE_KIND, symbol_ref_node_data};
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::runtime::store::NodeGraphStore;
@@ -21,7 +21,7 @@ use crate::ui::{
     NodeGraphOverlayState, NodeGraphStyle,
 };
 
-use super::{NullServices, TestUiHostImpl, insert_graph_view};
+use super::{insert_graph_view, NullServices, TestUiHostImpl};
 
 #[derive(Clone)]
 struct PointerDownCounter {

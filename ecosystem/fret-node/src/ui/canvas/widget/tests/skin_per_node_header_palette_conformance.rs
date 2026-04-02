@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use fret_core::{Color, Corners, DrawOrder, Point, Px, Rect, Scene, SceneOp, Size, Transform2D};
 use fret_ui::retained_bridge::Widget as _;
@@ -9,7 +9,7 @@ use crate::core::NodeKindKey;
 use crate::ui::{NodeChromeHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle};
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes, NullServices, TestUiHostImpl,
 };
 
 fn paint_once(
@@ -194,14 +194,10 @@ fn per_node_header_palette_draws_distinct_header_quads() {
         2,
         "expected one header quad per node with header_background hint"
     );
-    assert!(
-        headers
-            .iter()
-            .any(|(o, c)| *o == rect_a.origin && (c.b - 0.95).abs() < 1.0e-3)
-    );
-    assert!(
-        headers
-            .iter()
-            .any(|(o, c)| *o == rect_b.origin && (c.g - 0.75).abs() < 1.0e-3)
-    );
+    assert!(headers
+        .iter()
+        .any(|(o, c)| *o == rect_a.origin && (c.b - 0.95).abs() < 1.0e-3));
+    assert!(headers
+        .iter()
+        .any(|(o, c)| *o == rect_b.origin && (c.g - 0.75).abs() < 1.0e-3));
 }

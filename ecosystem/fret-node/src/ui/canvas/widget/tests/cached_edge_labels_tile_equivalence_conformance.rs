@@ -4,14 +4,14 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::ui::NodeGraphCanvas;
 use crate::ui::edge_types::{EdgeCustomPath, EdgePathInput, NodeGraphEdgeTypes};
 use crate::ui::presenter::EdgeRenderHint;
 use crate::ui::presenter::{EdgeMarker, EdgeRouteKind, NodeGraphPresenter};
 use crate::ui::style::NodeGraphStyle;
+use crate::ui::NodeGraphCanvas;
 
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports, TestUiHostImpl,
 };
 
 use std::sync::Arc;

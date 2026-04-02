@@ -115,11 +115,10 @@ mod viewport_animation_conformance;
 mod z_order_conformance;
 
 use harness::{
-    NullServices, TestUiHostImpl, command_cx, event_cx, insert_editor_config,
-    insert_editor_config_with, insert_graph_view, insert_view, make_host_graph_view,
-    make_test_graph_two_nodes, make_test_graph_two_nodes_with_ports,
-    make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
-    read_node_pos,
+    command_cx, event_cx, insert_editor_config, insert_editor_config_with, insert_graph_view,
+    insert_view, make_host_graph_view, make_test_graph_two_nodes,
+    make_test_graph_two_nodes_with_ports, make_test_graph_two_nodes_with_ports_spaced_x,
+    make_test_graph_two_nodes_with_size, read_node_pos, NullServices, TestUiHostImpl,
 };
 
 use prelude::{NodeDrag, NodeGraphCanvas, ViewSnapshot, WireDrag, WireDragKind};
@@ -322,14 +321,13 @@ fn pan_activation_key_code_must_match_to_enable_space_to_pan() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.space_to_pan = true;
-        s.interaction.pan_activation_key_code =
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.space_to_pan = true;
+        state.interaction.pan_activation_key_code =
             Some(crate::io::NodeGraphKeyCode(fret_core::KeyCode::KeyP));
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -384,13 +382,12 @@ fn pan_activation_key_code_none_disables_space_to_pan_activation() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.space_to_pan = true;
-        s.interaction.pan_activation_key_code = None;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.space_to_pan = true;
+        state.interaction.pan_activation_key_code = None;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -425,14 +422,13 @@ fn pan_on_scroll_mode_horizontal_ignores_vertical_wheel_delta() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.pan_on_scroll = true;
-        s.interaction.pan_on_scroll_speed = 1.0;
-        s.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Horizontal;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.pan_on_scroll = true;
+        state.interaction.pan_on_scroll_speed = 1.0;
+        state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Horizontal;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -480,14 +476,13 @@ fn pan_on_scroll_shift_maps_vertical_wheel_to_horizontal_on_windows() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.pan_on_scroll = true;
-        s.interaction.pan_on_scroll_speed = 1.0;
-        s.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.pan_on_scroll = true;
+        state.interaction.pan_on_scroll_speed = 1.0;
+        state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -526,16 +521,15 @@ fn space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.pan_on_scroll = false;
-        s.interaction.pan_on_scroll_speed = 1.0;
-        s.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
-        s.interaction.zoom_on_scroll = false;
-        s.interaction.space_to_pan = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.pan_on_scroll = false;
+        state.interaction.pan_on_scroll_speed = 1.0;
+        state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+        state.interaction.zoom_on_scroll = false;
+        state.interaction.space_to_pan = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -592,13 +586,12 @@ fn pinch_gesture_zooms_in_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_pinch = true;
-        s.interaction.zoom_on_pinch_speed = 1.0;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_pinch = true;
+        state.interaction.zoom_on_pinch_speed = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -639,12 +632,11 @@ fn pinch_gesture_respects_toggle() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_pinch = false;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_pinch = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -679,14 +671,13 @@ fn wheel_zoom_zooms_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_scroll = true;
-        s.interaction.zoom_on_scroll_speed = 1.0;
-        s.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_scroll = true;
+        state.interaction.zoom_on_scroll_speed = 1.0;
+        state.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -786,13 +777,12 @@ fn disable_keyboard_a11y_does_not_block_delete_shortcut() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.disable_keyboard_a11y = true;
-        s.interaction.delete_key = crate::io::NodeGraphDeleteKey::BackspaceOrDelete;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.disable_keyboard_a11y = true;
+        state.interaction.delete_key = crate::io::NodeGraphDeleteKey::BackspaceOrDelete;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -833,12 +823,11 @@ fn disable_keyboard_a11y_blocks_tab_focus_traversal() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.disable_keyboard_a11y = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.disable_keyboard_a11y = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -875,12 +864,11 @@ fn double_click_background_zooms_in_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_double_click = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_double_click = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -924,12 +912,11 @@ fn shift_double_click_background_zooms_out_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_double_click = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_double_click = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -1071,19 +1058,15 @@ fn internal_drag_drop_candidate_on_edge_splits_edge() {
     let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
     assert_eq!(nodes_len, 3);
     assert_eq!(edges_len, 2);
-    assert!(
-        graph
-            .read_ref(cx.app, |g| g.edges.contains_key(&edge_id))
-            .unwrap_or(false)
-    );
-    assert!(
-        graph
-            .read_ref(cx.app, |g| g
-                .nodes
-                .values()
-                .any(|n| n.kind == template_kind))
-            .unwrap_or(false)
-    );
+    assert!(graph
+        .read_ref(cx.app, |g| g.edges.contains_key(&edge_id))
+        .unwrap_or(false));
+    assert!(graph
+        .read_ref(cx.app, |g| g
+            .nodes
+            .values()
+            .any(|n| n.kind == template_kind))
+        .unwrap_or(false));
 
     let after = canvas.sync_view_state(cx.app);
     assert_eq!(after.selected_nodes.len(), 1);
@@ -2112,20 +2095,26 @@ fn nudge_multi_selection_respects_node_extent_by_selection_bounds() {
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+        .with_editor_config_model(editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a, b];
-        s.interaction.node_extent = Some(CanvasRect {
-            origin: CanvasPoint { x: 0.0, y: 0.0 },
-            size: CanvasSize {
-                width: 50.0,
-                height: 100.0,
-            },
-        });
     })
     .unwrap();
+    editor_config
+        .update(&mut host, |state, _cx| {
+            state.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 50.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
 
     let mut services = NullServices::default();
     let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
@@ -2323,17 +2312,23 @@ fn select_all_selects_nodes_groups_and_edges_and_respects_edge_selectable() {
 
     let (graph, view) = insert_graph_view(&mut host, graph);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let mut canvas =
+        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
-        s.interaction.edges_selectable = true;
         s.selected_nodes.clear();
         s.selected_edges.clear();
         s.selected_groups.clear();
     })
     .unwrap();
+    editor_config
+        .update(&mut host, |state, _cx| {
+            state.interaction.elements_selectable = true;
+            state.interaction.edges_selectable = true;
+        })
+        .unwrap();
 
     canvas.interaction.focused_edge = Some(e_ok);
     canvas.interaction.focused_node = Some(a);
@@ -2383,16 +2378,22 @@ fn delete_selection_respects_node_deletable_and_keeps_undeletable_selected() {
         .deletable = Some(false);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+        .with_editor_config_model(editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a, b];
         s.selected_edges.clear();
         s.selected_groups.clear();
-        s.interaction.nodes_deletable = true;
     })
     .unwrap();
+    editor_config
+        .update(&mut host, |state, _cx| {
+            state.interaction.nodes_deletable = true;
+        })
+        .unwrap();
 
     let mut services = NullServices::default();
     let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
@@ -2400,16 +2401,12 @@ fn delete_selection_respects_node_deletable_and_keeps_undeletable_selected() {
 
     assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_DELETE_SELECTION)));
 
-    assert!(
-        graph
-            .read_ref(&mut host, |g| g.nodes.contains_key(&a))
-            .unwrap_or(false)
-    );
-    assert!(
-        !graph
-            .read_ref(&mut host, |g| g.nodes.contains_key(&b))
-            .unwrap_or(true)
-    );
+    assert!(graph
+        .read_ref(&mut host, |g| g.nodes.contains_key(&a))
+        .unwrap_or(false));
+    assert!(!graph
+        .read_ref(&mut host, |g| g.nodes.contains_key(&b))
+        .unwrap_or(true));
 
     let selected_nodes = view
         .read_ref(&host, |s| s.selected_nodes.clone())
@@ -2438,16 +2435,22 @@ fn delete_selection_respects_edge_deletable_and_keeps_undeletable_selected() {
 
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+        .with_editor_config_model(editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
         s.selected_nodes.clear();
         s.selected_groups.clear();
         s.selected_edges = vec![edge];
-        s.interaction.edges_deletable = true;
     })
     .unwrap();
+    editor_config
+        .update(&mut host, |state, _cx| {
+            state.interaction.edges_deletable = true;
+        })
+        .unwrap();
 
     let mut services = NullServices::default();
     let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
@@ -2639,20 +2642,26 @@ fn align_center_x_preserves_alignment_under_node_extent_bounds() {
 
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+        .with_editor_config_model(editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a, b];
-        s.interaction.node_extent = Some(CanvasRect {
-            origin: CanvasPoint { x: 0.0, y: 0.0 },
-            size: CanvasSize {
-                width: 100.0,
-                height: 100.0,
-            },
-        });
     })
     .unwrap();
+    editor_config
+        .update(&mut host, |state, _cx| {
+            state.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
 
     let mut services = NullServices::default();
     let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
@@ -2778,20 +2787,26 @@ fn distribute_x_clamps_nodes_to_node_extent_rect_like_xyflow() {
 
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+        .with_editor_config_model(editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a, b, c, d];
-        s.interaction.node_extent = Some(CanvasRect {
-            origin: CanvasPoint { x: 0.0, y: 0.0 },
-            size: CanvasSize {
-                width: 100.0,
-                height: 100.0,
-            },
-        });
     })
     .unwrap();
+    editor_config
+        .update(&mut host, |state, _cx| {
+            state.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
 
     let mut services = NullServices::default();
     let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
@@ -2908,21 +2923,27 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_like_xyflow()
 
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+        .with_editor_config_model(editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![left, right];
         s.selected_groups = vec![group_id];
-        s.interaction.node_extent = Some(CanvasRect {
-            origin: CanvasPoint { x: 0.0, y: 0.0 },
-            size: CanvasSize {
-                width: 100.0,
-                height: 100.0,
-            },
-        });
     })
     .unwrap();
+    editor_config
+        .update(&mut host, |state, _cx| {
+            state.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
 
     let mut services = NullServices::default();
     let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
@@ -3142,17 +3163,23 @@ fn focus_next_skips_unselectable_nodes() {
 
     let (graph, view) = insert_graph_view(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let mut canvas =
+        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config.clone());
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
         s.draw_order = vec![a, b];
         s.selected_nodes.clear();
         s.selected_edges.clear();
         s.selected_groups.clear();
     })
     .unwrap();
+    editor_config
+        .update(&mut host, |state, _cx| {
+            state.interaction.elements_selectable = true;
+        })
+        .unwrap();
 
     let mut services = NullServices::default();
     let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();

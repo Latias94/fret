@@ -8,7 +8,10 @@ use crate::ui::presenter::PortAnchorHint;
 use crate::ui::{DefaultNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter};
 
 use super::prelude::*;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports_spaced_x,
+    TestUiHostImpl,
+};
 
 fn pick_target_port_at(
     canvas: &mut NodeGraphCanvas,
@@ -50,12 +53,13 @@ fn measured_port_anchor_hint_updates_hit_testing_in_strict_mode() {
     let measured = Arc::new(MeasuredGeometryStore::new());
     let presenter =
         MeasuredNodeGraphPresenter::new(DefaultNodeGraphPresenter::default(), measured.clone());
-
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_presenter(presenter);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.connection_mode = NodeGraphConnectionMode::Strict;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.connection_mode = NodeGraphConnectionMode::Strict;
     });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_editor_config_model(editor_config)
+        .with_presenter(presenter);
 
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, _index0) = canvas.canvas_derived(&host, &snapshot0);

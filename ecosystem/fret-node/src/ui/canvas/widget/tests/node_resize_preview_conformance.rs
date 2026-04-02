@@ -5,7 +5,10 @@ use fret_core::{Point, Px, Rect, Size};
 use crate::core::{CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind};
 
 use super::prelude::NodeGraphCanvas;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports_spaced_x,
+    TestUiHostImpl,
+};
 
 fn assert_near(a: f32, b: f32) {
     assert!((a - b).abs() <= 1.0e-5, "{a} != {b}");
@@ -18,7 +21,9 @@ fn node_resize_preview_cache_reuses_geometry_across_preview_rev_updates() {
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let mut canvas =
+        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config.clone());
 
     // Ensure base geometry + spatial index caches exist (resize previews are keyed off base_index_key).
     let snapshot0 = canvas.sync_view_state(&mut host);
@@ -78,8 +83,8 @@ fn node_resize_preview_cache_reuses_geometry_across_preview_rev_updates() {
     drop(index2);
 
     // If the base spatial index key changes, the preview cache must be invalidated and rebuilt.
-    let _ = view.update(&mut host, |s, _cx| {
-        s.runtime_tuning.spatial_index.edge_aabb_pad_screen_px = 200.0;
+    let _ = editor_config.update(&mut host, |state, _cx| {
+        state.runtime_tuning.spatial_index.edge_aabb_pad_screen_px = 200.0;
     });
     let snapshot1 = canvas.sync_view_state(&mut host);
     let _ = canvas.canvas_derived(&host, &snapshot1);

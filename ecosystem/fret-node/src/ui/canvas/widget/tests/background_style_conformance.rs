@@ -10,7 +10,7 @@ use crate::ui::style::{NodeGraphBackgroundPattern, NodeGraphBackgroundStyle};
 use crate::ui::{NodeGraphCanvas, NodeGraphColorMode, NodeGraphStyle};
 
 use super::{
-    NullServices, TestUiHostImpl, make_host_graph_view, make_test_graph_two_nodes_with_ports,
+    make_host_graph_view, make_test_graph_two_nodes_with_ports, NullServices, TestUiHostImpl,
 };
 
 fn bounds() -> Rect {

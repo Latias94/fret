@@ -6,7 +6,7 @@ use crate::ui::canvas::widget::view_queue::NodeGraphViewQueue;
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size, TestUiHostImpl,
 };
 
 #[test]

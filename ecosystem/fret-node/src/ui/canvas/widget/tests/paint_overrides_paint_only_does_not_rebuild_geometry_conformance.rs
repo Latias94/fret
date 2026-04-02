@@ -9,8 +9,8 @@ use crate::core::{Edge, EdgeId, EdgeKind};
 use crate::ui::{EdgePaintOverrideV1, NodeGraphCanvas, NodeGraphPaintOverridesMap, NodeGraphStyle};
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_ports,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports, NullServices,
+    TestUiHostImpl,
 };
 
 fn bounds() -> Rect {

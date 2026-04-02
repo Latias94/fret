@@ -2,7 +2,7 @@ use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{CanvasPoint, Graph, Node, NodeId, NodeKindKey};
 use crate::io::NodeGraphNodeOrigin;
-use crate::ui::canvas::geometry::{CanvasGeometry, node_size_default_px};
+use crate::ui::canvas::geometry::{node_size_default_px, CanvasGeometry};
 use crate::ui::{DefaultNodeGraphPresenter, NodeGraphStyle};
 
 #[test]

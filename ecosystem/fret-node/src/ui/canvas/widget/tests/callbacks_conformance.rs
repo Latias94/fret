@@ -13,11 +13,11 @@ use crate::runtime::callbacks::{
 };
 
 use super::prelude::{
-    NodeGraphCanvas, cancel, node_drag, pan_zoom, pending_drag, pointer_up, wire_drag,
+    cancel, node_drag, pan_zoom, pending_drag, pointer_up, wire_drag, NodeGraphCanvas,
 };
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_host_graph_view,
-    make_test_graph_two_nodes_with_ports_spaced_x,
+    event_cx, insert_editor_config_with, insert_graph_view, make_host_graph_view,
+    make_test_graph_two_nodes_with_ports_spaced_x, NullServices, TestUiHostImpl,
 };
 use crate::ui::canvas::state::{
     NodeDrag, PendingNodeDrag, PendingNodeSelectAction, PendingWireDrag, WireDrag, WireDragKind,
@@ -111,15 +111,16 @@ fn click_connect_emits_connect_start_and_committed_end() {
     let (graph_value, _a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.connect_on_click = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.connect_on_click = true;
     });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone()).with_callbacks(recorder);
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+        .with_editor_config_model(editor_config)
+        .with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -162,10 +163,9 @@ fn click_connect_emits_connect_start_and_committed_end() {
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s.starts_with("start:")));
     assert!(!got.iter().any(|s| s.starts_with("edge_update_start:")));
-    assert!(
-        got.iter()
-            .any(|s| s.contains("end:Committed") && s.contains("Some"))
-    );
+    assert!(got
+        .iter()
+        .any(|s| s.contains("end:Committed") && s.contains("Some")));
 }
 
 #[test]
@@ -174,15 +174,16 @@ fn escape_cancel_emits_connect_end_canceled() {
     let (graph_value, _a, _a_in, a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.connect_on_click = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.connect_on_click = true;
     });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_editor_config_model(editor_config)
+        .with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -352,14 +353,12 @@ fn reconnect_emits_reconnect_start_and_committed_end() {
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s.starts_with("reconnect_start:")));
     assert!(got.iter().any(|s| s.starts_with("edge_update_start:")));
-    assert!(
-        got.iter()
-            .any(|s| s.contains("reconnect_end:Committed") && s.contains("Some"))
-    );
-    assert!(
-        got.iter()
-            .any(|s| s.contains("edge_update_end:Committed") && s.contains("Some"))
-    );
+    assert!(got
+        .iter()
+        .any(|s| s.contains("reconnect_end:Committed") && s.contains("Some")));
+    assert!(got
+        .iter()
+        .any(|s| s.contains("edge_update_end:Committed") && s.contains("Some")));
 }
 
 #[test]
@@ -502,15 +501,16 @@ fn node_drag_start_and_escape_cancel_emits_node_drag_end_canceled() {
     let (graph_value, a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.nodes_draggable = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.nodes_draggable = true;
     });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_editor_config_model(editor_config)
+        .with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -544,10 +544,9 @@ fn node_drag_start_and_escape_cancel_emits_node_drag_end_canceled() {
 
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s.starts_with("node_drag_start:")));
-    assert!(
-        got.iter()
-            .any(|s| s.contains("node_drag_end") && s.contains("Canceled"))
-    );
+    assert!(got
+        .iter()
+        .any(|s| s.contains("node_drag_end") && s.contains("Canceled")));
 }
 
 #[test]
@@ -556,17 +555,18 @@ fn pan_inertia_emits_move_end_after_inertia_stops() {
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.pan_inertia.enabled = true;
-        s.interaction.pan_inertia.decay_per_s = 200.0;
-        s.interaction.pan_inertia.min_speed = 1.0;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.pan_inertia.enabled = true;
+        state.interaction.pan_inertia.decay_per_s = 200.0;
+        state.interaction.pan_inertia.min_speed = 1.0;
     });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_editor_config_model(editor_config)
+        .with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -686,10 +686,9 @@ fn node_drag_pointer_up_emits_node_drag_end_committed() {
     ));
 
     let got = log.borrow().clone();
-    assert!(
-        got.iter()
-            .any(|s| s.contains("node_drag_end") && s.contains("Committed"))
-    );
+    assert!(got
+        .iter()
+        .any(|s| s.contains("node_drag_end") && s.contains("Committed")));
 }
 
 #[test]
@@ -745,17 +744,18 @@ fn wheel_zoom_emits_move_start_and_debounced_move_end() {
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_scroll = true;
-        s.interaction.zoom_on_scroll_speed = 1.0;
-        s.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_scroll = true;
+        state.interaction.zoom_on_scroll_speed = 1.0;
+        state.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
     });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_editor_config_model(editor_config)
+        .with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -802,16 +802,17 @@ fn pinch_zoom_emits_move_start_and_debounced_move_end() {
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_pinch = true;
-        s.interaction.zoom_on_pinch_speed = 1.0;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_pinch = true;
+        state.interaction.zoom_on_pinch_speed = 1.0;
     });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_editor_config_model(editor_config)
+        .with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -857,18 +858,19 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_scroll = false;
-        s.interaction.pan_on_scroll = true;
-        s.interaction.pan_on_scroll_speed = 1.0;
-        s.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_scroll = false;
+        state.interaction.pan_on_scroll = true;
+        state.interaction.pan_on_scroll_speed = 1.0;
+        state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
     });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_editor_config_model(editor_config)
+        .with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -912,15 +914,16 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
 #[test]
 fn double_click_background_zoom_emits_move_start_and_move_end() {
     let (mut host, graph, view) = make_host_graph_view(Graph::default());
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_double_click = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_double_click = true;
     });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_editor_config_model(editor_config)
+        .with_callbacks(recorder);
     let bounds = make_bounds();
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
@@ -950,18 +953,19 @@ fn double_click_background_zoom_emits_move_start_and_move_end() {
 #[test]
 fn wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom() {
     let (mut host, graph, view) = make_host_graph_view(Graph::default());
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_scroll = false;
-        s.interaction.pan_on_scroll = true;
-        s.interaction.pan_on_scroll_speed = 1.0;
-        s.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.zoom_on_scroll = false;
+        state.interaction.pan_on_scroll = true;
+        state.interaction.pan_on_scroll_speed = 1.0;
+        state.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
     });
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_editor_config_model(editor_config.clone())
+        .with_callbacks(recorder);
     let bounds = make_bounds();
     let mut services = NullServices::default();
 
@@ -986,11 +990,11 @@ fn wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom() {
         );
     }
 
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_scroll = true;
-        s.interaction.zoom_on_scroll_speed = 1.0;
-        s.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
-        s.interaction.pan_on_scroll = false;
+    let _ = editor_config.update(&mut host, |state, _cx| {
+        state.interaction.zoom_on_scroll = true;
+        state.interaction.zoom_on_scroll_speed = 1.0;
+        state.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
+        state.interaction.pan_on_scroll = false;
     });
 
     {

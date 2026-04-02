@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports, TestUiHostImpl,
 };
 
 #[test]

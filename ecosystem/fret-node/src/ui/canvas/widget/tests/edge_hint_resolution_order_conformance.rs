@@ -4,15 +4,15 @@ use fret_core::scene::DashPatternV1;
 use fret_core::{Color, Point, Px, Rect, Size};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::ui::NodeGraphStyle;
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::tests::prelude::NodeGraphCanvas;
 use crate::ui::edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 use crate::ui::skin::{NodeGraphSkin, NodeGraphSkinRef};
+use crate::ui::NodeGraphStyle;
 
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports, TestUiHostImpl,
 };
 
 fn assert_close(a: f32, b: f32) {

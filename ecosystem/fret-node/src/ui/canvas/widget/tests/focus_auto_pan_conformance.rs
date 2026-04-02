@@ -9,8 +9,8 @@ use crate::ui::commands::CMD_NODE_GRAPH_FOCUS_NEXT;
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    NullServices, TestUiHostImpl, command_cx, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes,
+    command_cx, insert_editor_config_with, insert_view, make_test_graph_two_nodes, NullServices,
+    TestUiHostImpl,
 };
 
 #[test]

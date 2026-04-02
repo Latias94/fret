@@ -2,12 +2,12 @@ use fret_core::{Point, Px, Rect, Size};
 
 use crate::interaction::NodeGraphConnectionMode;
 
-use super::prelude::NodeGraphCanvas;
 use super::prelude::wire_drag::handle_wire_left_up_with_forced_target;
+use super::prelude::NodeGraphCanvas;
 use super::prelude::{HitTestCtx, HitTestScratch};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_ports_spaced_x,
+    event_cx, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x, NullServices, TestUiHostImpl,
 };
 use crate::ui::canvas::state::{ViewSnapshot, WireDrag, WireDragKind};
 use crate::ui::presenter::NodeGraphPresenter;

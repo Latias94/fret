@@ -4,7 +4,10 @@ use uuid::Uuid;
 use crate::core::{Edge, EdgeId, EdgeKind};
 
 use super::prelude::*;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports_spaced_x,
+    TestUiHostImpl,
+};
 
 fn pan_for_canvas_point_at_window_point(
     canvas_point: Point,
@@ -139,15 +142,16 @@ fn edge_hit_testing_is_screen_px_invariant_under_semantic_zoom() {
             })
         });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_edge_types(edge_types);
-
-    let anchor_window = Point::new(Px(320.0), Px(260.0));
-
     // Ensure edge slop dominates wire width so the threshold is unambiguous.
     let edge_slop_px = 12.0_f32;
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edge_interaction_width = edge_slop_px;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.edge_interaction_width = edge_slop_px;
     });
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_editor_config_model(editor_config)
+        .with_edge_types(edge_types);
+
+    let anchor_window = Point::new(Px(320.0), Px(260.0));
 
     for zoom in [0.5, 1.0, 1.25, 2.0, 4.0] {
         let _ = view.update(&mut host, |s, _cx| {

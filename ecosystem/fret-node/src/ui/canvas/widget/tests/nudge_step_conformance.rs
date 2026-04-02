@@ -2,14 +2,14 @@ use fret_runtime::CommandId;
 use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::{CanvasPoint, CanvasSize};
-use crate::ui::NodeGraphCanvas;
 use crate::ui::commands::{
     CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_NUDGE_UP,
 };
+use crate::ui::NodeGraphCanvas;
 
 use super::{
-    NullServices, TestUiHostImpl, command_cx, insert_editor_config_with, make_host_graph_view,
-    make_test_graph_two_nodes, read_node_pos,
+    command_cx, insert_editor_config_with, make_host_graph_view, make_test_graph_two_nodes,
+    read_node_pos, NullServices, TestUiHostImpl,
 };
 
 #[test]

@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use fret_core::scene::DashPatternV1;
 use fret_core::{Point, Px, Rect, Scene, Size, Transform2D};
@@ -10,8 +10,8 @@ use crate::core::{Edge, EdgeId, EdgeKind};
 use crate::ui::{EdgeRenderHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle};
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_ports,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports, NullServices,
+    TestUiHostImpl,
 };
 
 fn bounds() -> Rect {

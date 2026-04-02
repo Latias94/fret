@@ -1,12 +1,12 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use fret_core::{AppWindowId, Px, Rect};
 use fret_runtime::ModelsHost as _;
-use fret_ui::UiTree;
 use fret_ui::element::SemanticsProps;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::retained_bridge::Widget as _;
+use fret_ui::UiTree;
 
 use crate::core::{CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey};
 use crate::io::NodeGraphViewState;
@@ -16,14 +16,14 @@ use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::controller::NodeGraphController;
 use crate::ui::measured::MeasuredGeometryStore;
 use crate::ui::portal::{
-    NodeGraphPortalCommandHandler, NodeGraphPortalHost, PortalCommandOutcome, PortalTextCommand,
-    portal_submit_text_command,
+    portal_submit_text_command, NodeGraphPortalCommandHandler, NodeGraphPortalHost,
+    PortalCommandOutcome, PortalTextCommand,
 };
 use crate::ui::style::NodeGraphStyle;
 
 use super::{
-    NullServices, TestUiHostImpl, command_cx, insert_graph_view, insert_view,
-    make_test_graph_two_nodes,
+    command_cx, insert_graph_view, insert_view, make_test_graph_two_nodes, NullServices,
+    TestUiHostImpl,
 };
 
 fn bounds() -> Rect {

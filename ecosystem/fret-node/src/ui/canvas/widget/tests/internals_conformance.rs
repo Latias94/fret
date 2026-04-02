@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use fret_core::{NodeId as UiNodeId, Px, Rect, Scene, Size, Transform2D};
 use fret_runtime::ModelId;
+use fret_ui::retained_bridge::Widget as _;
 use fret_ui::Invalidation;
 use fret_ui::UiTree;
-use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::CanvasPoint;
 use crate::ui::internals::NodeGraphInternalsStore;
@@ -13,7 +13,8 @@ use crate::ui::measured::MeasuredGeometryStore;
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    NullServices, TestUiHostImpl, make_host_graph_view, make_test_graph_two_nodes_with_ports,
+    insert_editor_config_with, make_host_graph_view, make_test_graph_two_nodes_with_ports,
+    NullServices, TestUiHostImpl,
 };
 
 fn paint_once(
@@ -307,15 +308,17 @@ fn graph_edit_rebuilds_geometry_and_updates_internals() {
 fn spatial_index_tuning_rebuilds_index_without_rebuilding_geometry() {
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
     let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let editor_config = insert_editor_config_with(&mut host, |_| {});
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+        .with_editor_config_model(editor_config.clone());
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
     let counters1 = canvas.debug_derived_build_counters();
 
-    let _ = view.update(&mut host, |s, _cx| {
-        s.runtime_tuning.spatial_index.edge_aabb_pad_screen_px = 200.0;
+    let _ = editor_config.update(&mut host, |state, _cx| {
+        state.runtime_tuning.spatial_index.edge_aabb_pad_screen_px = 200.0;
     });
     let snapshot2 = canvas.sync_view_state(&mut host);
     let (geom2, index2) = canvas.canvas_derived(&host, &snapshot2);

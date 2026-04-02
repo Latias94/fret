@@ -7,7 +7,7 @@ use fret_ui::{Invalidation, UiTree};
 use crate::ui::{NodeChromeHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, NodeRingHint};
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes, NullServices, TestUiHostImpl,
 };
 
 fn paint_once(

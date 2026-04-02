@@ -13,7 +13,7 @@ use crate::ui::presenter::{InsertNodeCandidate, NodeGraphPresenter};
 use crate::{core::Graph, ops::GraphOp};
 
 use super::prelude::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_test_graph_two_nodes};
+use super::{event_cx, insert_graph_view, make_test_graph_two_nodes, NullServices, TestUiHostImpl};
 
 #[derive(Default)]
 struct BackgroundInsertPresenter;
@@ -151,14 +151,12 @@ fn internal_drag_drop_candidate_off_edge_creates_node() {
     let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
     assert_eq!(nodes_len, 3);
     assert_eq!(edges_len, 0);
-    assert!(
-        graph
-            .read_ref(cx.app, |g| g
-                .nodes
-                .values()
-                .any(|n| n.kind == template_kind))
-            .unwrap_or(false)
-    );
+    assert!(graph
+        .read_ref(cx.app, |g| g
+            .nodes
+            .values()
+            .any(|n| n.kind == template_kind))
+        .unwrap_or(false));
 
     let after = canvas.sync_view_state(cx.app);
     assert_eq!(after.selected_nodes.len(), 1);
@@ -216,12 +214,10 @@ fn internal_drag_drop_reroute_candidate_off_edge_creates_node() {
 
     let nodes_len = graph.read_ref(cx.app, |g| g.nodes.len()).unwrap_or(0);
     assert_eq!(nodes_len, 3);
-    assert!(
-        graph
-            .read_ref(cx.app, |g| g
-                .nodes
-                .values()
-                .any(|n| n.kind.0 == crate::REROUTE_KIND))
-            .unwrap_or(false)
-    );
+    assert!(graph
+        .read_ref(cx.app, |g| g
+            .nodes
+            .values()
+            .any(|n| n.kind.0 == crate::REROUTE_KIND))
+        .unwrap_or(false));
 }

@@ -1,7 +1,10 @@
 use fret_core::{Modifiers, Point, Px, Rect, Size};
 
-use super::prelude::{NodeGraphCanvas, pending_drag, pending_wire_drag};
-use super::{NullServices, event_cx, make_host_graph_view, make_test_graph_two_nodes_with_ports};
+use super::prelude::{pending_drag, pending_wire_drag, NodeGraphCanvas};
+use super::{
+    event_cx, insert_editor_config_with, make_host_graph_view,
+    make_test_graph_two_nodes_with_ports, NullServices,
+};
 use crate::ui::canvas::state::{
     PendingNodeDrag, PendingNodeSelectAction, PendingWireDrag, WireDragKind,
 };
@@ -21,14 +24,17 @@ fn node_drag_threshold_is_zoom_invariant_in_screen_space() {
 
     let threshold_screen = 8.0;
     let eps_screen = 0.1;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.node_drag_threshold = threshold_screen;
+    });
 
     for zoom in [0.5, 2.0] {
         let _ = view.update(&mut host, |s, _cx| {
             s.zoom = zoom;
-            s.interaction.node_drag_threshold = threshold_screen;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+            .with_editor_config_model(editor_config.clone());
         let snapshot = canvas.sync_view_state(&mut host);
         assert!((snapshot.zoom - zoom).abs() <= 1.0e-6);
 
@@ -96,16 +102,19 @@ fn connection_drag_threshold_is_zoom_invariant_in_screen_space() {
 
     let threshold_screen = 8.0;
     let eps_screen = 0.1;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.connection_drag_threshold = threshold_screen;
+        state.interaction.connection_radius = 0.0;
+        state.interaction.edge_interaction_width = 0.0;
+    });
 
     for zoom in [0.5, 2.0] {
         let _ = view.update(&mut host, |s, _cx| {
             s.zoom = zoom;
-            s.interaction.connection_drag_threshold = threshold_screen;
-            s.interaction.connection_radius = 0.0;
-            s.interaction.edge_interaction_width = 0.0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+            .with_editor_config_model(editor_config.clone());
         let snapshot = canvas.sync_view_state(&mut host);
         assert!((snapshot.zoom - zoom).abs() <= 1.0e-6);
 

@@ -7,8 +7,8 @@ use crate::core::{
 
 use crate::rules::EdgeEndpoint;
 
-use super::prelude::{NodeGraphCanvas, edge_drag};
-use super::{NullServices, TestUiHostImpl, event_cx, insert_view};
+use super::prelude::{edge_drag, NodeGraphCanvas};
+use super::{event_cx, insert_editor_config_with, insert_view, NullServices, TestUiHostImpl};
 use crate::ui::canvas::state::{EdgeDrag, WireDragKind};
 
 fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
@@ -126,15 +126,17 @@ fn edge_drag_prefers_from_endpoint_when_port_centers_are_equidistant() {
     let (graph_value, edge, out, inn) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.edges_reconnectable = true;
+        state.interaction.connection_drag_threshold = 1.0;
+        state.interaction.reconnect_radius = 0.0;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.interaction.edges_reconnectable = true;
-        s.interaction.connection_drag_threshold = 1.0;
-        s.interaction.reconnect_radius = 0.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let geom = canvas.canvas_geometry(&host, &snapshot);
@@ -190,18 +192,21 @@ fn edge_reconnect_radius_is_zoom_invariant_in_screen_space() {
     let view = insert_view(&mut host);
 
     let radius_screen = 16.0;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.edges_reconnectable = true;
+        state.interaction.connection_drag_threshold = 1.0;
+        state.interaction.reconnect_radius = radius_screen;
+    });
 
     for zoom in [0.5, 2.0] {
         let _ = view.update(&mut host, |s, _cx| {
             s.zoom = zoom;
-            s.interaction.edges_reconnectable = true;
-            s.interaction.connection_drag_threshold = 1.0;
-            s.interaction.reconnect_radius = radius_screen;
         });
 
         // Inside radius: should start wire-drag.
         {
-            let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+            let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+                .with_editor_config_model(editor_config.clone());
             let snapshot = canvas.sync_view_state(&mut host);
             let geom = canvas.canvas_geometry(&host, &snapshot);
             let from_center = geom.port_center(out).expect("from port center");
@@ -240,7 +245,8 @@ fn edge_reconnect_radius_is_zoom_invariant_in_screen_space() {
 
         // Outside radius: should not start wire-drag, edge_drag stays active.
         {
-            let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+            let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+                .with_editor_config_model(editor_config.clone());
             let snapshot = canvas.sync_view_state(&mut host);
             let geom = canvas.canvas_geometry(&host, &snapshot);
             let from_center = geom.port_center(out).expect("from port center");

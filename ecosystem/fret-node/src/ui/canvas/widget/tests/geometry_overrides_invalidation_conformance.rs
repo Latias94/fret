@@ -8,8 +8,8 @@ use fret_ui::{Invalidation, Theme, UiTree};
 use crate::ui::{NodeGraphCanvas, NodeGraphGeometryOverridesMap, NodeGraphGeometryOverridesRef};
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_ports,
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports, NullServices,
+    TestUiHostImpl,
 };
 
 fn bounds() -> Rect {

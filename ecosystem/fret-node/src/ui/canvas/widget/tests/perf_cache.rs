@@ -1,6 +1,6 @@
 use std::any::TypeId;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use fret_core::{
     AppWindowId, NodeId as UiNodeId, PathCommand, PathConstraints, PathId, PathMetrics, PathStyle,
@@ -8,10 +8,10 @@ use fret_core::{
     TextService, Transform2D,
 };
 use fret_runtime::ModelId;
+use fret_ui::retained_bridge::Widget as _;
 use fret_ui::Invalidation;
 use fret_ui::LayoutOverflowContext;
 use fret_ui::UiTree;
-use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
@@ -20,7 +20,7 @@ use crate::core::{
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, NodeGraphPresenter};
 
 use super::prelude::NodeGraphCanvas;
-use super::{TestUiHostImpl, insert_graph_view, make_host_graph_view};
+use super::{insert_graph_view, make_host_graph_view, TestUiHostImpl};
 
 #[derive(Default)]
 struct CountingServices {

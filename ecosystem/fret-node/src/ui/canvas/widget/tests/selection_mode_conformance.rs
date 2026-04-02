@@ -3,10 +3,10 @@ use fret_core::{Modifiers, Point, Px, Rect, Size};
 use crate::core::CanvasPoint;
 use crate::io::NodeGraphSelectionMode;
 
-use super::prelude::{NodeGraphCanvas, left_click, marquee};
+use super::prelude::{left_click, marquee, NodeGraphCanvas};
 use super::{
-    NullServices, event_cx, insert_editor_config_with, make_host_graph_view,
-    make_test_graph_two_nodes_with_size,
+    event_cx, insert_editor_config_with, make_host_graph_view, make_test_graph_two_nodes_with_size,
+    NullServices,
 };
 use crate::ui::canvas::state::ViewSnapshot;
 

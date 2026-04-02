@@ -7,10 +7,10 @@ use crate::core::{
 };
 use crate::ui::canvas::state::{GroupDrag, GroupResize};
 
-use super::prelude::{NodeGraphCanvas, group_resize};
+use super::prelude::{group_resize, NodeGraphCanvas};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_editor_config, insert_view,
-    make_test_graph_two_nodes_with_ports_spaced_x,
+    event_cx, insert_editor_config, insert_view, make_test_graph_two_nodes_with_ports_spaced_x,
+    NullServices, TestUiHostImpl,
 };
 
 fn assert_near(a: f32, b: f32) {

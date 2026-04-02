@@ -1,7 +1,7 @@
 use fret_core::AppWindowId;
 use fret_runtime::CommandId;
-use fret_ui::UiHost;
 use fret_ui::retained_bridge::Widget as _;
+use fret_ui::UiHost;
 
 use crate::ops::GraphTransaction;
 use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
@@ -13,8 +13,8 @@ use crate::ui::{
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    NullServices, TestUiHostImpl, command_cx, insert_graph_view, make_test_graph_two_nodes,
-    read_node_pos,
+    command_cx, insert_editor_config_with, insert_graph_view, make_test_graph_two_nodes,
+    read_node_pos, NullServices, TestUiHostImpl,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -76,18 +76,21 @@ fn middleware_can_override_select_all_command() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes();
     let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.edges_selectable = true;
+    });
 
     view.update(&mut host, |s, _cx| {
         s.selected_nodes.clear();
         s.selected_edges.clear();
         s.selected_groups.clear();
-        s.interaction.elements_selectable = true;
-        s.interaction.edges_selectable = true;
     })
     .unwrap();
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_middleware(SelectAllOverride { target: a });
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone())
+        .with_editor_config_model(editor_config)
+        .with_middleware(SelectAllOverride { target: a });
     canvas.sync_view_state(&mut host);
 
     let mut services = NullServices::default();

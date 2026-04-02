@@ -4,10 +4,10 @@ use fret_core::{PathCommand, Point, Px};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
 
-use super::prelude::NodeGraphCanvas;
 use super::prelude::path_midpoint_and_normal;
+use super::prelude::NodeGraphCanvas;
 use super::prelude::{HitTestCtx, HitTestScratch};
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{insert_view, make_test_graph_two_nodes_with_ports, TestUiHostImpl};
 
 const BEND_SCREEN_PX: f32 = 2048.0;
 

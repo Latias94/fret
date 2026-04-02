@@ -1,10 +1,12 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::Arc;
 
 use crate::rules::{DiagnosticSeverity, EdgeEndpoint};
 
 use super::prelude::NodeGraphCanvas;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports, TestUiHostImpl,
+};
 
 #[test]
 fn hover_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_index() {
@@ -52,19 +54,22 @@ fn hover_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_index()
 }
 
 #[test]
-fn selection_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_index_when_draw_order_is_constant()
- {
+fn selection_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_index_when_draw_order_is_constant(
+) {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, b, _b_in) = make_test_graph_two_nodes_with_ports();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elevate_nodes_on_select = false;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.draw_order = vec![a, b];
-        s.interaction.elevate_nodes_on_select = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas =
+        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 
