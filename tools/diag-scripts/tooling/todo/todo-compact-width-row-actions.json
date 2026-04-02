@@ -1,0 +1,50 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Todo compact-width row actions",
+    "tags": ["todo_demo", "responsive", "compact_width"],
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 700.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "todo_demo.root" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "todo_demo.row.3" }
+      }
+    },
+    { "type": "capture_bundle", "label": "todo-compact-before-remove" },
+    {
+      "type": "click",
+      "button": "left",
+      "target": { "kind": "test_id", "id": "todo_demo.remove.3" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "todo_demo.row.3" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "todo_demo.row.3" }
+      }
+    },
+    { "type": "capture_bundle", "label": "todo-compact-after-remove" }
+  ]
+}

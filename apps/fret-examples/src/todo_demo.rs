@@ -13,8 +13,12 @@ use fret_core::{
     AttributedText, Color, Corners, DecorationLineStyle, Px, StrikethroughStyle, TextAlign,
     TextPaintStyle, TextSpan,
 };
+use fret_ui::Invalidation;
 use fret_ui::element::{HoverRegionProps, StyledTextProps};
-use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::{
+    ViewportQueryHysteresis, primary_pointer_can_hover, style as decl_style, viewport_tailwind,
+    viewport_width_at_least,
+};
 use fret_ui_kit::{WidgetStateProperty, WidgetStates, typography};
 
 mod act {
@@ -44,6 +48,67 @@ const TEST_ID_FILTER_COMPLETED: &str = "todo_demo.filter.completed";
 const TEST_ID_DONE_PREFIX: &str = "todo_demo.done.";
 const TEST_ID_ROW_PREFIX: &str = "todo_demo.row.";
 const TEST_ID_REMOVE_PREFIX: &str = "todo_demo.remove.";
+const TODO_COMPACT_WIDTH: Px = Px(560.0);
+const TODO_COMPACT_HEIGHT: Px = Px(640.0);
+const TODO_ROOMY_HEIGHT: Px = Px(760.0);
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct TodoResponsiveLayout {
+    page_padding: Space,
+    page_top_padding: Space,
+    section_padding_x: Space,
+    stack_footer: bool,
+    always_show_row_actions: bool,
+    card_max_height: Px,
+    rows_max_height: Px,
+}
+
+impl TodoResponsiveLayout {
+    fn from_viewport(
+        viewport_width: Px,
+        viewport_height: Px,
+        can_hover: bool,
+        wide_breakpoint_active: bool,
+    ) -> Self {
+        let compact_width = viewport_width.0 < TODO_COMPACT_WIDTH.0;
+        let compact_height = viewport_height.0 < TODO_COMPACT_HEIGHT.0;
+        let roomy_height = viewport_height.0 >= TODO_ROOMY_HEIGHT.0;
+
+        let page_padding = if compact_width || compact_height {
+            Space::N3
+        } else {
+            Space::N4
+        };
+        let page_top_padding = if compact_height {
+            Space::N3
+        } else if roomy_height {
+            Space::N8
+        } else {
+            Space::N6
+        };
+        let section_padding_x = if compact_width { Space::N4 } else { Space::N6 };
+        let card_shell_allowance = if compact_height {
+            24.0
+        } else if roomy_height {
+            56.0
+        } else {
+            40.0
+        };
+        let card_max_height = Px((viewport_height.0 - card_shell_allowance).clamp(340.0, 720.0));
+        let rows_reserve = if compact_width { 252.0 } else { 272.0 };
+        let rows_max_height = Px((card_max_height.0 - rows_reserve).clamp(120.0, 420.0));
+
+        Self {
+            page_padding,
+            page_top_padding,
+            section_padding_x,
+            stack_footer: compact_width,
+            always_show_row_actions: !can_hover || !wide_breakpoint_active,
+            card_max_height,
+            rows_max_height,
+        }
+    }
+}
 
 #[derive(Clone)]
 struct TodoRow {
@@ -191,6 +256,19 @@ impl View for TodoDemoView {
         let theme = Theme::global(&*cx.app).snapshot();
         let locals = &self.locals;
         locals.bind_actions(cx);
+        let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
+        let wide_breakpoint_active = viewport_width_at_least(
+            cx,
+            Invalidation::Layout,
+            viewport_tailwind::SM,
+            ViewportQueryHysteresis::default(),
+        );
+        let responsive = TodoResponsiveLayout::from_viewport(
+            viewport.size.width,
+            viewport.size.height,
+            primary_pointer_can_hover(cx, Invalidation::Layout, true),
+            wide_breakpoint_active,
+        );
 
         let todos = locals.todos.layout_value(cx);
         let draft_value = locals.draft.layout_value(cx);
@@ -413,7 +491,7 @@ impl View for TodoDemoView {
                 |row| row.id,
                 |row| {
                     let theme = theme.clone();
-                    todo_row(theme, row)
+                    todo_row(theme, row, responsive.always_show_row_actions)
                 },
             )
         })
@@ -422,7 +500,11 @@ impl View for TodoDemoView {
         .items_stretch();
 
         let rows = shadcn::ScrollArea::new([rows_body.into_element(cx)])
-            .refine_layout(LayoutRefinement::default().w_full().max_h(Px(420.0)))
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .max_h(responsive.rows_max_height),
+            )
             .viewport_test_id(TEST_ID_ROWS)
             .into_element(cx);
 
@@ -477,17 +559,37 @@ impl View for TodoDemoView {
             .refine_layout(footer_pill_layout())
             .test_id(TEST_ID_CLEAR_DONE);
 
-        let footer = ui::h_flex(|cx| {
-            let mut children = vec![filters.into_element(cx)];
-            if has_completed {
-                children.push(clear_done_btn.into_element(cx));
-            }
-            children
-        })
-        .gap(Space::N3)
-        .items_center()
-        .justify_between()
-        .w_full();
+        let footer = if responsive.stack_footer {
+            ui::v_flex(|cx| {
+                let mut children = vec![filters.into_element(cx)];
+                if has_completed {
+                    children.push(
+                        ui::h_flex(|cx| ui::single(cx, clear_done_btn))
+                            .justify_end()
+                            .w_full()
+                            .into_element(cx),
+                    );
+                }
+                children
+            })
+            .gap(Space::N2)
+            .items_stretch()
+            .w_full()
+            .into_element(cx)
+        } else {
+            ui::h_flex(|cx| {
+                let mut children = vec![filters.into_element(cx)];
+                if has_completed {
+                    children.push(clear_done_btn.into_element(cx));
+                }
+                children
+            })
+            .gap(Space::N3)
+            .items_center()
+            .justify_between()
+            .w_full()
+            .into_element(cx)
+        };
 
         let card = ui::container(|cx| {
             ui::single(
@@ -495,18 +597,18 @@ impl View for TodoDemoView {
                 ui::v_flex(|cx| {
                     let mut sections = vec![
                         ui::container(|cx| ui::single(cx, header))
-                            .px(Space::N6)
+                            .px(responsive.section_padding_x)
                             .pt(Space::N6)
                             .pb(Space::N4)
                             .w_full()
                             .into_element(cx),
                         ui::container(|cx| ui::single(cx, input_row))
-                            .px(Space::N6)
+                            .px(responsive.section_padding_x)
                             .pb(Space::N4)
                             .w_full()
                             .into_element(cx),
                         ui::container(|cx| ui::single(cx, rows))
-                            .px(Space::N6)
+                            .px(responsive.section_padding_x)
                             .pb(Space::N2)
                             .w_full()
                             .into_element(cx),
@@ -515,7 +617,7 @@ impl View for TodoDemoView {
                     if total_count > 0 {
                         sections.push(
                             ui::container(|cx| ui::single(cx, footer))
-                                .px(Space::N6)
+                                .px(responsive.section_padding_x)
                                 .py(Space::N3p5)
                                 .bg(ColorRef::Color(footer_bg))
                                 .w_full()
@@ -536,26 +638,32 @@ impl View for TodoDemoView {
         .overflow_hidden()
         .w_full()
         .max_w(Px(448.0))
-        .max_h(Px(720.0))
+        .max_h(responsive.card_max_height)
         .test_id(TEST_ID_ROOT);
 
-        ui::single(cx, todo_page(theme, card))
+        ui::single(cx, todo_page(theme, responsive, card))
     }
 }
 
-fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild {
+fn todo_page(
+    theme: ThemeSnapshot,
+    responsive: TodoResponsiveLayout,
+    content: impl UiChild,
+) -> impl UiChild {
     ui::container(move |cx| {
         ui::single(
             cx,
             ui::v_flex(move |cx| ui::single(cx, content))
                 .w_full()
                 .h_full()
-                .justify_center()
+                .justify_start()
                 .items_center(),
         )
     })
     .bg(ColorRef::Color(theme.color_token("background")))
-    .p(Space::N4)
+    .px(responsive.page_padding)
+    .pt(responsive.page_top_padding)
+    .pb(responsive.page_padding)
     .w_full()
     .h_full()
 }
@@ -585,7 +693,7 @@ fn filter_chip(
     })
 }
 
-fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
+fn todo_row(theme: ThemeSnapshot, row: &TodoRow, always_show_remove_action: bool) -> impl UiChild {
     let row_done = row.done;
     let row_id = row.id;
     let row_text = row.text.clone();
@@ -715,10 +823,13 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
                 )])
                 .test_id(format!("{TEST_ID_REMOVE_PREFIX}{row_id}"));
 
-            let remove = cx.interactivity_gate(true, hovered, move |cx| {
-                vec![cx.opacity(if hovered { 1.0 } else { 0.0 }, move |cx| {
-                    vec![remove_button.into_element(cx)]
-                })]
+            let remove_visible = always_show_remove_action || hovered;
+            let remove = cx.interactivity_gate(true, remove_visible, move |cx| {
+                vec![
+                    cx.opacity(if remove_visible { 1.0 } else { 0.0 }, move |cx| {
+                        vec![remove_button.into_element(cx)]
+                    }),
+                ]
             });
 
             let row = ui::h_flex(|cx| ui::children![cx; leading, remove])
@@ -789,7 +900,8 @@ fn rich_strikethrough(text: &Arc<str>, strike_color: Color) -> AttributedText {
 
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("todo-demo")
-        .window("todo-demo", (640.0, 720.0))
+        .window("todo-demo", (560.0, 660.0))
+        .window_min_size((420.0, 560.0))
         .config_files(false)
         .setup(fret_icons_lucide::app::install)
         .setup(install_demo_theme)
@@ -832,5 +944,35 @@ mod tests {
                 "missing icon: {id}"
             );
         }
+    }
+
+    #[test]
+    fn todo_demo_responsive_layout_prefers_compact_footer_and_inline_actions_on_narrow_width() {
+        let compact = TodoResponsiveLayout::from_viewport(Px(520.0), Px(700.0), true, false);
+
+        assert_eq!(compact.page_padding, Space::N3);
+        assert_eq!(compact.section_padding_x, Space::N4);
+        assert!(compact.stack_footer);
+        assert!(compact.always_show_row_actions);
+    }
+
+    #[test]
+    fn todo_demo_responsive_layout_gives_roomy_shells_more_vertical_headroom() {
+        let compact = TodoResponsiveLayout::from_viewport(Px(720.0), Px(560.0), true, true);
+        let roomy = TodoResponsiveLayout::from_viewport(Px(720.0), Px(820.0), true, true);
+
+        assert_eq!(compact.page_top_padding, Space::N3);
+        assert_eq!(roomy.page_top_padding, Space::N8);
+        assert!(roomy.card_max_height.0 > compact.card_max_height.0);
+        assert!(roomy.rows_max_height.0 > compact.rows_max_height.0);
+        assert!(!roomy.always_show_row_actions);
+    }
+
+    #[test]
+    fn todo_demo_responsive_layout_keeps_inline_row_actions_for_non_hover_pointers() {
+        let touch = TodoResponsiveLayout::from_viewport(Px(820.0), Px(760.0), false, true);
+
+        assert!(touch.always_show_row_actions);
+        assert!(!touch.stack_footer);
     }
 }

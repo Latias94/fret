@@ -635,7 +635,16 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn todo_demo_prefers_default_app_surface() {
-        assert_uses_default_app_surface(TODO_DEMO);
+        assert!(TODO_DEMO.contains("use fret::app::prelude::*;"));
+        assert!(!TODO_DEMO.contains("advanced::prelude::*"));
+        assert!(!TODO_DEMO.contains("KernelApp"));
+        assert!(!TODO_DEMO.contains("AppWindowId"));
+        assert!(TODO_DEMO.contains("fn init(app: &mut App, _window: WindowId) -> Self"));
+        assert!(TODO_DEMO.contains("ui::single(cx, todo_page(theme, responsive, card))"));
+        assert!(TODO_DEMO.contains("fn todo_page("));
+        assert!(TODO_DEMO.contains("responsive: TodoResponsiveLayout,"));
+        assert!(!TODO_DEMO.contains("let card = card.into_element(cx);"));
+        assert!(!TODO_DEMO.contains("todo_page(theme, card).into_element(cx).into()"));
         assert_avoids_legacy_conversion_names(TODO_DEMO);
         assert!(TODO_DEMO.contains("struct TodoLocals {"));
         assert!(TODO_DEMO.contains("struct TodoDemoView {"));
