@@ -23,7 +23,8 @@ Prefer an explicit ladder instead of starting with the full baseline on minute 1
 
 1. `hello` — the smallest runnable “Hello UI”
 2. `simple-todo` - **View runtime + typed actions + keyed lists** (no selectors/queries; current practical shape is `LocalState<Vec<_>>` + payload row actions for view-owned lists)
-3. `todo` — the richer third rung / selector-query baseline once you need derived or async state
+3. `todo` — the richer third-rung product baseline once you need derived or async state, with
+   selector/query slices kept visible but easy to delete
 
 Templates (in this repository):
 
@@ -60,6 +61,9 @@ Related ADRs:
 
 If this is your first Fret app, stop at `simple-todo` first. Generate `todo` only when you
 intentionally want selector/query on day 1.
+
+Treat the generated `todo` scaffold as a product baseline first, not as the new minimum starter:
+keep the extra selector/query seams only when they help the app you are actually building.
 
 If you are working inside this repository, you can generate a runnable todo template:
 
@@ -215,6 +219,11 @@ showcasing selector and query hooks. On the current third rung, selector depende
 the LocalState-first teaching path via `cx.data().selector_layout(...)`, so the default authoring
 surface no longer teaches `clone_model()` or raw `DepsBuilder` choreography as the first selector
 story.
+
+Productization note (2026-04-02): the generated `todo` starter should now read like a deletable
+product baseline first. Keep the selector/query slices visible, but treat them as secondary seams:
+remove the query-backed focus note first if you do not need async state yet, then remove filters
+and the derived projection if your first version only needs one plain task list.
 
 The official baseline uses a 3-layer state split:
 

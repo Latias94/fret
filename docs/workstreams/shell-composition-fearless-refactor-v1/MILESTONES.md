@@ -4,10 +4,10 @@
 
 - `M0` Baseline and owner inventory: **Completed**
 - `M1` Contract freeze: **Completed**
-- `M2` Surface naming cleanup: **Planned**
-- `M3` Page-shell promotion decision: **Planned**
+- `M2` Surface naming cleanup: **Completed**
+- `M3` Page-shell promotion decision: **Completed**
 - `M4` Workspace-shell consolidation: **Planned**
-- `M5` Teaching-surface cleanup: **Planned**
+- `M5` Teaching-surface cleanup: **Completed**
 - `M6` Gates: **Planned**
 
 ## M0 — Baseline and owner inventory
@@ -54,36 +54,42 @@
 
 ## M2 — Surface naming cleanup
 
-**Status:** Planned
+**Status:** Completed
 
-**Planned slice**
+**What closed**
 
-- Rename misleading generic shell surfaces such as `workspace_menu`.
-- Keep neutral menu-bridge helpers opt-in and off the default prelude.
-- Delete stale names in the same lane once first-party callers migrate.
+- Renamed the misleading `workspace_menu` lane to `in_window_menubar`.
+- Updated first-party callers and source-audit tests to consume the new module path.
+- Added root-surface source-policy protection so the old module name does not quietly return.
 
-**Target evidence**
+**Evidence**
 
-- `ecosystem/fret/src/workspace_menu.rs` or its replacement
+- `ecosystem/fret/src/in_window_menubar.rs`
 - `ecosystem/fret/src/lib.rs`
-- source-policy tests that prevent old names from returning
+- `apps/fret-ui-gallery/src/driver/menubar.rs`
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
 
 ## M3 — Page-shell promotion decision
 
-**Status:** Planned
+**Status:** Completed
 
-**Planned slice**
+**What closed**
 
-- Audit first-party page-shell helpers and consumers.
-- Decide whether a reusable page-shell surface is actually justified.
-- If justified, move it to one owning ecosystem lane without compatibility aliases.
-- If not justified, keep page shell app-owned and document the promotion rule.
+- Audited the cookbook lesson shell, the UI Gallery docs scaffold, and the `todo_demo`
+  responsive shell.
+- Decided those first-party consumers are **not** aligned enough to justify a shared reusable
+  page-shell surface.
+- Kept the current page shells app-owned instead of inventing a false shared abstraction.
+- Froze the promotion gate: require at least three aligned first-party consumers with materially
+  similar layout semantics before promoting a reusable owner surface.
 
-**Target evidence**
+**Evidence**
 
+- `docs/workstreams/shell-composition-fearless-refactor-v1/PAGE_SHELL_AUDIT_2026-04-02.md`
 - `apps/fret-cookbook/src/scaffold.rs`
+- `apps/fret-cookbook/src/lib.rs`
 - `apps/fret-ui-gallery/src/ui/doc_layout.rs`
-- first-party demo call sites such as `apps/fret-examples/src/todo_demo.rs`
+- `apps/fret-examples/src/todo_demo.rs`
 
 ## M4 — Workspace-shell consolidation
 
@@ -104,21 +110,23 @@
 
 ## M5 — Teaching-surface cleanup
 
-**Status:** Planned
+**Status:** Completed
 
-**Planned slice**
+**What closed**
 
 - Update docs so the shell split is visible to contributors and app authors.
 - Ensure first-party examples teach startup window policy separately from interior shell
   composition.
 - Prevent docs from teaching app-local shell helpers as if they were already stable framework
   contracts.
+- Sweep historical docs/workstreams that still point to deleted workspace-shell facade paths as if
+  they were current owner surfaces.
 
-**Target evidence**
+**Evidence**
 
 - `docs/README.md`
 - `docs/crate-usage-guide.md`
-- `docs/examples/README.md` if needed
+- `docs/examples/README.md`
 
 ## M6 — Gates
 

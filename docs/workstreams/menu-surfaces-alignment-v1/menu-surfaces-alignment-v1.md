@@ -94,7 +94,7 @@ Baseline is implemented for Windows + macOS:
 
 The canonical bridge from `fret-runtime::MenuBar` → in-window overlay menubar lives in:
 
-- `ecosystem/fret/src/workspace_menu.rs` (`menubar_from_runtime_with_focus_handle`)
+- `ecosystem/fret/src/in_window_menubar.rs` (`menubar_from_runtime_with_focus_handle`)
 
 Focus integration exists:
 
@@ -115,7 +115,7 @@ Recently fixed (correctness + parity):
 
 Evidence:
 
-- `ecosystem/fret/src/workspace_menu.rs` (gating + sanitize)
+- `ecosystem/fret/src/in_window_menubar.rs` (gating + sanitize)
 
 ---
 

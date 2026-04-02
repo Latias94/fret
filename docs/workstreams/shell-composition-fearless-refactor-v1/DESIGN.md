@@ -18,8 +18,8 @@ coherent model:
 - **Page shell** helpers exist in app-owned places such as
   `apps/fret-cookbook/src/scaffold.rs` and `apps/fret-ui-gallery/src/ui/doc_layout.rs`.
 - **Workspace shell** building blocks already exist in `ecosystem/fret-workspace`.
-- some naming still blurs ownership, especially `fret::workspace_menu`, which is a generic
-  in-window menubar bridge rather than a workspace-only surface.
+- some historical naming blurred ownership, especially the old `fret::workspace_menu` lane for a
+  generic in-window menubar bridge.
 
 The result is predictable:
 
@@ -198,16 +198,16 @@ Promotion rule for v1:
 
 ### 5) Misleading shell names should be fixed, not documented around
 
-`fret::workspace_menu` is a naming smell:
+The historical `fret::workspace_menu` name was a naming smell:
 
 - it is a generic in-window menubar bridge built from runtime menu data and UI-kit primitives,
 - it is not an editor-workspace shell by itself.
 
 Decision:
 
-- the current `workspace_menu` name should not be treated as final,
-- it should be renamed to a neutral menu-bridge surface during this lane instead of accreting more
-  callers under a misleading module name,
+- the old `workspace_menu` name should not return,
+- the surface should live under a neutral explicit lane (`fret::in_window_menubar`) instead of
+  accreting more callers under a misleading module name,
 - no compatibility alias is required in this pre-release lane once first-party surfaces migrate.
 
 ### 6) Compatibility is not a goal for shell cleanup
@@ -256,6 +256,13 @@ Initial v1 posture:
 - keep page-shell helpers app-owned unless promotion criteria are met,
 - do not teach cookbook-local helpers as if they are already framework contracts,
 - audit first-party users first, then decide whether a reusable promotion target is justified.
+
+Current audit result:
+
+- `M3` closes with **no shared page-shell promotion** in v1,
+- cookbook lesson shells, UI Gallery docs shells, and demo-specific responsive shells are not the
+  same surface,
+- see `docs/workstreams/shell-composition-fearless-refactor-v1/PAGE_SHELL_AUDIT_2026-04-02.md`.
 
 ### C) Workspace shell lane
 
@@ -306,11 +313,12 @@ When a shell helper is proposed for promotion:
 
 - `docs/workspace-shell.md`
 - `docs/crate-usage-guide.md`
+- `docs/workstreams/shell-composition-fearless-refactor-v1/PAGE_SHELL_AUDIT_2026-04-02.md`
 - `apps/fret-cookbook/src/scaffold.rs`
 - `ecosystem/fret-workspace/src/lib.rs`
 - `ecosystem/fret-workspace/src/frame.rs`
 - `ecosystem/fret-workspace/src/layout.rs`
-- `ecosystem/fret/src/workspace_menu.rs`
+- `ecosystem/fret/src/in_window_menubar.rs`
 - `ecosystem/fret/src/lib.rs`
 - `repo-ref/zed/crates/workspace/src/workspace.rs`
 - `repo-ref/gpui-component/crates/ui/src/{lib.rs,root.rs,title_bar.rs}`

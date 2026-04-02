@@ -66,7 +66,7 @@ app-author golden path and should not force `fret-workspace` into the `fret` rel
 
 Decision:
 
-- keep `workspace_menu` on `fret` for now because it is a generic app-facing menubar helper,
+- keep `in_window_menubar` on `fret` for now because it is a generic app-facing menubar helper,
 - remove `workspace_shell` from the `fret` public root surface,
 - remove the direct `fret-workspace` dependency from `fret`.
 

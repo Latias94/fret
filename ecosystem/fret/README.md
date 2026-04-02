@@ -36,8 +36,8 @@ If you are learning the repo's default path, follow this ladder in order:
 
 - Index: `docs/examples/README.md`
 - The generated template READMEs repeat the same ladder and explain where each rung fits.
-- Use `fretboard new todo` when you want the richer third-rung baseline, not as a replacement for
-  the first two rungs.
+- Use `fretboard new todo` when you want the richer third-rung product baseline with explicit
+  selector/query seams, not as a replacement for the first two rungs.
 
 Generate a runnable starter (minimal baseline first):
 
@@ -46,7 +46,8 @@ cargo run -p fretboard -- new simple-todo --name my-simple-todo
 cargo run --manifest-path local/my-simple-todo/Cargo.toml
 ```
 
-Then move to the richer third rung when you actually want selectors + queries:
+Then move to the richer third rung when you actually want selectors + queries on top of a product
+baseline:
 
 ```bash
 cargo run -p fretboard -- new todo --name my-todo

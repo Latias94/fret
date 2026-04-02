@@ -240,7 +240,7 @@ If you are unsure, start with `Layout` and tighten later.
 
 1) **Hello UI** (minimal): `cargo run -p fretboard -- new hello --name hello-world`
 2) **Simple baseline**: `simple-todo` (this guide)
-3) **Richer third rung**: `todo` (selectors + queries, once you need derived/async state)
+3) **Richer third rung**: `todo` (product baseline with deletable selector/query seams, once you need derived/async state)
    - See: `docs/examples/todo-app-golden-path.md`
 4) **Comparison only**: `simple_todo_v2_target`
    - Use this only to compare authoring density or local-state/list tradeoffs against the default path.
@@ -258,4 +258,4 @@ If you are unsure, start with `Layout` and tighten later.
 | --- | --- | --- | --- |
 | `hello` | `cargo run -p fretboard -- new hello` | view runtime + typed actions (smallest runnable UI surface) | selectors/queries |
 | `simple-todo` | `cargo run -p fretboard -- new simple-todo` | view runtime + typed actions + keyed lists | selectors/queries |
-| `todo` | `cargo run -p fretboard -- new todo` | richer third rung: selectors + queries + LocalState transactions | being minimal |
+| `todo` | `cargo run -p fretboard -- new todo` | richer third rung product baseline: selector/query seams + LocalState transactions | being the minimal starter |

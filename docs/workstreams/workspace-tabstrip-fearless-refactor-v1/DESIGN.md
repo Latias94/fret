@@ -90,7 +90,7 @@ Keep adapter-specific integration while converging on shared headless primitives
 ## Evidence anchors (current)
 
 - Workspace shell usage:
-  - `ecosystem/fret/src/workspace_shell.rs`
+  - `apps/fret-ui-gallery/src/driver/{chrome.rs,render_flow.rs}`
 - Workspace shell demo (for future diag scripts):
   - Demo entry: `apps/fret-demo/src/bin/workspace_shell_demo.rs`
   - UI implementation: `apps/fret-examples/src/workspace_shell_demo.rs`

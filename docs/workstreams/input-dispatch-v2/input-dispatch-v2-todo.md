@@ -100,7 +100,7 @@ Keep this list short and evidence-backed:
     `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable_reports_availability_and_emits_clipboard_text`),
     `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable_reports_availability_and_emits_clipboard_text`)
 - [x] IDV2-avail-042 Define `focus.menu_bar` contract between runner shells and UI-kit.
-  - Evidence: `crates/fret-runtime/src/window_menu_bar_focus.rs`, `crates/fret-ui/src/tree/commands.rs`, `ecosystem/fret/src/workspace_shell.rs`
+  - Evidence: `crates/fret-runtime/src/window_menu_bar_focus.rs`, `crates/fret-ui/src/tree/commands.rs`, `apps/fret-ui-gallery/src/driver/menubar.rs`, `ecosystem/fret/src/in_window_menubar.rs`
   - Tests: `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs` (`action_availability_snapshot_publishes_focus_menu_bar_gating`)
 - [x] IDV2-avail-043 Allow declarative components to report command availability via policy hooks.
   - Evidence: `crates/fret-ui/src/action.rs` (`OnCommandAvailability`, `CommandAvailabilityActionCx`),

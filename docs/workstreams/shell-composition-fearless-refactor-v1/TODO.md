@@ -33,27 +33,28 @@ This file is the execution checklist for `DESIGN.md`.
 
 ## M2 — Surface naming cleanup
 
-- [ ] Audit all shell-like names on the `fret` facade and direct ecosystem callers.
-- [ ] Rename misleading generic shell names:
-  - [ ] `workspace_menu` should migrate to a neutral menu-bridge name
-- [ ] Update docs and first-party callers in the same slice.
-- [ ] Add a source-policy test that prevents old shell names from returning on the root facade.
+- [x] Audit all shell-like names on the `fret` facade and direct ecosystem callers.
+- [x] Rename misleading generic shell names:
+  - [x] `workspace_menu` migrated to the neutral `in_window_menubar` lane
+- [x] Update docs and first-party callers in the same slice.
+- [x] Add a source-policy test that prevents old shell names from returning on the root facade.
 
 ## M3 — Page-shell promotion decision
 
-- [ ] Inventory first-party page-shell helpers and consumers:
-  - [ ] `apps/fret-cookbook/src/scaffold.rs`
-  - [ ] `apps/fret-ui-gallery/src/ui/doc_layout.rs`
-  - [ ] user-facing demos such as `todo_demo`
-- [ ] Decide whether at least three aligned consumers exist.
-- [ ] If the answer is **no**:
-  - [ ] keep helpers app-owned,
-  - [ ] document the promotion rule explicitly,
-  - [ ] avoid premature framework surface growth.
-- [ ] If the answer is **yes**:
-  - [ ] choose one owning ecosystem lane,
-  - [ ] move the helper there without leaving a compatibility alias,
-  - [ ] keep it off the default `fret` prelude/root shortcuts.
+- [x] Inventory first-party page-shell helpers and consumers:
+  - [x] `apps/fret-cookbook/src/scaffold.rs`
+  - [x] `apps/fret-ui-gallery/src/ui/doc_layout.rs`
+  - [x] user-facing demos such as `todo_demo`
+- [x] Decide whether at least three aligned consumers exist.
+- [x] Close the current answer as **no** for v1.
+- [x] Keep helpers app-owned:
+  - [x] cookbook lesson shell stays on `apps/fret-cookbook`
+  - [x] UI Gallery docs scaffold stays on `apps/fret-ui-gallery`
+  - [x] `todo_demo` responsive shell stays demo-owned
+- [x] Document the promotion rule explicitly.
+- [x] Avoid premature framework surface growth by deferring shared promotion.
+- [x] Record the audit artifact:
+  - [x] `docs/workstreams/shell-composition-fearless-refactor-v1/PAGE_SHELL_AUDIT_2026-04-02.md`
 
 ## M4 — Workspace-shell consolidation
 
@@ -66,13 +67,15 @@ This file is the execution checklist for `DESIGN.md`.
 ## M5 — Teaching-surface cleanup
 
 - [x] Update `docs/README.md` to point to this lane.
-- [ ] Update app-facing docs if a shell surface moves or is renamed:
-  - [ ] `docs/crate-usage-guide.md`
-  - [ ] `docs/examples/README.md` if needed
-- [ ] Ensure first-party examples teach the final shell split:
-  - [ ] startup window policy at the builder layer,
-  - [ ] interior page shell in app-facing composition,
-  - [ ] workspace shell on `fret-workspace`.
+- [x] Update app-facing docs if a shell surface moves or is renamed:
+  - [x] `docs/crate-usage-guide.md`
+  - [x] `docs/examples/README.md` if needed
+- [x] Sweep historical docs/workstreams that still teach deleted workspace-shell facade paths such
+  as `fret::workspace_shell::*` or `ecosystem/fret/src/workspace_shell.rs` as active surfaces.
+- [x] Ensure first-party examples teach the final shell split:
+  - [x] startup window policy at the builder layer,
+  - [x] interior page shell in app-facing composition,
+  - [x] workspace shell on `fret-workspace`.
 
 ## M6 — Gates
 

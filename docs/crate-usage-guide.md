@@ -91,6 +91,7 @@ Desktop-first quick start:
 
 - If you want a single dependency for a native desktop app, use `fret` (ecosystem-level batteries-included wrapper).
 - If you are onboarding a new app author, pair it with the default ladder: `hello` → `simple-todo` → `todo`.
+  Treat `todo` as the richer third-rung product baseline, not as a replacement for the first two starters.
 
 Web/wasm quick start (tooling):
 
@@ -140,6 +141,20 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 **Boundary note:** keep editor/workspace shell composition on owning crates such as
 `fret-workspace`; `fret` should stay focused on app-facing authoring, not editor-specific shell
 facades.
+
+**Shell ownership note:**
+
+- keep **window bootstrap** on the builder/launch lane:
+  `FretApp::window(...)`, `.window_min_size(...)`, `.window_position_logical(...)`,
+  `.window_resize_increments(...)`, and related startup window configuration
+- keep **page shell** app-owned:
+  centered cards, docs scaffolds, responsive page padding, and similar interior framing helpers are
+  ordinary app/example composition rather than stable framework contracts
+- keep **workspace shell** on `fret-workspace`:
+  editor-grade frame chrome, pane-content focus targets, and workspace command scope should stay on
+  the explicit workspace owner
+- keep the optional in-window menubar bridge explicit on `fret::in_window_menubar::*`; it is not a
+  synonym for workspace shell ownership
 
 **Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions, prefer `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary LocalState tracked reads, and use `local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` when app code only needs a borrowed projection without cloning the full slot. Keep the first-contact handler surface to `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For ordinary initialized locals inside `locals_with((...)).on::<A>(...)`, prefer `tx.value(&local)` for reads and keep `tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases only. For view-owned keyed lists, bind row payloads with `.action_payload(...)` and prefer `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path. If a widget already exposes its own `.on_activate(...)` hook, stay on that component-owned surface instead of importing the activation bridge just to attach a no-op or side effect override. Only add `use fret::app::AppActivateExt as _;` for activation-only surfaces that do not yet offer a narrower widget-owned app-facing helper, and keep the same action-first vocabulary there via `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` for shared `Model<T>` graphs and `cx.actions().payload_models::<A>(...)` when the same graph needs typed payload actions without reopening the deleted payload-carrier namespace. Treat lower-level payload helpers, raw `AppUi::on_action_notify*`, and low-level `.on_activate(cx.actions().listen(...))` glue as cookbook/reference-only host-side escape hatches; if you intentionally reopen that seam, keep it on `cx.actions().listen(...)` or import `AppActivateExt` explicitly for activation-only typed dispatch.
 
@@ -733,6 +748,29 @@ Notes:
   wiring stay app-owned/advanced instead of becoming part of `fret::app::prelude::*`.
 - Prefer teaching docking as an opt-in editor-grade capability, not as part of the small-app
   golden path.
+
+### `fret-workspace`
+
+**What it is:** the explicit editor/workspace shell owner for frame chrome, top/status bars,
+workspace command scope, pane-content focus targets, and the default workspace menu model.
+
+**Use it when:** you are building an editor-grade window interior rather than a small-app page or
+one-off demo card layout.
+
+Notes:
+
+- Reach for `WorkspaceFrame`, `WorkspaceTopBar`, `WorkspaceStatusBar`,
+  `WorkspaceCommandScope`, `WorkspacePaneContentFocusTarget`, and
+  `workspace_default_menu_bar(...)` when assembling workspace chrome.
+- Keep startup window policy out of `fret-workspace`; initial size, min/max size, startup
+  position, resize increments, and other window-creation choices still belong on the
+  `fret` / `fret-bootstrap` / `fret-launch` lane.
+- Keep ordinary app page shells out of `fret-workspace`; centered cards, docs shells, and other
+  page framing helpers remain app-owned until a future promotion audit proves a shared shape.
+- Pair `fret-workspace` with `fret-docking` when you need dock graph orchestration or tear-off
+  behavior; do not collapse the two owners into one surface.
+- If the workspace also renders an in-window menubar, keep that renderer explicit on
+  `fret::in_window_menubar::*` rather than treating it as a hidden workspace-shell alias.
 
 ### `fret-canvas`
 

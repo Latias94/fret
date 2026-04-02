@@ -103,8 +103,8 @@ Legend:
 | `ecosystem/fret-ui-material3/src/button.rs` | Material button | `ControlChrome` | Future (if layout becomes patchable) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-material3/src/card.rs` | Material card | `ControlChrome` | Future (if layout becomes patchable) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-material3/src/tabs.rs` | Primary tab items | `AdHocChrome` | Yes | Yes | OK | Optional: adopt helper | Diag: `tools/diag-scripts/ui-gallery-material3-tabs-item-chrome-fill.json` | `.chrome` test ids attached to the pointer region (bounds-equal to pressable). |
-| `ecosystem/fret/src/workspace_menu.rs` | Menubar trigger | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
-| `ecosystem/fret/src/workspace_menu.rs` | Menubar item | `ControlChrome` | Yes (`w = Fill`) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
+| `ecosystem/fret/src/in_window_menubar.rs` | Menubar trigger | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
+| `ecosystem/fret/src/in_window_menubar.rs` | Menubar item | `ControlChrome` | Yes (`w = Fill`) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-code-view/src/copy_button.rs` | Copy button | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-ai/src/elements/code_block.rs` | Code block copy button | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Uses helper | Avoids chrome stretching when embedded in flex/grid rows. |
 | `ecosystem/fret-ui-ai/src/elements/snippet.rs` | Snippet copy button | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Uses helper | Same pattern as code block. |

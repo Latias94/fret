@@ -165,7 +165,7 @@ This workstream is now closed for the v1 action/view migration and default-path 
     - `crates/fret-runtime/src/keymap/display.rs` (`display_shortcut_for_command_sequence_with_key_contexts`)
     - `ecosystem/fret-ui-shadcn/src/command.rs` (palette shortcut display uses key contexts)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (gating trace uses key contexts)
-    - `ecosystem/fret/src/workspace_menu.rs` + `crates/fret-launch/src/runner/desktop/runner/windows_menu.rs` (menu `when` uses key contexts)
+    - `ecosystem/fret/src/in_window_menubar.rs` + `crates/fret-launch/src/runner/desktop/runner/windows_menu.rs` (menu `when` uses key contexts)
   - Gates:
     - `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (shortcut routing trace includes key contexts)
 

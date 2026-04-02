@@ -12,6 +12,8 @@ New to the repo? Start with:
 Default onboarding ladder:
 
 - **Default**: `hello` → `simple-todo` → `todo`
+  `todo` is the richer third rung product baseline, with deletable selector/query seams when you
+  actually need derived or async state.
 - **Comparison**: `simple_todo_v2_target` when you want to compare authoring density or local-state/list tradeoffs
 - **Advanced**: gallery, interop, docking, renderer, and maintainer harnesses
 
@@ -55,6 +57,7 @@ Unless a document says otherwise:
 - Open source readiness (README + examples + defaults polish): [docs/workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md](./workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md)
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
 - Shell composition fearless refactor (window bootstrap vs page shell vs workspace shell ownership): `docs/workstreams/shell-composition-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/shell-composition-fearless-refactor-v1/TODO.md`, and `docs/workstreams/shell-composition-fearless-refactor-v1/MILESTONES.md`
+- Default app productization (closed release-facing lane for blessed-path convergence, richer todo template productization, recipe-promotion audits, and resize/layout proof artifacts): `docs/workstreams/default-app-productization-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/default-app-productization-fearless-refactor-v1/TODO.md`, `docs/workstreams/default-app-productization-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/default-app-productization-fearless-refactor-v1/DRIFT_AUDIT_2026-04-02.md`, `docs/workstreams/default-app-productization-fearless-refactor-v1/RICH_TEMPLATE_PRODUCTIZATION_AUDIT_2026-04-02.md`, `docs/workstreams/default-app-productization-fearless-refactor-v1/RECIPE_PROMOTION_AUDIT_2026-04-02.md`, and `docs/workstreams/default-app-productization-fearless-refactor-v1/RESIZE_LAYOUT_PROOF_2026-04-02.md`
 - Launch/app public surface refactor (`fret-launch` + `fret` facade + GPUI comparison): `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/EXPORT_INVENTORY.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/CONFIG_INVENTORY.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/MILESTONES.md`, and `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/FINAL_STATUS.md`
 - App entry builder v1 (`fret::FretApp` onboarding + builder/hook story): `docs/workstreams/app-entry-builder-v1/DESIGN.md`, `docs/workstreams/app-entry-builder-v1/TODO.md`, and `docs/workstreams/app-entry-builder-v1/MILESTONES.md`
 - Authoring surface + ecosystem reset (pre-release, no-compat cleanup): `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TODO.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MIGRATION_MATRIX.md`
@@ -247,11 +250,11 @@ now taught as `LocalState` + view runtime + typed actions.
   - Run: `cargo run -p fretboard -- dev native --bin components_gallery`
 - Starter todo public proof surface (default app lane, no selector/query): [apps/fret-examples/src/simple_todo_demo.rs](../apps/fret-examples/src/simple_todo_demo.rs)
   - Run: `cargo run -p fretboard -- dev native --bin simple_todo_demo`
-- Todo app “golden path” (richer third rung; shadcn + bootstrap + selector/query): [apps/fret-examples/src/todo_demo.rs](../apps/fret-examples/src/todo_demo.rs)
+- Todo app “golden path” (richer third-rung product baseline; shadcn + bootstrap + selector/query seams): [apps/fret-examples/src/todo_demo.rs](../apps/fret-examples/src/todo_demo.rs)
   - Run: `cargo run -p fretboard -- dev native --bin todo_demo`
 - Default starter template generator (second rung, no selector/query): `cargo run -p fretboard -- new simple-todo --name my-simple-todo`
   - Guide: [docs/first-hour.md](./first-hour.md)
-- Richer todo template generator (third rung, selectors + queries): `cargo run -p fretboard -- new todo --name my-todo`
+- Richer todo template generator (third-rung product baseline with deletable selector/query slices): `cargo run -p fretboard -- new todo --name my-todo`
   - Guide: [docs/examples/todo-app-golden-path.md](./examples/todo-app-golden-path.md)
 - Windows build speed note: prefer `fretboard dev native ...` (defaults to `--profile dev-fast` on Windows).
 - Docking + viewport + overlays conformance harness (ADR 0072): [apps/fret-examples/src/docking_arbitration_demo.rs](../apps/fret-examples/src/docking_arbitration_demo.rs)

@@ -200,7 +200,7 @@ Explicit secondary app lanes:
 - `fret::activate::{on_activate, on_activate_notify, on_activate_request_redraw,
   on_activate_request_redraw_notify}` for intentional raw activation-helper glue outside the
   default app lane
-- `fret::workspace_menu::*` for opt-in in-window menubar/menu-model integration helpers
+- `fret::in_window_menubar::*` for opt-in in-window menubar/menu-model integration helpers
 - `fret::semantics::SemanticsRole` for explicit semantic-role nouns
 - `fret::style::ThemeSnapshot` for extracted helper signatures that intentionally take snapshot
   value types
@@ -228,7 +228,7 @@ Target non-exports:
 - `SemanticsRole`
 - `TypedAction`
 - `actions` as a default app-prelude module export
-- `workspace_menu` as a default app-prelude module export
+- `in_window_menubar` as a default app-prelude module export
 - `ElementCommandGatingExt`
 - `DepsBuilder`
 - `DepsSignature`

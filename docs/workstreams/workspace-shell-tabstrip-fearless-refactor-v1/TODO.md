@@ -6,7 +6,7 @@ This file is an execution checklist for the design in `DESIGN.md`.
 
 - [x] Inventory current tab strip usage:
   - [x] Workspace shell: `apps/fret-ui-gallery/src/driver/chrome.rs`
-  - [x] Workspace shell composition: `ecosystem/fret/src/workspace_shell.rs`
+  - [x] Workspace shell composition: `apps/fret-ui-gallery/src/driver/render_flow.rs`, `apps/fret-examples/src/workspace_shell_demo.rs`
   - [x] Docking tab bars: `ecosystem/fret-docking/src/dock/*`
 - [x] List all existing tab-related commands and decide ownership:
   - activate, close, close others, close left/right

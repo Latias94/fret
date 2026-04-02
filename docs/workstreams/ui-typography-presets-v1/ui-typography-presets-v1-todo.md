@@ -47,7 +47,7 @@ This is a checklist-style tracker. It is **non-normative**.
 - [x] `fret-ui-kit`: migrate ad-hoc control text in primitives/overlays (e.g. labels, text fields,
       toasts) to the intent-first stability defaults.
 - [x] `fret`: migrate workspace shell chrome (menubar/menu) to intent-first control text helpers.
-  - Evidence: `ecosystem/fret/src/workspace_menu.rs`
+  - Evidence: `ecosystem/fret/src/in_window_menubar.rs`
 - [x] `fret-ui-ai`: migrate AI Elements surfaces to intent-first typography helpers and remove
       ad-hoc `FixedFromStyle` literals.
   - Evidence:

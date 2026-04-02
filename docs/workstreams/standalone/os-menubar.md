@@ -177,7 +177,7 @@ Evidence anchors:
 - Display policy implementation: `crates/fret-runtime/src/keymap.rs` (`display_shortcut_for_command_sequence`).
 - Windows OS menubar uses display policy: `crates/fret-launch/src/runner/desktop/windows_menu.rs`.
 - Command palette uses display policy: `ecosystem/fret-ui-shadcn/src/command.rs`.
-- In-window menubar bridge uses the same display policy and is shadcn-free (built from `fret-ui-kit` primitives): `ecosystem/fret/src/workspace_menu.rs`.
+- In-window menubar bridge uses the same display policy and is shadcn-free (built from `fret-ui-kit` primitives): `ecosystem/fret/src/in_window_menubar.rs`.
 
 ### MVP 2.5: Menu Bar Presentation Modes (OS vs In-window) (Done)
 
@@ -223,7 +223,7 @@ Evidence anchors:
 
 - Command + default keybindings: `crates/fret-app/src/core_commands.rs` (`FOCUS_MENU_BAR`).
 - Declarative command hooks: `crates/fret-ui/src/{action.rs,elements/cx.rs,declarative/host_widget.rs}`.
-- In-window menubar focus wiring: `ecosystem/fret/src/{workspace_menu.rs,workspace_shell.rs}`.
+- In-window menubar focus wiring: `ecosystem/fret/src/in_window_menubar.rs`, `apps/fret-ui-gallery/src/driver/menubar.rs`.
 - Demo wiring: `apps/fret-ui-gallery/src/driver.rs`.
 - Diagnostics script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json`.
 
@@ -268,8 +268,8 @@ Evidence anchors:
 - Golden-path default handling: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (handles `app.quit`/`app.hide*`).
 - ADR: `docs/adr/0171-macos-about-panel-effect.md`.
 - Preferences policy: `docs/adr/0172-preferences-command-policy.md`.
-- Workspace baseline supports App menu: `ecosystem/fret-workspace/src/menu.rs` (`WorkspaceMenuCommands`).
-- Golden-path in-window default: `ecosystem/fret/src/workspace_shell.rs` (`workspace_shell_model_default_menu`).
+- Workspace baseline supports App menu: `ecosystem/fret-workspace/src/menu.rs` (`WorkspaceMenuCommands`, `workspace_default_menu_bar`).
+- Golden-path in-window renderer: `ecosystem/fret/src/in_window_menubar.rs` (`menubar_from_runtime`, `menubar_from_runtime_with_focus_handle`).
 - Undo/Redo availability seam example: `apps/fret-examples/src/gizmo3d_demo.rs` (`sync_window_command_availability`).
 
 ### MVP 4: Linux Strategy (Decision) (Done)

@@ -119,9 +119,10 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<KernelApp> + use
 - `apps/fret-cookbook/examples/chart_interactions_basics.rs::chart_canvas(...)` remains a valid
   raw helper example because retained-subtree adoption is itself the bridge boundary; do not hide
   `AnyElement` there unless the retained/cached subtree APIs grow a higher-level typed helper.
-- `fret::workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu}` and
-  `fret_workspace::{WorkspacePaneContentFocusTarget, WorkspaceFrame, WorkspaceCommandScope}`
-  now also follow the typed-helper rule:
+- the old `fret::workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu}`
+  lane has since been deleted; the surviving workspace-shell owners on
+  `fret_workspace::{WorkspacePaneContentFocusTarget, WorkspaceFrame, WorkspaceCommandScope}` follow
+  the typed-helper rule:
   pane renderers and workspace shell wrappers may stay on `IntoUiElement<H>`, while the shell
   keeps the final explicit landing seam only where it must register pane-content focus targets or
   assemble heterogeneous child rows.

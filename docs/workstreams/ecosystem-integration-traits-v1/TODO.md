@@ -137,13 +137,15 @@ surface.
     `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
   - raw `AnyElement` stays explicit for advanced/internal seams only.
   - Closeout on 2026-03-15:
-    `fret::workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu}`,
+    the surviving workspace-shell owners
     `fret_workspace::WorkspacePaneContentFocusTarget`,
     `fret_workspace::WorkspaceFrame`,
     and
     `fret_workspace::WorkspaceCommandScope`
     now accept typed pane content via `IntoUiElement<H>` instead of forcing workspace shell
     composition to land on `AnyElement` before the shell/focus-target/frame/command-scope seams.
+    The intermediate `fret::workspace_shell::*` wrapper referenced by older notes has since been
+    deleted by the shell-composition cleanup lane.
   - Intentional explicit landing seams kept on 2026-03-15:
     `fret_workspace::WorkspaceTopBar` and `fret_workspace::WorkspaceStatusBar` still collect
     heterogeneous `AnyElement` lists before an `ElementContext` exists, and the code now carries

@@ -49,7 +49,7 @@ Source of truth: `crates/fret-app/src/core_commands.rs` (Widget scope)
   - Default contract: shells that render an in-window menubar should publish
     `WindowMenuBarFocusService` so cross-surface gating can disable the command when no menubar is
     present.
-    - Evidence: `ecosystem/fret/src/workspace_shell.rs` (publishes service),
+    - Evidence: `apps/fret-ui-gallery/src/driver/menubar.rs` (publishes service for the first-party in-window menubar),
       `crates/fret-ui/src/tree/commands.rs` (publishes availability snapshot entry)
 
 ### Edit / Clipboard

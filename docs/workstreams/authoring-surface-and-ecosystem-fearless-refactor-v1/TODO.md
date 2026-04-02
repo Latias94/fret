@@ -411,9 +411,9 @@ Post-closeout handoff order on 2026-03-16:
     `.a11y_role(...)` helper methods on the default app lane.
   - [x] Eighth batch on 2026-03-15: audit `Px` and keep it intentionally on both app and
     component preludes as the shared low-friction unit type for everyday Fret authoring.
-  - [x] Ninth batch on 2026-03-15: remove `actions` / `workspace_menu` module re-exports from
+  - [x] Ninth batch on 2026-03-15: remove `actions` / `in_window_menubar` module re-exports from
     `fret::app::prelude::*`; app code now reaches those heavier module surfaces through explicit
-    `fret::actions::*` / `fret::workspace_menu::*` lanes instead of first-contact wildcard imports.
+    `fret::actions::*` / `fret::in_window_menubar::*` lanes instead of first-contact wildcard imports.
   - [x] Tenth batch on 2026-03-15: remove `UiElementSinkExt as _` from
     `fret::app::prelude::*`; sink-style `*_build(|cx, out| ...)` composition now requires an
     explicit `use fret::children::UiElementSinkExt as _;` import in the small set of app examples
@@ -654,7 +654,8 @@ Post-closeout handoff order on 2026-03-16:
   - [x] 2026-03-12: removed `fret::IconRegistry`; raw icon registry access now stays explicit via
     `fret-icons` / `fret-bootstrap` while app-facing icon packs install through `.setup(...::app::install)`.
   - [x] 2026-03-12: removed root `workspace_shell_model*` shortcuts; editor-style workspace shell
-    assembly now stays explicit under `fret::workspace_shell::*`.
+    assembly now stays explicit on `fret_workspace::*`, with the neutral in-window menubar bridge
+    isolated under `fret::in_window_menubar::*`.
 - [x] Remove flat `AppUi` data/effects helpers that duplicate the grouped `cx.data()` /
   `cx.effects()` surface.
 - [x] Remove public flat `AppUi::use_local*` helpers that duplicate the grouped `cx.state()`

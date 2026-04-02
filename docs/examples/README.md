@@ -33,11 +33,13 @@ Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` grap
 2. `simple-todo` (template) — view runtime + typed actions + keyed lists (no selectors/queries;
    the current default path is `LocalState<Vec<_>>` + payload row actions for view-owned lists).
    - Generate: `cargo run -p fretboard -- new simple-todo --name my-simple-todo`
-3. `todo` (template) — richer third rung once you need selectors + queries; not the default starter
-   scaffold.
+3. `todo` (template) — richer third rung once you need selectors + queries; generated as a
+   product baseline with deletable selector/query slices, not as the default starter scaffold.
    - Generate: `cargo run -p fretboard -- new todo --name my-todo`
    - Read: [docs/examples/todo-app-golden-path.md](./todo-app-golden-path.md)
-   - Note: this template opts into `fret` feature `state` (selector/query helpers).
+   - Note: this template opts into `fret` feature `state` (selector/query helpers), and its
+     generated README calls out the first deletable slices if you want to collapse back toward
+     `simple-todo`.
 
 ## 0.1) Surface taxonomy
 
@@ -47,10 +49,35 @@ Use these labels consistently:
 - **Comparison**: evidence-oriented side-by-side samples that help evaluate ergonomics, not onboarding
 - **Advanced**: gallery, interop, renderer, docking, and maintainer-oriented surfaces
 
+## 0.2) Shell split in examples
+
+Examples in this repo intentionally teach three different shell layers. Do not collapse them into
+one generic `AppShell` mental model.
+
+- **Window bootstrap** lives on the startup builder lane.
+  Templates and runnable examples should set initial title/size there, and should add
+  `.window_min_size(...)`, `.window_position_logical(...)`, or `.window_resize_increments(...)`
+  when that behavior is part of the user-facing product surface.
+- **Page shell** stays app-owned.
+  Templates, cookbook lessons, and ordinary demos may use centered cards, docs scaffolds, or
+  responsive page wrappers, but those helpers are teaching surfaces local to the app/example, not
+  stable framework contracts.
+- **Workspace shell** stays on `fret-workspace`.
+  UI Gallery, `workspace_shell_demo`, and other editor-grade shells should compose explicit
+  `fret_workspace::*` owners instead of routing that chrome back through `fret`.
+- **In-window menubar** is only an optional bridge.
+  If an example needs one, it should import `fret::in_window_menubar::*` explicitly rather than
+  treating it as a synonym for workspace shell ownership.
+
 ## 1) In-tree Cookbook (small, focused lessons)
 
 Cookbook examples live under [apps/fret-cookbook/examples/](../../apps/fret-cookbook/examples/).
 Each file is intended to be one lesson. They are runnable and designed for copy/paste.
+
+Shell note:
+
+- cookbook page framing is intentionally cookbook-owned; helpers such as the centered page scaffold
+  keep lessons visually consistent without turning that page shell into a shared framework API.
 
 Run one via the tooling runner (recommended):
 
@@ -112,6 +139,12 @@ Note: cookbook examples are separate binaries today, so scripts are per-example 
 The UI gallery is a larger, multi-page app intended for component discovery and parity testing.
 
 Taxonomy: this is an **Advanced** surface.
+
+Shell note:
+
+- UI Gallery is not the default small-app shell pattern. It combines a docs/page scaffold with
+  editor-grade workspace chrome from `fret-workspace`, and keeps optional in-window menubar wiring
+  explicit.
 
 Use it when:
 
