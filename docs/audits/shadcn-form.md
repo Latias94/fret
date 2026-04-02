@@ -55,6 +55,13 @@ instead:
 - Pass: `FormMessage` maps to `FieldError`.
 - Pass: `FormField` can decorate common controls with invalid styling and labels based on
   `FormState`.
+- Pass: `FormField::required(true)` now propagates required semantics through the common shadcn
+  form-control family (`Input`/`Textarea`/`InputOtp`, trigger-style controls, `RadioGroup`,
+  `Checkbox`, `Switch`, `NativeSelect`) without forcing callers to restate the field-level
+  semantic on each control root.
+- Pass: `FormField` still does not own `disabled` / `read_only`. Those remain control-owned
+  interaction-policy inputs rather than `FormState` field metadata, so the form wrapper does not
+  override or synthesize them.
 - Adjusted: `FormControl` is no longer treated as a `FieldContent` alias. This was a public-surface
   drift, because upstream `FormControl` is a slot-like control wrapper rather than a layout column.
 
@@ -64,9 +71,14 @@ instead:
 - Result: `FormControl` now keeps layout negotiation caller-owned by default, which matches shadcn
   docs/examples more closely and avoids repeating the `card`/`field` width footgun at the form
   surface.
+- Result: `FormField` now owns the field-level semantics that naturally belong to the wrapper
+  (`required`, invalid decoration driven by form state), while concrete interaction states
+  (`disabled`, `read_only`) stay owned by each control recipe.
 - Result: Follow-up work should focus on richer resolver/validation recipes only if a concrete
   product need appears; the core composition surface no longer forces `FieldContent` defaults.
 
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn --lib form_control_is_slot_like_for_single_child form_control_multi_child_fallback_drops_field_content_fill_defaults --status-level fail`
+- `CARGO_TARGET_DIR=target-codex-invalid-semantics cargo test -p fret-ui-shadcn --lib invalid`
+- `CARGO_TARGET_DIR=target-codex-required-semantics cargo test -p fret-ui-shadcn --lib required`
