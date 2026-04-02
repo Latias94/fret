@@ -107,8 +107,8 @@ pub(crate) fn make_test_graph_two_nodes_with_size() -> (Graph, NodeId, NodeId) {
     (graph, a, b)
 }
 
-pub(crate) fn make_test_graph_two_nodes_with_ports(
-) -> (Graph, NodeId, PortId, PortId, NodeId, PortId) {
+pub(crate) fn make_test_graph_two_nodes_with_ports()
+-> (Graph, NodeId, PortId, PortId, NodeId, PortId) {
     let mut graph = Graph::new(GraphId::new());
     let kind = NodeKindKey::new("test.node");
 

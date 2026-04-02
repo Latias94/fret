@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{AppWindowId, Point, Px, Rect, Size};
-use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::UiTree;
+use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
 use crate::core::{NodeId, PortId};
 use crate::ui::internals::{NodeGraphInternalsSnapshot, NodeGraphInternalsStore};
@@ -11,7 +11,7 @@ use crate::ui::{
     NodeGraphEditor,
 };
 
-use super::{insert_view, make_test_graph_two_nodes_with_ports, NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 fn bounds() -> Rect {
     Rect::new(

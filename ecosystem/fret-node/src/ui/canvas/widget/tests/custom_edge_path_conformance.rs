@@ -1,4 +1,4 @@
-use super::prelude::{path_midpoint_and_normal, HitTestCtx, HitTestScratch};
+use super::prelude::{HitTestCtx, HitTestScratch, path_midpoint_and_normal};
 use super::*;
 
 #[test]

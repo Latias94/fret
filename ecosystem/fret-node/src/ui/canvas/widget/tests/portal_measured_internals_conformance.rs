@@ -3,10 +3,10 @@ use std::sync::Arc;
 
 use fret_core::{AppWindowId, NodeId as UiNodeId, Px, Rect, Scene, Size, Transform2D};
 use fret_runtime::ModelId;
-use fret_ui::element::{LayoutStyle, Length, SemanticsProps, SizeStyle};
-use fret_ui::retained_bridge::{UiTreeRetainedExt as _, Widget as _};
 use fret_ui::Invalidation;
 use fret_ui::UiTree;
+use fret_ui::element::{LayoutStyle, Length, SemanticsProps, SizeStyle};
+use fret_ui::retained_bridge::{UiTreeRetainedExt as _, Widget as _};
 
 use crate::core::{CanvasPoint, Graph, GraphId, Node, NodeId, NodeKindKey};
 
@@ -18,7 +18,7 @@ use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 
 use super::prelude::NodeGraphCanvas;
-use super::{insert_view, NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_view};
 
 fn bounds() -> Rect {
     Rect::new(

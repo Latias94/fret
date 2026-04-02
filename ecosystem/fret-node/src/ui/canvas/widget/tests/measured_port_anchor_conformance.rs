@@ -9,8 +9,8 @@ use crate::ui::{DefaultNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGr
 
 use super::prelude::*;
 use super::{
-    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports_spaced_x,
-    TestUiHostImpl,
+    TestUiHostImpl, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
 fn pick_target_port_at(

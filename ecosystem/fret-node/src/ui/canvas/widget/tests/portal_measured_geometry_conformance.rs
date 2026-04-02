@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use fret_core::{AppWindowId, Px, Rect};
 use fret_runtime::ModelsHost as _;
+use fret_ui::UiTree;
 use fret_ui::element::{LayoutStyle, Length, SemanticsProps, SizeStyle};
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
-use fret_ui::UiTree;
 
 use crate::core::{CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey};
 
@@ -13,7 +13,7 @@ use crate::ui::measured::MeasuredGeometryStore;
 use crate::ui::portal::NodeGraphPortalHost;
 use crate::ui::style::NodeGraphStyle;
 
-use super::{insert_view, NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_view};
 
 fn bounds() -> Rect {
     Rect::new(

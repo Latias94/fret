@@ -7,7 +7,7 @@ use fret_ui::{Invalidation, UiTree};
 
 use crate::ui::{NodeGraphCanvas, NodeGraphPaintOverridesMap, NodePaintOverrideV1};
 
-use super::{insert_view, make_test_graph_two_nodes_with_ports, NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 fn bounds() -> Rect {
     Rect::new(

@@ -6,8 +6,8 @@ use super::prelude::wire_drag;
 use crate::ui::NodeGraphCanvas;
 
 use super::{
-    event_cx, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_ports_spaced_x, NullServices, TestUiHostImpl,
+    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::ui::canvas::state::{WireDrag, WireDragKind};
 

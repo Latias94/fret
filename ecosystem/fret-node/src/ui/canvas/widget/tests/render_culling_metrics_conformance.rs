@@ -1,8 +1,8 @@
 use fret_core::{Point, Px, Rect, Size};
 
 use super::{
-    insert_editor_config_with, make_host_graph_view, make_test_graph_two_nodes_with_size,
-    NodeGraphCanvas,
+    NodeGraphCanvas, insert_editor_config_with, make_host_graph_view,
+    make_test_graph_two_nodes_with_size,
 };
 
 #[test]

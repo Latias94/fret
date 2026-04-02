@@ -4,8 +4,8 @@ use fret_core::{Point, Px, Rect, Size};
 
 use super::prelude::{DragPreviewKind, NodeGraphCanvas};
 use super::{
-    insert_editor_config, insert_view, make_test_graph_two_nodes_with_ports_spaced_x,
-    TestUiHostImpl,
+    TestUiHostImpl, insert_editor_config, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind};
 

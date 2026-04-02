@@ -4,7 +4,7 @@ use fret_ui::{Invalidation, UiTree};
 
 use crate::ui::{NodeGraphCanvas, NodeGraphColorMode, NodeGraphStyle};
 
-use super::{make_host_graph_view, make_test_graph_two_nodes, NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, make_host_graph_view, make_test_graph_two_nodes};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,

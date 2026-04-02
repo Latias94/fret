@@ -149,6 +149,8 @@ update rather than an incidental refactor.
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing
     bundle) plus `NodeGraphController` (lower-level imperative/runtime facade).
+  - Advanced mirror-owned bindings now also carry an explicit `NodeGraphEditorConfig` model, so
+    binding-driven controlled sync no longer depends on optional config mirrors or implicit defaults.
   - The remaining gap is helper breadth and internal organization: viewport helpers, lookups,
     commands, store subscriptions, and controlled updates still need to keep converging on that
     pair without regrowing god files.
@@ -297,8 +299,9 @@ Source-policy tests now lock that posture across retained canvas / portal / rena
 blackboard / minimap surfaces, and the workflow gallery now constructs its retained controller from
 `binding.store_model()` instead of teaching a hidden controller escape hatch on the binding.
 The explicit advanced binding constructor is now named
-`NodeGraphSurfaceBinding::from_models_and_controller(...)`, so mirror-owned/controller-owned wiring
-does not read like a routine convenience constructor.
+`NodeGraphSurfaceBinding::from_models_and_controller(...)`, and it now requires explicit
+`graph + view_state + editor_config + controller` ownership, so mirror-owned/controller-owned
+wiring does not read like a routine convenience constructor or silently fall back to default config.
 `NodeGraphSurfaceBinding` itself is now split across `binding.rs` plus focused companion modules
 (`binding_queries.rs`, `binding_store_sync.rs`, `binding_viewport.rs`), and source-policy tests now
 aggregate that surface instead of forcing the contract to live in one growing file.

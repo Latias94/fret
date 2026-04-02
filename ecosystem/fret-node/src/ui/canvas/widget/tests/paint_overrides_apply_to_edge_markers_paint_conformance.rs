@@ -10,7 +10,7 @@ use crate::ui::edge_types::NodeGraphEdgeTypes;
 use crate::ui::presenter::EdgeMarker;
 use crate::ui::{EdgePaintOverrideV1, NodeGraphCanvas, NodeGraphPaintOverridesMap};
 
-use super::{insert_view, make_test_graph_two_nodes_with_ports, NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 fn bounds() -> Rect {
     Rect::new(

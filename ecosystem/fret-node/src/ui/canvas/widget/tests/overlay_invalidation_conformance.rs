@@ -4,7 +4,7 @@ use crate::core::CanvasPoint;
 use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
 
 use super::prelude::NodeGraphCanvas;
-use super::{insert_graph_view, make_test_graph_two_nodes_with_ports_spaced_x, TestUiHostImpl};
+use super::{TestUiHostImpl, insert_graph_view, make_test_graph_two_nodes_with_ports_spaced_x};
 use crate::ui::canvas::state::{
     ContextMenuState, ContextMenuTarget, SearcherRowsMode, SearcherState,
 };

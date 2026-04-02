@@ -12,7 +12,7 @@ use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
 use super::prelude::{cubic_bezier_derivative, wire_ctrl_points};
 use super::{
-    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports, TestUiHostImpl,
+    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
 };
 
 #[derive(Default)]

@@ -8,7 +8,7 @@ use fret_ui::{Invalidation, UiTree};
 use crate::core::{Edge, EdgeId, EdgeKind};
 use crate::ui::{EdgePaintOverrideV1, NodeGraphCanvas, NodeGraphPaintOverridesMap};
 
-use super::{insert_view, make_test_graph_two_nodes_with_ports, NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 fn bounds() -> Rect {
     Rect::new(

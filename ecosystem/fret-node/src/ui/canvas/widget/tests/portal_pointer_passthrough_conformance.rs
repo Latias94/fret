@@ -1,14 +1,14 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use fret_core::{
     AppWindowId, Event, Modifiers, MouseButton, Point, PointerEvent, PointerType, Px, Rect, Size,
 };
+use fret_ui::UiTree;
 use fret_ui::declarative::{render_dismissible_root_with_hooks, render_root};
 use fret_ui::element::{
     InsetStyle, LayoutStyle, Length, PointerRegionProps, PositionStyle, SizeStyle,
 };
-use fret_ui::UiTree;
 
 use super::{NullServices, TestUiHostImpl};
 

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::core::CanvasPoint;
 use crate::ui::measured::{
-    MeasuredGeometryApplyOptions, MeasuredGeometryExclusiveBatch, MEASURED_GEOMETRY_EPSILON_PX,
+    MEASURED_GEOMETRY_EPSILON_PX, MeasuredGeometryApplyOptions, MeasuredGeometryExclusiveBatch,
 };
 use crate::ui::{DefaultNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter};
 

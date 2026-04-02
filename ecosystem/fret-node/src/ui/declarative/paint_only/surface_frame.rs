@@ -9,6 +9,9 @@ use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
 use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
 use crate::ui::style::NodeGraphStyle;
 
+use super::surface_support::{
+    read_authoritative_interaction_config_in_models, read_authoritative_runtime_tuning_in_models,
+};
 use super::{
     PaintOnlySurfaceModels, PortalBoundsStore, PortalMeasuredGeometryFlushOutcome,
     SurfaceSemanticsParams, authoritative_surface_boundary_snapshot,
@@ -17,9 +20,6 @@ use super::{
     read_authoritative_graph_in_models, read_authoritative_view_state_in_models, stable_hash_u64,
     sync_authoritative_surface_boundary_in_models, sync_derived_cache, sync_edges_cache,
     sync_grid_cache, sync_nodes_cache, view_from_state,
-};
-use super::surface_support::{
-    read_authoritative_interaction_config_in_models, read_authoritative_runtime_tuning_in_models,
 };
 
 #[derive(Clone)]
@@ -170,18 +170,12 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         .unwrap_or(0);
 
     let draw_order_hash = stable_hash_u64(2, &view_value.draw_order);
-    let interaction_config = read_authoritative_interaction_config_in_models(
-        cx.app.models_mut(),
-        binding,
-        Clone::clone,
-    )
-    .unwrap_or_default();
-    let runtime_tuning = read_authoritative_runtime_tuning_in_models(
-        cx.app.models_mut(),
-        binding,
-        |state| *state,
-    )
-    .unwrap_or_default();
+    let interaction_config =
+        read_authoritative_interaction_config_in_models(cx.app.models_mut(), binding, Clone::clone)
+            .unwrap_or_default();
+    let runtime_tuning =
+        read_authoritative_runtime_tuning_in_models(cx.app.models_mut(), binding, |state| *state)
+            .unwrap_or_default();
     let interaction_state =
         crate::io::NodeGraphInteractionState::from_parts(&interaction_config, &runtime_tuning);
     let node_origin = interaction_config.node_origin;

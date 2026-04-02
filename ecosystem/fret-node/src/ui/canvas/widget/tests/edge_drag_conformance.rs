@@ -7,8 +7,8 @@ use crate::core::{
 
 use crate::rules::EdgeEndpoint;
 
-use super::prelude::{edge_drag, NodeGraphCanvas};
-use super::{event_cx, insert_editor_config_with, insert_view, NullServices, TestUiHostImpl};
+use super::prelude::{NodeGraphCanvas, edge_drag};
+use super::{NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view};
 use crate::ui::canvas::state::{EdgeDrag, WireDragKind};
 
 fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {

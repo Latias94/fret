@@ -1,15 +1,15 @@
 use fret_core::{AppWindowId, NodeId as UiNodeId, Point, Px, Rect, Size};
-use fret_ui::layout_pass::LayoutPassKind;
-use fret_ui::retained_bridge::Widget as _;
 use fret_ui::LayoutOverflowContext;
 use fret_ui::UiTree;
+use fret_ui::layout_pass::LayoutPassKind;
+use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::CanvasPoint;
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size, NullServices,
-    TestUiHostImpl,
+    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_size,
 };
 
 fn layout_once(

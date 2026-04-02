@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use fret_core::{NodeId as UiNodeId, Px, Rect, Scene, Size, Transform2D};
 use fret_runtime::ModelId;
-use fret_ui::retained_bridge::Widget as _;
 use fret_ui::Invalidation;
 use fret_ui::UiTree;
+use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::CanvasPoint;
 use crate::ui::internals::NodeGraphInternalsStore;
@@ -13,8 +13,8 @@ use crate::ui::measured::MeasuredGeometryStore;
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    insert_editor_config_with, make_host_graph_view, make_test_graph_two_nodes_with_ports,
-    NullServices, TestUiHostImpl,
+    NullServices, TestUiHostImpl, insert_editor_config_with, make_host_graph_view,
+    make_test_graph_two_nodes_with_ports,
 };
 
 fn paint_once(

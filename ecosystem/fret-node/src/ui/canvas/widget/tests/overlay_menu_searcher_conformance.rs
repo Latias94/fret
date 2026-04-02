@@ -8,10 +8,10 @@ use crate::ui::presenter::{
 };
 use crate::ui::style::NodeGraphStyle;
 
-use super::prelude::overlay_hit;
 use super::prelude::NodeGraphCanvas;
-use super::{insert_graph_view, TestUiHostImpl};
-use crate::ui::canvas::searcher::{SearcherRow, SearcherRowKind, SEARCHER_MAX_VISIBLE_ROWS};
+use super::prelude::overlay_hit;
+use super::{TestUiHostImpl, insert_graph_view};
+use crate::ui::canvas::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use crate::ui::canvas::state::{
     ContextMenuState, ContextMenuTarget, SearcherRowsMode, SearcherState,
 };
@@ -246,9 +246,11 @@ fn build_searcher_rows_respects_explicit_rows_mode() {
         catalog_rows.first().map(|row| &row.kind),
         Some(SearcherRowKind::Header)
     ));
-    assert!(flat_rows
-        .iter()
-        .all(|row| matches!(row.kind, SearcherRowKind::Candidate { .. })));
+    assert!(
+        flat_rows
+            .iter()
+            .all(|row| matches!(row.kind, SearcherRowKind::Candidate { .. }))
+    );
     assert_eq!(flat_rows.len(), candidates.len());
 }
 

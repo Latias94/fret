@@ -9,8 +9,8 @@ use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind};
 use crate::ui::{NodeGraphCanvas, NodeGraphPresetFamily, NodeGraphPresetSkinV1};
 
 use super::{
-    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports_spaced_x,
-    NullServices, TestUiHostImpl,
+    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
 fn paint_once(

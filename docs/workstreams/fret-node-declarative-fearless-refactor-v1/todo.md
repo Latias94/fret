@@ -77,18 +77,16 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Move app/example persistence and overlay authoring to the explicit `NodeGraphEditorConfig`
       seam.
   - `node_graph_legacy_demo` / `node_graph_domain_demo` now load and save
-    `NodeGraphViewStateFileV1` through `new_with_editor_config(...)`.
+    `NodeGraphViewStateFileV1` through `new(...)`.
   - `NodeGraphTuningOverlay` now reads/writes `NodeGraphEditorConfig` instead of mutating
     `NodeGraphViewState`.
   - `NodeGraphControlsOverlay`, retained canvas, and declarative bindings now consume an explicit
     editor-config mirror where the app surface owns one.
-- [ ] Delete the temporary `cfg(test)` bridge that mirrors `NodeGraphEditorConfig` back into
+- [x] Delete the temporary `cfg(test)` bridge that mirrors `NodeGraphEditorConfig` back into
       `NodeGraphViewState` for old tests.
-  - Remaining bridge touch points:
-    - `ecosystem/fret-node/src/io/mod.rs`
-    - `ecosystem/fret-node/src/runtime/store.rs`
-    - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
-    - retained/declarative test-only fallbacks that still read `view_state.interaction`
+  - `NodeGraphViewState` test helpers now stay pure view-state.
+  - Store/controller sync tests now bind explicit editor-config mirrors.
+  - Retained/declarative fixtures no longer read `view_state.interaction` as a compatibility path.
 
 ## M3 - Controller / instance facade
 
@@ -146,6 +144,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `replace_*_action_host`, `set_selection_action_host`, `undo_action_host`, and
     `redo_action_host`, so object-safe app hooks no longer need to bypass the binding for routine
     bound-model synchronization.
+- [x] Require explicit editor-config ownership even on the advanced mirror-owned binding seam.
+  - Progress: `NodeGraphSurfaceBinding::from_models_and_controller(...)` now requires
+    `graph + view_state + editor_config + controller`, `editor_config_model()` is always present,
+    and store-sync / replace-document helpers no longer fall back to `NodeGraphEditorConfig::default()`.
 - [x] Split `NodeGraphSurfaceBinding` by responsibility instead of letting `binding.rs` regrow as a
       god file.
   - Progress: viewport helpers now live in `binding_viewport.rs`, queries in

@@ -11,8 +11,8 @@ use crate::io::{
     NodeGraphEditorConfig, NodeGraphInteractionConfig, NodeGraphInteractionState,
     NodeGraphRuntimeTuning, NodeGraphViewState,
 };
-use crate::ops::{apply_transaction, GraphHistory, GraphTransaction};
-use crate::profile::{apply_transaction_with_profile, ApplyPipelineError, GraphProfile};
+use crate::ops::{GraphHistory, GraphTransaction, apply_transaction};
+use crate::profile::{ApplyPipelineError, GraphProfile, apply_transaction_with_profile};
 use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
 use crate::runtime::changes::{ChangesToTransactionError, NodeGraphChanges};
 use crate::runtime::events::{

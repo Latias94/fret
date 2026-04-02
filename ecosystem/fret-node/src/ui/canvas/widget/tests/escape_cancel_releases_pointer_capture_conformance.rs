@@ -1,7 +1,7 @@
 use fret_core::{Point, Px, Rect, Size};
 
 use super::prelude::NodeGraphCanvas;
-use super::{event_cx, insert_graph_view, make_test_graph_two_nodes, NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_test_graph_two_nodes};
 
 #[test]
 fn escape_cancel_releases_pointer_capture_during_panning() {

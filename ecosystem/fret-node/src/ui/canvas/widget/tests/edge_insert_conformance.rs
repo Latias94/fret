@@ -12,10 +12,10 @@ use crate::core::{
 use crate::ui::canvas::state::{ContextMenuTarget, EdgeInsertDrag, PendingEdgeInsertDrag};
 use crate::ui::presenter::{EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 
-use super::prelude::{edge_insert_drag, NodeGraphCanvas};
+use super::prelude::{NodeGraphCanvas, edge_insert_drag};
 use super::{
-    event_cx, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_ports_spaced_x, NullServices, TestUiHostImpl,
+    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
 fn bounds() -> Rect {

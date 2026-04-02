@@ -115,10 +115,11 @@ mod viewport_animation_conformance;
 mod z_order_conformance;
 
 use harness::{
-    command_cx, event_cx, insert_editor_config, insert_editor_config_with, insert_graph_view,
-    insert_view, make_host_graph_view, make_test_graph_two_nodes,
-    make_test_graph_two_nodes_with_ports, make_test_graph_two_nodes_with_ports_spaced_x,
-    make_test_graph_two_nodes_with_size, read_node_pos, NullServices, TestUiHostImpl,
+    NullServices, TestUiHostImpl, command_cx, event_cx, insert_editor_config,
+    insert_editor_config_with, insert_graph_view, insert_view, make_host_graph_view,
+    make_test_graph_two_nodes, make_test_graph_two_nodes_with_ports,
+    make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
+    read_node_pos,
 };
 
 use prelude::{NodeDrag, NodeGraphCanvas, ViewSnapshot, WireDrag, WireDragKind};
@@ -1058,15 +1059,19 @@ fn internal_drag_drop_candidate_on_edge_splits_edge() {
     let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
     assert_eq!(nodes_len, 3);
     assert_eq!(edges_len, 2);
-    assert!(graph
-        .read_ref(cx.app, |g| g.edges.contains_key(&edge_id))
-        .unwrap_or(false));
-    assert!(graph
-        .read_ref(cx.app, |g| g
-            .nodes
-            .values()
-            .any(|n| n.kind == template_kind))
-        .unwrap_or(false));
+    assert!(
+        graph
+            .read_ref(cx.app, |g| g.edges.contains_key(&edge_id))
+            .unwrap_or(false)
+    );
+    assert!(
+        graph
+            .read_ref(cx.app, |g| g
+                .nodes
+                .values()
+                .any(|n| n.kind == template_kind))
+            .unwrap_or(false)
+    );
 
     let after = canvas.sync_view_state(cx.app);
     assert_eq!(after.selected_nodes.len(), 1);
@@ -2401,12 +2406,16 @@ fn delete_selection_respects_node_deletable_and_keeps_undeletable_selected() {
 
     assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_DELETE_SELECTION)));
 
-    assert!(graph
-        .read_ref(&mut host, |g| g.nodes.contains_key(&a))
-        .unwrap_or(false));
-    assert!(!graph
-        .read_ref(&mut host, |g| g.nodes.contains_key(&b))
-        .unwrap_or(true));
+    assert!(
+        graph
+            .read_ref(&mut host, |g| g.nodes.contains_key(&a))
+            .unwrap_or(false)
+    );
+    assert!(
+        !graph
+            .read_ref(&mut host, |g| g.nodes.contains_key(&b))
+            .unwrap_or(true)
+    );
 
     let selected_nodes = view
         .read_ref(&host, |s| s.selected_nodes.clone())

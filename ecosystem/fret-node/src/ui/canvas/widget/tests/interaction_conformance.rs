@@ -10,13 +10,12 @@ use crate::rules::EdgeEndpoint;
 use crate::ui::edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
 
 use super::prelude::{
-    edge_drag, group_resize, left_click, marquee, node_drag, node_resize, pending_drag, pointer_up,
-    wire_drag, HitTestCtx, HitTestScratch, NodeGraphCanvas,
+    HitTestCtx, HitTestScratch, NodeGraphCanvas, edge_drag, group_resize, left_click, marquee,
+    node_drag, node_resize, pending_drag, pointer_up, wire_drag,
 };
 use super::{
-    event_cx, insert_editor_config_with, insert_view,
+    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
     make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
-    NullServices, TestUiHostImpl,
 };
 use crate::ui::canvas::state::{EdgeDrag, PendingGroupDrag, PendingGroupResize, WireDragKind};
 use crate::ui::canvas::state::{GroupResize, NodeDrag, NodeResize, NodeResizeHandle};

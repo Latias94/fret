@@ -7,8 +7,8 @@ use crate::ui::canvas::geometry::CanvasGeometry;
 
 use super::prelude::*;
 use super::{
-    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports_spaced_x,
-    TestUiHostImpl,
+    TestUiHostImpl, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
 fn hit_port_slow(geom: &CanvasGeometry, pos: Point) -> Option<PortId> {

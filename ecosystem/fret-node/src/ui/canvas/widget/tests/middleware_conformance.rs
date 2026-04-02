@@ -1,7 +1,7 @@
 use fret_core::AppWindowId;
 use fret_runtime::CommandId;
-use fret_ui::retained_bridge::Widget as _;
 use fret_ui::UiHost;
+use fret_ui::retained_bridge::Widget as _;
 
 use crate::ops::GraphTransaction;
 use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
@@ -13,8 +13,8 @@ use crate::ui::{
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    command_cx, insert_editor_config_with, insert_graph_view, make_test_graph_two_nodes,
-    read_node_pos, NullServices, TestUiHostImpl,
+    NullServices, TestUiHostImpl, command_cx, insert_editor_config_with, insert_graph_view,
+    make_test_graph_two_nodes, read_node_pos,
 };
 
 #[derive(Debug, Clone, Copy)]

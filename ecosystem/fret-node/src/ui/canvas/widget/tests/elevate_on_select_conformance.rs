@@ -13,8 +13,8 @@ use crate::ui::presenter::NodeGraphPresenter;
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
 use super::{
-    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size, NullServices,
-    TestUiHostImpl,
+    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_size,
 };
 
 fn paint_once(

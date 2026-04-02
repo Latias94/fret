@@ -1,11 +1,11 @@
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 use crate::rules::{DiagnosticSeverity, EdgeEndpoint};
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports, TestUiHostImpl,
+    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
 };
 
 #[test]
@@ -54,8 +54,8 @@ fn hover_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_index()
 }
 
 #[test]
-fn selection_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_index_when_draw_order_is_constant(
-) {
+fn selection_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_index_when_draw_order_is_constant()
+ {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, b, _b_in) = make_test_graph_two_nodes_with_ports();
     let graph = host.models.insert(graph_value);

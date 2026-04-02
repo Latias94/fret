@@ -7,9 +7,9 @@ use fret_core::{
     TextService, Transform2D,
 };
 use fret_runtime::ModelId;
-use fret_ui::retained_bridge::Widget as _;
 use fret_ui::Invalidation;
 use fret_ui::UiTree;
+use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
@@ -18,7 +18,7 @@ use crate::core::{
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, NodeGraphPresenter};
 
 use super::prelude::NodeGraphCanvas;
-use super::{insert_editor_config_with, insert_graph_view, TestUiHostImpl};
+use super::{TestUiHostImpl, insert_editor_config_with, insert_graph_view};
 
 #[derive(Default)]
 struct CountingServices {

@@ -1,10 +1,10 @@
 use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port};
 use crate::io::NodeGraphViewState;
-use crate::ops::{apply_transaction, GraphOp, GraphTransaction};
+use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::runtime::apply::{apply_edge_changes, apply_node_changes};
 use crate::runtime::callbacks::{
-    connection_changes_from_transaction, install_callbacks, ConnectionChange,
-    NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks,
+    ConnectionChange, NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks,
+    connection_changes_from_transaction, install_callbacks,
 };
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
 use crate::runtime::events::NodeGraphStoreEvent;

@@ -4,7 +4,7 @@ use crate::core::CanvasPoint;
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size, TestUiHostImpl,
+    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size,
 };
 
 #[test]

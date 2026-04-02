@@ -13,11 +13,11 @@ use crate::runtime::callbacks::{
 };
 
 use super::prelude::{
-    cancel, node_drag, pan_zoom, pending_drag, pointer_up, wire_drag, NodeGraphCanvas,
+    NodeGraphCanvas, cancel, node_drag, pan_zoom, pending_drag, pointer_up, wire_drag,
 };
 use super::{
-    event_cx, insert_editor_config_with, insert_graph_view, make_host_graph_view,
-    make_test_graph_two_nodes_with_ports_spaced_x, NullServices, TestUiHostImpl,
+    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_graph_view,
+    make_host_graph_view, make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::ui::canvas::state::{
     NodeDrag, PendingNodeDrag, PendingNodeSelectAction, PendingWireDrag, WireDrag, WireDragKind,
@@ -163,9 +163,10 @@ fn click_connect_emits_connect_start_and_committed_end() {
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s.starts_with("start:")));
     assert!(!got.iter().any(|s| s.starts_with("edge_update_start:")));
-    assert!(got
-        .iter()
-        .any(|s| s.contains("end:Committed") && s.contains("Some")));
+    assert!(
+        got.iter()
+            .any(|s| s.contains("end:Committed") && s.contains("Some"))
+    );
 }
 
 #[test]
@@ -353,12 +354,14 @@ fn reconnect_emits_reconnect_start_and_committed_end() {
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s.starts_with("reconnect_start:")));
     assert!(got.iter().any(|s| s.starts_with("edge_update_start:")));
-    assert!(got
-        .iter()
-        .any(|s| s.contains("reconnect_end:Committed") && s.contains("Some")));
-    assert!(got
-        .iter()
-        .any(|s| s.contains("edge_update_end:Committed") && s.contains("Some")));
+    assert!(
+        got.iter()
+            .any(|s| s.contains("reconnect_end:Committed") && s.contains("Some"))
+    );
+    assert!(
+        got.iter()
+            .any(|s| s.contains("edge_update_end:Committed") && s.contains("Some"))
+    );
 }
 
 #[test]
@@ -544,9 +547,10 @@ fn node_drag_start_and_escape_cancel_emits_node_drag_end_canceled() {
 
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s.starts_with("node_drag_start:")));
-    assert!(got
-        .iter()
-        .any(|s| s.contains("node_drag_end") && s.contains("Canceled")));
+    assert!(
+        got.iter()
+            .any(|s| s.contains("node_drag_end") && s.contains("Canceled"))
+    );
 }
 
 #[test]
@@ -686,9 +690,10 @@ fn node_drag_pointer_up_emits_node_drag_end_committed() {
     ));
 
     let got = log.borrow().clone();
-    assert!(got
-        .iter()
-        .any(|s| s.contains("node_drag_end") && s.contains("Committed")));
+    assert!(
+        got.iter()
+            .any(|s| s.contains("node_drag_end") && s.contains("Committed"))
+    );
 }
 
 #[test]

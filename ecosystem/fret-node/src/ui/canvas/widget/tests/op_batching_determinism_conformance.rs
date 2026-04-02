@@ -11,8 +11,8 @@ use crate::ui::{
     NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareCx,
 };
 
-use super::prelude::{node_drag, pointer_up, NodeGraphCanvas};
-use super::{event_cx, insert_view, NullServices, TestUiHostImpl};
+use super::prelude::{NodeGraphCanvas, node_drag, pointer_up};
+use super::{NullServices, TestUiHostImpl, event_cx, insert_view};
 use crate::ui::canvas::state::NodeDrag;
 
 #[derive(Debug, Default)]

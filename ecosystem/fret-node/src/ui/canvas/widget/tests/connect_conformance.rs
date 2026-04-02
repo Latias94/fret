@@ -12,10 +12,10 @@ use crate::interaction::NodeGraphConnectionMode;
 use crate::rules::{ConnectPlan, EdgeEndpoint, InsertNodeTemplate, PortTemplate};
 use crate::ui::presenter::NodeGraphPresenter;
 
-use super::prelude::{wire_drag, NodeGraphCanvas};
+use super::prelude::{NodeGraphCanvas, wire_drag};
 use super::{
-    event_cx, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_ports_spaced_x, NullServices, TestUiHostImpl,
+    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::ui::canvas::state::{ContextMenuTarget, WireDrag, WireDragKind};
 

@@ -11,7 +11,7 @@ use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, EdgeRouteKind, NodeGraphP
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
 use super::{
-    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports, TestUiHostImpl,
+    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
 };
 
 #[derive(Default)]

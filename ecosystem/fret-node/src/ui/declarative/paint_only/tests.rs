@@ -13,19 +13,25 @@ use fret_runtime::{
 };
 use fret_ui::action::UiActionHost;
 
-use super::hover_anchor::{hovered_canvas_anchor_rect_for_surface, HoverTooltipAnchorSource};
+use super::hover_anchor::{HoverTooltipAnchorSource, hovered_canvas_anchor_rect_for_surface};
 
 use super::overlay_elements::{
     build_hover_tooltip_overlay_spec, clamp_marquee_overlay_rect_to_bounds,
 };
 use super::pointer_down::read_left_pointer_down_snapshot_action_host;
 use super::{
-    apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
-    begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
-    build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
-    build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
-    build_node_drag_transaction, collect_portal_label_infos_for_visible_subset,
-    commit_graph_transaction, commit_marquee_selection_action_host, commit_node_drag_transaction,
+    AuthoritativeSurfaceBoundarySnapshot, DeclarativeDiagKeyAction, DeclarativeDiagViewPreset,
+    DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
+    Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot, LeftPointerReleaseOutcome,
+    MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome,
+    NodeDragReleaseOutcome, NodeDragState, NodeRectDraw, PendingSelectionState, PortalBoundsStore,
+    PortalDebugFlags, PortalMeasuredGeometryState, apply_declarative_diag_view_preset_action_host,
+    authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
+    begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
+    build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
+    build_marquee_preview_selected_nodes, build_node_drag_transaction,
+    collect_portal_label_infos_for_visible_subset, commit_graph_transaction,
+    commit_marquee_selection_action_host, commit_node_drag_transaction,
     commit_pending_selection_action_host, complete_left_pointer_release_action_host,
     complete_node_drag_release_action_host, derived_geometry_cache_key, edges_cache_key,
     effective_selected_nodes_for_paint, escape_cancel_declarative_interactions_action_host,
@@ -40,13 +46,7 @@ use super::{
     record_portal_measured_node_size_in_state, resolve_hover_tooltip_anchor, stable_hash_u64,
     sync_authoritative_surface_boundary_in_models, sync_hover_anchor_store_in_models,
     sync_portal_canvas_bounds_in_models, update_hovered_node_pointer_move_action_host,
-    update_view_state_action_host, view_from_state, AuthoritativeSurfaceBoundarySnapshot,
-    DeclarativeDiagKeyAction, DeclarativeDiagViewPreset, DeclarativeKeyboardZoomAction,
-    DerivedGeometryCacheState, DragState, HoverAnchorStore, Invalidation, LeftPointerDownOutcome,
-    LeftPointerDownSnapshot, LeftPointerReleaseOutcome, MarqueeDragState,
-    MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome, NodeDragReleaseOutcome,
-    NodeDragState, NodeRectDraw, PendingSelectionState, PortalBoundsStore, PortalDebugFlags,
-    PortalMeasuredGeometryState,
+    update_view_state_action_host, view_from_state,
 };
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,
@@ -55,8 +55,8 @@ use crate::core::{
 use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use crate::ops::GraphOp;
 use crate::runtime::callbacks::{
-    install_callbacks, NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks,
-    SelectionChange,
+    NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks, SelectionChange,
+    install_callbacks,
 };
 use crate::runtime::changes::NodeGraphChanges;
 use crate::runtime::store::NodeGraphStore;
@@ -460,7 +460,7 @@ fn commit_graph_transaction_syncs_graph_and_view_models_through_binding() {
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store.clone());
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     let tx = host
         .models
@@ -532,7 +532,7 @@ fn commit_node_drag_transaction_notifies_store_callbacks_through_binding() {
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store.clone());
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let commits: Rc<RefCell<Vec<(Option<String>, usize)>>> = Rc::new(RefCell::new(Vec::new()));
     let _callbacks_token = host
         .models
@@ -726,6 +726,7 @@ impl DeclarativeControllerFixture {
         graph_value.nodes.insert(node_b, test_node(node_b_pos));
         let graph = host.models.insert(graph_value.clone());
         let view_state = host.models.insert(initial_view.clone());
+        let editor_config = host.models.insert(default_editor_config());
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             initial_view,
@@ -735,6 +736,7 @@ impl DeclarativeControllerFixture {
         let binding = NodeGraphSurfaceBinding::from_models_and_controller(
             graph.clone(),
             view_state.clone(),
+            editor_config.clone(),
             controller.clone(),
         );
         Self {
@@ -779,13 +781,21 @@ fn assert_pointer_session_finished(
 }
 
 fn test_binding(
+    host: &mut TestActionHostImpl,
     graph: &Model<Graph>,
     view_state: &Model<NodeGraphViewState>,
     controller: &NodeGraphController,
 ) -> NodeGraphSurfaceBinding {
+    let editor_config = controller.store();
+    let editor_config = host
+        .models
+        .read(&editor_config, |store| store.editor_config())
+        .expect("binding test store readable");
+    let editor_config = host.models.insert(editor_config);
     NodeGraphSurfaceBinding::from_models_and_controller(
         graph.clone(),
         view_state.clone(),
+        editor_config,
         controller.clone(),
     )
 }
@@ -942,7 +952,7 @@ fn handle_declarative_pointer_up_action_host_ignores_non_left_non_pan_buttons() 
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     assert!(!handle_declarative_pointer_up_action_host(
         &mut host,
@@ -959,10 +969,11 @@ fn handle_declarative_pointer_up_action_host_ignores_non_left_non_pan_buttons() 
         &pending,
         &binding,
     ));
-    assert!(host
-        .models
-        .read(&drag, |state| state.is_some())
-        .expect("drag readable"));
+    assert!(
+        host.models
+            .read(&drag, |state| state.is_some())
+            .expect("drag readable")
+    );
     assert_eq!(host.release_pointer_capture_count, 0);
     assert!(host.invalidations.is_empty());
     assert!(host.notifications.is_empty());
@@ -989,7 +1000,7 @@ fn handle_declarative_pointer_up_action_host_pan_release_clears_drag_and_finishe
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     assert!(handle_declarative_pointer_up_action_host(
         &mut host,
@@ -1006,10 +1017,11 @@ fn handle_declarative_pointer_up_action_host_pan_release_clears_drag_and_finishe
         &pending,
         &binding,
     ));
-    assert!(host
-        .models
-        .read(&drag, |state| state.is_none())
-        .expect("drag readable"));
+    assert!(
+        host.models
+            .read(&drag, |state| state.is_none())
+            .expect("drag readable")
+    );
     assert_pointer_session_finished(&host, action_cx);
 }
 
@@ -1035,8 +1047,8 @@ fn handle_declarative_pointer_cancel_action_host_finishes_session_even_without_t
 }
 
 #[test]
-fn complete_left_pointer_release_action_host_pending_selection_clears_transient_and_notifies_selection(
-) {
+fn complete_left_pointer_release_action_host_pending_selection_clears_transient_and_notifies_selection()
+ {
     let node_a = NodeId::from_u128(9941);
     let node_b = NodeId::from_u128(9942);
     let initial_view = NodeGraphViewState {
@@ -1074,11 +1086,13 @@ fn complete_left_pointer_release_action_host_pending_selection_clears_transient_
             selection_committed: true,
         }
     );
-    assert!(fixture
-        .host
-        .models
-        .read(&pending, |state| state.is_none())
-        .expect("pending readable"));
+    assert!(
+        fixture
+            .host
+            .models
+            .read(&pending, |state| state.is_none())
+            .expect("pending readable")
+    );
     assert_single_selection_change(&trace, vec![node_b]);
 }
 
@@ -1124,11 +1138,13 @@ fn complete_left_pointer_release_action_host_inactive_toggle_marquee_skips_selec
             selection_committed: false,
         }
     );
-    assert!(fixture
-        .host
-        .models
-        .read(&marquee, |state| state.is_none())
-        .expect("marquee readable"));
+    assert!(
+        fixture
+            .host
+            .models
+            .read(&marquee, |state| state.is_none())
+            .expect("marquee readable")
+    );
     let got = trace.borrow();
     assert!(got.commit_labels.is_empty());
     assert!(got.selection_changes.is_empty());
@@ -1146,7 +1162,7 @@ fn complete_left_pointer_release_action_host_none_when_no_left_release_state_exi
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let node_drag = host.models.insert(None::<NodeDragState>);
     let marquee = host.models.insert(None::<MarqueeDragState>);
     let pending = host.models.insert(None::<PendingSelectionState>);
@@ -1203,16 +1219,20 @@ fn handle_node_drag_left_pointer_release_action_host_clears_drag_and_pending_sel
             }
         ))
     );
-    assert!(fixture
-        .host
-        .models
-        .read(&node_drag, |state| state.is_none())
-        .expect("node drag readable"));
-    assert!(fixture
-        .host
-        .models
-        .read(&pending, |state| state.is_none())
-        .expect("pending readable"));
+    assert!(
+        fixture
+            .host
+            .models
+            .read(&node_drag, |state| state.is_none())
+            .expect("node drag readable")
+    );
+    assert!(
+        fixture
+            .host
+            .models
+            .read(&pending, |state| state.is_none())
+            .expect("pending readable")
+    );
     assert_single_selection_change(&trace, vec![node_b]);
 }
 
@@ -1240,7 +1260,7 @@ fn handle_pending_selection_left_pointer_release_action_host_commits_and_clears_
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let pending = host.models.insert(Some(PendingSelectionState {
         nodes: Arc::from([node_b]),
         clear_edges: true,
@@ -1256,10 +1276,11 @@ fn handle_pending_selection_left_pointer_release_action_host_commits_and_clears_
             selection_committed: true,
         })
     );
-    assert!(host
-        .models
-        .read(&pending, |state| state.is_none())
-        .expect("pending readable"));
+    assert!(
+        host.models
+            .read(&pending, |state| state.is_none())
+            .expect("pending readable")
+    );
     assert_eq!(
         host.models
             .read(&view_state, |state| state.selected_nodes.clone())
@@ -1285,7 +1306,7 @@ fn handle_marquee_left_pointer_release_action_host_clears_pending_and_marquee_wi
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let marquee = host.models.insert(Some(MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(4.0), Px(4.0)),
@@ -1309,14 +1330,16 @@ fn handle_marquee_left_pointer_release_action_host_clears_pending_and_marquee_wi
             selection_committed: false,
         })
     );
-    assert!(host
-        .models
-        .read(&marquee, |state| state.is_none())
-        .expect("marquee readable"));
-    assert!(host
-        .models
-        .read(&pending, |state| state.is_none())
-        .expect("pending readable"));
+    assert!(
+        host.models
+            .read(&marquee, |state| state.is_none())
+            .expect("marquee readable")
+    );
+    assert!(
+        host.models
+            .read(&pending, |state| state.is_none())
+            .expect("pending readable")
+    );
     assert_eq!(
         host.models
             .read(&view_state, |state| state.selected_nodes.clone())
@@ -1326,8 +1349,8 @@ fn handle_marquee_left_pointer_release_action_host_clears_pending_and_marquee_wi
 }
 
 #[test]
-fn complete_node_drag_release_action_host_selection_only_release_notifies_selection_without_drag_commit(
-) {
+fn complete_node_drag_release_action_host_selection_only_release_notifies_selection_without_drag_commit()
+ {
     let mut host = TestActionHostImpl::default();
     let node_a = NodeId::from_u128(9951);
     let node_b = NodeId::from_u128(9952);
@@ -1350,7 +1373,7 @@ fn complete_node_drag_release_action_host_selection_only_release_notifies_select
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store.clone());
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let trace = install_declarative_callback_trace(&mut host, &store);
     let node_drag = NodeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
@@ -1445,10 +1468,11 @@ fn escape_cancel_declarative_interactions_action_host_handles_pending_selection_
     assert!(escape_cancel_declarative_interactions_action_host(
         &mut host, &drag, &marquee, &node_drag, &pending,
     ));
-    assert!(host
-        .models
-        .read(&pending, |state| state.is_none())
-        .expect("pending readable"));
+    assert!(
+        host.models
+            .read(&pending, |state| state.is_none())
+            .expect("pending readable")
+    );
 }
 
 #[test]
@@ -1478,14 +1502,16 @@ fn begin_pan_pointer_down_action_host_clears_transients_and_starts_drag() {
     assert!(begin_pan_pointer_down_action_host(
         &mut host, &drag, &marquee, &node_drag, down,
     ));
-    assert!(host
-        .models
-        .read(&marquee, |state| state.is_none())
-        .expect("marquee readable"));
-    assert!(host
-        .models
-        .read(&node_drag, |state| state.is_none())
-        .expect("node drag readable"));
+    assert!(
+        host.models
+            .read(&marquee, |state| state.is_none())
+            .expect("marquee readable")
+    );
+    assert!(
+        host.models
+            .read(&node_drag, |state| state.is_none())
+            .expect("node drag readable")
+    );
     host.models
         .read(&drag, |state| {
             let state = state.expect("drag armed");
@@ -1557,10 +1583,11 @@ fn begin_left_pointer_down_action_host_hit_node_selectable_arms_pending_selectio
             assert_eq!(state.nodes_sorted.as_ref(), &[hit]);
         })
         .expect("node drag readable");
-    assert!(host
-        .models
-        .read(&marquee, |state| state.is_none())
-        .expect("marquee readable"));
+    assert!(
+        host.models
+            .read(&marquee, |state| state.is_none())
+            .expect("marquee readable")
+    );
 }
 
 #[test]
@@ -1606,14 +1633,16 @@ fn begin_left_pointer_down_action_host_empty_space_arms_marquee() {
             .expect("hovered readable"),
         None
     );
-    assert!(host
-        .models
-        .read(&node_drag, |state| state.is_none())
-        .expect("node drag readable"));
-    assert!(host
-        .models
-        .read(&pending, |state| state.is_none())
-        .expect("pending readable"));
+    assert!(
+        host.models
+            .read(&node_drag, |state| state.is_none())
+            .expect("node drag readable")
+    );
+    assert!(
+        host.models
+            .read(&pending, |state| state.is_none())
+            .expect("pending readable")
+    );
     host.models
         .read(&marquee, |state| {
             let state = state.as_ref().expect("marquee armed");
@@ -1694,7 +1723,7 @@ fn read_authoritative_view_state_in_models_uses_store_when_bound_view_is_stale()
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     let projection = read_authoritative_view_state_in_models(&mut host.models, &binding, |state| {
         (state.pan, state.zoom, state.selected_nodes.clone())
@@ -1707,8 +1736,8 @@ fn read_authoritative_view_state_in_models_uses_store_when_bound_view_is_stale()
 }
 
 #[test]
-fn read_left_pointer_down_snapshot_action_host_uses_authoritative_store_view_state_when_bound_view_is_stale(
-) {
+fn read_left_pointer_down_snapshot_action_host_uses_authoritative_store_view_state_when_bound_view_is_stale()
+ {
     let mut host = TestActionHostImpl::default();
     let (graph_value, geom, node_a, node_b) = test_marquee_geometry();
     let spatial =
@@ -1739,7 +1768,7 @@ fn read_left_pointer_down_snapshot_action_host_uses_authoritative_store_view_sta
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let hit_scratch = host.models.insert(Vec::<NodeId>::new());
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -1765,8 +1794,8 @@ fn read_left_pointer_down_snapshot_action_host_uses_authoritative_store_view_sta
 }
 
 #[test]
-fn handle_node_drag_pointer_move_action_host_activation_commits_pending_selection_and_requests_capture(
-) {
+fn handle_node_drag_pointer_move_action_host_activation_commits_pending_selection_and_requests_capture()
+ {
     let mut host = TestActionHostImpl::default();
     let view_value = NodeGraphViewState::default();
     let editor_config = test_editor_config(|state| {
@@ -1787,7 +1816,7 @@ fn handle_node_drag_pointer_move_action_host_activation_commits_pending_selectio
         .insert(NodeGraphStore::new(graph_value, view_value, editor_config));
     let controller = NodeGraphController::new(store);
     let graph = host.models.insert(Graph::new(GraphId::from_u128(9973)));
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let node_drag = host.models.insert(Some(NodeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -1821,10 +1850,11 @@ fn handle_node_drag_pointer_move_action_host_activation_commits_pending_selectio
             needs_layout_redraw: true,
         })
     );
-    assert!(host
-        .models
-        .read(&pending, |state| state.is_none())
-        .expect("pending readable"));
+    assert!(
+        host.models
+            .read(&pending, |state| state.is_none())
+            .expect("pending readable")
+    );
     assert_eq!(
         host.models
             .read(&hovered, |state| *state)
@@ -1869,7 +1899,7 @@ fn handle_node_drag_pointer_move_action_host_uses_authoritative_store_interactio
     ));
     let controller = NodeGraphController::new(store);
     let graph = host.models.insert(Graph::new(GraphId::from_u128(99731)));
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let node_drag = host.models.insert(Some(NodeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -1924,7 +1954,7 @@ fn handle_node_drag_pointer_move_action_host_canceled_session_clears_hover_witho
     ));
     let controller = NodeGraphController::new(store);
     let graph = host.models.insert(Graph::new(GraphId::from_u128(9976)));
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let node_drag = host.models.insert(Some(NodeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -1977,7 +2007,7 @@ fn handle_marquee_pointer_move_action_host_non_selectable_clears_session_without
         editor_config,
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let marquee = host.models.insert(Some(MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -2012,10 +2042,11 @@ fn handle_marquee_pointer_move_action_host_non_selectable_clears_session_without
         outcome,
         Some(MarqueePointerMoveOutcome::ReleaseCaptureRedrawOnly)
     );
-    assert!(host
-        .models
-        .read(&marquee, |state| state.is_none())
-        .expect("marquee readable"));
+    assert!(
+        host.models
+            .read(&marquee, |state| state.is_none())
+            .expect("marquee readable")
+    );
     assert_eq!(
         host.models
             .read(&hovered, |state| *state)
@@ -2046,7 +2077,7 @@ fn handle_marquee_pointer_move_action_host_updates_preview_and_clears_hover() {
         .models
         .insert(NodeGraphStore::new(graph, view_value, editor_config));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph_model, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph_model, &view_state, &controller);
     let marquee = host.models.insert(Some(MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -2128,7 +2159,7 @@ fn handle_marquee_pointer_move_action_host_uses_authoritative_store_view_when_bo
         editor_config,
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let marquee = host.models.insert(Some(MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -2188,7 +2219,7 @@ fn update_hovered_node_pointer_move_action_host_sets_hit_node_from_geometry() {
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph_model, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph_model, &view_state, &controller);
     let hovered = host.models.insert(None::<NodeId>);
     let hit_scratch = host.models.insert(Vec::<NodeId>::new());
     let bounds = Rect::new(
@@ -2219,8 +2250,8 @@ fn update_hovered_node_pointer_move_action_host_sets_hit_node_from_geometry() {
 }
 
 #[test]
-fn update_hovered_node_pointer_move_action_host_uses_authoritative_store_view_when_bound_view_is_stale(
-) {
+fn update_hovered_node_pointer_move_action_host_uses_authoritative_store_view_when_bound_view_is_stale()
+ {
     let mut host = TestActionHostImpl::default();
     let (graph_value, geom, _node_a, node_b) = test_marquee_geometry();
     let spatial =
@@ -2248,7 +2279,7 @@ fn update_hovered_node_pointer_move_action_host_uses_authoritative_store_view_wh
         editor_config,
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let hovered = host.models.insert(None::<NodeId>);
     let hit_scratch = host.models.insert(Vec::<NodeId>::new());
     let bounds = Rect::new(
@@ -2312,7 +2343,7 @@ fn apply_declarative_diag_view_preset_action_host_offset_partial_marquee_clears_
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store.clone());
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     assert!(apply_declarative_diag_view_preset_action_host(
         &mut host,
@@ -2352,7 +2383,7 @@ fn handle_declarative_diag_key_action_host_disable_portals_clears_pending_fit_an
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let mut portal_bounds_state = PortalBoundsStore::default();
     portal_bounds_state.pending_fit_to_portals = true;
     portal_bounds_state.nodes_canvas_bounds.insert(
@@ -2376,10 +2407,11 @@ fn handle_declarative_diag_key_action_host_disable_portals_clears_pending_fit_an
         &diag_paint_overrides,
         &diag_paint_overrides_enabled,
     ));
-    assert!(host
-        .models
-        .read(&portal_debug, |state| state.disable_portals)
-        .expect("portal debug readable"));
+    assert!(
+        host.models
+            .read(&portal_debug, |state| state.disable_portals)
+            .expect("portal debug readable")
+    );
     host.models
         .read(&portal_bounds, |state| {
             assert!(!state.pending_fit_to_portals);
@@ -2403,7 +2435,7 @@ fn handle_declarative_keyboard_zoom_action_host_reset_normalizes_zoom() {
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     assert!(handle_declarative_keyboard_zoom_action_host(
         &mut host,
@@ -2445,7 +2477,7 @@ fn handle_declarative_diag_key_action_host_toggle_paint_overrides_sets_first_edg
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let portal_bounds = host.models.insert(PortalBoundsStore::default());
     let portal_debug = host.models.insert(PortalDebugFlags::default());
     let diag_paint_overrides_enabled = host.models.insert(false);
@@ -2460,10 +2492,11 @@ fn handle_declarative_diag_key_action_host_toggle_paint_overrides_sets_first_edg
         &diag_paint_overrides,
         &diag_paint_overrides_enabled,
     ));
-    assert!(host
-        .models
-        .read(&diag_paint_overrides_enabled, |state| *state)
-        .expect("flag readable"));
+    assert!(
+        host.models
+            .read(&diag_paint_overrides_enabled, |state| *state)
+            .expect("flag readable")
+    );
     assert!(diag_paint_overrides.edge_paint_override(edge_id).is_some());
 }
 
@@ -2483,12 +2516,13 @@ fn escape_cancel_declarative_interactions_action_host_ignores_already_canceled_n
     assert!(!escape_cancel_declarative_interactions_action_host(
         &mut host, &drag, &marquee, &node_drag, &pending,
     ));
-    assert!(host
-        .models
-        .read(&node_drag, |state| {
-            state.as_ref().is_some_and(NodeDragState::is_canceled)
-        })
-        .expect("node drag readable"));
+    assert!(
+        host.models
+            .read(&node_drag, |state| {
+                state.as_ref().is_some_and(NodeDragState::is_canceled)
+            })
+            .expect("node drag readable")
+    );
 }
 
 #[test]
@@ -2507,10 +2541,11 @@ fn pointer_cancel_declarative_interactions_action_host_clears_already_canceled_n
     assert!(pointer_cancel_declarative_interactions_action_host(
         &mut host, &drag, &marquee, &node_drag, &pending,
     ));
-    assert!(host
-        .models
-        .read(&node_drag, |state| state.is_none())
-        .expect("node drag readable"));
+    assert!(
+        host.models
+            .read(&node_drag, |state| state.is_none())
+            .expect("node drag readable")
+    );
 }
 
 #[test]
@@ -2543,22 +2578,26 @@ fn pointer_cancel_declarative_interactions_action_host_clears_transients_without
     assert!(pointer_cancel_declarative_interactions_action_host(
         &mut host, &drag, &marquee, &node_drag, &pending,
     ));
-    assert!(host
-        .models
-        .read(&drag, |state| state.is_none())
-        .expect("drag readable"));
-    assert!(host
-        .models
-        .read(&marquee, |state| state.is_none())
-        .expect("marquee readable"));
-    assert!(host
-        .models
-        .read(&node_drag, |state| state.is_none())
-        .expect("node drag readable"));
-    assert!(host
-        .models
-        .read(&pending, |state| state.is_none())
-        .expect("pending readable"));
+    assert!(
+        host.models
+            .read(&drag, |state| state.is_none())
+            .expect("drag readable")
+    );
+    assert!(
+        host.models
+            .read(&marquee, |state| state.is_none())
+            .expect("marquee readable")
+    );
+    assert!(
+        host.models
+            .read(&node_drag, |state| state.is_none())
+            .expect("node drag readable")
+    );
+    assert!(
+        host.models
+            .read(&pending, |state| state.is_none())
+            .expect("pending readable")
+    );
 }
 
 #[test]
@@ -2668,7 +2707,7 @@ fn commit_pending_selection_action_host_preserves_edges_and_groups_when_not_requ
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let pending = PendingSelectionState {
         nodes: Arc::from([node_b]),
         clear_edges: false,
@@ -2780,7 +2819,7 @@ fn commit_pending_selection_action_host_preserves_authoritative_selection_when_b
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let _ = host.models.update(&view_state, |state| {
         state.selected_nodes = vec![node_a];
         state.selected_edges.clear();
@@ -2896,7 +2935,7 @@ fn commit_pending_selection_action_host_can_clear_all_selection_kinds() {
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let pending = PendingSelectionState {
         nodes: Arc::from([]),
         clear_edges: true,
@@ -2950,7 +2989,7 @@ fn update_view_state_action_host_uses_authoritative_store_view_state_when_bound_
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     assert!(update_view_state_action_host(
         &mut host,
@@ -3897,26 +3936,31 @@ fn sync_authoritative_surface_boundary_in_models_clears_graph_scoped_transients_
         &hover_anchor,
         &portal_bounds,
     ));
-    assert!(host
-        .models
-        .read(&drag, |state| state.is_none())
-        .expect("drag readable"));
-    assert!(host
-        .models
-        .read(&marquee, |state| state.is_none())
-        .expect("marquee readable"));
-    assert!(host
-        .models
-        .read(&node_drag, |state| state.is_none())
-        .expect("node drag readable"));
-    assert!(host
-        .models
-        .read(&pending, |state| state.is_none())
-        .expect("pending readable"));
-    assert!(host
-        .models
-        .read(&hovered, |state| state.is_none())
-        .expect("hovered readable"));
+    assert!(
+        host.models
+            .read(&drag, |state| state.is_none())
+            .expect("drag readable")
+    );
+    assert!(
+        host.models
+            .read(&marquee, |state| state.is_none())
+            .expect("marquee readable")
+    );
+    assert!(
+        host.models
+            .read(&node_drag, |state| state.is_none())
+            .expect("node drag readable")
+    );
+    assert!(
+        host.models
+            .read(&pending, |state| state.is_none())
+            .expect("pending readable")
+    );
+    assert!(
+        host.models
+            .read(&hovered, |state| state.is_none())
+            .expect("hovered readable")
+    );
     host.models
         .read(&hover_anchor, |state| {
             assert_eq!(state.hovered_id, None);
@@ -4005,22 +4049,26 @@ fn sync_authoritative_surface_boundary_in_models_keeps_pan_and_hover_on_selectio
         &hover_anchor,
         &portal_bounds,
     ));
-    assert!(host
-        .models
-        .read(&drag, |state| state.is_some())
-        .expect("drag readable"));
-    assert!(host
-        .models
-        .read(&marquee, |state| state.is_none())
-        .expect("marquee readable"));
-    assert!(host
-        .models
-        .read(&node_drag, |state| state.is_none())
-        .expect("node drag readable"));
-    assert!(host
-        .models
-        .read(&pending, |state| state.is_none())
-        .expect("pending readable"));
+    assert!(
+        host.models
+            .read(&drag, |state| state.is_some())
+            .expect("drag readable")
+    );
+    assert!(
+        host.models
+            .read(&marquee, |state| state.is_none())
+            .expect("marquee readable")
+    );
+    assert!(
+        host.models
+            .read(&node_drag, |state| state.is_none())
+            .expect("node drag readable")
+    );
+    assert!(
+        host.models
+            .read(&pending, |state| state.is_none())
+            .expect("pending readable")
+    );
     assert_eq!(
         host.models
             .read(&hovered, |state| *state)
@@ -4127,7 +4175,7 @@ fn commit_marquee_selection_action_host_clears_edges_and_groups_for_non_toggle()
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let marquee = MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -4241,7 +4289,7 @@ fn commit_marquee_selection_action_host_preserves_edges_and_groups_for_toggle() 
         default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let marquee = MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),

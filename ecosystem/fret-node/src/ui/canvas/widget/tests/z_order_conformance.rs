@@ -4,7 +4,7 @@ use crate::core::{
 };
 
 use super::prelude::NodeGraphCanvas;
-use super::{insert_view, TestUiHostImpl};
+use super::{TestUiHostImpl, insert_view};
 
 #[test]
 fn edges_are_sorted_by_endpoint_z_order() {

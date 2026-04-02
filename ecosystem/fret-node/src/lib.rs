@@ -176,9 +176,10 @@ mod surface_policy_tests {
     fn binding_surface_covers_instance_style_sync_and_history_helpers() {
         let binding_surface = binding_surface();
         assert!(binding_surface.contains(
-            "pub struct NodeGraphSurfaceBinding {\n    graph: Model<Graph>,\n    view_state: Model<NodeGraphViewState>,\n    store: Model<NodeGraphStore>,\n}"
+            "pub struct NodeGraphSurfaceBinding {\n    graph: Model<Graph>,\n    view_state: Model<NodeGraphViewState>,\n    editor_config: Model<NodeGraphEditorConfig>,\n    store: Model<NodeGraphStore>,\n}"
         ));
         assert!(binding_surface.contains("pub fn from_models_and_controller("));
+        assert!(!binding_surface.contains("pub fn from_models_and_controller_with_editor_config("));
         assert!(!binding_surface.contains("pub fn from_models("));
         assert!(binding_surface.contains("pub fn dispatch_transaction<"));
         assert!(binding_surface.contains("pub fn dispatch_transaction_action_host("));

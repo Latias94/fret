@@ -13,7 +13,7 @@ use crate::ui::{
     InteractionChromeHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, WireOutlineHint,
 };
 
-use super::{insert_editor_config_with, insert_view, NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_editor_config_with, insert_view};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,

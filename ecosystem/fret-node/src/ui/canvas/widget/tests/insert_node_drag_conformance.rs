@@ -6,8 +6,8 @@ use serde_json::Value;
 use crate::ui::presenter::InsertNodeCandidate;
 
 use super::prelude::insert_node_drag::InsertNodeDragPayload;
-use super::prelude::{insert_node_drag, NodeGraphCanvas};
-use super::{event_cx, insert_graph_view, make_test_graph_two_nodes, NullServices, TestUiHostImpl};
+use super::prelude::{NodeGraphCanvas, insert_node_drag};
+use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_test_graph_two_nodes};
 use crate::ui::canvas::state::PendingInsertNodeDrag;
 
 #[test]

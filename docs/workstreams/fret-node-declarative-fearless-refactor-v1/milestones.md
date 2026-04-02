@@ -132,7 +132,9 @@ runtime tuning.
   - retained canvas can mirror `NodeGraphEditorConfig`,
   - tuning/controls overlays read explicit editor-config seams,
   - example persistence restores and saves `NodeGraphViewStateFileV1` through
-    `new_with_editor_config(...)`.
+    `new(...)`.
+  - advanced binding seams now also require explicit editor-config mirrors, so controlled sync no
+    longer falls back to default config when graph/view/controller mirrors are caller-owned.
 
 ### Done criteria
 
@@ -299,8 +301,9 @@ points rather than direct graph mutation.
     tests aggregate that companion surface so the public contract is no longer coupled to one
     monolithic file.
   - The advanced mirror-owned binding constructor is now spelled
-    `NodeGraphSurfaceBinding::from_models_and_controller(...)`, so explicit
-    graph/view/controller ownership does not masquerade as the default constructor family.
+    `NodeGraphSurfaceBinding::from_models_and_controller(...)`, and it now requires explicit
+    `graph + view_state + editor_config + controller` ownership so advanced mirror wiring does not
+    masquerade as the default constructor family or silently synthesize config defaults.
   - Internally, `NodeGraphSurfaceBinding` now stores the authoritative `NodeGraphStore` handle rather
     than privately holding a controller instance, so the implementation matches the public
     ownership story: controller construction is explicit, while the binding stays store-backed.

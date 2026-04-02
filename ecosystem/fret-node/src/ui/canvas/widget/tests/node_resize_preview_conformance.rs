@@ -6,8 +6,8 @@ use crate::core::{CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind};
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports_spaced_x,
-    TestUiHostImpl,
+    TestUiHostImpl, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
 fn assert_near(a: f32, b: f32) {

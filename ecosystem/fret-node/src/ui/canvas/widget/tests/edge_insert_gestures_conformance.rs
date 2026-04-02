@@ -7,8 +7,8 @@ use crate::ui::NodeGraphCanvas;
 
 use super::prelude::{cubic_bezier, wire_ctrl_points};
 use super::{
-    event_cx, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_ports_spaced_x, NullServices, TestUiHostImpl,
+    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
 fn bounds() -> Rect {
@@ -85,12 +85,14 @@ fn double_click_edge_inserts_reroute_when_enabled() {
     let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
     assert_eq!(nodes_len, 3);
     assert_eq!(edges_len, 2);
-    assert!(graph
-        .read_ref(cx.app, |g| g
-            .nodes
-            .values()
-            .any(|n| n.kind.0 == crate::REROUTE_KIND))
-        .unwrap_or(false));
+    assert!(
+        graph
+            .read_ref(cx.app, |g| g
+                .nodes
+                .values()
+                .any(|n| n.kind.0 == crate::REROUTE_KIND))
+            .unwrap_or(false)
+    );
 
     let after = canvas.sync_view_state(cx.app);
     assert_eq!(after.selected_edges.len(), 0);

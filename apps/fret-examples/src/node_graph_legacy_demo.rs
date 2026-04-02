@@ -2549,13 +2549,12 @@ fn render(
                         )
                     }
                     NodeGraphDemoDeclarativeMode::PaintOnly => {
-                        let binding =
-                            NodeGraphSurfaceBinding::from_models_and_controller_with_editor_config(
-                                models.graph.clone(),
-                                models.view.clone(),
-                                models.editor_config.clone(),
-                                models.controller.clone(),
-                            );
+                        let binding = NodeGraphSurfaceBinding::from_models_and_controller(
+                            models.graph.clone(),
+                            models.view.clone(),
+                            models.editor_config.clone(),
+                            models.controller.clone(),
+                        );
                         let props = binding.surface_props();
                         fret_node::ui::declarative::node_graph_surface(cx, props)
                     }

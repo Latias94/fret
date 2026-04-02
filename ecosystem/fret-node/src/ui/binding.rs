@@ -31,7 +31,7 @@ mod binding_viewport;
 pub struct NodeGraphSurfaceBinding {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,
-    editor_config: Option<Model<NodeGraphEditorConfig>>,
+    editor_config: Model<NodeGraphEditorConfig>,
     store: Model<NodeGraphStore>,
 }
 
@@ -47,7 +47,7 @@ impl NodeGraphSurfaceBinding {
         let view_state_model = models.insert(view_state.clone());
         let editor_config_model = models.insert(editor_config.clone());
         let store = models.insert(NodeGraphStore::new(graph, view_state, editor_config));
-        Self::from_models_and_controller_with_editor_config(
+        Self::from_models_and_controller(
             graph_model,
             view_state_model,
             editor_config_model,
@@ -64,7 +64,7 @@ impl NodeGraphSurfaceBinding {
         let graph_model = models.insert(graph);
         let view_state_model = models.insert(view_state);
         let editor_config_model = models.insert(editor_config);
-        Self::from_models_and_controller_with_editor_config(
+        Self::from_models_and_controller(
             graph_model,
             view_state_model,
             editor_config_model,
@@ -76,26 +76,13 @@ impl NodeGraphSurfaceBinding {
     pub fn from_models_and_controller(
         graph: Model<Graph>,
         view_state: Model<NodeGraphViewState>,
-        controller: NodeGraphController,
-    ) -> Self {
-        Self {
-            graph,
-            view_state,
-            editor_config: None,
-            store: controller.store(),
-        }
-    }
-
-    pub fn from_models_and_controller_with_editor_config(
-        graph: Model<Graph>,
-        view_state: Model<NodeGraphViewState>,
         editor_config: Model<NodeGraphEditorConfig>,
         controller: NodeGraphController,
     ) -> Self {
         Self {
             graph,
             view_state,
-            editor_config: Some(editor_config),
+            editor_config,
             store: controller.store(),
         }
     }
@@ -108,7 +95,7 @@ impl NodeGraphSurfaceBinding {
         self.view_state.clone()
     }
 
-    pub fn editor_config_model(&self) -> Option<Model<NodeGraphEditorConfig>> {
+    pub fn editor_config_model(&self) -> Model<NodeGraphEditorConfig> {
         self.editor_config.clone()
     }
 
@@ -132,9 +119,7 @@ impl NodeGraphSurfaceBinding {
     pub fn observe<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) {
         cx.observe_model(&self.graph, Invalidation::Paint);
         cx.observe_model(&self.view_state, Invalidation::Paint);
-        if let Some(editor_config) = self.editor_config.as_ref() {
-            cx.observe_model(editor_config, Invalidation::Paint);
-        }
+        cx.observe_model(&self.editor_config, Invalidation::Paint);
     }
 }
 
@@ -148,7 +133,7 @@ mod tests {
     use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
     use crate::ops::{GraphOp, GraphTransaction};
     use crate::runtime::fit_view::{
-        compute_fit_view_target_for_canvas_rect, FitViewComputeOptions,
+        FitViewComputeOptions, compute_fit_view_target_for_canvas_rect,
     };
     use crate::runtime::store::NodeGraphStore;
     use crate::ui::NodeGraphFitViewOptions;
@@ -313,30 +298,34 @@ mod tests {
         ));
         assert!(outcome.changes.nodes.is_empty());
         assert!(outcome.changes.edges.is_empty());
-        assert!(host
-            .models
-            .read(&binding.graph_model(), |graph| graph
-                .sticky_notes
-                .contains_key(&note_id))
-            .expect("graph model readable"));
+        assert!(
+            host.models
+                .read(&binding.graph_model(), |graph| graph
+                    .sticky_notes
+                    .contains_key(&note_id))
+                .expect("graph model readable")
+        );
 
         let undo = binding.undo_action_host(&mut host).expect("undo succeeds");
         assert!(undo.is_some());
-        assert!(!host
-            .models
-            .read(&binding.graph_model(), |graph| graph
-                .sticky_notes
-                .contains_key(&note_id))
-            .expect("graph model readable"));
+        assert!(
+            !host
+                .models
+                .read(&binding.graph_model(), |graph| graph
+                    .sticky_notes
+                    .contains_key(&note_id))
+                .expect("graph model readable")
+        );
 
         let redo = binding.redo_action_host(&mut host).expect("redo succeeds");
         assert!(redo.is_some());
-        assert!(host
-            .models
-            .read(&binding.graph_model(), |graph| graph
-                .sticky_notes
-                .contains_key(&note_id))
-            .expect("graph model readable"));
+        assert!(
+            host.models
+                .read(&binding.graph_model(), |graph| graph
+                    .sticky_notes
+                    .contains_key(&note_id))
+                .expect("graph model readable")
+        );
     }
 
     #[test]
@@ -358,12 +347,13 @@ mod tests {
         binding
             .replace_graph_action_host(&mut host, graph)
             .expect("replace graph succeeds");
-        assert!(host
-            .models
-            .read(&binding.graph_model(), |value| value
-                .nodes
-                .contains_key(&node_id))
-            .expect("graph model readable"));
+        assert!(
+            host.models
+                .read(&binding.graph_model(), |value| value
+                    .nodes
+                    .contains_key(&node_id))
+                .expect("graph model readable")
+        );
 
         binding
             .set_selection_action_host(&mut host, vec![node_id], Vec::new(), Vec::new())
@@ -407,11 +397,58 @@ mod tests {
     }
 
     #[test]
+    fn replace_document_action_host_preserves_explicit_editor_config_mirror() {
+        let mut host = TestActionHost::default();
+        let mut editor_config = NodeGraphEditorConfig::default();
+        editor_config.interaction.selection_on_drag = true;
+        editor_config.runtime_tuning.only_render_visible_elements = false;
+        let binding = NodeGraphSurfaceBinding::new(
+            &mut host.models,
+            Graph::new(GraphId::from_u128(0x9008)),
+            NodeGraphViewState::default(),
+            editor_config.clone(),
+        );
+        let next_graph = Graph::new(GraphId::from_u128(0x9009));
+        let next_view_state = NodeGraphViewState {
+            pan: CanvasPoint { x: 48.0, y: 24.0 },
+            zoom: 2.0,
+            ..NodeGraphViewState::default()
+        };
+
+        binding
+            .replace_document_action_host(&mut host, next_graph.clone(), next_view_state.clone())
+            .expect("replace document succeeds");
+
+        let store_editor_config = host
+            .models
+            .read(&binding.store_model(), |store| store.editor_config())
+            .expect("store editor config readable");
+        let bound_editor_config = host
+            .models
+            .read(&binding.editor_config_model(), |config| config.clone())
+            .expect("binding editor config readable");
+        let graph_id = host
+            .models
+            .read(&binding.graph_model(), |graph| graph.graph_id)
+            .expect("graph model readable");
+        let (pan, zoom) = host
+            .models
+            .read(&binding.view_state_model(), |state| (state.pan, state.zoom))
+            .expect("view model readable");
+
+        assert_eq!(store_editor_config, editor_config);
+        assert_eq!(bound_editor_config, editor_config);
+        assert_eq!(graph_id, next_graph.graph_id);
+        assert_eq!(pan, next_view_state.pan);
+        assert_eq!(zoom, next_view_state.zoom);
+    }
+
+    #[test]
     fn fit_canvas_rect_in_bounds_action_host_syncs_bound_view_model() {
         let mut host = TestActionHost::default();
         let binding = NodeGraphSurfaceBinding::new(
             &mut host.models,
-            Graph::new(GraphId::from_u128(0x9008)),
+            Graph::new(GraphId::from_u128(0x9010)),
             NodeGraphViewState::default(),
             NodeGraphEditorConfig::default(),
         );
