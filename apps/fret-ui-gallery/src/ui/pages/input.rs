@@ -31,6 +31,7 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Input` stays a leaf control; labels/descriptions/errors belong in `Field`, and inline adornments belong in `InputGroup` / `ButtonGroup`, so no generic `children(...)` / `asChild` surface is needed here.",
         "The self-drawn input surface does not yet expose generic browser `type=` hints (`email/search/url/tel/file`) as a public API; `password()` is the direct parity path today, and the file example remains an explicit composition translation.",
         "Native file inputs are authored as `Input` + `Browse` button composition; Fret does not mirror DOM `type=\"file\"` directly, and diagnostics runs mock the picker to keep scripted gates deterministic.",
+        "`Input::required(true)` keeps required semantics on the input control itself; any visible required marker remains caller-owned label composition.",
         "Required markers remain label/call-site composition; the recipe owns input chrome, not surrounding form-policy affordances.",
         "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
     ]);
@@ -78,7 +79,7 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let invalid = DocSection::build(cx, "Invalid", invalid)
         .test_id_prefix("ui-gallery-input-invalid")
         .description(
-            "Use `aria_invalid` on the input and invalid styling on the surrounding `Field`.",
+            "Use root `Input::aria_invalid(true)` on the input and caller-owned `Field::invalid(true)` on the surrounding `Field`.",
         )
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let file = DocSection::build(cx, "File", file)
@@ -96,7 +97,7 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let required = DocSection::build(cx, "Required", required)
         .test_id_prefix("ui-gallery-input-required")
         .description(
-            "Use `required(...)` on the input and compose the required marker in the label.",
+            "Use root `Input::required(true)` on the input and keep the visible required marker caller-owned in the label.",
         )
         .code_rust_from_file_region(snippets::required::SOURCE, "example");
     let badge = DocSection::build(cx, "Badge", badge)

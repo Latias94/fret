@@ -19,6 +19,7 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Textarea::new(model)` is the Fret equivalent of the upstream `<Textarea />`; `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `required(...)`, `min_height(...)`, and `rows(...)` cover the documented core surface.",
         "`Textarea` keeps control chrome, root `w-full min-w-0`, minimum height, and resize-handle behavior recipe-owned; surrounding width caps and form layout stay caller-owned.",
         "`Field::build(...)` is the focused Fret lane for docs-path label/description association, while explicit `control_id(...)` plus `FieldLabel::for_control(...)` stays in the separate `Label Association` follow-up.",
+        "`Textarea::required(true)` keeps required semantics on the textarea control itself; any visible required marker stays caller-owned label composition.",
         "Reference stack: shadcn Textarea docs, the default registry recipe, and the related base/new-york examples.",
         "Neither Radix Primitives nor Base UI defines a dedicated Textarea primitive or compound children contract; they only treat `<textarea>` as a labelable/render target, so this pass did not identify a missing `fret-ui` mechanism bug.",
         "No extra generic `compose()` / `asChild` / children API is needed here: upstream composition happens around the textarea via `Field` or simple stacked layout, and Fret already matches that leaf-control layering.",
@@ -54,7 +55,7 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-textarea-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let invalid = DocSection::build(cx, "Invalid", invalid)
-        .description("Invalid state uses `aria_invalid` and field-level error styling.")
+        .description("Invalid state uses root `Textarea::aria_invalid(true)` on the control and caller-owned `Field::invalid(true)` on the composition.")
         .test_id_prefix("ui-gallery-textarea-invalid")
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let button = DocSection::build(cx, "Button", button)

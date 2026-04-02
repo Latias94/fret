@@ -3537,6 +3537,137 @@ fn select_combobox_switch_and_native_select_docs_keep_required_ownership_on_the_
 }
 
 #[test]
+fn checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/pages/checkbox.rs",
+            vec![
+                "`Checkbox::required(true)` now maps the upstream required semantics (`aria-required`) onto the checkbox control itself; the docs path still composes field labels/descriptions externally instead of widening the checkbox to a children API.",
+            ],
+        ),
+        (
+            "src/ui/pages/radio_group.rs",
+            vec![
+                "`RadioGroup::required(true)` now marks the group root as required, matching the upstream group-level required semantics instead of scattering the state across individual radio items.",
+            ],
+        ),
+        (
+            "src/ui/snippets/input/required.rs",
+            vec![
+                "shadcn::Input::new(value)",
+                ".control_id(required_id)",
+                ".required(true)",
+                "shadcn::raw::typography::muted(\"*\")",
+            ],
+        ),
+        (
+            "src/ui/pages/input.rs",
+            vec![
+                "`Input::required(true)` keeps required semantics on the input control itself; any visible required marker remains caller-owned label composition.",
+                "Use root `Input::required(true)` on the input and keep the visible required marker caller-owned in the label.",
+            ],
+        ),
+        (
+            "src/ui/pages/textarea.rs",
+            vec![
+                "`Textarea::required(true)` keeps required semantics on the textarea control itself; any visible required marker stays caller-owned label composition.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing required ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn checkbox_radio_input_and_textarea_docs_keep_invalid_ownership_on_the_control_surface() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/checkbox/invalid_state.rs",
+            vec![
+                "shadcn::Checkbox::new(invalid)",
+                ".aria_invalid(!invalid_checked)",
+                ".invalid(!invalid_checked)",
+            ],
+        ),
+        (
+            "src/ui/pages/checkbox.rs",
+            vec![
+                "Invalid styling uses root `Checkbox::aria_invalid(...)` on the control and caller-owned `Field::invalid(...)` / destructive copy on the composition.",
+            ],
+        ),
+        (
+            "src/ui/snippets/radio_group/invalid.rs",
+            vec![
+                "shadcn::RadioGroupItem::new(\"email\",\"Emailonly\").aria_invalid(true)",
+                "shadcn::RadioGroupItem::new(\"sms\",\"SMSonly\").aria_invalid(true)",
+                "shadcn::RadioGroupItem::new(\"both\",\"BothEmail&SMS\").aria_invalid(true)",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/radio_group.rs",
+            vec![
+                "Use `RadioGroupItem::aria_invalid(true)` on each item and caller-owned `Field::invalid(true)` on each composed row for validation styling.",
+            ],
+        ),
+        (
+            "src/ui/snippets/input/invalid.rs",
+            vec![
+                "shadcn::Input::new(value)",
+                ".aria_invalid(true)",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/input.rs",
+            vec![
+                "Use root `Input::aria_invalid(true)` on the input and caller-owned `Field::invalid(true)` on the surrounding `Field`.",
+            ],
+        ),
+        (
+            "src/ui/snippets/textarea/invalid.rs",
+            vec![
+                "shadcn::Textarea::new(value)",
+                ".aria_invalid(true)",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/textarea.rs",
+            vec![
+                "Invalid state uses root `Textarea::aria_invalid(true)` on the control and caller-owned `Field::invalid(true)` on the composition.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing invalid ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
 fn form_page_and_notes_teach_rtl_as_a_fret_follow_up() {
     let form_page = read("src/ui/pages/form.rs");
     assert!(
