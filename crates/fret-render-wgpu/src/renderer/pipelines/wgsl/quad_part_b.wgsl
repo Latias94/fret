@@ -702,6 +702,11 @@ fn shadow_blurred_alpha(
   source_radii: vec4<f32>,
   sigma: f32,
 ) -> f32 {
+  // Four midpoint samples are sufficient for small soft shadows, but shadcn-style `shadow-lg` /
+  // `shadow-xl` profiles combine large blur radii with negative spread. That makes corner error
+  // more visible along the bottom shoulder. Eight midpoint samples remain cheap while tracking a
+  // higher-sample reference much more closely for those profiles.
+  let sample_count = 8.0;
   let half_size = source_rect.zw * 0.5;
   let center = source_rect.xy + half_size;
   let center_to_point = point - center;
@@ -711,11 +716,11 @@ fn shadow_blurred_alpha(
   let high = center_to_point.y + half_size.y;
   let start = clamp(-3.0 * sigma, low, high);
   let end = clamp(3.0 * sigma, low, high);
-  let step = (end - start) / 4.0;
+  let step = (end - start) / sample_count;
 
   var y = start + step * 0.5;
   var alpha = 0.0;
-  for (var i = 0; i < 4; i = i + 1) {
+  for (var i = 0; i < 8; i = i + 1) {
     let blur =
       shadow_blur_along_x(center_to_point.x, center_to_point.y - y, sigma, corner_radius, half_size);
     alpha = alpha + blur * shadow_gaussian(y, sigma) * step;

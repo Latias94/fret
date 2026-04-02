@@ -1,6 +1,7 @@
 use fret_core::geometry::{Corners, Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, Scene, SceneOp};
 use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
+use std::f32::consts::{FRAC_1_SQRT_2, PI};
 use std::sync::mpsc;
 
 fn read_texture_rgba8(
@@ -129,6 +130,86 @@ fn u(v: f32, sf: f32) -> u32 {
     (v * sf).round() as u32
 }
 
+fn shadow_source_rect(base_rect: [f32; 4], offset: [f32; 2], spread: f32) -> [f32; 4] {
+    [
+        base_rect[0] + offset[0] - spread,
+        base_rect[1] + offset[1] - spread,
+        (base_rect[2] + 2.0 * spread).max(0.0),
+        (base_rect[3] + 2.0 * spread).max(0.0),
+    ]
+}
+
+fn shadow_source_radii(base_radii: [f32; 4], source_size: [f32; 2], spread: f32) -> [f32; 4] {
+    let max_radius = (source_size[0].min(source_size[1]) * 0.5).max(0.0);
+    base_radii.map(|radius| (radius + spread).clamp(0.0, max_radius))
+}
+
+fn pick_corner_radius(center_to_point: [f32; 2], radii: [f32; 4]) -> f32 {
+    let left = center_to_point[0] < 0.0;
+    let top = center_to_point[1] < 0.0;
+    let top_radius = if left { radii[0] } else { radii[1] };
+    let bottom_radius = if left { radii[3] } else { radii[2] };
+    if top { top_radius } else { bottom_radius }
+}
+
+fn shadow_gaussian(x: f32, sigma: f32) -> f32 {
+    (-(x * x) / (2.0 * sigma * sigma)).exp() / ((2.0 * PI).sqrt() * sigma)
+}
+
+fn shadow_erf(value: f32) -> f32 {
+    let sign = value.signum();
+    let abs = value.abs();
+    let r1 = 1.0 + (0.278_393 + (0.230_389 + (0.000_972 + 0.078_108 * abs) * abs) * abs) * abs;
+    let r2 = r1 * r1;
+    sign - sign / (r2 * r2)
+}
+
+fn shadow_blur_along_x(x: f32, y: f32, sigma: f32, corner_radius: f32, half_size: [f32; 2]) -> f32 {
+    let delta = (half_size[1] - corner_radius - y.abs()).min(0.0);
+    let curved = half_size[0] - corner_radius
+        + (corner_radius * corner_radius - delta * delta)
+            .max(0.0)
+            .sqrt();
+    let lo = 0.5 + 0.5 * shadow_erf((x - curved) * (FRAC_1_SQRT_2 / sigma));
+    let hi = 0.5 + 0.5 * shadow_erf((x + curved) * (FRAC_1_SQRT_2 / sigma));
+    hi - lo
+}
+
+fn shadow_blurred_alpha(
+    point: [f32; 2],
+    source_rect: [f32; 4],
+    source_radii: [f32; 4],
+    sigma: f32,
+    sample_count: u32,
+) -> f32 {
+    let half_size = [source_rect[2] * 0.5, source_rect[3] * 0.5];
+    let center = [source_rect[0] + half_size[0], source_rect[1] + half_size[1]];
+    let center_to_point = [point[0] - center[0], point[1] - center[1]];
+    let corner_radius = pick_corner_radius(center_to_point, source_radii);
+
+    let low = center_to_point[1] - half_size[1];
+    let high = center_to_point[1] + half_size[1];
+    let start = (-3.0 * sigma).clamp(low, high);
+    let end = (3.0 * sigma).clamp(low, high);
+    let step = (end - start) / sample_count as f32;
+
+    let mut y = start + step * 0.5;
+    let mut alpha = 0.0;
+    for _ in 0..sample_count {
+        let blur = shadow_blur_along_x(
+            center_to_point[0],
+            center_to_point[1] - y,
+            sigma,
+            corner_radius,
+            half_size,
+        );
+        alpha += blur * shadow_gaussian(y, sigma) * step;
+        y += step;
+    }
+
+    alpha.clamp(0.0, 1.0)
+}
+
 #[test]
 fn shadow_rrect_conformance_masks_content_and_rounds_bottom_corners() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
@@ -195,6 +276,139 @@ fn shadow_rrect_conformance_masks_content_and_rounds_bottom_corners() {
             "rounded bottom corners should stay softer than the bottom center; center={below_center:?} corner={below_corner:?} sf={scale_factor}"
         );
     }
+}
+
+#[test]
+fn shadow_rrect_conformance_shadow_lg_keeps_bottom_shoulders_soft() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            return;
+        }
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::ShadowRRect {
+        order: DrawOrder(0),
+        rect: Rect::new(
+            Point::new(Px(32.0), Px(24.0)),
+            Size::new(Px(96.0), Px(120.0)),
+        ),
+        corner_radii: Corners::all(Px(16.0)),
+        offset: Point::new(Px(0.0), Px(10.0)),
+        spread: Px(-3.0),
+        blur_radius: Px(15.0),
+        color: Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.8,
+        },
+    });
+
+    for scale_factor in [1.0_f32, 2.0_f32] {
+        let size = (u(160.0, scale_factor), u(200.0, scale_factor));
+        let pixels = render_and_readback(&ctx, &mut renderer, &scene, size, scale_factor);
+
+        let inside_content = pixel_rgba(
+            &pixels,
+            size.0,
+            u(80.0, scale_factor),
+            u(84.0, scale_factor),
+        );
+        let below_center = pixel_rgba(
+            &pixels,
+            size.0,
+            u(80.0, scale_factor),
+            u(156.0, scale_factor),
+        );
+        let bottom_shoulder = pixel_rgba(
+            &pixels,
+            size.0,
+            u(54.0, scale_factor),
+            u(156.0, scale_factor),
+        );
+        let below_corner = pixel_rgba(
+            &pixels,
+            size.0,
+            u(44.0, scale_factor),
+            u(156.0, scale_factor),
+        );
+        let outside_corner = pixel_rgba(
+            &pixels,
+            size.0,
+            u(36.0, scale_factor),
+            u(156.0, scale_factor),
+        );
+
+        assert!(
+            inside_content[3] < 8,
+            "shadow-only draw must keep the content box transparent for shadow-lg-style profiles; got rgba={inside_content:?} sf={scale_factor}"
+        );
+        assert!(
+            below_center[3] > 56,
+            "expected a visible bottom shadow footprint for shadow-lg-style profiles; got rgba={below_center:?} sf={scale_factor}"
+        );
+        assert!(
+            below_center[3] > bottom_shoulder[3] + 4,
+            "bottom shoulder should taper before the center; center={below_center:?} shoulder={bottom_shoulder:?} sf={scale_factor}"
+        );
+        assert!(
+            bottom_shoulder[3] > below_corner[3] + 8,
+            "rounded bottom corners should stay softer than the shoulder; shoulder={bottom_shoulder:?} corner={below_corner:?} sf={scale_factor}"
+        );
+        assert!(
+            below_corner[3] > outside_corner[3] + 8,
+            "shadow-lg bottom corners should keep fading past the rounded edge; corner={below_corner:?} outside={outside_corner:?} sf={scale_factor}"
+        );
+    }
+}
+
+#[test]
+fn shadow_rrect_shadow_lg_numeric_profile_prefers_eight_midpoint_samples() {
+    let base_rect = [32.0, 24.0, 96.0, 120.0];
+    let base_radii = [16.0, 16.0, 16.0, 16.0];
+    let offset = [0.0, 10.0];
+    let spread = -3.0;
+    let sigma = 15.0;
+    let source_rect = shadow_source_rect(base_rect, offset, spread);
+    let source_radii = shadow_source_radii(base_radii, [source_rect[2], source_rect[3]], spread);
+
+    let mut mean_abs_error_4: f32 = 0.0;
+    let mut mean_abs_error_8: f32 = 0.0;
+    let mut max_abs_error_4: f32 = 0.0;
+    let mut max_abs_error_8: f32 = 0.0;
+    let mut probe_count = 0u32;
+
+    for y in (144..=174).step_by(2) {
+        for x in (32..=128).step_by(2) {
+            let point = [x as f32, y as f32];
+            let reference = shadow_blurred_alpha(point, source_rect, source_radii, sigma, 256);
+            let alpha_4 = shadow_blurred_alpha(point, source_rect, source_radii, sigma, 4);
+            let alpha_8 = shadow_blurred_alpha(point, source_rect, source_radii, sigma, 8);
+            let error_4 = (alpha_4 - reference).abs();
+            let error_8 = (alpha_8 - reference).abs();
+            mean_abs_error_4 += error_4;
+            mean_abs_error_8 += error_8;
+            max_abs_error_4 = max_abs_error_4.max(error_4);
+            max_abs_error_8 = max_abs_error_8.max(error_8);
+            probe_count += 1;
+        }
+    }
+
+    mean_abs_error_4 /= probe_count as f32;
+    mean_abs_error_8 /= probe_count as f32;
+
+    assert!(
+        mean_abs_error_8 < mean_abs_error_4 * 0.5,
+        "eight midpoint samples should track the high-sample shadow-lg bottom-band reference more closely than four; mae4={mean_abs_error_4} mae8={mean_abs_error_8}"
+    );
+    assert!(
+        max_abs_error_8 < max_abs_error_4 * 0.5,
+        "eight midpoint samples should reduce worst-case bottom-band error for shadow-lg-style profiles; max4={max_abs_error_4} max8={max_abs_error_8}"
+    );
 }
 
 #[test]
