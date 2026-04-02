@@ -18,10 +18,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 .unwrap_or_else(|| self.editor_config.clone());
         }
         #[cfg(test)]
-        if let Ok(editor_config) = self.view_state.read_ref(host, |state| NodeGraphEditorConfig {
-            interaction: state.interaction.clone(),
-            runtime_tuning: state.runtime_tuning,
-        }) {
+        if let Ok(editor_config) = self
+            .view_state
+            .read_ref(host, |state| NodeGraphEditorConfig {
+                interaction: state.interaction.clone(),
+                runtime_tuning: state.runtime_tuning,
+            })
+        {
             return editor_config;
         }
         self.editor_config.clone()
@@ -38,7 +41,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             selected_groups: Vec::new(),
             draw_order: Vec::new(),
             group_draw_order: Vec::new(),
-            interaction: self.editor_config_snapshot(host).resolved_interaction_state(),
+            interaction: self
+                .editor_config_snapshot(host)
+                .resolved_interaction_state(),
         };
 
         let _ = self.view_state.read(host, |_host, s| {
@@ -82,8 +87,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let Ok((next_view, next_graph, next_editor_config)) = store.read_ref(host, |s| {
             (s.view_state().clone(), s.graph().clone(), s.editor_config())
-        })
-        else {
+        }) else {
             return;
         };
         let _ = self.graph.update(host, |g, _cx| {

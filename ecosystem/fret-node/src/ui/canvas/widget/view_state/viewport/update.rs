@@ -33,7 +33,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let bounds = self.interaction.last_bounds.unwrap_or_default();
         let style = self.style.clone();
-        let translate_extent = self.editor_config_snapshot(host).interaction.translate_extent;
+        let translate_extent = self
+            .editor_config_snapshot(host)
+            .interaction
+            .translate_extent;
         if let Some(store) = self.store.as_ref() {
             let _ = store.update(host, |store, _cx| {
                 store.update_view_state(|s| {

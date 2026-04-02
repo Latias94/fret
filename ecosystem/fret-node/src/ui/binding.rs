@@ -38,12 +38,7 @@ pub struct NodeGraphSurfaceBinding {
 impl NodeGraphSurfaceBinding {
     /// Creates the default store-backed binding for declarative node-graph surfaces.
     pub fn new(models: &mut ModelStore, graph: Graph, view_state: NodeGraphViewState) -> Self {
-        Self::new_with_editor_config(
-            models,
-            graph,
-            view_state,
-            NodeGraphEditorConfig::default(),
-        )
+        Self::new_with_editor_config(models, graph, view_state, NodeGraphEditorConfig::default())
     }
 
     /// Creates a store-backed binding with an explicit editor configuration payload.

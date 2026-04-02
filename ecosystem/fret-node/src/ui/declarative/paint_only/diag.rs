@@ -1,5 +1,5 @@
-use super::*;
 use super::transactions::update_editor_config_action_host;
+use super::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DeclarativeDiagViewPreset {

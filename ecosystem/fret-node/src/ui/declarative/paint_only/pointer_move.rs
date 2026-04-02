@@ -1,5 +1,5 @@
-use super::*;
 use super::surface_support::read_authoritative_interaction_config_in_models;
+use super::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct NodeDragPointerMoveOutcome {
@@ -42,12 +42,9 @@ pub(super) fn handle_node_drag_pointer_move_action_host(
         });
     }
 
-    let interaction = read_authoritative_interaction_config_in_models(
-        host.models_mut(),
-        binding,
-        Clone::clone,
-    )
-    .unwrap_or_default();
+    let interaction =
+        read_authoritative_interaction_config_in_models(host.models_mut(), binding, Clone::clone)
+            .unwrap_or_default();
     let should_activate = pointer_crossed_threshold(
         node_drag_value.start_screen,
         mv.position,
@@ -102,12 +99,9 @@ pub(super) fn handle_marquee_pointer_move_action_host(
         .read(marquee, |state| state.clone())
         .ok()
         .flatten()?;
-    let interaction = read_authoritative_interaction_config_in_models(
-        host.models_mut(),
-        binding,
-        Clone::clone,
-    )
-    .unwrap_or_default();
+    let interaction =
+        read_authoritative_interaction_config_in_models(host.models_mut(), binding, Clone::clone)
+            .unwrap_or_default();
     let view = read_authoritative_view_state_action_host(host, binding, view_from_state)
         .unwrap_or_default();
 
