@@ -1,6 +1,6 @@
 ---
 name: fret-skills-playbook
-description: "This skill should be used when the user asks to \"write or update a skill\", \"define regression gates\", \"add a diag script\", or \"standardize `test_id` conventions\". Provides shared conventions for execution-mode selection, layering decisions (mechanism vs policy), regression gate types, diag scripts, and evidence discipline."
+description: "This skill should be used when the user asks to \"write or update a skill\", \"define regression gates\", \"add a diag script\", or \"standardize `test_id` conventions\". Provides shared conventions for execution-mode selection, goal-backward verification, layering decisions (mechanism vs policy), regression gate types, diag scripts, and evidence discipline."
 ---
 
 # Fret skills playbook (shared conventions)
@@ -34,6 +34,7 @@ Defaults if unclear:
 ## Quick start
 
 - Read `references/execution-mode-selection.md` when deciding whether the task should stay fast, become a quick slice, or move into a workstream.
+- Read `references/goal-backward-verification.md` when deciding what must be proven before calling work “done”.
 - Use the “deliverables 3-pack” for any non-trivial change:
   - Repro (smallest target or script)
   - Gate (test/script/perf)
@@ -74,6 +75,15 @@ Escalate mode instead of stretching the lower mode:
 - `Quick slice` → `Workstream` when scope, handoff needs, or contract risk stop being obvious.
 
 ### 3) The deliverables 3-pack (Repro + Gate + Evidence)
+
+Before choosing the exact gate, do a goal-backward pass:
+
+- write 3-5 **truths** that must be true when the task is actually done,
+- name the **artifacts** that must exist for each truth,
+- name the **wiring** that must connect those artifacts,
+- then choose the smallest repro/gate/evidence set that proves the truths rather than just the edits.
+
+Do not treat “task completed” or “docs updated” as proof that the intended outcome exists.
 
 Every non-trivial change should leave these three deliverables:
 
@@ -155,6 +165,7 @@ Minimum deliverables (3-pack):
 ## Evidence anchors
 
 - Execution-mode selection note: `references/execution-mode-selection.md`
+- Goal-backward verification note: `references/goal-backward-verification.md`
 - Layering and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
 - Crate/layer usage map: `docs/crate-usage-guide.md`
 - Canonical shadcn migration status: `docs/shadcn-declarative-progress.md`

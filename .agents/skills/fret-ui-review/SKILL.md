@@ -1,6 +1,6 @@
 ---
 name: fret-ui-review
-description: "This skill should be used when the user asks to \"review a Fret UI\", \"polish UX\", \"audit focus/overlays\", or \"check token drift and `test_id` stability\". Provides a framework-aligned audit workflow (tokens, focus-visible, overlays, commands gating) with recommended regression gates and evidence anchors."
+description: "This skill should be used when the user asks to \"review a Fret UI\", \"polish UX\", \"audit focus/overlays\", or \"check token drift and `test_id` stability\". Provides a framework-aligned audit workflow (tokens, focus-visible, overlays, commands gating) with outcome-first findings, recommended regression gates, and evidence anchors."
 ---
 
 # Fret UI review (framework-aligned audit)
@@ -57,10 +57,17 @@ Audit in this priority order:
 Keep findings terse and reviewable (Vercel-style):
 
 - `path:line - category/rule_id - message (what to change + why)`
+- When possible, make the broken truth explicit in the message instead of only naming the local code smell.
 
 ## Workflow
 
 1) Identify the review scope (files/patterns) and the smallest runnable target.
+
+1.25) Write 3-5 review truths before scanning details:
+
+- What must be true for this surface to be considered correct?
+- Which truths are user-facing behavior, and which are teaching-surface truths?
+- Which truths already have proof, and which are only assumed?
 
 1.5) If this is a first-party surface, compare the right UI Gallery layers before reviewing styling:
 
@@ -105,17 +112,25 @@ Also verify the intended surface against:
 - For visual chrome/clipping/focus rings: `capture_screenshot` when a screenshot carries more signal than a prose note.
 - For perf-sensitive changes: a small perf probe/baseline.
 
+8) Report findings goal-backward:
+
+- start from the broken or unproven truth,
+- then point to the missing/wrong artifact or wiring,
+- then recommend the smallest gate that would prove the truth next time.
+
 ## Definition of done (what to leave behind)
 
 Minimum deliverables (3-pack): Repro (smallest surface), Gate (script/test/perf), Evidence (anchors + command). See `fret-skills-playbook`.
 
 - Findings are reported as concrete issues with evidence anchors (file paths + key functions).
+- The highest-risk findings are framed as broken or unproven truths, not just code-style complaints.
 - Fix recommendations map to the correct layer (mechanism vs policy vs recipe).
 - At least one regression artifact is proposed (or added) for the highest-risk issue.
 
 ## Evidence anchors
 
 - Shared conventions: `.agents/skills/fret-skills-playbook/SKILL.md`
+- Goal-backward verification note: `.agents/skills/fret-skills-playbook/references/goal-backward-verification.md`
 - Crate/layer selection: `docs/crate-usage-guide.md`
 - Shadcn authoring golden path: `docs/shadcn-declarative-progress.md`
 - Build playbook (tokens + recipes): `.agents/skills/fret-app-ui-builder/SKILL.md`, `.agents/skills/fret-app-ui-builder/references/`
