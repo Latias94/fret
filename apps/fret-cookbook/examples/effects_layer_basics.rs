@@ -1,16 +1,11 @@
+use std::sync::Arc;
+
 use fret::component::prelude::*;
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectStep};
 
-mod act {
-    fret::actions!([
-        None = "cookbook.effects_layer_basics.effect.none.v1",
-        Pixelate = "cookbook.effects_layer_basics.effect.pixelate.v1",
-        Blur = "cookbook.effects_layer_basics.effect.blur.v1"
-    ]);
-}
-
 const TEST_ID_ROOT: &str = "cookbook.effects_layer_basics.root";
+const TEST_ID_GROUP: &str = "cookbook.effects_layer_basics.effect_group";
 const TEST_ID_NONE: &str = "cookbook.effects_layer_basics.effect.none";
 const TEST_ID_PIXELATE: &str = "cookbook.effects_layer_basics.effect.pixelate";
 const TEST_ID_BLUR: &str = "cookbook.effects_layer_basics.effect.blur";
@@ -23,63 +18,70 @@ enum EffectKind {
     Blur,
 }
 
+impl EffectKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Pixelate => "pixelate",
+            Self::Blur => "blur",
+        }
+    }
+
+    fn from_value(value: Option<&str>) -> Self {
+        match value {
+            Some(value) if value == Self::Pixelate.as_str() => Self::Pixelate,
+            Some(value) if value == Self::Blur.as_str() => Self::Blur,
+            _ => Self::None,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::None => "None",
+            Self::Pixelate => "Pixelate",
+            Self::Blur => "Blur",
+        }
+    }
+
+    fn a11y_label(self) -> &'static str {
+        match self {
+            Self::None => "No effect",
+            Self::Pixelate => "Pixelate effect",
+            Self::Blur => "Blur effect",
+        }
+    }
+
+    fn test_id(self) -> &'static str {
+        match self {
+            Self::None => TEST_ID_NONE,
+            Self::Pixelate => TEST_ID_PIXELATE,
+            Self::Blur => TEST_ID_BLUR,
+        }
+    }
+}
+
 struct EffectsLayerBasicsView {
-    effect: Model<EffectKind>,
+    effect: Model<Option<Arc<str>>>,
 }
 
 impl View for EffectsLayerBasicsView {
     fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
-            effect: app.models_mut().insert(EffectKind::None),
+            effect: app
+                .models_mut()
+                .insert(Some(Arc::from(EffectKind::None.as_str()))),
         }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let effect_kind = self.effect.layout(cx).value_or(EffectKind::None);
-
-        cx.actions().models::<act::None>({
-            let effect = self.effect.clone();
-            move |models| {
-                models
-                    .update(&effect, |value| *value = EffectKind::None)
-                    .is_ok()
-            }
-        });
-        cx.actions().models::<act::Pixelate>({
-            let effect = self.effect.clone();
-            move |models| {
-                models
-                    .update(&effect, |value| *value = EffectKind::Pixelate)
-                    .is_ok()
-            }
-        });
-        cx.actions().models::<act::Blur>({
-            let effect = self.effect.clone();
-            move |models| {
-                models
-                    .update(&effect, |value| *value = EffectKind::Blur)
-                    .is_ok()
-            }
-        });
-
-        let button = |_cx: &mut UiCx<'_>,
-                      label: &'static str,
-                      effect: EffectKind,
-                      action: fret_runtime::ActionId,
-                      test_id: &'static str| {
-            let selected = effect_kind == effect;
-            shadcn::Button::new(label)
-                .variant(if selected {
-                    shadcn::ButtonVariant::Default
-                } else {
-                    shadcn::ButtonVariant::Outline
-                })
-                .action(action)
-                .a11y_role(SemanticsRole::Button)
-                .test_id(test_id)
-        };
+        let effect_kind = EffectKind::from_value(
+            self.effect
+                .layout(cx)
+                .value_or(Some(Arc::<str>::from(EffectKind::None.as_str())))
+                .as_deref(),
+        );
 
         let chain = match effect_kind {
             EffectKind::None => EffectChain::EMPTY,
@@ -146,21 +148,33 @@ impl View for EffectsLayerBasicsView {
                 .test_id(TEST_ID_PREVIEW)
         };
 
-        let controls = ui::h_flex(|cx| {
-            ui::children![
-                cx;
-                button(cx, "None", EffectKind::None, act::None.into(), TEST_ID_NONE),
-                button(
-                    cx,
-                    "Pixelate",
-                    EffectKind::Pixelate,
-                    act::Pixelate.into(),
-                    TEST_ID_PIXELATE,
-                ),
-                button(cx, "Blur", EffectKind::Blur, act::Blur.into(), TEST_ID_BLUR),
-            ]
-        })
-        .gap(Space::N2);
+        let controls = shadcn::ToggleGroup::single(&self.effect)
+            .deselectable(false)
+            .variant(shadcn::ToggleVariant::Outline)
+            .spacing(Space::N2)
+            .items([
+                shadcn::ToggleGroupItem::new(
+                    EffectKind::None.as_str(),
+                    [cx.text(EffectKind::None.label())],
+                )
+                .a11y_label(EffectKind::None.a11y_label())
+                .test_id(EffectKind::None.test_id()),
+                shadcn::ToggleGroupItem::new(
+                    EffectKind::Pixelate.as_str(),
+                    [cx.text(EffectKind::Pixelate.label())],
+                )
+                .a11y_label(EffectKind::Pixelate.a11y_label())
+                .test_id(EffectKind::Pixelate.test_id()),
+                shadcn::ToggleGroupItem::new(
+                    EffectKind::Blur.as_str(),
+                    [cx.text(EffectKind::Blur.label())],
+                )
+                .a11y_label(EffectKind::Blur.a11y_label())
+                .test_id(EffectKind::Blur.test_id()),
+            ])
+            .refine_layout(LayoutRefinement::default().flex_none())
+            .into_element(cx)
+            .test_id(TEST_ID_GROUP);
 
         let card = shadcn::card(|cx| {
             ui::children![

@@ -447,6 +447,8 @@ mod authoring_surface_policy_tests {
         assert!(THEME_SWITCHING_EXAMPLE.contains("local_init(|| Some::<Arc<str>>"));
         assert!(THEME_SWITCHING_EXAMPLE.contains("shadcn::ToggleGroup::single(&scheme_state)"));
         assert!(!THEME_SWITCHING_EXAMPLE.contains("scheme_state.clone_model()"));
+        assert!(EFFECTS_LAYER_EXAMPLE.contains("shadcn::ToggleGroup::single(&self.effect)"));
+        assert!(EFFECTS_LAYER_EXAMPLE.contains(".deselectable(false)"));
 
         assert!(TOAST_EXAMPLE.contains("on_action_notify::<act::DefaultToast>"));
         assert!(!TOAST_EXAMPLE.contains("availability::<act::DefaultToast>"));
@@ -633,6 +635,9 @@ mod authoring_surface_policy_tests {
                 .contains("shadcn::Switch::new(visible_only_keys_state.clone_model())")
         );
         assert!(VIRTUAL_LIST_EXAMPLE.contains("let reversed = reversed_state.clone();"));
+        assert!(EFFECTS_LAYER_EXAMPLE.contains("shadcn::ToggleGroup::single(&self.effect)"));
+        assert!(EFFECTS_LAYER_EXAMPLE.contains(".deselectable(false)"));
+        assert!(!EFFECTS_LAYER_EXAMPLE.contains("self.effect.clone_model()"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains("let jump = jump_state.clone();"));
         assert!(
             VIRTUAL_LIST_EXAMPLE.contains("let reversed = reversed.value_in_or(models, false);")
@@ -1213,7 +1218,9 @@ mod authoring_surface_policy_tests {
 
         assert_selected_examples_prefer_handle_first_tracked_reads(
             EFFECTS_LAYER_EXAMPLE,
-            &["let effect_kind = self.effect.layout(cx).value_or(EffectKind::None);"],
+            &[
+                "let effect_kind = EffectKind::from_value(self.effect.layout(cx).value_or(Some(Arc::<str>::from(EffectKind::None.as_str()))).as_deref(),);",
+            ],
             &["cx.watch_model(&self.effect)"],
         );
 
