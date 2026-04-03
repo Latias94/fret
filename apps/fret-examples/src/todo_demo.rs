@@ -137,9 +137,9 @@ impl TodoFilter {
 
     fn label(self) -> &'static str {
         match self {
-            Self::All => "全部",
-            Self::Active => "进行中",
-            Self::Completed => "已完成",
+            Self::All => "All",
+            Self::Active => "Active",
+            Self::Completed => "Completed",
         }
     }
 }
@@ -162,17 +162,17 @@ impl TodoLocals {
                     TodoRow {
                         id: 1,
                         done: true,
-                        text: Arc::from("学习 React Hooks"),
+                        text: Arc::from("Learn React Hooks"),
                     },
                     TodoRow {
                         id: 2,
                         done: true,
-                        text: Arc::from("掌握 Tailwind CSS"),
+                        text: Arc::from("Master Tailwind CSS"),
                     },
                     TodoRow {
                         id: 3,
                         done: false,
-                        text: Arc::from("构建现代化 Todo 应用"),
+                        text: Arc::from("Build a modern Todo app"),
                     },
                 ]
             }),
@@ -317,7 +317,7 @@ impl View for TodoDemoView {
         .shadow_sm();
 
         let status_line = if total_count == 0 {
-            ui::text("添加一个新任务开始吧")
+            ui::text("Add a task to get started")
                 .text_sm()
                 .text_color(ColorRef::Color(muted_foreground))
                 .into_element(cx)
@@ -331,7 +331,7 @@ impl View for TodoDemoView {
                         Some(Px(14.0)),
                         Some(ColorRef::Color(success)),
                     ),
-                    ui::text("太棒了！所有任务已完成")
+                    ui::text("All tasks completed")
                         .text_sm()
                         .text_color(ColorRef::Color(muted_foreground))
                         .into_element(cx),
@@ -341,7 +341,8 @@ impl View for TodoDemoView {
             .items_center()
             .into_element(cx)
         } else {
-            ui::text(format!("还有 {active_count} 个未完成的任务"))
+            let task_label = if active_count == 1 { "task" } else { "tasks" };
+            ui::text(format!("{active_count} {task_label} left"))
                 .text_sm()
                 .text_color(ColorRef::Color(muted_foreground))
                 .into_element(cx)
@@ -350,7 +351,7 @@ impl View for TodoDemoView {
         let title_block = ui::v_flex(|cx| {
             ui::children![
                 cx;
-                ui::text("我的待办事项").text_base().font_semibold(),
+                ui::text("My tasks").text_base().font_semibold(),
                 status_line,
             ]
         })
@@ -370,7 +371,7 @@ impl View for TodoDemoView {
                     ui::h_flex(|cx| {
                         ui::children![
                             cx;
-                            ui::text("完成进度")
+                            ui::text("Progress")
                                 .text_xs()
                                 .text_color(ColorRef::Color(muted_foreground))
                                 .into_element(cx),
@@ -413,7 +414,7 @@ impl View for TodoDemoView {
             .size(shadcn::ButtonSize::Icon)
             .disabled(!add_enabled)
             .action(act::Add)
-            .a11y_label("添加任务")
+            .a11y_label("Add task")
             .corner_radii_override(Corners::all(Px(14.0)))
             .ui()
             .shadow_sm()
@@ -422,8 +423,8 @@ impl View for TodoDemoView {
             .test_id(TEST_ID_ADD);
 
         let input = shadcn::Input::new(&locals.draft)
-            .a11y_label("新任务")
-            .placeholder("添加新任务...")
+            .a11y_label("New task")
+            .placeholder("Add a new task...")
             .submit_action(act::Add)
             .corner_radii_override(Corners::all(Px(14.0)))
             .test_id(TEST_ID_DRAFT)
@@ -441,9 +442,9 @@ impl View for TodoDemoView {
         let rows_body = ui::v_flex(|cx| {
             if filtered_todos.is_empty() {
                 let empty_label = match filter_value {
-                    TodoFilter::All => "没有待办任务，享受休息吧！",
-                    TodoFilter::Active => "没有进行中的任务",
-                    TodoFilter::Completed => "没有已完成的任务",
+                    TodoFilter::All => "No tasks yet. Enjoy the break!",
+                    TodoFilter::Active => "No active tasks",
+                    TodoFilter::Completed => "No completed tasks",
                 };
 
                 let empty_icon = ui::v_flex(|cx| {
@@ -544,7 +545,7 @@ impl View for TodoDemoView {
         .items_center()
         .wrap();
 
-        let clear_done_btn = shadcn::Button::new("清除已完成")
+        let clear_done_btn = shadcn::Button::new("Clear completed")
             .variant(shadcn::ButtonVariant::Ghost)
             .size(shadcn::ButtonSize::Xs)
             .corner_radii_override(Corners::all(Px(9999.0)))
@@ -751,9 +752,9 @@ where
             .action(act::Toggle)
             .action_payload(row_id)
             .a11y_label(if row_done {
-                "标记为未完成"
+                "Mark as incomplete"
             } else {
-                "标记为已完成"
+                "Mark as complete"
             })
             .children([toggle_visual])
             .test_id(format!("{TEST_ID_DONE_PREFIX}{row_id}"));
@@ -796,7 +797,7 @@ where
             ))
             .action(act::Remove)
             .action_payload(row_id)
-            .a11y_label("删除任务")
+            .a11y_label("Delete task")
             .children([icon::icon_with(
                 cx,
                 IconId::new("lucide.trash-2"),
