@@ -206,3 +206,55 @@ fn dispatch_command_publishes_post_dispatch_input_context_snapshot() {
     );
     assert_eq!(ui.focus(), None);
 }
+
+#[test]
+fn paint_all_publishes_programmatic_input_context_snapshot() {
+    struct FocusableTextInput;
+
+    impl<H: UiHost> Widget<H> for FocusableTextInput {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn is_text_input(&self) -> bool {
+            true
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let text = ui.create_node(FocusableTextInput);
+    ui.add_child(root, text);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_in(&mut app, &mut services, root, bounds, 1.0);
+    ui.set_focus(Some(text));
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window input context snapshot");
+    assert!(
+        input_ctx.focus_is_text_input,
+        "paint should refresh the input context snapshot after programmatic focus changes"
+    );
+}

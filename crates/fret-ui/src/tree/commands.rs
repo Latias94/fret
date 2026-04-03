@@ -46,13 +46,12 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn current_window_input_context(
+    pub(in crate::tree) fn current_window_input_context(
         &self,
         app: &mut H,
         ui_has_modal: bool,
         focus_is_text_input: bool,
-    ) -> Option<InputContext> {
-        let window = self.window?;
+    ) -> InputContext {
         let caps = app
             .global::<PlatformCapabilities>()
             .cloned()
@@ -61,7 +60,9 @@ impl<H: UiHost> UiTree<H> {
             platform: Platform::current(),
             caps,
             ui_has_modal,
-            window_arbitration: Some(self.window_input_arbitration_snapshot()),
+            window_arbitration: self
+                .window
+                .map(|_| self.window_input_arbitration_snapshot()),
             focus_is_text_input,
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
@@ -70,26 +71,28 @@ impl<H: UiHost> UiTree<H> {
             router_can_forward: false,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
-        if let Some(mode) = app
-            .global::<fret_runtime::WindowTextBoundaryModeService>()
-            .and_then(|svc| svc.mode(window))
-        {
-            input_ctx.text_boundary_mode = mode;
+        if let Some(window) = self.window {
+            if let Some(mode) = app
+                .global::<fret_runtime::WindowTextBoundaryModeService>()
+                .and_then(|svc| svc.mode(window))
+            {
+                input_ctx.text_boundary_mode = mode;
+            }
+            if let Some(availability) = app
+                .global::<fret_runtime::WindowCommandAvailabilityService>()
+                .and_then(|svc| svc.snapshot(window))
+                .copied()
+            {
+                input_ctx.edit_can_undo = availability.edit_can_undo;
+                input_ctx.edit_can_redo = availability.edit_can_redo;
+                input_ctx.router_can_back = availability.router_can_back;
+                input_ctx.router_can_forward = availability.router_can_forward;
+            }
         }
         if let Some(mode) = self.focus_text_boundary_mode_override() {
             input_ctx.text_boundary_mode = mode;
         }
-        if let Some(availability) = app
-            .global::<fret_runtime::WindowCommandAvailabilityService>()
-            .and_then(|svc| svc.snapshot(window))
-            .copied()
-        {
-            input_ctx.edit_can_undo = availability.edit_can_undo;
-            input_ctx.edit_can_redo = availability.edit_can_redo;
-            input_ctx.router_can_back = availability.router_can_back;
-            input_ctx.router_can_forward = availability.router_can_forward;
-        }
-        Some(input_ctx)
+        input_ctx
     }
 
     pub(in crate::tree) fn publish_window_input_context_snapshot(
@@ -112,6 +115,32 @@ impl<H: UiHost> UiTree<H> {
                 },
             );
         }
+    }
+
+    pub(in crate::tree) fn publish_window_input_context_snapshot_untracked(
+        &self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        only_if_changed: bool,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+        if only_if_changed {
+            let needs_update = app
+                .global::<fret_runtime::WindowInputContextService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != input_ctx);
+            if !needs_update {
+                return;
+            }
+        }
+        app.with_global_mut_untracked(
+            fret_runtime::WindowInputContextService::default,
+            |svc, _app| {
+                svc.set_snapshot(window, input_ctx.clone());
+            },
+        );
     }
 
     pub(in crate::tree) fn publish_window_key_context_stack_snapshot(
@@ -143,7 +172,9 @@ impl<H: UiHost> UiTree<H> {
     /// removal, and similar helpers) only update retained tree state. Cross-surface consumers that
     /// read `WindowInputContextService`, `WindowKeyContextStackService`, or
     /// `WindowCommandActionAvailabilityService` become authoritative only after this publish step
-    /// or another explicit commit boundary such as declarative rebuild, input dispatch, or paint.
+    /// or another full snapshot commit boundary such as declarative rebuild or non-pointer input
+    /// dispatch. Paint-only boundaries refresh `WindowInputContextService`, but they do not
+    /// republish the full key-context / command-availability snapshot set.
     ///
     /// Call this after imperative tree mutations when later same-frame consumers must observe the
     /// new authoritative window state immediately.
@@ -162,13 +193,11 @@ impl<H: UiHost> UiTree<H> {
         self.revalidate_pending_shortcut_for_current_routing_context(app, barrier_root);
 
         let focus_is_text_input = self.focus_is_text_input(app);
-        let Some(input_ctx) = self.current_window_input_context(
+        let input_ctx = self.current_window_input_context(
             app,
             input_barrier_root.is_some(),
             focus_is_text_input,
-        ) else {
-            return;
-        };
+        );
 
         self.publish_window_input_context_snapshot(app, &input_ctx);
         self.publish_window_command_action_availability_snapshot(app, &input_ctx);

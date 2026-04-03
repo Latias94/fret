@@ -225,9 +225,12 @@ Mechanism (runtime-provided):
 
 - raw retained-tree mutation APIs may change local `UiTree` state without immediately republishing
   window-level services,
-- authoritative window snapshots are published at explicit commit boundaries (`dispatch_event`,
-  `dispatch_command`, paint/declarative rebuild boundaries, or
+- full authoritative window snapshots are published at explicit commit boundaries
+  (`dispatch_event`, `dispatch_command`, declarative rebuild boundaries, or
   `UiTree::publish_window_runtime_snapshots(...)` for imperative mutation flows),
+- paint remains an input-context refresh boundary only; it may republish
+  `WindowInputContextService` without recomputing the full key-context / command-availability
+  snapshot set,
 - snapshot publication must revalidate focus and pending shortcut/key-context state against the
   current authoritative tree before writing `WindowInputContextService`,
   `WindowKeyContextStackService`, and `WindowCommandActionAvailabilityService`.

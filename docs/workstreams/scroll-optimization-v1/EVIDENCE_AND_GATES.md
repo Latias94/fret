@@ -155,6 +155,8 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::window_command_action_availability_snapshot::publish_snapshot_refreshes_key_context_stack_for_cross_surface_gating`
 - Declarative rebuild refreshes window input snapshots before paint:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::render_root_rebuild_refreshes_window_input_context_snapshot_before_paint`
+- Paint refreshes window input context after programmatic focus changes:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::window_input_context_snapshot::paint_all_publishes_programmatic_input_context_snapshot`
 - Declarative rebuild refreshes window key-context snapshots before the next explicit publish:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::render_root_rebuild_refreshes_window_key_context_snapshot_before_next_publish`
 - Declarative rebuild refreshes widget command availability before the next explicit publish:
@@ -207,6 +209,8 @@ This follow-on slice locks the contract that:
 - Imperative window-snapshot commit surface:
   - `crates/fret-ui/src/tree/commands.rs`
   - `crates/fret-ui/src/tree/dispatch/window.rs`
+  - `crates/fret-ui/src/tree/paint/entry.rs`
+  - `crates/fret-ui/src/tree/tests/window_input_context_snapshot.rs`
   - `crates/fret-ui/src/declarative/tests/core.rs`
   - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - Lane positioning:
@@ -303,3 +307,4 @@ This follow-on slice locks the contract that:
   - `tree::tests::window_command_action_availability_snapshot::dispatch_event_publishes_action_availability_snapshot`
   - `tree::tests::window_input_context_snapshot::dispatch_event_publishes_post_dispatch_input_context_snapshot`
   - `tree::tests::window_input_context_snapshot::dispatch_command_publishes_post_dispatch_input_context_snapshot`
+  - `tree::tests::window_input_context_snapshot::paint_all_publishes_programmatic_input_context_snapshot`

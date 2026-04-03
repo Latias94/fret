@@ -270,75 +270,22 @@ impl<H: UiHost> UiTree<H> {
             trace_enabled,
             || tracing::trace_span!("fret.ui.dispatch.input_context"),
             || {
-                let caps = app
-                    .global::<PlatformCapabilities>()
-                    .cloned()
-                    .unwrap_or_default();
-                let mut input_ctx = InputContext {
-                    platform: Platform::current(),
-                    caps,
-                    ui_has_modal: barrier_root.is_some(),
-                    window_arbitration: None,
+                let is_pointer_move =
+                    matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. }));
+                let input_ctx = self.current_window_input_context(
+                    app,
+                    barrier_root.is_some(),
                     focus_is_text_input,
-                    text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
-                    edit_can_undo: true,
-                    edit_can_redo: true,
-                    router_can_back: false,
-                    router_can_forward: false,
-                    dispatch_phase: InputDispatchPhase::Bubble,
-                };
-                if let Some(window) = self.window {
-                    let is_pointer_move =
-                        matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. }));
-                    if let Some(mode) = app
-                        .global::<fret_runtime::WindowTextBoundaryModeService>()
-                        .and_then(|svc| svc.mode(window))
-                    {
-                        input_ctx.text_boundary_mode = mode;
-                    }
-                    if let Some(mode) = self.focus_text_boundary_mode_override() {
-                        input_ctx.text_boundary_mode = mode;
-                    }
-                    if let Some(availability) = app
-                        .global::<fret_runtime::WindowCommandAvailabilityService>()
-                        .and_then(|svc| svc.snapshot(window))
-                        .copied()
-                    {
-                        input_ctx.edit_can_undo = availability.edit_can_undo;
-                        input_ctx.edit_can_redo = availability.edit_can_redo;
-                        input_ctx.router_can_back = availability.router_can_back;
-                        input_ctx.router_can_forward = availability.router_can_forward;
-                    }
+                );
 
-                    let window_arbitration = self.window_input_arbitration_snapshot();
-                    input_ctx.window_arbitration = Some(window_arbitration);
-
-                    if is_pointer_move {
-                        // Keep pointer-move dispatch cheap: publish the snapshot without
-                        // participating in global-change propagation.
-                        app.with_global_mut_untracked(
-                            fret_runtime::WindowInputContextService::default,
-                            |svc, _app| {
-                                svc.set_snapshot(window, input_ctx.clone());
-                            },
-                        );
-                    } else {
-                        let needs_update = app
-                            .global::<fret_runtime::WindowInputContextService>()
-                            .and_then(|svc| svc.snapshot(window))
-                            .is_none_or(|prev| prev != &input_ctx);
-                        if needs_update {
-                            app.with_global_mut(
-                                fret_runtime::WindowInputContextService::default,
-                                |svc, _app| {
-                                    svc.set_snapshot(window, input_ctx.clone());
-                                },
-                            );
-                        }
-
-                        let next_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
-                        self.publish_window_key_context_stack_snapshot(app, next_key_contexts);
-                    }
+                if is_pointer_move {
+                    // Keep pointer-move dispatch cheap: publish the snapshot without
+                    // participating in global-change propagation.
+                    self.publish_window_input_context_snapshot_untracked(app, &input_ctx, false);
+                } else {
+                    self.publish_window_input_context_snapshot(app, &input_ctx);
+                    let next_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
+                    self.publish_window_key_context_stack_snapshot(app, next_key_contexts);
                 }
                 input_ctx
             },
@@ -2962,73 +2909,19 @@ impl<H: UiHost> UiTree<H> {
             trace_enabled,
             || tracing::trace_span!("fret.ui.dispatch.post_dispatch_snapshot"),
             || {
-                if let Some(window) = self.window {
-                    let (_active_layers, barrier_root) = self.active_input_layers();
-                    let is_pointer_move =
-                        matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. }));
-                    let caps = app
-                        .global::<PlatformCapabilities>()
-                        .cloned()
-                        .unwrap_or_default();
-                    let mut input_ctx = InputContext {
-                        platform: Platform::current(),
-                        caps,
-                        ui_has_modal: barrier_root.is_some(),
-                        window_arbitration: None,
+                let (_active_layers, barrier_root) = self.active_input_layers();
+                let is_pointer_move =
+                    matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. }));
+
+                if is_pointer_move {
+                    let input_ctx = self.current_window_input_context(
+                        app,
+                        barrier_root.is_some(),
                         focus_is_text_input,
-                        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
-                        edit_can_undo: true,
-                        edit_can_redo: true,
-                        router_can_back: false,
-                        router_can_forward: false,
-                        dispatch_phase: InputDispatchPhase::Bubble,
-                    };
-                    if let Some(mode) = app
-                        .global::<fret_runtime::WindowTextBoundaryModeService>()
-                        .and_then(|svc| svc.mode(window))
-                    {
-                        input_ctx.text_boundary_mode = mode;
-                    }
-                    if let Some(mode) = self.focus_text_boundary_mode_override() {
-                        input_ctx.text_boundary_mode = mode;
-                    }
-                    if let Some(availability) = app
-                        .global::<fret_runtime::WindowCommandAvailabilityService>()
-                        .and_then(|svc| svc.snapshot(window))
-                        .copied()
-                    {
-                        input_ctx.edit_can_undo = availability.edit_can_undo;
-                        input_ctx.edit_can_redo = availability.edit_can_redo;
-                        input_ctx.router_can_back = availability.router_can_back;
-                        input_ctx.router_can_forward = availability.router_can_forward;
-                    }
-
-                    let window_arbitration = self.window_input_arbitration_snapshot();
-                    input_ctx.window_arbitration = Some(window_arbitration);
-
-                    if is_pointer_move {
-                        app.with_global_mut_untracked(
-                            fret_runtime::WindowInputContextService::default,
-                            |svc, _app| {
-                                svc.set_snapshot(window, input_ctx);
-                            },
-                        );
-                    } else {
-                        let needs_update = app
-                            .global::<fret_runtime::WindowInputContextService>()
-                            .and_then(|svc| svc.snapshot(window))
-                            .is_none_or(|prev| prev != &input_ctx);
-                        if needs_update {
-                            app.with_global_mut(
-                                fret_runtime::WindowInputContextService::default,
-                                |svc, _app| {
-                                    svc.set_snapshot(window, input_ctx.clone());
-                                },
-                            );
-                        }
-
-                        self.publish_window_command_action_availability_snapshot(app, &input_ctx);
-                    }
+                    );
+                    self.publish_window_input_context_snapshot_untracked(app, &input_ctx, false);
+                } else {
+                    self.publish_window_runtime_snapshots(app);
                 }
             },
         );
