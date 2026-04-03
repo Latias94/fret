@@ -1,7 +1,7 @@
 # Scroll Optimization Workstream (v1)
 
 Date: 2026-03-03  
-Status: Draft (planning + gates-first)
+Status: Active execution lane
 
 ## Motivation
 
@@ -140,6 +140,24 @@ Concrete GPUI anchor (for parity): `scrollbar_drag_start_height` + `scrollbar_dr
 `max_offset_for_scrollbar` in `repo-ref/zed/crates/gpui/src/elements/list.rs`.
 
 ## Proposed work items (mechanism-safe)
+
+### Current slice (2026-04-03) — Deferred probe seed vs authoritative extent
+
+This slice tightens the runtime contract around deferred unbounded probing:
+
+- Deferred probing is an optimization, not a source of truth.
+- Retained caches are only seed extents; they cannot clear pending probes on their own.
+- Authoritative extents come only from an explicit unbounded probe or an authoritative
+  post-layout overflow observation.
+
+Must-be-true outcomes for this slice:
+
+- Deferred probe policy reads a real retained seed before skipping deep measurement.
+- Deferred frames can consume `intrinsic_measure_cache` as a seed even when retained child
+  measured sizes are absent.
+- `pending_extent_probe` clears only after an authoritative result lands.
+- Scroll mechanism tests lock the seed-vs-authority split without depending on demo-specific
+  behavior.
 
 ### A) Wheel/trackpad delta coalescing (gated)
 

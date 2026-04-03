@@ -370,6 +370,280 @@ fn scroll_probe_unbounded_cache_respects_cross_axis_height_in_same_frame() {
 }
 
 #[test]
+fn scroll_deferred_invalidation_uses_intrinsic_cache_seed_before_measure() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    struct FixedMeasureLayoutNode {
+        size: Size,
+    }
+
+    impl<H: UiHost> Widget<H> for FixedMeasureLayoutNode {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    let mut cfg = crate::runtime_config::ui_runtime_config().clone();
+    cfg.scroll_defer_unbounded_probe_on_invalidation = true;
+    cfg.scroll_defer_unbounded_probe_stable_frames = 2;
+    let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    scroll_handle.set_viewport_size_internal(Size::new(Px(120.0), Px(40.0)));
+    scroll_handle.set_content_size_internal(Size::new(Px(120.0), Px(160.0)));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-deferred-invalidation-intrinsic-seed",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+    ui.set_root(root);
+
+    let scroll_node = ui.children(root)[0];
+    let child = ui.create_node(FixedMeasureLayoutNode {
+        size: Size::new(Px(120.0), Px(160.0)),
+    });
+    ui.set_children(scroll_node, vec![child]);
+    ui.test_set_layout_invalidation(child, true);
+
+    let retained_child_size = ui.debug_node_measured_size(child);
+    assert!(
+        retained_child_size.is_none() || retained_child_size == Some(Size::default()),
+        "expected the retained child measured size to be absent or default-sized before the deferred frame, got {retained_child_size:?}"
+    );
+
+    let scroll_element = ui
+        .node_element(scroll_node)
+        .expect("expected scroll host node to carry an element id");
+    let child_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(120.0)),
+            AvailableSpace::MaxContent,
+        ),
+    );
+    let intrinsic_key = crate::element::ScrollIntrinsicMeasureCacheKey {
+        avail_w: child_constraints
+            .available
+            .width
+            .definite()
+            .unwrap()
+            .0
+            .to_bits() as u64,
+        avail_h: 2u64 << 62,
+        axis: 1,
+        probe_unbounded: true,
+        scale_bits: 1.0f32.to_bits(),
+    };
+    crate::elements::with_element_state(
+        &mut app,
+        window,
+        scroll_element,
+        crate::element::ScrollState::default,
+        |state| {
+            state.intrinsic_measure_cache = Some(crate::element::ScrollIntrinsicMeasureCache {
+                key: intrinsic_key,
+                max_child: Size::new(Px(120.0), Px(160.0)),
+            });
+        },
+    );
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    assert_eq!(
+        ui.debug_measure_child_calls_for_parent(scroll_node),
+        0,
+        "expected invalidation defer to consume the retained intrinsic seed instead of remeasuring the child subtree"
+    );
+    assert!(
+        (scroll_handle.content_size().height.0 - 160.0).abs() <= 0.5,
+        "expected deferred frame to preserve the seeded content extent without collapsing: content={:?}",
+        scroll_handle.content_size()
+    );
+    assert!(
+        (scroll_handle.max_offset().y.0 - 120.0).abs() <= 0.5,
+        "expected deferred frame to preserve the seeded scroll range: max_offset={:?}",
+        scroll_handle.max_offset()
+    );
+}
+
+#[test]
+fn scroll_authoritative_observation_same_extent_clears_deferred_invalidation_pending_state() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    struct FixedMeasureLayoutNode {
+        size: Size,
+    }
+
+    impl<H: UiHost> Widget<H> for FixedMeasureLayoutNode {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    let mut cfg = crate::runtime_config::ui_runtime_config().clone();
+    cfg.scroll_defer_unbounded_probe_on_invalidation = true;
+    cfg.scroll_defer_unbounded_probe_stable_frames = 2;
+    let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    scroll_handle.set_viewport_size_internal(Size::new(Px(120.0), Px(40.0)));
+    scroll_handle.set_content_size_internal(Size::new(Px(120.0), Px(160.0)));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-authoritative-observation-clears-deferred-invalidation-pending",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+    ui.set_root(root);
+
+    let scroll_node = ui.children(root)[0];
+    let child = ui.create_node(FixedMeasureLayoutNode {
+        size: Size::new(Px(120.0), Px(160.0)),
+    });
+    ui.set_children(scroll_node, vec![child]);
+    ui.test_set_layout_invalidation(child, true);
+
+    let scroll_element = ui
+        .node_element(scroll_node)
+        .expect("expected scroll host node to carry an element id");
+    let child_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(120.0)),
+            AvailableSpace::MaxContent,
+        ),
+    );
+    let intrinsic_key = crate::element::ScrollIntrinsicMeasureCacheKey {
+        avail_w: child_constraints
+            .available
+            .width
+            .definite()
+            .unwrap()
+            .0
+            .to_bits() as u64,
+        avail_h: 2u64 << 62,
+        axis: 1,
+        probe_unbounded: true,
+        scale_bits: 1.0f32.to_bits(),
+    };
+    crate::elements::with_element_state(
+        &mut app,
+        window,
+        scroll_element,
+        crate::element::ScrollState::default,
+        |state| {
+            state.intrinsic_measure_cache = Some(crate::element::ScrollIntrinsicMeasureCache {
+                key: intrinsic_key,
+                max_child: Size::new(Px(120.0), Px(160.0)),
+            });
+        },
+    );
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    assert_eq!(
+        ui.debug_measure_child_calls_for_parent(scroll_node),
+        0,
+        "expected the deferred invalidation frame to consume the intrinsic seed without measuring"
+    );
+
+    ui.test_set_layout_invalidation(child, false);
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), scroll_handle.max_offset().y));
+
+    app.advance_frame();
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    assert_eq!(
+        ui.debug_measure_child_calls_for_parent(scroll_node),
+        0,
+        "expected an unchanged authoritative post-layout observation to clear deferred invalidation state so the next at-edge frame does not force an extra probe"
+    );
+    assert!(
+        (scroll_handle.content_size().height.0 - 160.0).abs() <= 0.5,
+        "expected the follow-up frame to preserve the authoritative content extent: content={:?}",
+        scroll_handle.content_size()
+    );
+    assert!(
+        (scroll_handle.max_offset().y.0 - 120.0).abs() <= 0.5,
+        "expected the follow-up frame to preserve the scroll range without an extra probe: max_offset={:?}",
+        scroll_handle.max_offset()
+    );
+}
+
+#[test]
 fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

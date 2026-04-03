@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "slug": "scroll-optimization-v1",
+  "title": "Scroll Optimization Workstream v1",
+  "status": "active",
+  "updated": "2026-04-03",
+  "scope_kind": "execution",
+  "problem": "Keep scroll extent probing, deferred unbounded probes, and post-layout overflow observation coherent so scroll surfaces stay correct and smooth under resize, invalidation, view-cache reuse, and edge growth/shrink.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/scroll-optimization-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/scroll-optimization-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/scroll-optimization-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/scroll-optimization-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Resume this lane from the framework-level scroll seed/authority gates before profiling demo surfaces.",
+    "commands": [
+      "cargo run -p fret-demo --bin todo_demo",
+      "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui scroll_deferred_invalidation_uses_intrinsic_cache_seed_before_measure"
+    ]
+  },
+  "gates": [
+    {
+      "name": "scroll-seed-contract",
+      "command": "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui scroll_deferred_invalidation_uses_intrinsic_cache_seed_before_measure"
+    },
+    {
+      "name": "scroll-authoritative-observation-clears-deferred-pending",
+      "command": "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui scroll_authoritative_observation_same_extent_clears_deferred_invalidation_pending_state"
+    },
+    {
+      "name": "scroll-budget-hit-growth",
+      "command": "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui scroll_post_layout_budget_hit_growth_converges_via_pending_probe_next_frame"
+    },
+    {
+      "name": "scroll-budget-hit-shrink",
+      "command": "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui scroll_post_layout_budget_hit_shrink_converges_via_pending_probe_next_frame"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/scroll-optimization-v1/DESIGN.md",
+    "docs/workstreams/scroll-optimization-v1/TODO.md",
+    "docs/workstreams/scroll-optimization-v1/EVIDENCE_AND_GATES.md",
+    "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
+    "crates/fret-ui/src/declarative/tests/layout/scroll.rs"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane for mechanism-level scroll extent, deferred probe, and observation work. Start a narrower follow-on only if the seed/authority contract must be generalized beyond scroll surfaces."
+  }
+}

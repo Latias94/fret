@@ -580,6 +580,275 @@ struct ScrollDeferredUnboundedProbeState {
     pending_invalidation_probe: bool,
 }
 
+fn non_default_size(size: Size) -> Option<Size> {
+    (size != Size::default()).then_some(size)
+}
+
+fn scroll_measure_child_constraints(
+    axis: crate::element::ScrollAxis,
+    probe_unbounded_for_measure: bool,
+    available: Size,
+) -> LayoutConstraints {
+    LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            if axis.scroll_x() && probe_unbounded_for_measure {
+                AvailableSpace::MaxContent
+            } else if probe_unbounded_for_measure && available.width.0 <= 0.0 {
+                // Intrinsic sizing flows may pass `available.width = 0` as a placeholder for
+                // "unknown" even when the scroll axis is vertical. Treat it as unbounded so the
+                // child can contribute its intrinsic cross size.
+                AvailableSpace::MaxContent
+            } else {
+                AvailableSpace::Definite(available.width)
+            },
+            if axis.scroll_y() && probe_unbounded_for_measure {
+                AvailableSpace::MaxContent
+            } else if probe_unbounded_for_measure && available.height.0 <= 0.0 {
+                // Same as above, but for the vertical cross axis.
+                AvailableSpace::MaxContent
+            } else {
+                AvailableSpace::Definite(available.height)
+            },
+        ),
+    )
+}
+
+fn scroll_intrinsic_measure_cache_key(
+    axis: crate::element::ScrollAxis,
+    child_constraints: LayoutConstraints,
+    scale_factor: f32,
+) -> crate::element::ScrollIntrinsicMeasureCacheKey {
+    crate::element::ScrollIntrinsicMeasureCacheKey {
+        avail_w: available_space_cache_key(child_constraints.available.width),
+        avail_h: available_space_cache_key(child_constraints.available.height),
+        axis: match axis {
+            crate::element::ScrollAxis::X => 0,
+            crate::element::ScrollAxis::Y => 1,
+            crate::element::ScrollAxis::Both => 2,
+        },
+        probe_unbounded: matches!(
+            child_constraints.available.width,
+            AvailableSpace::MaxContent
+        ) || matches!(
+            child_constraints.available.height,
+            AvailableSpace::MaxContent
+        ),
+        scale_bits: scale_factor.to_bits(),
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct ScrollProbeSeed {
+    intrinsic_cached_max_child: Option<Size>,
+    cached_max_child: Option<Size>,
+    retained_measured_max_child: Option<Size>,
+    last_max_child: Option<Size>,
+}
+
+impl ScrollProbeSeed {
+    fn can_defer_with_seed(self) -> bool {
+        self.deferred_max_child().is_some()
+    }
+
+    fn deferred_max_child(self) -> Option<Size> {
+        self.cached_max_child
+            .or(self.intrinsic_cached_max_child)
+            .or(self.last_max_child)
+            .or(self.retained_measured_max_child)
+    }
+}
+
+fn resolve_retained_measured_max_child<H: UiHost>(cx: &LayoutCx<'_, H>) -> Option<Size> {
+    let mut max_child = Size::new(Px(0.0), Px(0.0));
+    let mut found = false;
+
+    for &child in cx.children {
+        if let Some(size) = cx.tree.node_measured_size(child).and_then(non_default_size) {
+            found = true;
+            max_child.width = Px(max_child.width.0.max(size.width.0));
+            max_child.height = Px(max_child.height.0.max(size.height.0));
+        }
+    }
+
+    found.then_some(max_child)
+}
+
+fn resolve_scroll_probe_seed<H: UiHost>(
+    cx: &LayoutCx<'_, H>,
+    intrinsic_measure_cache: Option<crate::element::ScrollIntrinsicMeasureCache>,
+    intrinsic_cache_key: Option<crate::element::ScrollIntrinsicMeasureCacheKey>,
+    retained_measured_max_child: Option<Size>,
+    last_max_child: Option<Size>,
+    at_end_with_invalidated_child: bool,
+) -> ScrollProbeSeed {
+    let mut seed = ScrollProbeSeed {
+        retained_measured_max_child,
+        last_max_child,
+        ..Default::default()
+    };
+
+    if let Some(cache_key) = intrinsic_cache_key
+        && cx.children.len() == 1
+    {
+        let child = cx.children[0];
+        seed.intrinsic_cached_max_child = intrinsic_measure_cache
+            .and_then(|cache| (cache.key == cache_key).then_some(cache.max_child))
+            .and_then(non_default_size);
+        if !at_end_with_invalidated_child && !cx.tree.node_needs_layout(child) {
+            seed.cached_max_child = seed.intrinsic_cached_max_child;
+        }
+    }
+
+    seed
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ScrollDeferredProbeInputs {
+    force_probe_now: bool,
+    wants_unbounded_probe: bool,
+    can_defer_with_seed: bool,
+    defer_probe_on_invalidation: bool,
+    should_defer_on_resize: bool,
+    should_defer_on_invalidation: bool,
+    children_layout_invalidated: bool,
+    at_scroll_extent_edge: bool,
+    stable_frames_required: u8,
+}
+
+fn clear_scroll_deferred_probe_state(state: &mut ScrollDeferredUnboundedProbeState) {
+    state.kind = ScrollDeferredUnboundedProbeKind::None;
+    state.stable_frames = 0;
+    state.pending_invalidation_probe = false;
+}
+
+fn update_scroll_deferred_probe_state(
+    state: &mut ScrollDeferredUnboundedProbeState,
+    inputs: ScrollDeferredProbeInputs,
+) -> bool {
+    let mut defer_this_frame = false;
+
+    if inputs.force_probe_now || !inputs.wants_unbounded_probe || !inputs.can_defer_with_seed {
+        clear_scroll_deferred_probe_state(state);
+        return false;
+    }
+
+    if inputs.should_defer_on_resize {
+        defer_this_frame = true;
+        state.kind = ScrollDeferredUnboundedProbeKind::Resize;
+        state.stable_frames = 0;
+        return defer_this_frame;
+    }
+
+    match state.kind {
+        ScrollDeferredUnboundedProbeKind::Resize => {
+            if inputs.stable_frames_required == 0 {
+                clear_scroll_deferred_probe_state(state);
+            } else {
+                state.stable_frames = state.stable_frames.saturating_add(1);
+                if state.stable_frames < inputs.stable_frames_required {
+                    defer_this_frame = true;
+                } else {
+                    clear_scroll_deferred_probe_state(state);
+                }
+            }
+        }
+        ScrollDeferredUnboundedProbeKind::Invalidation => {
+            // Under view-cache reconciliation, descendants can remain layout-invalidated for
+            // multiple frames. Keep deferring while invalidated, and only allow the expensive
+            // unbounded probe once the subtree stabilizes for a few frames.
+            if inputs.at_scroll_extent_edge || !inputs.defer_probe_on_invalidation {
+                clear_scroll_deferred_probe_state(state);
+            } else if inputs.children_layout_invalidated {
+                defer_this_frame = true;
+                state.pending_invalidation_probe = true;
+                state.stable_frames = 0;
+            } else if inputs.stable_frames_required == 0 {
+                clear_scroll_deferred_probe_state(state);
+            } else {
+                state.stable_frames = state.stable_frames.saturating_add(1);
+                if state.stable_frames < inputs.stable_frames_required {
+                    defer_this_frame = true;
+                } else {
+                    clear_scroll_deferred_probe_state(state);
+                }
+            }
+        }
+        ScrollDeferredUnboundedProbeKind::None => {
+            if inputs.should_defer_on_invalidation {
+                defer_this_frame = true;
+                state.kind = ScrollDeferredUnboundedProbeKind::Invalidation;
+                state.pending_invalidation_probe = true;
+                state.stable_frames = 0;
+            }
+        }
+    }
+
+    defer_this_frame
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ScrollAuthoritativeExtentCommit {
+    max_child: Size,
+    intrinsic_cache_key: Option<crate::element::ScrollIntrinsicMeasureCacheKey>,
+    probe_cache_key: Option<(FrameId, ScrollLayoutProbeKey)>,
+    clear_pending_invalidation_probe: bool,
+    clear_pending_extent_probe: bool,
+}
+
+fn commit_scroll_authoritative_extent<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+    commit: ScrollAuthoritativeExtentCommit,
+) {
+    crate::elements::with_element_state(
+        app,
+        window,
+        element,
+        ScrollLayoutProbeCacheState::default,
+        |state| {
+            if let Some((frame_id, key)) = commit.probe_cache_key {
+                if state.frame_id != frame_id {
+                    state.frame_id = frame_id;
+                    state.entries.clear();
+                }
+                state.entries.push((key, commit.max_child));
+            }
+            state.last_max_child = commit.max_child;
+        },
+    );
+
+    if commit.clear_pending_invalidation_probe {
+        crate::elements::with_element_state(
+            app,
+            window,
+            element,
+            ScrollDeferredUnboundedProbeState::default,
+            |state| state.pending_invalidation_probe = false,
+        );
+    }
+
+    crate::elements::with_element_state(
+        app,
+        window,
+        element,
+        crate::element::ScrollState::default,
+        |state| {
+            if commit.clear_pending_extent_probe {
+                state.pending_extent_probe = false;
+            }
+            state.intrinsic_measure_cache =
+                commit
+                    .intrinsic_cache_key
+                    .map(|key| crate::element::ScrollIntrinsicMeasureCache {
+                        key,
+                        max_child: commit.max_child,
+                    });
+        },
+    );
+}
+
 impl ElementHostWidget {
     pub(super) fn layout_virtual_list_impl<H: UiHost>(
         &mut self,
@@ -1314,9 +1583,21 @@ impl ElementHostWidget {
         let force_barrier_child_root_relayout = !forced_barrier_child_roots.is_empty();
         let at_end_with_invalidated_child = at_scroll_extent_edge && children_layout_invalidated;
 
-        let mut intrinsic_cached_max_child: Option<Size> = None;
-        let mut cached_max_child: Option<Size> = None;
-
+        let frame_id = cx.app.frame_id();
+        let retained_measured_max_child = resolve_retained_measured_max_child(cx);
+        let last_max_child = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            ScrollLayoutProbeCacheState::default,
+            |state| {
+                if state.frame_id != frame_id {
+                    state.frame_id = frame_id;
+                    state.entries.clear();
+                }
+                non_default_size(state.last_max_child)
+            },
+        );
         let wants_unbounded_probe = props.probe_unbounded
             && (props.axis.scroll_x() || props.axis.scroll_y())
             && !post_layout_extents_mode
@@ -1329,15 +1610,25 @@ impl ElementHostWidget {
             && (prev_viewport.width.0.to_bits() != available.width.0.to_bits()
                 || prev_viewport.height.0.to_bits() != available.height.0.to_bits());
 
-        let can_defer_probe_with_cached_max_child = intrinsic_cached_max_child
-            .or(cached_max_child)
-            .is_some_and(|size| size != Size::default());
-        let can_defer_probe_with_cached_children = can_defer_probe_with_cached_max_child
-            || cx.children.iter().copied().any(|child| {
-                cx.tree
-                    .node_measured_size(child)
-                    .is_some_and(|size| size != Size::default())
+        let deferred_child_constraints =
+            scroll_measure_child_constraints(props.axis, true, available);
+        let deferred_seed_cache_key =
+            (!is_probe_layout && cx.children.len() == 1 && wants_unbounded_probe).then(|| {
+                scroll_intrinsic_measure_cache_key(
+                    props.axis,
+                    deferred_child_constraints,
+                    cx.scale_factor,
+                )
             });
+        let deferred_probe_seed = resolve_scroll_probe_seed(
+            cx,
+            intrinsic_measure_cache,
+            deferred_seed_cache_key,
+            retained_measured_max_child,
+            last_max_child,
+            at_end_with_invalidated_child,
+        );
+        let can_defer_probe_with_cached_children = deferred_probe_seed.can_defer_with_seed();
         let viewport_became_known_during_resize = !viewport_known
             && cx.tree.interactive_resize_active()
             && available.width.0 > 0.0
@@ -1346,10 +1637,13 @@ impl ElementHostWidget {
 
         let should_defer_unbounded_probe_on_resize = wants_unbounded_probe
             && defer_probe_on_resize
+            && can_defer_probe_with_cached_children
+            && !pending_extent_probe
             && (viewport_changed || viewport_became_known_during_resize);
         let should_defer_unbounded_probe_on_invalidation = wants_unbounded_probe
             && defer_probe_on_invalidation
             && can_defer_probe_with_cached_children
+            && !pending_extent_probe
             && children_layout_invalidated
             && !at_scroll_extent_edge;
 
@@ -1360,67 +1654,20 @@ impl ElementHostWidget {
             self.element,
             ScrollDeferredUnboundedProbeState::default,
             |state| {
-                let mut defer_this_frame = false;
-                if should_defer_unbounded_probe_on_resize {
-                    defer_this_frame = true;
-                    state.kind = ScrollDeferredUnboundedProbeKind::Resize;
-                    state.stable_frames = 0;
-                } else {
-                    match state.kind {
-                        ScrollDeferredUnboundedProbeKind::Resize => {
-                            if stable_frames_required == 0 {
-                                state.kind = ScrollDeferredUnboundedProbeKind::None;
-                                state.stable_frames = 0;
-                            } else {
-                                state.stable_frames = state.stable_frames.saturating_add(1);
-                                if state.stable_frames < stable_frames_required {
-                                    defer_this_frame = true;
-                                } else {
-                                    state.kind = ScrollDeferredUnboundedProbeKind::None;
-                                    state.stable_frames = 0;
-                                }
-                            }
-                        }
-                        ScrollDeferredUnboundedProbeKind::Invalidation => {
-                            // Under view-cache reconciliation, descendants can remain layout-invalidated
-                            // for multiple frames. Keep deferring while invalidated, and only allow the
-                            // expensive unbounded probe once the subtree stabilizes for a few frames.
-                            if at_scroll_extent_edge
-                                || !wants_unbounded_probe
-                                || !defer_probe_on_invalidation
-                            {
-                                state.kind = ScrollDeferredUnboundedProbeKind::None;
-                                state.stable_frames = 0;
-                                state.pending_invalidation_probe = false;
-                            } else if children_layout_invalidated {
-                                defer_this_frame = true;
-                                state.pending_invalidation_probe = true;
-                                state.stable_frames = 0;
-                            } else if stable_frames_required == 0 {
-                                state.kind = ScrollDeferredUnboundedProbeKind::None;
-                                state.stable_frames = 0;
-                                state.pending_invalidation_probe = false;
-                            } else {
-                                state.stable_frames = state.stable_frames.saturating_add(1);
-                                if state.stable_frames < stable_frames_required {
-                                    defer_this_frame = true;
-                                } else {
-                                    state.kind = ScrollDeferredUnboundedProbeKind::None;
-                                    state.stable_frames = 0;
-                                    state.pending_invalidation_probe = false;
-                                }
-                            }
-                        }
-                        ScrollDeferredUnboundedProbeKind::None => {
-                            if should_defer_unbounded_probe_on_invalidation {
-                                defer_this_frame = true;
-                                state.kind = ScrollDeferredUnboundedProbeKind::Invalidation;
-                                state.pending_invalidation_probe = true;
-                                state.stable_frames = 0;
-                            }
-                        }
-                    }
-                }
+                let defer_this_frame = update_scroll_deferred_probe_state(
+                    state,
+                    ScrollDeferredProbeInputs {
+                        force_probe_now: pending_extent_probe,
+                        wants_unbounded_probe,
+                        can_defer_with_seed: can_defer_probe_with_cached_children,
+                        defer_probe_on_invalidation,
+                        should_defer_on_resize: should_defer_unbounded_probe_on_resize,
+                        should_defer_on_invalidation: should_defer_unbounded_probe_on_invalidation,
+                        children_layout_invalidated,
+                        at_scroll_extent_edge,
+                        stable_frames_required,
+                    },
+                );
                 (*state, defer_this_frame)
             },
         );
@@ -1451,52 +1698,21 @@ impl ElementHostWidget {
         let probe_unbounded_for_measure =
             props.probe_unbounded && (!post_layout_extents_mode || must_probe_for_growing_extent);
 
-        let child_constraints = LayoutConstraints::new(
-            LayoutSize::new(None, None),
-            LayoutSize::new(
-                if props.axis.scroll_x() && probe_unbounded_for_measure {
-                    AvailableSpace::MaxContent
-                } else if probe_unbounded_for_measure && available.width.0 <= 0.0 {
-                    // Intrinsic sizing flows may pass `available.width = 0` as a placeholder for
-                    // "unknown" even when the scroll axis is vertical. Treat it as unbounded so
-                    // the child can contribute its intrinsic cross size.
-                    AvailableSpace::MaxContent
-                } else {
-                    AvailableSpace::Definite(available.width)
-                },
-                if props.axis.scroll_y() && probe_unbounded_for_measure {
-                    AvailableSpace::MaxContent
-                } else if probe_unbounded_for_measure && available.height.0 <= 0.0 {
-                    // Same as above, but for the vertical cross axis.
-                    AvailableSpace::MaxContent
-                } else {
-                    AvailableSpace::Definite(available.height)
-                },
-            ),
+        let child_constraints =
+            scroll_measure_child_constraints(props.axis, probe_unbounded_for_measure, available);
+        let intrinsic_cache_key = (!is_probe_layout && cx.children.len() == 1).then(|| {
+            scroll_intrinsic_measure_cache_key(props.axis, child_constraints, cx.scale_factor)
+        });
+        let probe_seed = resolve_scroll_probe_seed(
+            cx,
+            intrinsic_measure_cache,
+            intrinsic_cache_key,
+            retained_measured_max_child,
+            last_max_child,
+            at_end_with_invalidated_child,
         );
-
-        if !is_probe_layout && cx.children.len() == 1 {
-            let child = cx.children[0];
-            let cache_key = crate::element::ScrollIntrinsicMeasureCacheKey {
-                avail_w: available_space_cache_key(child_constraints.available.width),
-                avail_h: available_space_cache_key(child_constraints.available.height),
-                axis: match props.axis {
-                    crate::element::ScrollAxis::X => 0,
-                    crate::element::ScrollAxis::Y => 1,
-                    crate::element::ScrollAxis::Both => 2,
-                },
-                probe_unbounded: probe_unbounded_for_measure,
-                scale_bits: cx.scale_factor.to_bits(),
-            };
-
-            intrinsic_cached_max_child = intrinsic_measure_cache
-                .and_then(|cache| (cache.key == cache_key).then_some(cache.max_child));
-            // Safe fast path: only use intrinsic size caching as a substitute for measuring the
-            // child when the child subtree does not need layout this frame.
-            if !at_end_with_invalidated_child && !cx.tree.node_needs_layout(child) {
-                cached_max_child = intrinsic_cached_max_child;
-            }
-        }
+        let intrinsic_cached_max_child = probe_seed.intrinsic_cached_max_child;
+        let mut cached_max_child = probe_seed.cached_max_child;
 
         if must_probe_for_growing_extent {
             cached_max_child = None;
@@ -1508,8 +1724,7 @@ impl ElementHostWidget {
             avail_w: available_space_cache_key(child_constraints.available.width),
             avail_h: available_space_cache_key(child_constraints.available.height),
         };
-        let frame_id = cx.app.frame_id();
-        let (cached, last_max_child) = crate::elements::with_element_state(
+        let cached = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
@@ -1526,7 +1741,7 @@ impl ElementHostWidget {
                 if let Some(cached) = cached {
                     state.last_max_child = cached;
                 }
-                (cached, state.last_max_child)
+                cached
             },
         );
 
@@ -1534,6 +1749,7 @@ impl ElementHostWidget {
         // during transient invalidation. Those cached extents can temporarily overestimate the true
         // content size after shrink (e.g. filtering a nav list), so we later apply an observed
         // post-layout shrink clamp when possible.
+        let mut needs_authoritative_cache_commit_from_same_frame_probe = false;
         let max_child = if must_probe_for_growing_extent {
             let measure_started = profile_cfg.is_some().then(Instant::now);
             let mut max_child = Size::new(Px(0.0), Px(0.0));
@@ -1546,42 +1762,27 @@ impl ElementHostWidget {
                 t_measure_children = started.elapsed();
             }
 
-            crate::elements::with_element_state(
+            commit_scroll_authoritative_extent(
                 &mut *cx.app,
                 window,
                 self.element,
-                ScrollLayoutProbeCacheState::default,
-                |state| {
-                    if state.frame_id != frame_id {
-                        state.frame_id = frame_id;
-                        state.entries.clear();
-                    }
-                    state.entries.push((key, max_child));
-                    state.last_max_child = max_child;
+                ScrollAuthoritativeExtentCommit {
+                    max_child,
+                    intrinsic_cache_key,
+                    probe_cache_key: Some((frame_id, key)),
+                    clear_pending_invalidation_probe: true,
+                    clear_pending_extent_probe: true,
                 },
-            );
-            crate::elements::with_element_state(
-                &mut *cx.app,
-                window,
-                self.element,
-                ScrollDeferredUnboundedProbeState::default,
-                |state| state.pending_invalidation_probe = false,
-            );
-            crate::elements::with_element_state(
-                &mut *cx.app,
-                window,
-                self.element,
-                crate::element::ScrollState::default,
-                |state| state.pending_extent_probe = false,
             );
 
             max_child
         } else if let Some(cached) = cached_max_child {
             cached
         } else if let Some(cached) = cached {
+            needs_authoritative_cache_commit_from_same_frame_probe = true;
             cached
         } else if defer_this_frame {
-            if last_max_child != Size::default() {
+            if let Some(max_child) = deferred_probe_seed.deferred_max_child() {
                 // Best-effort: reuse the last measured max-child size while deferring the expensive
                 // unbounded probe during interactive resize/unstable frames.
                 //
@@ -1594,27 +1795,37 @@ impl ElementHostWidget {
                 // The layout pass below opportunistically observes the post-layout child bounds
                 // and clamps the cached extent downward (when it can be proven smaller) without
                 // performing an additional deep measure walk.
-                last_max_child
+                max_child
             } else {
-                // Fallback: if we have no cached max-child size yet, scan the last measured child
-                // sizes and avoid a deep measure walk on this frame. Persist the result so future
-                // deferred frames can reuse it without scanning.
+                debug_assert!(
+                    false,
+                    "deferred scroll probe frame must have a retained seed before skipping measure"
+                );
+
+                let measure_started = profile_cfg.is_some().then(Instant::now);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
-                    if let Some(child_size) = cx.tree.node_measured_size(child) {
-                        max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                        max_child.height = Px(max_child.height.0.max(child_size.height.0));
-                    }
+                    let child_size = cx.measure_in(child, child_constraints);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
-                if max_child != Size::default() {
-                    crate::elements::with_element_state(
-                        &mut *cx.app,
-                        window,
-                        self.element,
-                        ScrollLayoutProbeCacheState::default,
-                        |state| state.last_max_child = max_child,
-                    );
+                if let Some(started) = measure_started {
+                    t_measure_children = started.elapsed();
                 }
+
+                commit_scroll_authoritative_extent(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    ScrollAuthoritativeExtentCommit {
+                        max_child,
+                        intrinsic_cache_key,
+                        probe_cache_key: Some((frame_id, key)),
+                        clear_pending_invalidation_probe: true,
+                        clear_pending_extent_probe: false,
+                    },
+                );
+
                 max_child
             }
         } else {
@@ -1629,26 +1840,17 @@ impl ElementHostWidget {
                 t_measure_children = started.elapsed();
             }
 
-            crate::elements::with_element_state(
+            commit_scroll_authoritative_extent(
                 &mut *cx.app,
                 window,
                 self.element,
-                ScrollLayoutProbeCacheState::default,
-                |state| {
-                    if state.frame_id != frame_id {
-                        state.frame_id = frame_id;
-                        state.entries.clear();
-                    }
-                    state.entries.push((key, max_child));
-                    state.last_max_child = max_child;
+                ScrollAuthoritativeExtentCommit {
+                    max_child,
+                    intrinsic_cache_key,
+                    probe_cache_key: Some((frame_id, key)),
+                    clear_pending_invalidation_probe: true,
+                    clear_pending_extent_probe: false,
                 },
-            );
-            crate::elements::with_element_state(
-                &mut *cx.app,
-                window,
-                self.element,
-                ScrollDeferredUnboundedProbeState::default,
-                |state| state.pending_invalidation_probe = false,
             );
 
             max_child
@@ -1829,37 +2031,20 @@ impl ElementHostWidget {
                     overflow_observation: None,
                 });
 
-            crate::elements::with_element_state(
-                &mut *cx.app,
-                window,
-                self.element,
-                crate::element::ScrollState::default,
-                |state| {
-                    if cx.children.len() == 1 {
-                        state.intrinsic_measure_cache =
-                            Some(crate::element::ScrollIntrinsicMeasureCache {
-                                key: crate::element::ScrollIntrinsicMeasureCacheKey {
-                                    avail_w: available_space_cache_key(
-                                        child_constraints.available.width,
-                                    ),
-                                    avail_h: available_space_cache_key(
-                                        child_constraints.available.height,
-                                    ),
-                                    axis: match props.axis {
-                                        crate::element::ScrollAxis::X => 0,
-                                        crate::element::ScrollAxis::Y => 1,
-                                        crate::element::ScrollAxis::Both => 2,
-                                    },
-                                    probe_unbounded: probe_unbounded_for_measure,
-                                    scale_bits: cx.scale_factor.to_bits(),
-                                },
-                                max_child,
-                            });
-                    } else {
-                        state.intrinsic_measure_cache = None;
-                    }
-                },
-            );
+            if needs_authoritative_cache_commit_from_same_frame_probe {
+                commit_scroll_authoritative_extent(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    ScrollAuthoritativeExtentCommit {
+                        max_child,
+                        intrinsic_cache_key,
+                        probe_cache_key: None,
+                        clear_pending_invalidation_probe: false,
+                        clear_pending_extent_probe: false,
+                    },
+                );
+            }
         }
 
         self.scroll_child_transform = Some(super::super::ScrollChildTransform {
@@ -1922,6 +2107,7 @@ impl ElementHostWidget {
 
         if !is_probe_layout {
             let mut relayout_with_updated_content_bounds = false;
+            let mut authoritative_observation_cleared_pending = false;
             // If we didn't do a deep unbounded probe for `max_child` this frame, scroll extents can
             // be temporarily pinned to cached values even if descendants overflow the forced
             // `content_bounds` rect (common with wrapper-heavy trees like docs pages and tab
@@ -2073,43 +2259,19 @@ impl ElementHostWidget {
                             overflow_observation: None,
                         });
 
-                    crate::elements::with_element_state(
+                    commit_scroll_authoritative_extent(
                         &mut *cx.app,
                         window,
                         self.element,
-                        ScrollLayoutProbeCacheState::default,
-                        |state| state.last_max_child = Size::new(content_w, content_h),
-                    );
-
-                    crate::elements::with_element_state(
-                        &mut *cx.app,
-                        window,
-                        self.element,
-                        crate::element::ScrollState::default,
-                        |state| {
-                            if cx.children.len() == 1 {
-                                state.intrinsic_measure_cache =
-                                    Some(crate::element::ScrollIntrinsicMeasureCache {
-                                        key: crate::element::ScrollIntrinsicMeasureCacheKey {
-                                            avail_w: available_space_cache_key(
-                                                child_constraints.available.width,
-                                            ),
-                                            avail_h: available_space_cache_key(
-                                                child_constraints.available.height,
-                                            ),
-                                            axis: match props.axis {
-                                                crate::element::ScrollAxis::X => 0,
-                                                crate::element::ScrollAxis::Y => 1,
-                                                crate::element::ScrollAxis::Both => 2,
-                                            },
-                                            probe_unbounded: probe_unbounded_for_measure,
-                                            scale_bits: cx.scale_factor.to_bits(),
-                                        },
-                                        max_child: Size::new(content_w, content_h),
-                                    });
-                            }
+                        ScrollAuthoritativeExtentCommit {
+                            max_child: Size::new(content_w, content_h),
+                            intrinsic_cache_key,
+                            probe_cache_key: None,
+                            clear_pending_invalidation_probe: true,
+                            clear_pending_extent_probe: pending_extent_probe,
                         },
                     );
+                    authoritative_observation_cleared_pending = true;
                 }
             } else {
                 // If post-layout child bounds exceed the currently inferred extent (cached/deferral
@@ -2168,43 +2330,24 @@ impl ElementHostWidget {
                             overflow_observation: None,
                         });
 
-                    crate::elements::with_element_state(
+                    commit_scroll_authoritative_extent(
                         &mut *cx.app,
                         window,
                         self.element,
-                        ScrollLayoutProbeCacheState::default,
-                        |state| state.last_max_child = Size::new(content_w, content_h),
-                    );
-
-                    crate::elements::with_element_state(
-                        &mut *cx.app,
-                        window,
-                        self.element,
-                        crate::element::ScrollState::default,
-                        |state| {
-                            if cx.children.len() == 1 {
-                                state.intrinsic_measure_cache =
-                                    Some(crate::element::ScrollIntrinsicMeasureCache {
-                                        key: crate::element::ScrollIntrinsicMeasureCacheKey {
-                                            avail_w: available_space_cache_key(
-                                                child_constraints.available.width,
-                                            ),
-                                            avail_h: available_space_cache_key(
-                                                child_constraints.available.height,
-                                            ),
-                                            axis: match props.axis {
-                                                crate::element::ScrollAxis::X => 0,
-                                                crate::element::ScrollAxis::Y => 1,
-                                                crate::element::ScrollAxis::Both => 2,
-                                            },
-                                            probe_unbounded: probe_unbounded_for_measure,
-                                            scale_bits: cx.scale_factor.to_bits(),
-                                        },
-                                        max_child: Size::new(content_w, content_h),
-                                    });
-                            }
+                        ScrollAuthoritativeExtentCommit {
+                            max_child: Size::new(content_w, content_h),
+                            intrinsic_cache_key,
+                            probe_cache_key: None,
+                            clear_pending_invalidation_probe:
+                                scroll_overflow_observation_is_authoritative(observation),
+                            clear_pending_extent_probe: scroll_overflow_observation_is_authoritative(
+                                observation,
+                            )
+                                && pending_extent_probe,
                         },
                     );
+                    authoritative_observation_cleared_pending =
+                        scroll_overflow_observation_is_authoritative(observation);
                 }
 
                 if shrink_validation_enabled
@@ -2288,45 +2431,40 @@ impl ElementHostWidget {
                                 overflow_observation: None,
                             });
 
-                        crate::elements::with_element_state(
+                        commit_scroll_authoritative_extent(
                             &mut *cx.app,
                             window,
                             self.element,
-                            ScrollLayoutProbeCacheState::default,
-                            |state| state.last_max_child = Size::new(content_w, content_h),
-                        );
-
-                        crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                            crate::element::ScrollState::default,
-                            |state| {
-                                if cx.children.len() == 1 {
-                                    state.intrinsic_measure_cache =
-                                        Some(crate::element::ScrollIntrinsicMeasureCache {
-                                            key: crate::element::ScrollIntrinsicMeasureCacheKey {
-                                                avail_w: available_space_cache_key(
-                                                    child_constraints.available.width,
-                                                ),
-                                                avail_h: available_space_cache_key(
-                                                    child_constraints.available.height,
-                                                ),
-                                                axis: match props.axis {
-                                                    crate::element::ScrollAxis::X => 0,
-                                                    crate::element::ScrollAxis::Y => 1,
-                                                    crate::element::ScrollAxis::Both => 2,
-                                                },
-                                                probe_unbounded: probe_unbounded_for_measure,
-                                                scale_bits: cx.scale_factor.to_bits(),
-                                            },
-                                            max_child: Size::new(content_w, content_h),
-                                        });
-                                }
+                            ScrollAuthoritativeExtentCommit {
+                                max_child: Size::new(content_w, content_h),
+                                intrinsic_cache_key,
+                                probe_cache_key: None,
+                                clear_pending_invalidation_probe: true,
+                                clear_pending_extent_probe: pending_extent_probe,
                             },
                         );
+                        authoritative_observation_cleared_pending = true;
                     }
                 }
+            }
+
+            let authoritative_observation_completed_without_extent_change =
+                !authoritative_observation_cleared_pending
+                    && scroll_overflow_observation_is_authoritative(observation)
+                    && (defer_state.pending_invalidation_probe || pending_extent_probe);
+            if authoritative_observation_completed_without_extent_change {
+                commit_scroll_authoritative_extent(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    ScrollAuthoritativeExtentCommit {
+                        max_child: Size::new(content_w, content_h),
+                        intrinsic_cache_key,
+                        probe_cache_key: None,
+                        clear_pending_invalidation_probe: defer_state.pending_invalidation_probe,
+                        clear_pending_extent_probe: pending_extent_probe,
+                    },
+                );
             }
 
             if relayout_with_updated_content_bounds {

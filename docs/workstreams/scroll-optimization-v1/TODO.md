@@ -1,7 +1,19 @@
 # Scroll Optimization Workstream (v1) — TODO
 
 Date: 2026-03-03  
-Status: Draft
+Status: Active
+
+## Current slice — Deferred probe seed vs authoritative extent
+
+- [x] Make deferred probe policy read retained seed state before deciding to skip a deep probe.
+- [x] Allow deferred invalidation frames to consume `intrinsic_measure_cache` as the seed extent
+  when retained child measured sizes are absent.
+- [x] Centralize authoritative extent commits so pending probe clearing only happens on explicit
+  probe / authoritative observation paths.
+- [x] Ensure unchanged authoritative post-layout observation still clears deferred invalidation
+  pending state instead of forcing an extra at-edge probe on the next frame.
+- [x] Record the dedicated verification results for the seed/authority regression gates in
+  `EVIDENCE_AND_GATES.md`.
 
 ## Gates-first checklist
 

@@ -1,7 +1,7 @@
 # Scroll Optimization Workstream (v1) — Milestones
 
 Date: 2026-03-03  
-Status: Draft
+Status: Active
 
 ## M0 — Baseline + evidence (1–2 days)
 
@@ -29,3 +29,7 @@ Status: Draft
 
 - Expand post-layout overflow observation coverage with gates.
 - Validate budget-hit fallback probes prevent pinned extents.
+- Separate retained seed extents from authoritative extent commits and lock the contract with
+  mechanism tests.
+- Ensure authoritative observations can finish deferred invalidation cleanup even when the
+  observed extent is unchanged.
