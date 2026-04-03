@@ -1720,6 +1720,9 @@ mod tests {
         assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
         assert!(src.contains("fn todo_page("));
         assert!(src.contains(") -> impl UiChild {"));
+        assert!(!src.contains("fret_cookbook::scaffold::"));
+        assert!(!src.contains("centered_page_muted("));
+        assert!(!src.contains("centered_page_background("));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
         assert!(!src.contains("Model<bool>"));
         assert!(!src.contains(".models_mut().insert("));
@@ -1832,6 +1835,9 @@ mod tests {
         assert!(src.contains("fn todo_page("));
         assert!(!src.contains("cx: &mut UiCx<'_>,"));
         assert!(src.contains(") -> impl UiChild {"));
+        assert!(!src.contains("fret_cookbook::scaffold::"));
+        assert!(!src.contains("centered_page_muted("));
+        assert!(!src.contains("centered_page_background("));
         assert!(src.contains("shadcn::Input::new(&locals.draft)"));
         assert!(src.contains("shadcn::Checkbox::from_checked(row.done)"));
         assert!(!src.contains("TodoLocals::new(app)"));

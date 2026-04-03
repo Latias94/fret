@@ -146,6 +146,8 @@ Key points:
 - If a local helper is only a pure page shell around already-typed children, prefer
   `fn page(...) -> impl UiChild` and let `render(...)` late-land it through
   `ui::single(cx, page(...))`.
+- Treat `fret_cookbook::scaffold::centered_page_*` as cookbook-owned lesson framing, not as the
+  default app/template page-shell surface.
 - If you have a patchable component type (implements `UiPatchTarget`), you can opt into the same fluent
   authoring style with `.ui()`.
 - Most `ui::*` layout constructors accept children through `IntoUiElement<H>`, so you can pass `UiBuilder` values

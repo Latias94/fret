@@ -183,6 +183,8 @@
   `ui::for_each_keyed_with_cx(...)`, matching the framework's keyed-list guidance.
 - Improved diagnostics traceability for the default grouped-local path by preserving app callsites
   through `ecosystem/fret/src/view.rs::local_with(...)`.
+- Added source-policy/template coverage that keeps default-ladder page shells local and prevents
+  cookbook `centered_page_*` helpers from drifting into app/demo/template teaching surfaces.
 - Recorded the remaining grouped-local warning noise as a residual authoring-diagnostics gap rather
   than burying it inside the proof run.
 
@@ -190,7 +192,9 @@
 
 - `apps/fret-examples/src/todo_demo.rs`
 - `apps/fret-examples/src/lib.rs`
+- `apps/fretboard/src/scaffold/templates.rs`
 - `ecosystem/fret/src/view.rs`
+- `docs/first-hour.md`
 - `tools/diag-scripts/tooling/todo/todo-resize-roundtrip-immediate-layout.json`
 - `tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json`
 - `docs/workstreams/default-app-productization-fearless-refactor-v1/RESIZE_LAYOUT_PROOF_2026-04-02.md`
@@ -200,5 +204,6 @@
 - `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/todo/todo-resize-roundtrip-immediate-layout.json --dir target/diag/todo-resize-roundtrip-immediate-layout-m5d --include-screenshots --exit-after-run --launch -- cargo run -p fret-demo --bin todo_demo`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json --dir target/diag/todo-resize-roundtrip-footer-within-window-m5 --include-screenshots --exit-after-run --launch -- cargo run -p fret-demo --bin todo_demo`
 - `cargo nextest run -p fret-examples todo_demo_prefers_default_app_surface simple_todo_demo_prefers_default_app_surface selected_view_runtime_examples_prefer_grouped_state_actions_and_effects todo_demo_registers_vendor_icons_used_by_layout todo_demo_responsive_layout_prefers_compact_footer_and_inline_actions_on_narrow_width todo_demo_responsive_layout_gives_roomy_shells_more_vertical_headroom todo_demo_responsive_layout_centers_card_once_viewport_is_large_enough todo_demo_responsive_layout_keeps_inline_row_actions_for_non_hover_pointers`
-- `rustfmt --check apps/fret-examples/src/lib.rs apps/fret-examples/src/todo_demo.rs ecosystem/fret/src/view.rs --edition 2024`
-- `git diff --check -- apps/fret-examples/src/lib.rs apps/fret-examples/src/todo_demo.rs ecosystem/fret/src/view.rs tools/diag-scripts/tooling/todo/todo-resize-roundtrip-immediate-layout.json tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json docs/README.md docs/workstreams/default-app-productization-fearless-refactor-v1`
+- `cargo nextest run -p fretboard todo_template_uses_default_authoring_dialect simple_todo_template_has_low_adapter_noise_and_no_query_selector`
+- `rustfmt --check apps/fret-examples/src/lib.rs apps/fretboard/src/scaffold/templates.rs ecosystem/fret/src/view.rs --edition 2024`
+- `git diff --check -- apps/fret-examples/src/lib.rs apps/fretboard/src/scaffold/templates.rs apps/fret-examples/src/todo_demo.rs ecosystem/fret/src/view.rs docs/first-hour.md tools/diag-scripts/tooling/todo/todo-resize-roundtrip-immediate-layout.json tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json docs/README.md docs/workstreams/default-app-productization-fearless-refactor-v1`

@@ -799,6 +799,9 @@ mod authoring_surface_policy_tests {
         assert!(TODO_DEMO.contains("responsive: TodoResponsiveLayout,"));
         assert!(!TODO_DEMO.contains("let card = card.into_element(cx);"));
         assert!(!TODO_DEMO.contains("todo_page(theme, card).into_element(cx).into()"));
+        assert!(!TODO_DEMO.contains("fret_cookbook::scaffold::"));
+        assert!(!TODO_DEMO.contains("centered_page_muted("));
+        assert!(!TODO_DEMO.contains("centered_page_background("));
         assert_avoids_legacy_conversion_names(TODO_DEMO);
         assert!(TODO_DEMO.contains("struct TodoLocals {"));
         assert!(TODO_DEMO.contains("fn new(cx: &mut AppUi<'_, '_>) -> Self {"));
@@ -865,6 +868,15 @@ mod authoring_surface_policy_tests {
         assert!(SIMPLE_TODO_DEMO.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(SIMPLE_TODO_DEMO.contains("let locals = TodoLocals::new(cx);"));
         assert!(SIMPLE_TODO_DEMO.contains("locals.bind_actions(cx);"));
+        assert!(SIMPLE_TODO_DEMO.contains("ui::single(cx, todo_page(theme, card))"));
+        assert!(
+            SIMPLE_TODO_DEMO.contains(
+                "fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild"
+            )
+        );
+        assert!(!SIMPLE_TODO_DEMO.contains("fret_cookbook::scaffold::"));
+        assert!(!SIMPLE_TODO_DEMO.contains("centered_page_muted("));
+        assert!(!SIMPLE_TODO_DEMO.contains("centered_page_background("));
         assert!(SIMPLE_TODO_DEMO.contains("draft: cx.state().local::<String>(),"));
         assert!(SIMPLE_TODO_DEMO.contains("next_id: cx.state().local_init(|| 3u64),"));
         assert!(SIMPLE_TODO_DEMO.contains("todos: cx.state().local_init(|| {"));

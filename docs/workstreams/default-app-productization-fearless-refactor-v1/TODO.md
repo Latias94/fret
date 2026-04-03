@@ -134,6 +134,9 @@ M5 evidence:
   - `tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json`
 - `todo_demo` now keeps row-local builder work inside `ui::for_each_keyed_with_cx(...)`, and the
   default `cx.state().local*` diagnostics now preserve app callsites via `ecosystem/fret/src/view.rs`.
+- Source-policy/template gates now also lock page-shell ownership on the default ladder:
+  - demos/templates keep local `todo_page(...)` helpers,
+  - cookbook `centered_page_*` stays cookbook-owned instead of leaking into generated app shells.
 
 ## Notes
 
