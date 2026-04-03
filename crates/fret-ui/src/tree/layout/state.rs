@@ -86,6 +86,14 @@ impl<H: UiHost> UiTree<H> {
         self.interactive_resize_active
     }
 
+    pub(crate) fn interactive_resize_requires_full_rebuild(&self) -> bool {
+        self.interactive_resize_needs_full_rebuild && !self.interactive_resize_active
+    }
+
+    pub(crate) fn note_interactive_resize_cached_flow_reuse(&mut self) {
+        self.interactive_resize_needs_full_rebuild = true;
+    }
+
     pub(crate) fn update_interactive_resize_state_for_layout(
         &mut self,
         frame_id: FrameId,

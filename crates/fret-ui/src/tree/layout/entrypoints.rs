@@ -66,6 +66,8 @@ impl<H: UiHost> UiTree<H> {
         if pass_kind == LayoutPassKind::Final {
             self.update_interactive_resize_state_for_layout(app.frame_id(), bounds, scale_factor);
         }
+        let force_post_resize_rebuild =
+            pass_kind == LayoutPassKind::Final && self.interactive_resize_requires_full_rebuild();
 
         let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
@@ -165,6 +167,7 @@ impl<H: UiHost> UiTree<H> {
             && !any_pending_barrier_needs_layout
             && self.invalidated_paint_nodes == 0
             && self.invalidated_hit_test_nodes == 0
+            && !force_post_resize_rebuild
         {
             self.pending_barrier_relayouts.retain(|&root| {
                 self.nodes
@@ -238,6 +241,7 @@ impl<H: UiHost> UiTree<H> {
             && self.last_layout_bounds == Some(bounds)
             && self.last_layout_scale_factor == Some(scale_factor)
             && self.layout_invalidations_count == 0
+            && !force_post_resize_rebuild
         {
             self.debug_stats.layout_fast_path_taken = true;
             self.prepaint_after_layout(app, scale_factor);
@@ -590,6 +594,9 @@ impl<H: UiHost> UiTree<H> {
             self.sync_element_bounds_cache_after_layout(app);
 
             self.validate_subtree_layout_dirty_counts_if_enabled();
+            if !self.interactive_resize_active() {
+                self.interactive_resize_needs_full_rebuild = false;
+            }
         }
 
         if pass_kind == LayoutPassKind::Final {
@@ -1050,6 +1057,10 @@ impl<H: UiHost> UiTree<H> {
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             available,
         );
+        let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
+        if force_post_resize_rebuild {
+            self.mark_subtree_invalidation_local(root, Invalidation::Layout);
+        }
 
         if self.invalidated_layout_nodes == 0
             && self.invalidated_hit_test_nodes == 0
@@ -1058,6 +1069,7 @@ impl<H: UiHost> UiTree<H> {
             && !n.invalidation.hit_test
             && n.bounds == bounds
             && n.measured_size != Size::default()
+            && !force_post_resize_rebuild
         {
             return n.measured_size;
         }
@@ -1108,6 +1120,10 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
     ) -> Size {
+        let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
+        if force_post_resize_rebuild {
+            self.mark_subtree_invalidation_local(root, Invalidation::Layout);
+        }
         if self.invalidated_layout_nodes == 0
             && self.invalidated_hit_test_nodes == 0
             && let Some(n) = self.nodes.get(root)
@@ -1115,6 +1131,7 @@ impl<H: UiHost> UiTree<H> {
             && !n.invalidation.hit_test
             && n.bounds == bounds
             && n.measured_size != Size::default()
+            && !force_post_resize_rebuild
         {
             return n.measured_size;
         }
@@ -1443,6 +1460,12 @@ impl<H: UiHost> UiTree<H> {
         let phase1_started = profile_layout.then(Instant::now);
         let reuse_cached_flow = self.interactive_resize_active();
         let allow_translation_only_skip = runtime_cfg.layout_skip_request_build_translation_only;
+        let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
+        if force_post_resize_rebuild {
+            for &root in roots {
+                self.mark_subtree_invalidation_local(root, Invalidation::Layout);
+            }
+        }
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
         for &root in roots {
             let Some((has_element, layout_invalidated, prev_bounds, measured)) =
@@ -1475,6 +1498,7 @@ impl<H: UiHost> UiTree<H> {
             if reuse_cached_flow && engine.layout_id_for_node(root).is_some() && !layout_invalidated
             {
                 engine.set_viewport_root_override_size(root, bounds.size, sf);
+                self.note_interactive_resize_cached_flow_reuse();
                 self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
             } else {
                 build_viewport_flow_subtree(
@@ -1671,6 +1695,17 @@ impl<H: UiHost> UiTree<H> {
                 );
 
                 let reuse_cached_flow = self.interactive_resize_active();
+                let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
+                if force_post_resize_rebuild {
+                    let roots_to_invalidate: Vec<NodeId> = self.viewport_roots
+                        [batch_start..batch_end]
+                        .iter()
+                        .map(|(root, _)| *root)
+                        .collect();
+                    for root in roots_to_invalidate {
+                        self.mark_subtree_invalidation_local(root, Invalidation::Layout);
+                    }
+                }
 
                 // Phase 1: request/build newly registered viewport roots for stable identity,
                 // regardless of whether they will be computed this frame.
@@ -1696,6 +1731,7 @@ impl<H: UiHost> UiTree<H> {
                         && !item.layout_invalidated
                     {
                         engine.set_viewport_root_override_size(item.root, item.bounds.size, sf);
+                        self.note_interactive_resize_cached_flow_reuse();
                         self.mark_layout_engine_seen_subtree_from_ui_children(
                             &mut engine,
                             item.root,

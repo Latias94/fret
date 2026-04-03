@@ -70,6 +70,28 @@ impl<H: UiHost> UiTree<H> {
         self.update_invalidation_counters(prev, next);
     }
 
+    pub(in crate::tree) fn mark_subtree_invalidation_local(
+        &mut self,
+        root: NodeId,
+        inv: Invalidation,
+    ) {
+        if !self.nodes.contains_key(root) {
+            return;
+        }
+
+        self.scratch_node_stack.clear();
+        self.scratch_node_stack.push(root);
+        while let Some(node) = self.scratch_node_stack.pop() {
+            let children: Vec<NodeId> = self
+                .nodes
+                .get(node)
+                .map(|entry| entry.children.iter().copied().collect())
+                .unwrap_or_default();
+            self.mark_invalidation_local(node, inv);
+            self.scratch_node_stack.extend(children);
+        }
+    }
+
     pub(in crate::tree) fn begin_prepaint_outputs_for_node(
         &mut self,
         node: NodeId,

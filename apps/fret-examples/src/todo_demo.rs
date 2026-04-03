@@ -60,9 +60,9 @@ struct TodoResponsiveLayout {
     center_card_vertically: bool,
     section_padding_x: Space,
     stack_footer: bool,
+    fill_card_height: bool,
     always_show_row_actions: bool,
     card_max_height: Px,
-    rows_max_height: Px,
 }
 
 impl TodoResponsiveLayout {
@@ -98,8 +98,6 @@ impl TodoResponsiveLayout {
             40.0
         };
         let card_max_height = Px((viewport_height.0 - card_shell_allowance).clamp(340.0, 720.0));
-        let rows_reserve = if compact_width { 252.0 } else { 272.0 };
-        let rows_max_height = Px((card_max_height.0 - rows_reserve).clamp(120.0, 420.0));
 
         Self {
             page_padding,
@@ -107,9 +105,9 @@ impl TodoResponsiveLayout {
             center_card_vertically,
             section_padding_x,
             stack_footer: compact_width,
+            fill_card_height: compact_width || compact_height,
             always_show_row_actions: !can_hover || !wide_breakpoint_active,
             card_max_height,
-            rows_max_height,
         }
     }
 }
@@ -510,9 +508,19 @@ impl View for TodoDemoView {
             .viewport_test_id(TEST_ID_ROWS)
             .ui()
             .w_full()
-            .max_h(responsive.rows_max_height)
+            .h_full()
+            .flex_1()
+            .min_h_0()
             .build()
             .into_element(cx);
+
+        let rows_section = ui::container(|cx| ui::single(cx, rows))
+            .px(responsive.section_padding_x)
+            .pt(Space::N0)
+            .pb(Space::N2)
+            .w_full()
+            .flex_1()
+            .min_h_0();
 
         let filters = ui::h_flex(|cx| {
             ui::children![
@@ -584,45 +592,34 @@ impl View for TodoDemoView {
             .into_element(cx)
         };
 
-        let card = ui::container(|cx| {
-            ui::single(
-                cx,
-                ui::v_flex(|cx| {
-                    let mut sections = vec![
-                        todo_card_section(
-                            header,
-                            responsive.section_padding_x,
-                            Space::N6,
-                            Space::N4,
-                        )
-                        .into_element(cx),
-                        todo_card_section(
-                            input_row,
-                            responsive.section_padding_x,
-                            Space::N0,
-                            Space::N4,
-                        )
-                        .into_element(cx),
-                        todo_card_section(rows, responsive.section_padding_x, Space::N0, Space::N2)
-                            .into_element(cx),
-                    ];
+        let card_min_height = if responsive.fill_card_height {
+            responsive.card_max_height
+        } else {
+            Px(0.0)
+        };
 
-                    if total_count > 0 {
-                        sections.push(
-                            todo_card_footer_section(
-                                footer,
-                                responsive.section_padding_x,
-                                footer_bg,
-                            )
-                            .into_element(cx),
-                        );
-                    }
+        let card = ui::v_flex(|cx| {
+            let mut sections = vec![
+                todo_card_section(header, responsive.section_padding_x, Space::N6, Space::N4)
+                    .into_element(cx),
+                todo_card_section(
+                    input_row,
+                    responsive.section_padding_x,
+                    Space::N0,
+                    Space::N4,
+                )
+                .into_element(cx),
+                rows_section.into_element(cx),
+            ];
 
-                    sections
-                })
-                .items_stretch()
-                .w_full(),
-            )
+            if total_count > 0 {
+                sections.push(
+                    todo_card_footer_section(footer, responsive.section_padding_x, footer_bg)
+                        .into_element(cx),
+                );
+            }
+
+            sections
         })
         .bg(ColorRef::Color(card))
         .border_1()
@@ -632,8 +629,10 @@ impl View for TodoDemoView {
         .overflow_hidden()
         .w_full()
         .max_w(Px(448.0))
+        .min_h(card_min_height)
         .max_h(responsive.card_max_height)
-        .test_id(TEST_ID_ROOT);
+        .items_stretch();
+        let card = card.test_id(TEST_ID_ROOT);
 
         ui::single(cx, todo_page(theme, responsive, card))
     }
@@ -980,6 +979,7 @@ mod tests {
         assert_eq!(compact.section_padding_x, Space::N4);
         assert!(!compact.center_card_vertically);
         assert!(compact.stack_footer);
+        assert!(compact.fill_card_height);
         assert!(compact.always_show_row_actions);
     }
 
@@ -991,7 +991,8 @@ mod tests {
         assert_eq!(compact.page_top_padding, Space::N3);
         assert_eq!(roomy.page_top_padding, Space::N8);
         assert!(roomy.card_max_height.0 > compact.card_max_height.0);
-        assert!(roomy.rows_max_height.0 > compact.rows_max_height.0);
+        assert!(compact.fill_card_height);
+        assert!(!roomy.fill_card_height);
         assert!(!roomy.always_show_row_actions);
     }
 

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/tooling/todo/todo-min-window-footer-visible.json",
+    "tools/diag-scripts/tooling/todo/todo-resize-roundtrip-immediate-layout.json",
+    "tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json",
+    "tools/diag-scripts/tooling/todo/todo-resize-drag-jitter-steady.json"
+  ]
+}
