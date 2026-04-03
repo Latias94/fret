@@ -37,6 +37,17 @@ This follow-on slice locks the contract that:
 - descendant layout invalidations under a clean ancestor must not remain pinned just because the
   barrier child list was structurally unchanged.
 
+## Follow-on slice — Contained cache-root dirty tracking must match authoritative layout state
+
+This follow-on slice locks the contract that:
+
+- a descendant layout invalidation truncated at a contained view-cache root must still make that
+  root discoverable to the contained-relayout pass,
+- layout-only descendant invalidations must not escalate a contained cache root into declarative
+  rerender pressure,
+- `dirty_cache_roots` must clear when authoritative main-pass layout already consumed the cache
+  root's scheduling-only layout invalidation.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -61,6 +72,8 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui set_children_barrier_same_children_clean_subtree_stays_noop`
 - Dirty barrier same-children remounts still converge via authoritative relayout:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui set_children_barrier_same_children_with_dirty_descendant_reaches_authoritative_relayout`
+- Descendant layout invalidations still schedule contained relayout without rerender:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui descendant_layout_invalidation_marks_contained_view_cache_root_dirty`
 
 ## Evidence anchors
 
@@ -79,6 +92,10 @@ This follow-on slice locks the contract that:
 - Barrier same-children follow-up scheduling:
   - `crates/fret-ui/src/tree/ui_tree_mutation/barrier.rs`
   - `crates/fret-ui/src/tree/tests/barrier_subtree_layout_dirty_aggregation.rs`
+- Contained cache-root dirty-marker lifecycle:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+  - `crates/fret-ui/src/tree/ui_tree_invalidation_walk/mark.rs`
+  - `crates/fret-ui/src/tree/tests/view_cache.rs`
 - Lane positioning:
   - `docs/workstreams/scroll-optimization-v1/DESIGN.md`
   - `docs/workstreams/scroll-optimization-v1/TODO.md`
@@ -115,3 +132,13 @@ This follow-on slice locks the contract that:
   - `tree::tests::view_cache::view_cache_runs_contained_relayout_for_invalidated_boundaries`
   - `tree::tests::view_cache::view_cache_layout_invalidations_allow_reuse_for_definite_contained_roots`
   - `tree::tests::view_cache::view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender`
+- 2026-04-03: contained cache-root dirty-marker lifecycle gates confirmed via `cargo nextest` with
+  `CARGO_TARGET_DIR=target-codex-verify7`:
+  - `tree::tests::view_cache::view_cache_invalidation_stops_at_boundary_for_paint`
+  - `tree::tests::view_cache::descendant_layout_invalidation_marks_contained_view_cache_root_dirty`
+  - `tree::tests::view_cache::view_cache_runs_contained_relayout_for_invalidated_boundaries`
+  - `tree::tests::view_cache::view_cache_contained_relayout_does_not_force_next_frame_rerender`
+  - `tree::tests::view_cache::view_cache_layout_invalidations_allow_reuse_for_definite_contained_roots`
+  - `tree::tests::view_cache::view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender`
+  - `tree::tests::view_cache::detached_dirty_view_cache_root_is_pruned_before_layout_followups`
+  - `tree::tests::barrier_subtree_layout_dirty_aggregation::*`

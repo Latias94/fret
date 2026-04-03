@@ -328,6 +328,11 @@ impl<H: UiHost> UiTree<H> {
                     layout_after,
                 );
                 self.update_invalidation_counters(prev, next);
+                // Main-pass layout can consume a cache root's scheduling-only layout dirty marker
+                // before the contained-relayout pass ever looks at it (for example, initial mount
+                // or ancestor-driven layout). Keep `dirty_cache_roots` aligned with authoritative
+                // layout state so clean cache roots do not remain queued across stable frames.
+                self.clear_cache_root_dirty_tracking_if_clean(node);
             }
         }
 

@@ -49,12 +49,15 @@ Status: Active
   - [x] `set_children_barrier(...same_children...)` schedules authoritative follow-up relayout when
     descendant layout work is still pending,
   - [ ] remaining child list mutation helpers,
-  - [ ] contained relayout scheduling,
+  - [x] contained cache-root dirty markers now align with main-pass layout consumption and
+    descendant-truncated contained relayout scheduling,
   - [x] subtree dirty aggregation bookkeeping.
 - [ ] Add/extend unit tests to cover:
   - [x] barrier relayout sets `subtree_layout_dirty_count` consistently,
   - [x] barrier same-children clean remount stays no-op,
   - [x] barrier same-children dirty descendant converges via contained relayout,
+  - [x] descendant layout invalidation under a contained cache root stays layout-only but still
+    schedules contained relayout,
   - [ ] scroll handle revision-only bumps stay classified correctly.
 
 ## Wheel/trackpad delta coalescing

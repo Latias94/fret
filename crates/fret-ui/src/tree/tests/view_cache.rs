@@ -135,6 +135,74 @@ fn view_cache_runs_contained_relayout_for_invalidated_boundaries() {
 }
 
 #[test]
+fn descendant_layout_invalidation_marks_contained_view_cache_root_dirty() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+    ui.nodes[boundary].view_cache.enabled = true;
+    ui.nodes[boundary].view_cache.contained_layout = true;
+    ui.nodes[boundary].view_cache.layout_definite = true;
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![leaf]);
+
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+    ui.nodes[root].bounds = bounds;
+    ui.nodes[root].measured_size = bounds.size;
+    ui.nodes[boundary].bounds = bounds;
+    ui.nodes[boundary].measured_size = bounds.size;
+    ui.nodes[leaf].bounds = bounds;
+    ui.nodes[leaf].measured_size = bounds.size;
+
+    let mut services = FakeUiServices;
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    for id in [root, boundary, leaf] {
+        ui.test_clear_node_invalidations(id);
+    }
+    assert!(
+        ui.dirty_cache_roots.is_empty(),
+        "stable frames must not carry contained-relayout candidates from the initial mount"
+    );
+
+    ui.invalidate(leaf, Invalidation::Layout);
+
+    assert!(ui.nodes[leaf].invalidation.layout);
+    assert!(ui.nodes[boundary].invalidation.layout);
+    assert!(
+        ui.dirty_cache_roots.contains(&boundary),
+        "contained cache roots with descendant layout invalidations must remain discoverable for the contained relayout pass"
+    );
+    assert!(
+        !ui.nodes[boundary].view_cache_needs_rerender,
+        "layout-only descendant invalidations should schedule contained relayout without escalating to declarative rerender"
+    );
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(ui.debug_stats().view_cache_contained_relayouts, 1);
+    assert!(
+        !ui.nodes[boundary].invalidation.layout,
+        "contained relayout must consume the cache-root layout invalidation induced by the descendant"
+    );
+    assert!(
+        !ui.nodes[leaf].invalidation.layout,
+        "contained relayout must converge the descendant layout invalidation in the same frame"
+    );
+}
+
+#[test]
 fn view_cache_contained_relayout_does_not_force_next_frame_rerender() {
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();

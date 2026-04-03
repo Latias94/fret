@@ -154,6 +154,7 @@ impl<H: UiHost> UiTree<H> {
             }
             let mut did_stop = false;
             let mut mark_dirty = false;
+            let mut mark_dirty_for_contained_layout = false;
             let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
             let mut self_delta: i32 = 0;
             let mut rebuild_subtree_layout_dirty: bool = false;
@@ -200,6 +201,8 @@ impl<H: UiHost> UiTree<H> {
                         }
                         hit_cache_root = Some(id);
                         did_stop = true;
+                        mark_dirty_for_contained_layout =
+                            n.view_cache.contained_layout && n.invalidation.layout;
                         if Self::invalidation_marks_view_dirty(source, inv, detail) {
                             n.view_cache_needs_rerender = true;
                             mark_dirty = true;
@@ -250,7 +253,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if did_stop {
-                if mark_dirty {
+                if mark_dirty || mark_dirty_for_contained_layout {
                     self.mark_cache_root_dirty(id, source, detail);
                 }
                 invalidation_active = false;
@@ -297,6 +300,7 @@ impl<H: UiHost> UiTree<H> {
             while let Some(id) = parent {
                 let next_parent = self.nodes.get(id).and_then(|n| n.parent);
                 let mut mark_dirty = false;
+                let mut mark_dirty_for_contained_layout = false;
                 let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
                 let mut layout_transition: Option<(NodeId, bool, bool)> = None;
                 if let Some(n) = self.nodes.get_mut(id)
@@ -313,6 +317,8 @@ impl<H: UiHost> UiTree<H> {
                     );
                     layout_transition = Some((id, layout_before, layout_after));
                     counter_update = Some((prev, n.invalidation));
+                    mark_dirty_for_contained_layout =
+                        n.view_cache.contained_layout && n.invalidation.layout;
                     if Self::invalidation_marks_view_dirty(source, inv, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
@@ -326,7 +332,7 @@ impl<H: UiHost> UiTree<H> {
                 if let Some((prev, next)) = counter_update {
                     self.update_invalidation_counters(prev, next);
                 }
-                if mark_dirty {
+                if mark_dirty || mark_dirty_for_contained_layout {
                     self.mark_cache_root_dirty(id, source, detail);
                 }
                 parent = next_parent;
@@ -399,6 +405,7 @@ impl<H: UiHost> UiTree<H> {
             }
             let mut did_stop = false;
             let mut mark_dirty = false;
+            let mut mark_dirty_for_contained_layout = false;
             let mut self_delta: i32 = 0;
             let mut rebuild_subtree_layout_dirty: bool = false;
             let next_parent = if let Some(n) = self.nodes.get_mut(id) {
@@ -439,6 +446,8 @@ impl<H: UiHost> UiTree<H> {
                                 .view_cache_invalidation_truncations
                                 .saturating_add(1);
                         }
+                        mark_dirty_for_contained_layout =
+                            n.view_cache.contained_layout && n.invalidation.layout;
                         if Self::invalidation_marks_view_dirty(source, inv, detail) {
                             n.view_cache_needs_rerender = true;
                             mark_dirty = true;
@@ -482,7 +491,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if did_stop {
-                if mark_dirty {
+                if mark_dirty || mark_dirty_for_contained_layout {
                     self.mark_cache_root_dirty(id, source, detail);
                 }
                 invalidation_active = false;
@@ -539,6 +548,7 @@ impl<H: UiHost> UiTree<H> {
                 let already = visited.mask(id);
                 if self.nodes.get(id).is_some_and(|n| n.view_cache.enabled) {
                     let mut mark_dirty = false;
+                    let mut mark_dirty_for_contained_layout = false;
                     let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
                     let mut layout_transition: Option<(NodeId, bool, bool)> = None;
                     if let Some(n) = self.nodes.get_mut(id) {
@@ -558,6 +568,8 @@ impl<H: UiHost> UiTree<H> {
                             );
                             layout_transition = Some((id, layout_before, layout_after));
                             counter_update = Some((prev, n.invalidation));
+                            mark_dirty_for_contained_layout =
+                                n.view_cache.contained_layout && n.invalidation.layout;
                         }
                     }
                     if let Some((id, before, after)) = layout_transition {
@@ -568,7 +580,7 @@ impl<H: UiHost> UiTree<H> {
                     if let Some((prev, next)) = counter_update {
                         self.update_invalidation_counters(prev, next);
                     }
-                    if mark_dirty {
+                    if mark_dirty || mark_dirty_for_contained_layout {
                         self.mark_cache_root_dirty(id, source, detail);
                     }
                     visited.set_mask(id, already | needed);
