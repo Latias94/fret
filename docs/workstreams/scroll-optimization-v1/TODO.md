@@ -71,6 +71,8 @@ Status: Active
     published input snapshots cannot suppress cross-surface gating or shortcut lookup,
   - [x] add a source-policy guardrail so future first-party code cannot reintroduce raw
     `WindowInputContextService` command-availability drift outside the runtime owner files,
+  - [x] audit remaining raw `WindowInputContextService` readers and confirm they are limited to
+    runtime ownership, diagnostics/debug surfaces, or text-boundary/IME reads,
   - [ ] remaining child list mutation helpers,
   - [x] contained cache-root dirty markers now align with main-pass layout consumption and
     descendant-truncated contained relayout scheduling,

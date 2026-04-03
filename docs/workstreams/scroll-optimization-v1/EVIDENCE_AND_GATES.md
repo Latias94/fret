@@ -347,3 +347,15 @@ This follow-on slice locks the contract that:
   publisher/helper allowlist:
   - `python3 tools/check_window_input_context_command_availability_usage.py`
   - `.github/workflows/consistency-checks.yml`
+- 2026-04-03: remaining raw `WindowInputContextService` consumers audited after the
+  command-availability overlay refactor:
+  - runtime owner/publisher sites remain in `crates/fret-ui/src/tree/commands.rs` and
+    `crates/fret-runtime/src/window_input_context.rs`,
+  - diagnostics readers in `ecosystem/fret-bootstrap/src/ui_diagnostics/{service.rs,script_steps_wait.rs,script_steps_assert.rs,script_steps_visibility.rs,script_steps_drag.rs}`
+    use the snapshot only for window liveness, `focus_is_text_input`, and platform capability
+    predicates, not command-availability truth,
+  - text/IME readers in `ecosystem/fret-code-editor/src/editor/mod.rs` and
+    `apps/fret-ui-gallery/src/ui/previews/pages/editors/web_ime.rs` use the snapshot only for
+    `text_boundary_mode` / `focus_is_text_input`,
+  - no remaining first-party command/shortcut consumers bypass the runtime helper overlay; the
+    source-policy gate now enforces that boundary.
