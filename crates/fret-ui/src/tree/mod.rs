@@ -228,6 +228,7 @@ pub struct UiTree<H: UiHost> {
     last_layout_bounds: Option<Rect>,
     last_layout_scale_factor: Option<f32>,
     interactive_resize_active: bool,
+    interactive_resize_needs_full_rebuild: bool,
     interactive_resize_stable_frames: u8,
     interactive_resize_last_updated_frame: Option<FrameId>,
     interactive_resize_last_bounds_delta: Option<(fret_core::Px, fret_core::Px)>,

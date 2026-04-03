@@ -60,9 +60,9 @@ struct TodoResponsiveLayout {
     center_card_vertically: bool,
     section_padding_x: Space,
     stack_footer: bool,
+    fill_card_height: bool,
     always_show_row_actions: bool,
     card_max_height: Px,
-    rows_max_height: Px,
 }
 
 impl TodoResponsiveLayout {
@@ -98,8 +98,6 @@ impl TodoResponsiveLayout {
             40.0
         };
         let card_max_height = Px((viewport_height.0 - card_shell_allowance).clamp(340.0, 720.0));
-        let rows_reserve = if compact_width { 252.0 } else { 272.0 };
-        let rows_max_height = Px((card_max_height.0 - rows_reserve).clamp(120.0, 420.0));
 
         Self {
             page_padding,
@@ -107,9 +105,9 @@ impl TodoResponsiveLayout {
             center_card_vertically,
             section_padding_x,
             stack_footer: compact_width,
+            fill_card_height: compact_width || compact_height,
             always_show_row_actions: !can_hover || !wide_breakpoint_active,
             card_max_height,
-            rows_max_height,
         }
     }
 }
@@ -139,9 +137,9 @@ impl TodoFilter {
 
     fn label(self) -> &'static str {
         match self {
-            Self::All => "全部",
-            Self::Active => "进行中",
-            Self::Completed => "已完成",
+            Self::All => "All",
+            Self::Active => "Active",
+            Self::Completed => "Completed",
         }
     }
 }
@@ -164,17 +162,17 @@ impl TodoLocals {
                     TodoRow {
                         id: 1,
                         done: true,
-                        text: Arc::from("学习 React Hooks"),
+                        text: Arc::from("Learn React Hooks"),
                     },
                     TodoRow {
                         id: 2,
                         done: true,
-                        text: Arc::from("掌握 Tailwind CSS"),
+                        text: Arc::from("Master Tailwind CSS"),
                     },
                     TodoRow {
                         id: 3,
                         done: false,
-                        text: Arc::from("构建现代化 Todo 应用"),
+                        text: Arc::from("Build a modern Todo app"),
                     },
                 ]
             }),
@@ -319,7 +317,7 @@ impl View for TodoDemoView {
         .shadow_sm();
 
         let status_line = if total_count == 0 {
-            ui::text("添加一个新任务开始吧")
+            ui::text("Add a task to get started")
                 .text_sm()
                 .text_color(ColorRef::Color(muted_foreground))
                 .into_element(cx)
@@ -333,7 +331,7 @@ impl View for TodoDemoView {
                         Some(Px(14.0)),
                         Some(ColorRef::Color(success)),
                     ),
-                    ui::text("太棒了！所有任务已完成")
+                    ui::text("All tasks completed")
                         .text_sm()
                         .text_color(ColorRef::Color(muted_foreground))
                         .into_element(cx),
@@ -343,7 +341,8 @@ impl View for TodoDemoView {
             .items_center()
             .into_element(cx)
         } else {
-            ui::text(format!("还有 {active_count} 个未完成的任务"))
+            let task_label = if active_count == 1 { "task" } else { "tasks" };
+            ui::text(format!("{active_count} {task_label} left"))
                 .text_sm()
                 .text_color(ColorRef::Color(muted_foreground))
                 .into_element(cx)
@@ -352,7 +351,7 @@ impl View for TodoDemoView {
         let title_block = ui::v_flex(|cx| {
             ui::children![
                 cx;
-                ui::text("我的待办事项").text_base().font_semibold(),
+                ui::text("My tasks").text_base().font_semibold(),
                 status_line,
             ]
         })
@@ -372,7 +371,7 @@ impl View for TodoDemoView {
                     ui::h_flex(|cx| {
                         ui::children![
                             cx;
-                            ui::text("完成进度")
+                            ui::text("Progress")
                                 .text_xs()
                                 .text_color(ColorRef::Color(muted_foreground))
                                 .into_element(cx),
@@ -415,7 +414,7 @@ impl View for TodoDemoView {
             .size(shadcn::ButtonSize::Icon)
             .disabled(!add_enabled)
             .action(act::Add)
-            .a11y_label("添加任务")
+            .a11y_label("Add task")
             .corner_radii_override(Corners::all(Px(14.0)))
             .ui()
             .shadow_sm()
@@ -424,8 +423,8 @@ impl View for TodoDemoView {
             .test_id(TEST_ID_ADD);
 
         let input = shadcn::Input::new(&locals.draft)
-            .a11y_label("新任务")
-            .placeholder("添加新任务...")
+            .a11y_label("New task")
+            .placeholder("Add a new task...")
             .submit_action(act::Add)
             .corner_radii_override(Corners::all(Px(14.0)))
             .test_id(TEST_ID_DRAFT)
@@ -443,9 +442,9 @@ impl View for TodoDemoView {
         let rows_body = ui::v_flex(|cx| {
             if filtered_todos.is_empty() {
                 let empty_label = match filter_value {
-                    TodoFilter::All => "没有待办任务，享受休息吧！",
-                    TodoFilter::Active => "没有进行中的任务",
-                    TodoFilter::Completed => "没有已完成的任务",
+                    TodoFilter::All => "No tasks yet. Enjoy the break!",
+                    TodoFilter::Active => "No active tasks",
+                    TodoFilter::Completed => "No completed tasks",
                 };
 
                 let empty_icon = ui::v_flex(|cx| {
@@ -510,9 +509,19 @@ impl View for TodoDemoView {
             .viewport_test_id(TEST_ID_ROWS)
             .ui()
             .w_full()
-            .max_h(responsive.rows_max_height)
+            .h_full()
+            .flex_1()
+            .min_h_0()
             .build()
             .into_element(cx);
+
+        let rows_section = ui::container(|cx| ui::single(cx, rows))
+            .px(responsive.section_padding_x)
+            .pt(Space::N0)
+            .pb(Space::N2)
+            .w_full()
+            .flex_1()
+            .min_h_0();
 
         let filters = ui::h_flex(|cx| {
             ui::children![
@@ -536,7 +545,7 @@ impl View for TodoDemoView {
         .items_center()
         .wrap();
 
-        let clear_done_btn = shadcn::Button::new("清除已完成")
+        let clear_done_btn = shadcn::Button::new("Clear completed")
             .variant(shadcn::ButtonVariant::Ghost)
             .size(shadcn::ButtonSize::Xs)
             .corner_radii_override(Corners::all(Px(9999.0)))
@@ -584,45 +593,34 @@ impl View for TodoDemoView {
             .into_element(cx)
         };
 
-        let card = ui::container(|cx| {
-            ui::single(
-                cx,
-                ui::v_flex(|cx| {
-                    let mut sections = vec![
-                        todo_card_section(
-                            header,
-                            responsive.section_padding_x,
-                            Space::N6,
-                            Space::N4,
-                        )
-                        .into_element(cx),
-                        todo_card_section(
-                            input_row,
-                            responsive.section_padding_x,
-                            Space::N0,
-                            Space::N4,
-                        )
-                        .into_element(cx),
-                        todo_card_section(rows, responsive.section_padding_x, Space::N0, Space::N2)
-                            .into_element(cx),
-                    ];
+        let card_min_height = if responsive.fill_card_height {
+            responsive.card_max_height
+        } else {
+            Px(0.0)
+        };
 
-                    if total_count > 0 {
-                        sections.push(
-                            todo_card_footer_section(
-                                footer,
-                                responsive.section_padding_x,
-                                footer_bg,
-                            )
-                            .into_element(cx),
-                        );
-                    }
+        let card = ui::v_flex(|cx| {
+            let mut sections = vec![
+                todo_card_section(header, responsive.section_padding_x, Space::N6, Space::N4)
+                    .into_element(cx),
+                todo_card_section(
+                    input_row,
+                    responsive.section_padding_x,
+                    Space::N0,
+                    Space::N4,
+                )
+                .into_element(cx),
+                rows_section.into_element(cx),
+            ];
 
-                    sections
-                })
-                .items_stretch()
-                .w_full(),
-            )
+            if total_count > 0 {
+                sections.push(
+                    todo_card_footer_section(footer, responsive.section_padding_x, footer_bg)
+                        .into_element(cx),
+                );
+            }
+
+            sections
         })
         .bg(ColorRef::Color(card))
         .border_1()
@@ -632,8 +630,10 @@ impl View for TodoDemoView {
         .overflow_hidden()
         .w_full()
         .max_w(Px(448.0))
+        .min_h(card_min_height)
         .max_h(responsive.card_max_height)
-        .test_id(TEST_ID_ROOT);
+        .items_stretch();
+        let card = card.test_id(TEST_ID_ROOT);
 
         ui::single(cx, todo_page(theme, responsive, card))
     }
@@ -752,9 +752,9 @@ where
             .action(act::Toggle)
             .action_payload(row_id)
             .a11y_label(if row_done {
-                "标记为未完成"
+                "Mark as incomplete"
             } else {
-                "标记为已完成"
+                "Mark as complete"
             })
             .children([toggle_visual])
             .test_id(format!("{TEST_ID_DONE_PREFIX}{row_id}"));
@@ -797,7 +797,7 @@ where
             ))
             .action(act::Remove)
             .action_payload(row_id)
-            .a11y_label("删除任务")
+            .a11y_label("Delete task")
             .children([icon::icon_with(
                 cx,
                 IconId::new("lucide.trash-2"),
@@ -980,6 +980,7 @@ mod tests {
         assert_eq!(compact.section_padding_x, Space::N4);
         assert!(!compact.center_card_vertically);
         assert!(compact.stack_footer);
+        assert!(compact.fill_card_height);
         assert!(compact.always_show_row_actions);
     }
 
@@ -991,7 +992,8 @@ mod tests {
         assert_eq!(compact.page_top_padding, Space::N3);
         assert_eq!(roomy.page_top_padding, Space::N8);
         assert!(roomy.card_max_height.0 > compact.card_max_height.0);
-        assert!(roomy.rows_max_height.0 > compact.rows_max_height.0);
+        assert!(compact.fill_card_height);
+        assert!(!roomy.fill_card_height);
         assert!(!roomy.always_show_row_actions);
     }
 

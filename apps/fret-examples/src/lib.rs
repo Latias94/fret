@@ -827,11 +827,10 @@ mod authoring_surface_policy_tests {
                 "shadcn::Progress::from_value(progress_pct).a11y_label(\"Todocompletionprogress\").ui().rounded(Radius::Full).w_full().build()"
             )
         );
-        assert!(
-            normalized.contains(
-                ".viewport_test_id(TEST_ID_ROWS).ui().w_full().max_h(responsive.rows_max_height).build()"
-            )
-        );
+        assert!(normalized.contains(
+            ".viewport_test_id(TEST_ID_ROWS).ui().w_full().h_full().flex_1().min_h_0().build()"
+        ));
+        assert!(!TODO_DEMO.contains("rows_max_height"));
         assert!(!normalized.contains(".a11y_label(\"Todocompletionprogress\").refine_style("));
         assert!(!normalized.contains(".viewport_test_id(TEST_ID_ROWS).refine_layout("));
         assert!(

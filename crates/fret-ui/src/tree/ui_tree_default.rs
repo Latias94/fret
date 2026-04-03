@@ -43,6 +43,7 @@ impl<H: UiHost> Default for UiTree<H> {
             last_layout_bounds: None,
             last_layout_scale_factor: None,
             interactive_resize_active: false,
+            interactive_resize_needs_full_rebuild: false,
             interactive_resize_stable_frames: 0,
             interactive_resize_last_updated_frame: None,
             interactive_resize_last_bounds_delta: None,

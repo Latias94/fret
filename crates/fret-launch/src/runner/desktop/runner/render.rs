@@ -45,6 +45,29 @@ pub(super) fn validate_scene_if_enabled(scene: &Scene) {
 }
 
 impl<D: WinitAppDriver> WinitRunner<D> {
+    pub(super) fn sync_surface_resize_now(
+        &mut self,
+        window: fret_core::AppWindowId,
+        size: winit::dpi::PhysicalSize<u32>,
+    ) {
+        if let Some(state) = self.windows.get_mut(window) {
+            state.pending_surface_resize = Some(size);
+        }
+        self.resize_surface(window, size.width, size.height);
+    }
+
+    pub(super) fn request_surface_resize_redraw(&mut self, window: fret_core::AppWindowId) {
+        if self.request_window_redraw_with_reason(
+            window,
+            fret_runtime::RunnerFrameDriveReason::SurfaceResize,
+        ) {
+            // Keep the wake-up behavior aligned with effect-driven redraw requests. Some
+            // platforms may not present the first post-resize frame unless we also keep a
+            // one-shot RAF pending for the next turn.
+            self.raf_windows.request(window);
+        }
+    }
+
     pub(super) fn record_surface_config_snapshot(
         &mut self,
         window: fret_core::AppWindowId,
