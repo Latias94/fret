@@ -58,6 +58,19 @@ fn render_resize_sensitive_root(
     )
 }
 
+struct DynamicViewportRoot {
+    child: NodeId,
+    viewport: std::sync::Arc<std::sync::Mutex<Rect>>,
+}
+
+impl<H: UiHost> Widget<H> for DynamicViewportRoot {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        let viewport = *self.viewport.lock().expect("viewport lock");
+        let _ = cx.layout_viewport_root(self.child, viewport);
+        cx.available
+    }
+}
+
 #[test]
 fn interactive_resize_cached_flow_rebuilds_once_bounds_stabilize() {
     let mut app = crate::test_host::TestHost::new();
@@ -222,6 +235,132 @@ fn interactive_resize_cached_flow_rebuilds_once_bounds_stabilize() {
     assert!(
         rebuilt_card_bounds.origin.y.0 <= 0.5,
         "expected compact layout to pin the card to the top once stale flow is rebuilt; rebuilt_card_bounds={rebuilt_card_bounds:?}"
+    );
+}
+
+#[test]
+fn interactive_resize_viewport_root_rebuilds_once_bounds_stabilize() {
+    use std::sync::{Arc, Mutex};
+
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let roomy_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(680.0), Px(760.0)),
+    );
+    let compact_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(560.0)),
+    );
+    let viewport = Arc::new(Mutex::new(roomy_bounds));
+    let mut services = FakeUiServices;
+
+    let viewport_root =
+        render_resize_sensitive_root(&mut ui, &mut app, &mut services, window, roomy_bounds, true);
+    let root = ui.create_node(DynamicViewportRoot {
+        child: viewport_root,
+        viewport: viewport.clone(),
+    });
+    ui.set_children(root, vec![viewport_root]);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, roomy_bounds, 1.0);
+
+    let mut page_node = ui.children(viewport_root)[0];
+    let engine = ui.take_layout_engine();
+    let page_style = engine
+        .debug_style_for_node(page_node)
+        .cloned()
+        .expect("page style after roomy viewport layout");
+    ui.put_layout_engine(engine);
+    assert_eq!(
+        page_style.justify_content,
+        Some(taffy::style::JustifyContent::Center)
+    );
+
+    app.advance_frame();
+    *viewport.lock().expect("viewport lock") = compact_bounds;
+    let compact_root = render_resize_sensitive_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        compact_bounds,
+        false,
+    );
+    assert_eq!(
+        compact_root, viewport_root,
+        "expected stable viewport root identity"
+    );
+    clear_all_invalidations(&mut ui);
+    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
+
+    page_node = ui.children(viewport_root)[0];
+    let card_node = ui.children(page_node)[0];
+    let stale_card_bounds = ui
+        .debug_node_bounds(card_node)
+        .expect("card bounds after cached viewport resize");
+    let engine = ui.take_layout_engine();
+    let page_style = engine
+        .debug_style_for_node(page_node)
+        .cloned()
+        .expect("page style after cached viewport resize");
+    ui.put_layout_engine(engine);
+    assert!(
+        ui.interactive_resize_needs_full_rebuild,
+        "cached viewport resize should arm the deferred rebuild flag"
+    );
+    assert_eq!(
+        page_style.justify_content,
+        Some(taffy::style::JustifyContent::Center),
+        "interactive resize should still reuse the previous viewport flow before settle"
+    );
+    assert!(
+        stale_card_bounds.origin.y.0 > 0.0,
+        "expected stale centered viewport layout before the settle rebuild"
+    );
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
+    assert!(
+        ui.interactive_resize_needs_full_rebuild,
+        "first stable frame should keep the deferred viewport rebuild armed"
+    );
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
+
+    page_node = ui.children(viewport_root)[0];
+    let card_node = ui.children(page_node)[0];
+    let rebuilt_card_bounds = ui
+        .debug_node_bounds(card_node)
+        .expect("card bounds after viewport settle rebuild");
+    let engine = ui.take_layout_engine();
+    let page_style = engine
+        .debug_style_for_node(page_node)
+        .cloned()
+        .expect("page style after viewport settle rebuild");
+    let card_style = engine
+        .debug_style_for_node(card_node)
+        .cloned()
+        .expect("card style after viewport settle rebuild");
+    ui.put_layout_engine(engine);
+
+    assert_eq!(
+        page_style.justify_content,
+        Some(taffy::style::JustifyContent::FlexStart),
+        "settled viewport frame should rebuild the compact page style"
+    );
+    assert_eq!(
+        card_style.min_size.height,
+        taffy::style::Dimension::length(120.0),
+        "settled viewport frame should forward compact min-height constraints"
+    );
+    assert!(
+        rebuilt_card_bounds.origin.y.0 <= 0.5,
+        "expected viewport root bounds to refresh after the forced rebuild; rebuilt_card_bounds={rebuilt_card_bounds:?}"
     );
 }
 

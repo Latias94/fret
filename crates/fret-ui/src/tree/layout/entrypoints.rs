@@ -1642,6 +1642,18 @@ impl<H: UiHost> UiTree<H> {
         while *viewport_cursor < self.viewport_roots.len() {
             let batch_start = *viewport_cursor;
             let batch_end = self.viewport_roots.len();
+            let force_post_resize_rebuild = pass_kind == LayoutPassKind::Final
+                && self.interactive_resize_requires_full_rebuild();
+
+            if force_post_resize_rebuild {
+                let roots_to_invalidate: Vec<NodeId> = self.viewport_roots[batch_start..batch_end]
+                    .iter()
+                    .map(|(root, _)| *root)
+                    .collect();
+                for root in roots_to_invalidate {
+                    self.mark_subtree_invalidation_local(root, Invalidation::Layout);
+                }
+            }
 
             struct ViewportWorkItem {
                 root: NodeId,
@@ -1685,17 +1697,6 @@ impl<H: UiHost> UiTree<H> {
                 );
 
                 let reuse_cached_flow = self.interactive_resize_active();
-                let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
-                if force_post_resize_rebuild {
-                    let roots_to_invalidate: Vec<NodeId> = self.viewport_roots
-                        [batch_start..batch_end]
-                        .iter()
-                        .map(|(root, _)| *root)
-                        .collect();
-                    for root in roots_to_invalidate {
-                        self.mark_subtree_invalidation_local(root, Invalidation::Layout);
-                    }
-                }
 
                 // Phase 1: request/build newly registered viewport roots for stable identity,
                 // regardless of whether they will be computed this frame.
