@@ -179,6 +179,9 @@ Status note (2026-04-03):
 - Declarative `paint_only` runtime source ownership is now locked: runtime files must treat
   `binding.store_model()` as the authoritative graph/view/editor-config source instead of
   consulting bound graph/view/config mirrors directly.
+- Declarative graph-edit commit authority is now also centralized in `paint_only/transactions.rs`:
+  runtime files must not replace graph/document directly or dispatch/submit transactions outside
+  that seam.
 - The retained compatibility runtime no longer keeps a stale `cfg(test)` editor-config
   reconstruction fallback; retained runtime, retained tests, and `--all-features` builds now all
   use the same explicit editor-config seam.

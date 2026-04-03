@@ -382,6 +382,9 @@ points rather than direct graph mutation.
   - Declarative `paint_only` runtime source ownership is now locked by focused source-policy
     coverage: the main surface file plus private runtime submodules must use `binding.store_model()`
     as the authoritative graph/view/editor-config source instead of reading bound mirrors directly.
+  - Declarative graph-edit commit authority is now also locked by focused source-policy coverage:
+    runtime files must not replace graph/document directly or dispatch/submit transactions outside
+    the private `paint_only/transactions.rs` seam.
   - The workflow gallery retained subtree now also keeps its retained controller as explicit local
     state and constructs it from `binding.store_model()` rather than teaching hidden controller
     extraction from the binding, so first-party code makes that advanced seam visible instead of
@@ -465,6 +468,8 @@ points rather than direct graph mutation.
 - controlled-mode regression coverage for replace/diff behavior
 - source-policy coverage proving declarative `paint_only` runtime files do not read/write bound
   graph/view/editor-config mirrors when a store-backed binding exists
+- source-policy coverage proving declarative graph-edit transaction dispatch stays inside
+  `paint_only/transactions.rs` and runtime files do not replace graph/document directly
 
 ### Evidence anchors
 

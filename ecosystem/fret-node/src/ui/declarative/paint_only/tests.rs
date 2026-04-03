@@ -3060,6 +3060,33 @@ fn declarative_paint_only_runtime_uses_authoritative_store_models_instead_of_bou
     }
 }
 
+#[test]
+fn declarative_paint_only_graph_edit_paths_stay_on_transactions_seam() {
+    for (path, source) in declarative_paint_only_runtime_sources() {
+        assert!(
+            !source.contains("replace_graph("),
+            "{path} must not replace the graph document directly; graph-edit gestures must stay transaction-backed",
+        );
+        assert!(
+            !source.contains("replace_document("),
+            "{path} must not replace the authoritative document directly; graph-edit gestures must stay transaction-backed",
+        );
+
+        if path == "transactions.rs" {
+            continue;
+        }
+
+        assert!(
+            !source.contains("dispatch_transaction_action_host("),
+            "{path} must not dispatch graph transactions directly; route graph commits through paint_only/transactions.rs",
+        );
+        assert!(
+            !source.contains("submit_transaction_action_host("),
+            "{path} must not submit graph transactions directly; route graph commits through paint_only/transactions.rs",
+        );
+    }
+}
+
 fn test_node_drag_state(phase: NodeDragPhase, current_screen: Point) -> NodeDragState {
     NodeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),

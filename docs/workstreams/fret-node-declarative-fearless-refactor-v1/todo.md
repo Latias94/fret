@@ -339,13 +339,14 @@ Execution companion: `design.md` (surface map + next worktree order).
     and forbids `binding.graph_model()`, `binding.view_state_model()`, and
     `binding.editor_config_model()` access there; bound surfaces must read/write authoritative
     graph/view/config through `binding.store_model()` instead.
-- [ ] Keep future declarative graph-edit commit paths on the same transaction-backed seam used by
+- [x] Keep future declarative graph-edit commit paths on the same transaction-backed seam used by
       node-drag and diagnostics, rather than reintroducing direct graph mutation when new gestures
       land.
   - Status note: the currently landed declarative graph-edit commit paths are node-drag plus the
-    diagnostics graph-diff actions; authoritative store-first source ownership is now also locked,
-    so the remaining risk is regression on future graph-edit gestures, not an already-known
-    direct-mutation or bound-mirror path in the current `paint_only` surface.
+    diagnostics graph-diff actions.
+  - Progress: authoritative store-first source ownership is now locked, and graph-edit commit
+    authority is now also locked to `paint_only/transactions.rs`; runtime files cannot replace the
+    graph/document directly or dispatch/submit transactions outside that seam.
 - [x] Keep ephemeral drag/hover session state local where that improves ergonomics, but route final
       commits through transactions.
   - Progress: marquee, pending-selection, node-drag, and hover session state now stay local until
