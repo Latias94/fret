@@ -447,13 +447,18 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if !self.replaying_pending_shortcut
-            && !self.pending_shortcut.keystrokes.is_empty()
-            && ((self.pending_shortcut.focus.is_some()
-                && self.pending_shortcut.focus != self.focus)
-                || self.pending_shortcut.barrier_root != barrier_root)
-        {
-            self.clear_pending_shortcut(app);
+        if !self.replaying_pending_shortcut && !self.pending_shortcut.keystrokes.is_empty() {
+            // `focus` / `barrier_root` are only proxies for the shortcut-routing context. Root
+            // replacement and other retained-tree repairs can change the authoritative key-context
+            // stack without changing either proxy (for example, when no node is focused). Re-check
+            // the current key-context stack before continuing a multi-stroke sequence.
+            let current_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
+            if (self.pending_shortcut.focus.is_some() && self.pending_shortcut.focus != self.focus)
+                || self.pending_shortcut.barrier_root != barrier_root
+                || self.pending_shortcut.key_contexts.as_slice() != current_key_contexts.as_slice()
+            {
+                self.clear_pending_shortcut(app);
+            }
         }
 
         if let Event::Timer { token } = event

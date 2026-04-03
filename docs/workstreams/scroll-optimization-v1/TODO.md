@@ -54,6 +54,9 @@ Status: Active
   - [x] `set_root(...)` / `set_base_root(...)` now prune detached focus/capture immediately when a
     layer-root replacement rebases the active layer roots, while preserving still-active overlay
     interaction state,
+  - [x] pending multi-stroke shortcut continuation now revalidates the authoritative key-context
+    stack before matching the next chord, so root replacement cannot keep stale shortcut contexts
+    alive,
   - [ ] remaining child list mutation helpers,
   - [x] contained cache-root dirty markers now align with main-pass layout consumption and
     descendant-truncated contained relayout scheduling,
@@ -68,6 +71,7 @@ Status: Active
     child-list mutation helpers,
   - [x] layer-root replacement clears detached interaction state without clearing still-active
     overlay interaction state,
+  - [x] pending shortcut continuation drops stale key-contexts after root replacement,
   - [ ] scroll handle revision-only bumps stay classified correctly.
 
 ## Wheel/trackpad delta coalescing

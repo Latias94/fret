@@ -726,7 +726,7 @@ mod tests {
     use crate::test_host::TestHost;
     use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Point, Px, Rect, Size};
     use fret_runtime::keymap::Binding;
-    use fret_runtime::{CommandId, Keymap, KeymapService, PlatformFilter};
+    use fret_runtime::{CommandId, Keymap, KeymapService, PlatformFilter, WhenExpr};
     use std::sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -938,6 +938,76 @@ mod tests {
                 .iter()
                 .any(|e| matches!(e, Effect::Command { command: c, .. } if c == &command)),
             "second chord should dispatch the multi-stroke command"
+        );
+    }
+
+    #[test]
+    fn pending_sequence_is_cleared_when_root_replacement_changes_key_contexts() {
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+
+        let command = CommandId::from("test.multi_stroke_root_context");
+        let ctrl_k = KeyChord::new(
+            KeyCode::KeyK,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        let mut keymap = Keymap::empty();
+        keymap.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![
+                ctrl_k,
+                KeyChord::new(KeyCode::ArrowRight, Modifiers::default()),
+            ],
+            when: Some(WhenExpr::parse("keyctx.demo").unwrap()),
+            command: Some(command.clone()),
+        });
+        app.set_global(KeymapService { keymap });
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let old_root = ui.create_node(RootStack);
+        ui.set_root(old_root);
+        ui.pending_shortcut = PendingShortcut {
+            keystrokes: vec![CapturedKeystroke {
+                chord: ctrl_k,
+                text: None,
+            }],
+            focus: None,
+            barrier_root: None,
+            fallback: None,
+            timer: None,
+            capture_next_text_input_key: None,
+            key_contexts: vec![Arc::<str>::from("demo")],
+        };
+
+        let new_root = ui.create_node(RootStack);
+        ui.set_root(new_root);
+
+        let mut services = FakeUiServices;
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert!(
+            ui.pending_shortcut.keystrokes.is_empty(),
+            "root replacement should invalidate pending shortcut state when the authoritative key-context stack changed"
+        );
+        let effects = app.take_effects();
+        assert!(
+            effects
+                .iter()
+                .all(|e| !matches!(e, Effect::Command { command: c, .. } if c == &command)),
+            "stale pending shortcut contexts must not dispatch commands after root replacement"
         );
     }
 }

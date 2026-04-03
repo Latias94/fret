@@ -69,6 +69,17 @@ This follow-on slice locks the contract that:
 - input-arbitration snapshots must reflect the pruned interaction state immediately instead of
   waiting for a later dispatch/command entry point to clean it up lazily.
 
+## Follow-on slice — Pending shortcut continuation must revalidate authoritative key contexts
+
+This follow-on slice locks the contract that:
+
+- multi-stroke shortcut continuation must not rely on `focus` / `barrier_root` alone as a proxy
+  for routing authority,
+- if root replacement or another retained-tree repair changes the current key-context stack, the
+  pending shortcut must be cleared before the next chord is matched,
+- stale pending shortcut key contexts must not dispatch commands after the authoritative routing
+  context changed.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -103,6 +114,8 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::layer_root_replacement::set_root_replacement_clears_detached_base_layer_interaction_state`
 - Root replacement preserves still-active overlay interaction state:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::layer_root_replacement::set_root_replacement_preserves_overlay_interaction_state`
+- Pending shortcut is cleared when root replacement changes the key-context stack:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::shortcuts::tests::pending_sequence_is_cleared_when_root_replacement_changes_key_contexts`
 
 ## Evidence anchors
 
@@ -132,6 +145,9 @@ This follow-on slice locks the contract that:
 - Layer-root replacement interaction pruning:
   - `crates/fret-ui/src/tree/layers/impls.rs`
   - `crates/fret-ui/src/tree/tests/layer_root_replacement.rs`
+- Pending shortcut authoritative-context revalidation:
+  - `crates/fret-ui/src/tree/dispatch/window.rs`
+  - `crates/fret-ui/src/tree/shortcuts.rs`
 - Lane positioning:
   - `docs/workstreams/scroll-optimization-v1/DESIGN.md`
   - `docs/workstreams/scroll-optimization-v1/TODO.md`
@@ -192,3 +208,9 @@ This follow-on slice locks the contract that:
   - `tree::tests::window_input_arbitration_snapshot::dispatch_command_publishes_post_dispatch_input_arbitration_snapshot`
   - `tree::tests::window_input_arbitration_snapshot::modal_barrier_scopes_pointer_capture_to_active_roots`
   - `tree::tests::semantics_focus_shortcuts::remove_layer_uninstalls_overlay_and_removes_subtree`
+- 2026-04-03: pending-shortcut authoritative-context revalidation gates confirmed via `cargo nextest`:
+  - `tree::shortcuts::tests::pending_sequence_is_cleared_when_root_replacement_changes_key_contexts`
+  - `tree::shortcuts::tests::pending_sequence_matches_reserved_second_chord_before_text_input_consumes`
+  - `tree::tests::command_enabled_service::shortcut_dispatch_respects_window_command_enabled_service`
+  - `tree::tests::command_enabled_service::shortcut_dispatch_respects_window_command_action_availability_snapshot`
+  - `tree::tests::command_enabled_service::focus_menu_bar_shortcut_dispatches_when_menu_bar_focus_service_is_present`
