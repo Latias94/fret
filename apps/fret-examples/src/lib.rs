@@ -818,7 +818,7 @@ mod authoring_surface_policy_tests {
         assert!(TODO_DEMO.contains("ui::for_each_keyed_with_cx("));
         assert!(TODO_DEMO.contains("fn todo_row<'a, Cx>("));
         assert!(TODO_DEMO.contains("Cx: fret::app::ElementContextAccess<'a, App>,"));
-        assert!(TODO_DEMO.contains("let cx = cx.elements();"));
+        assert!(!TODO_DEMO.contains("let cx = cx.elements();"));
         assert!(
             normalized.contains(
                 "shadcn::Progress::from_value(progress_pct).a11y_label(\"Todocompletionprogress\").ui().rounded(Radius::Full).w_full().build()"
@@ -831,6 +831,10 @@ mod authoring_surface_policy_tests {
         );
         assert!(!normalized.contains(".a11y_label(\"Todocompletionprogress\").refine_style("));
         assert!(!normalized.contains(".viewport_test_id(TEST_ID_ROWS).refine_layout("));
+        assert!(TODO_DEMO.contains("ui::hover_region(move |cx, hovered| {"));
+        assert!(TODO_DEMO.contains("ui::rich_text(rich)"));
+        assert!(!TODO_DEMO.contains("HoverRegionProps"));
+        assert!(!TODO_DEMO.contains("StyledTextProps"));
         assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
         assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
         assert!(!TODO_DEMO.contains("cx: &mut fret_ui::ElementContext<'_, App>,"));

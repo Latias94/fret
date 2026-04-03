@@ -60,8 +60,10 @@ Related:
   - the first proof correction from that audit is now landed:
     `todo_demo` no longer spells `LayoutRefinement` directly for `Progress` or `ScrollArea`,
     dedicated smoke tests in `fret-ui-shadcn` prove that both widgets already support the `.ui()`
-    patch-builder lane, and the remaining pressure is now narrower helper-local hover/styled-text
-    assembly plus shared chrome/layout fragments.
+    patch-builder lane, and a second proof correction now lands the first app-facing render-sugar
+    replacements in `fret-ui-kit::ui`: `todo_row(...)` uses `ui::hover_region(...)` and
+    `ui::rich_text(...)` instead of spelling `HoverRegionProps`, `StyledTextProps`, or
+    `cx.elements()` directly. The remaining pressure is now mostly shared chrome/layout fragments.
   - the cookbook scaffold proof surface and dedicated source-policy tests now lock this minimal
     capability lane so future cleanup can continue without regressing to implicit `Deref`.
 - **M3**: Met

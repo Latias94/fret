@@ -95,11 +95,13 @@ Companion docs:
       on the existing `.ui()` patch-builder lane instead of spelling `LayoutRefinement` directly,
     - [ ] helper-local hover/layout assembly and shared chrome/layout fragments still spelling
       `LayoutRefinement` / `ChromeRefinement` directly,
-    - [ ] helper-local hover-region assembly (`ElementContextAccess` / `HoverRegionProps`),
-    - [ ] helper-local styled-text assembly (`StyledTextProps` / `styled_text_props(...)`),
+    - [x] land the first helper-local hover-region sugar replacement (`ui::hover_region(...)`)
+      instead of spelling `HoverRegionProps` plus `cx.elements()` in app-facing helpers,
+    - [x] land the first helper-local rich-text sugar replacement (`ui::rich_text(...)`) instead
+      of spelling `StyledTextProps` / `styled_text_props(...)` in app-facing helpers,
     - [ ] explicit environment/responsive helpers that should stay off the default lane rather than
       being mistaken for raw debt.
-  - [ ] land the first justified app-facing render-sugar replacements without widening
+  - [x] land the first justified app-facing render-sugar replacements without widening
     `fret::app::prelude::*` or collapsing the documented `raw` lane.
 
 ## M3 — Migrate first-contact docs, templates, and proof surfaces

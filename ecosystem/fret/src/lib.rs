@@ -2924,6 +2924,8 @@ mod authoring_surface_policy_tests {
         assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().dispatch::<A>()`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().dispatch_payload::<A>(payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiCxActionsExt`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_kit::ui::hover_region(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_kit::ui::rich_text(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector_layout(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("raw `cx.data().selector(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
@@ -3245,6 +3247,8 @@ mod authoring_surface_policy_tests {
         );
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`use fret::app::AppActivateExt as _;`"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`UiCxActionsExt` / `UiCxDataExt`"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`fret_ui_kit::ui::hover_region(...)`"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`fret_ui_kit::ui::rich_text(...)`"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("first-party"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("bridge table is intentionally empty"));
         assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`.dispatch::<A>()`"));

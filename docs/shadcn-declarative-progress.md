@@ -114,8 +114,10 @@ Cross-cutting interaction policies (toggle models, close overlays, selection wri
   `ConfirmationAction` now stay on their native `.action(...)` slots or widget-owned
   `.on_activate(...)` hooks instead of extending the bridge table. First-party UI Gallery button
   and sidebar snippets now also use `UiCxActionsExt` plus widget-owned `.on_activate(...)` for
-  local listeners instead of importing `AppActivateExt`. As of 2026-03-16, the first-party
-  default widget bridge table is intentionally empty.
+  local listeners instead of importing `AppActivateExt`. When extracted app helpers only need a
+  hover shell or attributed text leaf, prefer `fret_ui_kit::ui::hover_region(...)` and
+  `fret_ui_kit::ui::rich_text(...)` over raw `HoverRegionProps`, `StyledTextProps`, or
+  `cx.elements()`. As of 2026-03-16, the first-party default widget bridge table is intentionally empty.
 - `fret-ui-kit` and `fret-ui-shadcn` register handlers to implement policies for each component.
 - On `fret-ui-shadcn` triggers such as `Button::toggle_model(...)` and
   `InputGroupButton::toggle_model(...)`, "toggle" is an intentional activation-policy verb for

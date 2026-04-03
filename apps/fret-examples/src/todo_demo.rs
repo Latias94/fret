@@ -4,20 +4,17 @@ use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::icons::IconId;
 use fret::shadcn::raw::{LayoutRefinement, icon};
-use fret::style::{
-    ChromeRefinement, ColorRef, MetricRef, Radius, Space, TextOverflow, TextWrap, Theme,
-    ThemeSnapshot,
-};
+use fret::style::{ChromeRefinement, ColorRef, MetricRef, Radius, Space, Theme, ThemeSnapshot};
 use fret_core::scene::DashPatternV1;
 use fret_core::{
-    AttributedText, Color, Corners, DecorationLineStyle, Px, StrikethroughStyle, TextAlign,
-    TextPaintStyle, TextSpan,
+    AttributedText, Color, Corners, DecorationLineStyle, Px, StrikethroughStyle, TextPaintStyle,
+    TextSpan,
 };
 use fret_ui::Invalidation;
-use fret_ui::element::{AnyElement, HoverRegionProps, StyledTextProps};
+use fret_ui::element::AnyElement;
 use fret_ui_kit::declarative::{
     ElementContextThemeExt as _, ViewportQueryHysteresis, primary_pointer_can_hover,
-    style as decl_style, viewport_tailwind, viewport_width_at_least,
+    viewport_tailwind, viewport_width_at_least,
 };
 use fret_ui_kit::{WidgetStateProperty, WidgetStates, typography};
 
@@ -701,7 +698,6 @@ fn todo_row<'a, Cx>(
 where
     Cx: fret::app::ElementContextAccess<'a, App>,
 {
-    let cx = cx.elements();
     let row_done = row.done;
     let row_id = row.id;
     let row_text = row.text.clone();
@@ -715,9 +711,7 @@ where
     let done_surface = Color::from_srgb_hex_rgb(0xf8_fa_fc);
     let hover_border = alpha(theme.color_token("primary"), 0.20);
 
-    let mut hover = HoverRegionProps::default();
-    hover.layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
-    let hover_region = cx.hover_region(hover, move |cx, hovered| {
+    let hover_region = ui::hover_region(move |cx, hovered| {
         let toggle_visual = if row_done {
             ui::v_flex(|cx| {
                 let icon_el = icon::icon_with(
@@ -762,19 +756,13 @@ where
             let rich = rich_strikethrough(&row_text, muted_foreground);
             let style = typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
                 .resolve(&theme);
-            cx.styled_text_props(StyledTextProps {
-                layout: decl_style::layout_style(
-                    &theme,
-                    LayoutRefinement::default().flex_1().min_w_0(),
-                ),
-                rich,
-                style: Some(style),
-                color: Some(muted_foreground),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-                align: TextAlign::Start,
-                ink_overflow: Default::default(),
-            })
+            ui::rich_text(rich)
+                .text_style(style)
+                .text_color(ColorRef::Color(muted_foreground))
+                .truncate()
+                .flex_1()
+                .min_w_0()
+                .into_element(cx)
         } else {
             ui::text(row_text.clone())
                 .truncate()
@@ -851,11 +839,12 @@ where
         };
 
         vec![row.into_element(cx)]
-    });
+    })
+    .w_full();
 
     ui::container(move |cx| ui::single(cx, hover_region))
         .w_full()
-        .into_element(cx)
+        .into_element_in(cx)
 }
 
 fn footer_pill_chrome() -> ChromeRefinement {

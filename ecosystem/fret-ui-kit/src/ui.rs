@@ -9,12 +9,13 @@ use smallvec::SmallVec;
 
 use fret_core::{
     AttributedText, Axis, Edges, EffectChain, EffectMode, FontId, FontWeight, Px, TextAlign,
-    TextOverflow, TextSpan, TextWrap,
+    TextOverflow, TextSpan, TextStyle, TextWrap,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, EffectLayerProps, Elements, FlexProps, InsetStyle, LayoutStyle,
-    Length, Overflow, PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps,
-    ScrollbarStyle, SelectableTextProps, SizeStyle, StackProps, TextProps,
+    AnyElement, ContainerProps, EffectLayerProps, Elements, FlexProps, HoverRegionProps,
+    InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, ScrollAxis, ScrollProps,
+    ScrollbarAxis, ScrollbarProps, ScrollbarStyle, SelectableTextProps, SizeStyle, StackProps,
+    StyledTextProps, TextProps,
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, ElementContextAccess, Theme, UiHost};
@@ -1771,6 +1772,147 @@ impl RawTextBox {
     }
 }
 
+/// A patchable attributed-text builder matching `StyledTextProps::new(...)` defaults.
+#[derive(Debug, Clone)]
+pub struct RichTextBox {
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) rich: AttributedText,
+    pub(crate) style_override: Option<TextStyle>,
+    pub(crate) color_override: Option<crate::ColorRef>,
+    pub(crate) wrap: TextWrap,
+    pub(crate) overflow: TextOverflow,
+    pub(crate) align: TextAlign,
+    pub(crate) ink_overflow_override: Option<fret_ui::element::TextInkOverflow>,
+}
+
+impl RichTextBox {
+    pub fn new(rich: AttributedText) -> Self {
+        Self {
+            layout: LayoutRefinement::default(),
+            rich,
+            style_override: None,
+            color_override: None,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
+            ink_overflow_override: None,
+        }
+    }
+}
+
+impl UiPatchTarget for RichTextBox {
+    fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+        self.layout = self.layout.merge(patch.layout);
+        self
+    }
+}
+
+impl UiSupportsLayout for RichTextBox {}
+
+impl<H: UiHost> IntoUiElement<H> for RichTextBox {
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let RichTextBox {
+            layout: layout_refinement,
+            rich,
+            style_override,
+            color_override,
+            wrap,
+            overflow,
+            align,
+            ink_overflow_override,
+        } = self;
+
+        let direction = crate::primitives::direction::use_direction_in_scope(cx, None);
+        let align = resolve_text_align_for_direction(align, direction);
+
+        let (layout, color) = {
+            let theme = Theme::global(&*cx.app);
+            let layout = decl_style::layout_style(theme, layout_refinement);
+            let color = color_override.as_ref().map(|c| c.resolve(theme));
+            (layout, color)
+        };
+
+        cx.styled_text_props(StyledTextProps {
+            layout,
+            rich,
+            style: style_override,
+            color,
+            wrap,
+            overflow,
+            align,
+            ink_overflow: ink_overflow_override.unwrap_or_default(),
+        })
+    }
+}
+
+/// Returns a patchable attributed-text builder matching `StyledTextProps::new(...)` defaults.
+pub fn rich_text(rich: AttributedText) -> UiBuilder<RichTextBox> {
+    UiBuilder::new(RichTextBox::new(rich))
+}
+
+/// A patchable hover-region builder for app-facing interaction shells.
+#[derive(Debug)]
+pub struct HoverRegionBox<H, F> {
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) children: Option<F>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H, F> HoverRegionBox<H, F> {
+    pub fn new(children: F) -> Self {
+        Self {
+            layout: LayoutRefinement::default(),
+            children: Some(children),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<H, F> UiPatchTarget for HoverRegionBox<H, F> {
+    fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+        self.layout = self.layout.merge(patch.layout);
+        self
+    }
+}
+
+impl<H, F> UiSupportsLayout for HoverRegionBox<H, F> {}
+
+impl<H: UiHost, F, I> IntoUiElement<H> for HoverRegionBox<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>, bool) -> I,
+    I: IntoIterator,
+    I::Item: IntoUiElement<H>,
+{
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let layout = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::layout_style(theme, self.layout)
+        };
+        let children = self
+            .children
+            .expect("HoverRegionBox::into_element called more than once");
+
+        cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
+            let built = children(cx, hovered);
+            let mut out: SmallVec<[AnyElement; 8]> = SmallVec::new();
+            for child in built {
+                out.push(crate::land_child(cx, child));
+            }
+            out
+        })
+    }
+}
+
+/// Returns a patchable hover-region builder.
+pub fn hover_region<H: UiHost, F, I>(children: F) -> UiBuilder<HoverRegionBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>, bool) -> I,
+    I: IntoIterator,
+    I::Item: IntoUiElement<H>,
+{
+    UiBuilder::new(HoverRegionBox::new(children))
+}
+
 impl UiPatchTarget for RawTextBox {
     fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
         self.layout = self.layout.merge(patch.layout);
@@ -1859,6 +2001,23 @@ mod tests {
         h_flex(|_cx| [text("a"), text("b")])
             .gap(Space::N2)
             .into_element(cx)
+    }
+
+    #[allow(dead_code)]
+    fn hover_region_accepts_ui_builder_children<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        hover_region(|_cx, hovered| [text(if hovered { "hovered" } else { "idle" }).truncate()])
+            .w_full()
+            .into_element(cx)
+    }
+
+    #[allow(dead_code)]
+    fn rich_text_builder_lands_without_raw_styled_text_props<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        rich: AttributedText,
+    ) -> AnyElement {
+        rich_text(rich).truncate().w_full().into_element(cx)
     }
 
     // Compile-only: ensure `ui::children!` accepts nested layout builders without requiring an
@@ -2106,6 +2265,59 @@ mod tests {
             assert_eq!(
                 props.color, None,
                 "expected text to keep color late-bound for inherited foreground paint resolution"
+            );
+        });
+    }
+
+    #[test]
+    fn rich_text_builder_renders_styled_text_element() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        let rich = AttributedText::new(
+            Arc::<str>::from("hello"),
+            [TextSpan {
+                len: 5,
+                shaping: Default::default(),
+                paint: Default::default(),
+            }],
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = rich_text(rich.clone()).truncate().w_full().into_element(cx);
+            let ElementKind::StyledText(props) = el.kind else {
+                panic!("expected ui::rich_text(...) to render a StyledText element");
+            };
+            assert_eq!(props.wrap, TextWrap::None);
+            assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        });
+    }
+
+    #[test]
+    fn hover_region_builder_renders_hover_region_element() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = hover_region(|_cx, hovered| [text(if hovered { "hovered" } else { "idle" })])
+                .w_full()
+                .into_element(cx);
+            assert!(
+                matches!(el.kind, ElementKind::HoverRegion(_)),
+                "expected ui::hover_region(...) to render a HoverRegion element"
+            );
+            assert_eq!(el.children.len(), 1, "expected a single hover-region child");
+            assert!(
+                matches!(el.children[0].kind, ElementKind::Text(_)),
+                "expected ui::hover_region(...) child to late-land text"
             );
         });
     }

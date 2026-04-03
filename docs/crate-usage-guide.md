@@ -174,6 +174,9 @@ their own app-facing action surface.
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.
+When extracted app helpers need hover shells or attributed text leaves, prefer
+`fret_ui_kit::ui::hover_region(...)` and `fret_ui_kit::ui::rich_text(...)` over spelling
+`HoverRegionProps`, `StyledTextProps`, or `cx.elements()` directly.
 When app code needs explicit theme snapshot value types in extracted helper signatures, import
 `fret::style::ThemeSnapshot` instead of expecting it from `fret::app::prelude::*`.
 When app code needs explicit local state-handle types in validators or helper signatures, import

@@ -487,6 +487,58 @@ impl UiBuilder<crate::ui::RawTextBox> {
     }
 }
 
+impl UiBuilder<crate::ui::RichTextBox> {
+    pub fn text_style(mut self, style: fret_core::TextStyle) -> Self {
+        self.inner.style_override = Some(style);
+        self
+    }
+
+    pub fn text_color(mut self, color: ColorRef) -> Self {
+        self.inner.color_override = Some(color);
+        self
+    }
+
+    pub fn wrap(mut self, wrap: TextWrap) -> Self {
+        self.inner.wrap = wrap;
+        self
+    }
+
+    pub fn overflow(mut self, overflow: TextOverflow) -> Self {
+        self.inner.overflow = overflow;
+        self
+    }
+
+    pub fn ink_overflow(mut self, ink_overflow: TextInkOverflow) -> Self {
+        self.inner.ink_overflow_override = Some(ink_overflow);
+        self
+    }
+
+    pub fn auto_pad_ink_overflow(self) -> Self {
+        self.ink_overflow(TextInkOverflow::AutoPad)
+    }
+
+    pub fn text_align(mut self, align: fret_core::TextAlign) -> Self {
+        self.inner.align = align;
+        self
+    }
+
+    pub fn nowrap(self) -> Self {
+        self.wrap(TextWrap::None).overflow(TextOverflow::Clip)
+    }
+
+    pub fn truncate(self) -> Self {
+        self.wrap(TextWrap::None).overflow(TextOverflow::Ellipsis)
+    }
+
+    pub fn break_words(self) -> Self {
+        self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
+    }
+
+    pub fn text_balance(self) -> Self {
+        self.wrap(TextWrap::Balance)
+    }
+}
+
 impl<T: UiSupportsChrome> UiBuilder<T> {
     pub fn paddings(self, paddings: impl Into<Edges4<MetricRef>>) -> Self {
         self.style_with(|mut c| {
