@@ -91,6 +91,18 @@ This follow-on slice locks the contract that:
 - app/window-scope command gating must observe the same authoritative key-context stack as the
   current UI tree rather than the last input-event snapshot.
 
+## Follow-on slice — Declarative rebuild commits must republish authoritative window snapshots
+
+This follow-on slice locks the contract that:
+
+- `render_root(...)` / `render_dismissible_root_with_hooks(...)` are authoritative declarative
+  rebuild commit points for window-level snapshot consumers,
+- once rebuild GC/root reuse has committed, later same-frame consumers must see refreshed
+  `WindowInputContextService`, `WindowKeyContextStackService`, and
+  `WindowCommandActionAvailabilityService` state,
+- rebuild-time focus/key-context changes must revalidate pending shortcut state before stale
+  overlay or gating consumers can observe it.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -129,6 +141,12 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::shortcuts::tests::pending_sequence_is_cleared_when_root_replacement_changes_key_contexts`
 - Publishing action availability refreshes key-context snapshots for cross-surface gating:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::window_command_action_availability_snapshot::publish_snapshot_refreshes_key_context_stack_for_cross_surface_gating`
+- Declarative rebuild refreshes window input snapshots before paint:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::render_root_rebuild_refreshes_window_input_context_snapshot_before_paint`
+- Declarative rebuild refreshes window key-context snapshots before the next explicit publish:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::render_root_rebuild_refreshes_window_key_context_snapshot_before_next_publish`
+- Declarative rebuild refreshes widget command availability before the next explicit publish:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::render_root_rebuild_refreshes_command_action_availability_before_next_publish`
 
 ## Evidence anchors
 
@@ -164,6 +182,10 @@ This follow-on slice locks the contract that:
 - Cross-surface command gating key-context snapshot refresh:
   - `crates/fret-ui/src/tree/commands.rs`
   - `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs`
+- Declarative rebuild window-snapshot republish:
+  - `crates/fret-ui/src/declarative/mount.rs`
+  - `crates/fret-ui/src/tree/commands.rs`
+  - `crates/fret-ui/src/declarative/tests/core.rs`
 - Lane positioning:
   - `docs/workstreams/scroll-optimization-v1/DESIGN.md`
   - `docs/workstreams/scroll-optimization-v1/TODO.md`
@@ -236,3 +258,13 @@ This follow-on slice locks the contract that:
   - `tree::tests::window_command_action_availability_snapshot::action_availability_snapshot_publishes_focus_traversal_gating`
   - `tree::tests::window_command_action_availability_snapshot::action_availability_snapshot_publishes_focus_menu_bar_gating`
   - `tree::tests::window_command_action_availability_snapshot::dispatch_event_publishes_action_availability_snapshot`
+- 2026-04-03: declarative rebuild window-snapshot republish gates confirmed via `cargo nextest`:
+  - `declarative::tests::core::render_root_rebuild_refreshes_window_input_context_snapshot_before_paint`
+  - `declarative::tests::core::render_root_rebuild_refreshes_window_key_context_snapshot_before_next_publish`
+  - `declarative::tests::core::render_root_rebuild_refreshes_command_action_availability_before_next_publish`
+  - `tree::shortcuts::tests::pending_sequence_is_cleared_when_root_replacement_changes_key_contexts`
+  - `tree::tests::window_command_action_availability_snapshot::publish_snapshot_refreshes_key_context_stack_for_cross_surface_gating`
+  - `tree::tests::window_input_context_snapshot::dispatch_event_publishes_post_dispatch_input_context_snapshot`
+  - `tree::tests::window_input_context_snapshot::dispatch_command_publishes_post_dispatch_input_context_snapshot`
+  - `tree::tests::window_input_arbitration_snapshot::dispatch_event_publishes_post_dispatch_input_arbitration_snapshot`
+  - `tree::tests::window_input_arbitration_snapshot::dispatch_command_publishes_post_dispatch_input_arbitration_snapshot`

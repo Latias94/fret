@@ -3,6 +3,125 @@ use crate::widget::{CommandAvailability, CommandAvailabilityCx};
 use fret_runtime::CommandScope;
 
 impl<H: UiHost> UiTree<H> {
+    fn revalidate_focus_for_dispatch_snapshot(
+        &mut self,
+        frame_id: fret_runtime::FrameId,
+        active_focus_layers: &[NodeId],
+        barrier_root: Option<NodeId>,
+        reason: &'static str,
+    ) {
+        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+            frame_id,
+            active_focus_layers,
+            barrier_root,
+        );
+        if self
+            .focus
+            .is_some_and(|node| dispatch_snapshot.pre.get(node).is_none())
+        {
+            self.set_focus_unchecked(None, reason);
+        }
+    }
+
+    fn current_window_input_context(
+        &self,
+        app: &mut H,
+        ui_has_modal: bool,
+        focus_is_text_input: bool,
+    ) -> Option<InputContext> {
+        let window = self.window?;
+        let caps = app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+        let mut input_ctx = InputContext {
+            platform: Platform::current(),
+            caps,
+            ui_has_modal,
+            window_arbitration: Some(self.window_input_arbitration_snapshot()),
+            focus_is_text_input,
+            text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
+            edit_can_undo: true,
+            edit_can_redo: true,
+            router_can_back: false,
+            router_can_forward: false,
+            dispatch_phase: InputDispatchPhase::Bubble,
+        };
+        if let Some(mode) = app
+            .global::<fret_runtime::WindowTextBoundaryModeService>()
+            .and_then(|svc| svc.mode(window))
+        {
+            input_ctx.text_boundary_mode = mode;
+        }
+        if let Some(mode) = self.focus_text_boundary_mode_override() {
+            input_ctx.text_boundary_mode = mode;
+        }
+        if let Some(availability) = app
+            .global::<fret_runtime::WindowCommandAvailabilityService>()
+            .and_then(|svc| svc.snapshot(window))
+            .copied()
+        {
+            input_ctx.edit_can_undo = availability.edit_can_undo;
+            input_ctx.edit_can_redo = availability.edit_can_redo;
+            input_ctx.router_can_back = availability.router_can_back;
+            input_ctx.router_can_forward = availability.router_can_forward;
+        }
+        Some(input_ctx)
+    }
+
+    fn publish_window_input_context_snapshot(&self, app: &mut H, input_ctx: &InputContext) {
+        let Some(window) = self.window else {
+            return;
+        };
+        let needs_update = app
+            .global::<fret_runtime::WindowInputContextService>()
+            .and_then(|svc| svc.snapshot(window))
+            .is_none_or(|prev| prev != input_ctx);
+        if needs_update {
+            app.with_global_mut(
+                fret_runtime::WindowInputContextService::default,
+                |svc, _app| {
+                    svc.set_snapshot(window, input_ctx.clone());
+                },
+            );
+        }
+    }
+
+    pub(crate) fn publish_window_runtime_snapshots_after_rebuild(&mut self, app: &mut H) {
+        let (_active_input_layers, input_barrier_root) = self.active_input_layers();
+        let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
+        let barrier_root = focus_barrier_root.or(input_barrier_root);
+
+        self.revalidate_focus_for_dispatch_snapshot(
+            app.frame_id(),
+            active_focus_layers.as_slice(),
+            barrier_root,
+            "commands: focus missing from dispatch snapshot",
+        );
+
+        if !self.replaying_pending_shortcut && !self.pending_shortcut.keystrokes.is_empty() {
+            let current_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
+            if (self.pending_shortcut.focus.is_some() && self.pending_shortcut.focus != self.focus)
+                || self.pending_shortcut.barrier_root != barrier_root
+                || self.pending_shortcut.key_contexts.as_slice() != current_key_contexts.as_slice()
+            {
+                self.clear_pending_shortcut(app);
+            }
+        }
+
+        let focus_is_text_input = self.focus_is_text_input(app);
+        let Some(input_ctx) = self.current_window_input_context(
+            app,
+            input_barrier_root.is_some(),
+            focus_is_text_input,
+        ) else {
+            return;
+        };
+
+        self.publish_window_input_context_snapshot(app, &input_ctx);
+        self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+    }
+
     fn focus_menu_bar_command_availability(&self, app: &mut H) -> CommandAvailability {
         let Some(window) = self.window else {
             return CommandAvailability::NotHandled;
@@ -230,12 +349,12 @@ impl<H: UiHost> UiTree<H> {
             active_focus_layers.as_slice(),
             barrier_root,
         );
-        if self
-            .focus
-            .is_some_and(|n| dispatch_snapshot.pre.get(n).is_none())
-        {
-            self.set_focus_unchecked(None, "commands: focus missing from dispatch snapshot");
-        }
+        self.revalidate_focus_for_dispatch_snapshot(
+            app.frame_id(),
+            active_focus_layers.as_slice(),
+            barrier_root,
+            "commands: focus missing from dispatch snapshot",
+        );
 
         let default_root = barrier_root.unwrap_or(base_root);
         let focus = self.focus;

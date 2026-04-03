@@ -813,6 +813,245 @@ fn key_hook_runs_for_focused_text_input() {
 }
 
 #[test]
+fn render_root_rebuild_refreshes_window_input_context_snapshot_before_paint() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+    let value = app.models_mut().insert(String::new());
+
+    let mut input_element = None;
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "rebuild-input-ctx",
+        |cx| {
+            let input = cx.text_input(TextInputProps::new(value.clone()));
+            input_element = Some(input.id);
+            vec![input]
+        },
+    );
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let input_node = crate::declarative::mount::node_for_element_in_window_frame(
+        &mut app,
+        window,
+        input_element.expect("text input element id"),
+    )
+    .expect("text input node");
+    ui.set_focus(Some(input_node));
+
+    let mut scene = Scene::default();
+    paint_frame(&mut ui, &mut app, &mut text, bounds, &mut scene);
+
+    let initial_snapshot = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("initial window input context snapshot");
+    assert!(
+        initial_snapshot.focus_is_text_input,
+        "baseline snapshot should reflect the focused text input before rebuild"
+    );
+
+    app.advance_frame();
+
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "rebuild-input-ctx",
+        |cx| vec![cx.text("plain text")],
+    );
+
+    let rebuilt_snapshot = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("rebuilt window input context snapshot");
+    assert!(
+        !rebuilt_snapshot.focus_is_text_input,
+        "render_root should refresh the window input context snapshot once rebuild removed the focused text input"
+    );
+}
+
+#[test]
+fn render_root_rebuild_refreshes_window_key_context_snapshot_before_next_publish() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let mut keyed_element = None;
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "rebuild-keyctx",
+        |cx| {
+            let element = cx.text("demo ctx").key_context("demo");
+            keyed_element = Some(element.id);
+            vec![element]
+        },
+    );
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let keyed_node = crate::declarative::mount::node_for_element_in_window_frame(
+        &mut app,
+        window,
+        keyed_element.expect("keyed element id"),
+    )
+    .expect("keyed node");
+    ui.set_focus(Some(keyed_node));
+    ui.publish_window_command_action_availability_snapshot(
+        &mut app,
+        &fret_runtime::InputContext::default(),
+    );
+
+    let initial_key_contexts = app
+        .global::<fret_runtime::WindowKeyContextStackService>()
+        .and_then(|svc| svc.snapshot(window))
+        .map(|v| v.to_vec())
+        .unwrap_or_default();
+    assert_eq!(initial_key_contexts, vec![Arc::<str>::from("demo")]);
+
+    app.advance_frame();
+
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "rebuild-keyctx",
+        |cx| vec![cx.text("plain text")],
+    );
+
+    let rebuilt_key_contexts = app
+        .global::<fret_runtime::WindowKeyContextStackService>()
+        .and_then(|svc| svc.snapshot(window))
+        .map(|v| v.to_vec())
+        .unwrap_or_default();
+    assert!(
+        rebuilt_key_contexts.is_empty(),
+        "render_root should refresh the published key-context stack after rebuild removed the focused keyed subtree"
+    );
+}
+
+#[test]
+fn render_root_rebuild_refreshes_command_action_availability_before_next_publish() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let command = CommandId::from("test.render_root_available");
+    app.register_command(
+        command.clone(),
+        fret_runtime::CommandMeta::new("Render Root Available")
+            .with_scope(fret_runtime::CommandScope::Widget),
+    );
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+    let mut availability_element = None;
+
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "rebuild-action-availability",
+        |cx| {
+            let root = cx.container(crate::element::ContainerProps::default(), |_cx| Vec::new());
+            availability_element = Some(root.id);
+            cx.command_on_command_availability_for(
+                root.id,
+                Arc::new(|_host, _acx, requested| {
+                    if requested.as_str() == "test.render_root_available" {
+                        return crate::widget::CommandAvailability::Available;
+                    }
+                    crate::widget::CommandAvailability::NotHandled
+                }),
+            );
+            vec![root]
+        },
+    );
+    let availability_node = crate::declarative::mount::node_for_element_in_window_frame(
+        &mut app,
+        window,
+        availability_element.expect("availability element id"),
+    )
+    .expect("availability node");
+    ui.set_focus(Some(availability_node));
+    ui.publish_window_command_action_availability_snapshot(
+        &mut app,
+        &fret_runtime::InputContext::default(),
+    );
+
+    let initial_availability = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &command));
+    assert_eq!(
+        initial_availability,
+        Some(true),
+        "baseline rebuild publish should expose the declarative command availability hook"
+    );
+
+    app.advance_frame();
+
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "rebuild-action-availability",
+        |cx| vec![cx.container(crate::element::ContainerProps::default(), |_cx| Vec::new())],
+    );
+
+    let rebuilt_availability = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &command));
+    assert_eq!(
+        rebuilt_availability,
+        Some(false),
+        "render_root should republish widget command availability after rebuild removed the declarative hook"
+    );
+}
+
+#[test]
 fn key_hook_can_request_focus() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

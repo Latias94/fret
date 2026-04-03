@@ -60,6 +60,9 @@ Status: Active
   - [x] publishing command/action availability snapshots now refreshes the authoritative
     window-level key-context stack, so cross-surface gating cannot keep stale `keyctx.*` state
     alive after rebuild,
+  - [x] declarative rebuild commit points (`render_root(...)` / `render_dismissible_root_with_hooks(...)`)
+    now republish authoritative window input/key-context/action-availability snapshots after tree
+    GC/root reuse, so later same-frame surfaces cannot keep consuming stale window services,
   - [ ] remaining child list mutation helpers,
   - [x] contained cache-root dirty markers now align with main-pass layout consumption and
     descendant-truncated contained relayout scheduling,
@@ -77,6 +80,11 @@ Status: Active
   - [x] pending shortcut continuation drops stale key-contexts after root replacement,
   - [x] cross-surface command gating refreshes stale key-context snapshots when action
     availability is republished,
+  - [x] declarative rebuild republished window input snapshots before the next paint,
+  - [x] declarative rebuild republished window key-context snapshots before later same-frame
+    consumers read them,
+  - [x] declarative rebuild republished widget command availability before the next explicit
+    publish/dispatch boundary,
   - [ ] scroll handle revision-only bumps stay classified correctly.
 
 ## Wheel/trackpad delta coalescing

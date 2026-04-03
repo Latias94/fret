@@ -329,198 +329,171 @@ where
             children
         });
 
-    app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
-        runtime.prepare_window_for_frame(window, frame_id);
-        let lag = runtime.gc_lag_frames();
-        let cutoff = frame_id.0.saturating_sub(lag);
+    let root_node =
+        app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
+            runtime.prepare_window_for_frame(window, frame_id);
+            let lag = runtime.gc_lag_frames();
+            let cutoff = frame_id.0.saturating_sub(lag);
 
-        let window_state = runtime.for_window_mut(window);
-        ui.debug_set_element_children_vec_pool_stats(
-            window_state.element_children_vec_pool_reuses(),
-            window_state.element_children_vec_pool_misses(),
-        );
-        let root_id = crate::elements::global_root(window, root_name);
-        let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> = Vec::new();
+            let window_state = runtime.for_window_mut(window);
+            ui.debug_set_element_children_vec_pool_stats(
+                window_state.element_children_vec_pool_reuses(),
+                window_state.element_children_vec_pool_misses(),
+            );
+            let root_id = crate::elements::global_root(window, root_name);
+            let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> =
+                Vec::new();
 
-        let root_node = window_state
-            .node_entry(root_id)
-            .map(|e| e.node)
-            .filter(|&node| ui.node_exists(node))
-            .unwrap_or_else(|| {
-                let node = ui.create_node(ElementHostWidget::new(root_id));
-                ui.set_node_element(node, Some(root_id));
-                window_state.set_node_entry(
-                    root_id,
-                    NodeEntry {
-                        node,
-                        last_seen_frame: frame_id,
-                        root: root_id,
-                    },
-                );
-                node
+            let root_node = window_state
+                .node_entry(root_id)
+                .map(|e| e.node)
+                .filter(|&node| ui.node_exists(node))
+                .unwrap_or_else(|| {
+                    let node = ui.create_node(ElementHostWidget::new(root_id));
+                    ui.set_node_element(node, Some(root_id));
+                    window_state.set_node_entry(
+                        root_id,
+                        NodeEntry {
+                            node,
+                            last_seen_frame: frame_id,
+                            root: root_id,
+                        },
+                    );
+                    node
+                });
+            ui.set_node_element(root_node, Some(root_id));
+
+            window_state.set_node_entry(
+                root_id,
+                NodeEntry {
+                    node: root_node,
+                    last_seen_frame: frame_id,
+                    root: root_id,
+                },
+            );
+
+            // Declarative GC uses `UiTree::node_layer` to detect whether nodes are detached from any UI
+            // layer. On the first frame, the base layer is typically registered by the app after
+            // `render_root` returns (e.g. `ui.set_root(root_node)`), which is too late for the GC pass
+            // below.
+            //
+            // However, `render_root` is also used for non-base roots (e.g. overlay helper roots). Do not
+            // steal the base layer if it is already installed.
+            if ui.node_layer(root_node).is_none() && ui.base_root().is_none() {
+                ui.set_root(root_node);
+            }
+
+            let mut pending_invalidations = ui.take_scratch_pending_invalidations();
+            pending_invalidations.clear();
+            app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
+                let window_frame = frame.windows.entry(window).or_default();
+                prepare_window_frame_for_frame(window_frame, frame_id);
+
+                let mut root_stack = crate::element::StackProps::default();
+                root_stack.layout.size.width = crate::element::Length::Fill;
+                root_stack.layout.size.height = crate::element::Length::Fill;
+                let inserted = window_frame
+                    .instances
+                    .insert(
+                        root_node,
+                        ElementRecord {
+                            element: root_id,
+                            instance: ElementInstance::Stack(root_stack),
+                            inherited_foreground: None,
+                            inherited_text_style: None,
+                            semantics_decoration: None,
+                            key_context: None,
+                        },
+                    )
+                    .is_none();
+
+                let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
+                let mut children = children;
+                for child in children.drain(..) {
+                    mounted_children.push(mount_element(
+                        ui,
+                        window,
+                        root_id,
+                        frame_id,
+                        window_state,
+                        window_frame,
+                        child,
+                        None,
+                        &mut scroll_bindings,
+                        &mut pending_invalidations,
+                    ));
+                }
+                ui.set_children(root_node, mounted_children);
+                sync_window_frame_children(window_frame, root_node, ui.children_ref(root_node));
+                if inserted {
+                    window_frame.revision = window_frame.revision.saturating_add(1);
+                }
+                window_state.restore_scratch_element_children_vec(children);
+
+                let retained_virtual_lists = window_state.take_retained_virtual_list_reconciles();
+                if !retained_virtual_lists.is_empty() {
+                    reconcile_retained_virtual_list_hosts(
+                        ui,
+                        _app,
+                        window,
+                        bounds,
+                        root_id,
+                        frame_id,
+                        window_state,
+                        window_frame,
+                        &mut scroll_bindings,
+                        &mut pending_invalidations,
+                        retained_virtual_lists,
+                    );
+                }
             });
-        ui.set_node_element(root_node, Some(root_id));
 
-        window_state.set_node_entry(
-            root_id,
-            NodeEntry {
-                node: root_node,
-                last_seen_frame: frame_id,
-                root: root_id,
-            },
-        );
-
-        // Declarative GC uses `UiTree::node_layer` to detect whether nodes are detached from any UI
-        // layer. On the first frame, the base layer is typically registered by the app after
-        // `render_root` returns (e.g. `ui.set_root(root_node)`), which is too late for the GC pass
-        // below.
-        //
-        // However, `render_root` is also used for non-base roots (e.g. overlay helper roots). Do not
-        // steal the base layer if it is already installed.
-        if ui.node_layer(root_node).is_none() && ui.base_root().is_none() {
-            ui.set_root(root_node);
-        }
-
-        let mut pending_invalidations = ui.take_scratch_pending_invalidations();
-        pending_invalidations.clear();
-        app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
-            let window_frame = frame.windows.entry(window).or_default();
-            prepare_window_frame_for_frame(window_frame, frame_id);
-
-            let mut root_stack = crate::element::StackProps::default();
-            root_stack.layout.size.width = crate::element::Length::Fill;
-            root_stack.layout.size.height = crate::element::Length::Fill;
-            let inserted = window_frame
-                .instances
-                .insert(
-                    root_node,
-                    ElementRecord {
-                        element: root_id,
-                        instance: ElementInstance::Stack(root_stack),
-                        inherited_foreground: None,
-                        inherited_text_style: None,
-                        semantics_decoration: None,
-                        key_context: None,
-                    },
-                )
-                .is_none();
-
-            let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
-            let mut children = children;
-            for child in children.drain(..) {
-                mounted_children.push(mount_element(
-                    ui,
-                    window,
-                    root_id,
-                    frame_id,
-                    window_state,
-                    window_frame,
-                    child,
-                    None,
-                    &mut scroll_bindings,
-                    &mut pending_invalidations,
-                ));
+            // View-cache experiments rely on explicit liveness bookkeeping (layer roots + view-cache
+            // reuse roots + subtree membership lists; ADR 0176). Parent pointers are still required
+            // for cache-root discovery and `node_layer` detachment checks, so repair any reachable
+            // inconsistencies before applying invalidations that may need to propagate across cache-root
+            // boundaries.
+            if ui.view_cache_enabled() {
+                let _ = ui.repair_parent_pointers_from_layer_roots();
             }
-            ui.set_children(root_node, mounted_children);
-            sync_window_frame_children(window_frame, root_node, ui.children_ref(root_node));
-            if inserted {
-                window_frame.revision = window_frame.revision.saturating_add(1);
+
+            apply_pending_invalidations(ui, &mut pending_invalidations);
+            ui.restore_scratch_pending_invalidations(pending_invalidations);
+
+            if ui.view_cache_enabled() {
+                ui.propagate_auto_sized_view_cache_root_invalidations();
             }
-            window_state.restore_scratch_element_children_vec(children);
 
-            let retained_virtual_lists = window_state.take_retained_virtual_list_reconciles();
-            if !retained_virtual_lists.is_empty() {
-                reconcile_retained_virtual_list_hosts(
-                    ui,
-                    _app,
-                    window,
-                    bounds,
-                    root_id,
-                    frame_id,
-                    window_state,
-                    window_frame,
-                    &mut scroll_bindings,
-                    &mut pending_invalidations,
-                    retained_virtual_lists,
-                );
-            }
-        });
-
-        // View-cache experiments rely on explicit liveness bookkeeping (layer roots + view-cache
-        // reuse roots + subtree membership lists; ADR 0176). Parent pointers are still required
-        // for cache-root discovery and `node_layer` detachment checks, so repair any reachable
-        // inconsistencies before applying invalidations that may need to propagate across cache-root
-        // boundaries.
-        if ui.view_cache_enabled() {
-            let _ = ui.repair_parent_pointers_from_layer_roots();
-        }
-
-        apply_pending_invalidations(ui, &mut pending_invalidations);
-        ui.restore_scratch_pending_invalidations(pending_invalidations);
-
-        if ui.view_cache_enabled() {
-            ui.propagate_auto_sized_view_cache_root_invalidations();
-        }
-
-        for element in window_state.take_notify_for_animation_frame() {
-            if let Some(node) = window_state.node_entry(element).map(|e| e.node) {
-                ui.invalidate_with_source_and_detail(
-                    node,
-                    Invalidation::Paint,
-                    UiDebugInvalidationSource::Notify,
-                    UiDebugInvalidationDetail::AnimationFrameRequest,
-                );
-            }
-        }
-
-        crate::declarative::frame::register_scroll_handle_bindings_batch(
-            app,
-            window,
-            frame_id,
-            scroll_bindings,
-        );
-
-        // Record the root's coordinate space for placement/collision logic (anchored overlays).
-        window_state.set_root_bounds(root_id, bounds);
-
-        let mut keep_alive_view_cache_elements: HashSet<GlobalElementId>;
-        let keep_alive_view_cache_elements_from_scratch: bool;
-        if keep_alive_view_cache_scratch_disabled() {
-            keep_alive_view_cache_elements = HashSet::new();
-            keep_alive_view_cache_elements_from_scratch = false;
-
-            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
-            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
-
-            while let Some(root) = stack.pop() {
-                if !visited_roots.insert(root) {
-                    continue;
-                }
-                let Some(elements) = window_state.view_cache_elements_for_root(root) else {
-                    continue;
-                };
-                for &element in elements {
-                    keep_alive_view_cache_elements.insert(element);
-                    if !visited_roots.contains(&element)
-                        && window_state.view_cache_elements_for_root(element).is_some()
-                    {
-                        stack.push(element);
-                    }
+            for element in window_state.take_notify_for_animation_frame() {
+                if let Some(node) = window_state.node_entry(element).map(|e| e.node) {
+                    ui.invalidate_with_source_and_detail(
+                        node,
+                        Invalidation::Paint,
+                        UiDebugInvalidationSource::Notify,
+                        UiDebugInvalidationDetail::AnimationFrameRequest,
+                    );
                 }
             }
-        } else {
-            keep_alive_view_cache_elements =
-                window_state.take_scratch_view_cache_keep_alive_elements();
-            keep_alive_view_cache_elements_from_scratch = true;
-            keep_alive_view_cache_elements.clear();
 
-            {
-                let mut visited_roots =
-                    window_state.take_scratch_view_cache_keep_alive_visited_roots();
-                let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
-                visited_roots.clear();
-                stack.clear();
-                stack.extend(window_state.view_cache_reuse_roots());
+            crate::declarative::frame::register_scroll_handle_bindings_batch(
+                app,
+                window,
+                frame_id,
+                scroll_bindings,
+            );
+
+            // Record the root's coordinate space for placement/collision logic (anchored overlays).
+            window_state.set_root_bounds(root_id, bounds);
+
+            let mut keep_alive_view_cache_elements: HashSet<GlobalElementId>;
+            let keep_alive_view_cache_elements_from_scratch: bool;
+            if keep_alive_view_cache_scratch_disabled() {
+                keep_alive_view_cache_elements = HashSet::new();
+                keep_alive_view_cache_elements_from_scratch = false;
+
+                let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+                let mut stack: Vec<GlobalElementId> =
+                    window_state.view_cache_reuse_roots().collect();
 
                 while let Some(root) = stack.pop() {
                     if !visited_roots.insert(root) {
@@ -538,276 +511,310 @@ where
                         }
                     }
                 }
+            } else {
+                keep_alive_view_cache_elements =
+                    window_state.take_scratch_view_cache_keep_alive_elements();
+                keep_alive_view_cache_elements_from_scratch = true;
+                keep_alive_view_cache_elements.clear();
 
-                visited_roots.clear();
-                stack.clear();
-                window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
-                window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+                {
+                    let mut visited_roots =
+                        window_state.take_scratch_view_cache_keep_alive_visited_roots();
+                    let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
+                    visited_roots.clear();
+                    stack.clear();
+                    stack.extend(window_state.view_cache_reuse_roots());
+
+                    while let Some(root) = stack.pop() {
+                        if !visited_roots.insert(root) {
+                            continue;
+                        }
+                        let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                            continue;
+                        };
+                        for &element in elements {
+                            keep_alive_view_cache_elements.insert(element);
+                            if !visited_roots.contains(&element)
+                                && window_state.view_cache_elements_for_root(element).is_some()
+                            {
+                                stack.push(element);
+                            }
+                        }
+                    }
+
+                    visited_roots.clear();
+                    stack.clear();
+                    window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
+                    window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+                }
             }
-        }
 
-        // If any cache root transitions into reuse this frame, proactively touch the entire
-        // retained subtree from the window root. This avoids GC sweeping still-live nodes in the
-        // transition frame when the producer subtree starts skipping renders.
-        if window_state
-            .view_cache_transitioned_reuse_roots()
-            .next()
-            .is_some()
-        {
-            with_window_frame(app, window, |window_frame| {
-                touch_existing_declarative_subtree_seen(
-                    ui,
-                    window_state,
-                    window_frame,
-                    root_id,
-                    frame_id,
-                    root_node,
-                );
-            });
-        }
-
-        // Node GC is keyed off `last_seen_frame`. Cache-hit frames can legitimately skip
-        // re-mounting cached subtrees, so view-cache reuse must keep the retained subtree alive
-        // via explicit liveness bookkeeping (ADR 0176).
-        //
-        // We only sweep nodes that are both stale and unreachable from the window's liveness
-        // roots:
-        // - layer roots (base + overlays),
-        // - view-cache reuse roots, and
-        // - retained windowed-surface keep-alive roots (ADR 0177),
-        // - recorded view-cache subtree memberships (to tolerate temporarily-incomplete child
-        //   edges on cache-hit frames).
-        //
-        // Note: `UiTree::node_layer` relies on parent pointers. Parent pointers can transiently
-        // drift under fearless refactors (e.g. when reusing cached subtrees), so `node_layer == None`
-        // must never be treated as a sufficient signal for liveness. Reachability from the
-        // liveness roots is the authoritative predicate for GC.
-        let liveness_roots = ui.all_layer_roots();
-        let keep_alive_roots: Vec<NodeId> = window_state
-            .retained_virtual_list_keep_alive_roots()
-            .collect();
-        let mut stale: Vec<StaleNodeRecord> = Vec::new();
-        let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
-        reachable_from_layers.clear();
-        let mut reachable_from_layers_computed = false;
-        let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
-        let mut reachable_from_view_cache_roots =
-            ui.take_scratch_gc_reachable_from_view_cache_roots();
-        reachable_from_view_cache_roots.clear();
-        let mut reachable_from_view_cache_roots_active = false;
-        let mut gc_stack = ui.take_scratch_gc_stack();
-        gc_stack.clear();
-
-        if view_cache_has_reuse_roots {
-            let view_cache_reuse_roots: Vec<GlobalElementId> =
-                window_state.view_cache_reuse_roots().collect();
-            let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
-                .iter()
-                .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
-                .collect();
-
-            if !view_cache_reuse_root_nodes.is_empty() {
+            // If any cache root transitions into reuse this frame, proactively touch the entire
+            // retained subtree from the window root. This avoids GC sweeping still-live nodes in the
+            // transition frame when the producer subtree starts skipping renders.
+            if window_state
+                .view_cache_transitioned_reuse_roots()
+                .next()
+                .is_some()
+            {
                 with_window_frame(app, window, |window_frame| {
-                    collect_reachable_nodes_for_gc_in_place(
+                    touch_existing_declarative_subtree_seen(
                         ui,
+                        window_state,
                         window_frame,
-                        view_cache_reuse_root_nodes.iter().copied(),
-                        &mut reachable_from_view_cache_roots,
-                        &mut gc_stack,
+                        root_id,
+                        frame_id,
+                        root_node,
                     );
                 });
             }
 
-            // Also treat recorded view-cache subtree memberships as authoritative reachability,
-            // so cache hits can keep subtrees alive even when child edges are temporarily
-            // incomplete (ADR 0176).
-            for root in view_cache_reuse_roots {
-                if let Some(elements) = window_state.view_cache_elements_for_root(root) {
-                    for &element in elements {
-                        if let Some(entry) = window_state.node_entry(element) {
-                            reachable_from_view_cache_roots.insert(entry.node);
+            // Node GC is keyed off `last_seen_frame`. Cache-hit frames can legitimately skip
+            // re-mounting cached subtrees, so view-cache reuse must keep the retained subtree alive
+            // via explicit liveness bookkeeping (ADR 0176).
+            //
+            // We only sweep nodes that are both stale and unreachable from the window's liveness
+            // roots:
+            // - layer roots (base + overlays),
+            // - view-cache reuse roots, and
+            // - retained windowed-surface keep-alive roots (ADR 0177),
+            // - recorded view-cache subtree memberships (to tolerate temporarily-incomplete child
+            //   edges on cache-hit frames).
+            //
+            // Note: `UiTree::node_layer` relies on parent pointers. Parent pointers can transiently
+            // drift under fearless refactors (e.g. when reusing cached subtrees), so `node_layer == None`
+            // must never be treated as a sufficient signal for liveness. Reachability from the
+            // liveness roots is the authoritative predicate for GC.
+            let liveness_roots = ui.all_layer_roots();
+            let keep_alive_roots: Vec<NodeId> = window_state
+                .retained_virtual_list_keep_alive_roots()
+                .collect();
+            let mut stale: Vec<StaleNodeRecord> = Vec::new();
+            let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
+            reachable_from_layers.clear();
+            let mut reachable_from_layers_computed = false;
+            let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
+            let mut reachable_from_view_cache_roots =
+                ui.take_scratch_gc_reachable_from_view_cache_roots();
+            reachable_from_view_cache_roots.clear();
+            let mut reachable_from_view_cache_roots_active = false;
+            let mut gc_stack = ui.take_scratch_gc_stack();
+            gc_stack.clear();
+
+            if view_cache_has_reuse_roots {
+                let view_cache_reuse_roots: Vec<GlobalElementId> =
+                    window_state.view_cache_reuse_roots().collect();
+                let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
+                    .iter()
+                    .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
+                    .collect();
+
+                if !view_cache_reuse_root_nodes.is_empty() {
+                    with_window_frame(app, window, |window_frame| {
+                        collect_reachable_nodes_for_gc_in_place(
+                            ui,
+                            window_frame,
+                            view_cache_reuse_root_nodes.iter().copied(),
+                            &mut reachable_from_view_cache_roots,
+                            &mut gc_stack,
+                        );
+                    });
+                }
+
+                // Also treat recorded view-cache subtree memberships as authoritative reachability,
+                // so cache hits can keep subtrees alive even when child edges are temporarily
+                // incomplete (ADR 0176).
+                for root in view_cache_reuse_roots {
+                    if let Some(elements) = window_state.view_cache_elements_for_root(root) {
+                        for &element in elements {
+                            if let Some(entry) = window_state.node_entry(element) {
+                                reachable_from_view_cache_roots.insert(entry.node);
+                            }
                         }
                     }
                 }
+                reachable_from_view_cache_roots_active = true;
             }
-            reachable_from_view_cache_roots_active = true;
-        }
-        window_state.retain_nodes(|id, entry| {
-            if *id == root_id {
-                return true;
+            window_state.retain_nodes(|id, entry| {
+                if *id == root_id {
+                    return true;
+                }
+                if entry.root != root_id {
+                    return true;
+                }
+                if !keep_alive_view_cache_elements.is_empty()
+                    && keep_alive_view_cache_elements.contains(id)
+                {
+                    entry.last_seen_frame = frame_id;
+                    return true;
+                }
+                if entry.last_seen_frame.0 >= cutoff {
+                    return true;
+                }
+                if ui.node_layer(entry.node).is_some() {
+                    return true;
+                }
+                if !reachable_from_layers_computed {
+                    with_window_frame(app, window, |window_frame| {
+                        if liveness_roots.is_empty() {
+                            collect_reachable_nodes_for_gc_in_place(
+                                ui,
+                                window_frame,
+                                std::iter::once(root_node).chain(keep_alive_roots.iter().copied()),
+                                &mut reachable_from_layers,
+                                &mut gc_stack,
+                            );
+                        } else {
+                            collect_reachable_nodes_for_gc_in_place(
+                                ui,
+                                window_frame,
+                                liveness_roots
+                                    .iter()
+                                    .copied()
+                                    .chain(keep_alive_roots.iter().copied()),
+                                &mut reachable_from_layers,
+                                &mut gc_stack,
+                            )
+                        }
+                    });
+                    reachable_from_layers_computed = true;
+                }
+                if reachable_from_layers.contains(&entry.node) {
+                    return true;
+                }
+                if reachable_from_view_cache_roots_active
+                    && reachable_from_view_cache_roots.contains(&entry.node)
+                {
+                    return true;
+                }
+                stale.push(StaleNodeRecord {
+                    node: entry.node,
+                    element: *id,
+                    #[cfg(feature = "diagnostics")]
+                    element_root: entry.root,
+                });
+                false
+            });
+
+            for record in &stale {
+                window_state.forget_view_cache_subtree_elements(record.element);
             }
-            if entry.root != root_id {
-                return true;
-            }
-            if !keep_alive_view_cache_elements.is_empty()
-                && keep_alive_view_cache_elements.contains(id)
-            {
-                entry.last_seen_frame = frame_id;
-                return true;
-            }
-            if entry.last_seen_frame.0 >= cutoff {
-                return true;
-            }
-            if ui.node_layer(entry.node).is_some() {
-                return true;
-            }
-            if !reachable_from_layers_computed {
-                with_window_frame(app, window, |window_frame| {
-                    if liveness_roots.is_empty() {
-                        collect_reachable_nodes_for_gc_in_place(
-                            ui,
-                            window_frame,
-                            std::iter::once(root_node).chain(keep_alive_roots.iter().copied()),
-                            &mut reachable_from_layers,
-                            &mut gc_stack,
-                        );
-                    } else {
-                        collect_reachable_nodes_for_gc_in_place(
-                            ui,
-                            window_frame,
-                            liveness_roots
-                                .iter()
-                                .copied()
-                                .chain(keep_alive_roots.iter().copied()),
-                            &mut reachable_from_layers,
-                            &mut gc_stack,
-                        )
+
+            for record in stale {
+                let node = record.node;
+                #[cfg(feature = "diagnostics")]
+                if let Some(ctx) = with_window_frame(app, window, |window_frame| {
+                    let window_frame = window_frame?;
+                    let parent = ui.node_parent(node);
+                    let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
+                    let root_reachable_from_layer_roots =
+                        reachable_from_layers_computed && reachable_from_layers.contains(&node);
+                    let root_reachable_from_view_cache_roots =
+                        reachable_from_view_cache_roots_active
+                            .then(|| reachable_from_view_cache_roots.contains(&node));
+                    let view_cache_reuse_roots: Vec<GlobalElementId> =
+                        window_state.view_cache_reuse_roots().collect();
+                    let liveness_layer_roots_len =
+                        liveness_roots.len().min(u32::MAX as usize) as u32;
+                    let view_cache_reuse_roots_len =
+                        view_cache_reuse_roots.len().min(u32::MAX as usize) as u32;
+                    let view_cache_reuse_root_nodes_len = view_cache_reuse_roots
+                        .iter()
+                        .filter(|root| window_state.node_entry(**root).is_some())
+                        .count()
+                        .min(u32::MAX as usize)
+                        as u32;
+                    let mut path_edge_frame_contains_child: [u8; 16] = [2u8; 16];
+                    let mut path_edge_len: u8 = 0;
+                    let mut current = Some(node);
+                    while let Some(child) = current {
+                        let Some(parent) = ui.node_parent(child) else {
+                            break;
+                        };
+                        if (path_edge_len as usize) >= path_edge_frame_contains_child.len() {
+                            break;
+                        }
+                        let contains = window_frame
+                            .children
+                            .get(parent)
+                            .map(|children| children.contains(&child));
+                        path_edge_frame_contains_child[path_edge_len as usize] = match contains {
+                            Some(true) => 1,
+                            Some(false) => 0,
+                            None => 2,
+                        };
+                        path_edge_len = path_edge_len.saturating_add(1);
+                        current = Some(parent);
+                    }
+                    Some(crate::tree::UiDebugRemoveSubtreeFrameContext {
+                        parent_frame_children_len: parent_frame_children
+                            .map(|v| v.len().min(u32::MAX as usize) as u32),
+                        parent_frame_children_contains_root: parent_frame_children
+                            .map(|v| v.contains(&node)),
+                        root_frame_instance_present: window_frame.instances.contains_key(node),
+                        root_frame_children_len: window_frame
+                            .children
+                            .get(node)
+                            .map(|v| v.len().min(u32::MAX as usize) as u32),
+                        root_reachable_from_layer_roots,
+                        root_reachable_from_view_cache_roots,
+                        liveness_layer_roots_len,
+                        view_cache_reuse_roots_len,
+                        view_cache_reuse_root_nodes_len,
+                        trigger_element: Some(record.element),
+                        trigger_element_root: Some(record.element_root),
+                        trigger_element_in_view_cache_keep_alive: Some(
+                            keep_alive_view_cache_elements.contains(&record.element),
+                        ),
+                        trigger_element_listed_under_reuse_root: window_state
+                            .view_cache_reuse_roots()
+                            .find(|&root| {
+                                window_state
+                                    .view_cache_elements_for_root(root)
+                                    .is_some_and(|elements| elements.contains(&record.element))
+                            }),
+                        path_edge_len,
+                        path_edge_frame_contains_child,
+                    })
+                }) {
+                    ui.debug_set_remove_subtree_frame_context(node, ctx);
+                }
+
+                let removed = ui.remove_subtree(services, node);
+                app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
+                    let window_frame = frame.windows.entry(window).or_default();
+                    let any_removed = !removed.is_empty();
+                    for removed in removed {
+                        window_frame.instances.remove(removed);
+                        window_frame.children.remove(removed);
+                    }
+                    if any_removed {
+                        window_frame.revision = window_frame.revision.saturating_add(1);
                     }
                 });
-                reachable_from_layers_computed = true;
             }
-            if reachable_from_layers.contains(&entry.node) {
-                return true;
+
+            reachable_from_layers.clear();
+            reachable_from_view_cache_roots.clear();
+            gc_stack.clear();
+            ui.restore_scratch_gc_reachable_from_layers(reachable_from_layers);
+            ui.restore_scratch_gc_reachable_from_view_cache_roots(reachable_from_view_cache_roots);
+            ui.restore_scratch_gc_stack(gc_stack);
+
+            if keep_alive_view_cache_elements_from_scratch {
+                keep_alive_view_cache_elements.clear();
+                window_state
+                    .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
             }
-            if reachable_from_view_cache_roots_active
-                && reachable_from_view_cache_roots.contains(&entry.node)
-            {
-                return true;
+
+            if window_state.wants_continuous_frames() {
+                app.push_effect(Effect::RequestAnimationFrame(window));
             }
-            stale.push(StaleNodeRecord {
-                node: entry.node,
-                element: *id,
-                #[cfg(feature = "diagnostics")]
-                element_root: entry.root,
-            });
-            false
+
+            root_node
         });
-
-        for record in &stale {
-            window_state.forget_view_cache_subtree_elements(record.element);
-        }
-
-        for record in stale {
-            let node = record.node;
-            #[cfg(feature = "diagnostics")]
-            if let Some(ctx) = with_window_frame(app, window, |window_frame| {
-                let window_frame = window_frame?;
-                let parent = ui.node_parent(node);
-                let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
-                let root_reachable_from_layer_roots =
-                    reachable_from_layers_computed && reachable_from_layers.contains(&node);
-                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots_active
-                    .then(|| reachable_from_view_cache_roots.contains(&node));
-                let view_cache_reuse_roots: Vec<GlobalElementId> =
-                    window_state.view_cache_reuse_roots().collect();
-                let liveness_layer_roots_len = liveness_roots.len().min(u32::MAX as usize) as u32;
-                let view_cache_reuse_roots_len =
-                    view_cache_reuse_roots.len().min(u32::MAX as usize) as u32;
-                let view_cache_reuse_root_nodes_len = view_cache_reuse_roots
-                    .iter()
-                    .filter(|root| window_state.node_entry(**root).is_some())
-                    .count()
-                    .min(u32::MAX as usize)
-                    as u32;
-                let mut path_edge_frame_contains_child: [u8; 16] = [2u8; 16];
-                let mut path_edge_len: u8 = 0;
-                let mut current = Some(node);
-                while let Some(child) = current {
-                    let Some(parent) = ui.node_parent(child) else {
-                        break;
-                    };
-                    if (path_edge_len as usize) >= path_edge_frame_contains_child.len() {
-                        break;
-                    }
-                    let contains = window_frame
-                        .children
-                        .get(parent)
-                        .map(|children| children.contains(&child));
-                    path_edge_frame_contains_child[path_edge_len as usize] = match contains {
-                        Some(true) => 1,
-                        Some(false) => 0,
-                        None => 2,
-                    };
-                    path_edge_len = path_edge_len.saturating_add(1);
-                    current = Some(parent);
-                }
-                Some(crate::tree::UiDebugRemoveSubtreeFrameContext {
-                    parent_frame_children_len: parent_frame_children
-                        .map(|v| v.len().min(u32::MAX as usize) as u32),
-                    parent_frame_children_contains_root: parent_frame_children
-                        .map(|v| v.contains(&node)),
-                    root_frame_instance_present: window_frame.instances.contains_key(node),
-                    root_frame_children_len: window_frame
-                        .children
-                        .get(node)
-                        .map(|v| v.len().min(u32::MAX as usize) as u32),
-                    root_reachable_from_layer_roots,
-                    root_reachable_from_view_cache_roots,
-                    liveness_layer_roots_len,
-                    view_cache_reuse_roots_len,
-                    view_cache_reuse_root_nodes_len,
-                    trigger_element: Some(record.element),
-                    trigger_element_root: Some(record.element_root),
-                    trigger_element_in_view_cache_keep_alive: Some(
-                        keep_alive_view_cache_elements.contains(&record.element),
-                    ),
-                    trigger_element_listed_under_reuse_root: window_state
-                        .view_cache_reuse_roots()
-                        .find(|&root| {
-                            window_state
-                                .view_cache_elements_for_root(root)
-                                .is_some_and(|elements| elements.contains(&record.element))
-                        }),
-                    path_edge_len,
-                    path_edge_frame_contains_child,
-                })
-            }) {
-                ui.debug_set_remove_subtree_frame_context(node, ctx);
-            }
-
-            let removed = ui.remove_subtree(services, node);
-            app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
-                let window_frame = frame.windows.entry(window).or_default();
-                let any_removed = !removed.is_empty();
-                for removed in removed {
-                    window_frame.instances.remove(removed);
-                    window_frame.children.remove(removed);
-                }
-                if any_removed {
-                    window_frame.revision = window_frame.revision.saturating_add(1);
-                }
-            });
-        }
-
-        reachable_from_layers.clear();
-        reachable_from_view_cache_roots.clear();
-        gc_stack.clear();
-        ui.restore_scratch_gc_reachable_from_layers(reachable_from_layers);
-        ui.restore_scratch_gc_reachable_from_view_cache_roots(reachable_from_view_cache_roots);
-        ui.restore_scratch_gc_stack(gc_stack);
-
-        if keep_alive_view_cache_elements_from_scratch {
-            keep_alive_view_cache_elements.clear();
-            window_state
-                .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
-        }
-
-        if window_state.wants_continuous_frames() {
-            app.push_effect(Effect::RequestAnimationFrame(window));
-        }
-
-        root_node
-    })
+    ui.publish_window_runtime_snapshots_after_rebuild(app);
+    root_node
 }
 
 /// Render a declarative element tree into a full-window, input-transparent overlay root.
@@ -878,148 +885,121 @@ where
             cx.collect_children(built)
         });
 
-    app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
-        runtime.prepare_window_for_frame(window, frame_id);
-        let lag = runtime.gc_lag_frames();
-        let cutoff = frame_id.0.saturating_sub(lag);
+    let root_node =
+        app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
+            runtime.prepare_window_for_frame(window, frame_id);
+            let lag = runtime.gc_lag_frames();
+            let cutoff = frame_id.0.saturating_sub(lag);
 
-        let window_state = runtime.for_window_mut(window);
-        ui.debug_set_element_children_vec_pool_stats(
-            window_state.element_children_vec_pool_reuses(),
-            window_state.element_children_vec_pool_misses(),
-        );
-        let root_id = crate::elements::global_root(window, root_name);
-        let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> = Vec::new();
+            let window_state = runtime.for_window_mut(window);
+            ui.debug_set_element_children_vec_pool_stats(
+                window_state.element_children_vec_pool_reuses(),
+                window_state.element_children_vec_pool_misses(),
+            );
+            let root_id = crate::elements::global_root(window, root_name);
+            let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> =
+                Vec::new();
 
-        let root_node = window_state
-            .node_entry(root_id)
-            .map(|e| e.node)
-            .filter(|&node| ui.node_exists(node))
-            .unwrap_or_else(|| {
-                let node = ui.create_node(ElementHostWidget::new(root_id));
-                ui.set_node_element(node, Some(root_id));
-                window_state.set_node_entry(
-                    root_id,
-                    NodeEntry {
-                        node,
-                        last_seen_frame: frame_id,
-                        root: root_id,
-                    },
-                );
-                node
+            let root_node = window_state
+                .node_entry(root_id)
+                .map(|e| e.node)
+                .filter(|&node| ui.node_exists(node))
+                .unwrap_or_else(|| {
+                    let node = ui.create_node(ElementHostWidget::new(root_id));
+                    ui.set_node_element(node, Some(root_id));
+                    window_state.set_node_entry(
+                        root_id,
+                        NodeEntry {
+                            node,
+                            last_seen_frame: frame_id,
+                            root: root_id,
+                        },
+                    );
+                    node
+                });
+            ui.set_node_element(root_node, Some(root_id));
+
+            window_state.set_node_entry(
+                root_id,
+                NodeEntry {
+                    node: root_node,
+                    last_seen_frame: frame_id,
+                    root: root_id,
+                },
+            );
+
+            let mut pending_invalidations = ui.take_scratch_pending_invalidations();
+            pending_invalidations.clear();
+            app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
+                let window_frame = frame.windows.entry(window).or_default();
+                prepare_window_frame_for_frame(window_frame, frame_id);
+
+                let inserted = window_frame
+                    .instances
+                    .insert(
+                        root_node,
+                        ElementRecord {
+                            element: root_id,
+                            instance: ElementInstance::DismissibleLayer(
+                                DismissibleLayerProps::default(),
+                            ),
+                            inherited_foreground: None,
+                            inherited_text_style: None,
+                            semantics_decoration: None,
+                            key_context: None,
+                        },
+                    )
+                    .is_none();
+                if inserted {
+                    window_frame.revision = window_frame.revision.saturating_add(1);
+                }
+
+                let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
+                let mut children = children;
+                for child in children.drain(..) {
+                    mounted_children.push(mount_element(
+                        ui,
+                        window,
+                        root_id,
+                        frame_id,
+                        window_state,
+                        window_frame,
+                        child,
+                        None,
+                        &mut scroll_bindings,
+                        &mut pending_invalidations,
+                    ));
+                }
+                ui.set_children(root_node, mounted_children);
+                window_state.restore_scratch_element_children_vec(children);
             });
-        ui.set_node_element(root_node, Some(root_id));
 
-        window_state.set_node_entry(
-            root_id,
-            NodeEntry {
-                node: root_node,
-                last_seen_frame: frame_id,
-                root: root_id,
-            },
-        );
-
-        let mut pending_invalidations = ui.take_scratch_pending_invalidations();
-        pending_invalidations.clear();
-        app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
-            let window_frame = frame.windows.entry(window).or_default();
-            prepare_window_frame_for_frame(window_frame, frame_id);
-
-            let inserted = window_frame
-                .instances
-                .insert(
-                    root_node,
-                    ElementRecord {
-                        element: root_id,
-                        instance: ElementInstance::DismissibleLayer(
-                            DismissibleLayerProps::default(),
-                        ),
-                        inherited_foreground: None,
-                        inherited_text_style: None,
-                        semantics_decoration: None,
-                        key_context: None,
-                    },
-                )
-                .is_none();
-            if inserted {
-                window_frame.revision = window_frame.revision.saturating_add(1);
+            if ui.view_cache_enabled() {
+                let _ = ui.repair_parent_pointers_from_layer_roots();
             }
 
-            let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
-            let mut children = children;
-            for child in children.drain(..) {
-                mounted_children.push(mount_element(
-                    ui,
-                    window,
-                    root_id,
-                    frame_id,
-                    window_state,
-                    window_frame,
-                    child,
-                    None,
-                    &mut scroll_bindings,
-                    &mut pending_invalidations,
-                ));
-            }
-            ui.set_children(root_node, mounted_children);
-            window_state.restore_scratch_element_children_vec(children);
-        });
+            apply_pending_invalidations(ui, &mut pending_invalidations);
+            ui.restore_scratch_pending_invalidations(pending_invalidations);
 
-        if ui.view_cache_enabled() {
-            let _ = ui.repair_parent_pointers_from_layer_roots();
-        }
+            crate::declarative::frame::register_scroll_handle_bindings_batch(
+                app,
+                window,
+                frame_id,
+                scroll_bindings,
+            );
 
-        apply_pending_invalidations(ui, &mut pending_invalidations);
-        ui.restore_scratch_pending_invalidations(pending_invalidations);
+            // Record the root's coordinate space for placement/collision logic (anchored overlays).
+            window_state.set_root_bounds(root_id, bounds);
 
-        crate::declarative::frame::register_scroll_handle_bindings_batch(
-            app,
-            window,
-            frame_id,
-            scroll_bindings,
-        );
+            let mut keep_alive_view_cache_elements: HashSet<GlobalElementId>;
+            let keep_alive_view_cache_elements_from_scratch: bool;
+            if keep_alive_view_cache_scratch_disabled() {
+                keep_alive_view_cache_elements = HashSet::new();
+                keep_alive_view_cache_elements_from_scratch = false;
 
-        // Record the root's coordinate space for placement/collision logic (anchored overlays).
-        window_state.set_root_bounds(root_id, bounds);
-
-        let mut keep_alive_view_cache_elements: HashSet<GlobalElementId>;
-        let keep_alive_view_cache_elements_from_scratch: bool;
-        if keep_alive_view_cache_scratch_disabled() {
-            keep_alive_view_cache_elements = HashSet::new();
-            keep_alive_view_cache_elements_from_scratch = false;
-
-            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
-            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
-
-            while let Some(root) = stack.pop() {
-                if !visited_roots.insert(root) {
-                    continue;
-                }
-                let Some(elements) = window_state.view_cache_elements_for_root(root) else {
-                    continue;
-                };
-                for &element in elements {
-                    keep_alive_view_cache_elements.insert(element);
-                    if !visited_roots.contains(&element)
-                        && window_state.view_cache_elements_for_root(element).is_some()
-                    {
-                        stack.push(element);
-                    }
-                }
-            }
-        } else {
-            keep_alive_view_cache_elements =
-                window_state.take_scratch_view_cache_keep_alive_elements();
-            keep_alive_view_cache_elements_from_scratch = true;
-            keep_alive_view_cache_elements.clear();
-
-            {
-                let mut visited_roots =
-                    window_state.take_scratch_view_cache_keep_alive_visited_roots();
-                let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
-                visited_roots.clear();
-                stack.clear();
-                stack.extend(window_state.view_cache_reuse_roots());
+                let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+                let mut stack: Vec<GlobalElementId> =
+                    window_state.view_cache_reuse_roots().collect();
 
                 while let Some(root) = stack.pop() {
                     if !visited_roots.insert(root) {
@@ -1037,261 +1017,295 @@ where
                         }
                     }
                 }
+            } else {
+                keep_alive_view_cache_elements =
+                    window_state.take_scratch_view_cache_keep_alive_elements();
+                keep_alive_view_cache_elements_from_scratch = true;
+                keep_alive_view_cache_elements.clear();
 
-                visited_roots.clear();
-                stack.clear();
-                window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
-                window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+                {
+                    let mut visited_roots =
+                        window_state.take_scratch_view_cache_keep_alive_visited_roots();
+                    let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
+                    visited_roots.clear();
+                    stack.clear();
+                    stack.extend(window_state.view_cache_reuse_roots());
+
+                    while let Some(root) = stack.pop() {
+                        if !visited_roots.insert(root) {
+                            continue;
+                        }
+                        let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                            continue;
+                        };
+                        for &element in elements {
+                            keep_alive_view_cache_elements.insert(element);
+                            if !visited_roots.contains(&element)
+                                && window_state.view_cache_elements_for_root(element).is_some()
+                            {
+                                stack.push(element);
+                            }
+                        }
+                    }
+
+                    visited_roots.clear();
+                    stack.clear();
+                    window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
+                    window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+                }
             }
-        }
 
-        // See `render_root`: on the first cache-hit frame for a previously dirty root, ensure the
-        // overlay subtree stays alive even if it won't rerender this frame.
-        if window_state
-            .view_cache_transitioned_reuse_roots()
-            .next()
-            .is_some()
-        {
-            with_window_frame(app, window, |window_frame| {
-                touch_existing_declarative_subtree_seen(
-                    ui,
-                    window_state,
-                    window_frame,
-                    root_id,
-                    frame_id,
-                    root_node,
-                );
-            });
-        }
-
-        // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
-        // only detached nodes that have been stale beyond the configured lag window.
-        let liveness_roots = ui.all_layer_roots();
-        let keep_alive_roots: Vec<NodeId> = window_state
-            .retained_virtual_list_keep_alive_roots()
-            .collect();
-        let mut stale: Vec<StaleNodeRecord> = Vec::new();
-        let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
-        reachable_from_layers.clear();
-        let mut reachable_from_layers_computed = false;
-        let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
-        let mut reachable_from_view_cache_roots =
-            ui.take_scratch_gc_reachable_from_view_cache_roots();
-        reachable_from_view_cache_roots.clear();
-        let mut reachable_from_view_cache_roots_active = false;
-        let mut gc_stack = ui.take_scratch_gc_stack();
-        gc_stack.clear();
-
-        if view_cache_has_reuse_roots {
-            let view_cache_reuse_roots: Vec<GlobalElementId> =
-                window_state.view_cache_reuse_roots().collect();
-            let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
-                .iter()
-                .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
-                .collect();
-
-            if !view_cache_reuse_root_nodes.is_empty() {
+            // See `render_root`: on the first cache-hit frame for a previously dirty root, ensure the
+            // overlay subtree stays alive even if it won't rerender this frame.
+            if window_state
+                .view_cache_transitioned_reuse_roots()
+                .next()
+                .is_some()
+            {
                 with_window_frame(app, window, |window_frame| {
-                    collect_reachable_nodes_for_gc_in_place(
+                    touch_existing_declarative_subtree_seen(
                         ui,
+                        window_state,
                         window_frame,
-                        view_cache_reuse_root_nodes.iter().copied(),
-                        &mut reachable_from_view_cache_roots,
-                        &mut gc_stack,
+                        root_id,
+                        frame_id,
+                        root_node,
                     );
                 });
             }
 
-            for root in view_cache_reuse_roots {
-                if let Some(elements) = window_state.view_cache_elements_for_root(root) {
-                    for &element in elements {
-                        if let Some(entry) = window_state.node_entry(element) {
-                            reachable_from_view_cache_roots.insert(entry.node);
+            // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
+            // only detached nodes that have been stale beyond the configured lag window.
+            let liveness_roots = ui.all_layer_roots();
+            let keep_alive_roots: Vec<NodeId> = window_state
+                .retained_virtual_list_keep_alive_roots()
+                .collect();
+            let mut stale: Vec<StaleNodeRecord> = Vec::new();
+            let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
+            reachable_from_layers.clear();
+            let mut reachable_from_layers_computed = false;
+            let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
+            let mut reachable_from_view_cache_roots =
+                ui.take_scratch_gc_reachable_from_view_cache_roots();
+            reachable_from_view_cache_roots.clear();
+            let mut reachable_from_view_cache_roots_active = false;
+            let mut gc_stack = ui.take_scratch_gc_stack();
+            gc_stack.clear();
+
+            if view_cache_has_reuse_roots {
+                let view_cache_reuse_roots: Vec<GlobalElementId> =
+                    window_state.view_cache_reuse_roots().collect();
+                let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
+                    .iter()
+                    .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
+                    .collect();
+
+                if !view_cache_reuse_root_nodes.is_empty() {
+                    with_window_frame(app, window, |window_frame| {
+                        collect_reachable_nodes_for_gc_in_place(
+                            ui,
+                            window_frame,
+                            view_cache_reuse_root_nodes.iter().copied(),
+                            &mut reachable_from_view_cache_roots,
+                            &mut gc_stack,
+                        );
+                    });
+                }
+
+                for root in view_cache_reuse_roots {
+                    if let Some(elements) = window_state.view_cache_elements_for_root(root) {
+                        for &element in elements {
+                            if let Some(entry) = window_state.node_entry(element) {
+                                reachable_from_view_cache_roots.insert(entry.node);
+                            }
                         }
                     }
                 }
+
+                reachable_from_view_cache_roots_active = true;
+            }
+            window_state.retain_nodes(|id, entry| {
+                if *id == root_id {
+                    return true;
+                }
+                if entry.root != root_id {
+                    return true;
+                }
+
+                if !keep_alive_view_cache_elements.is_empty()
+                    && keep_alive_view_cache_elements.contains(id)
+                {
+                    entry.last_seen_frame = frame_id;
+                    return true;
+                }
+
+                if entry.last_seen_frame.0 >= cutoff {
+                    return true;
+                }
+                if ui.node_layer(entry.node).is_some() {
+                    return true;
+                }
+                if !reachable_from_layers_computed {
+                    with_window_frame(app, window, |window_frame| {
+                        if liveness_roots.is_empty() {
+                            collect_reachable_nodes_for_gc_in_place(
+                                ui,
+                                window_frame,
+                                std::iter::once(root_node).chain(keep_alive_roots.iter().copied()),
+                                &mut reachable_from_layers,
+                                &mut gc_stack,
+                            );
+                        } else {
+                            collect_reachable_nodes_for_gc_in_place(
+                                ui,
+                                window_frame,
+                                liveness_roots
+                                    .iter()
+                                    .copied()
+                                    .chain(keep_alive_roots.iter().copied()),
+                                &mut reachable_from_layers,
+                                &mut gc_stack,
+                            )
+                        }
+                    });
+                    reachable_from_layers_computed = true;
+                }
+                if reachable_from_layers.contains(&entry.node) {
+                    return true;
+                }
+                if reachable_from_view_cache_roots_active
+                    && reachable_from_view_cache_roots.contains(&entry.node)
+                {
+                    return true;
+                }
+                stale.push(StaleNodeRecord {
+                    node: entry.node,
+                    element: *id,
+                    #[cfg(feature = "diagnostics")]
+                    element_root: entry.root,
+                });
+                false
+            });
+
+            for record in &stale {
+                window_state.forget_view_cache_subtree_elements(record.element);
             }
 
-            reachable_from_view_cache_roots_active = true;
-        }
-        window_state.retain_nodes(|id, entry| {
-            if *id == root_id {
-                return true;
-            }
-            if entry.root != root_id {
-                return true;
-            }
+            for record in stale {
+                let node = record.node;
+                #[cfg(feature = "diagnostics")]
+                if let Some(ctx) = with_window_frame(app, window, |window_frame| {
+                    let window_frame = window_frame?;
+                    let parent = ui.node_parent(node);
+                    let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
+                    let root_reachable_from_layer_roots =
+                        reachable_from_layers_computed && reachable_from_layers.contains(&node);
+                    let root_reachable_from_view_cache_roots =
+                        reachable_from_view_cache_roots_active
+                            .then(|| reachable_from_view_cache_roots.contains(&node));
+                    let view_cache_reuse_roots: Vec<GlobalElementId> =
+                        window_state.view_cache_reuse_roots().collect();
+                    let liveness_layer_roots_len =
+                        liveness_roots.len().min(u32::MAX as usize) as u32;
+                    let view_cache_reuse_roots_len =
+                        view_cache_reuse_roots.len().min(u32::MAX as usize) as u32;
+                    let view_cache_reuse_root_nodes_len = view_cache_reuse_roots
+                        .iter()
+                        .filter(|root| window_state.node_entry(**root).is_some())
+                        .count()
+                        .min(u32::MAX as usize)
+                        as u32;
+                    let mut path_edge_frame_contains_child: [u8; 16] = [2u8; 16];
+                    let mut path_edge_len: u8 = 0;
+                    let mut current = Some(node);
+                    while let Some(child) = current {
+                        let Some(parent) = ui.node_parent(child) else {
+                            break;
+                        };
+                        if (path_edge_len as usize) >= path_edge_frame_contains_child.len() {
+                            break;
+                        }
+                        let contains = window_frame
+                            .children
+                            .get(parent)
+                            .map(|children| children.contains(&child));
+                        path_edge_frame_contains_child[path_edge_len as usize] = match contains {
+                            Some(true) => 1,
+                            Some(false) => 0,
+                            None => 2,
+                        };
+                        path_edge_len = path_edge_len.saturating_add(1);
+                        current = Some(parent);
+                    }
+                    Some(crate::tree::UiDebugRemoveSubtreeFrameContext {
+                        parent_frame_children_len: parent_frame_children
+                            .map(|v| v.len().min(u32::MAX as usize) as u32),
+                        parent_frame_children_contains_root: parent_frame_children
+                            .map(|v| v.contains(&node)),
+                        root_frame_instance_present: window_frame.instances.contains_key(node),
+                        root_frame_children_len: window_frame
+                            .children
+                            .get(node)
+                            .map(|v| v.len().min(u32::MAX as usize) as u32),
+                        root_reachable_from_layer_roots,
+                        root_reachable_from_view_cache_roots,
+                        liveness_layer_roots_len,
+                        view_cache_reuse_roots_len,
+                        view_cache_reuse_root_nodes_len,
+                        trigger_element: Some(record.element),
+                        trigger_element_root: Some(record.element_root),
+                        trigger_element_in_view_cache_keep_alive: Some(
+                            keep_alive_view_cache_elements.contains(&record.element),
+                        ),
+                        trigger_element_listed_under_reuse_root: window_state
+                            .view_cache_reuse_roots()
+                            .find(|&root| {
+                                window_state
+                                    .view_cache_elements_for_root(root)
+                                    .is_some_and(|elements| elements.contains(&record.element))
+                            }),
+                        path_edge_len,
+                        path_edge_frame_contains_child,
+                    })
+                }) {
+                    ui.debug_set_remove_subtree_frame_context(node, ctx);
+                }
 
-            if !keep_alive_view_cache_elements.is_empty()
-                && keep_alive_view_cache_elements.contains(id)
-            {
-                entry.last_seen_frame = frame_id;
-                return true;
-            }
-
-            if entry.last_seen_frame.0 >= cutoff {
-                return true;
-            }
-            if ui.node_layer(entry.node).is_some() {
-                return true;
-            }
-            if !reachable_from_layers_computed {
-                with_window_frame(app, window, |window_frame| {
-                    if liveness_roots.is_empty() {
-                        collect_reachable_nodes_for_gc_in_place(
-                            ui,
-                            window_frame,
-                            std::iter::once(root_node).chain(keep_alive_roots.iter().copied()),
-                            &mut reachable_from_layers,
-                            &mut gc_stack,
-                        );
-                    } else {
-                        collect_reachable_nodes_for_gc_in_place(
-                            ui,
-                            window_frame,
-                            liveness_roots
-                                .iter()
-                                .copied()
-                                .chain(keep_alive_roots.iter().copied()),
-                            &mut reachable_from_layers,
-                            &mut gc_stack,
-                        )
+                let removed = ui.remove_subtree(services, node);
+                app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
+                    let window_frame = frame.windows.entry(window).or_default();
+                    let any_removed = !removed.is_empty();
+                    for removed in removed {
+                        window_frame.instances.remove(removed);
+                        window_frame.children.remove(removed);
+                    }
+                    if any_removed {
+                        window_frame.revision = window_frame.revision.saturating_add(1);
                     }
                 });
-                reachable_from_layers_computed = true;
             }
-            if reachable_from_layers.contains(&entry.node) {
-                return true;
+
+            reachable_from_layers.clear();
+            reachable_from_view_cache_roots.clear();
+            gc_stack.clear();
+            ui.restore_scratch_gc_reachable_from_layers(reachable_from_layers);
+            ui.restore_scratch_gc_reachable_from_view_cache_roots(reachable_from_view_cache_roots);
+            ui.restore_scratch_gc_stack(gc_stack);
+
+            if keep_alive_view_cache_elements_from_scratch {
+                keep_alive_view_cache_elements.clear();
+                window_state
+                    .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
             }
-            if reachable_from_view_cache_roots_active
-                && reachable_from_view_cache_roots.contains(&entry.node)
-            {
-                return true;
+
+            if window_state.wants_continuous_frames() {
+                app.push_effect(Effect::RequestAnimationFrame(window));
             }
-            stale.push(StaleNodeRecord {
-                node: entry.node,
-                element: *id,
-                #[cfg(feature = "diagnostics")]
-                element_root: entry.root,
-            });
-            false
+
+            root_node
         });
-
-        for record in &stale {
-            window_state.forget_view_cache_subtree_elements(record.element);
-        }
-
-        for record in stale {
-            let node = record.node;
-            #[cfg(feature = "diagnostics")]
-            if let Some(ctx) = with_window_frame(app, window, |window_frame| {
-                let window_frame = window_frame?;
-                let parent = ui.node_parent(node);
-                let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
-                let root_reachable_from_layer_roots =
-                    reachable_from_layers_computed && reachable_from_layers.contains(&node);
-                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots_active
-                    .then(|| reachable_from_view_cache_roots.contains(&node));
-                let view_cache_reuse_roots: Vec<GlobalElementId> =
-                    window_state.view_cache_reuse_roots().collect();
-                let liveness_layer_roots_len = liveness_roots.len().min(u32::MAX as usize) as u32;
-                let view_cache_reuse_roots_len =
-                    view_cache_reuse_roots.len().min(u32::MAX as usize) as u32;
-                let view_cache_reuse_root_nodes_len = view_cache_reuse_roots
-                    .iter()
-                    .filter(|root| window_state.node_entry(**root).is_some())
-                    .count()
-                    .min(u32::MAX as usize)
-                    as u32;
-                let mut path_edge_frame_contains_child: [u8; 16] = [2u8; 16];
-                let mut path_edge_len: u8 = 0;
-                let mut current = Some(node);
-                while let Some(child) = current {
-                    let Some(parent) = ui.node_parent(child) else {
-                        break;
-                    };
-                    if (path_edge_len as usize) >= path_edge_frame_contains_child.len() {
-                        break;
-                    }
-                    let contains = window_frame
-                        .children
-                        .get(parent)
-                        .map(|children| children.contains(&child));
-                    path_edge_frame_contains_child[path_edge_len as usize] = match contains {
-                        Some(true) => 1,
-                        Some(false) => 0,
-                        None => 2,
-                    };
-                    path_edge_len = path_edge_len.saturating_add(1);
-                    current = Some(parent);
-                }
-                Some(crate::tree::UiDebugRemoveSubtreeFrameContext {
-                    parent_frame_children_len: parent_frame_children
-                        .map(|v| v.len().min(u32::MAX as usize) as u32),
-                    parent_frame_children_contains_root: parent_frame_children
-                        .map(|v| v.contains(&node)),
-                    root_frame_instance_present: window_frame.instances.contains_key(node),
-                    root_frame_children_len: window_frame
-                        .children
-                        .get(node)
-                        .map(|v| v.len().min(u32::MAX as usize) as u32),
-                    root_reachable_from_layer_roots,
-                    root_reachable_from_view_cache_roots,
-                    liveness_layer_roots_len,
-                    view_cache_reuse_roots_len,
-                    view_cache_reuse_root_nodes_len,
-                    trigger_element: Some(record.element),
-                    trigger_element_root: Some(record.element_root),
-                    trigger_element_in_view_cache_keep_alive: Some(
-                        keep_alive_view_cache_elements.contains(&record.element),
-                    ),
-                    trigger_element_listed_under_reuse_root: window_state
-                        .view_cache_reuse_roots()
-                        .find(|&root| {
-                            window_state
-                                .view_cache_elements_for_root(root)
-                                .is_some_and(|elements| elements.contains(&record.element))
-                        }),
-                    path_edge_len,
-                    path_edge_frame_contains_child,
-                })
-            }) {
-                ui.debug_set_remove_subtree_frame_context(node, ctx);
-            }
-
-            let removed = ui.remove_subtree(services, node);
-            app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
-                let window_frame = frame.windows.entry(window).or_default();
-                let any_removed = !removed.is_empty();
-                for removed in removed {
-                    window_frame.instances.remove(removed);
-                    window_frame.children.remove(removed);
-                }
-                if any_removed {
-                    window_frame.revision = window_frame.revision.saturating_add(1);
-                }
-            });
-        }
-
-        reachable_from_layers.clear();
-        reachable_from_view_cache_roots.clear();
-        gc_stack.clear();
-        ui.restore_scratch_gc_reachable_from_layers(reachable_from_layers);
-        ui.restore_scratch_gc_reachable_from_view_cache_roots(reachable_from_view_cache_roots);
-        ui.restore_scratch_gc_stack(gc_stack);
-
-        if keep_alive_view_cache_elements_from_scratch {
-            keep_alive_view_cache_elements.clear();
-            window_state
-                .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
-        }
-
-        if window_state.wants_continuous_frames() {
-            app.push_effect(Effect::RequestAnimationFrame(window));
-        }
-
-        root_node
-    })
+    ui.publish_window_runtime_snapshots_after_rebuild(app);
+    root_node
 }
 
 #[allow(clippy::too_many_arguments)]
