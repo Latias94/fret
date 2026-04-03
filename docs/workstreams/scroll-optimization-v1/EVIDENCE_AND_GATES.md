@@ -48,6 +48,16 @@ This follow-on slice locks the contract that:
 - `dirty_cache_roots` must clear when authoritative main-pass layout already consumed the cache
   root's scheduling-only layout invalidation.
 
+## Follow-on slice — Same-children parent repair must reconnect authoritative layout
+
+This follow-on slice locks the contract that:
+
+- `set_children(...same_children...)` remains a true no-op when parent pointers are already valid,
+- `set_children(...same_children...)` must reconnect the parent into the authoritative layout
+  invalidation walk when it repaired stale child parent pointers under pending descendant layout
+  work,
+- `set_children_in_mount(...same_children...)` must honor the same reconnect contract.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -74,6 +84,10 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui set_children_barrier_same_children_with_dirty_descendant_reaches_authoritative_relayout`
 - Descendant layout invalidations still schedule contained relayout without rerender:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui descendant_layout_invalidation_marks_contained_view_cache_root_dirty`
+- Same-children parent repair reconnects detached descendant layout:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::children::set_children_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
+- Mount-time same-children parent repair reconnects detached descendant layout:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::children::set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
 
 ## Evidence anchors
 
@@ -96,6 +110,10 @@ This follow-on slice locks the contract that:
   - `crates/fret-ui/src/tree/layout/node.rs`
   - `crates/fret-ui/src/tree/ui_tree_invalidation_walk/mark.rs`
   - `crates/fret-ui/src/tree/tests/view_cache.rs`
+- Same-children parent repair reconnect path:
+  - `crates/fret-ui/src/tree/ui_tree_mutation/core.rs`
+  - `crates/fret-ui/src/tree/ui_tree_mutation/mount.rs`
+  - `crates/fret-ui/src/tree/tests/children.rs`
 - Lane positioning:
   - `docs/workstreams/scroll-optimization-v1/DESIGN.md`
   - `docs/workstreams/scroll-optimization-v1/TODO.md`
@@ -142,3 +160,10 @@ This follow-on slice locks the contract that:
   - `tree::tests::view_cache::view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender`
   - `tree::tests::view_cache::detached_dirty_view_cache_root_is_pruned_before_layout_followups`
   - `tree::tests::barrier_subtree_layout_dirty_aggregation::*`
+- 2026-04-03: same-children parent-repair reconnect gates confirmed via `cargo nextest` with
+  `CARGO_TARGET_DIR=target-codex-verify8`:
+  - `tree::tests::children::set_children_noops_when_unchanged`
+  - `tree::tests::children::set_children_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
+  - `tree::tests::children::set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
+  - `tree::tests::barrier_subtree_layout_dirty_aggregation::*`
+  - `tree::tests::view_cache::*` targeted contained-relayout gates

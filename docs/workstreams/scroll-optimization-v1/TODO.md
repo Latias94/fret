@@ -48,6 +48,9 @@ Status: Active
 - [ ] Audit all barrier-related paths that can affect scroll surfaces:
   - [x] `set_children_barrier(...same_children...)` schedules authoritative follow-up relayout when
     descendant layout work is still pending,
+  - [x] `set_children(...same_children...)` and `set_children_in_mount(...same_children...)`
+    reconnect authoritative layout when they repaired stale parent pointers under pending
+    descendant layout work,
   - [ ] remaining child list mutation helpers,
   - [x] contained cache-root dirty markers now align with main-pass layout consumption and
     descendant-truncated contained relayout scheduling,
@@ -58,6 +61,8 @@ Status: Active
   - [x] barrier same-children dirty descendant converges via contained relayout,
   - [x] descendant layout invalidation under a contained cache root stays layout-only but still
     schedules contained relayout,
+  - [x] same-children parent repair reconnects detached descendant layout for normal and mount-time
+    child-list mutation helpers,
   - [ ] scroll handle revision-only bumps stay classified correctly.
 
 ## Wheel/trackpad delta coalescing

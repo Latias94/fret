@@ -164,12 +164,7 @@ impl<H: UiHost> UiTree<H> {
             .get(parent)
             .is_some_and(|n| n.children.as_slice() == children.as_slice());
         if same_children {
-            for &child in &children {
-                if let Some(n) = self.nodes.get_mut(child) {
-                    n.parent = Some(parent);
-                }
-            }
-            self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
+            self.repair_same_children_parent_pointers_and_reconnect_layout(parent, &children);
             return;
         }
 
@@ -266,5 +261,57 @@ impl<H: UiHost> UiTree<H> {
                 UiDebugInvalidationSource::Other,
             );
         }
+    }
+
+    pub(in crate::tree) fn repair_same_children_parent_pointers_and_reconnect_layout(
+        &mut self,
+        parent: NodeId,
+        children: &[NodeId],
+    ) {
+        let mut repaired_parent_pointer = false;
+        for &child in children {
+            if let Some(n) = self.nodes.get_mut(child) {
+                repaired_parent_pointer |= n.parent != Some(parent);
+                n.parent = Some(parent);
+            }
+        }
+
+        self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
+
+        if repaired_parent_pointer
+            && self.subtree_has_pending_layout_work(parent)
+            && self
+                .nodes
+                .get(parent)
+                .is_some_and(|node| !node.invalidation.layout)
+        {
+            // Same-children writes are also used as a parent-pointer repair path during retained /
+            // GC flows. If a descendant became layout-dirty while detached, reconnect the parent to
+            // the authoritative layout invalidation walk so the next frame descends back into the
+            // repaired subtree.
+            self.mark_invalidation_with_source(
+                parent,
+                Invalidation::Layout,
+                UiDebugInvalidationSource::Other,
+            );
+        }
+    }
+
+    pub(in crate::tree) fn subtree_has_pending_layout_work(&self, root: NodeId) -> bool {
+        if self.subtree_layout_dirty_aggregation_enabled() {
+            return self.node_subtree_layout_dirty(root);
+        }
+
+        let mut stack: Vec<NodeId> = vec![root];
+        while let Some(node) = stack.pop() {
+            let Some(entry) = self.nodes.get(node) else {
+                continue;
+            };
+            if entry.invalidation.layout {
+                return true;
+            }
+            stack.extend(entry.children.iter().copied());
+        }
+        false
     }
 }

@@ -13,12 +13,7 @@ impl<H: UiHost> UiTree<H> {
             .get(parent)
             .is_some_and(|n| n.children.as_slice() == children.as_slice());
         if same_children {
-            for &child in &children {
-                if let Some(n) = self.nodes.get_mut(child) {
-                    n.parent = Some(parent);
-                }
-            }
-            self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
+            self.repair_same_children_parent_pointers_and_reconnect_layout(parent, &children);
             return;
         }
 
