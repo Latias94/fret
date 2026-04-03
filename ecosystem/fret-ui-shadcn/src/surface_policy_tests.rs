@@ -667,7 +667,7 @@ fn ui_builder_ext_keep_into_element_as_explicit_landing_seam() {
             &[
                 "fn into_element<H: UiHost>( self, cx: &mut ElementContext<'_, H>, cell_text_at: impl Fn(u64, u64) -> Arc<str> + Send + Sync + 'static, ) -> AnyElement;",
                 "fn into_element<H: UiHost, FRowKey, FRowState, FCell, TCell>( self, cx: &mut ElementContext<'_, H>, rows_revision: u64, cols_revision: u64, row_key_at: FRowKey, row_state_at: FRowState, cell_at: FCell, ) -> AnyElement where FRowKey: FnMut(usize) -> u64, FRowState: FnMut(usize) -> DataGridRowState, FCell: FnMut(&mut ElementContext<'_, H>, usize, usize) -> TCell, TCell: IntoUiElement<H>;",
-                "fn into_element<H: UiHost, TData, TCell>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> TCell + 'static, ) -> AnyElement where TData: 'static, TCell: IntoUiElement<H>;",
+                "fn into_element<H: UiHost, TData, TCell>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: impl IntoTableStateModel, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> TCell + 'static, ) -> AnyElement where TData: 'static, TCell: IntoUiElement<H>;",
             ][..],
         ),
         (
@@ -1573,7 +1573,7 @@ fn hover_card_root_promotes_typed_new_and_keeps_raw_root_seams_explicit() {
 fn dropdown_menu_root_promotes_uncontrolled_builder_path_and_keeps_managed_open_seams_explicit() {
     let normalized = normalize_ws(DROPDOWN_MENU_RS);
     let required_markers = [
-        "pub fn from_open(open: Model<bool>) -> Self {",
+        "pub fn from_open(open: impl IntoBoolModel) -> Self {",
         "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
         "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self {",
         "pub fn compose<H: UiHost>(self) -> DropdownMenuComposition<H> {",
@@ -1595,7 +1595,7 @@ fn context_menu_root_promotes_uncontrolled_builder_path_and_keeps_managed_open_s
     let normalized = normalize_ws(CONTEXT_MENU_RS);
     let required_markers = [
         "pub fn build<H: UiHost, T>(child: T) -> ContextMenuTriggerBuild<H, T>",
-        "pub fn from_open(open: Model<bool>) -> Self {",
+        "pub fn from_open(open: impl IntoBoolModel) -> Self {",
         "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
         "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self {",
         "pub fn compose<H: UiHost>(self) -> ContextMenuComposition<H> {",
@@ -2127,10 +2127,7 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
             "context_menu.rs",
             CONTEXT_MENU_RS,
             &[
-                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self",
-                "pub fn new(value: Model<Option<Arc<str>>>) -> Self",
                 "pub fn new( group_value: Model<Option<Arc<str>>>, value: impl Into<Arc<str>>, label: impl Into<Arc<str>>, ) -> Self",
-                "pub fn from_open(open: Model<bool>) -> Self",
                 "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
             ][..],
         ),
@@ -2142,20 +2139,14 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
         (
             "data_table.rs",
             DATA_TABLE_RS,
-            &[
-                "pub fn output_model(mut self, output: Model<TableViewOutput>) -> Self",
-                "pub fn into_element_retained<H: UiHost + 'static, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, debug_header_cell_test_id_prefix: Option<Arc<str>>, debug_row_test_id_prefix: Option<Arc<str>>, ) -> AnyElement where TData: 'static,",
-                "pub fn into_element<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, ) -> AnyElement where TData: 'static,",
-                "pub fn into_element_with_header_cell<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, header_cell_at: impl Fn( &mut ElementContext<'_, H>, &ColumnDef<TData>, Option<bool>, ) -> Option<Vec<AnyElement>> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, ) -> AnyElement where TData: 'static,",
-            ][..],
+            &["pub fn output_model(mut self, output: Model<TableViewOutput>) -> Self"][..],
         ),
         (
             "data_table_recipes.rs",
             DATA_TABLE_RECIPES_RS,
             &[
-                "pub fn new( state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, column_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, ) -> Self",
                 "pub fn faceted_filter_counts(mut self, counts: Model<HashMap<Arc<str>, usize>>) -> Self",
-                "pub fn new(state: Model<TableState>, output: Model<TableViewOutput>) -> Self",
+                "pub fn new(state: impl IntoTableStateModel, output: Model<TableViewOutput>) -> Self",
             ][..],
         ),
         (
@@ -2171,17 +2162,13 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
                 "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
                 "pub fn open_model(&self) -> Model<bool>",
                 "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
-                "pub fn new(open: Model<bool>) -> Self",
             ][..],
         ),
         (
             "dropdown_menu.rs",
             DROPDOWN_MENU_RS,
             &[
-                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self",
-                "pub fn new(value: Model<Option<Arc<str>>>) -> Self",
                 "pub fn new( group_value: Model<Option<Arc<str>>>, value: impl Into<Arc<str>>, label: impl Into<Arc<str>>, ) -> Self",
-                "pub fn from_open(open: Model<bool>) -> Self",
                 "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
             ][..],
         ),
@@ -2191,7 +2178,6 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
             &[
                 "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
                 "pub fn snap_point(mut self, snap_point: Model<Option<usize>>) -> Self",
-                "pub fn new(open: Model<bool>) -> Self",
             ][..],
         ),
         (
@@ -2237,7 +2223,6 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
             SHEET_RS,
             &[
                 "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
-                "pub fn new(open: Model<bool>) -> Self",
             ][..],
         ),
         (
@@ -2499,6 +2484,134 @@ fn default_facing_clickable_widgets_keep_action_first_aliases_on_public_builders
             ),
             "{label} should expose an action-first builder alias"
         );
+    }
+}
+
+#[test]
+fn data_table_surfaces_keep_narrow_table_state_bridges() {
+    assert!(
+        LIB_RS.contains("pub use fret_ui_kit::declarative::table::IntoTableStateModel;"),
+        "facade should re-export the dedicated table-state bridge so the LocalState-first path stays discoverable"
+    );
+
+    for (label, source, required_markers, forbidden_markers) in [
+        (
+            "data_table.rs",
+            DATA_TABLE_RS,
+            &[
+                "debug_ids: TableDebugIds,",
+                "pub fn debug_ids(mut self, debug_ids: TableDebugIds) -> Self {",
+                "pub fn into_element_retained<H: UiHost + 'static, TData>(",
+                "pub fn into_element<H: UiHost, TData>(",
+                "pub fn into_element_with_header_cell<H: UiHost, TData>(",
+                "state: impl IntoTableStateModel,",
+            ][..],
+            &[
+                "pub fn into_element_retained<H: UiHost + 'static, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>,",
+                "pub fn into_element<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>,",
+                "pub fn into_element_with_header_cell<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>,",
+                "debug_header_cell_test_id_prefix: Option<Arc<str>>",
+                "debug_row_test_id_prefix: Option<Arc<str>>",
+            ][..],
+        ),
+        (
+            "data_table_controls.rs",
+            DATA_TABLE_CONTROLS_RS,
+            &[
+                "pub fn from_column_options( open: impl IntoBoolModel, state: impl IntoTableStateModel, options: impl Into<Arc<[DataTableColumnOption]>>, ) -> Self",
+                "pub fn from_table_state<TData>( open: impl IntoBoolModel, state: impl IntoTableStateModel, columns: impl Into<Arc<[ColumnDef<TData>]>>, column_label: impl Fn(&ColumnDef<TData>) -> Arc<str>, ) -> Self",
+            ][..],
+            &[
+                "pub fn from_column_options( open: impl IntoBoolModel, state: Model<TableState>,",
+                "pub fn from_table_state<TData>( open: impl IntoBoolModel, state: Model<TableState>,",
+            ][..],
+        ),
+        (
+            "data_table_recipes.rs",
+            DATA_TABLE_RECIPES_RS,
+            &[
+                "pub fn new( state: impl IntoTableStateModel, columns: impl Into<Arc<[ColumnDef<TData>]>>, column_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, ) -> Self",
+                "pub fn new(state: impl IntoTableStateModel, output: Model<TableViewOutput>) -> Self",
+            ][..],
+            &[
+                "pub fn new( state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>,",
+                "pub fn new(state: Model<TableState>, output: Model<TableViewOutput>) -> Self",
+            ][..],
+        ),
+        (
+            "ui_builder_ext/data.rs",
+            UI_BUILDER_EXT_DATA_RS,
+            &[
+                "fn into_element<H: UiHost, TData, TCell>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: impl IntoTableStateModel, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> TCell + 'static, ) -> AnyElement where TData: 'static, TCell: IntoUiElement<H>;",
+            ][..],
+            &[
+                "fn into_element<H: UiHost, TData, TCell>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>,",
+            ][..],
+        ),
+    ] {
+        let normalized = normalize_ws(source);
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "{label} should keep the dedicated table-state bridge on the public authoring surface"
+            );
+        }
+        for marker in forbidden_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                !normalized.contains(&marker),
+                "{label} should not regress to raw Model<TableState>-only public signatures"
+            );
+        }
+    }
+}
+
+#[test]
+fn overlay_close_surfaces_keep_narrow_bool_bridges() {
+    for (label, source, required_markers, forbidden_markers) in [
+        (
+            "dialog.rs",
+            DIALOG_RS,
+            &[
+                "pub fn new(open: impl IntoBoolModel) -> Self { Self { open: Some(open.into_bool_model()),",
+            ][..],
+            &["pub fn new(open: Model<bool>) -> Self { Self { open: Some(open),"][..],
+        ),
+        (
+            "sheet.rs",
+            SHEET_RS,
+            &[
+                "pub fn new(open: impl IntoBoolModel) -> Self { Self { open: Some(open.into_bool_model()),",
+            ][..],
+            &["pub fn new(open: Model<bool>) -> Self { Self { open: Some(open),"][..],
+        ),
+        (
+            "drawer.rs",
+            DRAWER_RS,
+            &[
+                "pub fn new(open: impl IntoBoolModel) -> Self { Self { inner: crate::sheet::SheetClose::new(open),",
+            ][..],
+            &[
+                "pub fn new(open: Model<bool>) -> Self { Self { inner: crate::sheet::SheetClose::new(open),",
+            ][..],
+        ),
+    ] {
+        let normalized = normalize_ws(source);
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "{label} should keep close affordances on the narrow bool bridge instead of reopening a raw Model<bool> constructor"
+            );
+        }
+        for marker in forbidden_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                !normalized.contains(&marker),
+                "{label} should not regress close affordances back to explicit Model<bool> constructors on the default-facing recipe surface"
+            );
+        }
     }
 }
 

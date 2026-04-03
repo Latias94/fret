@@ -16,13 +16,14 @@ use fret_ui::element::{
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::form::FormRegistry;
+use fret_ui_kit::headless::calendar::CalendarMonth;
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
 use fret_ui_kit::headless::form_validation::{first_error, required_trimmed};
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, OverlayController, Space};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
-use time::Date;
+use time::{Date, OffsetDateTime};
 
 pub struct DemoWindowState {
     ui: UiTree<App>,
@@ -33,6 +34,8 @@ pub struct DemoWindowState {
     email: LocalState<String>,
     role: LocalState<Option<Arc<str>>>,
     role_open: LocalState<bool>,
+    start_date_open: LocalState<bool>,
+    start_date_month: LocalState<CalendarMonth>,
     start_date: LocalState<Option<Date>>,
     status: LocalState<Arc<str>>,
 }
@@ -42,32 +45,36 @@ pub struct FormDemoDriver;
 
 impl FormDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> DemoWindowState {
-        let name = LocalState::from_model(app.models_mut().insert(String::new()));
-        let email = LocalState::from_model(app.models_mut().insert(String::new()));
-        let role = LocalState::from_model(app.models_mut().insert(None));
-        let role_open = LocalState::from_model(app.models_mut().insert(false));
-        let start_date = LocalState::from_model(app.models_mut().insert(None::<Date>));
+        let today = OffsetDateTime::now_utc().date();
+        let name = LocalState::new_in(app.models_mut(), String::new());
+        let email = LocalState::new_in(app.models_mut(), String::new());
+        let role = LocalState::new_in(app.models_mut(), None::<Arc<str>>);
+        let role_open = LocalState::new_in(app.models_mut(), false);
+        let start_date_open = LocalState::new_in(app.models_mut(), false);
+        let start_date_month =
+            LocalState::new_in(app.models_mut(), CalendarMonth::from_date(today));
+        let start_date = LocalState::new_in(app.models_mut(), None::<Date>);
 
         let mut form_state = FormState::default();
         form_state.validate_mode = FormValidateMode::OnSubmit;
-        let form_state = LocalState::from_model(app.models_mut().insert(form_state));
+        let form_state = LocalState::new_in(app.models_mut(), form_state);
 
-        let status = LocalState::from_model(app.models_mut().insert(Arc::from("Idle")));
+        let status = LocalState::new_in(app.models_mut(), Arc::from("Idle"));
 
         let mut registry = FormRegistry::new();
-        registry.register_field("name", name.clone_model(), String::new(), |v| {
+        registry.register_field("name", &name, String::new(), |v| {
             required_trimmed(v, "Name is required")
         });
-        registry.register_field("email", email.clone_model(), String::new(), |v| {
+        registry.register_field("email", &email, String::new(), |v| {
             first_error([
                 required_trimmed(v, "Email is required"),
                 (!v.contains('@')).then(|| Arc::from("Email must contain '@'")),
             ])
         });
-        registry.register_field("role", role.clone_model(), None, |v| {
+        registry.register_field("role", &role, None, |v| {
             v.is_none().then(|| Arc::from("Role is required"))
         });
-        registry.register_field("start_date", start_date.clone_model(), None, |v| {
+        registry.register_field("start_date", &start_date, None, |v| {
             v.is_none().then(|| Arc::from("Start date is required"))
         });
         registry.register_into_form_state(app, form_state.model());
@@ -84,6 +91,8 @@ impl FormDemoDriver {
             email,
             role,
             role_open,
+            start_date_open,
+            start_date_month,
             start_date,
             status,
         }
@@ -167,6 +176,11 @@ fn handle_command(
                 .update_in(app.models_mut(), |v: &mut String| v.clear());
             let _ = state.role.set_in(app.models_mut(), None);
             let _ = state.role_open.set_in(app.models_mut(), false);
+            let _ = state.start_date_open.set_in(app.models_mut(), false);
+            let _ = state.start_date_month.set_in(
+                app.models_mut(),
+                CalendarMonth::from_date(OffsetDateTime::now_utc().date()),
+            );
             let _ = state.start_date.set_in(app.models_mut(), None);
             let _ = state
                 .form_state
@@ -238,6 +252,8 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
     let email = state.email.clone();
     let role = state.role.clone();
     let role_open = state.role_open.clone();
+    let start_date_open = state.start_date_open.clone();
+    let start_date_month = state.start_date_month.clone();
     let start_date = state.start_date.clone();
     let form_state = state.form_state.clone();
     let status = state.status.clone();
@@ -289,23 +305,23 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
             let form = {
                 shadcn::Form::new(vec![
                     shadcn::FormField::new(
-                        form_state.clone_model(),
+                        &form_state,
                         "name",
-                        vec![shadcn::Input::new(name.clone_model()).into_element(cx)],
+                        vec![shadcn::Input::new(&name).into_element(cx)],
                     )
                     .label("Name")
                     .required(true)
                     .into_element(cx),
                     shadcn::FormField::new(
-                        form_state.clone_model(),
+                        &form_state,
                         "email",
-                        vec![shadcn::Input::new(email.clone_model()).into_element(cx)],
+                        vec![shadcn::Input::new(&email).into_element(cx)],
                     )
                     .label("Email")
                     .required(true)
                     .into_element(cx),
                     shadcn::FormField::new(
-                        form_state.clone_model(),
+                        &form_state,
                         "role",
                         vec![
                             shadcn::Select::new(&role, &role_open)
@@ -323,15 +339,13 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                     .required(true)
                     .into_element(cx),
                     shadcn::FormField::new(
-                        form_state.clone_model(),
+                        &form_state,
                         "start_date",
                         vec![
-                            shadcn::DatePicker::new_controllable(
-                                cx,
-                                Some(start_date.clone_model()),
-                                None,
-                                None,
-                                false,
+                            shadcn::DatePicker::new(
+                                &start_date_open,
+                                &start_date_month,
+                                &start_date,
                             )
                             .placeholder("Pick a start date")
                             .refine_layout(LayoutRefinement::default().w_full())

@@ -616,6 +616,20 @@ fn render(
                                                 ..Default::default()
                                             },
                                             move |cx| {
+                                                // Keep stress/perf diagnostics on table-owned layout wrappers.
+                                                let table_debug_ids =
+                                                    fret_ui_kit::declarative::table::TableDebugIds {
+                                                        header_row_test_id: Some(Arc::<str>::from(
+                                                            "table-stress-header-row",
+                                                        )),
+                                                        header_cell_test_id_prefix: Some(
+                                                            Arc::<str>::from("table-stress-header-"),
+                                                        ),
+                                                        row_test_id_prefix: Some(Arc::<str>::from(
+                                                            "table-stress-row-",
+                                                        )),
+                                                    };
+
                                                 vec![fret_ui_kit::declarative::table::table_virtualized(
                                                     cx,
                                                     &rows,
@@ -667,6 +681,7 @@ fn render(
                                                         vec![cx.text(text)]
                                                     },
                                                     None,
+                                                    table_debug_ids,
                                                 )]
                                             },
                                         ),

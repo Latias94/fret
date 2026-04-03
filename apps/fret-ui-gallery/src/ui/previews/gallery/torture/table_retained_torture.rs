@@ -312,6 +312,15 @@ pub(in crate::ui) fn preview_table_retained_torture(
                 },
             );
 
+            // Keep retained table diagnostics on table-owned layout wrappers.
+            let table_debug_ids = fret_ui_kit::declarative::table::TableDebugIds {
+                header_row_test_id: Some(Arc::<str>::from("ui-gallery-table-retained-header-row")),
+                header_cell_test_id_prefix: Some(Arc::<str>::from(
+                    "ui-gallery-table-retained-header-",
+                )),
+                row_test_id_prefix: Some(Arc::<str>::from("ui-gallery-table-retained-row-")),
+            };
+
             let table = fret_ui_kit::declarative::table::table_virtualized_retained_v0(
                 cx,
                 data.clone(),
@@ -327,8 +336,7 @@ pub(in crate::ui) fn preview_table_retained_torture(
                 header_label,
                 None,
                 cell_at,
-                Some(Arc::<str>::from("ui-gallery-table-retained-header-")),
-                Some(Arc::<str>::from("ui-gallery-table-retained-row-")),
+                table_debug_ids,
             );
 
             vec![

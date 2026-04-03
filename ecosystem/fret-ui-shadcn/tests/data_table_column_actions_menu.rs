@@ -53,6 +53,11 @@ fn render_frame(
         move |cx| {
             let table = shadcn::DataTable::new()
                 .column_actions_menu(true)
+                .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
+                    header_cell_test_id_prefix: Some(Arc::<str>::from("data-table-header/")),
+                    row_test_id_prefix: Some(Arc::<str>::from("data-table-row/")),
+                    ..Default::default()
+                })
                 .into_element_retained(
                     cx,
                     data.clone(),
@@ -66,8 +71,6 @@ fn render_frame(
                         "email" => cx.text(row.email),
                         _ => cx.text("?"),
                     },
-                    None,
-                    None,
                 );
             vec![table]
         },

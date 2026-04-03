@@ -1916,6 +1916,9 @@ mod tests {
         assert!(hello.contains("widget-local `.action(...)` / `.listen(...)`"));
         assert!(!hello.contains("on_action_notify_models"));
         assert!(!hello.contains("use `on_activate*` only for local pressable glue"));
+        assert!(!hello.contains("AppUiRawModelExt"));
+        assert!(!hello.contains("cx.raw_model::<"));
+        assert!(!hello.contains("use_state"));
 
         let simple = simple_todo_template_readme_md("simple-todo-app", opts());
         assert!(simple.contains(
@@ -1936,6 +1939,9 @@ mod tests {
         assert!(!simple.contains("on_action_notify_locals"));
         assert!(!simple.contains("`cx.actions().payload::<A>()`"));
         assert!(!simple.contains("keep `on_activate*` for local widget glue only"));
+        assert!(!simple.contains("AppUiRawModelExt"));
+        assert!(!simple.contains("cx.raw_model::<"));
+        assert!(!simple.contains("use_state"));
 
         let simple_with_assets =
             simple_todo_template_readme_md("simple-todo-app", opts_with_ui_assets());
@@ -1965,6 +1971,9 @@ mod tests {
         assert!(!todo.contains("on_action_notify_locals"));
         assert!(!todo.contains("on_action_notify_transient"));
         assert!(!todo.contains("`cx.actions().payload::<A>()`"));
+        assert!(!todo.contains("AppUiRawModelExt"));
+        assert!(!todo.contains("cx.raw_model::<"));
+        assert!(!todo.contains("use_state"));
 
         let todo_with_assets = todo_template_readme_md("todo-app", opts_with_ui_assets());
         assert!(todo_with_assets.contains("`generated_assets::mount(builder)?`"));

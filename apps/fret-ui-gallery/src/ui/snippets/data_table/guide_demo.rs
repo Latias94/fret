@@ -491,6 +491,13 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .header_height(Px(40.0))
             .column_actions_menu(false)
             .refine_layout(LayoutRefinement::default().w_full().h_px(Px(240.0)))
+            .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
+                header_cell_test_id_prefix: Some(Arc::<str>::from(
+                    "ui-gallery-data-table-listlike-header-",
+                )),
+                row_test_id_prefix: Some(Arc::<str>::from("ui-gallery-data-table-listlike-row-")),
+                ..Default::default()
+            })
             .into_element_retained(
                 cx,
                 assets.data.clone(),
@@ -506,8 +513,6 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
                     _ => cx.text("?"),
                 },
-                Some(Arc::<str>::from("ui-gallery-data-table-listlike-header-")),
-                Some(Arc::<str>::from("ui-gallery-data-table-listlike-row-")),
             )
             .test_id("ui-gallery-data-table-listlike-root");
 

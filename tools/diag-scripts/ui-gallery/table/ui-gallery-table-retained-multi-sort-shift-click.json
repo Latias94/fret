@@ -36,6 +36,24 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-header-row" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "padding_px": 2.0,
+        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-header-row" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-table-retained-header-status" }
       },
       "timeout_frames": 240

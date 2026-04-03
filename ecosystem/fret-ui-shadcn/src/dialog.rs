@@ -1521,9 +1521,9 @@ impl DialogClose {
     ///
     /// Prefer this constructor when you want fully explicit data flow or when the close control is
     /// authored outside the dialog content subtree.
-    pub fn new(open: Model<bool>) -> Self {
+    pub fn new(open: impl IntoBoolModel) -> Self {
         Self {
-            open: Some(open),
+            open: Some(open.into_bool_model()),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }

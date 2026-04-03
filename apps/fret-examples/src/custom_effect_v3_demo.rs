@@ -1,8 +1,12 @@
-//! Custom effect demo (CustomV3).
+//! Advanced/reference demo: Custom effect authoring (CustomV3).
 //!
-//! Native (desktop) authoring demo for the CustomV3 "lens" recipe. This intentionally uses the
-//! action-first + view runtime path so it participates in the UI diagnostics + scripted testing
-//! pipeline (`fretboard diag run`).
+//! Why advanced:
+//! - this surface keeps explicit effect/runtime ownership on purpose,
+//! - it validates renderer/effect ABI and diagnostics pipeline behavior instead of teaching the
+//!   default LocalState-first app lane.
+//!
+//! Not a first-contact teaching surface: treat it as reference/product-validation material for the
+//! bounded custom-effect contract.
 
 #![cfg(not(target_arch = "wasm32"))]
 

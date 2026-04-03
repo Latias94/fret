@@ -7,6 +7,7 @@ use fret_launch::{
 use fret_runtime::{FontCatalogCache, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui::declarative;
+use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -215,12 +216,13 @@ impl CjkConformanceDriver {
     }
 }
 
-fn cjk_conformance_page<C>(
-    cx: &mut fret_ui::ElementContext<'_, App>,
+fn cjk_conformance_page<'a, Cx, C>(
+    cx: &mut Cx,
     theme: fret_ui::ThemeSnapshot,
     card: C,
-) -> impl fret_ui_kit::IntoUiElement<App> + use<C>
+) -> impl fret_ui_kit::IntoUiElement<App> + use<Cx, C>
 where
+    Cx: fret_ui::ElementContextAccess<'a, App>,
     C: fret_ui_kit::IntoUiElement<App>,
 {
     ui::container(move |cx| {
@@ -237,7 +239,7 @@ where
     .p(Space::N6)
     .w_full()
     .h_full()
-    .into_element(cx)
+    .into_element_in(cx)
 }
 
 fn create_window_state(

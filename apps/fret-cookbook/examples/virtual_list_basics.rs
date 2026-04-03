@@ -269,14 +269,14 @@ impl View for VirtualListBasicsView {
 
         cx.actions().models::<act::ScrollToTarget>({
             let items = self.items.clone();
-            let reversed = reversed_state.clone_model();
+            let reversed = reversed_state.clone();
             let scroll = self.scroll.clone();
             move |models| {
                 let items = models
                     .read(&items, Arc::clone)
                     .ok()
                     .unwrap_or_else(|| Arc::new(Vec::new()));
-                let reversed = models.read(&reversed, |v| *v).ok().unwrap_or(false);
+                let reversed = reversed.value_in_or(models, false);
 
                 let pos = items.iter().position(|it| it.id == TARGET_ID).unwrap_or(0);
                 let index = if reversed {
@@ -291,10 +291,10 @@ impl View for VirtualListBasicsView {
         });
 
         cx.actions().models::<act::ScrollJump>({
-            let jump = jump_state.clone_model();
+            let jump = jump_state.clone();
             let scroll = self.scroll.clone();
             move |models| {
-                let raw = models.read(&jump, Clone::clone).ok().unwrap_or_default();
+                let raw = jump.value_in_or_default(models);
                 let index = raw.trim().parse::<usize>().ok().unwrap_or(0);
                 scroll.scroll_to_item(index, ScrollStrategy::Start);
                 true

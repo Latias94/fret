@@ -11,16 +11,17 @@ use fret::style::{ColorRef, Space, Theme};
 ///
 /// The root node is stamped with a stable `test_id` so scripts can wait for it deterministically.
 #[track_caller]
-pub fn centered_page<B>(
-    cx: &mut UiCx<'_>,
+pub fn centered_page<'a, Cx, B>(
+    cx: &mut Cx,
     root_test_id: &'static str,
     background_token: &'static str,
     surface: B,
 ) -> Ui
 where
+    Cx: fret::app::ElementContextAccess<'a, App>,
     B: UiChild,
 {
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.elements().theme().snapshot();
 
     ui::container(move |cx| {
         ui::single(
@@ -36,14 +37,19 @@ where
     .p(Space::N6)
     .size_full()
     .test_id(root_test_id)
-    .into_element(cx)
+    .into_element_in(cx)
     .into()
 }
 
 /// Uses the theme `background` token for the page background.
 #[track_caller]
-pub fn centered_page_background<B>(cx: &mut UiCx<'_>, root_test_id: &'static str, surface: B) -> Ui
+pub fn centered_page_background<'a, Cx, B>(
+    cx: &mut Cx,
+    root_test_id: &'static str,
+    surface: B,
+) -> Ui
 where
+    Cx: fret::app::ElementContextAccess<'a, App>,
     B: UiChild,
 {
     centered_page(cx, root_test_id, "background", surface)
@@ -51,8 +57,9 @@ where
 
 /// Uses the theme `muted` token for the page background (useful for smaller, dialog-like examples).
 #[track_caller]
-pub fn centered_page_muted<B>(cx: &mut UiCx<'_>, root_test_id: &'static str, surface: B) -> Ui
+pub fn centered_page_muted<'a, Cx, B>(cx: &mut Cx, root_test_id: &'static str, surface: B) -> Ui
 where
+    Cx: fret::app::ElementContextAccess<'a, App>,
     B: UiChild,
 {
     centered_page(cx, root_test_id, "muted", surface)

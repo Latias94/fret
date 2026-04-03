@@ -274,6 +274,16 @@ pub(in crate::ui) fn preview_data_table_torture(
                     .measure_rows(variable_height)
                     .column_actions_menu(true)
                     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
+                    .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
+                        header_row_test_id: Some(Arc::<str>::from(
+                            "ui-gallery-data-table-header-row",
+                        )),
+                        header_cell_test_id_prefix: Some(Arc::<str>::from(
+                            "ui-gallery-data-table-header-",
+                        )),
+                        row_test_id_prefix: Some(Arc::<str>::from("ui-gallery-data-table-row-")),
+                        ..Default::default()
+                    })
                     .into_element_retained(
                         cx,
                         data.clone(),
@@ -305,8 +315,6 @@ pub(in crate::ui) fn preview_data_table_torture(
                             "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
                             _ => cx.text("?"),
                         },
-                        Some(Arc::<str>::from("ui-gallery-data-table-header-")),
-                        Some(Arc::<str>::from("ui-gallery-data-table-row-")),
                     )
             } else {
                 let mut t = shadcn::DataTable::new();
@@ -318,6 +326,16 @@ pub(in crate::ui) fn preview_data_table_torture(
                     .measure_rows(variable_height)
                     .column_actions_menu(true)
                     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
+                    .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
+                        header_row_test_id: Some(Arc::<str>::from(
+                            "ui-gallery-data-table-header-row",
+                        )),
+                        header_cell_test_id_prefix: Some(Arc::<str>::from(
+                            "ui-gallery-data-table-header-",
+                        )),
+                        row_test_id_prefix: Some(Arc::<str>::from("ui-gallery-data-table-row-")),
+                        ..Default::default()
+                    })
                     .into_element(
                         cx,
                         data.clone(),

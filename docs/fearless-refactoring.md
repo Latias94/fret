@@ -80,7 +80,7 @@ actions:
 - Define typed unit actions with stable IDs via `fret::actions!([..])`.
 - Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
 - Handle actions via `cx.actions().locals_with((...)).on::<A>(...)`, single-local `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()`, keyed-row `.action_payload(...)` plus `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default view-owned row-write path, `cx.actions().models::<A>(...)` / `cx.actions().payload_models::<A>(...)` (shared graphs, with or without payload actions), `cx.actions().transient::<A>(...)`, plus widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` for activation-only surfaces after explicitly importing `use fret::app::AppActivateExt as _;`; keep raw `AppUi::on_action_notify*`, raw `AppUi::on_payload_action_notify*`, and low-level `on_activate*` helpers for cookbook/reference host-side cases.
-- If advanced code intentionally wants the raw model-backed hook, import `use fret::advanced::AppUiRawStateExt;` and call `cx.use_state::<T>()` explicitly instead of treating it as part of the default `AppUi` surface.
+- If advanced code intentionally wants the raw model-backed hook, import `use fret::advanced::AppUiRawModelExt;` and call `cx.raw_model::<T>()` explicitly instead of treating it as part of the default `AppUi` surface.
 
 Authoring and historical note:
 
@@ -94,7 +94,8 @@ Authoring and historical note:
 When rendering collections:
 
 - Use `cx.keyed(key, |cx| ...)` for list rows, menus, tabs, virtual list items.
-- Use `cx.scope(|cx| ...)` at component boundaries where stable element-local state matters.
+- Use `cx.elements().scope(|cx| ...)` at component boundaries where stable element-local state
+  matters on the app lane.
 
 This makes later refactors (virtualization, reordering, splitting components) safer.
 

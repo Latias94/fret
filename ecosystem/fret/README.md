@@ -69,6 +69,8 @@ Keep the default authoring model intentionally small:
 - use `cx.actions().transient::<A>(...)` when the real effect must happen with `&mut App` in
   `render()`,
 - drop to `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs,
+- if you intentionally need the raw model handle itself, treat that as the advanced lane via
+  `use fret::advanced::AppUiRawModelExt;` + `cx.raw_model::<T>()`,
 - keep widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` for activation-only
   surfaces that do not already expose a narrower widget-owned app-facing helper.
 

@@ -23,18 +23,28 @@ pub struct SonnerDemoWindowState {
     ui: UiTree<App>,
     app_ui_root: AppUiRenderRootState,
     root: Option<fret_core::NodeId>,
-    last_action: LocalState<Arc<str>>,
+    locals: Option<SonnerDemoLocals>,
     promise: Option<shadcn::ToastPromise>,
+}
+
+#[derive(Clone)]
+struct SonnerDemoLocals {
+    last_action: LocalState<Arc<str>>,
+}
+
+impl SonnerDemoLocals {
+    fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {
+        Self {
+            last_action: cx.state().local_init(|| Arc::<str>::from("<none>")),
+        }
+    }
 }
 
 #[derive(Default)]
 pub struct SonnerDemoDriver;
 
 impl SonnerDemoDriver {
-    fn build_ui(app: &mut App, window: AppWindowId) -> SonnerDemoWindowState {
-        let last_action =
-            LocalState::from_model(app.models_mut().insert(Arc::<str>::from("<none>")));
-
+    fn build_ui(_app: &mut App, window: AppWindowId) -> SonnerDemoWindowState {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
@@ -42,7 +52,7 @@ impl SonnerDemoDriver {
             ui,
             app_ui_root: AppUiRenderRootState::default(),
             root: None,
-            last_action,
+            locals: None,
             promise: None,
         }
     }
@@ -56,7 +66,7 @@ impl SonnerDemoDriver {
     ) {
         OverlayController::begin_frame(app, window);
 
-        let last_action = state.last_action.clone();
+        let locals = &mut state.locals;
         let promise_active = state.promise.is_some();
 
         let root = render_root_with_app_ui(
@@ -64,6 +74,11 @@ impl SonnerDemoDriver {
             "sonner-demo",
             &mut state.app_ui_root,
             |cx| {
+                if locals.is_none() {
+                    *locals = Some(SonnerDemoLocals::new(cx));
+                }
+                let SonnerDemoLocals { last_action } =
+                    locals.as_ref().expect("sonner locals should exist").clone();
                 let last_action_value = last_action.layout_value(cx);
 
                 vec![
@@ -364,9 +379,11 @@ fn handle_command(
                 sonner.toast_promise(&mut host, window, "Working…")
             };
             state.promise = Some(promise);
-            let _ = state
-                .last_action
-                .set_in(app.models_mut(), Arc::<str>::from("promise.start"));
+            if let Some(locals) = state.locals.as_ref() {
+                let _ = locals
+                    .last_action
+                    .set_in(app.models_mut(), Arc::<str>::from("promise.start"));
+            }
         }
         "sonner.promise.success" => {
             if let Some(promise) = state.promise.take() {
@@ -378,9 +395,11 @@ fn handle_command(
                         shadcn::ToastMessageOptions::new().description("Promise resolved."),
                     );
                 }
-                let _ = state
-                    .last_action
-                    .set_in(app.models_mut(), Arc::<str>::from("promise.success"));
+                if let Some(locals) = state.locals.as_ref() {
+                    let _ = locals
+                        .last_action
+                        .set_in(app.models_mut(), Arc::<str>::from("promise.success"));
+                }
             } else {
                 let mut host = UiActionHostAdapter { app };
                 sonner.toast_info_message(
@@ -401,9 +420,11 @@ fn handle_command(
                         shadcn::ToastMessageOptions::new().description("Promise rejected."),
                     );
                 }
-                let _ = state
-                    .last_action
-                    .set_in(app.models_mut(), Arc::<str>::from("promise.error"));
+                if let Some(locals) = state.locals.as_ref() {
+                    let _ = locals
+                        .last_action
+                        .set_in(app.models_mut(), Arc::<str>::from("promise.error"));
+                }
             } else {
                 let mut host = UiActionHostAdapter { app };
                 sonner.toast_info_message(
@@ -415,14 +436,18 @@ fn handle_command(
             }
         }
         "sonner.toast.action" => {
-            let _ = state
-                .last_action
-                .set_in(app.models_mut(), Arc::<str>::from("toast.action"));
+            if let Some(locals) = state.locals.as_ref() {
+                let _ = locals
+                    .last_action
+                    .set_in(app.models_mut(), Arc::<str>::from("toast.action"));
+            }
         }
         "sonner.toast.cancel" => {
-            let _ = state
-                .last_action
-                .set_in(app.models_mut(), Arc::<str>::from("toast.cancel"));
+            if let Some(locals) = state.locals.as_ref() {
+                let _ = locals
+                    .last_action
+                    .set_in(app.models_mut(), Arc::<str>::from("toast.cancel"));
+            }
         }
         _ => {}
     }

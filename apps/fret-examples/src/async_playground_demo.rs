@@ -125,8 +125,8 @@ struct SelectLocals {
 impl SelectLocals {
     fn new(app: &mut KernelApp, initial: Option<&'static str>) -> Self {
         Self {
-            value: LocalState::from_model(app.models_mut().insert(initial.map(Arc::from))),
-            open: LocalState::from_model(app.models_mut().insert(false)),
+            value: LocalState::new_in(app.models_mut(), initial.map(Arc::from)),
+            open: LocalState::new_in(app.models_mut(), false),
         }
     }
 }
@@ -142,11 +142,11 @@ struct QueryConfigLocals {
 impl QueryConfigLocals {
     fn new(app: &mut KernelApp) -> Self {
         Self {
-            stale_time_s: LocalState::from_model(app.models_mut().insert("2".to_string())),
-            cache_time_s: LocalState::from_model(app.models_mut().insert("30".to_string())),
-            keep_prev: LocalState::from_model(app.models_mut().insert(true)),
+            stale_time_s: LocalState::new_in(app.models_mut(), "2".to_string()),
+            cache_time_s: LocalState::new_in(app.models_mut(), "30".to_string()),
+            keep_prev: LocalState::new_in(app.models_mut(), true),
             cancel_mode: SelectLocals::new(app, Some("cancel")),
-            fail_mode: LocalState::from_model(app.models_mut().insert(false)),
+            fail_mode: LocalState::new_in(app.models_mut(), false),
         }
     }
 }

@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use fret::advanced::prelude::LocalState;
-use fret_app::{App, CommandId, Effect, Model, WindowRequest};
+use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
@@ -11,7 +11,7 @@ use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
+use fret_ui::{UiTree, VirtualListScrollHandle};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::headless::table::{
@@ -40,7 +40,7 @@ struct DemoRow {
 
 pub struct TableDemoWindowState {
     ui: UiTree<App>,
-    table_state: Model<TableState>,
+    table_state: LocalState<TableState>,
     rows: Arc<[DemoRow]>,
     scroll: VirtualListScrollHandle,
     view_options_open: LocalState<bool>,
@@ -98,7 +98,7 @@ impl TableDemoDriver {
             left: vec!["id".into()],
             right: vec!["score".into()],
         };
-        let table_state = app.models_mut().insert(table_state);
+        let table_state = LocalState::new_in(app.models_mut(), table_state);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -108,15 +108,16 @@ impl TableDemoDriver {
             table_state,
             rows,
             scroll: VirtualListScrollHandle::new(),
-            view_options_open: LocalState::from_model(app.models_mut().insert(false)),
-            enable_grouping: LocalState::from_model(app.models_mut().insert(true)),
-            grouped_column_mode: LocalState::from_model(
-                app.models_mut().insert(Some(Arc::from("reorder"))),
+            view_options_open: LocalState::new_in(app.models_mut(), false),
+            enable_grouping: LocalState::new_in(app.models_mut(), true),
+            grouped_column_mode: LocalState::new_in(
+                app.models_mut(),
+                Some(Arc::<str>::from("reorder")),
             ),
-            header_menu_id_open: LocalState::from_model(app.models_mut().insert(false)),
-            header_menu_name_open: LocalState::from_model(app.models_mut().insert(false)),
-            header_menu_role_open: LocalState::from_model(app.models_mut().insert(false)),
-            header_menu_score_open: LocalState::from_model(app.models_mut().insert(false)),
+            header_menu_id_open: LocalState::new_in(app.models_mut(), false),
+            header_menu_name_open: LocalState::new_in(app.models_mut(), false),
+            header_menu_role_open: LocalState::new_in(app.models_mut(), false),
+            header_menu_score_open: LocalState::new_in(app.models_mut(), false),
             started_at,
             frame: 0,
             profile_frames_left,
@@ -190,49 +191,51 @@ fn handle_command(
             return;
         }
         CMD_GROUP_CLEAR => {
-            let _ = app.models_mut().update(&state.table_state, clear_grouping);
+            state
+                .table_state
+                .update_in(app.models_mut(), clear_grouping);
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_SET_ROLE => {
-            let _ = app
-                .models_mut()
-                .update(&state.table_state, |st| set_grouping(st, "role"));
+            state
+                .table_state
+                .update_in(app.models_mut(), |st| set_grouping(st, "role"));
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_SET_NAME => {
-            let _ = app
-                .models_mut()
-                .update(&state.table_state, |st| set_grouping(st, "name"));
+            state
+                .table_state
+                .update_in(app.models_mut(), |st| set_grouping(st, "name"));
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_TOGGLE_ID => {
-            let _ = app
-                .models_mut()
-                .update(&state.table_state, |st| toggle_grouping(st, "id"));
+            state
+                .table_state
+                .update_in(app.models_mut(), |st| toggle_grouping(st, "id"));
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_TOGGLE_NAME => {
-            let _ = app
-                .models_mut()
-                .update(&state.table_state, |st| toggle_grouping(st, "name"));
+            state
+                .table_state
+                .update_in(app.models_mut(), |st| toggle_grouping(st, "name"));
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_TOGGLE_ROLE => {
-            let _ = app
-                .models_mut()
-                .update(&state.table_state, |st| toggle_grouping(st, "role"));
+            state
+                .table_state
+                .update_in(app.models_mut(), |st| toggle_grouping(st, "role"));
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_TOGGLE_SCORE => {
-            let _ = app
-                .models_mut()
-                .update(&state.table_state, |st| toggle_grouping(st, "score"));
+            state
+                .table_state
+                .update_in(app.models_mut(), |st| toggle_grouping(st, "score"));
             app.request_redraw(window);
             return;
         }
@@ -312,83 +315,75 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
     let header_menu_name_open = state.header_menu_name_open.clone();
     let header_menu_role_open = state.header_menu_role_open.clone();
     let header_menu_score_open = state.header_menu_score_open.clone();
-    let root =
-            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-                .render_root("table-demo", move |cx| {
-                    cx.observe_model(&table_state, Invalidation::Layout);
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+        .render_root("table-demo", move |cx| {
+            let (selected, sorting) = table_state.layout_read_ref_in(cx, |st| {
+                let selected = st.row_selection.len();
+                let sorting = st
+                    .sorting
+                    .first()
+                    .map(|s| {
+                        format!(
+                            "{}:{}",
+                            s.column.as_ref(),
+                            if s.desc { "desc" } else { "asc" }
+                        )
+                    })
+                    .unwrap_or_else(|| "<none>".to_string());
+                (selected, sorting)
+            });
 
-                    let (selected, sorting) = cx
-                        .app
-                        .models()
-                        .read(&table_state, |st| {
-                            let selected = st.row_selection.len();
-                            let sorting = st
-                                .sorting
-                                .first()
-                                .map(|s| {
-                                    format!(
-                                        "{}:{}",
-                                        s.column.as_ref(),
-                                        if s.desc { "desc" } else { "asc" }
-                                    )
-                                })
-                                .unwrap_or_else(|| "<none>".to_string());
-                            (selected, sorting)
-                        })
-                        .unwrap_or((0, "<none>".to_string()));
+            let theme = cx.theme_snapshot();
 
-                    let theme = cx.theme_snapshot();
+            let mut root_layout = LayoutStyle::default();
+            root_layout.size.width = Length::Fill;
+            root_layout.size.height = Length::Fill;
 
-                    let mut root_layout = LayoutStyle::default();
-                    root_layout.size.width = Length::Fill;
-                    root_layout.size.height = Length::Fill;
+            let mut table_slot = LayoutStyle::default();
+            table_slot.size.width = Length::Fill;
+            table_slot.size.height = Length::Fill;
+            table_slot.flex.grow = 1.0;
+            table_slot.flex.basis = Length::Px(Px(0.0));
+            table_slot.overflow = Overflow::Clip;
+            let helper = create_column_helper::<DemoRow>();
+            let columns = vec![
+                helper
+                    .clone()
+                    .accessor("id", |r| r.id)
+                    .facet_key_by(|r| r.id as u64),
+                helper
+                    .clone()
+                    .accessor("name", |r| r.name.clone())
+                    .facet_str_by(|r| r.name.as_ref()),
+                helper
+                    .clone()
+                    .accessor("role", |r| r.role.clone())
+                    .facet_str_by(|r| r.role.as_ref()),
+                helper
+                    .accessor("score", |r| r.score)
+                    .facet_key_by(|r| r.score as u64),
+            ];
 
-                    let mut table_slot = LayoutStyle::default();
-                    table_slot.size.width = Length::Fill;
-                    table_slot.size.height = Length::Fill;
-                    table_slot.flex.grow = 1.0;
-                    table_slot.flex.basis = Length::Px(Px(0.0));
-                    table_slot.overflow = Overflow::Clip;
+            let rows = rows.clone();
+            let scroll = scroll.clone();
+            let table_state = table_state.clone();
+            let enable_grouping = enable_grouping_state.clone();
+            let grouped_column_mode = grouped_column_mode_state.clone();
+            let view_options_open = view_options_open.clone();
+            let header_menu_id_open = header_menu_id_open.clone();
+            let header_menu_name_open = header_menu_name_open.clone();
+            let header_menu_role_open = header_menu_role_open.clone();
+            let header_menu_score_open = header_menu_score_open.clone();
 
-                    let helper = create_column_helper::<DemoRow>();
-                    let columns = vec![
-                        helper
-                            .clone()
-                            .accessor("id", |r| r.id)
-                            .facet_key_by(|r| r.id as u64),
-                        helper
-                            .clone()
-                            .accessor("name", |r| r.name.clone())
-                            .facet_str_by(|r| r.name.as_ref()),
-                        helper
-                            .clone()
-                            .accessor("role", |r| r.role.clone())
-                            .facet_str_by(|r| r.role.as_ref()),
-                        helper
-                            .accessor("score", |r| r.score)
-                            .facet_key_by(|r| r.score as u64),
-                    ];
+            let enable_grouping = enable_grouping.layout_value_in(cx);
+            let grouped_column_mode = grouped_column_mode.layout_value_in(cx);
+            let grouped_column_mode = match grouped_column_mode.as_deref() {
+                Some("remove") => GroupedColumnMode::Remove,
+                Some("none") => GroupedColumnMode::None,
+                _ => GroupedColumnMode::Reorder,
+            };
 
-                    let rows = rows.clone();
-                    let scroll = scroll.clone();
-                    let table_state = table_state.clone();
-                    let view_options_open = view_options_open.clone_model();
-                    let enable_grouping = enable_grouping_state.clone();
-                    let grouped_column_mode = grouped_column_mode_state.clone();
-                    let header_menu_id_open = header_menu_id_open.clone_model();
-                    let header_menu_name_open = header_menu_name_open.clone_model();
-                    let header_menu_role_open = header_menu_role_open.clone_model();
-                    let header_menu_score_open = header_menu_score_open.clone_model();
-
-                    let enable_grouping = enable_grouping.layout_value_in(cx);
-                    let grouped_column_mode = grouped_column_mode.layout_value_in(cx);
-                    let grouped_column_mode = match grouped_column_mode.as_deref() {
-                        Some("remove") => GroupedColumnMode::Remove,
-                        Some("none") => GroupedColumnMode::None,
-                        _ => GroupedColumnMode::Reorder,
-                    };
-
-                    vec![cx.container(
+            vec![cx.container(
                         ContainerProps {
                             layout: root_layout,
                             background: Some(theme.color_token("background")),
@@ -434,10 +429,8 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                         move |cx| {
                                                 let open = view_options_open.clone();
                                                 let open_for_trigger = open.clone();
-                                                let enable_grouping =
-                                                    enable_grouping_state.clone_model();
-                                                let grouped_column_mode =
-                                                    grouped_column_mode_state.clone_model();
+                                                let enable_grouping = enable_grouping_state.clone();
+                                                let grouped_column_mode = grouped_column_mode_state.clone();
 
                                                 vec![shadcn::DropdownMenu::from_open(open).build(
                                                     cx,
@@ -452,7 +445,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                             ),
                                                             shadcn::DropdownMenuEntry::CheckboxItem(
                                                                 shadcn::DropdownMenuCheckboxItem::new(
-                                                                    enable_grouping,
+                                                                    &enable_grouping,
                                                                     "Enable grouping",
                                                                 ),
                                                             ),
@@ -483,7 +476,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                             ),
                                                             shadcn::DropdownMenuEntry::RadioGroup(
                                                                 shadcn::DropdownMenuRadioGroup::new(
-                                                                    grouped_column_mode,
+                                                                    &grouped_column_mode,
                                                                 )
                                                                 .item(
                                                                     shadcn::DropdownMenuRadioItemSpec::new(
@@ -521,11 +514,25 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                 ..Default::default()
                                             },
                                             move |cx| {
+                                                // Prefer table-owned diagnostics anchors over renderer-local markers.
+                                                let table_debug_ids =
+                                                    fret_ui_kit::declarative::table::TableDebugIds {
+                                                        header_row_test_id: Some(Arc::<str>::from(
+                                                            "table-demo-header-row",
+                                                        )),
+                                                        header_cell_test_id_prefix: Some(
+                                                            Arc::<str>::from("table-demo-header-"),
+                                                        ),
+                                                        row_test_id_prefix: Some(Arc::<str>::from(
+                                                            "table-demo-row-",
+                                                        )),
+                                                    };
+
                                                 vec![fret_ui_kit::declarative::table::table_virtualized(
                                                     cx,
                                                     &rows,
                                                     &columns,
-                                                    table_state.clone(),
+                                                    &table_state,
                                                     &scroll,
                                                     1,
                                                     &|row: &DemoRow, _i| RowKey(row.id as u64),
@@ -565,22 +572,18 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                         let id: Arc<str> = Arc::from(col.id.as_ref());
                                                         let groupable = col.facet_key_fn.is_some()
                                                             || col.facet_str_fn.is_some();
-                                                        let is_grouped = cx
-                                                            .app
-                                                            .models()
-                                                            .read(&table_state, |st| {
+                                                        let is_grouped = table_state.layout_read_ref_in(
+                                                            cx,
+                                                            |st| {
                                                                 st.grouping.iter().any(|c| {
                                                                     c.as_ref() == id.as_ref()
                                                                 })
-                                                            })
-                                                            .unwrap_or(false);
-                                                        let has_grouping = cx
-                                                            .app
-                                                            .models()
-                                                            .read(&table_state, |st| {
+                                                            },
+                                                        );
+                                                        let has_grouping =
+                                                            table_state.layout_read_ref_in(cx, |st| {
                                                                 !st.grouping.is_empty()
-                                                            })
-                                                            .unwrap_or(false);
+                                                            });
 
                                                         vec![shadcn::ContextMenu::from_open(open).into_element(
                                                             cx,
@@ -656,6 +659,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                         vec![cx.text(text)]
                                                     },
                                                     None,
+                                                    table_debug_ids,
                                                 )]
                                             },
                                         ),

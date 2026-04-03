@@ -8,7 +8,7 @@ use fret_core::{
 };
 use fret_ui::element::{AnyElement, ScrollAxis, SemanticsDecoration, TextInkOverflow};
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 use std::panic::Location;
 use std::sync::Arc;
 
@@ -58,6 +58,21 @@ pub trait IntoUiElement<H: UiHost>: Sized {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
 }
+
+/// Explicit landing helpers for surfaces that only expose [`ElementContextAccess`] rather than a
+/// raw `&mut ElementContext<...>`.
+pub trait IntoUiElementInExt<H: UiHost>: IntoUiElement<H> + Sized {
+    #[track_caller]
+    fn into_element_in<'a, Cx>(self, cx: &mut Cx) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+        H: 'a,
+    {
+        self.into_element(cx.elements())
+    }
+}
+
+impl<H: UiHost, T> IntoUiElementInExt<H> for T where T: IntoUiElement<H> {}
 
 impl<H: UiHost> IntoUiElement<H> for AnyElement {
     #[track_caller]

@@ -1,7 +1,12 @@
-//! Theme-like post-processing demo (CustomV1 + built-in effect steps).
+//! Advanced/reference demo: Theme-like post-processing (CustomV1 + built-in effect steps).
 //!
-//! This demo exists to validate the “high ceiling” story without expanding the portable core
-//! contract: authoring policy lives in app/ecosystem code, while the renderer stays bounded.
+//! Why advanced:
+//! - this surface keeps explicit renderer/theme bridge ownership on purpose,
+//! - it validates the high-ceiling post-process story without widening the default LocalState-first
+//!   app lane.
+//!
+//! Not a first-contact teaching surface: treat it as reference/product-validation material for the
+//! renderer/theme bridge contract.
 
 #![cfg(not(target_arch = "wasm32"))]
 

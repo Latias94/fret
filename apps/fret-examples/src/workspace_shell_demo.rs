@@ -75,6 +75,54 @@ fn fixed_width_fill_height(width: Px) -> LayoutStyle {
     layout
 }
 
+fn workspace_shell_command_button<'a, Cx>(
+    cx: &mut Cx,
+    test_id: &str,
+    label: &str,
+    cmd: CommandId,
+    height: Px,
+    padding: Px,
+) -> fret_ui::element::AnyElement
+where
+    Cx: fret::app::ElementContextAccess<'a, App>,
+{
+    let cx = cx.elements();
+    let test_id: Arc<str> = Arc::from(test_id);
+    let label: Arc<str> = Arc::from(label);
+    cx.pressable(
+        PressableProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Auto;
+                layout.size.height = Length::Px(height);
+                layout
+            },
+            enabled: true,
+            focusable: false,
+            a11y: PressableA11y {
+                role: Some(SemanticsRole::Button),
+                label: Some(label.clone()),
+                test_id: Some(test_id),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, _state| {
+            cx.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
+                host.dispatch_command(Some(acx.window), cmd.clone());
+            }));
+            vec![cx.container(
+                ContainerProps {
+                    layout: fill_layout(),
+                    padding: Edges::all(padding).into(),
+                    ..Default::default()
+                },
+                move |cx| vec![cx.text(label.clone())],
+            )]
+        },
+    )
+}
+
 fn build_file_tree_items() -> (Vec<TreeItem>, TreeState) {
     let root_count = 80u64;
     let folders_per_root = 6u64;
@@ -308,48 +356,6 @@ impl WorkspaceShellDemoDriver {
                                 ..Default::default()
                             },
                             move |cx| {
-                                let button = |cx: &mut fret_ui::ElementContext<'_, App>,
-                                              test_id: &str,
-                                              label: &str,
-                                              cmd: CommandId| {
-                                    let test_id: Arc<str> = Arc::from(test_id);
-                                    let label: Arc<str> = Arc::from(label);
-                                    cx.pressable(
-                                        PressableProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Auto;
-                                                layout.size.height = Length::Px(Px(28.0));
-                                                layout
-                                            },
-                                            enabled: true,
-                                            focusable: false,
-                                            a11y: PressableA11y {
-                                                role: Some(SemanticsRole::Button),
-                                                label: Some(label.clone()),
-                                                test_id: Some(test_id),
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
-                                        move |cx, _state| {
-                                            cx.pressable_add_on_activate(Arc::new(
-                                                move |host, acx, _reason| {
-                                                    host.dispatch_command(Some(acx.window), cmd.clone());
-                                                },
-                                            ));
-                                            vec![cx.container(
-                                                ContainerProps {
-                                                    layout: fill_layout(),
-                                                    padding: Edges::all(Px(8.0)).into(),
-                                                    ..Default::default()
-                                                },
-                                                move |cx| vec![cx.text(label.clone())],
-                                            )]
-                                        },
-                                    )
-                                };
-
                                 let mut center = FlexProps {
                                     layout: fill_layout(),
                                     direction: Axis::Vertical,
@@ -417,23 +423,29 @@ impl WorkspaceShellDemoDriver {
                                                         },
                                                         move |cx| {
                                                             vec![
-                                                                button(
+                                                                workspace_shell_command_button(
                                                                     cx,
                                                                     "workspace-shell-dirty-close-prompt.cancel",
                                                                     "Cancel",
                                                                     cancel_cmd.clone(),
+                                                                    Px(28.0),
+                                                                    Px(8.0),
                                                                 ),
-                                                                button(
+                                                                workspace_shell_command_button(
                                                                     cx,
                                                                     "workspace-shell-dirty-close-prompt.discard",
                                                                     "Discard && Close",
                                                                     discard_cmd.clone(),
+                                                                    Px(28.0),
+                                                                    Px(8.0),
                                                                 ),
-                                                                button(
+                                                                workspace_shell_command_button(
                                                                     cx,
                                                                     "workspace-shell-dirty-close-prompt.save_and_close",
                                                                     "Save && Close",
                                                                     save_cmd.clone(),
+                                                                    Px(28.0),
+                                                                    Px(8.0),
                                                                 ),
                                                             ]
                                                         },
@@ -632,54 +644,6 @@ impl WorkspaceShellDemoDriver {
                                                     && pane.id.as_ref() == "pane-a";
                                                 let mut children = vec![strip];
                                                 if debug_preview {
-                                                    let button = |cx: &mut fret_ui::ElementContext<'_, App>,
-                                                                  test_id: &str,
-                                                                  label: &str,
-                                                                  cmd: CommandId| {
-                                                        let test_id: Arc<str> = Arc::from(test_id);
-                                                        let label: Arc<str> = Arc::from(label);
-                                                        cx.pressable(
-                                                            PressableProps {
-                                                                layout: {
-                                                                    let mut layout =
-                                                                        LayoutStyle::default();
-                                                                    layout.size.width = Length::Auto;
-                                                                    layout.size.height =
-                                                                        Length::Px(Px(22.0));
-                                                                    layout
-                                                                },
-                                                                enabled: true,
-                                                                focusable: false,
-                                                                a11y: PressableA11y {
-                                                                    role: Some(SemanticsRole::Button),
-                                                                    label: Some(label.clone()),
-                                                                    test_id: Some(test_id),
-                                                                    ..Default::default()
-                                                                },
-                                                                ..Default::default()
-                                                            },
-                                                            move |cx, _state| {
-                                                                cx.pressable_add_on_activate(
-                                                                    Arc::new(move |host, acx, _reason| {
-                                                                        host.dispatch_command(
-                                                                            Some(acx.window),
-                                                                            cmd.clone(),
-                                                                        );
-                                                                    }),
-                                                                );
-                                                                vec![cx.container(
-                                                                    ContainerProps {
-                                                                        layout: fill_layout(),
-                                                                        padding: Edges::all(Px(6.0))
-                                                                            .into(),
-                                                                        ..Default::default()
-                                                                    },
-                                                                    move |cx| vec![cx.text(label.clone())],
-                                                                )]
-                                                            },
-                                                        )
-                                                    };
-
                                                     let open_a = CommandId::new(Arc::<str>::from(
                                                         "workspace.tab.open_preview.doc-a-preview-a",
                                                     ));
@@ -722,13 +686,13 @@ impl WorkspaceShellDemoDriver {
 	                                                        "workspace.tab.close.right",
                                                     ));
 
-	                                                    let bar_primary = cx.flex(
-	                                                        FlexProps {
-	                                                            layout: {
-	                                                                let mut layout =
-	                                                                    LayoutStyle::default();
-	                                                                layout.size.width = Length::Fill;
-	                                                                layout.size.height =
+                                                    let bar_primary = cx.flex(
+                                                        FlexProps {
+                                                            layout: {
+                                                                let mut layout =
+                                                                    LayoutStyle::default();
+                                                                layout.size.width = Length::Fill;
+                                                                layout.size.height =
                                                                     Length::Px(Px(28.0));
                                                                 layout.flex.shrink = 0.0;
                                                                 layout
@@ -740,118 +704,144 @@ impl WorkspaceShellDemoDriver {
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Center,
                                                             wrap: false,
-	                                                            ..Default::default()
-	                                                        },
-	                                                        move |cx| {
-	                                                            vec![
-	                                                                button(
-	                                                                    cx,
-	                                                                    "workspace-shell-pane-pane-a-debug-mark-dirty",
-	                                                                    "Mark dirty",
+                                                            ..Default::default()
+                                                        },
+                                                        move |cx| {
+                                                            vec![
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-mark-dirty",
+                                                                    "Mark dirty",
                                                                     set_dirty.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
                                                                 ),
-                                                                button(
+                                                                workspace_shell_command_button(
                                                                     cx,
                                                                     "workspace-shell-pane-pane-a-debug-clear-dirty",
                                                                     "Clear dirty",
                                                                     clear_dirty.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
                                                                 ),
-	                                                                button(
-	                                                                    cx,
-	                                                                    "workspace-shell-pane-pane-a-debug-close-active",
-	                                                                    "Close active (pane-a)",
-	                                                                    close_active.clone(),
-	                                                                ),
-	                                                            ]
-	                                                        },
-	                                                    );
-	                                                    let bar_secondary = cx.flex(
-	                                                        FlexProps {
-	                                                            layout: {
-	                                                                let mut layout =
-	                                                                    LayoutStyle::default();
-	                                                                layout.size.width = Length::Fill;
-	                                                                layout.size.height =
-	                                                                    Length::Px(Px(28.0));
-	                                                                layout.flex.shrink = 0.0;
-	                                                                layout
-	                                                            },
-	                                                            direction: Axis::Horizontal,
-	                                                            gap: fret_ui::element::SpacingLength::Px(
-	                                                                Px(8.0),
-	                                                            ),
-	                                                            justify: MainAlign::Start,
-	                                                            align: CrossAlign::Center,
-	                                                            wrap: false,
-	                                                            ..Default::default()
-	                                                        },
-		                                                        move |cx| {
-		                                                            vec![
-		                                                                button(
-		                                                                    cx,
-		                                                                    "workspace-shell-pane-pane-a-debug-toggle-tabstrip-two-row-pinned",
-		                                                                    "Toggle pinned row layout",
-		                                                                    toggle_two_row_pinned.clone(),
-		                                                                ),
-		                                                                button(
-		                                                                    cx,
-		                                                                    "workspace-shell-pane-pane-a-debug-pin-doc-a-0",
-		                                                                    "Pin doc-a-0",
-		                                                                    pin_doc_a_0.clone(),
-		                                                                ),
-		                                                                button(
-		                                                                    cx,
-		                                                                    "workspace-shell-pane-pane-a-debug-pin-doc-a-1",
-		                                                                    "Pin doc-a-1",
-		                                                                    pin_doc_a_1.clone(),
-		                                                                ),
-		                                                                button(
-		                                                                    cx,
-		                                                                    "workspace-shell-pane-pane-a-debug-open-preview-a",
-		                                                                    "Open preview A",
-		                                                                    open_a.clone(),
-		                                                                ),
-	                                                                button(
-	                                                                    cx,
-	                                                                    "workspace-shell-pane-pane-a-debug-open-preview-b",
-	                                                                    "Open preview B",
-	                                                                    open_b.clone(),
-	                                                                ),
-		                                                                button(
-		                                                                    cx,
-		                                                                    "workspace-shell-pane-pane-a-debug-commit-preview",
-		                                                                    "Commit preview",
-		                                                                    commit.clone(),
-		                                                                ),
-		                                                                button(
-		                                                                    cx,
-		                                                                    "workspace-shell-pane-pane-a-debug-toggle-pin",
-		                                                                    "Toggle pin",
-		                                                                    toggle_pin.clone(),
-		                                                                ),
-		                                                                button(
-		                                                                    cx,
-		                                                                    "workspace-shell-pane-pane-a-debug-close-others",
-		                                                                    "Close others",
-	                                                                    close_others.clone(),
-	                                                                ),
-	                                                                button(
-	                                                                    cx,
-	                                                                    "workspace-shell-pane-pane-a-debug-close-left",
-	                                                                    "Close left",
-	                                                                    close_left.clone(),
-	                                                                ),
-	                                                                button(
-	                                                                    cx,
-	                                                                    "workspace-shell-pane-pane-a-debug-close-right",
-	                                                                    "Close right",
-	                                                                    close_right.clone(),
-	                                                                ),
-	                                                            ]
-	                                                        },
-	                                                    );
-	                                                    children.push(bar_primary);
-	                                                    children.push(bar_secondary);
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-close-active",
+                                                                    "Close active (pane-a)",
+                                                                    close_active.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
+                                                            ]
+                                                        },
+                                                    );
+                                                    let bar_secondary = cx.flex(
+                                                        FlexProps {
+                                                            layout: {
+                                                                let mut layout =
+                                                                    LayoutStyle::default();
+                                                                layout.size.width = Length::Fill;
+                                                                layout.size.height =
+                                                                    Length::Px(Px(28.0));
+                                                                layout.flex.shrink = 0.0;
+                                                                layout
+                                                            },
+                                                            direction: Axis::Horizontal,
+                                                            gap: fret_ui::element::SpacingLength::Px(
+                                                                Px(8.0),
+                                                            ),
+                                                            justify: MainAlign::Start,
+                                                            align: CrossAlign::Center,
+                                                            wrap: false,
+                                                            ..Default::default()
+                                                        },
+                                                        move |cx| {
+                                                            vec![
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-toggle-tabstrip-two-row-pinned",
+                                                                    "Toggle pinned row layout",
+                                                                    toggle_two_row_pinned.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-pin-doc-a-0",
+                                                                    "Pin doc-a-0",
+                                                                    pin_doc_a_0.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-pin-doc-a-1",
+                                                                    "Pin doc-a-1",
+                                                                    pin_doc_a_1.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-open-preview-a",
+                                                                    "Open preview A",
+                                                                    open_a.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-open-preview-b",
+                                                                    "Open preview B",
+                                                                    open_b.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-commit-preview",
+                                                                    "Commit preview",
+                                                                    commit.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-toggle-pin",
+                                                                    "Toggle pin",
+                                                                    toggle_pin.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-close-others",
+                                                                    "Close others",
+                                                                    close_others.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-close-left",
+                                                                    "Close left",
+                                                                    close_left.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-close-right",
+                                                                    "Close right",
+                                                                    close_right.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
+                                                            ]
+                                                        },
+                                                    );
+                                                    children.push(bar_primary);
+                                                    children.push(bar_secondary);
 	                                                }
 	                                                children.push(content);
 	                                                children

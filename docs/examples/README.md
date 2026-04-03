@@ -27,6 +27,9 @@ single-local writes, keyed-row payload binding via `.action_payload(...)`, and
 `cx.actions().transient(...)` for App-bound effects, and widget-local `.action(...)` /
 `.action_payload(...)` / `.listen(...)` only when a control truly needs the activation bridge.
 Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
+The only raw-model escape hatch is the explicit advanced import
+`use fret::advanced::AppUiRawModelExt;` plus `cx.raw_model::<T>()`; it is not part of the default
+ladder.
 
 1. `hello` (template) — smallest runnable UI surface.
    - Generate: `cargo run -p fretboard -- new hello --name hello-world`
@@ -166,6 +169,20 @@ Do not use it as the first place to learn the authoring model.
 
 Some demos are intentionally “high ceiling” (docking arbitration, renderer effects, node graph
 stress). They are useful for maintainers and advanced users but are not the onboarding path.
+
+Explicit advanced/reference roster:
+
+- `custom_effect_v1_demo`, `custom_effect_v2_demo`, and `custom_effect_v3_demo` are renderer/effect
+  reference surfaces. They keep explicit effect/runtime ownership because the point is validating
+  effect ABI, bounded custom-effect authoring, and diagnostics behavior.
+- `postprocess_theme_demo` and `liquid_glass_demo` are renderer/product-validation surfaces. They
+  keep explicit renderer/theme or renderer-capability ownership because they validate high-ceiling
+  post-process and glass/warp behavior rather than the default app lane.
+- `genui_demo` is a generator/editor integration reference surface. It keeps explicit model
+  ownership because the point is catalog/runtime/validation integration, not first-contact app
+  authoring.
+- `imui_floating_windows_demo` is an IMUI overlap/floating proof surface. It validates IMUI
+  interaction contracts and diagnostics affordances rather than the retained-mode onboarding lane.
 
 Start from the “Examples redesign” workstream for the intended product surface:
 

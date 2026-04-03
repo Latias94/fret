@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::declarative::table::IntoTableStateModel;
 use fret_ui_kit::{IntoUiElement, UiBuilder};
 
-use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
+use fret_ui_headless::table::{ColumnDef, RowKey};
 
 use crate::data_grid_canvas::DataGridCanvas;
 use crate::data_table::DataTable;
@@ -81,7 +81,7 @@ pub trait DataTableUiBuilderExt {
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,
         data_revision: u64,
-        state: Model<TableState>,
+        state: impl IntoTableStateModel,
         columns: impl Into<Arc<[ColumnDef<TData>]>>,
         get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
         header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
@@ -99,7 +99,7 @@ impl DataTableUiBuilderExt for UiBuilder<DataTable> {
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,
         data_revision: u64,
-        state: Model<TableState>,
+        state: impl IntoTableStateModel,
         columns: impl Into<Arc<[ColumnDef<TData>]>>,
         get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
         header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,

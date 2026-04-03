@@ -8,6 +8,8 @@ This document shows what we want a first-time Fret user to write when building a
 - no direct knowledge of `winit`, `wgpu`, effect flushing, or runner internals.
 
 It is intentionally “golden path”: advanced apps may assemble crates manually.
+This document teaches one default path only: LocalState-first app code on the `fret::app`
+surface. Explicit raw `Model<T>` handles stay on the advanced lane.
 
 Taxonomy:
 
@@ -294,9 +296,9 @@ If a product intentionally needs the raw model-backed hook, keep that on the exp
 Make that choice explicit:
 
 ```rust,ignore
-use fret::advanced::AppUiRawStateExt;
+use fret::advanced::AppUiRawModelExt;
 
-let raw_model = cx.use_state::<T>();
+let raw_model = cx.raw_model::<T>();
 ```
 
 For the full runnable baseline, see the `cargo run -p fretboard -- new todo` scaffold template.

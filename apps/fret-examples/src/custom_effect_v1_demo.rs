@@ -1,7 +1,12 @@
-//! Custom effect demo (CustomV1).
+//! Advanced/reference demo: Custom effect authoring (CustomV1).
 //!
-//! Demonstrates the "escape hatch with a ceiling": app/ecosystem code registers a small WGSL
-//! snippet on GPU readiness and uses the resulting `EffectId` in an `EffectChain`.
+//! Why advanced:
+//! - this surface keeps explicit effect/runtime ownership on purpose,
+//! - it validates renderer/effect ABI wiring rather than teaching the default LocalState-first
+//!   app lane.
+//!
+//! Not a first-contact teaching surface: treat it as reference/product-validation material for the
+//! bounded custom-effect contract.
 
 #![cfg(not(target_arch = "wasm32"))]
 

@@ -42,6 +42,10 @@ fn render_frame(
                 .row_click_selection(true)
                 .row_click_selection_policy(PointerRowSelectionPolicy::ListLike)
                 .single_row_selection(false)
+                .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
+                    row_test_id_prefix: Some(Arc::<str>::from("data-table-row/")),
+                    ..Default::default()
+                })
                 .into_element_retained(
                     cx,
                     data.clone(),
@@ -54,8 +58,6 @@ fn render_frame(
                         "id" => cx.text(format!("id={row}")),
                         _ => cx.text("?"),
                     },
-                    None,
-                    Some(Arc::<str>::from("data-table-row/")),
                 );
             vec![table]
         },

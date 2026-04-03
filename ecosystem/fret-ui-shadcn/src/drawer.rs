@@ -2747,7 +2747,7 @@ impl std::fmt::Debug for DrawerClose {
 }
 
 impl DrawerClose {
-    pub fn new(open: Model<bool>) -> Self {
+    pub fn new(open: impl IntoBoolModel) -> Self {
         Self {
             inner: crate::sheet::SheetClose::new(open),
         }

@@ -7,7 +7,9 @@ use fret_ui::element::{
     ScrollProps, SemanticsProps, SpacerProps, VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
-use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost, scroll::ScrollStrategy};
+use fret_ui::{
+    ElementContext, ElementContextAccess, GlobalElementId, Theme, UiHost, scroll::ScrollStrategy,
+};
 
 use fret_core::time::Instant;
 use std::cell::{Cell, RefCell};
@@ -20,14 +22,34 @@ type CopyTextAtFn = dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync;
 type RowKeyAt<TData> = dyn Fn(&TData, usize) -> RowKey;
 type HeaderLabelAt<TData> = dyn Fn(&ColumnDef<TData>) -> Arc<str>;
 type HeaderAccessoryAt<H, TData> =
-    dyn for<'a> Fn(&mut ElementContext<'a, H>, &ColumnDef<TData>) -> AnyElement;
+    dyn for<'a> Fn(&mut dyn ElementContextAccess<'a, H>, &ColumnDef<TData>) -> AnyElement;
 type CellAt<H, TData> =
-    dyn for<'a> Fn(&mut ElementContext<'a, H>, &ColumnDef<TData>, &TData) -> AnyElement;
+    dyn for<'a> Fn(&mut dyn ElementContextAccess<'a, H>, &ColumnDef<TData>, &TData) -> AnyElement;
 type GroupAggsU64 = std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>;
 type GroupAggsAny = std::collections::HashMap<RowKey, Arc<[(ColumnId, TanStackValue)]>>;
 type GroupAggsText = std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>;
 type SorterFn<TData> = dyn Fn(&TData, &TData) -> std::cmp::Ordering;
 type SorterSpec<TData> = (SortSpec, Arc<SorterFn<TData>>);
+
+/// Narrow interop bridge for table surfaces that still store view state in `Model<TableState>`.
+///
+/// This stays intentionally table-specific so `LocalState<TableState>` can participate in the
+/// public table/data-table authoring lane without widening into a crate-wide `IntoModel<T>` story.
+pub trait IntoTableStateModel {
+    fn into_table_state_model(self) -> Model<TableState>;
+}
+
+impl IntoTableStateModel for Model<TableState> {
+    fn into_table_state_model(self) -> Model<TableState> {
+        self
+    }
+}
+
+impl IntoTableStateModel for &Model<TableState> {
+    fn into_table_state_model(self) -> Model<TableState> {
+        self.clone()
+    }
+}
 
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -225,6 +247,41 @@ fn table_wrap_horizontal_scroll<H: UiHost>(
     } else {
         row
     }
+}
+
+fn take_single_root_test_id(children: &mut [AnyElement]) -> Option<Arc<str>> {
+    let mut found: Option<(usize, Arc<str>)> = None;
+
+    for (idx, child) in children.iter().enumerate() {
+        let Some(test_id) = child
+            .semantics_decoration
+            .as_ref()
+            .and_then(|decoration| decoration.test_id.as_ref())
+            .cloned()
+        else {
+            continue;
+        };
+
+        if found.is_some() {
+            return None;
+        }
+
+        found = Some((idx, test_id));
+    }
+
+    let (idx, test_id) = found?;
+    if let Some(decoration) = children[idx].semantics_decoration.as_mut() {
+        decoration.test_id = None;
+    }
+
+    Some(test_id)
+}
+
+fn table_wrapper_test_id(
+    children: &mut [AnyElement],
+    explicit: Option<Arc<str>>,
+) -> Option<Arc<str>> {
+    explicit.or_else(|| take_single_root_test_id(children))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -498,9 +555,23 @@ pub struct TableViewOutput {
     pub pagination: PaginationBounds,
 }
 
+/// Debug/test-only anchors for virtualized table harnesses.
+///
+/// These ids are intended for scripted diagnostics and geometry assertions:
+/// - `header_row_test_id` targets the fixed header viewport row.
+/// - `header_cell_test_id_prefix` targets table-owned header cell layout wrappers.
+/// - `row_test_id_prefix` targets table-owned body row / cell layout wrappers.
+#[derive(Debug, Clone, Default)]
+pub struct TableDebugIds {
+    pub header_row_test_id: Option<Arc<str>>,
+    pub header_cell_test_id_prefix: Option<Arc<str>>,
+    pub row_test_id_prefix: Option<Arc<str>>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    const SOURCE: &str = include_str!("table.rs");
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, Modifiers, MouseButton, PathCommand, PointerEvent, PointerId,
@@ -511,6 +582,168 @@ mod tests {
     use fret_core::{Point, Px, Rect, TextWrap};
     use fret_ui::ThemeConfig;
     use fret_ui::{Theme, UiTree, VirtualListScrollHandle};
+
+    #[test]
+    fn table_surfaces_keep_a_narrow_table_state_bridge() {
+        assert!(
+            SOURCE.contains("pub trait IntoTableStateModel {"),
+            "table surfaces should keep a dedicated TableState bridge instead of widening into a generic model conversion story"
+        );
+        assert!(
+            SOURCE.contains("pub fn table_virtualized<H: UiHost, TData, IHeader, TH, ICell, TC>(")
+                && SOURCE.contains("state: impl IntoTableStateModel,"),
+            "table_virtualized should accept the dedicated table-state bridge"
+        );
+        assert!(
+            SOURCE.contains("pub fn table_virtualized_retained_v0<H: UiHost + 'static, TData>("),
+            "retained table surface should accept the dedicated table-state bridge"
+        );
+        assert!(
+            !SOURCE.contains(
+                "pub fn table_virtualized<H: UiHost, TData, IHeader, TH, ICell, TC>(\n    cx: &mut ElementContext<'_, H>,\n    data: &[TData],\n    columns: &[ColumnDef<TData>],\n    state: Model<TableState>,"
+            ),
+            "table_virtualized should not regress to a raw Model<TableState>-only signature"
+        );
+    }
+
+    #[test]
+    fn retained_table_callbacks_prefer_explicit_context_access_capability() {
+        assert!(
+            SOURCE.contains("dyn for<'a> Fn(&mut dyn ElementContextAccess<'a, H>, &ColumnDef<TData>) -> AnyElement;")
+                || SOURCE.contains(
+                    "dyn for<'a> Fn(\n        &mut dyn ElementContextAccess<'a, H>,\n        &ColumnDef<TData>,\n    ) -> AnyElement;"
+                ),
+            "retained table header accessories should accept explicit context access capability"
+        );
+        assert!(
+            SOURCE.contains("dyn for<'a> Fn(&mut dyn ElementContextAccess<'a, H>, &ColumnDef<TData>, &TData) -> AnyElement;")
+                || SOURCE.contains(
+                    "dyn for<'a> Fn(\n        &mut dyn ElementContextAccess<'a, H>,\n        &ColumnDef<TData>,\n        &TData,\n    ) -> AnyElement;"
+                ),
+            "retained table cell renderers should accept explicit context access capability"
+        );
+    }
+
+    #[test]
+    fn table_debug_ids_expose_explicit_header_row_anchor() {
+        assert!(
+            SOURCE.contains("pub struct TableDebugIds {"),
+            "table harnesses should use a structured debug-id surface"
+        );
+        assert!(
+            SOURCE.contains("pub header_row_test_id: Option<Arc<str>>,"),
+            "table debug ids should expose an explicit header-row anchor"
+        );
+        assert!(
+            SOURCE.contains("debug_ids: TableDebugIds,"),
+            "table surfaces should accept a shared structured debug-id contract"
+        );
+    }
+
+    #[test]
+    fn table_virtualized_hoists_single_root_renderer_test_ids_to_layout_anchors() {
+        assert!(
+            SOURCE.contains(
+                "fn take_single_root_test_id(children: &mut [AnyElement]) -> Option<Arc<str>> {"
+            ),
+            "table_virtualized should keep the single-root test-id hoist helper close to the table surface"
+        );
+        assert!(
+            SOURCE.contains(
+                "fn table_wrapper_test_id(\n    children: &mut [AnyElement],\n    explicit: Option<Arc<str>>,\n) -> Option<Arc<str>> {"
+            ),
+            "table_virtualized should resolve explicit debug ids before falling back to renderer-root hoists"
+        );
+        assert!(
+            SOURCE.match_indices("table_wrapper_test_id(").count() >= 4,
+            "table_virtualized should hoist marked header/cell renderer roots onto stable layout anchors"
+        );
+    }
+
+    #[test]
+    fn table_virtualized_retained_accepts_capability_first_cell_renderer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 1;
+        let state = app.models_mut().insert(state_value);
+
+        let data: Arc<[u32]> = Arc::from(vec![0u32]);
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![{
+            let mut col = ColumnDef::new("name");
+            col.size = 220.0;
+            col
+        }]);
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    TableViewProps::default(),
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    None,
+                    Arc::new(retained_table_capability_test_cell),
+                    TableDebugIds {
+                        header_cell_test_id_prefix: Some(Arc::<str>::from(
+                            "table-retained-capability-header-",
+                        )),
+                        row_test_id_prefix: Some(Arc::<str>::from(
+                            "table-retained-capability-row-",
+                        )),
+                        ..Default::default()
+                    },
+                )]
+            })
+        };
+
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after retained table render");
+
+        assert!(
+            snap.nodes.iter().any(
+                |node| node.test_id.as_deref() == Some("table-retained-capability-cell-name-0")
+            ),
+            "expected retained table capability-first cell renderer to contribute its semantics marker"
+        );
+    }
 
     #[test]
     fn single_sort_toggle_cycles_and_resets_page_index() {
@@ -736,6 +969,105 @@ mod tests {
         }
     }
 
+    fn retained_table_capability_test_cell<'a>(
+        cx: &mut dyn ElementContextAccess<'a, App>,
+        col: &ColumnDef<u32>,
+        row: &u32,
+    ) -> AnyElement {
+        let cx = cx.elements();
+        let label = format!("{}-{row}", col.id.as_ref());
+        let test_id = Arc::<str>::from(format!("table-retained-capability-cell-{label}"));
+        cx.semantics(
+            SemanticsProps {
+                test_id: Some(test_id),
+                ..Default::default()
+            },
+            move |cx| vec![cx.text(label.clone())],
+        )
+    }
+
+    fn capture_layout_sidecar(
+        ui: &UiTree<App>,
+        app: &mut App,
+        window: AppWindowId,
+        root: fret_core::NodeId,
+        bounds: Rect,
+    ) -> serde_json::Value {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be after unix epoch")
+            .as_nanos();
+        let out_dir = std::env::temp_dir().join(format!(
+            "fret-ui-kit-table-layout-sidecar-{}-{nonce}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&out_dir);
+
+        let path = ui
+            .debug_write_layout_sidecar_taffy_v1_json(
+                app, window, root, bounds, 1.0, None, &out_dir, 0,
+            )
+            .expect("layout sidecar should be written");
+
+        let sidecar: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).expect("sidecar should be readable"))
+                .expect("sidecar json should parse");
+        let _ = std::fs::remove_dir_all(&out_dir);
+        sidecar
+    }
+
+    fn layout_sidecar_abs_rect(sidecar: &serde_json::Value, test_id: &str) -> Rect {
+        let mut candidates: Vec<&serde_json::Value> = sidecar["taffy"]["nodes"]
+            .as_array()
+            .into_iter()
+            .flat_map(|nodes| nodes.iter())
+            .collect();
+        if let Some(roots) = sidecar["taffy"]["roots"].as_array() {
+            for root in roots {
+                if let Some(nodes) = root["dump"]["nodes"].as_array() {
+                    candidates.extend(nodes.iter());
+                }
+            }
+        }
+
+        let matches = candidates
+            .iter()
+            .filter(|node| node["debug"]["test_id"].as_str() == Some(test_id))
+            .copied()
+            .collect::<Vec<_>>();
+        let matched = matches
+            .into_iter()
+            .max_by(|a, b| {
+                let area = |node: &serde_json::Value| {
+                    let rect = &node["abs_rect"];
+                    rect["w"].as_f64().unwrap_or(0.0) * rect["h"].as_f64().unwrap_or(0.0)
+                };
+                area(a)
+                    .partial_cmp(&area(b))
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .unwrap_or_else(|| {
+                let available = candidates
+                    .iter()
+                    .filter_map(|node| node["debug"]["test_id"].as_str())
+                    .collect::<Vec<_>>();
+                panic!(
+                    "expected layout sidecar node with test_id `{test_id}`; available_test_ids={available:?}"
+                );
+            });
+        let abs = &matched["abs_rect"];
+        Rect::new(
+            Point::new(
+                Px(abs["x"].as_f64().expect("abs_rect.x should be a number") as f32),
+                Px(abs["y"].as_f64().expect("abs_rect.y should be a number") as f32),
+            ),
+            fret_core::Size::new(
+                Px(abs["w"].as_f64().expect("abs_rect.w should be a number") as f32),
+                Px(abs["h"].as_f64().expect("abs_rect.h should be a number") as f32),
+            ),
+        )
+    }
+
     #[test]
     fn table_virtualized_copyable_reports_availability_and_emits_clipboard_text() {
         let window = AppWindowId::default();
@@ -786,6 +1118,7 @@ mod tests {
                     |cx, _col, _sort| [cx.text("Header")],
                     |cx, row, _col| [cx.text(format!("Cell {}", row.index))],
                     None,
+                    TableDebugIds::default(),
                 )]
             })
         };
@@ -942,6 +1275,7 @@ mod tests {
                         )]
                     },
                     None,
+                    TableDebugIds::default(),
                 )]
             })
         };
@@ -1047,36 +1381,16 @@ mod tests {
                     props.clone(),
                     |_row| None,
                     |cx, col, _sort| {
-                        let test_id = Arc::<str>::from(format!("table-align-header-{}", col.id));
                         let label = Arc::<str>::from(col.id.as_ref());
-                        let header = cx.semantics(
-                            SemanticsProps {
-                                test_id: Some(test_id),
+                        [cx.container(
+                            ContainerProps {
+                                layout: table_clip_fill_layout(),
                                 ..Default::default()
                             },
-                            move |_cx| {
-                                vec![_cx.container(
-                                    ContainerProps {
-                                        layout: LayoutStyle {
-                                            size: fret_ui::element::SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Fill,
-                                                ..Default::default()
-                                            },
-                                            overflow: Overflow::Clip,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    move |cx| vec![crate::ui::text(label.clone()).into_element(cx)],
-                                )]
-                            },
-                        );
-                        [header]
+                            move |_cx| vec![crate::ui::text(label.clone()).into_element(_cx)],
+                        )]
                     },
                     |cx, row, col| {
-                        let test_id =
-                            Arc::<str>::from(format!("table-align-cell-r{}-{}", row.index, col.id));
                         let text = match col.id.as_ref() {
                             "name" => {
                                 if row.index == 1 {
@@ -1091,40 +1405,29 @@ mod tests {
                             _ => "?".to_string(),
                         };
                         let cell = crate::ui::text(text).wrap(TextWrap::Grapheme);
-                        let cell = cx.semantics(
-                            SemanticsProps {
-                                test_id: Some(test_id),
+                        [cx.container(
+                            ContainerProps {
+                                layout: table_clip_fill_layout(),
                                 ..Default::default()
                             },
-                            move |_cx| {
-                                vec![_cx.container(
-                                    ContainerProps {
-                                        layout: LayoutStyle {
-                                            size: fret_ui::element::SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Fill,
-                                                ..Default::default()
-                                            },
-                                            overflow: Overflow::Clip,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    |cx| vec![cell.clone().into_element(cx)],
-                                )]
-                            },
-                        );
-                        [cell]
+                            move |_cx| vec![cell.clone().into_element(_cx)],
+                        )]
                     },
                     None,
+                    TableDebugIds {
+                        header_cell_test_id_prefix: Some(Arc::<str>::from("table-align-header-")),
+                        row_test_id_prefix: Some(Arc::<str>::from("table-align-row-")),
+                        ..Default::default()
+                    },
                 )]
             })
         };
 
         // VirtualList computes the visible window based on viewport metrics populated during layout,
         // so it takes two frames for the first set of rows to mount.
+        let mut root = fret_core::NodeId::default();
         for _ in 0..2 {
-            let root = render(&mut ui, &mut app, &mut services);
+            root = render(&mut ui, &mut app, &mut services);
             ui.set_root(root);
             ui.request_semantics_snapshot();
             ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -1134,15 +1437,35 @@ mod tests {
 
         let snap = ui
             .semantics_snapshot()
-            .expect("expected a semantics snapshot");
-
-        let find_bounds = |id: &str| -> Rect {
-            snap.nodes
+            .expect("expected semantics snapshot after table render");
+        let col_ids = ["name", "status", "cpu%", "mem_mb"];
+        for col_id in col_ids {
+            let header_test_id = format!("table-align-header-{col_id}");
+            let header_count = snap
+                .nodes
                 .iter()
-                .find(|n| n.test_id.as_deref() == Some(id))
-                .map(|n| n.bounds)
-                .unwrap_or_else(|| panic!("expected to find {id}"))
-        };
+                .filter(|node| node.test_id.as_deref() == Some(header_test_id.as_str()))
+                .count();
+            assert_eq!(
+                header_count, 1,
+                "expected exactly one semantics node for hoisted header anchor {header_test_id}"
+            );
+
+            for row in 0..3 {
+                let cell_test_id = format!("table-align-row-{row}-cell-{col_id}");
+                let cell_count = snap
+                    .nodes
+                    .iter()
+                    .filter(|node| node.test_id.as_deref() == Some(cell_test_id.as_str()))
+                    .count();
+                assert_eq!(
+                    cell_count, 1,
+                    "expected exactly one semantics node for hoisted cell anchor {cell_test_id}"
+                );
+            }
+        }
+
+        let sidecar = capture_layout_sidecar(&ui, &mut app, window, root, bounds);
 
         // `table_virtualized` composes header/body content under slightly different chrome
         // (e.g. grid line dividers vs resize handles). We want a strict gate for x alignment
@@ -1150,11 +1473,13 @@ mod tests {
         // content-box width when borders are involved.
         let eps_x = 0.5;
         let eps_w = 1.0;
-        let col_ids = ["name", "status", "cpu%", "mem_mb"];
         for col_id in col_ids {
-            let header = find_bounds(&format!("table-align-header-{col_id}"));
+            let header = layout_sidecar_abs_rect(&sidecar, &format!("table-align-header-{col_id}"));
             for row in 0..3 {
-                let cell = find_bounds(&format!("table-align-cell-r{row}-{col_id}"));
+                let cell = layout_sidecar_abs_rect(
+                    &sidecar,
+                    &format!("table-align-row-{row}-cell-{col_id}"),
+                );
                 assert!(
                     (cell.origin.x.0 - header.origin.x.0).abs() <= eps_x,
                     "expected header/cell x alignment for col={col_id} row={row} (header_x={:.2}px cell_x={:.2}px)",
@@ -1239,19 +1564,14 @@ mod tests {
                             },
                             |_| Vec::new(),
                         );
-                        if row.index == 1 {
-                            [cx.semantics(
-                                SemanticsProps {
-                                    test_id: Some(Arc::<str>::from("table-test-row-1-marker")),
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![marker],
-                            )]
-                        } else {
-                            [marker]
-                        }
+                        let _ = row;
+                        [marker]
                     },
                     None,
+                    TableDebugIds {
+                        row_test_id_prefix: Some(Arc::<str>::from("table-test-row-")),
+                        ..Default::default()
+                    },
                 )]
             })
         };
@@ -1271,7 +1591,7 @@ mod tests {
         let before = snap
             .nodes
             .iter()
-            .find(|n| n.test_id.as_deref() == Some("table-test-row-1-marker"))
+            .find(|n| n.test_id.as_deref() == Some("table-test-row-1"))
             .map(|n| n.bounds)
             .expect("expected marker node");
 
@@ -1321,7 +1641,7 @@ mod tests {
         let after = snap
             .nodes
             .iter()
-            .find(|n| n.test_id.as_deref() == Some("table-test-row-1-marker"))
+            .find(|n| n.test_id.as_deref() == Some("table-test-row-1"))
             .map(|n| n.bounds)
             .expect("expected marker node");
 
@@ -1402,19 +1722,14 @@ mod tests {
                             },
                             |_| Vec::new(),
                         );
-                        if row.index == 1 {
-                            [cx.semantics(
-                                SemanticsProps {
-                                    test_id: Some(Arc::<str>::from("table-test-row-1-marker")),
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![marker],
-                            )]
-                        } else {
-                            [marker]
-                        }
+                        let _ = row;
+                        [marker]
                     },
                     None,
+                    TableDebugIds {
+                        row_test_id_prefix: Some(Arc::<str>::from("table-test-row-")),
+                        ..Default::default()
+                    },
                 )]
             })
         };
@@ -1434,7 +1749,7 @@ mod tests {
         let marker_bounds = snap
             .nodes
             .iter()
-            .find(|n| n.test_id.as_deref() == Some("table-test-row-1-marker"))
+            .find(|n| n.test_id.as_deref() == Some("table-test-row-1"))
             .map(|n| n.bounds)
             .expect("expected marker node");
 
@@ -1489,7 +1804,6 @@ mod tests {
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        ui.set_debug_enabled(true);
 
         Theme::with_global_mut(&mut app, |theme| {
             theme.apply_config(&ThemeConfig {
@@ -1595,6 +1909,7 @@ mod tests {
                         _ => [cx.text("?")],
                     },
                     None,
+                    TableDebugIds::default(),
                 )]
             })
         };
@@ -1754,17 +2069,14 @@ mod tests {
                             },
                             |_| Vec::new(),
                         );
-                        let test_id =
-                            Arc::<str>::from(format!("table-test-row-{}-marker", row.index));
-                        [cx.semantics(
-                            SemanticsProps {
-                                test_id: Some(test_id),
-                                ..Default::default()
-                            },
-                            move |_cx| vec![marker],
-                        )]
+                        let _ = row;
+                        [marker]
                     },
                     None,
+                    TableDebugIds {
+                        row_test_id_prefix: Some(Arc::<str>::from("table-test-row-")),
+                        ..Default::default()
+                    },
                 )]
             })
         };
@@ -1786,7 +2098,7 @@ mod tests {
                 .expect("expected a semantics snapshot");
             (0..5)
                 .map(|row_index| {
-                    let id = format!("table-test-row-{}-marker", row_index);
+                    let id = format!("table-test-row-{row_index}");
                     let bounds = snap
                         .nodes
                         .iter()
@@ -1955,12 +2267,17 @@ mod tests {
                     Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
                     None,
                     Arc::new(
-                        |cx: &mut ElementContext<'_, App>, _col: &ColumnDef<u32>, _row: &u32| {
-                            crate::ui::text("Row 0").into_element(cx)
+                        |cx: &mut dyn ElementContextAccess<'_, App>,
+                         _col: &ColumnDef<u32>,
+                         _row: &u32| {
+                            crate::ui::text("Row 0").into_element(cx.elements())
                         },
                     ),
-                    Some(Arc::<str>::from("table-test-header-")),
-                    Some(Arc::<str>::from("table-test-row-")),
+                    TableDebugIds {
+                        header_row_test_id: Some(Arc::<str>::from("table-test-header-row")),
+                        header_cell_test_id_prefix: Some(Arc::<str>::from("table-test-header-")),
+                        row_test_id_prefix: Some(Arc::<str>::from("table-test-row-")),
+                    },
                 )]
             })
         };
@@ -1988,7 +2305,7 @@ mod tests {
                 .unwrap_or_else(|| panic!("expected to find {id}"))
         };
 
-        let header_h = find_height("table-test-header-name");
+        let header_h = find_height("table-test-header-row");
         let body_h = find_height("table-test-row-0");
 
         let eps = 2.0;
@@ -2064,12 +2381,17 @@ mod tests {
                     Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
                     None,
                     Arc::new(
-                        |cx: &mut ElementContext<'_, App>, _col: &ColumnDef<u32>, row: &u32| {
-                            crate::ui::text(format!("Row {row}")).into_element(cx)
+                        |cx: &mut dyn ElementContextAccess<'_, App>,
+                         _col: &ColumnDef<u32>,
+                         row: &u32| {
+                            crate::ui::text(format!("Row {row}")).into_element(cx.elements())
                         },
                     ),
-                    Some(Arc::<str>::from("table-test-header-")),
-                    Some(Arc::<str>::from("table-test-row-")),
+                    TableDebugIds {
+                        header_cell_test_id_prefix: Some(Arc::<str>::from("table-test-header-")),
+                        row_test_id_prefix: Some(Arc::<str>::from("table-test-row-")),
+                        ..Default::default()
+                    },
                 )]
             })
         };
@@ -2280,7 +2602,10 @@ mod tests {
                     Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
                     None,
                     Arc::new(
-                        move |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u32>, row: &u32| {
+                        move |cx: &mut dyn ElementContextAccess<'_, App>,
+                              col: &ColumnDef<u32>,
+                              row: &u32| {
+                            let cx = cx.elements();
                             match col.id.as_ref() {
                                 "name" => crate::ui::text(format!("Row {row}")).into_element(cx),
                                 "actions" if *row == 1 => {
@@ -2327,8 +2652,13 @@ mod tests {
                             }
                         },
                     ),
-                    Some(Arc::<str>::from("table-retained-test-header-")),
-                    Some(Arc::<str>::from("table-retained-test-row-")),
+                    TableDebugIds {
+                        header_cell_test_id_prefix: Some(Arc::<str>::from(
+                            "table-retained-test-header-",
+                        )),
+                        row_test_id_prefix: Some(Arc::<str>::from("table-retained-test-row-")),
+                        ..Default::default()
+                    },
                 )]
             })
         };
@@ -2480,12 +2810,20 @@ mod tests {
                     Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
                     None,
                     Arc::new(
-                        |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u32>, row: &u32| {
+                        |cx: &mut dyn ElementContextAccess<'_, App>,
+                         col: &ColumnDef<u32>,
+                         row: &u32| {
+                            let cx = cx.elements();
                             cx.text(format!("{}-{row}", col.id.as_ref()))
                         },
                     ),
-                    Some(Arc::<str>::from("table-retained-colpin-header-")),
-                    Some(Arc::<str>::from("table-retained-colpin-row-")),
+                    TableDebugIds {
+                        header_cell_test_id_prefix: Some(Arc::<str>::from(
+                            "table-retained-colpin-header-",
+                        )),
+                        row_test_id_prefix: Some(Arc::<str>::from("table-retained-colpin-row-")),
+                        ..Default::default()
+                    },
                 );
 
                 vec![cx.semantics(
@@ -2648,7 +2986,10 @@ mod tests {
                     Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
                     None,
                     Arc::new(
-                        |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u32>, row: &u32| {
+                        |cx: &mut dyn ElementContextAccess<'_, App>,
+                         col: &ColumnDef<u32>,
+                         row: &u32| {
+                            let cx = cx.elements();
                             if *row == 0 && col.id.as_ref() == "b" {
                                 ui::v_stack(|cx| [cx.text("b-0"), cx.text("extra line")])
                                     .gap(Space::N0)
@@ -2658,8 +2999,13 @@ mod tests {
                             }
                         },
                     ),
-                    Some(Arc::<str>::from("table-retained-colpin-header-")),
-                    Some(Arc::<str>::from("table-retained-colpin-row-")),
+                    TableDebugIds {
+                        header_cell_test_id_prefix: Some(Arc::<str>::from(
+                            "table-retained-colpin-header-",
+                        )),
+                        row_test_id_prefix: Some(Arc::<str>::from("table-retained-colpin-row-")),
+                        ..Default::default()
+                    },
                 );
 
                 vec![cx.semantics(
@@ -2953,7 +3299,7 @@ pub fn table_virtualized<H: UiHost, TData, IHeader, TH, ICell, TC>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
     columns: &[ColumnDef<TData>],
-    state: Model<TableState>,
+    state: impl IntoTableStateModel,
     vertical_scroll: &VirtualListScrollHandle,
     items_revision: u64,
     row_key_at: &RowKeyAt<TData>,
@@ -2967,6 +3313,7 @@ pub fn table_virtualized<H: UiHost, TData, IHeader, TH, ICell, TC>(
     ) -> IHeader,
     render_cell: impl FnMut(&mut ElementContext<'_, H>, &Row<'_, TData>, &ColumnDef<TData>) -> ICell,
     output: Option<Model<TableViewOutput>>,
+    debug_ids: TableDebugIds,
 ) -> AnyElement
 where
     IHeader: IntoIterator<Item = TH>,
@@ -2974,6 +3321,7 @@ where
     ICell: IntoIterator<Item = TC>,
     TC: IntoUiElement<H>,
 {
+    let state = state.into_table_state_model();
     table_virtualized_impl(
         cx,
         data,
@@ -2989,6 +3337,7 @@ where
         render_header_cell,
         render_cell,
         output,
+        debug_ids,
     )
 }
 
@@ -3001,7 +3350,7 @@ pub fn table_virtualized_copyable<H: UiHost, TData, IHeader, TH, ICell, TC>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
     columns: &[ColumnDef<TData>],
-    state: Model<TableState>,
+    state: impl IntoTableStateModel,
     vertical_scroll: &VirtualListScrollHandle,
     items_revision: u64,
     row_key_at: &RowKeyAt<TData>,
@@ -3016,6 +3365,7 @@ pub fn table_virtualized_copyable<H: UiHost, TData, IHeader, TH, ICell, TC>(
     ) -> IHeader,
     render_cell: impl FnMut(&mut ElementContext<'_, H>, &Row<'_, TData>, &ColumnDef<TData>) -> ICell,
     output: Option<Model<TableViewOutput>>,
+    debug_ids: TableDebugIds,
 ) -> AnyElement
 where
     IHeader: IntoIterator<Item = TH>,
@@ -3023,6 +3373,7 @@ where
     ICell: IntoIterator<Item = TC>,
     TC: IntoUiElement<H>,
 {
+    let state = state.into_table_state_model();
     table_virtualized_impl(
         cx,
         data,
@@ -3038,6 +3389,7 @@ where
         render_header_cell,
         render_cell,
         output,
+        debug_ids,
     )
 }
 
@@ -3062,7 +3414,7 @@ pub fn table_virtualized_retained_v0<H: UiHost + 'static, TData>(
     cx: &mut ElementContext<'_, H>,
     data: Arc<[TData]>,
     columns: Arc<[ColumnDef<TData>]>,
-    state: Model<TableState>,
+    state: impl IntoTableStateModel,
     vertical_scroll: &VirtualListScrollHandle,
     items_revision: u64,
     row_key_at: Arc<RowKeyAt<TData>>,
@@ -3071,12 +3423,18 @@ pub fn table_virtualized_retained_v0<H: UiHost + 'static, TData>(
     header_label: Arc<HeaderLabelAt<TData>>,
     header_accessory_at: Option<Arc<HeaderAccessoryAt<H, TData>>>,
     cell_at: Arc<CellAt<H, TData>>,
-    debug_header_cell_test_id_prefix: Option<Arc<str>>,
-    debug_row_test_id_prefix: Option<Arc<str>>,
+    debug_ids: TableDebugIds,
 ) -> AnyElement
 where
     TData: 'static,
 {
+    let state = state.into_table_state_model();
+    let TableDebugIds {
+        header_row_test_id: debug_header_row_test_id,
+        header_cell_test_id_prefix: debug_header_cell_test_id_prefix,
+        row_test_id_prefix: debug_row_test_id_prefix,
+    } = debug_ids;
+
     #[derive(Debug, Clone, Copy)]
     struct RowEntry {
         key: RowKey,
@@ -3272,6 +3630,7 @@ where
     let header = {
         let state = state.clone();
         let header_label = Arc::clone(&header_label);
+        let debug_header_row_test_id = debug_header_row_test_id.clone();
         let debug_header_cell_test_id_prefix = debug_header_cell_test_id_prefix.clone();
         let visible_columns = visible_columns.clone();
         let col_widths = col_widths.clone();
@@ -3282,7 +3641,7 @@ where
         let sorting = sorting.clone();
         let data_for_header = data.clone();
 
-        cx.container(
+        let header = cx.container(
             ContainerProps {
                 background: Some(header_bg),
                 border: Edges {
@@ -3371,7 +3730,7 @@ where
                                                 },
                                             );
 
-                                        cx.container(
+                                        let header_cell = cx.container(
                                             ContainerProps {
                                                 border: if props.optimize_grid_lines {
                                                     Edges::default()
@@ -3540,7 +3899,9 @@ where
                                                     },
                                                 )]
                                             },
-                                        )
+                                        );
+
+                                        header_cell
                                     })
                                     .collect::<Vec<_>>()
                         })
@@ -3565,7 +3926,13 @@ where
                 .layout(LayoutRefinement::default().w_full())
                 .into_element(cx)]
             },
-        )
+        );
+
+        if let Some(test_id) = debug_header_row_test_id {
+            header.test_id(test_id)
+        } else {
+            header
+        }
     };
 
     let key_at: Arc<dyn Fn(usize) -> fret_ui::ItemKey> = {
@@ -4149,6 +4516,7 @@ fn table_virtualized_impl<H: UiHost, TData, IHeader, TH, ICell, TC>(
     ) -> IHeader,
     mut render_cell: impl FnMut(&mut ElementContext<'_, H>, &Row<'_, TData>, &ColumnDef<TData>) -> ICell,
     output: Option<Model<TableViewOutput>>,
+    debug_ids: TableDebugIds,
 ) -> AnyElement
 where
     IHeader: IntoIterator<Item = TH>,
@@ -4157,6 +4525,11 @@ where
     TC: IntoUiElement<H>,
 {
     let profile = std::env::var_os("FRET_TABLE_PROFILE").is_some();
+    let TableDebugIds {
+        header_row_test_id: debug_header_row_test_id,
+        header_cell_test_id_prefix: debug_header_cell_test_id_prefix,
+        row_test_id_prefix: debug_row_test_id_prefix,
+    } = debug_ids;
     let state_value = cx.watch_model(&state).layout().cloned_or_default();
 
     let theme = Theme::global(&*cx.app);
@@ -5280,6 +5653,9 @@ where
                 },
                 |cx| {
                     vec![ui::v_flex(|cx| {
+                                    let debug_header_row_test_id = debug_header_row_test_id.clone();
+                                    let debug_header_cell_test_id_prefix =
+                                        debug_header_cell_test_id_prefix.clone();
                                     let header = cx.container(
                                         ContainerProps {
                                             background: Some(header_bg),
@@ -5312,6 +5688,8 @@ where
                                                  scroll_x: Option<ScrollHandle>| {
                                                     let column_width_by_id =
                                                         column_width_by_id.clone();
+                                                    let debug_header_cell_test_id_prefix =
+                                                        debug_header_cell_test_id_prefix.clone();
                                                     let row = ui::h_row(|cx| {
                                                             let out: Vec<AnyElement> = cols.iter()
                                                                 .map(|col| {
@@ -5363,7 +5741,21 @@ where
                                                                         ..Default::default()
                                                                     };
 
-                                                                    cx.container(cell_props, |cx| {
+                                                                    let hoisted_test_id =
+                                                                        Rc::new(RefCell::new(None));
+                                                                    let hoisted_test_id_for_cell =
+                                                                        hoisted_test_id.clone();
+                                                                    let explicit_test_id =
+                                                                        debug_header_cell_test_id_prefix
+                                                                            .as_ref()
+                                                                            .map(|prefix| {
+                                                                                Arc::<str>::from(format!(
+                                                                                    "{prefix}{id}",
+                                                                                    id = col.id.as_ref()
+                                                                                ))
+                                                                            });
+                                                                    let header_cell =
+                                                                        cx.container(cell_props, |cx| {
                                                                         let mut out = Vec::new();
 
                                                                         out.push(ui::h_row(|cx| {
@@ -5508,9 +5900,17 @@ where
                                                                                                         col,
                                                                                                         sort_state,
                                                                                                     );
-                                                                                                collect_children(
-                                                                                                    cx, items,
-                                                                                                )
+                                                                                                let mut children =
+                                                                                                    collect_children(
+                                                                                                        cx, items,
+                                                                                                    );
+                                                                                                *hoisted_test_id_for_cell
+                                                                                                    .borrow_mut() =
+                                                                                                    table_wrapper_test_id(
+                                                                                                        &mut children,
+                                                                                                        explicit_test_id.clone(),
+                                                                                                    );
+                                                                                                children
                                                                                             },
                                                                                         )]
                                                                                     },
@@ -5719,8 +6119,16 @@ where
                                                                             .items_center()
                                                                             .into_element(cx));
 
-                                                                        out
-                                                                    })
+                                                                                out
+                                                                    });
+
+                                                                    if let Some(test_id) =
+                                                                        hoisted_test_id.borrow_mut().take()
+                                                                    {
+                                                                        header_cell.test_id(test_id)
+                                                                    } else {
+                                                                        header_cell
+                                                                    }
                                                                 })
                                                                 .collect();
 
@@ -5831,7 +6239,13 @@ where
                                             .into_element(cx)]
                                         },
                                     );
+                                    let header = if let Some(test_id) = debug_header_row_test_id {
+                                        header.test_id(test_id)
+                                    } else {
+                                        header
+                                    };
 
+                                    let debug_row_test_id_prefix = debug_row_test_id_prefix.clone();
                                     let body = cx.virtual_list_keyed_with_layout(
                                         {
                                             let mut layout = LayoutStyle::default();
@@ -5897,6 +6311,14 @@ where
                                                         let typeahead = typeahead.clone();
                                                         let typeahead_timer = typeahead_timer.clone();
                                                         let focus_target = list_id;
+                                                        let row_test_id = debug_row_test_id_prefix
+                                                            .as_ref()
+                                                            .map(|prefix| {
+                                                                Arc::<str>::from(format!(
+                                                                    "{prefix}{id}",
+                                                                    id = row_key.0
+                                                                ))
+                                                            });
 
                                                         return cx.pressable(
                                                             PressableProps {
@@ -5907,6 +6329,7 @@ where
                                                                         SemanticsRole::ListItem,
                                                                     ),
                                                                     expanded: Some(expanded),
+                                                                    test_id: row_test_id,
                                                                     ..Default::default()
                                                                 }
                                                                 .with_collection_position(i, set_size),
@@ -6469,6 +6892,14 @@ where
                                             let enabled = cmd.is_some() || props.enable_row_selection;
                                             let is_selected =
                                                 is_row_selected(data_row.key, &state_value.row_selection);
+                                            let row_test_id = debug_row_test_id_prefix
+                                                .as_ref()
+                                                .map(|prefix| {
+                                                    Arc::<str>::from(format!(
+                                                        "{prefix}{id}",
+                                                        id = data_row.key.0
+                                                    ))
+                                                });
 
                                             let active_index = active_index.clone();
                                             let anchor_index = anchor_index.clone();
@@ -6485,6 +6916,7 @@ where
                                                     a11y: PressableA11y {
                                                         role: Some(SemanticsRole::ListItem),
                                                         selected: is_selected,
+                                                        test_id: row_test_id,
                                                         ..Default::default()
                                                     }
                                                     .with_collection_position(i, set_size),
@@ -6805,7 +7237,22 @@ where
                                                                                                 cols.iter()
                                                                                                     .zip(col_widths.iter().copied())
                                                                                                     .map(|(col, col_w)| {
-                                                                                                        cx.container(
+                                                                                                        let hoisted_test_id =
+                                                                                                            Rc::new(RefCell::new(None));
+                                                                                                        let hoisted_test_id_for_cell =
+                                                                                                            hoisted_test_id.clone();
+                                                                                                        let explicit_test_id =
+                                                                                                            debug_row_test_id_prefix
+                                                                                                                .as_ref()
+                                                                                                                .map(|prefix| {
+                                                                                                                    Arc::<str>::from(format!(
+                                                                                                                        "{prefix}{row}-cell-{col}",
+                                                                                                                        row = data_row.key.0,
+                                                                                                                        col = col.id.as_ref()
+                                                                                                                    ))
+                                                                                                                });
+                                                                                                        let cell =
+                                                                                                            cx.container(
                                                                                                             ContainerProps {
                                                                                                                 padding: Edges::symmetric(
                                                                                                                     cell_px,
@@ -6819,18 +7266,47 @@ where
                                                                                                                 ..Default::default()
                                                                                                             },
                                                                                                             |cx| {
-                                                                                                                vec![ui::h_row(|cx| render_cell(cx, &data_row, col))
-                                                                                                                    .layout(
-                                                                                                                        LayoutRefinement::default()
-                                                                                                                            .w_full()
-                                                                                                                            .h_full(),
-                                                                                                                    )
-                                                                                                                    .gap(Space::N0)
-                                                                                                                    .justify_start()
-                                                                                                                    .items_center()
-                                                                                                                    .into_element(cx)]
+                                                                                                                let items =
+                                                                                                                    render_cell(
+                                                                                                                        cx,
+                                                                                                                        &data_row,
+                                                                                                                        col,
+                                                                                                                    );
+                                                                                                                let mut children =
+                                                                                                                    collect_children(
+                                                                                                                        cx, items,
+                                                                                                                    );
+                                                                                                                *hoisted_test_id_for_cell
+                                                                                                                    .borrow_mut() =
+                                                                                                                    table_wrapper_test_id(
+                                                                                                                        &mut children,
+                                                                                                                        explicit_test_id
+                                                                                                                            .clone(),
+                                                                                                                    );
+                                                                                                                let content = ui::h_row(
+                                                                                                                    move |_cx| {
+                                                                                                                        children
+                                                                                                                    },
+                                                                                                                )
+                                                                                                                .layout(
+                                                                                                                    LayoutRefinement::default()
+                                                                                                                        .w_full()
+                                                                                                                        .h_full(),
+                                                                                                                )
+                                                                                                                .gap(Space::N0)
+                                                                                                                .justify_start()
+                                                                                                                .items_center()
+                                                                                                                .into_element(cx);
+                                                                                                                vec![content]
                                                                                                             },
-                                                                                                        )
+                                                                                                        );
+                                                                                                        if let Some(test_id) =
+                                                                                                            hoisted_test_id.borrow_mut().take()
+                                                                                                        {
+                                                                                                            cell.test_id(test_id)
+                                                                                                        } else {
+                                                                                                            cell
+                                                                                                        }
                                                                                                     })
                                                                                                     .collect::<Vec<_>>()
                                                                                         })
@@ -6852,7 +7328,21 @@ where
                                                                                                 .get(&col.id)
                                                                                                 .copied()
                                                                                                 .unwrap_or(Px(col.size));
-                                                                                            cx.container(
+                                                                                            let hoisted_test_id =
+                                                                                                Rc::new(RefCell::new(None));
+                                                                                            let hoisted_test_id_for_cell =
+                                                                                                hoisted_test_id.clone();
+                                                                                            let explicit_test_id =
+                                                                                                debug_row_test_id_prefix
+                                                                                                    .as_ref()
+                                                                                                    .map(|prefix| {
+                                                                                                        Arc::<str>::from(format!(
+                                                                                                            "{prefix}{row}-cell-{col}",
+                                                                                                            row = data_row.key.0,
+                                                                                                            col = col.id.as_ref()
+                                                                                                        ))
+                                                                                                    });
+                                                                                            let cell = cx.container(
                                                                                                 ContainerProps {
                                                                                                     padding: Edges::symmetric(
                                                                                                         cell_px, cell_py,
@@ -6878,18 +7368,47 @@ where
                                                                                                 ..Default::default()
                                                                                             },
                                                                                             |cx| {
-                                                                                                vec![ui::h_row(|cx| render_cell(cx, &data_row, col))
-                                                                                                    .layout(
-                                                                                                        LayoutRefinement::default()
-                                                                                                            .w_full()
-                                                                                                            .h_full(),
-                                                                                                    )
-                                                                                                    .gap(Space::N0)
-                                                                                                    .justify_start()
-                                                                                                    .items_center()
-                                                                                                    .into_element(cx)]
+                                                                                                let items =
+                                                                                                    render_cell(
+                                                                                                        cx,
+                                                                                                        &data_row,
+                                                                                                        col,
+                                                                                                    );
+                                                                                                let mut children =
+                                                                                                    collect_children(
+                                                                                                        cx, items,
+                                                                                                    );
+                                                                                                *hoisted_test_id_for_cell
+                                                                                                    .borrow_mut() =
+                                                                                                    table_wrapper_test_id(
+                                                                                                        &mut children,
+                                                                                                        explicit_test_id
+                                                                                                            .clone(),
+                                                                                                    );
+                                                                                                let content = ui::h_row(
+                                                                                                    move |_cx| {
+                                                                                                        children
+                                                                                                    },
+                                                                                                )
+                                                                                                .layout(
+                                                                                                    LayoutRefinement::default()
+                                                                                                        .w_full()
+                                                                                                        .h_full(),
+                                                                                                )
+                                                                                                .gap(Space::N0)
+                                                                                                .justify_start()
+                                                                                                .items_center()
+                                                                                                .into_element(cx);
+                                                                                                vec![content]
                                                                                             },
-                                                                                        )
+                                                                                        );
+                                                                                            if let Some(test_id) =
+                                                                                                hoisted_test_id.borrow_mut().take()
+                                                                                            {
+                                                                                                cell.test_id(test_id)
+                                                                                            } else {
+                                                                                                cell
+                                                                                            }
                                                                                     })
                                                                                     .collect::<Vec<_>>()
                                                                         })

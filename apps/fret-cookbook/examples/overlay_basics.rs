@@ -88,8 +88,8 @@ impl View for OverlayBasicsView {
         cx.actions()
             .availability::<act::BumpUnderlay>(|_host, _acx| CommandAvailability::Available);
 
-        let dialog_open_for_footer = dialog_open_state.clone_model();
-        let dialog_open_for_close = dialog_open_state.clone_model();
+        let dialog_open_for_footer = dialog_open_state.clone();
+        let dialog_open_for_close = dialog_open_state.clone();
 
         let bumps = underlay_bumps_state.layout_value(cx);
         let enabled = cx.action_is_enabled(&cmd_bump);

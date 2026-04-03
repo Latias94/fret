@@ -1,7 +1,12 @@
-//! Custom effect demo (CustomV2).
+//! Advanced/reference demo: Custom effect authoring (CustomV2).
 //!
-//! Demonstrates the "escape hatch with a higher ceiling": a bounded custom WGSL snippet can
-//! sample a single user-provided image (by `ImageId`) in addition to the effect's `src_texture`.
+//! Why advanced:
+//! - this surface keeps explicit effect/runtime ownership on purpose,
+//! - it validates renderer/effect ABI wiring for bounded user-image sampling instead of teaching
+//!   the default LocalState-first app lane.
+//!
+//! Not a first-contact teaching surface: treat it as reference/product-validation material for the
+//! bounded custom-effect contract.
 
 #![cfg(not(target_arch = "wasm32"))]
 

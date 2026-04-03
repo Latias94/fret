@@ -48,6 +48,7 @@ Active tracker highlights:
 - App composition density follow-on (closeout / maintenance lane for the default app-lane composition/query shell follow-on): `docs/workstreams/app-composition-density-follow-on-v1/DESIGN.md`, `docs/workstreams/app-composition-density-follow-on-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/app-composition-density-follow-on-v1/MILESTONES.md`, and `docs/workstreams/app-composition-density-follow-on-v1/TODO.md`.
 - Local-state architecture follow-on (closed decision lane): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
 - Local-state facade boundary hardening (closed maintenance lane): `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/MILESTONES.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/TODO.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`, and `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
+- Public authoring state lanes + identity contract (active pre-release lane for LocalState-first default teaching, explicit raw-model naming, kernel/facade substrate convergence, and full example migration): `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MIGRATION_MATRIX.md`, and `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`.
 
 Current pre-release authoring cleanup sequence:
 
@@ -117,12 +118,12 @@ Current execution stance on 2026-03-20:
   rather than another helper-growth pass.
 - `local-state-architecture-fearless-refactor-v1` = closed / maintenance lane:
   the lane now closes on `O1` (keep model-backed storage, harden the facade boundary, keep
-  `use_state` as the explicit raw-model seam); reopen only if fresh cross-surface evidence shows
-  that the storage model itself has become the bottleneck.
+  `AppUiRawModelExt::raw_model::<T>()` as the explicit raw-model seam); reopen only if fresh
+  cross-surface evidence shows that the storage model itself has become the bottleneck.
 - `local-state-facade-boundary-hardening-v1` = closed / maintenance lane:
   the initial wording/gate hardening batch is landed; the repo now consistently classifies
-  `use_state` as the advanced raw-model seam and `LocalState::{model, clone_model, *_in,
-  watch_in}` as explicit bridge APIs.
+  `AppUiRawModelExt::raw_model::<T>()` as the advanced raw-model seam and
+  `LocalState::{model, clone_model, *_in, watch_in}` as explicit bridge APIs.
 
 Recommended order from here:
 

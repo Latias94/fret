@@ -7,6 +7,9 @@ It is intentionally narrow: if a new app needs patterns outside this page, treat
 an **advanced** requirement (explicit shared `Model<T>` graphs) or a docs bug (we should add a
 missing default guideline).
 
+This is the only blessed first-contact local-state story. Keep the explicit raw-model seam on the
+advanced lane instead of mixing it into default app examples.
+
 ## Mental model (keep it small)
 
 - **UI**: a `View` object renders an element tree in `render()`.
@@ -33,7 +36,7 @@ missing default guideline).
 | Async resources | `cx.data().query(key, policy, fetch)` + `handle.read_layout(cx)` | Keep create-side semantics explicit, then use `read_layout(cx)` for the default app-path read when `QueryState::<T>::default()` is the fallback. For common semantic projections, prefer `state.status.as_str()`, `state.is_refreshing()`, and `state.has_error()` over rebuilding the same checks manually. |
 | Query invalidation on app lane | `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)` | Prefer this when invalidation happens inside `AppUi` / extracted `UiCx`; keep raw `with_query_client(...)` for pure app/driver code. |
 | App-only effects | `cx.actions().transient::<A>(...)` + `cx.effects().take_transient(...)` | Consume transients in `render()` when `&mut App` is required. |
-| Explicit raw `Model<T>` hook (advanced) | `use fret::advanced::AppUiRawStateExt;` + `cx.use_state::<T>()` | Only when you intentionally want the raw model handle instead of `LocalState<T>`. |
+| Explicit raw `Model<T>` hook (advanced) | `use fret::advanced::AppUiRawModelExt;` + `cx.raw_model::<T>()` | Only when you intentionally want the raw model handle instead of `LocalState<T>`. |
 
 ## When to drop down to explicit `Model<T>` graphs
 
@@ -48,9 +51,9 @@ Otherwise, keep the default surface LocalState-first.
 If you intentionally need the raw model-backed hook, make that choice explicit in imports:
 
 ```rust,ignore
-use fret::advanced::AppUiRawStateExt;
+use fret::advanced::AppUiRawModelExt;
 
-let shared = cx.use_state::<MyState>();
+let shared = cx.raw_model::<MyState>();
 ```
 
 ## Example: payload + keyed list (row toggle)

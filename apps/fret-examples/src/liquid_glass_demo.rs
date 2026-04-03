@@ -1,9 +1,12 @@
-//! Liquid glass demo (BackdropWarpV1 / BackdropWarpV2).
+//! Advanced/reference demo: Liquid glass (BackdropWarpV1 / BackdropWarpV2).
 //!
-//! This demo intentionally keeps the "stage" visible and places two small lenses on top:
-//! - Fake glass: blur + color adjust
-//! - True warp (v1): BackdropWarpV1 + blur + color adjust
-//! - True warp (v2): BackdropWarpV2 (image warp field) + blur + color adjust
+//! Why advanced:
+//! - this surface keeps explicit renderer capability and effect/control graph ownership on purpose,
+//! - it validates glass/warp behavior ceilings rather than teaching the default LocalState-first
+//!   app lane.
+//!
+//! Not a first-contact teaching surface: treat it as reference/product-validation material for
+//! backdrop-warp and custom-effect capability validation.
 
 #![cfg(not(target_arch = "wasm32"))]
 

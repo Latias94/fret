@@ -17,7 +17,7 @@ use fret_ui::element::{
     ScrollbarStyle, SelectableTextProps, SizeStyle, StackProps, TextProps,
 };
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, Theme, UiHost};
 
 use crate::declarative::style as decl_style;
 use crate::declarative::text as decl_text;
@@ -26,17 +26,15 @@ use crate::{
     Space, UiBuilder, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
-fn collect_ui_children<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    iter: I,
-) -> SmallVec<[AnyElement; 8]>
+fn collect_ui_children<'a, H: UiHost + 'a, Cx, I>(cx: &mut Cx, iter: I) -> SmallVec<[AnyElement; 8]>
 where
+    Cx: ElementContextAccess<'a, H>,
     I: IntoIterator,
     I::Item: IntoUiElement<H>,
 {
     let mut out: SmallVec<[AnyElement; 8]> = SmallVec::new();
     for child in iter {
-        out.push(IntoUiElement::into_element(child, cx));
+        out.push(crate::land_child(cx, child));
     }
     out
 }
@@ -46,11 +44,12 @@ where
 /// This is the narrow default-path helper for render roots or wrapper closures that only need to
 /// return one already-typed child without spelling `ui::children![cx; child].into()`.
 #[track_caller]
-pub fn single<H: UiHost, T: IntoUiElement<H>>(
-    cx: &mut ElementContext<'_, H>,
-    child: T,
-) -> Elements {
-    Elements::from(IntoUiElement::into_element(child, cx))
+pub fn single<'a, H: UiHost + 'a, Cx, T>(cx: &mut Cx, child: T) -> Elements
+where
+    Cx: ElementContextAccess<'a, H>,
+    T: IntoUiElement<H>,
+{
+    Elements::from(crate::land_child(cx, child))
 }
 
 /// Extension helpers for `*_build` child sinks.
@@ -58,25 +57,30 @@ pub fn single<H: UiHost, T: IntoUiElement<H>>(
 /// These helpers make builder-first layout code read more like direct composition without falling
 /// back to `ui::children!` only to convert a heterogeneous list into `AnyElement` values.
 pub trait UiElementSinkExt {
-    fn push_ui<H: UiHost, T: IntoUiElement<H>>(&mut self, cx: &mut ElementContext<'_, H>, child: T);
-
-    fn extend_ui<H: UiHost, I>(&mut self, cx: &mut ElementContext<'_, H>, children: I)
+    fn push_ui<'a, H: UiHost + 'a, Cx, T>(&mut self, cx: &mut Cx, child: T)
     where
+        Cx: ElementContextAccess<'a, H>,
+        T: IntoUiElement<H>;
+
+    fn extend_ui<'a, H: UiHost + 'a, Cx, I>(&mut self, cx: &mut Cx, children: I)
+    where
+        Cx: ElementContextAccess<'a, H>,
         I: IntoIterator,
         I::Item: IntoUiElement<H>;
 }
 
 impl UiElementSinkExt for Vec<AnyElement> {
-    fn push_ui<H: UiHost, T: IntoUiElement<H>>(
-        &mut self,
-        cx: &mut ElementContext<'_, H>,
-        child: T,
-    ) {
-        self.push(IntoUiElement::into_element(child, cx));
+    fn push_ui<'a, H: UiHost + 'a, Cx, T>(&mut self, cx: &mut Cx, child: T)
+    where
+        Cx: ElementContextAccess<'a, H>,
+        T: IntoUiElement<H>,
+    {
+        self.push(crate::land_child(cx, child));
     }
 
-    fn extend_ui<H: UiHost, I>(&mut self, cx: &mut ElementContext<'_, H>, children: I)
+    fn extend_ui<'a, H: UiHost + 'a, Cx, I>(&mut self, cx: &mut Cx, children: I)
     where
+        Cx: ElementContextAccess<'a, H>,
         I: IntoIterator,
         I::Item: IntoUiElement<H>,
     {

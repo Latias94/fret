@@ -8,6 +8,7 @@ use fret_bootstrap::ui_app_driver;
 use fret_icons::IconRegistry;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::SemanticsDecoration;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 
 mod act {
     fret::actions!([
@@ -130,7 +131,7 @@ impl View for SimpleTodoView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
         let theme_for_rows = theme.clone();
         let locals = TodoLocals::new(cx);
         locals.bind_actions(cx);

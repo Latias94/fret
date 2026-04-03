@@ -10,6 +10,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::form_state::{FormFieldId, FormState};
 
 use crate::form::{FormControl, FormDescription, FormItem, FormLabel, FormMessage};
+use crate::form_state_model::IntoFormStateModel;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FormErrorVisibility {
@@ -42,12 +43,12 @@ pub struct FormField {
 
 impl FormField {
     pub fn new(
-        form_state: Model<FormState>,
+        form_state: impl IntoFormStateModel,
         id: impl Into<FormFieldId>,
         control: impl Into<Vec<AnyElement>>,
     ) -> Self {
         Self {
-            form_state,
+            form_state: form_state.into_form_state_model(),
             id: id.into(),
             label: None,
             description: None,
@@ -427,6 +428,8 @@ fn form_decorate_control_element(
 mod tests {
     use super::*;
 
+    const SOURCE: &str = include_str!("form_field.rs");
+
     use fret_app::App;
     use fret_core::window::ColorScheme;
     use fret_core::{
@@ -464,6 +467,10 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(220.0)),
         )
+    }
+
+    fn normalize_ws(source: &str) -> String {
+        source.split_whitespace().collect()
     }
 
     fn find_text_area_props(el: &AnyElement) -> Option<&fret_ui::element::TextAreaProps> {
@@ -528,6 +535,22 @@ mod tests {
             }),
             _ => el.children.iter().find_map(find_pressable_chrome),
         }
+    }
+
+    #[test]
+    fn form_field_new_keeps_a_narrow_form_state_bridge() {
+        let implementation = SOURCE.split("#[cfg(test)]").next().unwrap_or(SOURCE);
+        let normalized = normalize_ws(implementation);
+        assert!(
+            normalized.contains(
+                "pubfnnew(form_state:implIntoFormStateModel,id:implInto<FormFieldId>,control:implInto<Vec<AnyElement>>,)->Self{"
+            ),
+            "FormField::new should accept the dedicated form-state bridge"
+        );
+        assert!(
+            !normalized.contains("pubfnnew(form_state:Model<FormState>,"),
+            "FormField::new should not regress to a raw Model<FormState>-only signature"
+        );
     }
 
     fn find_slot_border_color(el: &AnyElement, test_id: &str) -> Option<Color> {

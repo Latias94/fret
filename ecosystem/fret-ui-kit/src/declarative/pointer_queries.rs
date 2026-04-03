@@ -1,13 +1,16 @@
 use fret_core::PointerType;
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContextAccess, Invalidation, UiHost};
 
 /// Returns the most recent committed primary pointer type for the window (ADR 0232).
 #[track_caller]
-pub fn primary_pointer_type<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+pub fn primary_pointer_type<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
     invalidation: Invalidation,
-) -> PointerType {
-    cx.environment_primary_pointer_type(invalidation)
+) -> PointerType
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements().environment_primary_pointer_type(invalidation)
 }
 
 /// Returns whether the primary pointer is expected to support hover-driven affordances.
@@ -17,22 +20,30 @@ pub fn primary_pointer_type<H: UiHost>(
 ///   precise capability data.
 /// - When the pointer type is `Unknown`, `default_when_unknown` is returned.
 #[track_caller]
-pub fn primary_pointer_can_hover<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+pub fn primary_pointer_can_hover<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
     invalidation: Invalidation,
     default_when_unknown: bool,
-) -> bool {
-    cx.environment_primary_pointer_can_hover(invalidation, default_when_unknown)
+) -> bool
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements()
+        .environment_primary_pointer_can_hover(invalidation, default_when_unknown)
 }
 
 /// Returns whether the primary pointer is expected to be coarse (touch-first).
 ///
 /// When the pointer type is `Unknown`, `default_when_unknown` is returned.
 #[track_caller]
-pub fn primary_pointer_is_coarse<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+pub fn primary_pointer_is_coarse<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
     invalidation: Invalidation,
     default_when_unknown: bool,
-) -> bool {
-    cx.environment_primary_pointer_is_coarse(invalidation, default_when_unknown)
+) -> bool
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements()
+        .environment_primary_pointer_is_coarse(invalidation, default_when_unknown)
 }

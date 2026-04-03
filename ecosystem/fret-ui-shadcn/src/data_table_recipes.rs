@@ -12,7 +12,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState, pin_column};
 use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::table::TableViewOutput;
+use fret_ui_kit::declarative::table::{IntoTableStateModel, TableViewOutput};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 use serde_json::Value;
 
@@ -312,12 +312,12 @@ impl<TData> std::fmt::Debug for DataTableToolbar<TData> {
 
 impl<TData> DataTableToolbar<TData> {
     pub fn new(
-        state: Model<TableState>,
+        state: impl IntoTableStateModel,
         columns: impl Into<Arc<[ColumnDef<TData>]>>,
         column_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
     ) -> Self {
         Self {
-            state,
+            state: state.into_table_state_model(),
             columns: columns.into(),
             column_label: Arc::new(column_label),
             show_global_filter: true,
@@ -1485,9 +1485,9 @@ impl std::fmt::Debug for DataTablePagination {
 }
 
 impl DataTablePagination {
-    pub fn new(state: Model<TableState>, output: Model<TableViewOutput>) -> Self {
+    pub fn new(state: impl IntoTableStateModel, output: Model<TableViewOutput>) -> Self {
         Self {
-            state,
+            state: state.into_table_state_model(),
             output,
             page_sizes: Arc::from([10usize, 20, 25, 30, 40, 50]),
         }

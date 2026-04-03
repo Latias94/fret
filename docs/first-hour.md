@@ -66,7 +66,7 @@ Memorize the default app surface before you start editing:
   `local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` for borrowed
   projections
 - if you intentionally need the raw model-backed hook, make that an advanced choice via
-  `use fret::advanced::AppUiRawStateExt;`
+  `use fret::advanced::AppUiRawModelExt;` + `cx.raw_model::<T>()`
 - if you later graduate to the richer `todo` rung and need explicit selector/query nouns, add
   `fret::selector::ui::DepsBuilder`, `fret::selector::DepsSignature`, or
   `fret::query::{QueryKey, QueryPolicy, ...}` intentionally instead of expecting them from the

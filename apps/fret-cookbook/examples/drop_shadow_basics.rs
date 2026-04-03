@@ -101,7 +101,7 @@ impl View for DropShadowBasicsView {
                 ui::children![
                     cx;
                     shadcn::Label::new("Enable DropShadowV1:"),
-                    shadcn::Switch::new(enabled_state.clone_model())
+                    shadcn::Switch::new(&enabled_state)
                         .test_id(TEST_ID_SWITCH_SHADOW),
                 ]
             })
@@ -112,7 +112,7 @@ impl View for DropShadowBasicsView {
                 ui::children![
                     cx;
                     shadcn::Label::new("Stress grid:"),
-                    shadcn::Switch::new(stress_state.clone_model())
+                    shadcn::Switch::new(&stress_state)
                         .test_id(TEST_ID_SWITCH_STRESS),
                 ]
             })

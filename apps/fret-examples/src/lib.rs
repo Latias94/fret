@@ -275,6 +275,7 @@ mod authoring_surface_policy_tests {
     const CUSTOM_EFFECT_V2_WEB_DEMO: &str = include_str!("custom_effect_v2_web_demo.rs");
     const CONTAINER_QUERIES_DOCKING_DEMO: &str = include_str!("container_queries_docking_demo.rs");
     const CUSTOM_EFFECT_V3_DEMO: &str = include_str!("custom_effect_v3_demo.rs");
+    const DATATABLE_DEMO: &str = include_str!("datatable_demo.rs");
     const DATE_PICKER_DEMO: &str = include_str!("date_picker_demo.rs");
     const DOCKING_ARBITRATION_DEMO: &str = include_str!("docking_arbitration_demo.rs");
     const DOCKING_DEMO: &str = include_str!("docking_demo.rs");
@@ -284,6 +285,7 @@ mod authoring_surface_policy_tests {
     const EDITOR_NOTES_DEMO: &str = include_str!("editor_notes_demo.rs");
     const EMPTY_IDLE_DEMO: &str = include_str!("empty_idle_demo.rs");
     const EMOJI_CONFORMANCE_DEMO: &str = include_str!("emoji_conformance_demo.rs");
+    const EXAMPLES_DOCS_README: &str = include_str!("../../../docs/examples/README.md");
     const EXTERNAL_TEXTURE_IMPORTS_DEMO: &str = include_str!("external_texture_imports_demo.rs");
     const EXTERNAL_TEXTURE_IMPORTS_WEB_DEMO: &str =
         include_str!("external_texture_imports_web_demo.rs");
@@ -315,6 +317,7 @@ mod authoring_surface_policy_tests {
     const SIMPLE_TODO_DEMO: &str = include_str!("simple_todo_demo.rs");
     const SONNER_DEMO: &str = include_str!("sonner_demo.rs");
     const TABLE_DEMO: &str = include_str!("table_demo.rs");
+    const TABLE_STRESS_DEMO: &str = include_str!("table_stress_demo.rs");
     const TEXT_HEAVY_MEMORY_DEMO: &str = include_str!("text_heavy_memory_demo.rs");
     const TODO_DEMO: &str = include_str!("todo_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
@@ -364,6 +367,31 @@ mod authoring_surface_policy_tests {
                 || src.contains("UiTree<KernelApp>")
                 || src.contains("KernelApp::new()")
         );
+    }
+
+    fn assert_explicit_advanced_reference_classification(name: &str, src: &str, reasons: &[&str]) {
+        assert!(
+            src.contains("Advanced/reference demo:"),
+            "{name} should advertise its advanced/reference classification"
+        );
+        assert!(
+            src.contains("Why advanced:"),
+            "{name} should explain why it stays on the advanced/reference lane"
+        );
+        assert!(
+            src.contains("Not a first-contact teaching surface:"),
+            "{name} should say it is not part of the first-contact teaching surface"
+        );
+        assert!(
+            src.contains("reference/product-validation"),
+            "{name} should describe itself as a reference/product-validation surface"
+        );
+        for reason in reasons {
+            assert!(
+                src.contains(reason),
+                "{name} is missing the advanced/reference rationale marker: {reason}"
+            );
+        }
     }
 
     fn assert_uses_default_app_surface_with_page(src: &str, page_fn: &str, call_site: &str) {
@@ -684,6 +712,80 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn advanced_reference_demos_are_explicitly_classified() {
+        assert_explicit_advanced_reference_classification(
+            "custom_effect_v1_demo",
+            CUSTOM_EFFECT_V1_DEMO,
+            &["effect/runtime ownership", "renderer/effect ABI"],
+        );
+        assert_explicit_advanced_reference_classification(
+            "custom_effect_v2_demo",
+            CUSTOM_EFFECT_V2_DEMO,
+            &["effect/runtime ownership", "renderer/effect ABI"],
+        );
+        assert_explicit_advanced_reference_classification(
+            "custom_effect_v3_demo",
+            CUSTOM_EFFECT_V3_DEMO,
+            &[
+                "effect/runtime ownership",
+                "renderer/effect ABI and diagnostics pipeline",
+            ],
+        );
+        assert_explicit_advanced_reference_classification(
+            "postprocess_theme_demo",
+            POSTPROCESS_THEME_DEMO,
+            &[
+                "renderer/theme bridge ownership",
+                "high-ceiling post-process story",
+            ],
+        );
+        assert_explicit_advanced_reference_classification(
+            "liquid_glass_demo",
+            LIQUID_GLASS_DEMO,
+            &[
+                "renderer capability and effect/control graph ownership",
+                "glass/warp behavior ceilings",
+            ],
+        );
+        assert_explicit_advanced_reference_classification(
+            "genui_demo",
+            GENUI_DEMO,
+            &[
+                "explicit model ownership",
+                "generator/editor integration",
+                "catalog, runtime, and validation flows",
+            ],
+        );
+        assert_explicit_advanced_reference_classification(
+            "imui_floating_windows_demo",
+            IMUI_FLOATING_WINDOWS_DEMO,
+            &[
+                "immediate-mode overlap/floating proof",
+                "IMUI interaction contracts and diagnostics affordances",
+            ],
+        );
+    }
+
+    #[test]
+    fn examples_docs_explicitly_name_the_advanced_reference_roster() {
+        let normalized = EXAMPLES_DOCS_README.split_whitespace().collect::<String>();
+        for marker in [
+            "Explicit advanced/reference roster:",
+            "`custom_effect_v1_demo`, `custom_effect_v2_demo`, and `custom_effect_v3_demo`",
+            "renderer/effect reference surfaces",
+            "`postprocess_theme_demo` and `liquid_glass_demo` are renderer/product-validation surfaces",
+            "`genui_demo` is a generator/editor integration reference surface",
+            "`imui_floating_windows_demo` is an IMUI overlap/floating proof surface",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "examples docs lost advanced/reference roster marker: {marker}"
+            );
+        }
+    }
+
+    #[test]
     fn todo_demo_prefers_default_app_surface() {
         assert!(TODO_DEMO.contains("use fret::app::prelude::*;"));
         assert!(!TODO_DEMO.contains("advanced::prelude::*"));
@@ -712,8 +814,12 @@ mod authoring_surface_policy_tests {
         assert!(TODO_DEMO.contains(".window_position_logical(TODO_WINDOW_POSITION_LOGICAL)"));
         assert!(TODO_DEMO.contains(".window_resize_increments(TODO_WINDOW_RESIZE_INCREMENTS)"));
         assert!(TODO_DEMO.contains("ui::for_each_keyed_with_cx("));
+        assert!(TODO_DEMO.contains("fn todo_row<'a, Cx>("));
+        assert!(TODO_DEMO.contains("Cx: fret::app::ElementContextAccess<'a, App>,"));
+        assert!(TODO_DEMO.contains("let cx = cx.elements();"));
         assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
         assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
+        assert!(!TODO_DEMO.contains("cx: &mut fret_ui::ElementContext<'_, App>,"));
         assert!(!TODO_DEMO.contains("TodoLocals::new(app)"));
         assert!(!TODO_DEMO.contains("LocalState::from_model(app.models_mut().insert("));
     }
@@ -848,16 +954,18 @@ mod authoring_surface_policy_tests {
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
             CJK_CONFORMANCE_DEMO,
             &[
-                "fn cjk_conformance_page<C>(",
-                "cx: &mut fret_ui::ElementContext<'_, App>,",
+                "fn cjk_conformance_page<'a, Cx, C>(",
+                "Cx: fret_ui::ElementContextAccess<'a, App>,",
                 "theme: fret_ui::ThemeSnapshot,",
                 "card: C,",
-                ") -> impl fret_ui_kit::IntoUiElement<App> + use<C>",
+                ") -> impl fret_ui_kit::IntoUiElement<App> + use<Cx, C>",
                 "C: fret_ui_kit::IntoUiElement<App>,",
+                ".into_element_in(cx)",
                 "ui::children![cx; cjk_conformance_page(cx, theme, card)]",
                 "ui::v_flex(move |cx| ui::single(cx, card))",
             ],
             &[
+                "cx: &mut fret_ui::ElementContext<'_, App>,",
                 "let page = ui::container(|cx| {",
                 "ui::v_flex(move |_cx| [card])",
             ],
@@ -866,16 +974,18 @@ mod authoring_surface_policy_tests {
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
             EMOJI_CONFORMANCE_DEMO,
             &[
-                "fn emoji_conformance_page<C>(",
-                "cx: &mut fret_ui::ElementContext<'_, App>,",
+                "fn emoji_conformance_page<'a, Cx, C>(",
+                "Cx: fret_ui::ElementContextAccess<'a, App>,",
                 "theme: fret_ui::ThemeSnapshot,",
                 "card: C,",
-                ") -> impl fret_ui_kit::IntoUiElement<App> + use<C>",
+                ") -> impl fret_ui_kit::IntoUiElement<App> + use<Cx, C>",
                 "C: fret_ui_kit::IntoUiElement<App>,",
+                ".into_element_in(cx)",
                 "ui::children![cx; emoji_conformance_page(cx, theme, card)]",
                 "ui::v_flex(move |cx| ui::single(cx, card))",
             ],
             &[
+                "cx: &mut fret_ui::ElementContext<'_, App>,",
                 "let page = ui::container(|cx| {",
                 "ui::v_flex(move |_cx| [card])",
             ],
@@ -889,12 +999,16 @@ mod authoring_surface_policy_tests {
             &[
                 "app_ui_root: AppUiRenderRootState,",
                 "form_state: LocalState<FormState>,",
+                "LocalState::new_in(app.models_mut(), String::new())",
+                "LocalState::new_in(app.models_mut(), None::<Arc<str>>)",
+                "LocalState::new_in(app.models_mut(), form_state)",
                 "let root = render_root_with_app_ui(",
                 "let (submit_count, valid, dirty) = form_state.layout(cx).read_ref(",
                 "let status_text = status.layout_value(cx);",
             ],
             &[
                 "form_state: Model<FormState>,",
+                "LocalState::from_model(app.models_mut().insert(",
                 ".render_root(\"form-demo\", move |cx| {",
                 "cx.observe_model(&form_state, Invalidation::Layout);",
                 "cx.app.models().read(&form_state, |st| {",
@@ -905,13 +1019,63 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn init_phase_local_state_examples_prefer_new_in_over_from_model() {
+        for (src, required_markers) in [
+            (
+                FORM_DEMO,
+                &[
+                    "LocalState::new_in(app.models_mut(), String::new())",
+                    "LocalState::new_in(app.models_mut(), None::<Arc<str>>)",
+                    "LocalState::new_in(app.models_mut(), form_state)",
+                ][..],
+            ),
+            (
+                ASYNC_PLAYGROUND_DEMO,
+                &[
+                    "LocalState::new_in(app.models_mut(), initial.map(Arc::from))",
+                    "LocalState::new_in(app.models_mut(), \"2\".to_string())",
+                    "LocalState::new_in(app.models_mut(), false)",
+                ][..],
+            ),
+            (
+                TABLE_DEMO,
+                &[
+                    "LocalState::new_in(app.models_mut(), false)",
+                    "LocalState::new_in(app.models_mut(), true)",
+                    "Some(Arc::<str>::from(\"reorder\"))",
+                ][..],
+            ),
+            (
+                GENUI_DEMO,
+                &[
+                    "LocalState::new_in(app.models_mut(), true)",
+                    "LocalState::new_in(app.models_mut(), SPEC_JSON.to_string())",
+                    "LocalState::new_in(app.models_mut(), String::new())",
+                ][..],
+            ),
+        ] {
+            for marker in required_markers {
+                assert!(
+                    src.contains(marker),
+                    "expected init-time LocalState marker missing: {marker}"
+                );
+            }
+            assert!(!src.contains("LocalState::from_model(app.models_mut().insert("));
+        }
+    }
+
+    #[test]
     fn manual_date_picker_demo_uses_app_ui_render_root_bridge() {
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
             DATE_PICKER_DEMO,
             &[
                 "app_ui_root: AppUiRenderRootState,",
-                "open: LocalState<bool>,",
-                "month: LocalState<CalendarMonth>,",
+                "locals: Option<DatePickerDemoLocals>,",
+                "struct DatePickerDemoLocals {",
+                "fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {",
+                "open: cx.state().local_init(|| false),",
+                "month: cx",
+                "if locals.is_none() {",
                 "let root = render_root_with_app_ui(",
                 "let open_value = open.layout_value(cx);",
                 "let selected_value = selected.layout_value(cx);",
@@ -919,6 +1083,7 @@ mod authoring_surface_policy_tests {
             ],
             &[
                 "open: Model<bool>,",
+                "LocalState::from_model(app.models_mut().insert(",
                 ".render_root(\"date-picker-demo\", move |cx| {",
                 "cx.observe_model(&open, Invalidation::Layout);",
                 "cx.app.models().get_copied(&open)",
@@ -935,12 +1100,17 @@ mod authoring_surface_policy_tests {
             SONNER_DEMO,
             &[
                 "app_ui_root: AppUiRenderRootState,",
-                "last_action: LocalState<Arc<str>>,",
+                "locals: Option<SonnerDemoLocals>,",
+                "struct SonnerDemoLocals {",
+                "fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {",
+                "last_action: cx.state().local_init(|| Arc::<str>::from(\"<none>\")),",
+                "if locals.is_none() {",
                 "let root = render_root_with_app_ui(",
                 "let last_action_value = last_action.layout_value(cx);",
             ],
             &[
                 "last_action: Model<Arc<str>>,",
+                "LocalState::from_model(app.models_mut().insert(",
                 ".render_root(\"sonner-demo\", |cx| {",
                 "cx.observe_model(&last_action, Invalidation::Layout);",
                 "cx.app.models().get_cloned(&last_action)",
@@ -955,18 +1125,27 @@ mod authoring_surface_policy_tests {
             IME_SMOKE_DEMO,
             &[
                 "app_ui_root: AppUiRenderRootState,",
-                "input_single: LocalState<String>,",
-                "last_ime: LocalState<Arc<str>>,",
+                "locals: Option<ImeSmokeLocals>,",
+                "struct ImeSmokeLocals {",
+                "fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {",
+                "input_single: cx.state().local::<String>(),",
+                "last_ime: cx.state().local_init(|| Arc::<str>::from(\"IME: <none>\")),",
+                "if locals.is_none() {",
                 "let root = render_root_with_app_ui(",
                 "let last = last_ime.paint_value(cx);",
+                "shadcn::Input::new(&input_single)",
+                "shadcn::Textarea::new(&input_multi)",
             ],
             &[
                 "input_single: Model<String>,",
                 "last_ime: Model<Arc<str>>,",
+                "LocalState::from_model(app.models_mut().insert(",
                 ".render_root(\"ime-smoke\",",
                 "cx.observe_model(&last_ime, Invalidation::Paint);",
                 "cx.app.models().read(&last_ime, |v| v.clone())",
                 "last_ime.paint(cx).value_or_else(",
+                "input_single.clone_model()",
+                "input_multi.clone_model()",
             ],
         );
     }
@@ -977,13 +1156,17 @@ mod authoring_surface_policy_tests {
             EMOJI_CONFORMANCE_DEMO,
             &[
                 "app_ui_root: AppUiRenderRootState,",
-                "emoji_font_override: LocalState<Option<Arc<str>>>,",
-                "emoji_font_override_open: LocalState<bool>,",
+                "locals: Option<EmojiConformanceLocals>,",
+                "struct EmojiConformanceLocals {",
+                "fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {",
+                "emoji_font_override: cx.state().local_init(|| None::<Arc<str>>),",
+                "if locals.is_none() {",
                 "let root = render_root_with_app_ui(",
                 "let selected_emoji_font = emoji_font_override.layout_value(cx);",
             ],
             &[
                 "emoji_font_override: Model<Option<Arc<str>>>,",
+                "LocalState::from_model(app.models_mut().insert(",
                 ".render_root(\"emoji-conformance\", |cx| {",
                 "cx.observe_model(&emoji_font_override, Invalidation::Layout);",
                 "cx.app.models().read(&emoji_font_override, |v| v.clone())",
@@ -1022,6 +1205,12 @@ mod authoring_surface_policy_tests {
         assert!(DATE_PICKER_DEMO.contains("shadcn::Switch::new(&disabled)"));
         assert!(DATE_PICKER_DEMO.contains("shadcn::DatePicker::new(&open, &month, &selected)"));
         assert!(DATE_PICKER_DEMO.contains("shadcn::Calendar::new(&month, &selected)"));
+        assert!(FORM_DEMO.contains("shadcn::DatePicker::new("));
+        assert!(
+            FORM_DEMO.contains("&start_date_open,")
+                && FORM_DEMO.contains("&start_date_month,")
+                && FORM_DEMO.contains("&start_date,")
+        );
         assert!(!DATE_PICKER_DEMO.contains("week_start_monday.clone_model()"));
         assert!(!DATE_PICKER_DEMO.contains("show_outside_days.clone_model()"));
         assert!(!DATE_PICKER_DEMO.contains("disable_outside_days.clone_model()"));
@@ -1030,6 +1219,49 @@ mod authoring_surface_policy_tests {
         assert!(!DATE_PICKER_DEMO.contains("open.clone_model()"));
         assert!(!DATE_PICKER_DEMO.contains("month.clone_model()"));
         assert!(!DATE_PICKER_DEMO.contains("selected.clone_model()"));
+        assert!(!FORM_DEMO.contains("DatePicker::new_controllable("));
+        assert!(!FORM_DEMO.contains("start_date.clone_model()"));
+    }
+
+    #[test]
+    fn bool_control_examples_prefer_local_state_bridges_over_clone_model() {
+        assert!(DROP_SHADOW_DEMO.contains("shadcn::Switch::new(&enabled_state)"));
+        assert!(DROP_SHADOW_DEMO.contains("shadcn::Switch::new(&stress_state)"));
+        assert!(!DROP_SHADOW_DEMO.contains("enabled_state.clone_model()"));
+        assert!(!DROP_SHADOW_DEMO.contains("stress_state.clone_model()"));
+
+        assert!(MARKDOWN_DEMO.contains("shadcn::Switch::new(&wrap_code_state)"));
+        assert!(MARKDOWN_DEMO.contains("shadcn::Switch::new(&cap_code_height_state)"));
+        assert!(!MARKDOWN_DEMO.contains("wrap_code_state.clone_model()"));
+        assert!(!MARKDOWN_DEMO.contains("cap_code_height_state.clone_model()"));
+    }
+
+    #[test]
+    fn form_examples_prefer_local_state_form_bridges_over_clone_model() {
+        assert!(
+            FORM_DEMO.contains("registry.register_field(\"name\", &name, String::new(), |v| {")
+        );
+        assert!(
+            FORM_DEMO.contains("registry.register_field(\"email\", &email, String::new(), |v| {")
+        );
+        assert!(FORM_DEMO.contains("registry.register_field(\"role\", &role, None, |v| {"));
+        assert!(
+            FORM_DEMO.contains("registry.register_field(\"start_date\", &start_date, None, |v| {")
+        );
+        assert!(FORM_DEMO.contains("shadcn::FormField::new("));
+        assert!(FORM_DEMO.contains("&form_state,"));
+        assert!(FORM_DEMO.contains("shadcn::Input::new(&name)"));
+        assert!(FORM_DEMO.contains("shadcn::Input::new(&email)"));
+        assert!(!FORM_DEMO.contains("form_state.clone_model()"));
+        assert!(!FORM_DEMO.contains("name.clone_model()"));
+        assert!(!FORM_DEMO.contains("email.clone_model()"));
+        assert!(!FORM_DEMO.contains("registry.register_field(\"name\", name.clone_model(),"));
+        assert!(!FORM_DEMO.contains("registry.register_field(\"email\", email.clone_model(),"));
+        assert!(!FORM_DEMO.contains("registry.register_field(\"role\", role.clone_model(),"));
+        assert!(
+            !FORM_DEMO
+                .contains("registry.register_field(\"start_date\", start_date.clone_model(),")
+        );
     }
 
     #[test]
@@ -1038,6 +1270,10 @@ mod authoring_surface_policy_tests {
             COMPONENTS_GALLERY_DEMO,
             &[
                 "app_ui_root: AppUiRenderRootState,",
+                "fn components_gallery_table_cell(",
+                "cx: &mut dyn fret_ui::ElementContextAccess<'_, App>,",
+                "let cx = cx.elements();",
+                "let cell_at = Arc::new(components_gallery_table_cell);",
                 "let root = render_root_with_app_ui(",
                 "let selected = tree_state.layout(cx).read_ref(|s| s.selected).ok().flatten();",
                 "let checkbox_value = checkbox.layout(cx).copied_or(false);",
@@ -1045,6 +1281,7 @@ mod authoring_surface_policy_tests {
                 "let last_action_value = last_action.layout(cx).value_or_else(",
             ],
             &[
+                "move |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u64>, row: &u64| {",
                 ".render_root(\"components-gallery\", |cx| {",
                 "cx.observe_model(&tree_state, Invalidation::Layout);",
                 "cx.app.models().get_copied(&checkbox).unwrap_or(false);",
@@ -2044,12 +2281,16 @@ mod authoring_surface_policy_tests {
                 "cx.actions().local(&self.todos)",
                 ".payload_update_if::<act::Toggle>(|rows, id| {",
                 ".payload_update_if::<act::Remove>(|rows, id| {",
+                "fn todo_row<'a, Cx>(",
+                "Cx: fret::app::ElementContextAccess<'a, App>,",
+                "let cx = cx.elements();",
             ],
             &[
                 "bind_todo_actions(",
                 "cx.use_local::<String>()",
                 "cx.on_action_notify_models::<act::Add>",
                 "cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>",
+                "cx: &mut fret_ui::ElementContext<'_, App>,",
                 "todos_state.layout(cx).value_or_default()",
                 "draft_state.layout(cx).value_or_default()",
                 "tx.value_or_else(&draft_state, String::new)",
@@ -2098,14 +2339,16 @@ mod authoring_surface_policy_tests {
                 "let stress_state = cx.state().local_init(|| false);",
                 "let enabled = enabled_state.layout_value(cx);",
                 "let stress = stress_state.layout_value(cx);",
-                "shadcn::Switch::new(enabled_state.clone_model())",
-                "shadcn::Switch::new(stress_state.clone_model())",
+                "shadcn::Switch::new(&enabled_state)",
+                "shadcn::Switch::new(&stress_state)",
             ],
             &[
                 "enabled: app.models_mut().insert(false)",
                 "stress: app.models_mut().insert(false)",
                 "self.st.enabled.layout(cx).value_or_default()",
                 "self.st.stress.layout(cx).value_or_default()",
+                "enabled_state.clone_model()",
+                "stress_state.clone_model()",
             ],
         );
 
@@ -2180,6 +2423,12 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             ASYNC_PLAYGROUND_DEMO,
             &[
+                "value: LocalState::new_in(app.models_mut(), initial.map(Arc::from)),",
+                "open: LocalState::new_in(app.models_mut(), false),",
+                "stale_time_s: LocalState::new_in(app.models_mut(), \"2\".to_string()),",
+                "cache_time_s: LocalState::new_in(app.models_mut(), \"30\".to_string()),",
+                "keep_prev: LocalState::new_in(app.models_mut(), true),",
+                "fail_mode: LocalState::new_in(app.models_mut(), false),",
                 "selected: cx.state().local_init(|| QueryId::Tip),",
                 "dark: cx.state().local_init(|| false),",
                 "global_slow: cx.state().local_init(|| false),",
@@ -2212,6 +2461,7 @@ mod authoring_surface_policy_tests {
                 "namespace_input: app.models_mut().insert(\"tip\".to_string())",
                 "search_input: app.models_mut().insert(\"react\".to_string())",
                 "stock_symbol: app.models_mut().insert(\"FRET\".to_string())",
+                "LocalState::from_model(app.models_mut().insert(",
                 "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_SELECTED)",
                 "cx.on_action_notify_models::<act::SelectTip>",
                 "cx.actions().models::<act::SelectTip>({",
@@ -2228,10 +2478,17 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             EDITOR_NOTES_DEMO,
             &[
+                "fn selection_button<'a, Cx>(",
+                "Cx: fret::app::ElementContextAccess<'a, App>,",
+                ".into_element_in(cx)",
+                "fn render_inspector_panel<'a, Cx>(",
+                ".into_element(cx.elements(),",
                 "let (committed_notes, notes_outcome) = cx.data().selector_model_paint(",
                 "(&asset.notes_model, &asset.notes_outcome_model),",
             ],
             &[
+                "fn selection_button(cx: &mut AppUi<'_, '_>,",
+                "fn render_inspector_panel(cx: &mut AppUi<'_, '_>,",
                 ".watch_model(&asset.notes_model)",
                 ".watch_model(&asset.notes_outcome_model)",
             ],
@@ -2422,8 +2679,8 @@ mod authoring_surface_policy_tests {
                 "let wrap_enabled = wrap_code_state.layout_value(cx);",
                 "let cap_enabled = cap_code_height_state.layout_value(cx);",
                 "components.on_link_activate = Some(Self::on_link_activate(pending_anchor_state.clone()));",
-                "shadcn::Switch::new(wrap_code_state.clone_model())",
-                "shadcn::Switch::new(cap_code_height_state.clone_model())",
+                "shadcn::Switch::new(&wrap_code_state)",
+                "shadcn::Switch::new(&cap_code_height_state)",
             ],
             &[
                 "cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES)",
@@ -2433,6 +2690,8 @@ mod authoring_surface_policy_tests {
                 "self.st.pending_anchor.layout(cx).value_or_default()",
                 "self.st.wrap_code.layout(cx).value_or_default()",
                 "self.st.cap_code_height.layout(cx).value_or_default()",
+                "wrap_code_state.clone_model()",
+                "cap_code_height_state.clone_model()",
             ],
         );
     }
@@ -2446,12 +2705,21 @@ mod authoring_surface_policy_tests {
                 "view_options_open: LocalState<bool>,",
                 "enable_grouping: LocalState<bool>,",
                 "grouped_column_mode: LocalState<Option<Arc<str>>>,",
+                "view_options_open: LocalState::new_in(app.models_mut(), false),",
+                "grouped_column_mode: LocalState::new_in(",
                 "let enable_grouping = enable_grouping.layout_value_in(cx);",
                 "let grouped_column_mode = grouped_column_mode.layout_value_in(cx);",
-                "let view_options_open = view_options_open.clone_model();",
+                "let view_options_open = view_options_open.clone();",
+                "shadcn::DropdownMenu::from_open(open).build(",
+                "shadcn::DropdownMenuCheckboxItem::new(",
+                "&enable_grouping,",
+                "shadcn::DropdownMenuRadioGroup::new(",
+                "&grouped_column_mode,",
+                "shadcn::ContextMenu::from_open(open).into_element(",
             ],
             &[
                 "use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;",
+                "LocalState::from_model(app.models_mut().insert(",
                 "cx.watch_model(&enable_grouping_model)",
                 "cx.watch_model(&grouped_column_mode_model)",
                 "view_options_open: Model<bool>,",
@@ -2499,6 +2767,9 @@ mod authoring_surface_policy_tests {
                 "editor_text: LocalState<String>,",
                 "stream_text: LocalState<String>,",
                 "stream_patch_only: LocalState<bool>,",
+                "auto_apply_standard_actions: LocalState::new_in(app.models_mut(), true),",
+                "editor_text: LocalState::new_in(app.models_mut(), SPEC_JSON.to_string()),",
+                "stream_patch_only: LocalState::new_in(app.models_mut(), false),",
                 "let auto_apply_enabled = st.auto_apply_standard_actions.layout_value_in(cx);",
                 "let _auto_fix_enabled = st.auto_fix_on_apply.layout_value_in(cx);",
                 "let auto_apply_model = st.auto_apply_standard_actions.clone_model();",
@@ -2519,6 +2790,7 @@ mod authoring_surface_policy_tests {
                 "editor_text: Model<String>,",
                 "stream_text: Model<String>,",
                 "stream_patch_only: Model<bool>,",
+                "LocalState::from_model(app.models_mut().insert(",
                 "cx.watch_model(&st.auto_apply_standard_actions)",
                 "cx.watch_model(&st.auto_fix_on_apply)",
                 "cx.watch_model(&st.genui_state)",
@@ -2836,6 +3108,8 @@ mod authoring_surface_policy_tests {
             &[
                 "always_on_top: LocalState<bool>,",
                 "status: LocalState<Arc<str>>,",
+                "LocalState::new_in(app.models_mut(), false)",
+                "LocalState::new_in(app.models_mut(), Arc::from(\"Idle\"))",
                 "let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector_layout(",
                 "(&st.always_on_top, &st.status),",
             ],
@@ -2846,6 +3120,7 @@ mod authoring_surface_policy_tests {
                 "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
                 "always_on_top: fret_runtime::Model<bool>,",
                 "status: fret_runtime::Model<Arc<str>>,",
+                "LocalState::from_model(app.models_mut().insert(",
                 "let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector(",
             ],
         );
@@ -2860,6 +3135,7 @@ mod authoring_surface_policy_tests {
             LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO,
             &[
                 "status: LocalState<Arc<str>>,",
+                "LocalState::new_in(app.models_mut(), Arc::from(\"Idle\"))",
                 "let status = st.status.layout_value_in(cx);",
             ],
             &[
@@ -2867,22 +3143,185 @@ mod authoring_surface_policy_tests {
                 "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
                 "let status = cx.data().selector_layout(&st.status, |status| status);",
                 "status: fret_runtime::Model<Arc<str>>,",
+                "LocalState::from_model(app.models_mut().insert(",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             WORKSPACE_SHELL_DEMO,
             &[
+                "fn workspace_shell_command_button<'a, Cx>(",
+                "Cx: fret::app::ElementContextAccess<'a, App>,",
+                "let cx = cx.elements();",
                 "let (prompt_open, prompt): (bool, Option<WorkspaceShellDirtyClosePrompt>) =",
                 "cx.data().selector_model_layout(",
                 "(&dirty_close_prompt_open, &dirty_close_prompt),",
                 ".selector_model_layout(&tabstrip_two_row_pinned, |two_row_pinned| {",
             ],
             &[
+                "let button = |cx: &mut fret_ui::ElementContext<'_, App>,",
                 ".get_model_cloned(&dirty_close_prompt_open, Invalidation::Layout)",
                 ".get_model_cloned(&dirty_close_prompt, Invalidation::Layout)",
                 ".get_model_cloned(&tabstrip_two_row_pinned, Invalidation::Layout)",
             ],
+        );
+    }
+
+    #[test]
+    fn workspace_shell_demo_prefers_capability_first_command_button_helpers() {
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            WORKSPACE_SHELL_DEMO,
+            &[
+                "fn workspace_shell_command_button<'a, Cx>(",
+                "Cx: fret::app::ElementContextAccess<'a, App>,",
+                "let cx = cx.elements();",
+                "workspace_shell_command_button(",
+            ],
+            &["let button = |cx: &mut fret_ui::ElementContext<'_, App>,"],
+        );
+    }
+
+    #[test]
+    fn table_examples_prefer_local_state_menu_bridges_over_clone_model() {
+        assert!(TABLE_DEMO.contains("table_state: LocalState<TableState>,"));
+        assert!(
+            TABLE_DEMO
+                .contains("let table_state = LocalState::new_in(app.models_mut(), table_state);")
+        );
+        assert!(
+            TABLE_DEMO
+                .contains("let (selected, sorting) = table_state.layout_read_ref_in(cx, |st| {")
+        );
+        assert!(TABLE_DEMO.contains("fret_ui_kit::declarative::table::table_virtualized("));
+        assert!(TABLE_DEMO.contains("&table_state,"));
+        assert!(TABLE_DEMO.contains("let view_options_open = view_options_open.clone();"));
+        assert!(TABLE_DEMO.contains("let header_menu_id_open = header_menu_id_open.clone();"));
+        assert!(TABLE_DEMO.contains("let header_menu_name_open = header_menu_name_open.clone();"));
+        assert!(TABLE_DEMO.contains("let header_menu_role_open = header_menu_role_open.clone();"));
+        assert!(
+            TABLE_DEMO.contains("let header_menu_score_open = header_menu_score_open.clone();")
+        );
+        assert!(TABLE_DEMO.contains("shadcn::DropdownMenu::from_open(open).build("));
+        assert!(TABLE_DEMO.contains("shadcn::DropdownMenuCheckboxItem::new("));
+        assert!(TABLE_DEMO.contains("&enable_grouping,"));
+        assert!(TABLE_DEMO.contains("shadcn::DropdownMenuRadioGroup::new("));
+        assert!(TABLE_DEMO.contains("&grouped_column_mode,"));
+        assert!(TABLE_DEMO.contains("shadcn::ContextMenu::from_open(open).into_element("));
+        assert!(TABLE_DEMO.contains(
+            "let table_debug_ids =\n                                                    fret_ui_kit::declarative::table::TableDebugIds {"
+        ));
+        assert!(TABLE_DEMO.contains(
+            "header_row_test_id: Some(Arc::<str>::from(\n                                                            \"table-demo-header-row\","
+        ));
+        assert!(TABLE_DEMO.contains(
+            "header_cell_test_id_prefix: Some(\n                                                            Arc::<str>::from(\"table-demo-header-\"),"
+        ));
+        assert!(TABLE_DEMO.contains(
+            "row_test_id_prefix: Some(Arc::<str>::from(\n                                                            \"table-demo-row-\","
+        ));
+        assert!(!TABLE_DEMO.contains("let view_options_open = view_options_open.clone_model();"));
+        assert!(
+            !TABLE_DEMO.contains("let header_menu_id_open = header_menu_id_open.clone_model();")
+        );
+        assert!(
+            !TABLE_DEMO
+                .contains("let header_menu_name_open = header_menu_name_open.clone_model();")
+        );
+        assert!(
+            !TABLE_DEMO
+                .contains("let header_menu_role_open = header_menu_role_open.clone_model();")
+        );
+        assert!(
+            !TABLE_DEMO
+                .contains("let header_menu_score_open = header_menu_score_open.clone_model();")
+        );
+        assert!(!TABLE_DEMO.contains("enable_grouping_state.clone_model();"));
+        assert!(!TABLE_DEMO.contains("grouped_column_mode_state.clone_model();"));
+        assert!(!TABLE_DEMO.contains("table_state: Model<TableState>,"));
+        assert!(!TABLE_DEMO.contains("cx.observe_model(&table_state, Invalidation::Layout);"));
+        assert!(!TABLE_DEMO.contains(".models().read(&table_state, |st|"));
+    }
+
+    #[test]
+    fn table_demo_uses_structured_table_debug_ids() {
+        assert!(TABLE_DEMO.contains(
+            "let table_debug_ids =\n                                                    fret_ui_kit::declarative::table::TableDebugIds {"
+        ));
+        assert!(TABLE_DEMO.contains(
+            "header_row_test_id: Some(Arc::<str>::from(\n                                                            \"table-demo-header-row\","
+        ));
+        assert!(TABLE_DEMO.contains(
+            "header_cell_test_id_prefix: Some(\n                                                            Arc::<str>::from(\"table-demo-header-\"),"
+        ));
+        assert!(TABLE_DEMO.contains(
+            "row_test_id_prefix: Some(Arc::<str>::from(\n                                                            \"table-demo-row-\","
+        ));
+        assert!(
+            TABLE_DEMO
+                .contains("Prefer table-owned diagnostics anchors over renderer-local markers.")
+        );
+    }
+
+    #[test]
+    fn datatable_examples_prefer_local_state_table_bridges() {
+        assert!(DATATABLE_DEMO.contains("use fret::advanced::prelude::LocalState;"));
+        assert!(DATATABLE_DEMO.contains("table_state: LocalState<TableState>,"));
+        assert!(
+            DATATABLE_DEMO
+                .contains("let table_state = LocalState::new_in(app.models_mut(), table_state);")
+        );
+        assert!(
+            DATATABLE_DEMO
+                .contains("let (selected, sorting) = table_state.layout_read_ref_in(cx, |st| {")
+        );
+        assert!(DATATABLE_DEMO.contains("shadcn::DataTableToolbar::new("));
+        assert!(
+            DATATABLE_DEMO
+                .contains("shadcn::DataTablePagination::new(&table_state, table_output.clone())")
+        );
+        assert!(DATATABLE_DEMO.contains("&table_state,"));
+        assert!(!DATATABLE_DEMO.contains("table_state: Model<TableState>,"));
+        assert!(!DATATABLE_DEMO.contains(".models().read(&table_state, |st|"));
+    }
+
+    #[test]
+    fn datatable_demo_uses_structured_table_debug_ids() {
+        assert!(
+            DATATABLE_DEMO.contains(".debug_ids(fret_ui_kit::declarative::table::TableDebugIds {")
+        );
+        assert!(DATATABLE_DEMO.contains(
+            "header_row_test_id: Some(Arc::<str>::from(\"datatable-demo-header-row\")),"
+        ));
+        assert!(DATATABLE_DEMO.contains(
+            "header_cell_test_id_prefix: Some(Arc::<str>::from(\"datatable-demo-header-\")),"
+        ));
+        assert!(
+            DATATABLE_DEMO
+                .contains("row_test_id_prefix: Some(Arc::<str>::from(\"datatable-demo-row-\")),")
+        );
+    }
+
+    #[test]
+    fn table_stress_demo_uses_structured_table_debug_ids() {
+        assert!(TABLE_STRESS_DEMO.contains(
+            "let table_debug_ids =\n                                                    fret_ui_kit::declarative::table::TableDebugIds {"
+        ));
+        assert!(TABLE_STRESS_DEMO.contains(
+            "header_row_test_id: Some(Arc::<str>::from(\n                                                            \"table-stress-header-row\","
+        ));
+        assert!(TABLE_STRESS_DEMO.contains(
+            "header_cell_test_id_prefix: Some(\n                                                            Arc::<str>::from(\"table-stress-header-\"),"
+        ));
+        assert!(TABLE_STRESS_DEMO.contains(
+            "row_test_id_prefix: Some(Arc::<str>::from(\n                                                            \"table-stress-row-\","
+        ));
+        assert!(
+            TABLE_STRESS_DEMO
+                .contains("Keep stress/perf diagnostics on table-owned layout wrappers.")
+        );
+        assert!(
+            !TABLE_STRESS_DEMO
+                .contains("fret_ui_kit::declarative::table::TableDebugIds::default()")
         );
     }
 

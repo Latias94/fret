@@ -8,6 +8,7 @@ use fret_ui::element::{AnyElement, LayoutStyle, SpacerProps};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_headless::table::{ColumnDef, ColumnId, TableState};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::table::IntoTableStateModel;
 
 use crate::bool_model::IntoBoolModel;
 use crate::button::{Button, ButtonSize, ButtonVariant};
@@ -182,13 +183,13 @@ impl DataTableViewOptions {
 
     pub fn from_column_options(
         open: impl IntoBoolModel,
-        state: Model<TableState>,
+        state: impl IntoTableStateModel,
         options: impl Into<Arc<[DataTableColumnOption]>>,
     ) -> Self {
         Self {
             open: open.into_bool_model(),
             items: Vec::new(),
-            bound_state: Some(state),
+            bound_state: Some(state.into_table_state_model()),
             bound_options: options.into(),
             button_label: Arc::from("View"),
             menu_label: Some(Arc::from("Toggle columns")),
@@ -207,7 +208,7 @@ impl DataTableViewOptions {
 
     pub fn from_table_state<TData>(
         open: impl IntoBoolModel,
-        state: Model<TableState>,
+        state: impl IntoTableStateModel,
         columns: impl Into<Arc<[ColumnDef<TData>]>>,
         column_label: impl Fn(&ColumnDef<TData>) -> Arc<str>,
     ) -> Self {
@@ -234,7 +235,7 @@ impl DataTableViewOptions {
         let mut options_vec = Vec::new();
         push_leaf_column_options(&columns, &mut options_vec, &column_label);
         let options: Arc<[DataTableColumnOption]> = Arc::from(options_vec.into_boxed_slice());
-        Self::from_column_options(open, state, options)
+        Self::from_column_options(open, state.into_table_state_model(), options)
     }
 
     pub fn button_label(mut self, label: impl Into<Arc<str>>) -> Self {

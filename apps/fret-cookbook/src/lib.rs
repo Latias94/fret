@@ -582,6 +582,21 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn cookbook_data_table_example_prefers_local_state_table_bridges() {
+        assert!(DATA_TABLE_EXAMPLE.contains("table_state: LocalState<TableState>,"));
+        assert!(
+            DATA_TABLE_EXAMPLE
+                .contains("table_state: LocalState::new_in(app.models_mut(), state),")
+        );
+        assert!(DATA_TABLE_EXAMPLE.contains("shadcn::DataTableToolbar::new("));
+        assert!(DATA_TABLE_EXAMPLE.contains(
+            "shadcn::DataTablePagination::new(&self.table_state, self.table_output.clone())"
+        ));
+        assert!(DATA_TABLE_EXAMPLE.contains("&self.table_state,"));
+        assert!(!DATA_TABLE_EXAMPLE.contains("table_state: Model<TableState>,"));
+    }
+
+    #[test]
     fn common_shadcn_control_examples_prefer_local_state_bridges_over_clone_model() {
         assert!(THEME_SWITCHING_EXAMPLE.contains("shadcn::ToggleGroup::single(&scheme_state)"));
         assert!(!THEME_SWITCHING_EXAMPLE.contains("scheme_state.clone_model()"));
@@ -590,6 +605,11 @@ mod authoring_surface_policy_tests {
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("shadcn::Switch::new(&cap_height_state)"));
         assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("wrap_state.clone_model()"));
         assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("cap_height_state.clone_model()"));
+
+        assert!(DROP_SHADOW_EXAMPLE.contains("shadcn::Switch::new(&enabled_state)"));
+        assert!(DROP_SHADOW_EXAMPLE.contains("shadcn::Switch::new(&stress_state)"));
+        assert!(!DROP_SHADOW_EXAMPLE.contains("enabled_state.clone_model()"));
+        assert!(!DROP_SHADOW_EXAMPLE.contains("stress_state.clone_model()"));
 
         assert!(VIRTUAL_LIST_EXAMPLE.contains("shadcn::ToggleGroup::single(&mode_state)"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains("shadcn::Switch::new(&tall_rows_state)"));
@@ -612,6 +632,14 @@ mod authoring_surface_policy_tests {
             !VIRTUAL_LIST_EXAMPLE
                 .contains("shadcn::Switch::new(visible_only_keys_state.clone_model())")
         );
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("let reversed = reversed_state.clone();"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("let jump = jump_state.clone();"));
+        assert!(
+            VIRTUAL_LIST_EXAMPLE.contains("let reversed = reversed.value_in_or(models, false);")
+        );
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("let raw = jump.value_in_or_default(models);"));
+        assert!(!VIRTUAL_LIST_EXAMPLE.contains("reversed_state.clone_model()"));
+        assert!(!VIRTUAL_LIST_EXAMPLE.contains("jump_state.clone_model()"));
     }
 
     #[test]
@@ -628,19 +656,27 @@ mod authoring_surface_policy_tests {
     fn overlay_example_prefers_local_state_bool_root_bridges_over_clone_model() {
         assert!(OVERLAY_EXAMPLE.contains("shadcn::Dialog::new(&dialog_open_state)"));
         assert!(
-            !OVERLAY_EXAMPLE
-                .contains("let dialog_open_for_dialog = dialog_open_state.clone_model();")
+            OVERLAY_EXAMPLE.contains("let dialog_open_for_footer = dialog_open_state.clone();")
         );
+        assert!(OVERLAY_EXAMPLE.contains("let dialog_open_for_close = dialog_open_state.clone();"));
+        assert!(OVERLAY_EXAMPLE.contains(".toggle_model(dialog_open_for_footer.clone()),"));
+        assert!(
+            OVERLAY_EXAMPLE.contains("shadcn::DialogClose::new(dialog_open_for_close.clone())")
+        );
+        assert!(!OVERLAY_EXAMPLE.contains("dialog_open_state.clone_model()"));
     }
 
     #[test]
-    fn shared_scaffold_prefers_app_surface_for_cookbook_page_shells() {
+    fn shared_scaffold_prefers_explicit_app_context_access_for_cookbook_page_shells() {
         assert!(SCAFFOLD.contains("use fret::app::prelude::*;"));
         assert!(SCAFFOLD.contains("use fret::style::{ColorRef, Space, Theme};"));
-        assert!(SCAFFOLD.contains("&mut UiCx<'_>"));
+        assert!(SCAFFOLD.contains("Cx: fret::app::ElementContextAccess<'a, App>"));
         assert!(SCAFFOLD.contains("B: UiChild"));
+        assert!(SCAFFOLD.contains("let theme = cx.elements().theme().snapshot();"));
         assert!(SCAFFOLD.contains("ui::single(cx, surface)"));
+        assert!(SCAFFOLD.contains(".into_element_in(cx)"));
         assert!(!SCAFFOLD.contains("ui::children![cx; surface]"));
+        assert!(!SCAFFOLD.contains("&mut UiCx<'_>"));
         assert!(!SCAFFOLD.contains("&mut ComponentCx<'_, H>"));
         assert!(!SCAFFOLD.contains("B: IntoUiElement<H>"));
         assert!(!SCAFFOLD.contains("use fret::prelude::*;"));

@@ -7,7 +7,7 @@
 //! - hook-style helpers compose existing mechanism contracts (models + observation).
 //!
 //! v1 notes:
-//! - the explicit raw-model hook seam (`AppUiRawStateExt::use_state<T>()`) currently returns a
+//! - the explicit raw-model hook seam (`AppUiRawModelExt::raw_model<T>()`) currently returns a
 //!   `Model<T>` allocated in the app-owned model store. This keeps event handlers object-safe
 //!   (they only receive `UiActionHost`) while still providing view-local state ergonomics.
 //! - The view runtime is intentionally additive and lives in `ecosystem/fret` (not kernel).
@@ -42,7 +42,7 @@ pub trait View: 'static {
 ///
 /// - use `cx.state().local*` plus `layout_value(...)` / `paint_value(...)` for the default
 ///   app-authoring path,
-/// - use [`AppUiRawStateExt::use_state`] when code intentionally wants a raw `Model<T>` handle,
+/// - use [`AppUiRawModelExt::raw_model`] when code intentionally wants a raw `Model<T>` handle,
 /// - use the bridge helpers below only when ownership or helper-context boundaries still require
 ///   direct `ModelStore`, `ElementContext`, or `Model<T>` access.
 pub struct LocalState<T> {
@@ -58,6 +58,22 @@ impl<T> Clone for LocalState<T> {
 }
 
 impl<T> LocalState<T> {
+    /// Insert a new view-owned local slot into an existing `ModelStore`.
+    ///
+    /// This is the blessed constructor for driver/init/hybrid surfaces that already own
+    /// `&mut ModelStore` (for example: manual window state, `UiAppDriver` init hooks, or
+    /// render-root bridges that need a `LocalState<T>` handle before the first `AppUi` render).
+    /// On the default `AppUi` lane, prefer `cx.state().local::<T>()` / `local_init(...)`.
+    #[track_caller]
+    pub fn new_in(models: &mut ModelStore, value: T) -> Self
+    where
+        T: Any,
+    {
+        Self {
+            model: models.insert(value),
+        }
+    }
+
     /// Wrap an existing raw `Model<T>` handle as explicit `LocalState<T>` bridge state.
     ///
     /// This is primarily for advanced/manual surfaces that allocate tracked slots outside the
@@ -706,6 +722,34 @@ impl<T: Any> TrackedStateExt<T> for Model<T> {
     }
 }
 
+impl<T> fret_ui_kit::declarative::form::IntoFormValueModel<T> for LocalState<T> {
+    fn into_form_value_model(self) -> Model<T> {
+        self.clone_model()
+    }
+}
+
+impl<T> fret_ui_kit::declarative::form::IntoFormValueModel<T> for &LocalState<T> {
+    fn into_form_value_model(self) -> Model<T> {
+        self.clone_model()
+    }
+}
+
+impl fret_ui_kit::declarative::table::IntoTableStateModel
+    for LocalState<fret_ui_kit::headless::table::TableState>
+{
+    fn into_table_state_model(self) -> Model<fret_ui_kit::headless::table::TableState> {
+        self.clone_model()
+    }
+}
+
+impl fret_ui_kit::declarative::table::IntoTableStateModel
+    for &LocalState<fret_ui_kit::headless::table::TableState>
+{
+    fn into_table_state_model(self) -> Model<fret_ui_kit::headless::table::TableState> {
+        self.clone_model()
+    }
+}
+
 #[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoBoolModel for LocalState<bool> {
     fn into_bool_model(self) -> Model<bool> {
@@ -730,6 +774,24 @@ impl fret_ui_shadcn::facade::IntoOptionalBoolModel for LocalState<Option<bool>> 
 #[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoOptionalBoolModel for &LocalState<Option<bool>> {
     fn into_optional_bool_model(self) -> Model<Option<bool>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoFormStateModel
+    for LocalState<fret_ui_kit::headless::form_state::FormState>
+{
+    fn into_form_state_model(self) -> Model<fret_ui_kit::headless::form_state::FormState> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoFormStateModel
+    for &LocalState<fret_ui_kit::headless::form_state::FormState>
+{
+    fn into_form_state_model(self) -> Model<fret_ui_kit::headless::form_state::FormState> {
         self.clone_model()
     }
 }
@@ -1190,7 +1252,22 @@ impl_model_selector_inputs_tuple!(
 ///
 /// This is a thin wrapper over [`ElementContext`] that:
 /// - provides grouped default-path helpers (`state`, `actions`, `data`, `effects`),
-/// - collects action handlers for installation at a chosen root element.
+/// - collects action handlers for installation at a chosen root element,
+/// - and keeps the component/internal identity lane behind an explicit `elements()` escape hatch.
+///
+/// The default app lane intentionally does not expose helper-local slot/model primitives such as
+/// `slot_state(...)` or `local_model(...)` directly.
+///
+/// ```compile_fail
+/// use fret::AppUi;
+///
+/// fn wrong(cx: &mut AppUi<'_, '_>) {
+///     let _ = cx.local_model(|| false);
+/// }
+/// ```
+///
+/// Reach for `cx.state().local*` on the default app lane, or call `cx.elements()` explicitly when
+/// advanced/component-heavy code intentionally needs the lower-level `ElementContext` substrate.
 pub struct AppUi<'cx, 'a, H: UiHost> {
     cx: &'cx mut ElementContext<'a, H>,
     action_root: fret_ui::GlobalElementId,
@@ -1198,28 +1275,31 @@ pub struct AppUi<'cx, 'a, H: UiHost> {
     action_handlers_used: bool,
 }
 
+#[doc(hidden)]
+pub trait AppUiComponentLaneRequiresExplicitElementsEscapeHatch {}
+
 /// Explicit raw-model state hooks that intentionally stay off the default app authoring surface.
 ///
 /// This trait is intentionally omitted from `fret::app::prelude::*` and reexported from
 /// `fret::advanced::prelude::*`.
 ///
-/// Import it explicitly when advanced code still wants stable callsite-keyed `Model<T>`
-/// allocation rather than the grouped `cx.state().local*` surface. For loop/dynamic callsites,
-/// wrap `use_state::<T>()` in `cx.keyed(...)` instead of relying on a separate keyed alias.
-pub trait AppUiRawStateExt {
+/// Import it explicitly when advanced code still wants a stable callsite-keyed raw `Model<T>`
+/// handle rather than the grouped `cx.state().local*` surface. For loop/dynamic callsites, wrap
+/// `raw_model::<T>()` in `cx.keyed(...)` instead of relying on a separate keyed alias.
+pub trait AppUiRawModelExt {
     #[track_caller]
-    fn use_state<T>(&mut self) -> Model<T>
+    fn raw_model<T>(&mut self) -> Model<T>
     where
         T: Any + Default;
 }
 
-impl<'cx, 'a, H: UiHost> AppUiRawStateExt for AppUi<'cx, 'a, H> {
+impl<'cx, 'a, H: UiHost> AppUiRawModelExt for AppUi<'cx, 'a, H> {
     #[track_caller]
-    fn use_state<T>(&mut self) -> Model<T>
+    fn raw_model<T>(&mut self) -> Model<T>
     where
         T: Any + Default,
     {
-        self.use_state_with(T::default)
+        self.raw_model_with(T::default)
     }
 }
 
@@ -1572,26 +1652,6 @@ where
 
 fn action_listener(f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
     Arc::new(move |host, action_cx, _reason| f(host, action_cx))
-}
-
-#[cfg(debug_assertions)]
-#[derive(Default)]
-struct UseStateRenderPassDiagnostics {
-    last_render_pass_id: u64,
-    calls_in_render_pass: u32,
-}
-
-#[cfg(debug_assertions)]
-fn note_use_state_call_in_render_pass(
-    diagnostics: &mut UseStateRenderPassDiagnostics,
-    render_pass_id: u64,
-) -> bool {
-    if diagnostics.last_render_pass_id != render_pass_id {
-        diagnostics.last_render_pass_id = render_pass_id;
-        diagnostics.calls_in_render_pass = 0;
-    }
-    diagnostics.calls_in_render_pass = diagnostics.calls_in_render_pass.saturating_add(1);
-    diagnostics.calls_in_render_pass == 2
 }
 
 #[derive(Default)]
@@ -2205,6 +2265,22 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiEffects<'view, 'cx, 'a, H> {
     }
 }
 
+impl<'cx, 'a, H: UiHost> fret_ui::ElementContextAccess<'a, H> for AppUi<'cx, 'a, H> {
+    fn elements(&mut self) -> &mut ElementContext<'a, H> {
+        self.cx
+    }
+}
+
+impl<'cx, 'a, H: UiHost> fret_ui_kit::declarative::ElementContextThemeExt for AppUi<'cx, 'a, H> {
+    fn with_theme<R>(&mut self, f: impl FnOnce(&fret_ui::Theme) -> R) -> R {
+        f(self.cx.theme())
+    }
+
+    fn theme_snapshot(&mut self) -> fret_ui::ThemeSnapshot {
+        self.cx.theme().snapshot()
+    }
+}
+
 impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     pub(crate) fn new(
         cx: &'cx mut ElementContext<'a, H>,
@@ -2218,9 +2294,159 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
         }
     }
 
-    /// Access the underlying element context.
+    /// Access the underlying element context explicitly.
+    ///
+    /// This is the escape hatch for advanced/component-heavy code that intentionally needs the
+    /// lower-level identity/state substrate (`scope`, `slot_state`, `local_model`, `state_for`,
+    /// etc.). Default app-facing code should prefer `state()`, `actions()`, `data()`, `effects()`,
+    /// and `keyed()` first.
     pub fn elements(&mut self) -> &mut ElementContext<'a, H> {
         self.cx
+    }
+
+    /// Borrow the current app/host explicitly from the default app-facing render lane.
+    pub fn app(&self) -> &H {
+        self.cx.app
+    }
+
+    /// Borrow the current app/host mutably from the default app-facing render lane.
+    pub fn app_mut(&mut self) -> &mut H {
+        self.cx.app
+    }
+
+    /// Read the current window id without reopening the broader `ElementContext` surface.
+    pub fn window_id(&self) -> AppWindowId {
+        self.cx.window
+    }
+
+    /// Read the committed viewport bounds from the default app-facing render lane.
+    pub fn environment_viewport_bounds(&mut self, invalidation: Invalidation) -> fret_core::Rect {
+        self.cx.environment_viewport_bounds(invalidation)
+    }
+
+    // Lane-sealing barriers for the default app surface.
+    //
+    // Keep these helpers callable-but-unusable on `AppUi` itself so method resolution stops here
+    // instead of falling through the `Deref` to `ElementContext`. Advanced code can still opt into
+    // the lower-level substrate explicitly via `cx.elements()`.
+
+    #[doc(hidden)]
+    pub fn scope<R>(&mut self, _f: impl FnOnce(&mut Self) -> R)
+    where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.keyed(...) or cx.elements().scope(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn named<R>(&mut self, _name: &str, _f: impl FnOnce(&mut Self) -> R)
+    where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.keyed(...) or cx.elements().named(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn root_state<S: Any, R>(&mut self, _init: impl FnOnce() -> S, _f: impl FnOnce(&mut S) -> R)
+    where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.state().local* or cx.elements().root_state(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn with_state<S: Any, R>(&mut self, _init: impl FnOnce() -> S, _f: impl FnOnce(&mut S) -> R)
+    where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.state().local* or cx.elements().root_state(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn slot_state<S: Any, R>(&mut self, _init: impl FnOnce() -> S, _f: impl FnOnce(&mut S) -> R)
+    where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.state().local* or cx.elements().slot_state(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn keyed_slot_state<K: Hash, S: Any, R>(
+        &mut self,
+        _key: K,
+        _init: impl FnOnce() -> S,
+        _f: impl FnOnce(&mut S) -> R,
+    ) where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.state().local_keyed(...) or cx.elements().keyed_slot_state(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn slot_id(&mut self)
+    where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.elements().slot_id(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn keyed_slot_id<K: Hash>(&mut self, _key: K)
+    where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.elements().keyed_slot_id(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn local_model<T: Any>(&mut self, _init: impl FnOnce() -> T)
+    where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.state().local_init(...) or cx.elements().local_model(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn local_model_keyed<K: Hash, T: Any>(&mut self, _key: K, _init: impl FnOnce() -> T)
+    where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.state().local_keyed(...) or cx.elements().local_model_keyed(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn state_for<S: Any, R>(
+        &mut self,
+        _element: fret_ui::GlobalElementId,
+        _init: impl FnOnce() -> S,
+        _f: impl FnOnce(&mut S) -> R,
+    ) where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.elements().state_for(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn with_state_for<S: Any, R>(
+        &mut self,
+        _element: fret_ui::GlobalElementId,
+        _init: impl FnOnce() -> S,
+        _f: impl FnOnce(&mut S) -> R,
+    ) where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.elements().state_for(...)")
+    }
+
+    #[doc(hidden)]
+    pub fn model_for<T: Any>(
+        &mut self,
+        _element: fret_ui::GlobalElementId,
+        _init: impl FnOnce() -> T,
+    ) where
+        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
+    {
+        unreachable!("use cx.elements().model_for(...)")
     }
 
     /// Grouped state/local helpers for the default app authoring surface.
@@ -2325,60 +2551,25 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     }
 
     #[track_caller]
-    fn use_state_with<T>(&mut self, init: impl FnOnce() -> T) -> Model<T>
+    fn raw_model_with<T>(&mut self, init: impl FnOnce() -> T) -> Model<T>
     where
         T: Any,
     {
         let callsite = std::panic::Location::caller();
-        let key = (callsite.file(), callsite.line(), callsite.column());
-        let mut init = Some(init);
 
-        self.cx.keyed(key, |cx| {
-            struct UseStateSlot<T> {
-                model: Option<Model<T>>,
-                #[cfg(debug_assertions)]
-                diagnostics: UseStateRenderPassDiagnostics,
+        #[cfg(debug_assertions)]
+        {
+            if self.cx.note_repeated_call_in_render_evaluation_at(callsite) {
+                eprintln!(
+                    "raw_model called multiple times in the same render pass at the same callsite ({}:{}:{}); wrap in `cx.keyed(...)` to avoid state collisions",
+                    callsite.file(),
+                    callsite.line(),
+                    callsite.column()
+                );
             }
+        }
 
-            impl<T> Default for UseStateSlot<T> {
-                fn default() -> Self {
-                    Self {
-                        model: None,
-                        #[cfg(debug_assertions)]
-                        diagnostics: UseStateRenderPassDiagnostics::default(),
-                    }
-                }
-            }
-
-            #[cfg(debug_assertions)]
-            {
-                let render_pass_id = cx.render_pass_id();
-                cx.root_state(UseStateSlot::<T>::default, |slot| {
-                    if note_use_state_call_in_render_pass(&mut slot.diagnostics, render_pass_id) {
-                        eprintln!(
-                            "use_state called multiple times in the same render pass at the same callsite ({}:{}:{}); wrap in `cx.keyed(...)` to avoid state collisions",
-                            callsite.file(),
-                            callsite.line(),
-                            callsite.column()
-                        );
-                    }
-                });
-            }
-
-            let existing = cx.root_state(UseStateSlot::<T>::default, |slot| slot.model.clone());
-            if let Some(model) = existing {
-                return model;
-            }
-
-            let init = init.take().expect("use_state init closure is available");
-            let model = cx.app.models_mut().insert(init());
-            cx.root_state(UseStateSlot::<T>::default, |slot| {
-                if slot.model.is_none() {
-                    slot.model = Some(model.clone());
-                }
-                slot.model.clone().expect("state slot must contain a model after init")
-            })
-        })
+        self.cx.local_model_at(callsite, init)
     }
 
     #[track_caller]
@@ -2387,7 +2578,7 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
         T: Any,
     {
         LocalState {
-            model: self.use_state_with(init),
+            model: self.raw_model_with(init),
         }
     }
 
@@ -2407,6 +2598,9 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     }
 }
 
+// Temporary compatibility bridge while the repo still separates the app-facing render-authoring
+// lane from raw `ElementContext` mostly by documentation/barriers rather than by a dedicated
+// extracted-helper surface. See ADR 0319 + the corresponding workstream before widening this.
 impl<'cx, 'a, H: UiHost> std::ops::Deref for AppUi<'cx, 'a, H> {
     type Target = ElementContext<'a, H>;
 
@@ -2588,11 +2782,9 @@ mod tests {
     use super::{
         AppActivateExt, AppActivateSurface, AppUiRenderRootState, LocalActionCapture, LocalState,
         LocalStateTxn, OnActivate, UiCxActionsExt as _, View, ViewWindowState, action_listener,
-        dispatch_action_listener, dispatch_payload_action_listener,
-        note_use_state_call_in_render_pass, render_root_with_app_ui, view_init_window, view_view,
+        dispatch_action_listener, dispatch_payload_action_listener, render_root_with_app_ui,
+        view_init_window, view_view,
     };
-    #[cfg(debug_assertions)]
-    use super::UseStateRenderPassDiagnostics;
     use std::any::Any;
     use std::sync::{
         Arc,
@@ -2985,6 +3177,14 @@ mod tests {
     }
 
     #[test]
+    fn local_state_new_in_allocates_without_exposing_raw_model_handle() {
+        let mut host = FakeHost::default();
+        let local = LocalState::new_in(&mut host.models, String::from("hello"));
+
+        assert_eq!(local.value_in(&host.models), Some(String::from("hello")));
+    }
+
+    #[test]
     fn local_state_borrowed_read_helpers_project_without_clone_noise() {
         let mut app = crate::app::App::new();
         let window = AppWindowId::default();
@@ -3369,25 +3569,20 @@ mod tests {
         assert_eq!(st.last_seen_count.load(Ordering::SeqCst), 1);
     }
 
-    #[cfg(debug_assertions)]
     #[test]
-    fn use_state_repeated_call_diagnostics_reset_between_render_passes() {
-        let mut diagnostics = UseStateRenderPassDiagnostics::default();
+    fn raw_model_with_reuses_element_context_local_model_substrate() {
+        let api_source = VIEW_RS_SOURCE
+            .split("\nmod tests {")
+            .next()
+            .expect("view.rs test module marker should exist");
 
-        assert!(!note_use_state_call_in_render_pass(&mut diagnostics, 11));
-        assert!(note_use_state_call_in_render_pass(&mut diagnostics, 11));
-        assert!(!note_use_state_call_in_render_pass(&mut diagnostics, 12));
-        assert!(note_use_state_call_in_render_pass(&mut diagnostics, 12));
-    }
-
-    #[cfg(debug_assertions)]
-    #[test]
-    fn use_state_repeated_call_diagnostics_only_warn_on_second_call_in_one_pass() {
-        let mut diagnostics = UseStateRenderPassDiagnostics::default();
-
-        assert!(!note_use_state_call_in_render_pass(&mut diagnostics, 41));
-        assert!(note_use_state_call_in_render_pass(&mut diagnostics, 41));
-        assert!(!note_use_state_call_in_render_pass(&mut diagnostics, 42));
+        assert!(api_source.contains("self.cx.local_model_at(callsite, init)"));
+        assert!(
+            api_source.contains("self.cx.note_repeated_call_in_render_evaluation_at(callsite)")
+        );
+        assert!(!api_source.contains("struct RawModelSlot<T>"));
+        assert!(!api_source.contains("struct RawModelRenderPassDiagnostics"));
+        assert!(!api_source.contains("fn note_raw_model_call_in_render_pass("));
     }
 
     #[test]
@@ -3710,6 +3905,7 @@ mod tests {
         assert!(!api_source.contains("pub fn use_state<"));
         assert!(!api_source.contains("pub fn use_state_keyed<"));
         assert!(!api_source.contains("fn use_state_keyed<"));
+        assert!(!api_source.contains("pub fn raw_model<"));
         assert!(!api_source.contains("pub fn use_local<"));
         assert!(!api_source.contains("pub fn use_local_keyed<"));
         assert!(!api_source.contains("pub fn use_local_with<"));
@@ -3769,8 +3965,12 @@ mod tests {
         assert!(api_source.contains("pub trait LocalSelectorLayoutInputs"));
         assert!(api_source.contains("pub trait ModelSelectorInputs"));
         assert!(api_source.contains("pub trait QueryHandleReadLayoutExt<T: 'static>"));
-        assert!(api_source.contains("pub trait AppUiRawStateExt"));
+        assert!(!api_source.contains("pub trait AppUiRawStateExt"));
+        assert!(api_source.contains("pub trait AppUiRawModelExt"));
         assert!(api_source.contains("pub trait AppUiRawActionNotifyExt"));
+        assert!(
+            api_source.contains("pub trait AppUiComponentLaneRequiresExplicitElementsEscapeHatch")
+        );
         assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub trait UiCxActionsExt"));
         assert!(!api_source.contains("pub fn watch_local<'m, T: Any>("));
@@ -3779,6 +3979,25 @@ mod tests {
         assert!(!api_source.contains("pub fn new(cx: &'cx mut ElementContext<'a, H>, action_root: fret_ui::GlobalElementId) -> Self"));
         assert!(api_source.contains("pub(crate) fn new("));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
+        assert!(api_source.contains("pub fn scope<R>(&mut self, _f: impl FnOnce(&mut Self) -> R)"));
+        assert!(
+            api_source.contains(
+                "pub fn named<R>(&mut self, _name: &str, _f: impl FnOnce(&mut Self) -> R)"
+            )
+        );
+        assert!(api_source.contains(
+            "pub fn slot_state<S: Any, R>(&mut self, _init: impl FnOnce() -> S, _f: impl FnOnce(&mut S) -> R)"
+        ));
+        assert!(api_source.contains(
+            "pub fn local_model<T: Any>(&mut self, _init: impl FnOnce() -> T)\n    where"
+        ));
+        assert!(api_source.contains(
+            "pub fn local_model_keyed<K: Hash, T: Any>(&mut self, _key: K, _init: impl FnOnce() -> T)"
+        ));
+        assert!(api_source.contains("pub fn state_for<S: Any, R>("));
+        assert!(
+            api_source.contains("Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,")
+        );
         assert!(api_source.contains(
             "pub fn local<T>(self, local: &LocalState<T>) -> AppUiActionLocal<'view, 'cx, 'a, H, T>"
         ));
@@ -3959,9 +4178,24 @@ mod tests {
             .next()
             .expect("view.rs test module marker should exist");
         assert!(api_source.contains("Default app-facing handle for view-owned local state."));
+        assert!(api_source.contains("Insert a new view-owned local slot into an existing"));
         assert!(api_source.contains("Expose the underlying `Model<T>` as an explicit bridge."));
         assert!(api_source.contains("Clone the underlying `Model<T>` as an explicit bridge."));
         assert!(api_source.contains("Read this local through an explicit `ModelStore` bridge."));
+        assert!(api_source.contains(
+            "Query the underlying model revision through an explicit `ModelStore` bridge."
+        ));
+        assert!(api_source.contains(
+            "Clone the current local value through an explicit `ModelStore` bridge read."
+        ));
+        assert!(
+            api_source
+                .contains("Update this local slot through an explicit `ModelStore` transaction.")
+        );
+        assert!(
+            api_source
+                .contains("Set this local slot through an explicit `ModelStore` transaction.")
+        );
         assert!(api_source.contains(
             "Read the current local value through a layout invalidation tracked read on the default app"
         ));
@@ -3994,5 +4228,18 @@ mod tests {
             "This trait is intentionally omitted from `fret::app::prelude::*` and reexported from"
         ));
         assert!(api_source.contains("`fret::advanced::prelude::*`."));
+    }
+
+    #[test]
+    fn app_ui_deref_is_marked_as_temporary_render_authoring_bridge() {
+        let api_source = VIEW_RS_SOURCE
+            .split("\nmod tests {")
+            .next()
+            .expect("view.rs test module marker should exist");
+        assert!(
+            api_source.contains("Temporary compatibility bridge while the repo still separates")
+        );
+        assert!(api_source.contains("app-facing render-authoring"));
+        assert!(api_source.contains("raw `ElementContext`"));
     }
 }

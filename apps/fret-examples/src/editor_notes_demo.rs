@@ -251,13 +251,16 @@ fn make_asset_state(
     }
 }
 
-fn selection_button(
-    cx: &mut AppUi<'_, '_>,
+fn selection_button<'a, Cx>(
+    cx: &mut Cx,
     label: &'static str,
     selected: bool,
     action: CommandId,
     test_id: &'static str,
-) -> AnyElement {
+) -> AnyElement
+where
+    Cx: fret::app::ElementContextAccess<'a, App>,
+{
     let variant = if selected {
         shadcn::ButtonVariant::Default
     } else {
@@ -269,15 +272,18 @@ fn selection_button(
         .test_id(test_id)
         .ui()
         .w_full()
-        .into_element(cx)
+        .into_element_in(cx)
 }
 
-fn render_inspector_panel(
-    cx: &mut AppUi<'_, '_>,
+fn render_inspector_panel<'a, Cx>(
+    cx: &mut Cx,
     asset: EditorAssetState,
     committed_label: String,
     outcome_label: String,
-) -> AnyElement {
+) -> AnyElement
+where
+    Cx: fret::app::ElementContextAccess<'a, App>,
+{
     let subtitle = asset.subtitle.clone();
     let title = asset.title.clone();
     let notes_outcome_model = asset.notes_outcome_model.clone();
@@ -298,7 +304,7 @@ fn render_inspector_panel(
             ..Default::default()
         })
         .into_element(
-            cx,
+            cx.elements(),
             move |cx, _panel_cx| {
                 let muted = cx.theme_snapshot().color_token("muted-foreground");
                 let subtitle_text = cx.text_props(TextProps {

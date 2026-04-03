@@ -18,30 +18,38 @@ use std::sync::Arc;
 pub struct ImeSmokeWindowState {
     ui: UiTree<App>,
     app_ui_root: AppUiRenderRootState,
+    locals: Option<ImeSmokeLocals>,
+}
+
+#[derive(Clone)]
+struct ImeSmokeLocals {
     input_single: LocalState<String>,
     input_multi: LocalState<String>,
     last_ime: LocalState<Arc<str>>,
+}
+
+impl ImeSmokeLocals {
+    fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {
+        Self {
+            input_single: cx.state().local::<String>(),
+            input_multi: cx.state().local::<String>(),
+            last_ime: cx.state().local_init(|| Arc::<str>::from("IME: <none>")),
+        }
+    }
 }
 
 #[derive(Default)]
 pub struct ImeSmokeDriver;
 
 impl ImeSmokeDriver {
-    fn build_ui(app: &mut App, window: AppWindowId) -> ImeSmokeWindowState {
-        let input_single = LocalState::from_model(app.models_mut().insert(String::new()));
-        let input_multi = LocalState::from_model(app.models_mut().insert(String::new()));
-        let last_ime =
-            LocalState::from_model(app.models_mut().insert(Arc::<str>::from("IME: <none>")));
-
+    fn build_ui(_app: &mut App, window: AppWindowId) -> ImeSmokeWindowState {
         let mut ui = UiTree::new();
         ui.set_window(window);
 
         ImeSmokeWindowState {
             ui,
             app_ui_root: AppUiRenderRootState::default(),
-            input_single,
-            input_multi,
-            last_ime,
+            locals: None,
         }
     }
 
@@ -52,15 +60,21 @@ impl ImeSmokeDriver {
         window: AppWindowId,
         bounds: Rect,
         app_ui_root: &mut AppUiRenderRootState,
-        input_single: LocalState<String>,
-        input_multi: LocalState<String>,
-        last_ime: LocalState<Arc<str>>,
+        locals: &mut Option<ImeSmokeLocals>,
     ) {
         let root = render_root_with_app_ui(
             declarative::RenderRootContext::new(ui, app, services, window, bounds),
             "ime-smoke",
             app_ui_root,
             |cx| {
+                if locals.is_none() {
+                    *locals = Some(ImeSmokeLocals::new(cx));
+                }
+                let ImeSmokeLocals {
+                    input_single,
+                    input_multi,
+                    last_ime,
+                } = locals.as_ref().expect("IME locals should exist").clone();
                 let theme = Theme::global(&*cx.app).snapshot();
                 let last = last_ime.paint_value(cx);
 
@@ -95,11 +109,11 @@ impl ImeSmokeDriver {
                                     cx.text("Type `nihao` while IME is active and verify inline preedit + candidate window positioning."),
                                     cx.text(last),
                                     cx.text("Single-line input"),
-                                    shadcn::Input::new(input_single.clone_model())
+                                    shadcn::Input::new(&input_single)
                                         .a11y_label("IME single-line input")
                                         .into_element(cx),
                                     cx.text("Multiline textarea"),
-                                    shadcn::Textarea::new(input_multi.clone_model())
+                                    shadcn::Textarea::new(&input_multi)
                                         .a11y_label("IME multiline textarea")
                                         .min_height(Px(160.0))
                                         .into_element(cx),
@@ -211,7 +225,9 @@ fn handle_event(
                 "IME: DeleteSurrounding(before_bytes={before_bytes}, after_bytes={after_bytes})"
             )),
         };
-        let _ = state.last_ime.set_in(app.models_mut(), msg);
+        if let Some(locals) = state.locals.as_ref() {
+            let _ = locals.last_ime.set_in(app.models_mut(), msg);
+        }
     }
 
     state.ui.dispatch_event(app, services, event);
@@ -234,9 +250,7 @@ fn render(_driver: &mut ImeSmokeDriver, context: WinitRenderContext<'_, ImeSmoke
         window,
         bounds,
         &mut state.app_ui_root,
-        state.input_single.clone(),
-        state.input_multi.clone(),
-        state.last_ime.clone(),
+        &mut state.locals,
     );
 
     state.ui.request_semantics_snapshot();

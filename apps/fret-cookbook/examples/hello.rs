@@ -19,20 +19,7 @@ impl View for HelloView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let rendered_once = cx.slot_state(
-            || false,
-            |v| {
-                let first = !*v;
-                *v = true;
-                first
-            },
-        );
-        let render_marker = if rendered_once {
-            "RenderedOnce"
-        } else {
-            "RenderedAgain"
-        };
-
+        let render_marker = "ViewReady";
         let count_state = cx.state().local_init(|| 0u32);
         let count_value = count_state.layout_value(cx);
 

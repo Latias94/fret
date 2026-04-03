@@ -100,6 +100,7 @@ mod field;
 mod float_value_model;
 mod float_vec_model;
 mod form;
+mod form_state_model;
 mod hover_card;
 mod input;
 mod input_group;
@@ -238,6 +239,7 @@ pub mod raw {
     raw_module!(float_value_model);
     raw_module!(float_vec_model);
     raw_module!(form);
+    raw_module!(form_state_model);
     raw_module!(hover_card);
     raw_module!(input);
     raw_module!(input_group);
@@ -442,6 +444,7 @@ pub mod facade {
         Form, FormControl, FormDescription, FormErrorVisibility, FormField, FormItem, FormLabel,
         FormMessage, form,
     };
+    pub use crate::form_state_model::IntoFormStateModel;
     pub use crate::hover_card::{
         HoverCard, HoverCardAlign, HoverCardAnchor, HoverCardContent, HoverCardSide,
         HoverCardTrigger,
@@ -570,6 +573,7 @@ pub mod facade {
     pub use crate::u8_value_model::IntoU8ValueModel;
     pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
     pub use fret_ui_headless::calendar_solar_hijri::SolarHijriMonth;
+    pub use fret_ui_kit::declarative::table::IntoTableStateModel;
     pub use fret_ui_kit::declarative::table::TableViewOutput as DataTableViewOutput;
 
     /// Default high-performance data grid surface (canvas-rendered).

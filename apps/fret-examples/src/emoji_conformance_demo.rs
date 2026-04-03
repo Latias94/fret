@@ -9,6 +9,7 @@ use fret_launch::{
 use fret_runtime::{FontCatalogCache, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui::declarative;
+use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::primitives::separator::Separator;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -65,8 +66,22 @@ const EMOJI_CASES: &[EmojiCase] = &[
 pub struct EmojiConformanceWindowState {
     ui: UiTree<App>,
     app_ui_root: AppUiRenderRootState,
+    locals: Option<EmojiConformanceLocals>,
+}
+
+#[derive(Clone)]
+struct EmojiConformanceLocals {
     emoji_font_override: LocalState<Option<Arc<str>>>,
     emoji_font_override_open: LocalState<bool>,
+}
+
+impl EmojiConformanceLocals {
+    fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {
+        Self {
+            emoji_font_override: cx.state().local_init(|| None::<Arc<str>>),
+            emoji_font_override_open: cx.state().local_init(|| false),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -80,14 +95,23 @@ impl EmojiConformanceDriver {
         state: &mut EmojiConformanceWindowState,
         bounds: Rect,
     ) {
-        let emoji_font_override = state.emoji_font_override.clone();
-        let emoji_font_override_open = state.emoji_font_override_open.clone();
+        let locals = &mut state.locals;
 
         let root = render_root_with_app_ui(
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds),
             "emoji-conformance",
             &mut state.app_ui_root,
             |cx| {
+                if locals.is_none() {
+                    *locals = Some(EmojiConformanceLocals::new(cx));
+                }
+                let EmojiConformanceLocals {
+                    emoji_font_override,
+                    emoji_font_override_open,
+                } = locals
+                    .as_ref()
+                    .expect("emoji conformance locals should exist")
+                    .clone();
                 let theme = cx.theme_snapshot();
 
                 let available_fonts = cx
@@ -268,12 +292,13 @@ impl EmojiConformanceDriver {
     }
 }
 
-fn emoji_conformance_page<C>(
-    cx: &mut fret_ui::ElementContext<'_, App>,
+fn emoji_conformance_page<'a, Cx, C>(
+    cx: &mut Cx,
     theme: fret_ui::ThemeSnapshot,
     card: C,
-) -> impl fret_ui_kit::IntoUiElement<App> + use<C>
+) -> impl fret_ui_kit::IntoUiElement<App> + use<Cx, C>
 where
+    Cx: fret_ui::ElementContextAccess<'a, App>,
     C: fret_ui_kit::IntoUiElement<App>,
 {
     ui::container(move |cx| {
@@ -290,25 +315,21 @@ where
     .p(Space::N6)
     .w_full()
     .h_full()
-    .into_element(cx)
+    .into_element_in(cx)
 }
 
 fn create_window_state(
     _driver: &mut EmojiConformanceDriver,
-    app: &mut App,
+    _app: &mut App,
     window: AppWindowId,
 ) -> EmojiConformanceWindowState {
-    let emoji_font_override = LocalState::from_model(app.models_mut().insert(None::<Arc<str>>));
-    let emoji_font_override_open = LocalState::from_model(app.models_mut().insert(false));
-
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
     EmojiConformanceWindowState {
         ui,
         app_ui_root: AppUiRenderRootState::default(),
-        emoji_font_override,
-        emoji_font_override_open,
+        locals: None,
     }
 }
 
@@ -331,7 +352,9 @@ fn handle_command(
     let WinitCommandContext { app, state, .. } = context;
 
     if command.as_str() == CMD_EMOJI_FONT_RESET {
-        let _ = state.emoji_font_override.set_in(app.models_mut(), None);
+        if let Some(locals) = state.locals.as_ref() {
+            let _ = locals.emoji_font_override.set_in(app.models_mut(), None);
+        }
     }
 }
 

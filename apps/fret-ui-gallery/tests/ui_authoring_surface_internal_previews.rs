@@ -794,3 +794,36 @@ fn gallery_torture_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface(
         "internal gallery torture preview surface",
     );
 }
+
+#[test]
+fn gallery_table_retained_torture_uses_structured_table_debug_ids() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/torture/table_retained_torture.rs",
+        &[
+            "let table_debug_ids = fret_ui_kit::declarative::table::TableDebugIds {",
+            "header_row_test_id: Some(Arc::<str>::from(\"ui-gallery-table-retained-header-row\")),",
+            "header_cell_test_id_prefix: Some(Arc::<str>::from(\"ui-gallery-table-retained-header-\",)),",
+            "row_test_id_prefix: Some(Arc::<str>::from(\"ui-gallery-table-retained-row-\")),",
+            "Keep retained table diagnostics on table-owned layout wrappers.",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("TableDebugIds::default()"),
+        "table_retained_torture should not fall back to an empty default diagnostics contract"
+    );
+}
+
+#[test]
+fn gallery_data_table_torture_exposes_header_row_anchor() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/data/table_torture.rs",
+        &["header_row_test_id: Some(Arc::<str>::from(\"ui-gallery-data-table-header-row\",)),"],
+    );
+
+    assert!(
+        normalized.contains("ui-gallery-data-table-header-")
+            && normalized.contains("ui-gallery-data-table-row-"),
+        "table_torture should keep the structured data-table header/body diagnostics prefixes alongside the header-row anchor"
+    );
+}

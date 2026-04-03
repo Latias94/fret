@@ -16,7 +16,7 @@ struct DemoRow {
 }
 
 struct DataTableBasicsView {
-    table_state: Model<TableState>,
+    table_state: LocalState<TableState>,
     table_output: Model<shadcn::DataTableViewOutput>,
     rows: Arc<[DemoRow]>,
     columns: Arc<[ColumnDef<DemoRow>]>,
@@ -47,7 +47,7 @@ impl View for DataTableBasicsView {
         .into();
 
         Self {
-            table_state: app.models_mut().insert(state),
+            table_state: LocalState::new_in(app.models_mut(), state),
             table_output: app
                 .models_mut()
                 .insert(shadcn::DataTableViewOutput::default()),
@@ -69,20 +69,19 @@ impl View for DataTableBasicsView {
             ]
         });
 
-        let toolbar = shadcn::DataTableToolbar::new(
-            self.table_state.clone(),
-            Arc::clone(&self.columns),
-            |col| match col.id.as_ref() {
-                "id" => Arc::from("ID"),
-                "name" => Arc::from("Name"),
-                "role" => Arc::from("Role"),
-                "score" => Arc::from("Score"),
-                _ => Arc::clone(&col.id),
-            },
-        );
+        let toolbar =
+            shadcn::DataTableToolbar::new(&self.table_state, Arc::clone(&self.columns), |col| {
+                match col.id.as_ref() {
+                    "id" => Arc::from("ID"),
+                    "name" => Arc::from("Name"),
+                    "role" => Arc::from("Role"),
+                    "score" => Arc::from("Score"),
+                    _ => Arc::clone(&col.id),
+                }
+            });
 
         let pagination =
-            shadcn::DataTablePagination::new(self.table_state.clone(), self.table_output.clone());
+            shadcn::DataTablePagination::new(&self.table_state, self.table_output.clone());
 
         let data_table = shadcn::DataTable::new()
             .output_model(self.table_output.clone())
@@ -90,7 +89,7 @@ impl View for DataTableBasicsView {
                 cx,
                 Arc::clone(&self.rows),
                 1,
-                self.table_state.clone(),
+                &self.table_state,
                 Arc::clone(&self.columns),
                 |row, _i, _parent| RowKey(row.id),
                 |col| match col.id.as_ref() {

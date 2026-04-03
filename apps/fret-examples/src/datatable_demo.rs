@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use fret::advanced::prelude::LocalState;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
@@ -29,7 +30,7 @@ struct DemoRow {
 
 pub struct DemoWindowState {
     ui: UiTree<App>,
-    table_state: Model<TableState>,
+    table_state: LocalState<TableState>,
     table_output: Model<shadcn::DataTableViewOutput>,
     rows: Arc<[DemoRow]>,
     started_at: Instant,
@@ -63,7 +64,7 @@ impl DataTableDemoDriver {
 
         let mut table_state = TableState::default();
         table_state.pagination.page_size = 50;
-        let table_state = app.models_mut().insert(table_state);
+        let table_state = LocalState::new_in(app.models_mut(), table_state);
         let table_output = app
             .models_mut()
             .insert(shadcn::DataTableViewOutput::default());
@@ -201,31 +202,26 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
     let table_output = state.table_output.clone();
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("datatable-demo", move |cx| {
-            cx.observe_model(&table_state, Invalidation::Layout);
             cx.observe_model(&table_output, Invalidation::Layout);
 
             let theme = cx.theme_snapshot();
             let padding = theme.metric_token("metric.padding.md");
 
-            let (selected, sorting) = cx
-                .app
-                .models()
-                .read(&table_state, |st| {
-                    let selected = st.row_selection.len();
-                    let sorting = st
-                        .sorting
-                        .first()
-                        .map(|s| {
-                            format!(
-                                "{}:{}",
-                                s.column.as_ref(),
-                                if s.desc { "desc" } else { "asc" }
-                            )
-                        })
-                        .unwrap_or_else(|| "<none>".to_string());
-                    (selected, sorting)
-                })
-                .unwrap_or((0, "<none>".to_string()));
+            let (selected, sorting) = table_state.layout_read_ref_in(cx, |st| {
+                let selected = st.row_selection.len();
+                let sorting = st
+                    .sorting
+                    .first()
+                    .map(|s| {
+                        format!(
+                            "{}:{}",
+                            s.column.as_ref(),
+                            if s.desc { "desc" } else { "asc" }
+                        )
+                    })
+                    .unwrap_or_else(|| "<none>".to_string());
+                (selected, sorting)
+            });
 
             let helper = create_column_helper::<DemoRow>();
             let columns: Vec<ColumnDef<DemoRow>> = vec![
@@ -271,30 +267,31 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
 
             let columns_for_header: Arc<[(Arc<str>, Arc<str>)]> = Arc::clone(&columns_for_menu);
             let columns_for_toolbar = Arc::clone(&columns_for_header);
-            let toolbar = shadcn::DataTableToolbar::new(
-                table_state.clone(),
-                Arc::clone(&columns),
-                move |col| {
+            let toolbar =
+                shadcn::DataTableToolbar::new(&table_state, Arc::clone(&columns), move |col| {
                     columns_for_toolbar
                         .iter()
                         .find_map(|(id, label)| {
                             (id.as_ref() == col.id.as_ref()).then(|| Arc::clone(label))
                         })
                         .unwrap_or_else(|| Arc::clone(&col.id))
-                },
-            )
-            .into_element(cx);
-            let pagination =
-                shadcn::DataTablePagination::new(table_state.clone(), table_output.clone())
-                    .into_element(cx);
+                })
+                .into_element(cx);
+            let pagination = shadcn::DataTablePagination::new(&table_state, table_output.clone())
+                .into_element(cx);
 
             let data_table = shadcn::DataTable::new()
                 .output_model(table_output.clone())
+                .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
+                    header_row_test_id: Some(Arc::<str>::from("datatable-demo-header-row")),
+                    header_cell_test_id_prefix: Some(Arc::<str>::from("datatable-demo-header-")),
+                    row_test_id_prefix: Some(Arc::<str>::from("datatable-demo-row-")),
+                })
                 .into_element(
                     cx,
                     Arc::clone(&rows),
                     1,
-                    table_state.clone(),
+                    &table_state,
                     Arc::clone(&columns),
                     |row, _i, _parent| RowKey(row.id),
                     move |col| {

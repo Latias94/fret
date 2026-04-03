@@ -5,7 +5,9 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use crate::bool_model::IntoBoolModel;
 use crate::direction::LayoutDirection;
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use crate::test_id::test_id_slug;
 use fret_core::time::Duration;
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
@@ -848,12 +850,12 @@ impl std::fmt::Debug for ContextMenuCheckboxItem {
 }
 
 impl ContextMenuCheckboxItem {
-    pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self {
+    pub fn new(checked: impl IntoBoolModel, label: impl Into<Arc<str>>) -> Self {
         let label = label.into();
         Self {
             label: label.clone(),
             value: label,
-            checked: ContextMenuCheckboxChecked::Model(checked),
+            checked: ContextMenuCheckboxChecked::Model(checked.into_bool_model()),
             leading: None,
             disabled: false,
             close_on_select: false,
@@ -964,9 +966,9 @@ impl std::fmt::Debug for ContextMenuRadioGroup {
 }
 
 impl ContextMenuRadioGroup {
-    pub fn new(value: Model<Option<Arc<str>>>) -> Self {
+    pub fn new(value: impl IntoOptionalTextValueModel) -> Self {
         Self {
-            value: ContextMenuRadioValue::Model(value),
+            value: ContextMenuRadioValue::Model(value.into_optional_text_value_model()),
             on_value_change: None,
             items: Vec::new(),
         }
@@ -3116,9 +3118,9 @@ impl std::fmt::Debug for ContextMenu {
 
 impl ContextMenu {
     /// Explicit advanced seam for authoring against an already-managed open model.
-    pub fn from_open(open: Model<bool>) -> Self {
+    pub fn from_open(open: impl IntoBoolModel) -> Self {
         Self {
-            open,
+            open: open.into_bool_model(),
             disabled: false,
             test_id_prefix: None,
             modal: true,

@@ -1,3 +1,13 @@
+//! Advanced/reference demo: GenUI catalog/editor integration.
+//!
+//! Why advanced:
+//! - this surface keeps explicit model ownership on purpose,
+//! - it validates generator/editor integration across catalog, runtime, and validation flows rather
+//!   than teaching the default LocalState-first app lane.
+//!
+//! Not a first-contact teaching surface: treat it as reference/product-validation material for the
+//! GenUI integration seam.
+
 use std::sync::Arc;
 
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
@@ -457,13 +467,13 @@ impl GenUiView {
             validation_state: app.models_mut().insert(ValidationStateV1::default()),
             action_queue: app.models_mut().insert(GenUiActionQueue::default()),
             queue_summary: None,
-            auto_apply_standard_actions: LocalState::from_model(app.models_mut().insert(true)),
-            auto_fix_on_apply: LocalState::from_model(app.models_mut().insert(true)),
+            auto_apply_standard_actions: LocalState::new_in(app.models_mut(), true),
+            auto_fix_on_apply: LocalState::new_in(app.models_mut(), true),
             auto_fix_summary: None,
-            editor_text: LocalState::from_model(app.models_mut().insert(SPEC_JSON.to_string())),
+            editor_text: LocalState::new_in(app.models_mut(), SPEC_JSON.to_string()),
             editor_error: None,
-            stream_text: LocalState::from_model(app.models_mut().insert(String::new())),
-            stream_patch_only: LocalState::from_model(app.models_mut().insert(false)),
+            stream_text: LocalState::new_in(app.models_mut(), String::new()),
+            stream_patch_only: LocalState::new_in(app.models_mut(), false),
             stream_summary: None,
             stream_error: None,
         }

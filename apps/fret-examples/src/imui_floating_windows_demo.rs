@@ -1,3 +1,13 @@
+//! Advanced/reference demo: IMUI floating windows.
+//!
+//! Why advanced:
+//! - this surface exists as an immediate-mode overlap/floating proof,
+//! - it validates IMUI interaction contracts and diagnostics affordances rather than teaching the
+//!   default LocalState-first app lane.
+//!
+//! Not a first-contact teaching surface: treat it as reference/product-validation material for the
+//! IMUI floating-window contract.
+
 use std::sync::Arc;
 
 use fret::{FretApp, advanced::prelude::*};

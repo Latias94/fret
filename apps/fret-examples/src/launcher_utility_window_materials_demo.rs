@@ -73,7 +73,7 @@ struct LauncherUtilityWindowMaterialsState {
 fn init_window(app: &mut KernelApp, window: AppWindowId) -> LauncherUtilityWindowMaterialsState {
     LauncherUtilityWindowMaterialsState {
         window,
-        status: LocalState::from_model(app.models_mut().insert(Arc::from("Idle"))),
+        status: LocalState::new_in(app.models_mut(), Arc::from("Idle")),
     }
 }
 

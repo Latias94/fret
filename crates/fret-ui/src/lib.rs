@@ -75,7 +75,7 @@ pub mod virtual_list;
 pub(crate) mod widget;
 pub(crate) mod windowed_surface_host;
 
-pub use elements::{ElementContext, ElementRuntime, GlobalElementId};
+pub use elements::{ElementContext, ElementContextAccess, ElementRuntime, GlobalElementId};
 #[cfg(any(test, feature = "compat-retained-widgets"))]
 pub use fixed_split::FixedSplit;
 pub use frame_cx::{UiFrameContext, UiFrameCx};

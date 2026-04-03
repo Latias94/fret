@@ -589,14 +589,14 @@ $$
                     "wrap code: {}",
                     if wrap_enabled { "on" } else { "off" }
                 )),
-                shadcn::Switch::new(wrap_code_state.clone_model())
+                shadcn::Switch::new(&wrap_code_state)
                     .a11y_label("Wrap code blocks")
                     .into_element(cx),
                 cx.text(format!(
                     "cap code height: {}",
                     if cap_enabled { "on" } else { "off" }
                 )),
-                shadcn::Switch::new(cap_code_height_state.clone_model())
+                shadcn::Switch::new(&cap_code_height_state)
                     .a11y_label("Cap code block height")
                     .into_element(cx),
                 shadcn::Button::new("Refresh remote images")

@@ -36,6 +36,10 @@ shadcn/ui v4 Radix guide, the guide demos, and the existing table layout gates.
 
 - Pass: row heights, table chrome, selection affordances, pagination controls, and column-action menus remain recipe-owned on the `DataTable` / companion recipe layer.
 - Pass: app-specific columns, data shape, filtering rules, and page-level width/height negotiation remain caller-owned.
+- Pass: diagnostics anchors now stay on the recipe surface too: `DataTable::debug_ids(TableDebugIds { ... })`
+  feeds the underlying table-owned header/body wrappers directly, so both retained and non-retained
+  call sites can share one structured diagnostics contract instead of threading retained-only
+  prefix arguments or relying on renderer-local `test_id` markers in header/cell renderers.
 - Pass: existing web-vs-Fret layout gates already cover key `data-table-demo` geometry outcomes; this pass does not identify a mechanism-layer gap.
 - Pass: the missing Guide Demo header labels/icons were not a renderer defect; the regression came from stacked clipping/sizing defaults in the shared non-retained header content shell (`ecosystem/fret-ui-kit/src/declarative/table.rs`) plus the shadcn header recipe (`ecosystem/fret-ui-shadcn/src/data_table.rs`) requesting `h_full`/clip wrappers around intrinsically sized header content.
 - Pass: the non-retained `table_virtualized(...)` mismatch that broke nested row-action hit-testing was a `fret-ui-kit` content-shell sizing bug (`table_virtualized_impl(...)` needed a full-height flex shell so the virtual list receives a real viewport), not a `crates/fret-ui` mechanism defect.
@@ -57,6 +61,7 @@ shadcn/ui v4 Radix guide, the guide demos, and the existing table layout gates.
 - `CARGO_TARGET_DIR=target-codex-data-table cargo check -p fret-ui-gallery --message-format short`
 - `CARGO_TARGET_DIR=target-codex-data-table cargo nextest run -p fret-ui-shadcn --test data_table_view_options`
 - `CARGO_TARGET_DIR=target-codex-data-table cargo nextest run -p fret-ui-shadcn --test ui_builder_smoke`
+- `cargo test -p fret-ui-shadcn --lib data_table_surfaces_keep_narrow_table_state_bridges -- --nocapture`
 - `CARGO_TARGET_DIR=target-codex-data-table cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app data_table_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface data_table_page_uses_typed_doc_sections_for_app_facing_snippets`
 - `CARGO_TARGET_DIR=target-codex-data-table cargo nextest run -p fret-ui-gallery --test data_table_action_first_surface`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-smoke.json --dir target/fret-diag/data-table-reusable-components-smoke --timeout-ms 240000 --pack --ai-packet --launch -- env CARGO_TARGET_DIR=target-codex-data-table cargo run -p fret-ui-gallery`

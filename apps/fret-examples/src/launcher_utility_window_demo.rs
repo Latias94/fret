@@ -79,9 +79,9 @@ struct LauncherUtilityWindowViewSettings {
 fn init_window(app: &mut KernelApp, window: AppWindowId) -> LauncherUtilityWindowState {
     LauncherUtilityWindowState {
         window,
-        always_on_top: LocalState::from_model(app.models_mut().insert(false)),
+        always_on_top: LocalState::new_in(app.models_mut(), false),
         blink_timer: None,
-        status: LocalState::from_model(app.models_mut().insert(Arc::from("Idle"))),
+        status: LocalState::new_in(app.models_mut(), Arc::from("Idle")),
     }
 }
 

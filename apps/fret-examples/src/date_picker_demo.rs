@@ -24,6 +24,11 @@ use time::{OffsetDateTime, Weekday};
 pub struct DemoWindowState {
     ui: UiTree<App>,
     app_ui_root: AppUiRenderRootState,
+    locals: Option<DatePickerDemoLocals>,
+}
+
+#[derive(Clone)]
+struct DatePickerDemoLocals {
     open: LocalState<bool>,
     month: LocalState<CalendarMonth>,
     selected: LocalState<Option<time::Date>>,
@@ -34,37 +39,34 @@ pub struct DemoWindowState {
     disabled: LocalState<bool>,
 }
 
+impl DatePickerDemoLocals {
+    fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {
+        let today = OffsetDateTime::now_utc().date();
+        Self {
+            open: cx.state().local_init(|| false),
+            selected: cx.state().local_init(|| None::<time::Date>),
+            month: cx.state().local_init(|| CalendarMonth::from_date(today)),
+            week_start_monday: cx.state().local_init(|| true),
+            show_outside_days: cx.state().local_init(|| true),
+            disable_outside_days: cx.state().local_init(|| true),
+            disable_weekends: cx.state().local_init(|| false),
+            disabled: cx.state().local_init(|| false),
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct DatePickerDemoDriver;
 
 impl DatePickerDemoDriver {
-    fn build_ui(app: &mut App, window: AppWindowId) -> DemoWindowState {
-        let today = OffsetDateTime::now_utc().date();
-        let open = LocalState::from_model(app.models_mut().insert(false));
-        let selected = LocalState::from_model(app.models_mut().insert(None::<time::Date>));
-        let month =
-            LocalState::from_model(app.models_mut().insert(CalendarMonth::from_date(today)));
-
-        let week_start_monday = LocalState::from_model(app.models_mut().insert(true));
-        let show_outside_days = LocalState::from_model(app.models_mut().insert(true));
-        let disable_outside_days = LocalState::from_model(app.models_mut().insert(true));
-        let disable_weekends = LocalState::from_model(app.models_mut().insert(false));
-        let disabled = LocalState::from_model(app.models_mut().insert(false));
-
+    fn build_ui(_app: &mut App, window: AppWindowId) -> DemoWindowState {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
         DemoWindowState {
             ui,
             app_ui_root: AppUiRenderRootState::default(),
-            open,
-            month,
-            selected,
-            week_start_monday,
-            show_outside_days,
-            disable_outside_days,
-            disable_weekends,
-            disabled,
+            locals: None,
         }
     }
 }
@@ -133,15 +135,21 @@ fn handle_command(
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
         }
         "date_picker_demo.reset_today" => {
+            let Some(locals) = state.locals.as_ref() else {
+                return;
+            };
             let today = OffsetDateTime::now_utc().date();
-            let _ = state.selected.set_in(app.models_mut(), Some(today));
-            let _ = state
+            let _ = locals.selected.set_in(app.models_mut(), Some(today));
+            let _ = locals
                 .month
                 .set_in(app.models_mut(), CalendarMonth::from_date(today));
             app.request_redraw(window);
         }
         "date_picker_demo.clear" => {
-            let _ = state.selected.set_in(app.models_mut(), None);
+            let Some(locals) = state.locals.as_ref() else {
+                return;
+            };
+            let _ = locals.selected.set_in(app.models_mut(), None);
             app.request_redraw(window);
         }
         _ => {}
@@ -190,21 +198,29 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
     } = context;
 
     OverlayController::begin_frame(app, window);
-
-    let open = state.open.clone();
-    let month = state.month.clone();
-    let selected = state.selected.clone();
-    let week_start_monday = state.week_start_monday.clone();
-    let show_outside_days = state.show_outside_days.clone();
-    let disable_outside_days = state.disable_outside_days.clone();
-    let disable_weekends = state.disable_weekends.clone();
-    let disabled = state.disabled.clone();
+    let locals = &mut state.locals;
 
     let root = render_root_with_app_ui(
         declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds),
         "date-picker-demo",
         &mut state.app_ui_root,
         move |cx| {
+            if locals.is_none() {
+                *locals = Some(DatePickerDemoLocals::new(cx));
+            }
+            let DatePickerDemoLocals {
+                open,
+                month,
+                selected,
+                week_start_monday,
+                show_outside_days,
+                disable_outside_days,
+                disable_weekends,
+                disabled,
+            } = locals
+                .as_ref()
+                .expect("date picker locals should exist")
+                .clone();
             let theme = cx.theme_snapshot();
             let padding = theme.metric_token("metric.padding.md");
 

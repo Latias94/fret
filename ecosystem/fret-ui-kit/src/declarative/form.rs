@@ -42,6 +42,26 @@ struct RegisteredField {
     eval: FieldEvalFn,
 }
 
+/// Narrow interop bridge for form registries that track app-owned values in `Model<T>`.
+///
+/// This intentionally stays specific to the form registry surface rather than widening into a
+/// crate-wide `IntoModel<T>` story.
+pub trait IntoFormValueModel<T> {
+    fn into_form_value_model(self) -> Model<T>;
+}
+
+impl<T> IntoFormValueModel<T> for Model<T> {
+    fn into_form_value_model(self) -> Model<T> {
+        self
+    }
+}
+
+impl<T> IntoFormValueModel<T> for &Model<T> {
+    fn into_form_value_model(self) -> Model<T> {
+        self.clone()
+    }
+}
+
 /// A lightweight, opt-in registry that connects app-owned `Model<T>` values to a `FormState`.
 ///
 /// Notes:
@@ -94,13 +114,14 @@ impl FormRegistry {
     pub fn register_field<T>(
         &mut self,
         id: impl Into<FormFieldId>,
-        model: Model<T>,
+        model: impl IntoFormValueModel<T>,
         initial: T,
         validate: impl Fn(&T) -> Option<Arc<str>> + 'static,
     ) where
         T: Clone + PartialEq + 'static,
     {
         let id: FormFieldId = id.into();
+        let model = model.into_form_value_model();
         let model_id = model.id();
         let eval: FieldEvalFn = Arc::new(move |store, force_validate| {
             let current = store
@@ -224,5 +245,39 @@ impl FormRegistry {
         });
 
         store.read(form_state, |st| st.is_valid()).unwrap_or(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    const SOURCE: &str = include_str!("form.rs");
+
+    fn normalize_ws(source: &str) -> String {
+        source.split_whitespace().collect()
+    }
+
+    #[test]
+    fn form_registry_register_field_keeps_a_narrow_model_bridge() {
+        let implementation = SOURCE.split("#[cfg(test)]").next().unwrap_or(SOURCE);
+        let normalized = normalize_ws(implementation);
+
+        assert!(
+            normalized.contains(
+                "pubtraitIntoFormValueModel<T>{fninto_form_value_model(self)->Model<T>;}"
+            ),
+            "form registry should keep a dedicated narrow bridge trait instead of a broad generic model conversion story"
+        );
+        assert!(
+            normalized.contains(
+                "pubfnregister_field<T>(&mutself,id:implInto<FormFieldId>,model:implIntoFormValueModel<T>,initial:T,validate:implFn(&T)->Option<Arc<str>>+'static,)whereT:Clone+PartialEq+'static,"
+            ),
+            "register_field should accept the dedicated form-value bridge"
+        );
+        assert!(
+            !normalized.contains(
+                "pubfnregister_field<T>(&mutself,id:implInto<FormFieldId>,model:Model<T>,"
+            ),
+            "register_field should not regress to a raw Model<T>-only signature"
+        );
     }
 }

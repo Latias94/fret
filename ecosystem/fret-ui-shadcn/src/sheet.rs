@@ -1377,9 +1377,9 @@ impl std::fmt::Debug for SheetClose {
 }
 
 impl SheetClose {
-    pub fn new(open: Model<bool>) -> Self {
+    pub fn new(open: impl IntoBoolModel) -> Self {
         Self {
-            open: Some(open),
+            open: Some(open.into_bool_model()),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default().relative().inset(Space::N0),
         }

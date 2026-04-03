@@ -8,12 +8,12 @@ use fret_ui::element::{
     Overflow,
 };
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::table::{
-    PointerRowSelectionPolicy, TableRowMeasureMode, TableViewOutput, TableViewProps,
-    table_virtualized,
+    IntoTableStateModel, PointerRowSelectionPolicy, TableDebugIds, TableRowMeasureMode,
+    TableViewOutput, TableViewProps, table_virtualized,
 };
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
@@ -311,6 +311,7 @@ pub struct DataTable {
     column_actions_menu: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    debug_ids: TableDebugIds,
     output: Option<Model<TableViewOutput>>,
 }
 
@@ -328,6 +329,7 @@ impl Default for DataTable {
             column_actions_menu: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            debug_ids: TableDebugIds::default(),
             output: None,
         }
     }
@@ -410,6 +412,14 @@ impl DataTable {
         self
     }
 
+    /// Installs table-owned diagnostics anchors for scripted tests and geometry assertions.
+    ///
+    /// Prefer this over relying on renderer-local `test_id` markers inside header/cell renderers.
+    pub fn debug_ids(mut self, debug_ids: TableDebugIds) -> Self {
+        self.debug_ids = debug_ids;
+        self
+    }
+
     pub fn output_model(mut self, output: Model<TableViewOutput>) -> Self {
         self.output = Some(output);
         self
@@ -427,17 +437,16 @@ impl DataTable {
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,
         data_revision: u64,
-        state: Model<TableState>,
+        state: impl IntoTableStateModel,
         columns: impl Into<Arc<[ColumnDef<TData>]>>,
         get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
         header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
         cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
-        debug_header_cell_test_id_prefix: Option<Arc<str>>,
-        debug_row_test_id_prefix: Option<Arc<str>>,
     ) -> AnyElement
     where
         TData: 'static,
     {
+        let state = state.into_table_state_model();
         let DataTable {
             overscan,
             keep_alive,
@@ -450,6 +459,7 @@ impl DataTable {
             column_actions_menu,
             chrome,
             layout,
+            debug_ids,
             output: _output,
         } = self;
 
@@ -479,20 +489,22 @@ impl DataTable {
             let cell_at_raw = Arc::new(cell_at);
             let body_text_style_for_cells = body_text_style.clone();
             let cell_at = Arc::new(
-                move |cx: &mut ElementContext<'_, H>, col: &ColumnDef<TData>, row: &TData| {
-                    let el = cell_at_raw(cx, col, row);
+                move |cx: &mut dyn ElementContextAccess<'_, H>,
+                      col: &ColumnDef<TData>,
+                      row: &TData| {
+                    let el = cell_at_raw(cx.elements(), col, row);
                     apply_default_text_style_recursive(el, &body_text_style_for_cells)
                 },
             );
 
             let header_accessory_at: Option<
-                Arc<dyn Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>) -> AnyElement>,
+                Arc<dyn Fn(&mut dyn ElementContextAccess<'_, H>, &ColumnDef<TData>) -> AnyElement>,
             > = if column_actions_menu {
                 let state_for_actions = state.clone();
                 Some(Arc::new(
-                    move |cx: &mut ElementContext<'_, H>, col: &ColumnDef<TData>| {
+                    move |cx: &mut dyn ElementContextAccess<'_, H>, col: &ColumnDef<TData>| {
                         render_column_actions_menu(
-                            cx,
+                            cx.elements(),
                             state_for_actions.clone(),
                             Arc::<str>::from(col.id.as_ref()),
                             col.enable_sorting,
@@ -539,8 +551,7 @@ impl DataTable {
                     header_label,
                     header_accessory_at,
                     cell_at,
-                    debug_header_cell_test_id_prefix,
-                    debug_row_test_id_prefix,
+                    debug_ids.clone(),
                 ),
             ]
         })
@@ -552,7 +563,7 @@ impl DataTable {
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,
         data_revision: u64,
-        state: Model<TableState>,
+        state: impl IntoTableStateModel,
         columns: impl Into<Arc<[ColumnDef<TData>]>>,
         get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
         header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
@@ -561,6 +572,7 @@ impl DataTable {
     where
         TData: 'static,
     {
+        let state = state.into_table_state_model();
         self.into_element_with_header_cell_opt(
             cx,
             data,
@@ -592,7 +604,7 @@ impl DataTable {
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,
         data_revision: u64,
-        state: Model<TableState>,
+        state: impl IntoTableStateModel,
         columns: impl Into<Arc<[ColumnDef<TData>]>>,
         get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
         header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
@@ -607,6 +619,7 @@ impl DataTable {
     where
         TData: 'static,
     {
+        let state = state.into_table_state_model();
         self.into_element_with_header_cell_opt(
             cx,
             data,
@@ -655,6 +668,7 @@ impl DataTable {
             column_actions_menu,
             chrome,
             layout,
+            debug_ids,
             output,
         } = self;
 
@@ -1001,6 +1015,7 @@ impl DataTable {
                 },
                 move |cx, row, col| vec![(cell_at)(cx, col, row.original)],
                 output,
+                debug_ids.clone(),
             );
 
             vec![table]

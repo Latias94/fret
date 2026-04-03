@@ -21,7 +21,7 @@ macro_rules! children {
         $(
             {
                 let child = $child;
-                let element = $crate::IntoUiElement::into_element(child, &mut *$cx);
+                let element = $crate::land_child(&mut *$cx, child);
                 children.push(element);
             }
         )+
@@ -30,20 +30,33 @@ macro_rules! children {
 }
 
 /// Land typed child values at the last possible moment inside wrapper-style helpers.
-pub(crate) fn collect_children<H, I>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
+pub(crate) fn collect_children<'a, H, Cx, I>(
+    cx: &mut Cx,
     children: I,
 ) -> Vec<fret_ui::element::AnyElement>
 where
-    H: fret_ui::UiHost,
+    H: fret_ui::UiHost + 'a,
+    Cx: fret_ui::ElementContextAccess<'a, H>,
     I: IntoIterator,
     I::Item: crate::ui_builder::IntoUiElement<H>,
 {
     let mut out = Vec::new();
     for child in children {
-        out.push(crate::ui_builder::IntoUiElement::into_element(child, cx));
+        out.push(crate::land_child(cx, child));
     }
     out
+}
+
+/// Land one typed child through any explicit element-context access surface.
+#[doc(hidden)]
+#[track_caller]
+pub fn land_child<'a, H, Cx, T>(cx: &mut Cx, child: T) -> fret_ui::element::AnyElement
+where
+    H: fret_ui::UiHost + 'a,
+    Cx: fret_ui::ElementContextAccess<'a, H>,
+    T: crate::ui_builder::IntoUiElement<H>,
+{
+    crate::ui_builder::IntoUiElement::into_element(child, cx.elements())
 }
 
 /// Implement the `UiBuilder` patch + render glue for a component that supports both chrome and
@@ -245,7 +258,8 @@ pub use style::{
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use ui_builder::{
-    IntoUiElement, UiBuilder, UiExt, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+    IntoUiElement, IntoUiElementInExt, UiBuilder, UiExt, UiPatch, UiPatchTarget, UiSupportsChrome,
+    UiSupportsLayout,
 };
 
 pub use overlay_controller::{

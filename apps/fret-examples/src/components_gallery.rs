@@ -102,6 +102,27 @@ fn components_gallery_install_imported_font_assets(
     batch
 }
 
+fn components_gallery_table_cell(
+    cx: &mut dyn fret_ui::ElementContextAccess<'_, App>,
+    col: &ColumnDef<u64>,
+    row: &u64,
+) -> fret_ui::element::AnyElement {
+    let cx = cx.elements();
+    match col.id.as_ref() {
+        "id" => cx.text(row.to_string()),
+        "status" => cx.text(if row % 3 == 0 {
+            "idle"
+        } else if row % 3 == 1 {
+            "busy"
+        } else {
+            "offline"
+        }),
+        "cpu" => cx.text(format!("{}%", (row * 7) % 100)),
+        "mem_mb" => cx.text(format!("{} MB", 128 + (row % 4096))),
+        _ => cx.text("?"),
+    }
+}
+
 #[derive(Default)]
 struct ComponentsGalleryDriver;
 
@@ -308,7 +329,7 @@ impl ComponentsGalleryDriver {
             &mut state.app_ui_root,
             |cx| {
                 if std::env::var_os("FRET_COMPONENTS_GALLERY_TABLE_TORTURE").is_some() {
-                    let (data, columns) = cx.slot_state(
+                    let (data, columns) = cx.elements().slot_state(
                         || {
                             let n: u64 = std::env::var("FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N")
                                 .ok()
@@ -334,8 +355,9 @@ impl ComponentsGalleryDriver {
                         },
                         |(data, columns)| (data.clone(), columns.clone()),
                     );
-                    let table_state =
-                        cx.local_model_keyed("table_torture.state", TableState::default);
+                    let table_state = cx
+                        .elements()
+                        .local_model_keyed("table_torture.state", TableState::default);
 
                     let theme = cx.theme_snapshot();
                     let padding = theme.metric_token("metric.padding.md");
@@ -386,28 +408,7 @@ impl ComponentsGalleryDriver {
                                     });
                                     let row_key_at =
                                         Arc::new(|row: &u64, _index: usize| RowKey(*row));
-                                    let cell_at = Arc::new(
-                                        move |cx: &mut ElementContext<'_, App>,
-                                              col: &ColumnDef<u64>,
-                                              row: &u64| {
-                                            match col.id.as_ref() {
-                                                "id" => cx.text(row.to_string()),
-                                                "status" => cx.text(if row % 3 == 0 {
-                                                    "idle"
-                                                } else if row % 3 == 1 {
-                                                    "busy"
-                                                } else {
-                                                    "offline"
-                                                }),
-                                                "cpu" => cx.text(format!("{}%", (row * 7) % 100)),
-                                                "mem_mb" => cx.text(format!(
-                                                    "{} MB",
-                                                    128 + (row % 4096)
-                                                )),
-                                                _ => cx.text("?"),
-                                            }
-                                        },
-                                    );
+                                    let cell_at = Arc::new(components_gallery_table_cell);
 
                                     vec![fret_ui_kit::declarative::table::table_virtualized_retained_v0(
                                         cx,
@@ -424,10 +425,15 @@ impl ComponentsGalleryDriver {
                                         header_label,
                                         None,
                                         cell_at,
-                                        Some(Arc::<str>::from(
-                                            "components-gallery-table-header-",
-                                        )),
-                                        Some(Arc::<str>::from("components-gallery-table-row-")),
+                                        fret_ui_kit::declarative::table::TableDebugIds {
+                                            header_cell_test_id_prefix: Some(Arc::<str>::from(
+                                                "components-gallery-table-header-",
+                                            )),
+                                            row_test_id_prefix: Some(Arc::<str>::from(
+                                                "components-gallery-table-row-",
+                                            )),
+                                            ..Default::default()
+                                        },
                                     )]
                                 },
                             )]

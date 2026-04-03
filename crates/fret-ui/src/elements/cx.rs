@@ -67,6 +67,21 @@ pub struct ElementContext<'a, H: UiHost> {
     view_cache_should_reuse: Option<&'a mut dyn FnMut(NodeId) -> bool>,
 }
 
+/// Explicit access contract for APIs that only need to land UI through an [`ElementContext`].
+///
+/// This keeps extracted helper/render-authoring surfaces free to accept a narrower context-access
+/// capability instead of hard-coding `&mut ElementContext<...>` or relying on implicit `Deref`
+/// bridges from facade types.
+pub trait ElementContextAccess<'a, H: UiHost> {
+    fn elements(&mut self) -> &mut ElementContext<'a, H>;
+}
+
+impl<'a, H: UiHost> ElementContextAccess<'a, H> for ElementContext<'a, H> {
+    fn elements(&mut self) -> &mut ElementContext<'a, H> {
+        self
+    }
+}
+
 type CallsiteCounters = SmallVec<[(u64, u32); 16]>;
 
 static NEXT_RENDER_PASS_ID: AtomicU64 = AtomicU64::new(1);
@@ -82,6 +97,26 @@ struct ProvidedState<T> {
 
 struct LocalModelSlot<T> {
     model: Option<Model<T>>,
+}
+
+#[cfg(debug_assertions)]
+#[derive(Default)]
+struct RenderEvaluationCallsiteDiagnostics {
+    last_render_pass_id: u64,
+    calls_in_render_pass: u32,
+}
+
+#[cfg(debug_assertions)]
+fn note_call_in_render_evaluation(
+    diagnostics: &mut RenderEvaluationCallsiteDiagnostics,
+    render_pass_id: u64,
+) -> bool {
+    if diagnostics.last_render_pass_id != render_pass_id {
+        diagnostics.last_render_pass_id = render_pass_id;
+        diagnostics.calls_in_render_pass = 0;
+    }
+    diagnostics.calls_in_render_pass = diagnostics.calls_in_render_pass.saturating_add(1);
+    diagnostics.calls_in_render_pass == 2
 }
 
 impl<T> Default for LocalModelSlot<T> {
@@ -201,9 +236,34 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         }
     }
 
+    /// Framework-internal diagnostics hook for repeated same-callsite use within one render
+    /// evaluation.
+    ///
+    /// This is not a public authoring API; it exists so higher-level facade code can reuse the
+    /// kernel's identity/evaluation substrate instead of maintaining duplicate bookkeeping.
+    #[cfg(debug_assertions)]
     #[doc(hidden)]
-    pub fn render_pass_id(&self) -> u64 {
-        self.render_pass_id
+    pub fn note_repeated_call_in_render_evaluation_at(
+        &mut self,
+        loc: &'static Location<'static>,
+    ) -> bool {
+        let key = (loc.file(), loc.line(), loc.column());
+        self.keyed_at(loc, key, |cx| {
+            let render_pass_id = cx.render_pass_id;
+            cx.root_state(
+                RenderEvaluationCallsiteDiagnostics::default,
+                |diagnostics| note_call_in_render_evaluation(diagnostics, render_pass_id),
+            )
+        })
+    }
+
+    #[cfg(not(debug_assertions))]
+    #[doc(hidden)]
+    pub fn note_repeated_call_in_render_evaluation_at(
+        &mut self,
+        _loc: &'static Location<'static>,
+    ) -> bool {
+        false
     }
 
     pub fn root_id(&self) -> GlobalElementId {
@@ -525,7 +585,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.enter_with_callsite(loc, caller, Some(key_hash), Some(name), f)
     }
 
-    /// Accesses root-scoped state stored under the current `root_id()`.
+    /// Component/internal identity lane: accesses root-scoped state stored under the current
+    /// `root_id()`.
     ///
     /// This is keyed by `(root_id, TypeId)`, so it is a shared slot per element root.
     /// Repeated calls with the same state type under the same root intentionally see the same
@@ -553,7 +614,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.root_state(init, f)
     }
 
-    /// Accesses helper-local state stored under a synthetic callsite-derived slot.
+    /// Component/internal identity lane: accesses helper-local state stored under a synthetic
+    /// callsite-derived slot.
     ///
     /// Unlike [`Self::root_state`], this does not use the current `root_id()` directly. The slot is
     /// derived from `(current_root, caller_location, call_index_at_that_location)` so distinct
@@ -605,7 +667,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     #[track_caller]
     pub fn slot_id(&mut self) -> GlobalElementId {
         let loc = Location::caller();
-        self.callsite_state_slot_id(loc, None)
+        self.slot_id_at(loc)
     }
 
     /// Like [`Self::slot_id`], but keys the synthetic slot by `(callsite, key)`.
@@ -615,10 +677,28 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     #[track_caller]
     pub fn keyed_slot_id<K: Hash>(&mut self, key: K) -> GlobalElementId {
         let loc = Location::caller();
+        self.keyed_slot_id_at(loc, key)
+    }
+
+    /// Like [`Self::slot_id`], but anchors the synthetic slot at an explicit caller location.
+    #[doc(hidden)]
+    pub fn slot_id_at(&mut self, loc: &'static Location<'static>) -> GlobalElementId {
+        self.callsite_state_slot_id(loc, None)
+    }
+
+    /// Like [`Self::keyed_slot_id`], but anchors the synthetic slot at an explicit caller
+    /// location.
+    #[doc(hidden)]
+    pub fn keyed_slot_id_at<K: Hash>(
+        &mut self,
+        loc: &'static Location<'static>,
+        key: K,
+    ) -> GlobalElementId {
         self.callsite_state_slot_id(loc, Some(stable_hash(&key)))
     }
 
-    /// Returns a helper-local model handle stored under a synthetic callsite-derived slot.
+    /// Component/internal identity lane: returns a helper-local model handle stored under a
+    /// synthetic callsite-derived slot.
     ///
     /// This is the model-handle counterpart to [`Self::slot_state`]: the slot identity is local to
     /// this helper invocation and stable across frames, so callers can create copy-paste-friendly
@@ -626,6 +706,17 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     #[track_caller]
     pub fn local_model<T: Any>(&mut self, init: impl FnOnce() -> T) -> Model<T> {
         let slot = self.slot_id();
+        self.local_model_for(slot, init)
+    }
+
+    /// Like [`Self::local_model`], but anchors the synthetic slot at an explicit caller location.
+    #[doc(hidden)]
+    pub fn local_model_at<T: Any>(
+        &mut self,
+        loc: &'static Location<'static>,
+        init: impl FnOnce() -> T,
+    ) -> Model<T> {
+        let slot = self.slot_id_at(loc);
         self.local_model_for(slot, init)
     }
 
@@ -640,6 +731,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         init: impl FnOnce() -> T,
     ) -> Model<T> {
         let slot = self.keyed_slot_id(key);
+        self.local_model_for(slot, init)
+    }
+
+    /// Like [`Self::local_model_keyed`], but anchors the synthetic slot at an explicit caller
+    /// location.
+    #[doc(hidden)]
+    pub fn local_model_keyed_at<K: Hash, T: Any>(
+        &mut self,
+        loc: &'static Location<'static>,
+        key: K,
+        init: impl FnOnce() -> T,
+    ) -> Model<T> {
+        let slot = self.keyed_slot_id_at(loc, key);
         self.local_model_for(slot, init)
     }
 
@@ -667,7 +771,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.state_for(element, init, f)
     }
 
-    /// Returns a model handle stored under an explicit element identity.
+    /// Component/internal identity lane: returns a model handle stored under an explicit element
+    /// identity.
     ///
     /// This is the explicit-identity counterpart to [`Self::local_model`] and
     /// [`Self::local_model_keyed`]. Prefer it when a helper must bind a `Model<T>` to a stable

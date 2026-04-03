@@ -4,6 +4,8 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use crate::bool_model::IntoBoolModel;
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use crate::test_id::test_id_slug;
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
@@ -756,12 +758,12 @@ impl std::fmt::Debug for DropdownMenuCheckboxItem {
 }
 
 impl DropdownMenuCheckboxItem {
-    pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self {
+    pub fn new(checked: impl IntoBoolModel, label: impl Into<Arc<str>>) -> Self {
         let label = label.into();
         Self {
             label: label.clone(),
             value: label,
-            checked: DropdownMenuCheckboxChecked::Model(checked),
+            checked: DropdownMenuCheckboxChecked::Model(checked.into_bool_model()),
             leading: None,
             leading_icon: None,
             shortcut: None,
@@ -892,9 +894,9 @@ impl std::fmt::Debug for DropdownMenuRadioGroup {
 }
 
 impl DropdownMenuRadioGroup {
-    pub fn new(value: Model<Option<Arc<str>>>) -> Self {
+    pub fn new(value: impl IntoOptionalTextValueModel) -> Self {
         Self {
-            value: DropdownMenuRadioValue::Model(value),
+            value: DropdownMenuRadioValue::Model(value.into_optional_text_value_model()),
             on_value_change: None,
             items: Vec::new(),
         }
@@ -3195,9 +3197,9 @@ impl std::fmt::Debug for DropdownMenu {
 
 impl DropdownMenu {
     /// Explicit advanced seam for authoring against an already-managed open model.
-    pub fn from_open(open: Model<bool>) -> Self {
+    pub fn from_open(open: impl IntoBoolModel) -> Self {
         Self {
-            open,
+            open: open.into_bool_model(),
             disabled: false,
             test_id_prefix: None,
             modal: true,

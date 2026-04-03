@@ -16,7 +16,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 192
+- Dedicated directories: 193
 - Standalone markdown files: 45 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -309,6 +309,7 @@ Rule:
 - `docs/workstreams/path-stroke-style-v2/` — first 2026-02-16, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/perf-baselines/` — first 2026-02-06, latest 2026-02-10, 1 markdown docs
 - `docs/workstreams/primitives-interaction-semantics-alignment-v1/` — first 2026-02-09, latest 2026-02-17, 19 markdown docs
+- `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/` — first 2026-04-02, latest 2026-04-02, 4 markdown docs
 - `docs/workstreams/quad-border-styles-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/query-lifecycle-v1/` — first 2026-02-06, latest 2026-02-11, 2 markdown docs
 - `docs/workstreams/renderer-clip-mask-closure-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs

@@ -414,6 +414,9 @@ pub mod app {
     /// `fret::advanced::kernel`; prefer this name in ordinary app code and keep the raw alias for
     /// advanced/manual integration seams.
     pub use fret_app::App;
+    /// Explicit context-access capability for helper signatures that should not hard-code raw
+    /// `ElementContext` ownership.
+    pub use fret_ui::ElementContextAccess;
 
     /// Common imports for app code on the default authoring surface.
     pub mod prelude {
@@ -431,6 +434,7 @@ pub mod app {
         pub use crate::{AppUi, Ui, UiChild, UiCx, WindowId};
         pub use fret_core::Px;
         pub use fret_ui_kit::IntoUiElement as _;
+        pub use fret_ui_kit::IntoUiElementInExt as _;
         pub use fret_ui_kit::StyledExt as _;
         pub use fret_ui_kit::UiExt as _;
         pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;
@@ -614,12 +618,12 @@ pub mod advanced {
     /// and host-owned integrations while leaving
     /// `fret::app::prelude::*` focused on `cx.actions()`.
     pub use crate::view::AppUiRawActionNotifyExt;
-    /// Explicit raw-model local-state hooks kept on the advanced lane.
+    /// Explicit raw-model hooks kept on the advanced lane.
     ///
-    /// This keeps `use_state*` discoverable for advanced/manual assembly and intentional
+    /// This keeps `raw_model(...)` discoverable for advanced/manual assembly and intentional
     /// `Model<T>`-centric code while leaving `fret::app::prelude::*` focused on
     /// `LocalState<T>` / `cx.state().local*`.
-    pub use crate::view::AppUiRawStateExt;
+    pub use crate::view::AppUiRawModelExt;
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::{UiAppBuilder, UiAppDriver};
     pub use fret_app::App as KernelApp;
@@ -3423,7 +3427,8 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("pub use crate::{AppUi, Ui, UiCx};"));
         assert!(advanced_prelude_exports_symbol("KernelApp"));
         assert!(advanced_prelude_exports_symbol("AppUiRawActionNotifyExt"));
-        assert!(advanced_prelude_exports_symbol("AppUiRawStateExt"));
+        assert!(!advanced_prelude_exports_symbol("AppUiRawStateExt"));
+        assert!(advanced_prelude_exports_symbol("AppUiRawModelExt"));
         assert!(advanced_prelude_exports_symbol("AppUi"));
         assert!(advanced_prelude_exports_symbol("Ui"));
         assert!(advanced_prelude_exports_symbol("UiCx"));
@@ -3455,10 +3460,7 @@ mod authoring_surface_policy_tests {
         assert!(!advanced_prelude.contains(
             "pub use fret_ui::element::{Elements, HoverRegionProps, Length, SemanticsProps};"
         ));
-        assert!(
-            advanced_prelude
-                .contains("Explicit raw-model local-state hooks kept on the advanced lane.")
-        );
+        assert!(advanced_prelude.contains("Explicit raw-model hooks kept on the advanced lane."));
         assert!(advanced_prelude.contains("while leaving `fret::app::prelude::*` focused on"));
     }
 
@@ -3788,6 +3790,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("AppWindowId"));
         assert!(!app_prelude_exports_symbol("AppUiRawActionNotifyExt"));
         assert!(!app_prelude_exports_symbol("AppUiRawStateExt"));
+        assert!(!app_prelude_exports_symbol("AppUiRawModelExt"));
         assert!(!app_prelude_exports_symbol("Event"));
         assert!(!app_prelude_exports_symbol("ElementContext"));
         assert!(!app_prelude_exports_symbol("UiTree"));

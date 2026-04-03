@@ -1,5 +1,5 @@
 use fret_core::Px;
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, Invalidation, UiHost};
 
 /// Tailwind-compatible viewport width breakpoints.
 ///
@@ -171,12 +171,16 @@ where
 ///
 /// Returns `true` when viewport width is (stably) at least `threshold` (Tailwind-style min-width).
 #[track_caller]
-pub fn viewport_width_at_least<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+pub fn viewport_width_at_least<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
     invalidation: Invalidation,
     threshold: Px,
     hysteresis: ViewportQueryHysteresis,
-) -> bool {
+) -> bool
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    let cx = cx.elements();
     let width = cx.environment_viewport_width(invalidation);
     cx.slot_state(ViewportWidthAtLeastState::default, |st| {
         if !st.initialized {
@@ -193,12 +197,15 @@ pub fn viewport_width_at_least<H: UiHost>(
 /// Returns the viewport's aspect ratio (`width / height`) based on the committed per-window
 /// environment snapshot (ADR 0232).
 #[track_caller]
-pub fn viewport_aspect_ratio<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+pub fn viewport_aspect_ratio<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
     invalidation: Invalidation,
     fallback_when_zero_height: f32,
-) -> f32 {
-    cx.scope(|cx| {
+) -> f32
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements().scope(|cx| {
         let bounds = cx.environment_viewport_bounds(invalidation);
         viewport_aspect_ratio_for_dimensions(
             bounds.size.width,
@@ -211,29 +218,35 @@ pub fn viewport_aspect_ratio<H: UiHost>(
 /// Returns a coarse "portrait/landscape/square" orientation derived from the committed viewport
 /// snapshot (ADR 0232).
 #[track_caller]
-pub fn viewport_orientation<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+pub fn viewport_orientation<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
     invalidation: Invalidation,
-) -> ViewportOrientation {
-    cx.scope(|cx| {
+) -> ViewportOrientation
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements().scope(|cx| {
         let bounds = cx.environment_viewport_bounds(invalidation);
         viewport_orientation_for_dimensions(bounds.size.width, bounds.size.height)
     })
 }
 
 #[track_caller]
-pub fn viewport_is_portrait<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    invalidation: Invalidation,
-) -> bool {
+pub fn viewport_is_portrait<'a, H: UiHost + 'a, Cx>(cx: &mut Cx, invalidation: Invalidation) -> bool
+where
+    Cx: ElementContextAccess<'a, H>,
+{
     viewport_orientation(cx, invalidation) == ViewportOrientation::Portrait
 }
 
 #[track_caller]
-pub fn viewport_is_landscape<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+pub fn viewport_is_landscape<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
     invalidation: Invalidation,
-) -> bool {
+) -> bool
+where
+    Cx: ElementContextAccess<'a, H>,
+{
     viewport_orientation(cx, invalidation) == ViewportOrientation::Landscape
 }
 

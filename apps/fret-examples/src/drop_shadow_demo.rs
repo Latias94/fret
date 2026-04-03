@@ -240,7 +240,7 @@ impl View for DropShadowDemoView {
                             shadcn::Separator::new().into_element(cx),
                             ui::h_row(|cx| {
                                 [
-                                    shadcn::Switch::new(enabled_state.clone_model())
+                                    shadcn::Switch::new(&enabled_state)
                                         .a11y_label("Enable drop shadow")
                                         .test_id("drop-shadow-switch-enabled")
                                         .into_element(cx),
@@ -252,7 +252,7 @@ impl View for DropShadowDemoView {
                             .into_element(cx),
                             ui::h_row(|cx| {
                                 [
-                                    shadcn::Switch::new(stress_state.clone_model())
+                                    shadcn::Switch::new(&stress_state)
                                         .a11y_label("Enable stress grid")
                                         .test_id("drop-shadow-switch-stress")
                                         .into_element(cx),

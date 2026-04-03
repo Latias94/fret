@@ -16,8 +16,8 @@ use fret_core::{
 use fret_ui::Invalidation;
 use fret_ui::element::{AnyElement, HoverRegionProps, StyledTextProps};
 use fret_ui_kit::declarative::{
-    ViewportQueryHysteresis, primary_pointer_can_hover, style as decl_style, viewport_tailwind,
-    viewport_width_at_least,
+    ElementContextThemeExt as _, ViewportQueryHysteresis, primary_pointer_can_hover,
+    style as decl_style, viewport_tailwind, viewport_width_at_least,
 };
 use fret_ui_kit::{WidgetStateProperty, WidgetStates, typography};
 
@@ -258,7 +258,7 @@ impl View for TodoDemoView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
         let locals = TodoLocals::new(cx);
         locals.bind_actions(cx);
         let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
@@ -691,12 +691,16 @@ fn filter_chip(
     })
 }
 
-fn todo_row(
-    cx: &mut fret_ui::ElementContext<'_, App>,
+fn todo_row<'a, Cx>(
+    cx: &mut Cx,
     theme: ThemeSnapshot,
     row: &TodoRow,
     always_show_remove_action: bool,
-) -> AnyElement {
+) -> AnyElement
+where
+    Cx: fret::app::ElementContextAccess<'a, App>,
+{
+    let cx = cx.elements();
     let row_done = row.done;
     let row_id = row.id;
     let row_text = row.text.clone();

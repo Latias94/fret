@@ -5,7 +5,7 @@ use fret_core::{SvgId, UiServices};
 use fret_icons::{FrozenIconRegistry, IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 use fret_ui::SvgSource;
 use fret_ui::element::SvgIconProps;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContextAccess, Theme, UiHost};
 
 use super::style;
 use crate::{ColorRef, LayoutRefinement};
@@ -99,26 +99,29 @@ pub fn resolve_svg_source_from_globals<H: UiHost>(
 }
 
 #[track_caller]
-pub fn icon<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    icon: IconId,
-) -> fret_ui::element::AnyElement {
+pub fn icon<'a, H: UiHost + 'a, Cx>(cx: &mut Cx, icon: IconId) -> fret_ui::element::AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
     icon_with(cx, icon, None, None)
 }
 
 #[track_caller]
-pub fn icon_with<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+pub fn icon_with<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
     icon: IconId,
     size: Option<Px>,
     color: Option<ColorRef>,
-) -> fret_ui::element::AnyElement {
+) -> fret_ui::element::AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
     // Semantics:
     // - `color=None` means "use currentColor when a ForegroundScope is present; otherwise fall
     //   back to muted-foreground". This mirrors shadcn/Radix's common reliance on CSS
     //   `currentColor` for icons.
     // - `color=Some(_)` pins the icon to an explicit color and disables currentColor inheritance.
-    cx.scope(|cx| {
+    cx.elements().scope(|cx| {
         let svg: SvgSource = if let Some(svg) = cx
             .app
             .global::<IconSvgRegistry>()
@@ -163,6 +166,7 @@ mod tests {
     use fret_core::{
         PathId, Rect, Size, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
     };
+    use fret_ui::ElementContext;
     use fret_ui::elements::ElementRuntime;
 
     use super::*;
