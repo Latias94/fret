@@ -126,6 +126,9 @@ runtime tuning.
 - Landed slice: `NodeGraphViewState` is pure view state, while the file wrapper persists
   `NodeGraphInteractionConfig` + `NodeGraphRuntimeTuning`, and widget/runtime snapshots still
   resolve a combined `NodeGraphInteractionState` from explicit editor-config seams.
+- The retained canvas sync/runtime path no longer reconstructs editor config from
+  `NodeGraphViewState` under `cfg(test)`; retained runtime, retained tests, and `--all-features`
+  builds all use the same explicit editor-config seam.
 - Persistence ownership is now explicit: the file wrapper writes pure view-state under `state`, with
   `interaction` / `runtime_tuning` stored as wrapper-owned fields in `state_version = 2`.
 - App/example authoring also follows the split:
@@ -195,6 +198,8 @@ runtime tuning.
   use explicit editor-config seams.
 - Retained public compatibility widgets no longer hide default editor-config ownership behind their
   constructor boundary.
+- Retained runtime/test sync no longer carries a stale `cfg(test)` editor-config reconstruction
+  fallback; all feature sets now use the same explicit editor-config ownership contract.
 
 ### Required regression protection
 
@@ -374,6 +379,9 @@ points rather than direct graph mutation.
     transaction commit, selection commit, diagnostics presets, keyboard zoom, pointer release/move
     helpers, and fit-to-portals viewport updates no longer thread `graph + view_state +
     controller` triplets for ordinary bound-surface work.
+  - Declarative `paint_only` runtime source ownership is now locked by focused source-policy
+    coverage: the main surface file plus private runtime submodules must use `binding.store_model()`
+    as the authoritative graph/view/editor-config source instead of reading bound mirrors directly.
   - The workflow gallery retained subtree now also keeps its retained controller as explicit local
     state and constructs it from `binding.store_model()` rather than teaching hidden controller
     extraction from the binding, so first-party code makes that advanced seam visible instead of
@@ -455,6 +463,8 @@ points rather than direct graph mutation.
 - pointer-move reducer gates for drag activation, canceled drag cleanup, marquee
   preview/cancel, and hover hit updates
 - controlled-mode regression coverage for replace/diff behavior
+- source-policy coverage proving declarative `paint_only` runtime files do not read/write bound
+  graph/view/editor-config mirrors when a store-backed binding exists
 
 ### Evidence anchors
 
@@ -470,6 +480,7 @@ points rather than direct graph mutation.
 - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
 - `ecosystem/fret-node/src/ui/binding_viewport.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`

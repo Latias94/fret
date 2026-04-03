@@ -17,16 +17,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 .ok()
                 .unwrap_or_else(|| self.editor_config.clone());
         }
-        #[cfg(test)]
-        if let Ok(editor_config) = self
-            .view_state
-            .read_ref(host, |state| NodeGraphEditorConfig {
-                interaction: state.interaction.clone(),
-                runtime_tuning: state.runtime_tuning,
-            })
-        {
-            return editor_config;
-        }
         self.editor_config.clone()
     }
 

@@ -3013,6 +3013,53 @@ fn update_view_state_action_host_uses_authoritative_store_view_state_when_bound_
     assert_eq!(synced_node, Some(CanvasPoint { x: 8.0, y: 16.0 }));
 }
 
+fn declarative_paint_only_runtime_sources() -> [(&'static str, &'static str); 21] {
+    [
+        ("paint_only.rs", include_str!("../paint_only.rs")),
+        ("cache.rs", include_str!("cache.rs")),
+        ("diag.rs", include_str!("diag.rs")),
+        ("hover_anchor.rs", include_str!("hover_anchor.rs")),
+        ("input_handlers.rs", include_str!("input_handlers.rs")),
+        ("overlay_elements.rs", include_str!("overlay_elements.rs")),
+        ("overlays.rs", include_str!("overlays.rs")),
+        ("pointer_down.rs", include_str!("pointer_down.rs")),
+        ("pointer_move.rs", include_str!("pointer_move.rs")),
+        ("pointer_session.rs", include_str!("pointer_session.rs")),
+        (
+            "portal_measurement.rs",
+            include_str!("portal_measurement.rs"),
+        ),
+        ("portals.rs", include_str!("portals.rs")),
+        ("selection.rs", include_str!("selection.rs")),
+        ("semantics.rs", include_str!("semantics.rs")),
+        ("surface_content.rs", include_str!("surface_content.rs")),
+        ("surface_frame.rs", include_str!("surface_frame.rs")),
+        ("surface_math.rs", include_str!("surface_math.rs")),
+        ("surface_models.rs", include_str!("surface_models.rs")),
+        ("surface_shell.rs", include_str!("surface_shell.rs")),
+        ("surface_state.rs", include_str!("surface_state.rs")),
+        ("surface_support.rs", include_str!("surface_support.rs")),
+    ]
+}
+
+#[test]
+fn declarative_paint_only_runtime_uses_authoritative_store_models_instead_of_bound_mirrors() {
+    for (path, source) in declarative_paint_only_runtime_sources() {
+        assert!(
+            !source.contains("binding.graph_model()"),
+            "{path} must not read/write the bound graph mirror; use binding.store_model() instead",
+        );
+        assert!(
+            !source.contains("binding.view_state_model()"),
+            "{path} must not read/write the bound view-state mirror; use binding.store_model() instead",
+        );
+        assert!(
+            !source.contains("binding.editor_config_model()"),
+            "{path} must not read/write the bound editor-config mirror; use binding.store_model() instead",
+        );
+    }
+}
+
 fn test_node_drag_state(phase: NodeDragPhase, current_screen: Point) -> NodeDragState {
     NodeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),

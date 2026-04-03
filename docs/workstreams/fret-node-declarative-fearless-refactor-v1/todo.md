@@ -139,6 +139,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - `NodeGraphViewState` test helpers now stay pure view-state.
   - Store/controller sync tests now bind explicit editor-config mirrors.
   - Retained/declarative fixtures no longer read `view_state.interaction` as a compatibility path.
+  - `ui/canvas/widget/view_state/sync.rs` no longer keeps a `cfg(test)` fallback that reconstructs
+    `NodeGraphEditorConfig` from `NodeGraphViewState`; retained runtime/tests and
+    `--all-features` builds now all resolve editor config from the explicit mirror seam only.
 
 ## M3 - Controller / instance facade
 
@@ -330,12 +333,19 @@ Execution companion: `design.md` (surface map + next worktree order).
       the default declarative demo path exercises the transaction-safe architecture without
       teaching raw graph/view/controller plumbing.
 - [x] Add a focused regression test for the drag transaction builder used by the declarative path.
+- [x] Lock declarative `paint_only` runtime source ownership to the authoritative store-backed
+      seam.
+  - Progress: source-policy coverage now scans `paint_only.rs` plus the private runtime submodules
+    and forbids `binding.graph_model()`, `binding.view_state_model()`, and
+    `binding.editor_config_model()` access there; bound surfaces must read/write authoritative
+    graph/view/config through `binding.store_model()` instead.
 - [ ] Keep future declarative graph-edit commit paths on the same transaction-backed seam used by
       node-drag and diagnostics, rather than reintroducing direct graph mutation when new gestures
       land.
   - Status note: the currently landed declarative graph-edit commit paths are node-drag plus the
-    diagnostics graph-diff actions; the remaining risk is regression on future graph-edit gestures,
-    not an already-known direct-mutation path in the current `paint_only` surface.
+    diagnostics graph-diff actions; authoritative store-first source ownership is now also locked,
+    so the remaining risk is regression on future graph-edit gestures, not an already-known
+    direct-mutation or bound-mirror path in the current `paint_only` surface.
 - [x] Keep ephemeral drag/hover session state local where that improves ergonomics, but route final
       commits through transactions.
   - Progress: marquee, pending-selection, node-drag, and hover session state now stay local until

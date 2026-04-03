@@ -1,6 +1,6 @@
 # `fret-node` Fearless Refactor (v1) - Design Map
 
-Status: execution-oriented companion (last updated 2026-04-01)
+Status: execution-oriented companion (last updated 2026-04-03)
 Scope: `ecosystem/fret-node` only
 
 This file is the shortest possible answer to:
@@ -176,8 +176,15 @@ Status note (2026-04-03):
 - Local-vs-store interaction boundaries are explicit: transient drag/marquee/pending-selection/
   hover state stays local until commit/cancel, while committed selection/graph edits route through
   the binding/controller seams.
+- Declarative `paint_only` runtime source ownership is now locked: runtime files must treat
+  `binding.store_model()` as the authoritative graph/view/editor-config source instead of
+  consulting bound graph/view/config mirrors directly.
+- The retained compatibility runtime no longer keeps a stale `cfg(test)` editor-config
+  reconstruction fallback; retained runtime, retained tests, and `--all-features` builds now all
+  use the same explicit editor-config seam.
 - The next narrow follow-up inside Slice 2 should focus on any still-missing transaction-backed
-  declarative graph-edit path, not on reopening the reducer split that now has focused gates.
+  declarative graph-edit path, not on reopening either the reducer split or the store-first source
+  boundary that now has focused gates.
 
 Why next:
 
