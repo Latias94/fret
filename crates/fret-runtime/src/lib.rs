@@ -236,7 +236,10 @@ pub use window_global_change_diagnostics::{
     WindowGlobalChangeNameCount, WindowGlobalChangeWindowSnapshot,
 };
 pub use window_input_arbitration::{WindowInputArbitrationSnapshot, WindowPointerOcclusion};
-pub use window_input_context::WindowInputContextService;
+pub use window_input_context::{
+    WindowInputContextService, best_effort_input_context_for_window,
+    best_effort_input_context_for_window_with_fallback,
+};
 pub use window_key_context_stack::WindowKeyContextStackService;
 pub use window_menu_bar_focus::WindowMenuBarFocusService;
 pub use window_metrics::apply_window_metrics_event;

@@ -2,9 +2,9 @@
 use fret_core::AppWindowId;
 
 use crate::WindowCommandActionAvailabilityService;
+use crate::WindowCommandEnabledService;
 use crate::WindowKeyContextStackService;
 use crate::{CommandId, CommandScope, CommandsHost, GlobalsHost, InputContext};
-use crate::{WindowCommandEnabledService, WindowInputContextService};
 
 use super::{WindowCommandGatingService, WindowCommandGatingSnapshot};
 
@@ -45,11 +45,8 @@ pub fn snapshot_for_window_with_input_ctx_fallback(
     window: AppWindowId,
     fallback_input_ctx: InputContext,
 ) -> WindowCommandGatingSnapshot {
-    let input_ctx = app
-        .global::<WindowInputContextService>()
-        .and_then(|svc| svc.snapshot(window))
-        .cloned()
-        .unwrap_or(fallback_input_ctx);
+    let input_ctx =
+        crate::best_effort_input_context_for_window_with_fallback(app, window, fallback_input_ctx);
 
     let enabled_overrides = app
         .global::<WindowCommandEnabledService>()

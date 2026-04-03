@@ -115,6 +115,17 @@ This follow-on slice locks the contract that:
   writing `WindowInputContextService`, `WindowKeyContextStackService`, and
   `WindowCommandActionAvailabilityService`.
 
+## Follow-on slice — Published input-context consumers must overlay authoritative command availability
+
+This follow-on slice locks the contract that:
+
+- `WindowInputContextService` remains a best-effort window snapshot transport for cross-surface
+  consumers,
+- when consumers need `edit.can_*` / `router.can_*` semantics, `WindowCommandAvailabilityService`
+  stays authoritative and must overlay the published `InputContext`,
+- stale published input snapshots must not suppress command gating or shortcut lookup once the
+  authoritative command-availability service has changed.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -167,6 +178,14 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_key_contexts`
 - Imperative tree mutation refreshes widget command availability only after explicit snapshot commit:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_command_availability`
+- Best-effort input context overlays authoritative command availability:
+  - `cargo nextest run -p fret-runtime best_effort_input_context_overlays_authoritative_command_availability`
+- Best-effort input-context fallback inherits authoritative command availability:
+  - `cargo nextest run -p fret-runtime best_effort_input_context_fallback_inherits_command_availability`
+- Window command-gating fallback overlays authoritative command availability over stale input snapshots:
+  - `cargo nextest run -p fret-runtime snapshot_for_window_overlays_authoritative_command_availability_over_stale_input_context`
+- shadcn shortcut display prefers authoritative command availability over stale published input snapshots:
+  - `cargo nextest run -p fret-ui-shadcn shortcut_display_input_context_prefers_authoritative_command_availability`
 
 ## Evidence anchors
 
@@ -174,6 +193,12 @@ This follow-on slice locks the contract that:
   - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
 - Mechanism regression coverage:
   - `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
+- Best-effort window snapshot / command-availability overlay helpers:
+  - `crates/fret-runtime/src/window_input_context.rs`
+  - `crates/fret-runtime/src/window_command_gating/helpers.rs`
+- Cross-surface consumer regression coverage:
+  - `crates/fret-runtime/src/window_command_gating/tests.rs`
+  - `ecosystem/fret-ui-shadcn/src/shortcut_display.rs`
   - `crates/fret-ui/src/tree/tests/view_cache.rs`
 - Contained relayout dirty/rerender bookkeeping:
   - `crates/fret-ui/src/tree/layout/entrypoints.rs`
@@ -308,3 +333,7 @@ This follow-on slice locks the contract that:
   - `tree::tests::window_input_context_snapshot::dispatch_event_publishes_post_dispatch_input_context_snapshot`
   - `tree::tests::window_input_context_snapshot::dispatch_command_publishes_post_dispatch_input_context_snapshot`
   - `tree::tests::window_input_context_snapshot::paint_all_publishes_programmatic_input_context_snapshot`
+- 2026-04-03: best-effort input-context authoritative-overlay runtime gates confirmed via `cargo nextest`:
+  - `best_effort_input_context_overlays_authoritative_command_availability`
+  - `best_effort_input_context_fallback_inherits_command_availability`
+  - `snapshot_for_window_overlays_authoritative_command_availability_over_stale_input_context`

@@ -55,6 +55,9 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 - **Runner snapshot seam (data-only):**
   - `fret-runtime::WindowInputContextService` publishes a window-scoped `InputContext` snapshot for
     runner/platform integration surfaces (OS menubars, etc.).
+  - `edit.can_*` / `router.can_*` booleans embedded in that snapshot are best-effort until
+    consumers overlay `WindowCommandAvailabilityService`; command-availability truth remains
+    authoritative there.
   - `InputContext.window_arbitration` (`WindowInputArbitrationSnapshot`) is the single source of
     truth for window-level modal/capture/occlusion state. It is published by the UI runtime as part
     of the `InputContext` snapshot (no separate arbitration service).

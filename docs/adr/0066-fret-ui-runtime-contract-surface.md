@@ -231,6 +231,10 @@ Mechanism (runtime-provided):
 - paint remains an input-context refresh boundary only; it may republish
   `WindowInputContextService` without recomputing the full key-context / command-availability
   snapshot set,
+- consumers that need `edit.can_*` / `router.can_*` semantics from a published window snapshot must
+  treat those `InputContext` fields as best-effort transport and overlay the authoritative
+  `WindowCommandAvailabilityService` snapshot when present before evaluating command gating or
+  shortcut availability,
 - snapshot publication must revalidate focus and pending shortcut/key-context state against the
   current authoritative tree before writing `WindowInputContextService`,
   `WindowKeyContextStackService`, and `WindowCommandActionAvailabilityService`.

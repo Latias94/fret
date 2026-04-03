@@ -5,7 +5,7 @@ use fret_core::{
 };
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
-    WindowInputContextService, WindowKeyContextStackService, format_sequence,
+    WindowKeyContextStackService, format_sequence,
 };
 use fret_ui::element::{AnyElement, StyledTextProps};
 use fret_ui::{ElementContext, ThemeSnapshot, UiHost};
@@ -17,34 +17,7 @@ pub(crate) fn command_shortcut_label<H: UiHost>(
     command: &CommandId,
     platform: Platform,
 ) -> Option<Arc<str>> {
-    let caps = cx
-        .app
-        .global::<PlatformCapabilities>()
-        .cloned()
-        .unwrap_or_default();
-
-    let snapshot = cx
-        .app
-        .global::<WindowInputContextService>()
-        .and_then(|svc| svc.snapshot(cx.window))
-        .cloned();
-
-    let mut base_ctx = snapshot.unwrap_or(InputContext {
-        platform,
-        caps: caps.clone(),
-        ui_has_modal: false,
-        window_arbitration: None,
-        focus_is_text_input: false,
-        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
-        edit_can_undo: true,
-        edit_can_redo: true,
-        router_can_back: false,
-        router_can_forward: false,
-        dispatch_phase: InputDispatchPhase::Bubble,
-    });
-    base_ctx.platform = platform;
-    base_ctx.caps = caps;
-    base_ctx.dispatch_phase = InputDispatchPhase::Bubble;
+    let base_ctx = shortcut_display_input_context(cx.app, cx.window, platform);
 
     let key_contexts: Vec<Arc<str>> = cx
         .app
@@ -74,6 +47,36 @@ pub(crate) fn command_shortcut_label<H: UiHost>(
         })?;
 
     Some(Arc::from(format_sequence(platform, &seq)))
+}
+
+fn shortcut_display_input_context<H: UiHost>(
+    app: &H,
+    window: fret_core::AppWindowId,
+    platform: Platform,
+) -> InputContext {
+    let caps = app
+        .global::<PlatformCapabilities>()
+        .cloned()
+        .unwrap_or_default();
+    let fallback = InputContext {
+        platform,
+        caps: caps.clone(),
+        ui_has_modal: false,
+        window_arbitration: None,
+        focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
+        edit_can_undo: true,
+        edit_can_redo: true,
+        router_can_back: false,
+        router_can_forward: false,
+        dispatch_phase: InputDispatchPhase::Bubble,
+    };
+    let mut base_ctx =
+        fret_runtime::best_effort_input_context_for_window_with_fallback(app, window, fallback);
+    base_ctx.platform = platform;
+    base_ctx.caps = caps;
+    base_ctx.dispatch_phase = InputDispatchPhase::Bubble;
+    base_ctx
 }
 
 pub(crate) fn shortcut_text_element<H: UiHost>(
@@ -186,6 +189,13 @@ fn shortcut_attributed_text_with_symbol_fallback(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, KeyCode, Modifiers};
+    use fret_runtime::keymap::Binding;
+    use fret_runtime::{
+        InputContext, KeyChord, Keymap, KeymapService, PlatformFilter, WhenExpr,
+        WindowCommandAvailabilityService, WindowInputContextService,
+    };
 
     #[test]
     fn shortcut_symbol_detection_covers_menu_glyphs() {
@@ -214,5 +224,60 @@ mod tests {
             FontId::family("Apple Symbols"),
         );
         assert!(rich.is_valid());
+    }
+
+    #[test]
+    fn shortcut_display_input_context_prefers_authoritative_command_availability() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let command = CommandId::from("test.router.back");
+        let chord = KeyChord::new(
+            KeyCode::BracketLeft,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+
+        app.with_global_mut(WindowInputContextService::default, |svc, _app| {
+            svc.set_snapshot(
+                window,
+                InputContext {
+                    router_can_back: false,
+                    ..Default::default()
+                },
+            );
+        });
+        app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
+            svc.set_router_availability(window, true, false);
+        });
+
+        let mut keymap = Keymap::empty();
+        keymap.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![chord],
+            when: Some(WhenExpr::parse("router.can_back").unwrap()),
+            command: Some(command.clone()),
+        });
+        app.set_global(KeymapService { keymap });
+
+        let base_ctx = shortcut_display_input_context(&app, window, Platform::Windows);
+        assert!(
+            base_ctx.router_can_back,
+            "shortcut-display base context should merge authoritative router availability over a stale published input context snapshot"
+        );
+
+        let seq = app
+            .global::<KeymapService>()
+            .and_then(|svc| {
+                svc.keymap
+                    .display_shortcut_for_command_sequence_with_key_contexts(
+                        &base_ctx,
+                        &[],
+                        &command,
+                    )
+            })
+            .expect("shortcut should resolve once authoritative router availability is merged");
+        assert_eq!(seq, vec![chord]);
     }
 }

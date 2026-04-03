@@ -5,7 +5,46 @@ use fret_core::AppWindowId;
 
 use super::*;
 use crate::WhenExpr;
-use crate::{CommandId, CommandScope, InputContext};
+use crate::{
+    CommandId, CommandScope, GlobalsHost, InputContext, WindowCommandAvailabilityService,
+    WindowInputContextService,
+};
+use std::any::{Any, TypeId};
+
+#[derive(Default)]
+struct TestGlobalsHost {
+    globals: HashMap<TypeId, Box<dyn Any>>,
+}
+
+impl GlobalsHost for TestGlobalsHost {
+    fn set_global<T: Any>(&mut self, value: T) {
+        self.globals.insert(TypeId::of::<T>(), Box::new(value));
+    }
+
+    fn global<T: Any>(&self) -> Option<&T> {
+        self.globals
+            .get(&TypeId::of::<T>())
+            .and_then(|value| value.downcast_ref::<T>())
+    }
+
+    fn with_global_mut<T: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> T,
+        f: impl FnOnce(&mut T, &mut Self) -> R,
+    ) -> R {
+        let type_id = TypeId::of::<T>();
+        let mut value = match self.globals.remove(&type_id) {
+            Some(value) => *value
+                .downcast::<T>()
+                .expect("TestGlobalsHost stored wrong type"),
+            None => init(),
+        };
+
+        let out = f(&mut value, self);
+        self.globals.insert(type_id, Box::new(value));
+        out
+    }
+}
 
 #[test]
 fn base_snapshot_is_visible_when_no_stack_overrides_exist() {
@@ -117,6 +156,34 @@ fn when_expr_can_gate_by_key_contexts_in_snapshot() {
     assert!(
         !snapshot.is_enabled_for_meta(&command, CommandScope::App, Some(&when)),
         "expected the command to be disabled when the key context is missing"
+    );
+}
+
+#[test]
+fn snapshot_for_window_overlays_authoritative_command_availability_over_stale_input_context() {
+    let mut host = TestGlobalsHost::default();
+    let window = AppWindowId::default();
+    let command = CommandId::new("test.router.back");
+    let when = WhenExpr::parse("router.can_back").unwrap();
+
+    host.with_global_mut(WindowInputContextService::default, |svc, _host| {
+        svc.set_snapshot(
+            window,
+            InputContext {
+                router_can_back: false,
+                ..Default::default()
+            },
+        );
+    });
+    host.with_global_mut(WindowCommandAvailabilityService::default, |svc, _host| {
+        svc.set_router_availability(window, true, false);
+    });
+
+    let snapshot =
+        snapshot_for_window_with_input_ctx_fallback(&host, window, InputContext::default());
+    assert!(
+        snapshot.is_enabled_for_meta(&command, CommandScope::App, Some(&when)),
+        "expected gating snapshot to read authoritative router availability even when the published input context snapshot is stale"
     );
 }
 

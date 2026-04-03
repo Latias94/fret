@@ -66,6 +66,9 @@ Status: Active
   - [x] raw imperative `UiTree` mutations now have an explicit authoritative window-snapshot
     commit surface, so same-frame consumers can republish input/key-context/action-availability
     after retained-state changes without waiting for rebuild/dispatch/paint,
+  - [x] best-effort `WindowInputContextService` consumers now overlay the authoritative
+    `WindowCommandAvailabilityService` before using `edit.can_*` / `router.can_*`, so stale
+    published input snapshots cannot suppress cross-surface gating or shortcut lookup,
   - [ ] remaining child list mutation helpers,
   - [x] contained cache-root dirty markers now align with main-pass layout consumption and
     descendant-truncated contained relayout scheduling,
@@ -90,6 +93,8 @@ Status: Active
     publish/dispatch boundary,
   - [x] imperative raw tree mutation only refreshes window input/key-context/action-availability
     after an explicit window snapshot commit,
+  - [x] best-effort input-context readers inherit authoritative command availability over stale or
+    fallback published snapshots,
   - [ ] scroll handle revision-only bumps stay classified correctly.
 
 ## Wheel/trackpad delta coalescing
