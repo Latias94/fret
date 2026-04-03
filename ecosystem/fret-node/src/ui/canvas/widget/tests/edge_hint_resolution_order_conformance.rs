@@ -12,7 +12,7 @@ use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, EdgeRouteKind, NodeGraphP
 use crate::ui::skin::{NodeGraphSkin, NodeGraphSkinRef};
 
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+    TestUiHostImpl, insert_graph_view_editor_config_with, make_test_graph_two_nodes_with_ports,
 };
 
 fn assert_close(a: f32, b: f32) {
@@ -157,12 +157,11 @@ fn edge_render_hint_is_resolved_in_stage_order_presenter_edge_types_skin() {
     );
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.runtime_tuning.only_render_visible_elements = false;
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.runtime_tuning.only_render_visible_elements = false;
+            state.interaction.frame_view_duration_ms = 0;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = crate::core::CanvasPoint::default();
         s.zoom = 1.0;

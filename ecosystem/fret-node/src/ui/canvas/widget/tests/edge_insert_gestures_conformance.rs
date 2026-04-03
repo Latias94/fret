@@ -7,8 +7,8 @@ use crate::ui::NodeGraphCanvas;
 
 use super::prelude::{cubic_bezier, wire_ctrl_points};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_ports_spaced_x,
+    NullServices, TestUiHostImpl, event_cx, insert_graph_view_editor_config,
+    insert_graph_view_editor_config_with, make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
 fn bounds() -> Rect {
@@ -50,12 +50,11 @@ fn double_click_edge_inserts_reroute_when_enabled() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_double_click = true;
-        state.interaction.reroute_on_edge_double_click = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.zoom_on_double_click = true;
+            state.interaction.reroute_on_edge_double_click = true;
+        });
 
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let mut services = NullServices::default();
@@ -117,10 +116,8 @@ fn alt_double_click_edge_opens_insert_node_picker() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-
-    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
     let mut cx = event_cx(
@@ -178,12 +175,11 @@ fn alt_double_click_edge_prefers_picker_over_reroute_when_both_enabled() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.zoom_on_double_click = true;
-        state.interaction.reroute_on_edge_double_click = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.zoom_on_double_click = true;
+            state.interaction.reroute_on_edge_double_click = true;
+        });
 
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let mut services = NullServices::default();
@@ -249,11 +245,10 @@ fn alt_drag_edge_opens_insert_node_picker_when_enabled() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.edge_insert_on_alt_drag = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.edge_insert_on_alt_drag = true;
+        });
 
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let mut services = NullServices::default();

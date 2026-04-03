@@ -12,8 +12,8 @@ use crate::ui::{
 };
 
 use super::{
-    NullServices, TestUiHostImpl, command_cx, insert_editor_config_with, insert_graph_view,
-    make_test_graph_two_nodes, read_node_pos,
+    NullServices, TestUiHostImpl, command_cx, insert_graph_view_editor_config,
+    insert_graph_view_editor_config_with, make_test_graph_two_nodes, read_node_pos,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -74,11 +74,11 @@ impl NodeGraphCanvasMiddleware for RejectNudgeCommit {
 fn middleware_can_override_select_all_command() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.elements_selectable = true;
-        state.interaction.edges_selectable = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.elements_selectable = true;
+            state.interaction.edges_selectable = true;
+        });
 
     view.update(&mut host, |s, _cx| {
         s.selected_nodes.clear();
@@ -106,10 +106,10 @@ fn middleware_can_override_select_all_command() {
 fn middleware_can_reject_commits_before_apply() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas =
-        new_canvas!(host, graph.clone(), view.clone()).with_middleware(RejectNudgeCommit);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config)
+        .with_middleware(RejectNudgeCommit);
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {

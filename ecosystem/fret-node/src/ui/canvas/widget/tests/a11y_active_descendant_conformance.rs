@@ -11,7 +11,10 @@ use crate::ui::{
     NodeGraphEditor,
 };
 
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config,
+    make_test_graph_two_nodes_with_ports,
+};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -53,8 +56,7 @@ fn canvas_active_descendant_points_to_focused_port_semantics_node() {
     ui.set_window(AppWindowId::default());
 
     let (graph_value, a, a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let mut snap = NodeGraphInternalsSnapshot::default();
@@ -63,7 +65,8 @@ fn canvas_active_descendant_points_to_focused_port_semantics_node() {
     internals.update(snap);
     set_internals_focus(&internals, Some(a), Some(a_in));
 
-    let mut canvas = new_canvas!(host, graph, view).with_internals_store(internals.clone());
+    let mut canvas =
+        new_canvas!(host, graph, view, editor_config).with_internals_store(internals.clone());
     canvas.interaction.focused_node = Some(a);
     canvas.interaction.focused_port = Some(a_in);
     canvas.interaction.focused_edge = None;
@@ -102,8 +105,7 @@ fn canvas_active_descendant_points_to_focused_node_semantics_node() {
     ui.set_window(AppWindowId::default());
 
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let mut snap = NodeGraphInternalsSnapshot::default();
@@ -111,7 +113,8 @@ fn canvas_active_descendant_points_to_focused_node_semantics_node() {
     internals.update(snap);
     set_internals_focus(&internals, Some(a), None);
 
-    let mut canvas = new_canvas!(host, graph, view).with_internals_store(internals.clone());
+    let mut canvas =
+        new_canvas!(host, graph, view, editor_config).with_internals_store(internals.clone());
     canvas.interaction.focused_node = Some(a);
     canvas.interaction.focused_port = None;
     canvas.interaction.focused_edge = None;

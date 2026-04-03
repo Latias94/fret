@@ -19,13 +19,6 @@ use fret_ui::retained_bridge::Widget as _;
 use serde_json::Value;
 
 macro_rules! new_canvas {
-    ($host:ident, $graph:expr, $view:expr) => {
-        crate::ui::NodeGraphCanvas::new(
-            $graph,
-            $view,
-            crate::ui::canvas::widget::tests::harness::insert_editor_config(&mut $host),
-        )
-    };
     ($host:ident, $graph:expr, $view:expr, $editor_config:expr) => {
         crate::ui::NodeGraphCanvas::new($graph, $view, $editor_config)
     };
@@ -128,16 +121,17 @@ mod viewport_animation_conformance;
 mod z_order_conformance;
 
 use harness::{
-    NullServices, TestUiHostImpl, command_cx, event_cx, insert_editor_config,
-    insert_editor_config_with, insert_graph_view, insert_view, make_host_graph_view,
-    make_test_graph_two_nodes, make_test_graph_two_nodes_with_ports,
-    make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
-    read_node_pos,
+    NullServices, TestUiHostImpl, command_cx, event_cx, insert_editor_config_with,
+    insert_graph_view, insert_view, make_test_graph_two_nodes,
+    make_test_graph_two_nodes_with_ports, make_test_graph_two_nodes_with_ports_spaced_x,
+    make_test_graph_two_nodes_with_size, read_node_pos,
 };
 #[allow(unused_imports)]
 use harness::{
     insert_graph_view_editor_config, insert_graph_view_editor_config_with,
-    make_host_graph_view_editor_config, make_host_graph_view_editor_config_with,
+    insert_view_editor_config, insert_view_editor_config_with, make_host_graph_view_editor_config,
+    make_host_graph_view_editor_config_with, make_host_view_editor_config,
+    make_host_view_editor_config_with,
 };
 
 use prelude::{NodeDrag, NodeGraphCanvas, ViewSnapshot, WireDrag, WireDragKind};
@@ -176,9 +170,9 @@ fn edge_bounds_rect_applies_padding() {
 fn middle_mouse_panning_tracks_screen_delta_under_render_transform() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -231,9 +225,9 @@ fn middle_mouse_panning_tracks_screen_delta_under_render_transform() {
 fn space_to_pan_starts_left_mouse_panning_and_updates_viewport() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -732,8 +726,8 @@ fn wheel_zoom_zooms_about_pointer() {
 fn delete_key_defaults_to_backspace() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let mut canvas = new_canvas!(host, graph, view);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -1040,9 +1034,9 @@ fn internal_drag_drop_candidate_on_edge_splits_edge() {
         super::insert_node_drag::InsertNodeDragPayload { candidate },
     ));
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -1872,9 +1866,9 @@ fn should_add_bundle_port_requires_same_side_and_dedupes() {
 fn node_drag_records_single_history_entry_for_multi_node_move() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -2032,9 +2026,9 @@ fn connect_bundle_records_single_history_entry() {
         },
     );
 
-    let (graph_model, view) = insert_graph_view(&mut host, graph);
+    let (graph_model, view, editor_config) = insert_graph_view_editor_config(&mut host, graph);
 
-    let mut canvas = new_canvas!(host, graph_model.clone(), view);
+    let mut canvas = new_canvas!(host, graph_model.clone(), view, editor_config);
     let snapshot: ViewSnapshot = canvas.sync_view_state(&mut host);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -2082,9 +2076,9 @@ fn connect_bundle_records_single_history_entry() {
 fn nudge_moves_selection_and_records_history_entry() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2116,9 +2110,7 @@ fn nudge_moves_selection_and_records_history_entry() {
 fn nudge_multi_selection_respects_node_extent_by_selection_bounds() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
@@ -2187,9 +2179,9 @@ fn nudge_respects_per_node_extent_rect() {
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2332,9 +2324,7 @@ fn select_all_selects_nodes_groups_and_edges_and_respects_edge_selectable() {
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph);
-
-    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph);
     let mut canvas = new_canvas!(host, graph, view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
@@ -2397,9 +2387,7 @@ fn delete_selection_respects_node_deletable_and_keeps_undeletable_selected() {
         .get_mut(&a)
         .expect("node must exist")
         .deletable = Some(false);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
@@ -2457,9 +2445,7 @@ fn delete_selection_respects_edge_deletable_and_keeps_undeletable_selected() {
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
@@ -2493,9 +2479,9 @@ fn delete_selection_respects_edge_deletable_and_keeps_undeletable_selected() {
 fn align_left_moves_selected_nodes_and_records_history_entry() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2587,9 +2573,9 @@ fn align_right_respects_per_node_extent_rect() {
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -2663,9 +2649,7 @@ fn align_center_x_preserves_alignment_under_node_extent_bounds() {
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
@@ -2807,9 +2791,7 @@ fn distribute_x_clamps_nodes_to_node_extent_rect_like_xyflow() {
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
@@ -2942,9 +2924,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_like_xyflow()
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
@@ -3094,9 +3074,9 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_ext
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -3127,9 +3107,9 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_ext
 fn focus_next_cycles_nodes_and_updates_selection() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -3181,9 +3161,7 @@ fn focus_next_skips_unselectable_nodes() {
         .expect("node exists")
         .selectable = Some(false);
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-
-    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
     let mut canvas = new_canvas!(host, graph, view.clone(), editor_config.clone());
     canvas.sync_view_state(&mut host);
 
@@ -3215,9 +3193,9 @@ fn focus_next_skips_unselectable_nodes() {
 fn focus_next_port_cycles_ports_within_focused_node() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -3253,9 +3231,9 @@ fn focus_next_port_cycles_ports_within_focused_node() {
 fn focus_next_port_filters_by_wire_direction() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     view.update(&mut host, |s, _cx| {
@@ -3285,9 +3263,10 @@ fn focus_next_port_filters_by_wire_direction() {
 fn activate_starts_and_commits_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) = make_test_graph_two_nodes_with_ports();
-    let (graph_model, view) = insert_graph_view(&mut host, graph_value);
+    let (graph_model, view, editor_config) =
+        insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph_model.clone(), view);
+    let mut canvas = new_canvas!(host, graph_model.clone(), view, editor_config);
     canvas.sync_view_state(&mut host);
 
     canvas.interaction.focused_port = Some(a_out);
@@ -3321,9 +3300,9 @@ fn focus_port_right_moves_to_neighbor_node() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     canvas.interaction.focused_port = Some(a_out);
@@ -3343,9 +3322,9 @@ fn focus_port_left_moves_back() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = new_canvas!(host, graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     canvas.sync_view_state(&mut host);
 
     canvas.interaction.focused_port = Some(b_in);

@@ -19,7 +19,7 @@ fn hit_testing_uses_custom_edge_path() {
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let edge_types = crate::ui::NodeGraphEdgeTypes::new().register_path(
         crate::ui::EdgeTypeKey::new("data"),
@@ -43,7 +43,7 @@ fn hit_testing_uses_custom_edge_path() {
         },
     );
 
-    let mut canvas = new_canvas!(host, graph, view).with_edge_types(edge_types);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_edge_types(edge_types);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(1200.0), Px(800.0)),
@@ -121,7 +121,7 @@ fn spatial_index_includes_custom_edge_path_bounds() {
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let edge_types = crate::ui::NodeGraphEdgeTypes::new().register_path(
         crate::ui::EdgeTypeKey::new("data"),
@@ -145,7 +145,7 @@ fn spatial_index_includes_custom_edge_path_bounds() {
         },
     );
 
-    let mut canvas = new_canvas!(host, graph, view).with_edge_types(edge_types);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_edge_types(edge_types);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(1200.0), Px(800.0)),
@@ -213,7 +213,8 @@ fn custom_edge_path_generation_is_deterministic_for_identical_inputs() {
         },
     );
 
-    let (graph, view_state) = insert_graph_view(&mut host, graph_value);
+    let (graph, view_state, editor_config) =
+        insert_graph_view_editor_config(&mut host, graph_value);
     let view = view_state.clone();
 
     let _ = view.update(&mut host, |s, _cx| {
@@ -246,7 +247,8 @@ fn custom_edge_path_generation_is_deterministic_for_identical_inputs() {
         },
     );
 
-    let mut canvas = new_canvas!(host, graph, view_state).with_edge_types(edge_types);
+    let mut canvas =
+        new_canvas!(host, graph, view_state, editor_config).with_edge_types(edge_types);
     let snapshot = canvas.sync_view_state(&mut host);
     let zoom = snapshot.zoom;
     assert!((zoom - 1.25).abs() <= 1.0e-6);

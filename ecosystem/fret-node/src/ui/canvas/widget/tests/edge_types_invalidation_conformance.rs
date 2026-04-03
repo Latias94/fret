@@ -6,7 +6,9 @@ use crate::core::{Edge, EdgeId, EdgeKind};
 
 use super::prelude::path_midpoint_and_normal;
 use super::prelude::{HitTestCtx, HitTestScratch};
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    TestUiHostImpl, insert_graph_view_editor_config, make_test_graph_two_nodes_with_ports,
+};
 
 const BEND_SCREEN_PX: f32 = 2048.0;
 
@@ -28,11 +30,10 @@ fn edge_types_updates_invalidate_spatial_index_and_hit_testing_uses_new_custom_p
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     // Start with no `edgeTypes` (no custom paths).
-    let mut canvas = new_canvas!(host, graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 

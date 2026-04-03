@@ -9,7 +9,7 @@ use crate::ui::{DefaultNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGr
 
 use super::prelude::*;
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view,
+    TestUiHostImpl, insert_graph_view_editor_config, insert_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
@@ -47,15 +47,14 @@ fn measured_port_anchor_hint_updates_hit_testing_in_strict_mode() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
 
     let measured = Arc::new(MeasuredGeometryStore::new());
     let presenter =
         MeasuredNodeGraphPresenter::new(DefaultNodeGraphPresenter::default(), measured.clone());
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.connection_mode = NodeGraphConnectionMode::Strict;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.connection_mode = NodeGraphConnectionMode::Strict;
+        });
 
     let mut canvas =
         new_canvas!(host, graph, view.clone(), editor_config).with_presenter(presenter);
@@ -111,14 +110,14 @@ fn measured_port_anchor_hint_is_scaled_in_canvas_space_by_zoom() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(0.0);
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
 
     let measured = Arc::new(MeasuredGeometryStore::new());
     let presenter =
         MeasuredNodeGraphPresenter::new(DefaultNodeGraphPresenter::default(), measured.clone());
 
-    let mut canvas = new_canvas!(host, graph, view.clone()).with_presenter(presenter);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas =
+        new_canvas!(host, graph, view.clone(), editor_config).with_presenter(presenter);
 
     let hint = make_hint(140.0, 60.0);
     let _ = measured.apply_exclusive_batch_if_changed(

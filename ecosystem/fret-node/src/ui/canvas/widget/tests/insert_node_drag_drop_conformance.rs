@@ -12,7 +12,10 @@ use crate::rules::{InsertNodeTemplate, PortTemplate};
 use crate::ui::presenter::{InsertNodeCandidate, NodeGraphPresenter};
 use crate::{core::Graph, ops::GraphOp};
 
-use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_test_graph_two_nodes};
+use super::{
+    NullServices, TestUiHostImpl, event_cx, insert_graph_view_editor_config,
+    make_test_graph_two_nodes,
+};
 
 #[derive(Default)]
 struct BackgroundInsertPresenter;
@@ -118,8 +121,8 @@ fn internal_drag_drop_candidate_off_edge_creates_node() {
     ));
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     canvas.presenter = Box::<BackgroundInsertPresenter>::default();
 
     let bounds = Rect::new(
@@ -187,8 +190,8 @@ fn internal_drag_drop_reroute_candidate_off_edge_creates_node() {
     ));
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

@@ -15,7 +15,8 @@ use super::prelude::{
 };
 use super::{
     NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
-    make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
+    insert_view_editor_config, make_test_graph_two_nodes_with_ports_spaced_x,
+    make_test_graph_two_nodes_with_size,
 };
 use crate::ui::canvas::state::{EdgeDrag, PendingGroupDrag, PendingGroupResize, WireDragKind};
 use crate::ui::canvas::state::{GroupResize, NodeDrag, NodeResize, NodeResizeHandle};
@@ -170,8 +171,8 @@ fn child_node_drag_is_clamped_to_group_when_expand_parent_is_false() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {
@@ -297,8 +298,8 @@ fn child_node_drag_expands_group_when_expand_parent_is_true() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {
@@ -430,8 +431,8 @@ fn node_drag_respects_per_node_extent_rect() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {
@@ -716,8 +717,8 @@ fn node_resize_expands_group_when_expand_parent_is_true() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_resize = Some(NodeResize {
@@ -865,8 +866,8 @@ fn group_resize_is_previewed_and_committed_on_pointer_up() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.group_resize = Some(GroupResize {
@@ -1035,8 +1036,8 @@ fn pending_group_drag_release_clears_session_without_committing() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     canvas.interaction.pending_group_drag = Some(PendingGroupDrag {
         group: group_id,
@@ -1100,8 +1101,8 @@ fn pending_group_resize_release_clears_session_without_committing() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     canvas.interaction.pending_group_resize = Some(PendingGroupResize {
         group: group_id,
@@ -1487,9 +1488,9 @@ fn marquee_selects_connected_edges_for_selected_nodes_with_store() {
         store_editor_config,
     ));
     let graph = host.models.insert(Graph::default());
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = new_canvas!(host, graph, view).with_store(store.clone());
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_store(store.clone());
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -2492,9 +2493,9 @@ fn ctrl_click_port_yanks_edges_and_starts_reconnect_with_store() {
         store_editor_config,
     ));
     let graph = host.models.insert(Graph::default());
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = new_canvas!(host, graph, view).with_store(store);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_store(store);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
     let pos = geom.port_center(from).expect("from port center");
@@ -2779,9 +2780,9 @@ fn connectable_false_prevents_connecting_to_target_port() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -2820,9 +2821,9 @@ fn edge_reconnect_requires_drag_threshold_before_starting_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = new_canvas!(host, graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let geom = canvas.canvas_geometry(&host, &snapshot);
@@ -2899,9 +2900,9 @@ fn edge_reconnect_drag_cancels_when_endpoint_not_reconnectable() {
     ));
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = new_canvas!(host, graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let geom = canvas.canvas_geometry(&host, &snapshot);
@@ -3216,9 +3217,9 @@ fn window_focus_lost_cancels_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = new_canvas!(host, graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
             edge,
@@ -3260,9 +3261,9 @@ fn pointer_left_cancels_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = new_canvas!(host, graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
             edge,
@@ -3387,9 +3388,9 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_wire_reconnec
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = new_canvas!(host, graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
             edge,
@@ -3442,9 +3443,9 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_new_wire_drag
     let mut host = TestUiHostImpl::default();
     let (graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = new_canvas!(host, graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::New {
             from,
@@ -3499,9 +3500,9 @@ fn right_click_cancels_wire_drag_and_opens_context_menu() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = new_canvas!(host, graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
 
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {

@@ -14,7 +14,7 @@ use crate::core::{Edge, EdgeId, EdgeKind};
 use crate::ui::{EdgeRenderHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle};
 
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+    TestUiHostImpl, insert_graph_view_editor_config_with, make_test_graph_two_nodes_with_ports,
 };
 
 fn bounds() -> Rect {
@@ -174,12 +174,11 @@ fn wire_path_cache_key_includes_dash_pattern() {
     );
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.runtime_tuning.only_render_visible_elements = false;
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.runtime_tuning.only_render_visible_elements = false;
+            state.interaction.frame_view_duration_ms = 0;
+        });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;

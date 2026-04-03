@@ -174,7 +174,7 @@ pub(crate) fn insert_view(host: &mut TestUiHostImpl) -> Model<NodeGraphViewState
     host.models.insert(NodeGraphViewState::default())
 }
 
-pub(crate) fn insert_editor_config(host: &mut TestUiHostImpl) -> Model<NodeGraphEditorConfig> {
+fn insert_editor_config(host: &mut TestUiHostImpl) -> Model<NodeGraphEditorConfig> {
     host.models.insert(NodeGraphEditorConfig::default())
 }
 
@@ -187,6 +187,25 @@ pub(crate) fn insert_editor_config_with(
         configure(state);
     });
     editor_config
+}
+
+pub(crate) fn insert_view_editor_config(
+    host: &mut TestUiHostImpl,
+) -> (Model<NodeGraphViewState>, Model<NodeGraphEditorConfig>) {
+    let view = insert_view(host);
+    let editor_config = insert_editor_config(host);
+    (view, editor_config)
+}
+
+pub(crate) fn insert_view_editor_config_with(
+    host: &mut TestUiHostImpl,
+    configure: impl FnOnce(&mut NodeGraphEditorConfig),
+) -> (Model<NodeGraphViewState>, Model<NodeGraphEditorConfig>) {
+    let (view, editor_config) = insert_view_editor_config(host);
+    let _ = editor_config.update(host, |state, _cx| {
+        configure(state);
+    });
+    (view, editor_config)
 }
 
 pub(crate) fn insert_graph_view(
@@ -227,12 +246,26 @@ pub(crate) fn insert_graph_view_editor_config_with(
     (graph, view, editor_config)
 }
 
-pub(crate) fn make_host_graph_view(
-    graph_value: Graph,
-) -> (TestUiHostImpl, Model<Graph>, Model<NodeGraphViewState>) {
+pub(crate) fn make_host_view_editor_config() -> (
+    TestUiHostImpl,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
     let mut host = TestUiHostImpl::default();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    (host, graph, view)
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    (host, view, editor_config)
+}
+
+pub(crate) fn make_host_view_editor_config_with(
+    configure: impl FnOnce(&mut NodeGraphEditorConfig),
+) -> (
+    TestUiHostImpl,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
+    let mut host = TestUiHostImpl::default();
+    let (view, editor_config) = insert_view_editor_config_with(&mut host, configure);
+    (host, view, editor_config)
 }
 
 pub(crate) fn make_host_graph_view_editor_config(

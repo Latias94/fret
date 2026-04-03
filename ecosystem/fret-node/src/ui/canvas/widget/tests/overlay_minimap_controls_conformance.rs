@@ -23,7 +23,10 @@ use crate::ui::{
     NodeGraphMiniMapOverlay, NodeGraphStyle,
 };
 
-use super::{NullServices, TestUiHostImpl, insert_editor_config, insert_graph_view, insert_view};
+use super::{
+    NullServices, TestUiHostImpl, insert_graph_view, insert_view_editor_config,
+    make_host_view_editor_config,
+};
 
 #[derive(Clone)]
 struct PointerDownCounter {
@@ -125,7 +128,7 @@ fn install_tab_focus_next_keymap(host: &mut TestUiHostImpl) {
 
 #[test]
 fn controls_overlay_pointer_events_fall_through_outside_panel() {
-    let mut host = TestUiHostImpl::default();
+    let (mut host, view, editor_config) = make_host_view_editor_config();
     let mut services = NullServices::default();
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
@@ -133,8 +136,6 @@ fn controls_overlay_pointer_events_fall_through_outside_panel() {
     let underlay_downs = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, test_style());
     let controls_node = ui.create_node_retained(controls);
 
@@ -160,7 +161,7 @@ fn controls_overlay_pointer_events_fall_through_outside_panel() {
 
 #[test]
 fn controls_overlay_blocks_canvas_input_within_panel_even_off_button() {
-    let mut host = TestUiHostImpl::default();
+    let (mut host, view, editor_config) = make_host_view_editor_config();
     let mut services = NullServices::default();
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
@@ -171,8 +172,6 @@ fn controls_overlay_blocks_canvas_input_within_panel_even_off_button() {
     let underlay_downs = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, style);
     let controls_node = ui.create_node_retained(controls);
 
@@ -205,7 +204,7 @@ fn controls_overlay_blocks_canvas_input_within_panel_even_off_button() {
 
 #[test]
 fn controls_overlay_button_click_requests_focus_to_canvas_node() {
-    let mut host = TestUiHostImpl::default();
+    let (mut host, view, editor_config) = make_host_view_editor_config();
     let mut services = NullServices::default();
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
@@ -217,8 +216,6 @@ fn controls_overlay_button_click_requests_focus_to_canvas_node() {
     let underlay_downs = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, style);
     let controls_node = ui.create_node_retained(controls);
 
@@ -273,14 +270,12 @@ fn controls_overlay_button_click_requests_focus_to_canvas_node() {
 #[test]
 fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_returns_focus_to_canvas()
  {
-    let mut host = TestUiHostImpl::default();
+    let (mut host, view, editor_config) = make_host_view_editor_config();
     let mut services = NullServices::default();
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, test_style());
     let controls_node = ui.create_node_retained(controls);
 
@@ -328,13 +323,12 @@ fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_re
 
 #[test]
 fn controls_overlay_supports_command_binding_overrides_for_b_layer_wiring() {
-    let mut host = TestUiHostImpl::default();
+    let (mut host, view, editor_config) = make_host_view_editor_config();
     let mut services = NullServices::default();
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
-    let view = insert_view(&mut host);
 
     let mut bindings = NodeGraphControlsBindings::default();
     bindings.toggle_connection_mode = NodeGraphControlsCommandBinding::Command(CommandId::from(
@@ -343,7 +337,6 @@ fn controls_overlay_supports_command_binding_overrides_for_b_layer_wiring() {
     bindings.zoom_in =
         NodeGraphControlsCommandBinding::Command(CommandId::from("node_graph.custom.zoom_in"));
 
-    let editor_config = insert_editor_config(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, test_style())
         .with_bindings(bindings);
     let controls_node = ui.create_node_retained(controls);
@@ -410,14 +403,12 @@ fn controls_overlay_supports_command_binding_overrides_for_b_layer_wiring() {
 
 #[test]
 fn controls_overlay_escape_returns_focus_to_canvas_without_dispatching_command() {
-    let mut host = TestUiHostImpl::default();
+    let (mut host, view, editor_config) = make_host_view_editor_config();
     let mut services = NullServices::default();
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, test_style());
     let controls_node = ui.create_node_retained(controls);
 
@@ -473,8 +464,7 @@ fn tab_focus_traversal_reaches_controls_then_minimap_and_escape_returns_to_canva
 
     let underlay = ui.create_node_retained(FocusableUnderlay::default());
 
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
     let controls =
         NodeGraphControlsOverlay::new(underlay, view.clone(), editor_config, test_style());
     let controls_node = ui.create_node_retained(controls);
@@ -963,15 +953,13 @@ fn minimap_keyboard_zoom_updates_view_state_and_store_zoom_about_center() {
 
 #[test]
 fn controls_overlay_contributes_semantics_test_id() {
-    let mut host = TestUiHostImpl::default();
+    let (mut host, view, editor_config) = make_host_view_editor_config();
     let mut services = NullServices::default();
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
 
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, test_style());
     let controls_node = ui.create_node_retained(controls);
 

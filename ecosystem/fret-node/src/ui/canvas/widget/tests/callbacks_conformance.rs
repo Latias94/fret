@@ -14,7 +14,7 @@ use crate::runtime::callbacks::{
 
 use super::prelude::{cancel, node_drag, pan_zoom, pending_drag, pointer_up, wire_drag};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_graph_view,
+    NullServices, TestUiHostImpl, event_cx, insert_graph_view_editor_config,
     insert_graph_view_editor_config_with, make_host_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_ports_spaced_x,
 };
@@ -217,12 +217,12 @@ fn rejected_drop_emits_connect_end_rejected() {
     graph_value.ports.get_mut(&b_in).unwrap().kind = crate::core::PortKind::Exec;
     graph_value.nodes.get_mut(&b).unwrap().ports = vec![b_in];
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = new_canvas!(host, graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -311,12 +311,12 @@ fn reconnect_emits_reconnect_start_and_committed_end() {
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = new_canvas!(host, graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -379,12 +379,12 @@ fn reconnect_escape_cancel_emits_reconnect_end_canceled() {
         },
     );
 
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = new_canvas!(host, graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_callbacks(recorder);
 
     canvas.interaction.wire_drag = Some(WireDrag {
         kind: WireDragKind::Reconnect {
@@ -416,12 +416,12 @@ fn panning_emits_move_start_and_move_end() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = new_canvas!(host, graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -462,12 +462,12 @@ fn escape_cancel_panning_emits_move_end_canceled() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = new_canvas!(host, graph, view.clone()).with_callbacks(recorder);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = make_bounds();
@@ -633,12 +633,13 @@ fn node_drag_pointer_up_emits_node_drag_end_committed() {
     let (graph_value, a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let start_pos = graph_value.nodes.get(&a).unwrap().pos;
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = new_canvas!(host, graph.clone(), view.clone()).with_callbacks(recorder);
+    let mut canvas =
+        new_canvas!(host, graph.clone(), view.clone(), editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {
@@ -694,12 +695,13 @@ fn node_drag_move_emits_on_node_drag() {
     let (graph_value, a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let start_pos = graph_value.nodes.get(&a).unwrap().pos;
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
 
-    let mut canvas = new_canvas!(host, graph.clone(), view.clone()).with_callbacks(recorder);
+    let mut canvas =
+        new_canvas!(host, graph.clone(), view.clone(), editor_config).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {

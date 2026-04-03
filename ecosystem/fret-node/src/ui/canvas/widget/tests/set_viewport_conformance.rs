@@ -5,7 +5,7 @@ use crate::ui::canvas::widget::view_queue::{
     NodeGraphViewQueue, NodeGraphViewQueueSetViewportOptions,
 };
 
-use super::{make_host_graph_view, make_test_graph_two_nodes_with_size};
+use super::{make_host_graph_view_editor_config, make_test_graph_two_nodes_with_size};
 
 #[test]
 fn set_viewport_via_view_queue_updates_pan_and_zoom() {
@@ -16,10 +16,10 @@ fn set_viewport_via_view_queue_updates_pan_and_zoom() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
 
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let (mut host, graph, view, editor_config) = make_host_graph_view_editor_config(graph_value);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
-    let mut canvas = new_canvas!(host, graph, view).with_view_queue(queue.clone());
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
 
     let pan = CanvasPoint { x: 123.0, y: -45.0 };
@@ -48,14 +48,14 @@ fn set_viewport_via_view_queue_clamps_zoom_to_style_limits() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
 
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let (mut host, graph, view, editor_config) = make_host_graph_view_editor_config(graph_value);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 0.5;
     });
 
-    let mut canvas = new_canvas!(host, graph, view).with_view_queue(queue.clone());
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
     canvas.style.geometry.min_zoom = 0.5;
     canvas.style.geometry.max_zoom = 1.0;

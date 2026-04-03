@@ -7,7 +7,7 @@ use crate::ui::canvas::geometry::CanvasGeometry;
 
 use super::prelude::*;
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view,
+    TestUiHostImpl, insert_graph_view_editor_config, insert_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
@@ -189,10 +189,9 @@ fn spatial_index_hit_port_matches_slow_scan() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
 
-    let mut canvas = new_canvas!(host, graph, view);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, index) = canvas.canvas_derived(&host, &snapshot);
 
@@ -238,12 +237,11 @@ fn spatial_index_hit_edge_matches_slow_scan() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.edge_interaction_width = 24.0;
-        state.interaction.edges_reconnectable = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.edge_interaction_width = 24.0;
+            state.interaction.edges_reconnectable = true;
+        });
 
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
@@ -306,11 +304,10 @@ fn spatial_index_edge_focus_anchor_hit_testing_matches_slow_scan() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.edges_reconnectable = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.edges_reconnectable = true;
+        });
 
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);

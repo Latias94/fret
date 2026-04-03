@@ -18,7 +18,9 @@ use crate::core::{
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, NodeGraphPresenter};
 
 use super::prelude::NodeGraphCanvas;
-use super::{TestUiHostImpl, insert_editor_config_with, insert_graph_view};
+use super::{
+    TestUiHostImpl, insert_graph_view_editor_config, insert_graph_view_editor_config_with,
+};
 
 #[derive(Default)]
 struct CountingServices {
@@ -242,12 +244,15 @@ fn make_graph_chain_edges(edge_count: usize, spacing: f32) -> Graph {
 #[test]
 fn paint_cache_prune_releases_old_path_and_text_entries() {
     let mut host = TestUiHostImpl::default();
-    let (graph, view) = insert_graph_view(&mut host, make_graph_chain_edges(220, 80.0));
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.runtime_tuning.paint_cache_prune.max_age_frames = 2;
-        // Use a large entry budget so this test is primarily driven by max_age eviction.
-        state.runtime_tuning.paint_cache_prune.max_entries = 10_000;
-    });
+    let (graph, view, editor_config) = insert_graph_view_editor_config_with(
+        &mut host,
+        make_graph_chain_edges(220, 80.0),
+        |state| {
+            state.runtime_tuning.paint_cache_prune.max_age_frames = 2;
+            // Use a large entry budget so this test is primarily driven by max_age eviction.
+            state.runtime_tuning.paint_cache_prune.max_entries = 10_000;
+        },
+    );
 
     let mut canvas = new_canvas!(host, graph, view.clone(), editor_config)
         .with_presenter(UniqueEdgeLabelPresenter);
@@ -289,9 +294,10 @@ fn paint_cache_prune_releases_old_path_and_text_entries() {
 #[test]
 fn static_scene_tile_cache_does_not_grow_unbounded_while_panning_across_many_tiles() {
     let mut host = TestUiHostImpl::default();
-    let (graph, view) = insert_graph_view(&mut host, make_graph_chain_edges(80, 260.0));
-    let mut canvas =
-        new_canvas!(host, graph, view.clone()).with_presenter(UniqueEdgeLabelPresenter);
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config(&mut host, make_graph_chain_edges(80, 260.0));
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config)
+        .with_presenter(UniqueEdgeLabelPresenter);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

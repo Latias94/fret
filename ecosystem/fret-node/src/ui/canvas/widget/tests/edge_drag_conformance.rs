@@ -8,7 +8,7 @@ use crate::core::{
 use crate::rules::EdgeEndpoint;
 
 use super::prelude::edge_drag;
-use super::{NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view};
+use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view_editor_config_with};
 use crate::ui::canvas::state::{EdgeDrag, WireDragKind};
 
 fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
@@ -124,13 +124,12 @@ fn bounds() -> Rect {
 fn edge_drag_prefers_from_endpoint_when_port_centers_are_equidistant() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, out, inn) = make_test_graph_edge_reconnect();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.edges_reconnectable = true;
-        state.interaction.connection_drag_threshold = 1.0;
-        state.interaction.reconnect_radius = 0.0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.edges_reconnectable = true;
+            state.interaction.connection_drag_threshold = 1.0;
+            state.interaction.reconnect_radius = 0.0;
+        });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
@@ -188,15 +187,13 @@ fn edge_drag_prefers_from_endpoint_when_port_centers_are_equidistant() {
 fn edge_reconnect_radius_is_zoom_invariant_in_screen_space() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, out, inn) = make_test_graph_edge_reconnect();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-
     let radius_screen = 16.0;
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.edges_reconnectable = true;
-        state.interaction.connection_drag_threshold = 1.0;
-        state.interaction.reconnect_radius = radius_screen;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.edges_reconnectable = true;
+            state.interaction.connection_drag_threshold = 1.0;
+            state.interaction.reconnect_radius = radius_screen;
+        });
 
     for zoom in [0.5, 2.0] {
         let _ = view.update(&mut host, |s, _cx| {

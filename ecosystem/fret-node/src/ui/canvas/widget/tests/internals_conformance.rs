@@ -13,7 +13,7 @@ use crate::ui::measured::MeasuredGeometryStore;
 
 use super::prelude::NodeGraphCanvas;
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, make_host_graph_view,
+    NullServices, TestUiHostImpl, make_host_graph_view_editor_config,
     make_test_graph_two_nodes_with_ports,
 };
 
@@ -58,12 +58,12 @@ fn bounds_at(x: f32, y: f32) -> Rect {
 #[test]
 fn internals_store_is_stable_across_identical_paint() {
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let (mut host, graph, view, editor_config) = make_host_graph_view_editor_config(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
 
-    let mut canvas = new_canvas!(host, graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_internals_store(internals.clone())
         .with_measured_output_store(measured.clone());
 
@@ -88,12 +88,12 @@ fn internals_store_is_stable_across_identical_paint() {
 #[test]
 fn pan_updates_internals_without_rebuilding_geometry_or_measured_output() {
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let (mut host, graph, view, editor_config) = make_host_graph_view_editor_config(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
 
-    let mut canvas = new_canvas!(host, graph.clone(), view.clone())
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config)
         .with_internals_store(internals.clone())
         .with_measured_output_store(measured.clone());
 
@@ -153,12 +153,12 @@ fn pan_updates_internals_without_rebuilding_geometry_or_measured_output() {
 #[test]
 fn semantic_zoom_keeps_node_sizes_constant_in_window_space() {
     let (graph_value, _a, _a_in, _a_out, b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let (mut host, graph, view, editor_config) = make_host_graph_view_editor_config(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
 
-    let mut canvas = new_canvas!(host, graph, view.clone())
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config)
         .with_internals_store(internals.clone())
         .with_measured_output_store(measured.clone());
 
@@ -200,10 +200,11 @@ fn semantic_zoom_keeps_node_sizes_constant_in_window_space() {
 #[test]
 fn bounds_origin_updates_internals_transform() {
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let (mut host, graph, view, editor_config) = make_host_graph_view_editor_config(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
-    let mut canvas = new_canvas!(host, graph, view).with_internals_store(internals.clone());
+    let mut canvas =
+        new_canvas!(host, graph, view, editor_config).with_internals_store(internals.clone());
 
     let mut services = NullServices::default();
     let b0 = bounds_at(0.0, 0.0);
@@ -240,12 +241,12 @@ fn bounds_origin_updates_internals_transform() {
 #[test]
 fn graph_edit_rebuilds_geometry_and_updates_internals() {
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let (mut host, graph, view, editor_config) = make_host_graph_view_editor_config(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
 
-    let mut canvas = new_canvas!(host, graph.clone(), view.clone())
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config)
         .with_internals_store(internals.clone())
         .with_measured_output_store(measured.clone());
 
@@ -307,8 +308,7 @@ fn graph_edit_rebuilds_geometry_and_updates_internals() {
 #[test]
 fn spatial_index_tuning_rebuilds_index_without_rebuilding_geometry() {
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let (mut host, graph, view, editor_config) = make_host_graph_view_editor_config(graph_value);
 
     let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
 

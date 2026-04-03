@@ -6,7 +6,7 @@ use super::prelude::NodeGraphCanvas;
 use super::prelude::wire_drag::handle_wire_left_up_with_forced_target;
 use super::prelude::{HitTestCtx, HitTestScratch};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
+    NullServices, TestUiHostImpl, event_cx, insert_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::ui::canvas::state::{ViewSnapshot, WireDrag, WireDragKind};
@@ -90,12 +90,11 @@ fn pick_target_port_loose_can_select_same_side_when_closer() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.connection_mode = NodeGraphConnectionMode::Loose;
-        state.interaction.connection_radius = 80.0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.connection_mode = NodeGraphConnectionMode::Loose;
+            state.interaction.connection_radius = 80.0;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
@@ -156,12 +155,11 @@ fn pick_target_port_strict_rejects_same_side_even_when_inside_bounds() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.connection_mode = NodeGraphConnectionMode::Strict;
-        state.interaction.connection_radius = 80.0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.connection_mode = NodeGraphConnectionMode::Strict;
+            state.interaction.connection_radius = 80.0;
+        });
 
     let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
@@ -187,11 +185,10 @@ fn strict_rejects_out_to_out_but_loose_commits_out_to_out_when_forced() {
     graph_value.nodes.get_mut(&b).unwrap().ports = vec![b_port];
     graph_value.ports.get_mut(&b_port).unwrap().dir = crate::core::PortDirection::Out;
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.connection_mode = NodeGraphConnectionMode::Strict;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.connection_mode = NodeGraphConnectionMode::Strict;
+        });
 
     let mut canvas = new_canvas!(host, graph.clone(), view, editor_config.clone())
         .with_presenter(SimplePresenter);

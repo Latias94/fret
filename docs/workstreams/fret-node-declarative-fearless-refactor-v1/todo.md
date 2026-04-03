@@ -94,6 +94,46 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Retained widget test harnesses now also expose combined `graph + view + editor_config` helpers,
     so focused conformance gates can stay explicit about editor-config ownership without repeating
     the same host/model setup block in every file.
+  - Overlay-only retained harnesses now also expose combined `view + editor_config` helpers, so
+    controls/minimap-style gates can reuse the same explicit editor-config seam without
+    re-assembling view/config bootstrap in each test.
+  - Edge label/marker/cache, edge-insert, paint-overrides, skin, invalidation,
+    selection/preview/semantic-zoom, measured/spatial, and a11y/fit-view/connection-validity
+    retained conformance gates now also route their `graph + view + editor_config` bootstrap
+    through the shared harness seam, so renderer-focused, edge-insert interaction, paint-only
+    parity, skin-chrome, invalidation, selection/preview, measured/spatial, and a11y/fit-view
+    tests keep explicit editor-config ownership without teaching more local setup variants.
+  - Background-style/color-mode, custom-edge-path, derived-geometry invalidation,
+    edit-command-availability, escape-cancel, and insert-node-drag retained conformance gates now
+    also route their `graph + view + editor_config` bootstrap through the shared harness seam, so
+    canvas chrome/theme sync, custom-path hit-testing, derived-geometry cache invalidation,
+    command-availability gating, pointer-capture cancel, and insert-node threshold coverage stop
+    teaching the implicit default editor-config path.
+  - Drag-preview, node-resize-preview, overlay invalidation, and overlay menu/searcher retained
+    conformance gates now also route their `graph + view + editor_config` bootstrap through the
+    shared harness seam, so preview cache reuse, preview geometry/index drift, overlay-only
+    invalidation, and overlay clamp coverage stay on the same explicit editor-config contract.
+  - Callback-oriented retained conformance gates now also route connect/reconnect, pan, and
+    node-drag callback bootstrap through the shared `graph + view + editor_config` harness seam,
+    so gesture/view callback coverage no longer teaches implicit default editor-config ownership.
+  - Hit-testing and internals retained conformance gates now also route target-port picking,
+    edge/anchor hit resolution, internals snapshot publication, and internals/measured-output
+    stability coverage through the shared `graph + view + editor_config` harness seam, so those
+    geometry-facing tests stop teaching implicit default editor-config ownership.
+  - Insert-node-drag-drop, middleware, op-batching determinism, portal measured-internals,
+    set-viewport queue, and perf-cache-prune retained conformance gates now also route their
+    `graph + view + editor_config` bootstrap through the shared harness seam, so drag-drop,
+    middleware rejection, group-op batching, portal-measurement-to-internals, view-queue viewport,
+    and cache-prune coverage stop teaching implicit default editor-config ownership.
+  - Perf-cache retained coverage now also routes static node/edge cache reuse, tile-boundary
+    reuse, incremental edge-label/marker warmup, and repeated-label auto-measure bootstrap through
+    the shared `graph + view + editor_config` harness seam, so renderer-cache-focused tests stop
+    teaching the implicit default editor-config path.
+  - Interaction-conformance and the remaining root retained widget tests now also route their
+    `graph + view + editor_config` bootstrap through the shared harness seam, and the now-unused
+    implicit `make_host_graph_view(...)` helper plus the test-only 3-arg `new_canvas!(...)` arm
+    are deleted from the retained test harness, so this lane no longer leaves any retained
+    conformance teaching surface on the implicit default editor-config path.
 - [x] Delete the temporary `cfg(test)` bridge that mirrors `NodeGraphEditorConfig` back into
       `NodeGraphViewState` for old tests.
   - `NodeGraphViewState` test helpers now stay pure view-state.
@@ -133,7 +173,7 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Stop teaching diagnostics-only direct graph mutation in `paint_only` hotkeys:
   - the `Digit3/4/5` deterministic graph tweaks now build transactions from `graph_diff`
   - those transactions now commit through the same controller/store transaction path when present
-- [ ] Extend the controller surface further for broader imperative viewport choreography beyond the
+- [x] Extend the controller surface further for broader imperative viewport choreography beyond the
       first bounds-aware helper set.
   - Progress: controller/binding now also expose `fit_canvas_rect_in_bounds*`, lifting the
     declarative-only fit-rect viewport math into a store-first runtime/controller helper so
@@ -141,6 +181,11 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: controller/binding now also expose `screen_to_canvas` / `canvas_to_screen`, so
     app-facing viewport choreography no longer has to reach into retained/declarative-local view
     math just to project pointer positions or anchors.
+  - Progress: focused controller/binding gates now also lock viewport read/projection plus
+    `set_viewport*`, `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, and
+    `fit_canvas_rect_in_bounds*`, so the current controller-facing XyFlow viewport mapping is no
+    longer an open-ended breadth item; future helper additions should land as separate,
+    evidence-backed follow-ons.
 - [x] Split the public viewport option surface from retained queue-era animation transport.
   - Progress: root `ui::*` now re-exports `NodeGraphFitViewOptions` /
     `NodeGraphSetViewportOptions` from a dedicated store-first module, while `view_queue.rs` keeps
@@ -285,10 +330,17 @@ Execution companion: `design.md` (surface map + next worktree order).
       the default declarative demo path exercises the transaction-safe architecture without
       teaching raw graph/view/controller plumbing.
 - [x] Add a focused regression test for the drag transaction builder used by the declarative path.
-- [ ] Expand the same transaction-safe pattern to the rest of committed declarative edit paths,
-      rather than stopping at node drag.
-- [ ] Keep ephemeral drag/hover session state local where that improves ergonomics, but route final
+- [ ] Keep future declarative graph-edit commit paths on the same transaction-backed seam used by
+      node-drag and diagnostics, rather than reintroducing direct graph mutation when new gestures
+      land.
+  - Status note: the currently landed declarative graph-edit commit paths are node-drag plus the
+    diagnostics graph-diff actions; the remaining risk is regression on future graph-edit gestures,
+    not an already-known direct-mutation path in the current `paint_only` surface.
+- [x] Keep ephemeral drag/hover session state local where that improves ergonomics, but route final
       commits through transactions.
+  - Progress: marquee, pending-selection, node-drag, and hover session state now stay local until
+    commit/cancel, while final selection commits route through controller/store-backed selection
+    seams and final graph edits route through `GraphTransaction` submission helpers.
 - [x] Add undo/redo coverage for the declarative path once commits stop mutating `Graph` directly.
   - Landed via focused paint-only coverage: controller-backed node-drag commit now proves
     history records the transaction, undo re-syncs graph/view models, and redo restores the same
@@ -324,7 +376,7 @@ Execution companion: `design.md` (surface map + next worktree order).
 
 ## M4 - Declarative interaction closure
 
-- [ ] Migrate selection/marquee state machines toward declarative reducers with explicit commit and
+- [x] Migrate selection/marquee state machines toward declarative reducers with explicit commit and
       cancel semantics.
   - Landed first marquee slice: preview selection is now local transient state and pointer-up commits
     through the controller/store-backed selection seam.
@@ -379,6 +431,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     from the authoritative store via `NodeGraphSurfaceBinding`, while graph-dependent cache/frame
     invalidation now keys off `NodeGraphStore::graph_revision()` instead of a stale bound
     `graph_model()` mirror.
+  - Status note: the remaining declarative closure work is no longer reducer extraction itself;
+    follow-on slices should target any still-missing transaction-backed graph edit path or the
+    portal/overlay closure work, rather than reopening selection/marquee reducer structure.
 - [x] Keep pointer-capture and cancel behavior as a first-class regression target while doing this.
   - Landed initial declarative gates for selection-only release, escape cancel, and pointer-cancel
     cleanup in `paint_only.rs`.

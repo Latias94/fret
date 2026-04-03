@@ -125,6 +125,15 @@ focused tests that still need queue transport while the retained stack is being 
 
 ## Next worktree order
 
+Status note (2026-04-03):
+
+- Slice 1 is now landed for the current controller-facing viewport/XyFlow mapping.
+- Focused `controller.rs` + `binding.rs` gates now cover viewport read/projection,
+  `set_viewport*`, `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, and
+  `fit_canvas_rect_in_bounds*`.
+- Unless fresh evidence reveals another controller helper gap, the next default execution surface
+  should start at Slice 2 rather than reopening controller breadth by habit.
+
 ### Slice 1 - remaining controller surface breadth
 
 Why first:
@@ -160,6 +169,15 @@ First landing in this worktree:
   should preserve responsibility boundaries instead of re-growing a single surface file.
 
 ### Slice 2 - declarative transaction closure
+
+Status note (2026-04-03):
+
+- The selection/marquee/pointer-session reducer split is now landed.
+- Local-vs-store interaction boundaries are explicit: transient drag/marquee/pending-selection/
+  hover state stays local until commit/cancel, while committed selection/graph edits route through
+  the binding/controller seams.
+- The next narrow follow-up inside Slice 2 should focus on any still-missing transaction-backed
+  declarative graph-edit path, not on reopening the reducer split that now has focused gates.
 
 Why next:
 

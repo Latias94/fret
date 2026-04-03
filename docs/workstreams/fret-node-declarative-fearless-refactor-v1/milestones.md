@@ -143,6 +143,46 @@ runtime tuning.
   - retained widget test harnesses now also provide combined `graph + view + editor_config`
     setup helpers, keeping explicit editor-config ownership visible in conformance tests without
     leaving repeated host/model bootstrap blocks as accidental public teaching surface.
+  - overlay-oriented retained harnesses now also provide combined `view + editor_config` setup
+    helpers, so focused controls/minimap conformance gates can stay on the same explicit
+    editor-config seam without duplicating local bootstrap code.
+  - edge label/marker/cache, edge-insert, paint-overrides, skin, invalidation,
+    selection/preview/semantic-zoom, measured/spatial, and a11y/fit-view/connection-validity
+    retained conformance gates now also consume the shared `graph + view + editor_config` harness
+    setup, keeping renderer-focused, edge-insert interaction, paint-only, skin-chrome,
+    invalidation, selection/preview, measured/spatial, and a11y/fit-view tests aligned with the
+    same explicit editor-config ownership contract.
+  - background-style/color-mode, custom-edge-path, derived-geometry invalidation,
+    edit-command-availability, escape-cancel, and insert-node-drag retained conformance gates now
+    also consume the shared `graph + view + editor_config` harness setup, keeping canvas
+    chrome/theme sync, custom-path hit-testing, derived-geometry cache invalidation,
+    command-availability gating, pointer-capture cancel, and insert-node threshold coverage aligned
+    with the same explicit editor-config ownership contract.
+  - drag-preview, node-resize-preview, overlay invalidation, and overlay menu/searcher retained
+    conformance gates now also consume the shared `graph + view + editor_config` harness setup,
+    keeping preview cache reuse, preview geometry/index drift, overlay-only invalidation, and
+    overlay clamp coverage aligned with the same explicit editor-config ownership contract.
+  - callback-oriented retained conformance gates now also consume the shared
+    `graph + view + editor_config` harness setup, keeping connect/reconnect, pan, and node-drag
+    callback coverage aligned with the same explicit editor-config ownership contract.
+  - hit-testing and internals retained conformance gates now also consume the shared
+    `graph + view + editor_config` harness setup, keeping target-port picking, edge/anchor hit
+    resolution, internals snapshot publication, and internals/measured-output stability coverage
+    aligned with the same explicit editor-config ownership contract.
+  - insert-node-drag-drop, middleware, op-batching determinism, portal measured-internals,
+    set-viewport queue, and perf-cache-prune retained conformance gates now also consume the
+    shared `graph + view + editor_config` harness setup, keeping drag-drop, middleware rejection,
+    group-op batching, portal-measurement-to-internals, view-queue viewport, and cache-prune
+    coverage aligned with the same explicit editor-config ownership contract.
+  - perf-cache retained coverage now also consumes the shared `graph + view + editor_config`
+    harness setup, keeping static node/edge cache reuse, tile-boundary reuse, incremental
+    edge-label/marker warmup, and repeated-label auto-measure coverage aligned with the same
+    explicit editor-config ownership contract.
+  - interaction-conformance and the remaining root retained widget tests now also consume the
+    shared `graph + view + editor_config` harness setup, and the now-unused implicit
+    `make_host_graph_view(...)` helper plus the test-only 3-arg `new_canvas!(...)` arm are
+    deleted from the retained test harness, so no retained conformance gate still teaches implicit
+    default editor-config ownership.
 
 ### Done criteria
 
@@ -321,6 +361,10 @@ points rather than direct graph mutation.
     (`set_viewport*`, `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, including option-bearing
     and action-host variants), so routine app-facing viewport hooks can stay on the instance-style
     binding surface instead of dropping to explicit controller wiring.
+  - Focused controller/binding gates now also lock viewport read/projection plus
+    `set_viewport*`, `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, and
+    `fit_canvas_rect_in_bounds*`, so the current controller-facing XyFlow viewport mapping is
+    reviewable as a closed slice rather than an open-ended helper-breadth backlog item.
   - `NodeGraphSurfaceBinding` now also mirrors routine bound-store edit/sync/history helpers
     (`dispatch_transaction*`, `submit_transaction*`, `replace_*_action_host`,
     `set_selection_action_host`, `undo_action_host`, `redo_action_host`), so object-safe app hooks

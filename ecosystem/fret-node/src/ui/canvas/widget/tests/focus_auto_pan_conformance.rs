@@ -8,7 +8,7 @@ use crate::core::CanvasPoint;
 use crate::ui::commands::CMD_NODE_GRAPH_FOCUS_NEXT;
 
 use super::{
-    NullServices, TestUiHostImpl, command_cx, insert_editor_config_with, insert_view,
+    NullServices, TestUiHostImpl, command_cx, insert_graph_view_editor_config_with,
     make_test_graph_two_nodes,
 };
 
@@ -23,11 +23,10 @@ fn focus_next_can_pan_viewport_when_auto_pan_on_node_focus_is_enabled() {
     graph_value.nodes.get_mut(&b).expect("node b exists").pos = CanvasPoint { x: 5000.0, y: 0.0 };
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.auto_pan.on_node_focus = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.auto_pan.on_node_focus = true;
+        });
 
     let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     canvas.sync_view_state(&mut host);

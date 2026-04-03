@@ -125,6 +125,9 @@ impl NodeGraphSurfaceBinding {
 
 #[cfg(test)]
 mod tests {
+    use std::any::{Any, TypeId};
+    use std::collections::HashMap;
+
     use super::NodeGraphSurfaceBinding;
     use crate::core::{
         CanvasPoint, CanvasRect, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey, StickyNote,
@@ -133,20 +136,88 @@ mod tests {
     use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
     use crate::ops::{GraphOp, GraphTransaction};
     use crate::runtime::fit_view::{
-        FitViewComputeOptions, compute_fit_view_target_for_canvas_rect,
+        FitViewComputeOptions, FitViewNodeInfo, compute_fit_view_target,
+        compute_fit_view_target_for_canvas_rect,
     };
     use crate::runtime::store::NodeGraphStore;
     use crate::ui::NodeGraphFitViewOptions;
     use fret_core::AppWindowId;
     use fret_core::{Point, Px, Rect, Size};
-    use fret_runtime::{Effect, ModelStore, TimerToken};
+    use fret_runtime::{
+        ClipboardToken, CommandRegistry, DragKindId, DragSession, DragSessionId, Effect, FrameId,
+        ModelHost, ModelStore, ShareSheetToken, TickId, TimerToken,
+    };
     use serde_json::Value;
 
     #[derive(Default)]
     struct TestActionHost {
+        globals: HashMap<TypeId, Box<dyn Any>>,
         models: ModelStore,
+        commands: CommandRegistry,
         effects: Vec<Effect>,
-        next_token: u64,
+        drag: Option<DragSession>,
+        tick_id: TickId,
+        frame_id: FrameId,
+        next_timer_token: u64,
+        next_clipboard_token: u64,
+        next_share_sheet_token: u64,
+        next_image_upload_token: u64,
+    }
+
+    impl fret_runtime::GlobalsHost for TestActionHost {
+        fn set_global<T: Any>(&mut self, value: T) {
+            self.globals.insert(TypeId::of::<T>(), Box::new(value));
+        }
+
+        fn global<T: Any>(&self) -> Option<&T> {
+            self.globals
+                .get(&TypeId::of::<T>())
+                .and_then(|value| value.downcast_ref::<T>())
+        }
+
+        fn with_global_mut<T: Any, R>(
+            &mut self,
+            init: impl FnOnce() -> T,
+            f: impl FnOnce(&mut T, &mut Self) -> R,
+        ) -> R {
+            let type_id = TypeId::of::<T>();
+            if !self.globals.contains_key(&type_id) {
+                self.globals.insert(type_id, Box::new(init()));
+            }
+            let boxed = self
+                .globals
+                .remove(&type_id)
+                .expect("global must exist")
+                .downcast::<T>()
+                .ok()
+                .expect("global has wrong type");
+            let mut value = *boxed;
+            let out = f(&mut value, self);
+            self.globals.insert(type_id, Box::new(value));
+            out
+        }
+    }
+
+    impl ModelHost for TestActionHost {
+        fn models(&self) -> &ModelStore {
+            &self.models
+        }
+
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+    }
+
+    impl fret_runtime::ModelsHost for TestActionHost {
+        fn take_changed_models(&mut self) -> Vec<fret_runtime::ModelId> {
+            self.models.take_changed_models()
+        }
+    }
+
+    impl fret_runtime::CommandsHost for TestActionHost {
+        fn commands(&self) -> &CommandRegistry {
+            &self.commands
+        }
     }
 
     impl fret_ui::action::UiActionHost for TestActionHost {
@@ -161,18 +232,141 @@ mod tests {
         fn request_redraw(&mut self, _window: AppWindowId) {}
 
         fn next_timer_token(&mut self) -> TimerToken {
-            self.next_token = self.next_token.saturating_add(1);
-            TimerToken(self.next_token)
+            self.next_timer_token = self.next_timer_token.saturating_add(1);
+            TimerToken(self.next_timer_token)
         }
 
-        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
-            self.next_token = self.next_token.saturating_add(1);
-            fret_runtime::ClipboardToken(self.next_token)
+        fn next_clipboard_token(&mut self) -> ClipboardToken {
+            self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+            ClipboardToken(self.next_clipboard_token)
         }
 
-        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
-            self.next_token = self.next_token.saturating_add(1);
-            fret_runtime::ShareSheetToken(self.next_token)
+        fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+            self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
+            ShareSheetToken(self.next_share_sheet_token)
+        }
+    }
+
+    impl fret_runtime::EffectSink for TestActionHost {
+        fn request_redraw(&mut self, _window: AppWindowId) {}
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+    }
+
+    impl fret_runtime::TimeHost for TestActionHost {
+        fn tick_id(&self) -> TickId {
+            self.tick_id
+        }
+
+        fn frame_id(&self) -> FrameId {
+            self.frame_id
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.next_timer_token = self.next_timer_token.saturating_add(1);
+            TimerToken(self.next_timer_token)
+        }
+
+        fn next_clipboard_token(&mut self) -> ClipboardToken {
+            self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+            ClipboardToken(self.next_clipboard_token)
+        }
+
+        fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+            self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
+            ShareSheetToken(self.next_share_sheet_token)
+        }
+
+        fn next_image_upload_token(&mut self) -> fret_runtime::ImageUploadToken {
+            self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
+            fret_runtime::ImageUploadToken(self.next_image_upload_token)
+        }
+    }
+
+    impl fret_runtime::DragHost for TestActionHost {
+        fn drag(&self, pointer_id: fret_core::PointerId) -> Option<&DragSession> {
+            self.drag
+                .as_ref()
+                .filter(|drag| drag.pointer_id == pointer_id)
+        }
+
+        fn drag_mut(&mut self, pointer_id: fret_core::PointerId) -> Option<&mut DragSession> {
+            self.drag
+                .as_mut()
+                .filter(|drag| drag.pointer_id == pointer_id)
+        }
+
+        fn cancel_drag(&mut self, pointer_id: fret_core::PointerId) {
+            if self.drag(pointer_id).is_some() {
+                self.drag = None;
+            }
+        }
+
+        fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
+            self.drag.as_ref().is_some_and(|drag| predicate(drag))
+        }
+
+        fn find_drag_pointer_id(
+            &self,
+            mut predicate: impl FnMut(&DragSession) -> bool,
+        ) -> Option<fret_core::PointerId> {
+            self.drag
+                .as_ref()
+                .filter(|drag| predicate(drag))
+                .map(|drag| drag.pointer_id)
+        }
+
+        fn cancel_drag_sessions(
+            &mut self,
+            mut predicate: impl FnMut(&DragSession) -> bool,
+        ) -> Vec<fret_core::PointerId> {
+            let Some(drag) = self.drag.as_ref() else {
+                return Vec::new();
+            };
+            if !predicate(drag) {
+                return Vec::new();
+            }
+            let pointer_id = drag.pointer_id;
+            self.drag = None;
+            vec![pointer_id]
+        }
+
+        fn begin_drag_with_kind<T: Any>(
+            &mut self,
+            pointer_id: fret_core::PointerId,
+            kind: DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
+        ) {
+            self.drag = Some(DragSession::new(
+                DragSessionId(1),
+                pointer_id,
+                source_window,
+                kind,
+                start,
+                payload,
+            ));
+        }
+
+        fn begin_cross_window_drag_with_kind<T: Any>(
+            &mut self,
+            pointer_id: fret_core::PointerId,
+            kind: DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
+        ) {
+            self.drag = Some(DragSession::new_cross_window(
+                DragSessionId(1),
+                pointer_id,
+                source_window,
+                kind,
+                start,
+                payload,
+            ));
         }
     }
 
@@ -194,6 +388,12 @@ mod tests {
             ports: Vec::new(),
             data: Value::Null,
         }
+    }
+
+    fn test_node_with_size(pos: CanvasPoint, size: CanvasSize) -> Node {
+        let mut node = test_node(pos);
+        node.size = Some(size);
+        node
     }
 
     #[test]
@@ -441,6 +641,183 @@ mod tests {
         assert_eq!(graph_id, next_graph.graph_id);
         assert_eq!(pan, next_view_state.pan);
         assert_eq!(zoom, next_view_state.zoom);
+    }
+
+    #[test]
+    fn viewport_queries_use_authoritative_store_viewport() {
+        let mut host = TestActionHost::default();
+        let view_state = NodeGraphViewState {
+            pan: CanvasPoint { x: 10.0, y: 20.0 },
+            zoom: 2.0,
+            ..NodeGraphViewState::default()
+        };
+        let binding = NodeGraphSurfaceBinding::new(
+            &mut host.models,
+            Graph::new(GraphId::from_u128(0x900a)),
+            view_state,
+            NodeGraphEditorConfig::default(),
+        );
+        host.models
+            .update(&binding.view_state_model(), |state| {
+                state.pan = CanvasPoint {
+                    x: -999.0,
+                    y: -999.0,
+                };
+                state.zoom = 0.5;
+            })
+            .expect("stale view model update");
+
+        assert_eq!(
+            binding.viewport(&host),
+            (CanvasPoint { x: 10.0, y: 20.0 }, 2.0)
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(100.0), Px(50.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let canvas = binding
+            .screen_to_canvas(&host, bounds, Point::new(Px(300.0), Px(250.0)))
+            .expect("screen projection");
+        assert!((canvas.x - 90.0).abs() <= 1.0e-6);
+        assert!((canvas.y - 80.0).abs() <= 1.0e-6);
+
+        let screen = binding
+            .canvas_to_screen(&host, bounds, CanvasPoint { x: 90.0, y: 80.0 })
+            .expect("canvas projection");
+        assert!((screen.x.0 - 300.0).abs() <= 1.0e-6);
+        assert!((screen.y.0 - 250.0).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn set_viewport_action_host_syncs_bound_view_model() {
+        let mut host = TestActionHost::default();
+        let binding = NodeGraphSurfaceBinding::new(
+            &mut host.models,
+            Graph::new(GraphId::from_u128(0x900b)),
+            NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
+        );
+
+        assert!(binding.set_viewport_action_host(
+            &mut host,
+            CanvasPoint { x: -12.0, y: 8.0 },
+            1.75,
+        ));
+
+        let (pan, zoom) = host
+            .models
+            .read(&binding.view_state_model(), |state| (state.pan, state.zoom))
+            .expect("view model readable");
+        assert_eq!(pan, CanvasPoint { x: -12.0, y: 8.0 });
+        assert_eq!(zoom, 1.75);
+    }
+
+    #[test]
+    fn set_center_in_bounds_action_host_syncs_bound_view_model() {
+        let mut host = TestActionHost::default();
+        let binding = NodeGraphSurfaceBinding::new(
+            &mut host.models,
+            Graph::new(GraphId::from_u128(0x900c)),
+            NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
+        );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        assert!(binding.set_center_in_bounds_action_host(
+            &mut host,
+            bounds,
+            CanvasPoint { x: 10.0, y: 20.0 },
+        ));
+
+        let (pan, zoom) = host
+            .models
+            .read(&binding.view_state_model(), |state| (state.pan, state.zoom))
+            .expect("view model readable");
+        assert_eq!(pan, CanvasPoint { x: 390.0, y: 280.0 });
+        assert_eq!(zoom, 1.0);
+    }
+
+    #[test]
+    fn fit_view_nodes_in_bounds_action_host_syncs_bound_view_model() {
+        let mut host = TestActionHost::default();
+        let mut graph = Graph::new(GraphId::from_u128(0x900d));
+        let node_a = NodeId::from_u128(0x900e);
+        let node_b = NodeId::from_u128(0x900f);
+        graph.nodes.insert(
+            node_a,
+            test_node_with_size(
+                CanvasPoint { x: 0.0, y: 0.0 },
+                CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            ),
+        );
+        graph.nodes.insert(
+            node_b,
+            test_node_with_size(
+                CanvasPoint { x: 200.0, y: 0.0 },
+                CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            ),
+        );
+        let binding = NodeGraphSurfaceBinding::new(
+            &mut host.models,
+            graph,
+            NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
+        );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let options = NodeGraphFitViewOptions {
+            padding: Some(0.0),
+            ..NodeGraphFitViewOptions::default()
+        };
+
+        assert!(binding.fit_view_nodes_in_bounds_with_options_action_host(
+            &mut host,
+            bounds,
+            vec![node_a, node_b],
+            options,
+        ));
+
+        let expected = compute_fit_view_target(
+            &[
+                FitViewNodeInfo {
+                    pos: CanvasPoint { x: 0.0, y: 0.0 },
+                    size_px: (100.0, 100.0),
+                },
+                FitViewNodeInfo {
+                    pos: CanvasPoint { x: 200.0, y: 0.0 },
+                    size_px: (100.0, 100.0),
+                },
+            ],
+            FitViewComputeOptions {
+                viewport_width_px: 800.0,
+                viewport_height_px: 600.0,
+                node_origin: (0.0, 0.0),
+                padding: 0.0,
+                margin_px_fallback: 48.0,
+                min_zoom: 0.05,
+                max_zoom: 64.0,
+            },
+        )
+        .expect("fit-view target");
+        let (pan, zoom) = host
+            .models
+            .read(&binding.view_state_model(), |state| (state.pan, state.zoom))
+            .expect("view model readable");
+        assert!((pan.x - expected.0.x).abs() <= 1.0e-6);
+        assert!((pan.y - expected.0.y).abs() <= 1.0e-6);
+        assert!((zoom - expected.1).abs() <= 1.0e-6);
     }
 
     #[test]

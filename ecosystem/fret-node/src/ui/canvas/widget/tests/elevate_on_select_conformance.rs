@@ -13,7 +13,7 @@ use crate::ui::presenter::NodeGraphPresenter;
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_size,
 };
 
@@ -71,13 +71,12 @@ fn elevate_nodes_on_select_draws_selected_node_body_last() {
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.runtime_tuning.only_render_visible_elements = false;
-        state.interaction.elevate_nodes_on_select = true;
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.runtime_tuning.only_render_visible_elements = false;
+            state.interaction.elevate_nodes_on_select = true;
+            state.interaction.frame_view_duration_ms = 0;
+        });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
@@ -329,14 +328,13 @@ fn elevate_edges_on_select_controls_selection_z_order() {
 
     let paths_with = |elevate: bool| {
         let mut host = TestUiHostImpl::default();
-        let graph = host.models.insert(graph_value.clone());
-        let view = insert_view(&mut host);
-        let editor_config = insert_editor_config_with(&mut host, |state| {
-            state.runtime_tuning.only_render_visible_elements = false;
-            state.interaction.elevate_edges_on_select = elevate;
-            state.interaction.edges_reconnectable = false;
-            state.interaction.frame_view_duration_ms = 0;
-        });
+        let (graph, view, editor_config) =
+            insert_graph_view_editor_config_with(&mut host, graph_value.clone(), |state| {
+                state.runtime_tuning.only_render_visible_elements = false;
+                state.interaction.elevate_edges_on_select = elevate;
+                state.interaction.edges_reconnectable = false;
+                state.interaction.frame_view_duration_ms = 0;
+            });
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = CanvasPoint::default();
             s.zoom = 1.0;
@@ -580,14 +578,13 @@ fn elevate_edges_on_select_controls_selection_z_order_for_custom_paths() {
 
     let paths_with = |elevate: bool| {
         let mut host = TestUiHostImpl::default();
-        let graph = host.models.insert(graph_value.clone());
-        let view = insert_view(&mut host);
-        let editor_config = insert_editor_config_with(&mut host, |state| {
-            state.runtime_tuning.only_render_visible_elements = false;
-            state.interaction.elevate_edges_on_select = elevate;
-            state.interaction.edges_reconnectable = false;
-            state.interaction.frame_view_duration_ms = 0;
-        });
+        let (graph, view, editor_config) =
+            insert_graph_view_editor_config_with(&mut host, graph_value.clone(), |state| {
+                state.runtime_tuning.only_render_visible_elements = false;
+                state.interaction.elevate_edges_on_select = elevate;
+                state.interaction.edges_reconnectable = false;
+                state.interaction.frame_view_duration_ms = 0;
+            });
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = CanvasPoint::default();
             s.zoom = 1.0;

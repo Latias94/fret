@@ -11,7 +11,7 @@ use crate::ui::{
 };
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_ports,
 };
 
@@ -73,12 +73,11 @@ fn paint_overrides_do_not_mutate_serialized_graph() {
     let mut host = TestUiHostImpl::default();
     host.set_global(Theme::global(&host).clone());
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.runtime_tuning.only_render_visible_elements = false;
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.runtime_tuning.only_render_visible_elements = false;
+            state.interaction.frame_view_duration_ms = 0;
+        });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;

@@ -9,7 +9,7 @@ use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind};
 use crate::ui::{NodeGraphCanvas, NodeGraphPresetFamily, NodeGraphPresetSkinV1};
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
@@ -67,12 +67,11 @@ fn skin_wire_glow_selected_emits_push_effect_drop_shadow() {
             reconnectable: None,
         },
     );
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.runtime_tuning.only_render_visible_elements = false;
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.runtime_tuning.only_render_visible_elements = false;
+            state.interaction.frame_view_duration_ms = 0;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;

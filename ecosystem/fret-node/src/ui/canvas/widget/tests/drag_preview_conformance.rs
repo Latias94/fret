@@ -4,8 +4,7 @@ use fret_core::{Point, Px, Rect, Size};
 
 use super::prelude::DragPreviewKind;
 use super::{
-    TestUiHostImpl, insert_editor_config, insert_view,
-    make_test_graph_two_nodes_with_ports_spaced_x,
+    TestUiHostImpl, insert_graph_view_editor_config, make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind};
 
@@ -18,9 +17,7 @@ fn drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
     let mut canvas = new_canvas!(host, graph, view, editor_config.clone());
 
     // Ensure base geometry + spatial index caches exist (drag previews are keyed off base_index_key).
@@ -140,9 +137,8 @@ fn drag_preview_updates_node_rect_port_centers_and_edge_index() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = new_canvas!(host, graph, view);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (base_geom, base_index) = canvas.canvas_derived(&host, &snapshot);

@@ -12,7 +12,10 @@ use crate::ui::measured::{MeasuredGeometryApplyOptions, MeasuredGeometryExclusiv
 use crate::ui::{DefaultNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter};
 
 use super::prelude::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config,
+    make_test_graph_two_nodes_with_ports,
+};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -56,15 +59,14 @@ fn bounds_at(x: f32, y: f32) -> Rect {
 fn measured_geometry_updates_are_observed_in_paint_without_layout() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
 
     let presenter =
         MeasuredNodeGraphPresenter::new(DefaultNodeGraphPresenter::default(), measured.clone());
-    let mut canvas = new_canvas!(host, graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_presenter(presenter)
         .with_internals_store(internals.clone());
 

@@ -13,7 +13,7 @@ use crate::ui::{
     InteractionChromeHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, WireOutlineHint,
 };
 
-use super::{NullServices, TestUiHostImpl, insert_editor_config_with, insert_view};
+use super::{NullServices, TestUiHostImpl, insert_graph_view_editor_config_with};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -214,12 +214,11 @@ fn skin_wire_outline_selected_draws_outline_path_before_core() {
     );
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.runtime_tuning.only_render_visible_elements = false;
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.runtime_tuning.only_render_visible_elements = false;
+            state.interaction.frame_view_duration_ms = 0;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = crate::core::CanvasPoint::default();
         s.zoom = 1.0;
