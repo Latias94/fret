@@ -73,7 +73,9 @@ Status: Active
     `WindowInputContextService` command-availability drift outside the runtime owner files,
   - [x] audit remaining raw `WindowInputContextService` readers and confirm they are limited to
     runtime ownership, diagnostics/debug surfaces, or text-boundary/IME reads,
-  - [ ] remaining child list mutation helpers,
+  - [x] remaining child-list mutation helpers now route through the same authoritative structural
+    contract; `add_child(...)` reparents by severing old parent edges, avoiding duplicate child
+    edges, and delegating the structural write to `set_children(...)`,
   - [x] contained cache-root dirty markers now align with main-pass layout consumption and
     descendant-truncated contained relayout scheduling,
   - [x] subtree dirty aggregation bookkeeping.
@@ -99,6 +101,7 @@ Status: Active
     after an explicit window snapshot commit,
   - [x] best-effort input-context readers inherit authoritative command availability over stale or
     fallback published snapshots,
+  - [x] `add_child(...)` reparents without stale child edges and no-ops when already attached once,
   - [ ] scroll handle revision-only bumps stay classified correctly.
 
 ## Wheel/trackpad delta coalescing

@@ -140,3 +140,55 @@ fn set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_di
         "mount-time same-children parent repair must reconnect detached descendant layout invalidations to the authoritative layout pass"
     );
 }
+
+#[test]
+fn add_child_reparents_from_old_parent_without_leaving_stale_child_edges() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let left = ui.create_node(TestStack);
+    let right = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![left, right]);
+    ui.set_children(left, vec![child]);
+
+    ui.test_clear_node_invalidations(root);
+    ui.test_clear_node_invalidations(left);
+    ui.test_clear_node_invalidations(right);
+    ui.test_clear_node_invalidations(child);
+
+    ui.add_child(right, child);
+
+    assert_eq!(ui.node_parent(child), Some(right));
+    assert_eq!(ui.nodes[left].children, Vec::<NodeId>::new());
+    assert_eq!(ui.nodes[right].children, vec![child]);
+    assert!(ui.nodes[left].invalidation.layout);
+    assert!(ui.nodes[right].invalidation.layout);
+    assert!(ui.nodes[root].invalidation.layout);
+}
+
+#[test]
+fn add_child_noops_when_child_is_already_attached_once_to_same_parent() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.add_child(root, child);
+
+    ui.test_clear_node_invalidations(root);
+    ui.test_clear_node_invalidations(child);
+
+    ui.add_child(root, child);
+
+    assert_eq!(ui.node_parent(child), Some(root));
+    assert_eq!(ui.nodes[root].children, vec![child]);
+    assert!(!ui.nodes[root].invalidation.hit_test);
+    assert!(!ui.nodes[root].invalidation.layout);
+    assert!(!ui.nodes[root].invalidation.paint);
+}

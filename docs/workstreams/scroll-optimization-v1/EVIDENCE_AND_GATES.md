@@ -56,7 +56,10 @@ This follow-on slice locks the contract that:
 - `set_children(...same_children...)` must reconnect the parent into the authoritative layout
   invalidation walk when it repaired stale child parent pointers under pending descendant layout
   work,
-- `set_children_in_mount(...same_children...)` must honor the same reconnect contract.
+- `set_children_in_mount(...same_children...)` must honor the same reconnect contract,
+- `add_child(...)` must not bypass the same structural consistency contract: reparenting a child
+  must sever the old parent's child edge, avoid duplicate child edges on the new parent, and route
+  the resulting structural change through the authoritative layout invalidation path.
 
 ## Follow-on slice — Layer root replacement must prune detached interaction state
 
@@ -156,6 +159,8 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::children::set_children_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
 - Mount-time same-children parent repair reconnects detached descendant layout:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::children::set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
+- `add_child(...)` reparents without stale child edges and no-ops when already attached once:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui add_child_reparents_from_old_parent_without_leaving_stale_child_edges add_child_noops_when_child_is_already_attached_once_to_same_parent`
 - Root replacement clears detached base-layer interaction state:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::layer_root_replacement::set_root_replacement_clears_detached_base_layer_interaction_state`
 - Root replacement preserves still-active overlay interaction state:
@@ -195,6 +200,9 @@ This follow-on slice locks the contract that:
   - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
 - Mechanism regression coverage:
   - `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
+- Child-list mutation helper coverage:
+  - `crates/fret-ui/src/tree/ui_tree_mutation/core.rs`
+  - `crates/fret-ui/src/tree/tests/children.rs`
 - Best-effort window snapshot / command-availability overlay helpers:
   - `crates/fret-runtime/src/window_input_context.rs`
   - `crates/fret-runtime/src/window_command_gating/helpers.rs`
@@ -296,6 +304,12 @@ This follow-on slice locks the contract that:
   - `tree::tests::children::set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
   - `tree::tests::barrier_subtree_layout_dirty_aggregation::*`
   - `tree::tests::view_cache::*` targeted contained-relayout gates
+- 2026-04-03: remaining child-list mutation helper audit closed with `add_child(...)` now routed
+  through the same authoritative child-list contract via `cargo nextest`:
+  - `tree::tests::children::add_child_reparents_from_old_parent_without_leaving_stale_child_edges`
+  - `tree::tests::children::add_child_noops_when_child_is_already_attached_once_to_same_parent`
+  - `tree::tests::children::set_children_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
+  - `tree::tests::children::set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
 - 2026-04-03: layer-root replacement interaction-pruning gates confirmed via `cargo nextest`:
   - `tree::tests::layer_root_replacement::set_root_replacement_clears_detached_base_layer_interaction_state`
   - `tree::tests::layer_root_replacement::set_root_replacement_preserves_overlay_interaction_state`

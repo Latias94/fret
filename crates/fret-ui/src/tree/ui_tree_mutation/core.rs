@@ -131,20 +131,34 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn add_child(&mut self, parent: NodeId, child: NodeId) {
-        if let Some(node) = self.nodes.get_mut(child) {
-            node.parent = Some(parent);
+        let Some(mut parent_children) = self.nodes.get(parent).map(|node| node.children.clone())
+        else {
+            return;
+        };
+        if !self.nodes.contains_key(child) {
+            return;
         }
-        if let Some(node) = self.nodes.get_mut(parent) {
-            node.children.push(child);
-            node.invalidation.hit_test = true;
-            if !node.invalidation.layout {
-                self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
-            }
-            node.invalidation.layout = true;
-            node.invalidation.paint = true;
+
+        let old_parent = self.nodes.get(child).and_then(|node| node.parent);
+        let occurrences_in_parent = parent_children.iter().filter(|&&id| id == child).count();
+
+        if old_parent == Some(parent) && occurrences_in_parent == 1 {
+            return;
         }
-        self.mark_invalidation_local(parent, Invalidation::HitTest);
-        self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
+
+        if let Some(old_parent) = old_parent
+            && old_parent != parent
+            && let Some(old_children) = self.nodes.get(old_parent).map(|node| node.children.clone())
+            && old_children.contains(&child)
+        {
+            let filtered_old_children: Vec<NodeId> =
+                old_children.into_iter().filter(|&id| id != child).collect();
+            self.set_children(old_parent, filtered_old_children);
+        }
+
+        parent_children.retain(|&id| id != child);
+        parent_children.push(child);
+        self.set_children(parent, parent_children);
     }
 
     #[track_caller]
