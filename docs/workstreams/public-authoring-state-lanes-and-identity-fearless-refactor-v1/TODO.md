@@ -91,7 +91,10 @@ Companion docs:
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`
     removal:
-    - [ ] ordinary app composition still spelling `LayoutRefinement` directly,
+    - [x] prove that the first ordinary app-composition slice (`Progress` / `ScrollArea`) can stay
+      on the existing `.ui()` patch-builder lane instead of spelling `LayoutRefinement` directly,
+    - [ ] helper-local hover/layout assembly and shared chrome/layout fragments still spelling
+      `LayoutRefinement` / `ChromeRefinement` directly,
     - [ ] helper-local hover-region assembly (`ElementContextAccess` / `HoverRegionProps`),
     - [ ] helper-local styled-text assembly (`StyledTextProps` / `styled_text_props(...)`),
     - [ ] explicit environment/responsive helpers that should stay off the default lane rather than

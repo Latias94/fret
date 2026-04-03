@@ -57,6 +57,11 @@ Related:
     - keep-raw escape hatches,
     - explicit environment/responsive lanes that should stay non-default,
     - and missing app-facing render sugar for ordinary app helper extraction.
+  - the first proof correction from that audit is now landed:
+    `todo_demo` no longer spells `LayoutRefinement` directly for `Progress` or `ScrollArea`,
+    dedicated smoke tests in `fret-ui-shadcn` prove that both widgets already support the `.ui()`
+    patch-builder lane, and the remaining pressure is now narrower helper-local hover/styled-text
+    assembly plus shared chrome/layout fragments.
   - the cookbook scaffold proof surface and dedicated source-policy tests now lock this minimal
     capability lane so future cleanup can continue without regressing to implicit `Deref`.
 - **M3**: Met

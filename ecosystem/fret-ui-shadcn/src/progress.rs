@@ -323,6 +323,7 @@ mod tests {
     use fret_core::{AppWindowId, Point, Px, Rect, Size, WindowFrameClockService};
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::ElementKind;
+    use fret_ui_kit::UiExt as _;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -390,6 +391,22 @@ mod tests {
             assert_eq!(semantics.role, Some(SemanticsRole::ProgressBar));
             assert_eq!(semantics.numeric_value, Some(42.0));
             assert_eq!(semantics.value.as_deref(), Some("42%"));
+        });
+    }
+
+    #[test]
+    fn progress_supports_ui_patch_builder_lane() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let _ = Progress::from_value(42.0)
+                .a11y_label("progress")
+                .ui()
+                .rounded(Radius::Full)
+                .w_full()
+                .build()
+                .into_element(cx);
         });
     }
 

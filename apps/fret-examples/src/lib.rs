@@ -787,6 +787,8 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn todo_demo_prefers_default_app_surface() {
+        let normalized = TODO_DEMO.split_whitespace().collect::<String>();
+
         assert!(TODO_DEMO.contains("use fret::app::prelude::*;"));
         assert!(!TODO_DEMO.contains("advanced::prelude::*"));
         assert!(!TODO_DEMO.contains("KernelApp"));
@@ -817,6 +819,18 @@ mod authoring_surface_policy_tests {
         assert!(TODO_DEMO.contains("fn todo_row<'a, Cx>("));
         assert!(TODO_DEMO.contains("Cx: fret::app::ElementContextAccess<'a, App>,"));
         assert!(TODO_DEMO.contains("let cx = cx.elements();"));
+        assert!(
+            normalized.contains(
+                "shadcn::Progress::from_value(progress_pct).a11y_label(\"Todocompletionprogress\").ui().rounded(Radius::Full).w_full().build()"
+            )
+        );
+        assert!(
+            normalized.contains(
+                ".viewport_test_id(TEST_ID_ROWS).ui().w_full().max_h(responsive.rows_max_height).build()"
+            )
+        );
+        assert!(!normalized.contains(".a11y_label(\"Todocompletionprogress\").refine_style("));
+        assert!(!normalized.contains(".viewport_test_id(TEST_ID_ROWS).refine_layout("));
         assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
         assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
         assert!(!TODO_DEMO.contains("cx: &mut fret_ui::ElementContext<'_, App>,"));

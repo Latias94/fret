@@ -391,8 +391,10 @@ impl View for TodoDemoView {
                     .into_element(cx),
                     shadcn::Progress::from_value(progress_pct)
                         .a11y_label("Todo completion progress")
-                        .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                        .refine_layout(LayoutRefinement::default().w_full())
+                        .ui()
+                        .rounded(Radius::Full)
+                        .w_full()
+                        .build()
                         .into_element(cx)
                         .test_id(TEST_ID_PROGRESS),
                 ]
@@ -505,12 +507,11 @@ impl View for TodoDemoView {
         .items_stretch();
 
         let rows = shadcn::ScrollArea::new([rows_body.into_element(cx)])
-            .refine_layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .max_h(responsive.rows_max_height),
-            )
             .viewport_test_id(TEST_ID_ROWS)
+            .ui()
+            .w_full()
+            .max_h(responsive.rows_max_height)
+            .build()
             .into_element(cx);
 
         let filters = ui::h_flex(|cx| {

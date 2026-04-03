@@ -957,6 +957,7 @@ mod tests {
     use fret_runtime::TickId;
     use fret_ui::element::{ColumnProps, ContainerProps, ElementKind, LayoutStyle, Length};
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::UiExt as _;
     use fret_ui_kit::ui;
     use std::time::Duration;
 
@@ -1082,6 +1083,35 @@ mod tests {
         assert!(
             any_element_has_text(&element, "Row"),
             "expected ScrollArea::build to keep child content"
+        );
+    }
+
+    #[test]
+    fn scroll_area_supports_ui_patch_builder_lane() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ScrollArea::new([ui::text("Row").into_element(cx)])
+                .viewport_test_id("sa.viewport")
+                .ui()
+                .w_full()
+                .h_px(Px(80.0))
+                .build()
+                .into_element(cx)
+        });
+
+        assert!(
+            any_element_has_test_id(&element, "sa.viewport"),
+            "expected ScrollArea::new + .ui() to preserve viewport test_id"
+        );
+        assert!(
+            any_element_has_text(&element, "Row"),
+            "expected ScrollArea::new + .ui() to keep child content"
         );
     }
 

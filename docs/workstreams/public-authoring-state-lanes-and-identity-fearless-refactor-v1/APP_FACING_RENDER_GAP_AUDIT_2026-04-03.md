@@ -1,6 +1,6 @@
 # App-Facing Render Gap Audit — 2026-04-03
 
-Status: Initial classification audit
+Status: Initial classification audit with first proof correction
 
 Related:
 
@@ -81,18 +81,33 @@ It is narrower:
 
 Current pressure points:
 
-- ordinary layout/style refinement in app code still imports `LayoutRefinement` for common
-  operations such as width fill, max height, and fixed control height,
+- the first ordinary app-composition proof has already closed:
+  `todo_demo` now expresses `Progress` width/fill/rounding and `ScrollArea` width/max-height through
+  the existing `.ui()` patch-builder lane instead of spelling `LayoutRefinement` directly,
 - extracted app helpers such as `todo_row(...)` still require `ElementContextAccess`,
   `HoverRegionProps`, `StyledTextProps`, and `cx.elements()` to express hover-region and styled-text
-  assembly.
+  assembly,
+- `todo_demo` still keeps a smaller amount of direct `LayoutRefinement` / `ChromeRefinement`
+  sharing for helper-local hover layout and footer-pill chrome/layout fragments.
 
 Why this matters:
 
-- these are not all justification for new public recipes,
-- but they do show that the repo still lacks one fully explicit app-facing render-authoring lane
-  covering “ordinary app helper extraction” without falling through to raw `ElementContext` too
-  early.
+- this was not a missing widget contract for `Progress` or `ScrollArea`; the `.ui()` lane already
+  existed and the proof surface had simply not migrated to it,
+- these findings are not all justification for new public recipes,
+- but the remaining helper-local pressure still shows that the repo lacks one fully explicit
+  app-facing render-authoring lane covering “ordinary app helper extraction” without falling
+  through to raw `ElementContext` too early.
+
+Evidence from the first proof correction:
+
+- `apps/fret-examples/src/todo_demo.rs`
+- `apps/fret-examples/src/lib.rs` (`todo_demo_prefers_default_app_surface`)
+- `ecosystem/fret-ui-shadcn/src/progress.rs`
+- `ecosystem/fret-ui-shadcn/src/scroll_area.rs`
+- `cargo nextest run -p fret-ui-shadcn --lib progress_supports_ui_patch_builder_lane scroll_area_supports_ui_patch_builder_lane`
+- `cargo nextest run -p fret-examples --lib todo_demo_prefers_default_app_surface`
+- `cargo check -p fret-demo --bin todo_demo`
 
 ### 4) This audit does not reopen the closed keep-local recipe verdicts
 
@@ -125,7 +140,8 @@ The follow-on question is different:
 
 ### Follow-on app-facing render-sugar audit/cleanup
 
-- ordinary layout/style refinement for app-owned component composition
+- helper-local hover/layout assembly and shared chrome/layout fragments after the first `Progress` /
+  `ScrollArea` proof correction
 - extracted helper support for hover-region assembly
 - extracted helper support for styled text / rich inline text composition
 - narrowing the ordinary `AppUi` / extracted-helper surface before any future `Deref` removal

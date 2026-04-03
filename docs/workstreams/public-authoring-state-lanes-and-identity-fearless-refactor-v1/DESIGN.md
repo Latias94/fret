@@ -1,7 +1,7 @@
 # Public Authoring State Lanes and Identity Fearless Refactor v1 — Design
 
 Status: Draft
-Last updated: 2026-04-02
+Last updated: 2026-04-03
 
 Related:
 
@@ -317,9 +317,11 @@ The target is:
   low-level icon helpers, state-style graphs),
 - some low-level usage belongs on explicit but non-default environment/responsive lanes
   (`viewport_width_at_least(...)`, pointer-capability queries, hysteresis nouns),
-- and some current pressure is really missing app-facing render sugar
-  (`LayoutRefinement` for ordinary app composition, helper-local hover/styled-text assembly that
-  currently falls through to `ElementContextAccess` / `HoverRegionProps` / `StyledTextProps`).
+- and the remaining pressure is now narrower than the first audit suggested:
+  `Progress` and `ScrollArea` already fit the existing `.ui()` patch-builder lane, while the still
+  open pressure is helper-local hover/styled-text assembly plus shared chrome/layout fragments that
+  currently fall through to `ElementContextAccess` / `HoverRegionProps` / `StyledTextProps` /
+  direct refinement types.
 
 That means this lane must classify Todo-surfaced render pressure precisely instead of treating every
 low-level noun as the same kind of problem.
