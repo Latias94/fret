@@ -1657,25 +1657,30 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                             }
                         }
                         WindowRequest::SetInnerSize { window, size } => {
-                            if let Some(state) = self.windows.get_mut(window) {
+                            let applied = if let Some(state) = self.windows.get_mut(window) {
                                 let requested = winit::dpi::LogicalSize::new(
                                     size.width.0 as f64,
                                     size.height.0 as f64,
                                 );
-                                let applied = state
-                                    .window
-                                    .request_surface_size(requested.into())
-                                    // Some platforms apply the resize without emitting a resize
-                                    // event *and* return `None` here. Fall back to querying the
-                                    // current surface size so scripted diagnostics still converge.
-                                    .unwrap_or_else(|| state.window.surface_size());
+                                Some(
+                                    state
+                                        .window
+                                        .request_surface_size(requested.into())
+                                        // Some platforms apply the resize without emitting a resize
+                                        // event *and* return `None` here. Fall back to querying the
+                                        // current surface size so scripted diagnostics still converge.
+                                        .unwrap_or_else(|| state.window.surface_size()),
+                                )
+                            } else {
+                                None
+                            };
 
-                                // If the platform doesn't emit a resize event, queue the applied
-                                // size so the runner still reconfigures the surface and delivers
-                                // metrics updates on the next redraw (critical for scripted
-                                // diagnostics).
-                                state.pending_surface_resize = Some(applied);
-                                state.window.request_redraw();
+                            if let Some(applied) = applied {
+                                // Match the OS resize-event path: sync the surface as soon as we
+                                // know the applied physical size, but keep window-metrics delivery
+                                // coalesced to the next redraw.
+                                self.sync_surface_resize_now(window, applied);
+                                self.request_surface_resize_redraw(window);
                             }
                         }
                         WindowRequest::SetOuterPosition { window, position } => {

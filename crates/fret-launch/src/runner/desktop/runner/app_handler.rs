@@ -1192,14 +1192,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             WindowEvent::SurfaceResized(size) => {
-                if let Some(state) = self.windows.get_mut(app_window) {
-                    state.pending_surface_resize = Some(size);
-                }
+                self.sync_surface_resize_now(app_window, size);
                 #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
                 if macos_hit_test::has_active_regions() {
                     macos_hit_test::apply_latest_mouse_location();
                 }
-                self.app.request_redraw(app_window);
+                self.request_surface_resize_redraw(app_window);
+                self.drain_effects(event_loop);
             }
             ref ev @ WindowEvent::PointerMoved { .. } => {
                 let (mapped, pos, external_drag_token, screen_pos, _scale_factor) = {
@@ -1605,11 +1604,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     .get_mut(app_window)
                     .and_then(|state| state.pending_surface_resize.take())
                 {
+                    // The platform event path now reconfigures the surface immediately. Keep the
+                    // redraw-time resize as an eventual-consistency fallback for windows that
+                    // queued a size before their surface/context existed.
                     self.resize_surface(app_window, size.width, size.height);
 
-                    // Keep delivering size/scale events for consistency with the existing runner
-                    // behavior, but apply them once per frame so interactive resizes don't spam
-                    // surface reconfigures and relayouts.
+                    // Keep delivering size/scale events once per frame so interactive resizes do
+                    // not spam high-level relayout work even though the GPU surface has already
+                    // been synchronized to the latest physical size.
                     let (logical_width, logical_height, scale_factor, should_deliver_resized) = {
                         let Some(state) = self.windows.get_mut(app_window) else {
                             return;

@@ -30,11 +30,12 @@ pub(super) struct WindowRuntime<S> {
     pub(super) pending_wheel: Option<PendingWheelEvent>,
     #[cfg(target_os = "android")]
     pub(super) android_bottom_inset_baseline: Option<fret_core::Px>,
-    /// Coalesced resizes awaiting application at the next frame boundary.
+    /// Coalesced resizes awaiting metrics delivery at the next frame boundary.
     ///
     /// During interactive window resize, platforms may emit multiple size updates per vblank.
-    /// We keep only the latest physical size and apply it once per `RedrawRequested` to avoid
-    /// reconfiguring the surface and recomputing layout more often than we can present.
+    /// We keep only the latest physical size so `Event::WindowResized` /
+    /// `Event::WindowScaleFactorChanged` are still delivered once per `RedrawRequested`, while
+    /// the underlying GPU surface can already be reconfigured at event time.
     pub(super) pending_surface_resize: Option<winit::dpi::PhysicalSize<u32>>,
     /// Last delivered (quantized) logical size for `Event::WindowResized`.
     ///

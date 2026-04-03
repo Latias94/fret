@@ -35,19 +35,24 @@ Related:
 
 ### 1) Runner coalescing (desktop)
 
-Fret coalesces OS resize events and applies a pending surface resize at redraw time (once per frame).
+Fret coalesces high-level window metrics delivery during interactive resize, but the desktop runner now reconfigures
+the GPU surface as soon as the platform reports the new physical size.
 
-This avoids “N resizes per frame”, but does not eliminate per-frame layout/paint work while the window size is
-changing.
+In practice this means:
+
+- `wgpu::Surface::configure` follows the live resize immediately, reducing the chance of newly exposed client area
+  showing stale/clear content.
+- `Event::WindowResized` / `Event::WindowScaleFactorChanged` still stay coalesced to once per `RedrawRequested`, so
+  higher-level layout work is not forced to run for every raw OS resize callback.
 
 Reference:
-- `crates/fret-launch/src/runner/desktop/app_handler.rs` (`pending_surface_resize` applied on `RedrawRequested`)
+- `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` (`pending_surface_resize` applied on `RedrawRequested`)
 
 Note:
-- Today we coalesce *surface reconfigure* and *bounds used for layout* to once-per-frame, but we still deliver a
-  `WindowResized` event each time we apply the pending resize. Unlike GPUI’s `set_frame_size` guard (`old_size == new_size`),
-  we do not currently keep an explicit “last delivered (quantized) logical size” to drop no-op resize deliveries.
-  - This is likely a small win, but it also reduces “float noise” churn for higher-level code that reads window metrics.
+- We still keep `WindowResized` delivery coalesced to redraw-time, but the runner now also keeps an explicit
+  “last delivered (quantized) logical size” guard to drop no-op resize deliveries.
+  - This mirrors GPUI’s `set_frame_size` early-return and reduces float-noise churn for higher-level code that reads
+    window metrics.
 
 ### 2) Layout engine solves are multi-root (window root + viewport roots)
 
