@@ -1,9 +1,6 @@
 use fret_core::{Point, Px, Rect, Size};
 
-use super::{
-    NodeGraphCanvas, insert_editor_config_with, make_host_graph_view,
-    make_test_graph_two_nodes_with_size,
-};
+use super::{make_host_graph_view_editor_config_with, make_test_graph_two_nodes_with_size};
 
 #[test]
 fn render_metrics_report_culling_reduction_when_enabled() {
@@ -17,32 +14,32 @@ fn render_metrics_report_culling_reduction_when_enabled() {
     graph_value.nodes.get_mut(&b).expect("node b exists").pos.y = 0.0;
 
     let metrics_culled = {
-        let (mut host, graph, view) = make_host_graph_view(graph_value.clone());
-        let editor_config = insert_editor_config_with(&mut host, |state| {
-            state.runtime_tuning.only_render_visible_elements = true;
-            state.interaction.frame_view_duration_ms = 0;
-        });
+        let (mut host, graph, view, editor_config) =
+            make_host_graph_view_editor_config_with(graph_value.clone(), |state| {
+                state.runtime_tuning.only_render_visible_elements = true;
+                state.interaction.frame_view_duration_ms = 0;
+            });
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+        let mut canvas = new_canvas!(host, graph, view, editor_config);
         canvas.debug_render_metrics_for_bounds(&mut host, bounds)
     };
 
     let metrics_full = {
-        let (mut host, graph, view) = make_host_graph_view(graph_value);
-        let editor_config = insert_editor_config_with(&mut host, |state| {
-            state.runtime_tuning.only_render_visible_elements = false;
-            state.interaction.frame_view_duration_ms = 0;
-        });
+        let (mut host, graph, view, editor_config) =
+            make_host_graph_view_editor_config_with(graph_value, |state| {
+                state.runtime_tuning.only_render_visible_elements = false;
+                state.interaction.frame_view_duration_ms = 0;
+            });
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+        let mut canvas = new_canvas!(host, graph, view, editor_config);
         canvas.debug_render_metrics_for_bounds(&mut host, bounds)
     };
 

@@ -7,7 +7,7 @@ pub(in crate::ui) fn preview_node_graph_cull_torture(
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     use fret_core::{Px, SemanticsRole};
-    use fret_node::io::NodeGraphViewState;
+    use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
     use fret_node::ui::NodeGraphCanvas;
     use fret_node::{
         Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port, PortCapacity,
@@ -240,11 +240,13 @@ pub(in crate::ui) fn preview_node_graph_cull_torture(
         build_stress_graph(graph_id, 8_000)
     });
     let view = cx.local_model_keyed("view", NodeGraphViewState::default);
+    let editor_config = cx.local_model_keyed("editor_config", NodeGraphEditorConfig::default);
 
     let surface =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
             let graph = graph.clone();
             let view = view.clone();
+            let editor_config = editor_config.clone();
 
             let mut layout = LayoutStyle::default();
             layout.size.width = Length::Fill;
@@ -252,7 +254,8 @@ pub(in crate::ui) fn preview_node_graph_cull_torture(
 
             let props = RetainedSubtreeProps::new::<App>(move |ui| {
                 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
-                let canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+                let canvas =
+                    NodeGraphCanvas::new(graph.clone(), view.clone(), editor_config.clone());
                 ui.create_node_retained(canvas)
             })
             .with_layout(layout);

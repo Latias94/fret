@@ -7,7 +7,7 @@ use fret_node::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
-use fret_node::io::NodeGraphViewState;
+use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use fret_node::ui::{
     EdgePaintOverrideV1, NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef,
     NodeGraphSurfaceBinding, node_graph_surface,
@@ -37,6 +37,7 @@ impl View for NodeGraphDemoView {
             app.models_mut(),
             demo_graph(),
             NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
         );
         let paint_overrides = demo_paint_overrides();
         Self {

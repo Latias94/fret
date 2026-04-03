@@ -10,7 +10,10 @@ use crate::ui::{
     InteractionChromeHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, WireHighlightHint,
 };
 
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config_with,
+    make_test_graph_two_nodes_with_ports,
+};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -133,18 +136,19 @@ fn skin_wire_highlight_selected_draws_highlight_after_core() {
     );
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.runtime_tuning.only_render_visible_elements = false;
+            state.interaction.frame_view_duration_ms = 0;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = crate::core::CanvasPoint::default();
         s.zoom = 1.0;
         s.selected_edges = vec![edge_id];
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style)
         .with_presenter(EdgeColorPresenter { edge: edge_id })
         .with_skin(Arc::new(WireHighlightSkin {
@@ -223,18 +227,19 @@ fn skin_wire_highlight_hovered_draws_highlight_after_core() {
     );
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.runtime_tuning.only_render_visible_elements = false;
+            state.interaction.frame_view_duration_ms = 0;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = crate::core::CanvasPoint::default();
         s.zoom = 1.0;
         s.selected_edges = Vec::new();
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_style(style)
         .with_presenter(EdgeColorPresenter { edge: edge_id })
         .with_skin(Arc::new(WireHighlightSkin {

@@ -11,7 +11,10 @@ use crate::ui::internals::NodeGraphInternalsStore;
 use crate::ui::measured::{MEASURED_GEOMETRY_EPSILON_PX, MeasuredGeometryStore};
 
 use super::prelude::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config,
+    make_test_graph_two_nodes_with_ports,
+};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -56,13 +59,12 @@ fn quant(v: f32) -> f32 {
 fn measured_output_store_matches_internals_query_surfaces() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, a_in, a_out, b, b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config)
         .with_internals_store(internals.clone())
         .with_measured_output_store(measured.clone());
 

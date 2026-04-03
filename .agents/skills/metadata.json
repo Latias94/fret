@@ -2,8 +2,16 @@
   "name": "fret-skills",
   "version": "0.7.2",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
-  "last_updated": "2026-02-18",
+  "last_updated": "2026-04-02",
   "intents": {
+    "manage_workstream_lifecycle": {
+      "primary": "fret-workstream-lifecycle",
+      "also_consider": [
+        "fret-framework-maintainer-guide",
+        "fret-diag-workflow",
+        "fret-skills-playbook"
+      ]
+    },
     "maintain_framework": {
       "primary": "fret-framework-maintainer-guide",
       "also_consider": ["fret-diag-workflow", "fret-boundary-checks", "fret-shadcn-source-alignment"]
@@ -64,6 +72,7 @@
   "skills": {
     "start_here": [
       "fret-repo-orientation",
+      "fret-workstream-lifecycle",
       "fret-skills-playbook",
       "fret-external-app-mode"
     ],
@@ -79,7 +88,7 @@
       "fret-ui-review"
     ],
     "release": ["fret-release-check-and-publish"],
-    "meta": ["fret-skill-evolution"]
+    "meta": ["fret-skill-evolution", "fret-workstream-lifecycle"]
   },
   "triggers": {
     "fret": [
@@ -337,6 +346,26 @@
       "where to change",
       "which crate",
       "layering"
+    ],
+    "workstreams": [
+      "workstream",
+      "new workstream",
+      "create workstream",
+      "fearless refactor",
+      "closeout audit",
+      "evidence and gates",
+      "target interface state",
+      "milestones.md",
+      "todo.md",
+      "resume workstream",
+      "continue lane",
+      "closed lane",
+      "active lane",
+      "workstream status",
+      "工作流",
+      "里程碑",
+      "收口",
+      "继续这个 lane"
     ]
   },
   "notes": {
@@ -346,6 +375,7 @@
     "consumer-app-dev": ["fret-repo-orientation", "fret-skills-playbook", "fret-external-app-mode", "fret-app-ui-builder", "fret-ui-review", "fret-diag-workflow", "fret-perf-optimization", "fret-perf-tracy-bridge"],
     "framework-dev": [
       "fret-repo-orientation",
+      "fret-workstream-lifecycle",
       "fret-skills-playbook",
       "fret-framework-maintainer-guide",
       "fret-mobile-real-device-debug",

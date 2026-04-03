@@ -11,7 +11,7 @@ use crate::ui::NodeGraphCanvas;
 use crate::ui::presenter::NodeGraphPresenter;
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_size,
 };
 
@@ -77,22 +77,20 @@ fn only_render_visible_elements_controls_render_culling_work() {
     // With culling enabled, we expect far-away nodes to be skipped during render-data collection.
     let titles_culled = {
         let mut host = TestUiHostImpl::default();
-        let graph = host.models.insert(graph_value.clone());
-        let view = insert_view(&mut host);
-        let editor_config = insert_editor_config_with(&mut host, |state| {
-            state.runtime_tuning.only_render_visible_elements = true;
-            state.interaction.frame_view_duration_ms = 0;
-        });
+        let (graph, view, editor_config) =
+            insert_graph_view_editor_config_with(&mut host, graph_value.clone(), |state| {
+                state.runtime_tuning.only_render_visible_elements = true;
+                state.interaction.frame_view_duration_ms = 0;
+            });
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view)
-            .with_presenter(CountingPresenter {
+        let mut canvas =
+            new_canvas!(host, graph, view, editor_config).with_presenter(CountingPresenter {
                 node_title_calls: counts.clone(),
-            })
-            .with_editor_config_model(editor_config);
+            });
         let mut tree = UiTree::<TestUiHostImpl>::default();
         let mut services = NullServices::default();
         paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
@@ -105,22 +103,20 @@ fn only_render_visible_elements_controls_render_culling_work() {
     // With culling disabled, we expect both nodes to be visited even if offscreen.
     let titles_full = {
         let mut host = TestUiHostImpl::default();
-        let graph = host.models.insert(graph_value);
-        let view = insert_view(&mut host);
-        let editor_config = insert_editor_config_with(&mut host, |state| {
-            state.runtime_tuning.only_render_visible_elements = false;
-            state.interaction.frame_view_duration_ms = 0;
-        });
+        let (graph, view, editor_config) =
+            insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+                state.runtime_tuning.only_render_visible_elements = false;
+                state.interaction.frame_view_duration_ms = 0;
+            });
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view)
-            .with_presenter(CountingPresenter {
+        let mut canvas =
+            new_canvas!(host, graph, view, editor_config).with_presenter(CountingPresenter {
                 node_title_calls: counts.clone(),
-            })
-            .with_editor_config_model(editor_config);
+            });
         let mut tree = UiTree::<TestUiHostImpl>::default();
         let mut services = NullServices::default();
         paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);

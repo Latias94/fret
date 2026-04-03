@@ -1583,11 +1583,7 @@ impl NodeGraphDemoDriver {
             return;
         };
 
-        let file = NodeGraphViewStateFileV1::new_with_editor_config(
-            persist.graph_id,
-            state,
-            editor_config,
-        );
+        let file = NodeGraphViewStateFileV1::new(persist.graph_id, state, editor_config);
         if let Err(err) = file.save_json(&persist.path) {
             tracing::warn!(?err, "failed to save node graph view state");
         }
@@ -1718,9 +1714,8 @@ impl NodeGraphDemoDriver {
             Vec::new()
         };
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view, editor_config.clone())
             .with_controller(controller.clone())
-            .with_editor_config_model(editor_config.clone())
             .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_edge_types(edge_types)
@@ -1830,10 +1825,13 @@ impl NodeGraphDemoDriver {
             .unwrap_or_else(|| Arc::new(NodeGraphDemoOverlayToggles::new()));
 
         let controls_node = if toggles.controls_in_panel() {
-            let controls_overlay =
-                NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone())
-                    .with_editor_config_model(editor_config.clone())
-                    .in_panel_bounds();
+            let controls_overlay = NodeGraphControlsOverlay::new(
+                canvas_node,
+                models.view.clone(),
+                editor_config.clone(),
+                style.clone(),
+            )
+            .in_panel_bounds();
             let controls_overlay_node = ui.create_node_retained(controls_overlay);
 
             let controls_panel = NodeGraphPanel::new(NodeGraphPanelPosition::TopRight)
@@ -1842,9 +1840,12 @@ impl NodeGraphDemoDriver {
             ui.set_children(controls_node, vec![controls_overlay_node]);
             Some(controls_node)
         } else {
-            let controls_overlay =
-                NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone())
-                    .with_editor_config_model(editor_config.clone());
+            let controls_overlay = NodeGraphControlsOverlay::new(
+                canvas_node,
+                models.view.clone(),
+                editor_config.clone(),
+                style.clone(),
+            );
             Some(ui.create_node_retained(controls_overlay))
         };
 
@@ -2541,6 +2542,7 @@ fn render(
                             fret_node::ui::declarative::NodeGraphSurfaceCompatRetainedProps::new(
                                 models.graph.clone(),
                                 models.view.clone(),
+                                models.editor_config.clone(),
                             );
                         surface_props.controller = Some(models.controller.clone());
                         surface_props.overlays = Some(models.overlays.clone());
@@ -2553,13 +2555,12 @@ fn render(
                         )
                     }
                     NodeGraphDemoDeclarativeMode::PaintOnly => {
-                        let binding =
-                            NodeGraphSurfaceBinding::from_models_and_controller_with_editor_config(
-                                models.graph.clone(),
-                                models.view.clone(),
-                                models.editor_config.clone(),
-                                models.controller.clone(),
-                            );
+                        let binding = NodeGraphSurfaceBinding::from_models_and_controller(
+                            models.graph.clone(),
+                            models.view.clone(),
+                            models.editor_config.clone(),
+                            models.controller.clone(),
+                        );
                         let props = binding.surface_props();
                         fret_node::ui::declarative::node_graph_surface(cx, props)
                     }
@@ -2781,7 +2782,7 @@ pub fn run() -> anyhow::Result<()> {
     };
     view_value.sanitize_for_graph(&graph_value);
 
-    let store_value = NodeGraphStore::with_profile_and_editor_config(
+    let store_value = NodeGraphStore::with_profile(
         graph_value,
         view_value,
         editor_config,

@@ -15,7 +15,7 @@ use fret_node::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
-use fret_node::io::NodeGraphViewState;
+use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::runtime::apply::{apply_edge_changes, apply_node_changes};
 use fret_node::runtime::callbacks::{
@@ -141,7 +141,11 @@ fn make_graph() -> (Graph, NodeId) {
 
 fn main() {
     let (g0, node_a) = make_graph();
-    let mut store = NodeGraphStore::new(g0.clone(), NodeGraphViewState::default());
+    let mut store = NodeGraphStore::new(
+        g0.clone(),
+        NodeGraphViewState::default(),
+        NodeGraphEditorConfig::default(),
+    );
 
     let app_graph = Rc::new(RefCell::new(g0));
     let _token = install_callbacks(

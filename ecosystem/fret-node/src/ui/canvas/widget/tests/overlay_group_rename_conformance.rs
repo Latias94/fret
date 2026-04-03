@@ -515,6 +515,7 @@ fn group_rename_overlay_enter_with_controller_commits_through_store() {
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
+        crate::io::NodeGraphEditorConfig::default(),
     ));
     let controller = NodeGraphController::new(store.clone());
     let overlays = host.models.insert(NodeGraphOverlayState::default());

@@ -9,7 +9,7 @@ use crate::ui::edge_types::NodeGraphEdgeTypes;
 use crate::ui::presenter::EdgeMarker;
 
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+    TestUiHostImpl, insert_graph_view_editor_config_with, make_test_graph_two_nodes_with_ports,
 };
 
 #[derive(Default)]
@@ -150,12 +150,11 @@ fn capture_arrow_axis_lengths_for_zoom(zoom: f32) -> Vec<f32> {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.runtime_tuning.only_render_visible_elements = false;
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.runtime_tuning.only_render_visible_elements = false;
+            state.interaction.frame_view_duration_ms = 0;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = zoom;
     });
@@ -166,9 +165,7 @@ fn capture_arrow_axis_lengths_for_zoom(zoom: f32) -> Vec<f32> {
         h
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_edge_types(edge_types)
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_edge_types(edge_types);
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = CaptureServices::default();

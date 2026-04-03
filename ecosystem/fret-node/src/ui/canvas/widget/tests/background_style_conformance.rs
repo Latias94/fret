@@ -10,7 +10,8 @@ use crate::ui::style::{NodeGraphBackgroundPattern, NodeGraphBackgroundStyle};
 use crate::ui::{NodeGraphCanvas, NodeGraphColorMode, NodeGraphStyle};
 
 use super::{
-    NullServices, TestUiHostImpl, make_host_graph_view, make_test_graph_two_nodes_with_ports,
+    NullServices, TestUiHostImpl, make_host_graph_view_editor_config,
+    make_test_graph_two_nodes_with_ports,
 };
 
 fn bounds() -> Rect {
@@ -54,10 +55,10 @@ fn paint_once(
 #[test]
 fn background_style_updates_do_not_rebuild_canvas_derived_geometry() {
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let (mut host, graph, view, editor_config) = make_host_graph_view_editor_config(graph_value);
 
     let style = NodeGraphStyle::default();
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_style(style);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_style(style);
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
@@ -109,7 +110,7 @@ fn background_style_updates_do_not_rebuild_canvas_derived_geometry() {
 #[test]
 fn background_style_override_survives_color_mode_theme_sync() {
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
+    let (mut host, graph, view, editor_config) = make_host_graph_view_editor_config(graph_value);
 
     let background = NodeGraphBackgroundStyle {
         background: Color {
@@ -138,7 +139,7 @@ fn background_style_override_survives_color_mode_theme_sync() {
         grid_cross_size: 6.0,
     };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
+    let mut canvas = new_canvas!(host, graph, view, editor_config)
         .with_color_mode(NodeGraphColorMode::System)
         .with_background_style(background);
 

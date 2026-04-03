@@ -4,7 +4,10 @@ use uuid::Uuid;
 use crate::interaction::NodeGraphConnectionMode;
 
 use super::prelude::*;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{
+    TestUiHostImpl, insert_graph_view_editor_config, insert_graph_view_editor_config_with,
+    make_test_graph_two_nodes_with_ports_spaced_x,
+};
 
 fn pick_target_port_at(
     canvas: &mut NodeGraphCanvas,
@@ -69,10 +72,13 @@ fn strict_requires_pointer_inside_pin_bounds_while_loose_accepts_radius() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.connection_mode = NodeGraphConnectionMode::Strict;
+            state.interaction.connection_radius = 24.0;
+        });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config.clone());
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
@@ -85,10 +91,6 @@ fn strict_requires_pointer_inside_pin_bounds_while_loose_accepts_radius() {
     let r = hit_test_canvas_units_from_screen_px(canvas.style.geometry.pin_radius, snapshot.zoom);
     let outside_but_near = Point::new(Px(handle.bounds.origin.x.0 - 0.5 * r), inside.y);
 
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.connection_mode = NodeGraphConnectionMode::Strict;
-        s.interaction.connection_radius = 24.0;
-    });
     let snapshot_strict = canvas.sync_view_state(&mut host);
     assert_eq!(
         pick_target_port_at(
@@ -105,9 +107,8 @@ fn strict_requires_pointer_inside_pin_bounds_while_loose_accepts_radius() {
         Some(b_in)
     );
 
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.connection_mode = NodeGraphConnectionMode::Loose;
-        s.interaction.connection_radius = 24.0;
+    let _ = editor_config.update(&mut host, |state, _cx| {
+        state.interaction.connection_mode = NodeGraphConnectionMode::Loose;
     });
     let snapshot_loose = canvas.sync_view_state(&mut host);
     assert_eq!(
@@ -166,15 +167,13 @@ fn loose_mode_prefers_opposite_side_when_handles_overlap() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.connection_mode = NodeGraphConnectionMode::Loose;
+            state.interaction.connection_radius = 48.0;
+        });
 
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.connection_mode = NodeGraphConnectionMode::Loose;
-        s.interaction.connection_radius = 48.0;
-    });
-
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
 
@@ -245,9 +244,8 @@ fn edge_hit_testing_tie_breaks_by_edge_id_when_distances_match() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
@@ -290,8 +288,7 @@ fn edge_hit_testing_tie_breaks_by_edge_id_when_custom_paths_overlap() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let edge_types =
         crate::ui::NodeGraphEdgeTypes::new().with_fallback_path(|_g, _e, _style, _hint, input| {
@@ -304,7 +301,7 @@ fn edge_hit_testing_tie_breaks_by_edge_id_when_custom_paths_overlap() {
             })
         });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_edge_types(edge_types);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_edge_types(edge_types);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let pos = geom
@@ -346,13 +343,12 @@ fn edge_focus_anchor_hit_testing_tie_breaks_by_edge_id_when_distances_match() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edges_reconnectable = true;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.edges_reconnectable = true;
+        });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let route = canvas

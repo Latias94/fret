@@ -48,7 +48,7 @@ copy.
 
 ## Pattern A - Binding-first declarative surface (recommended default)
 
-- Create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`.
+- Create one `NodeGraphSurfaceBinding::new(models, graph, view_state, editor_config)`.
 - Render `node_graph_surface(cx, binding.surface_props())` for the default surface props.
 - Prefer the binding itself for common app-facing helpers:
   `viewport`, `graph_snapshot`, `view_state_snapshot`, `set_viewport*`,
@@ -61,7 +61,7 @@ copy.
   `Node` / `Edge`, so structural port edits and endpoint rewires stay on explicit transactions.
 - Treat `NodeGraphController::new(binding.store_model())` as the explicit lower-level escape hatch
   for controller-only helpers or retained/compat wiring.
-- When you already own explicit graph/view mirrors plus controller state, use
+- When you already own explicit graph/view/editor-config mirrors plus controller state, use
   `NodeGraphSurfaceBinding::from_models_and_controller(...)`; this is an advanced constructor, not
   the default teaching path.
 - Expect transient paint-only interaction sessions to stay local to the surface: marquee preview,

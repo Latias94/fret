@@ -19,12 +19,17 @@ New app code should prefer the declarative surface:
 Minimal composition pattern:
 
 ```rust
-use fret_node::io::NodeGraphViewState;
+use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use fret_node::Graph;
 use fret_node::ui::{NodeGraphSurfaceBinding, node_graph_surface};
 
 fn init(app: &mut fret::App, graph: Graph) -> NodeGraphSurfaceBinding {
-    NodeGraphSurfaceBinding::new(app.models_mut(), graph, NodeGraphViewState::default())
+    NodeGraphSurfaceBinding::new(
+        app.models_mut(),
+        graph,
+        NodeGraphViewState::default(),
+        NodeGraphEditorConfig::default(),
+    )
 }
 
 fn view(cx: &mut fret_ui::ElementContext<'_, fret::App>, surface: &NodeGraphSurfaceBinding) {

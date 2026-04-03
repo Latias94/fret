@@ -12,7 +12,10 @@ use crate::core::{
 use crate::ui::presenter::NodeGraphPresenter;
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
+use super::{
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config_with,
+    make_test_graph_two_nodes_with_size,
+};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -68,20 +71,21 @@ fn elevate_nodes_on_select_draws_selected_node_body_last() {
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.runtime_tuning.only_render_visible_elements = false;
+            state.interaction.elevate_nodes_on_select = true;
+            state.interaction.frame_view_duration_ms = 0;
+        });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;
         s.draw_order = vec![a, b];
         s.selected_nodes = vec![a];
-        s.runtime_tuning.only_render_visible_elements = false;
-        s.interaction.elevate_nodes_on_select = true;
-        s.interaction.frame_view_duration_ms = 0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(TestPresenter);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_presenter(TestPresenter);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let rect_a = geom.nodes.get(&a).expect("node a exists").rect;
@@ -324,23 +328,25 @@ fn elevate_edges_on_select_controls_selection_z_order() {
 
     let paths_with = |elevate: bool| {
         let mut host = TestUiHostImpl::default();
-        let graph = host.models.insert(graph_value.clone());
-        let view = insert_view(&mut host);
+        let (graph, view, editor_config) =
+            insert_graph_view_editor_config_with(&mut host, graph_value.clone(), |state| {
+                state.runtime_tuning.only_render_visible_elements = false;
+                state.interaction.elevate_edges_on_select = elevate;
+                state.interaction.edges_reconnectable = false;
+                state.interaction.frame_view_duration_ms = 0;
+            });
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = CanvasPoint::default();
             s.zoom = 1.0;
             s.draw_order = vec![a, b, c];
             s.selected_edges = vec![edge_low];
-            s.runtime_tuning.only_render_visible_elements = false;
-            s.interaction.elevate_edges_on_select = elevate;
-            s.interaction.edges_reconnectable = false;
-            s.interaction.frame_view_duration_ms = 0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(EdgeColorPresenter {
-            red: edge_low,
-            green: edge_high,
-        });
+        let mut canvas =
+            new_canvas!(host, graph, view, editor_config).with_presenter(EdgeColorPresenter {
+                red: edge_low,
+                green: edge_high,
+            });
         let mut tree = UiTree::<TestUiHostImpl>::default();
         let mut services = NullServices::default();
         let scene = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
@@ -572,20 +578,21 @@ fn elevate_edges_on_select_controls_selection_z_order_for_custom_paths() {
 
     let paths_with = |elevate: bool| {
         let mut host = TestUiHostImpl::default();
-        let graph = host.models.insert(graph_value.clone());
-        let view = insert_view(&mut host);
+        let (graph, view, editor_config) =
+            insert_graph_view_editor_config_with(&mut host, graph_value.clone(), |state| {
+                state.runtime_tuning.only_render_visible_elements = false;
+                state.interaction.elevate_edges_on_select = elevate;
+                state.interaction.edges_reconnectable = false;
+                state.interaction.frame_view_duration_ms = 0;
+            });
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = CanvasPoint::default();
             s.zoom = 1.0;
             s.draw_order = vec![a, b, c];
             s.selected_edges = vec![edge_low];
-            s.runtime_tuning.only_render_visible_elements = false;
-            s.interaction.elevate_edges_on_select = elevate;
-            s.interaction.edges_reconnectable = false;
-            s.interaction.frame_view_duration_ms = 0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph, view)
+        let mut canvas = new_canvas!(host, graph, view, editor_config)
             .with_presenter(EdgeColorPresenter {
                 red: edge_low,
                 green: edge_high,

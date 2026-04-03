@@ -1,20 +1,19 @@
-use super::prelude::NodeGraphCanvas;
-use super::{insert_editor_config_with, make_host_graph_view, make_test_graph_two_nodes_with_size};
+use super::{make_host_graph_view_editor_config_with, make_test_graph_two_nodes_with_size};
 
 #[test]
 fn node_origin_center_shifts_node_rect_origin() {
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
 
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.node_origin.x = 0.5;
-        state.interaction.node_origin.y = 0.5;
-    });
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(graph_value, |state| {
+            state.interaction.node_origin.x = 0.5;
+            state.interaction.node_origin.y = 0.5;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
 

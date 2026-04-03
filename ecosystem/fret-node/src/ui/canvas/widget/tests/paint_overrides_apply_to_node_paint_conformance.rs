@@ -7,7 +7,10 @@ use fret_ui::{Invalidation, UiTree};
 
 use crate::ui::{NodeGraphCanvas, NodeGraphPaintOverridesMap, NodePaintOverrideV1};
 
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config,
+    make_test_graph_two_nodes_with_ports,
+};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -53,11 +56,11 @@ fn paint_overrides_can_override_node_body_border_and_header_paint_bindings() {
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let overrides = Arc::new(NodeGraphPaintOverridesMap::default());
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_paint_overrides(overrides.clone());
+    let mut canvas =
+        new_canvas!(host, graph, view, editor_config).with_paint_overrides(overrides.clone());
 
     let body_paint = PaintBindingV1::with_eval_space(
         Paint::Solid(Color::from_srgb_hex_rgb(0x12_34_56)),

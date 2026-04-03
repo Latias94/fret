@@ -161,6 +161,7 @@ Each bundle contains only skill folders and can be installed by unzipping and co
 Pick **one primary skill** based on intent, then pull in the adjacent ones only if needed:
 
 - Get oriented / pick the right layer: `fret-repo-orientation` (then `fret-skills-playbook`)
+- Start, continue, or close out a workstream lane with assumptions-first resume: `fret-workstream-lifecycle`
 - Build a good-looking app UI (golden path): `fret-app-ui-builder`
 - Review/audit a Fret UI: `fret-ui-review`
 - Debug a correctness regression (repro + gate + bundle): `fret-diag-workflow`
@@ -181,11 +182,12 @@ Common adjacent pulls:
 ## Skills
 
 - `fret-repo-orientation`: Find the right layer/crate fast (mono-repo vs external app repo), choose the smallest runnable target, and keep contract-first navigation.
-- `fret-skills-playbook`: Shared conventions for layering decisions, regression gates, `test_id`/diag script style, and evidence discipline across all skills.
+- `fret-workstream-lifecycle`: Manage the lifecycle of a workstream lane: create the minimal doc set, reopen existing lanes with an assumptions-first evidence pass, keep status explicit, decide continue vs follow-on, and close out with gates/evidence.
+- `fret-skills-playbook`: Shared conventions for execution-mode selection, goal-backward verification, layering decisions, regression gates, `test_id`/diag script style, and evidence discipline across all skills.
 - `fret-external-app-mode`: Use the skills from an external app repo (outside the mono-repo): what works without `tools/` and `fretboard`, and how to keep anchors and tooling usable via a Fret checkout.
 - `fret-app-ui-builder`: Product-oriented golden path: pick a baseline style, apply token overrides, compose shadcn recipes, and leave diag/perf gates early.
 - `fret-ui-review`: Review/audit Fret UI code for framework-aligned UX correctness (tokens, focus-visible, overlays, commands gating, `test_id`, and regression gates).
-- `fret-framework-maintainer-guide`: Maintainer playbook for contracts/ADRs, boundaries, diagnostics/perf gates, upstream alignment (shadcn/Radix/Base UI), and evidence discipline.
+- `fret-framework-maintainer-guide`: Maintainer playbook for contracts/ADRs, boundaries, goal-backward verification, diagnostics/perf gates, upstream alignment (shadcn/Radix/Base UI), and evidence discipline.
 - `fret-mobile-real-device-debug`: Real-device mobile debugging workflow (Android + iOS): run the smallest mobile target, verify Vulkan/Metal constraints, and capture diagnostics bundle evidence for ADRs/workstreams.
 - `fret-diag-workflow`: Diagnostics for correctness + perf: scripted repros, bundles/screenshots, triage/compare, perf gates (`diag perf`), and worst-frame attribution.
 - `fret-perf-optimization`: Perf optimization workflow: turn “jank” into a durable perf contract (tail vs typical), normalize suites, attribute worst bundles, and land reversible fixes with evidence.

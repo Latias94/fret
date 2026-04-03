@@ -108,7 +108,7 @@ make compatibility paths explicit instead of accidental.
 
 ## M2 - State boundary split
 
-Status target: architectural refactor with compatibility plan
+Status target: architectural refactor landed; follow-on cleanup only
 
 ### Goal
 
@@ -123,16 +123,66 @@ runtime tuning.
   - runtime tuning.
 - A serialization compatibility plan for existing persisted data.
 - Store/runtime wiring updated to use the new boundaries without breaking the editor contract.
-- First landed slice: `NodeGraphViewState` persists `NodeGraphInteractionConfig` +
-  `NodeGraphRuntimeTuning`, while widget/runtime snapshots still resolve a combined
-  `NodeGraphInteractionState` for compatibility.
+- Landed slice: `NodeGraphViewState` is pure view state, while the file wrapper persists
+  `NodeGraphInteractionConfig` + `NodeGraphRuntimeTuning`, and widget/runtime snapshots still
+  resolve a combined `NodeGraphInteractionState` from explicit editor-config seams.
 - Persistence ownership is now explicit: the file wrapper writes pure view-state under `state`, with
   `interaction` / `runtime_tuning` stored as wrapper-owned fields in `state_version = 2`.
 - App/example authoring also follows the split:
   - retained canvas can mirror `NodeGraphEditorConfig`,
-  - tuning/controls overlays read explicit editor-config seams,
+  - tuning/controls overlays read explicit editor-config seams, with
+    `NodeGraphControlsOverlay::new(...)` now taking the editor-config model directly,
   - example persistence restores and saves `NodeGraphViewStateFileV1` through
-    `new_with_editor_config(...)`.
+    `new(...)`.
+  - advanced binding seams now also require explicit editor-config mirrors, so controlled sync no
+    longer falls back to default config when graph/view/controller mirrors are caller-owned.
+  - retained compatibility constructors now also require explicit editor-config models:
+    `NodeGraphCanvas::new(...)`, `NodeGraphCanvas::new_with_middleware(...)`, and
+    `NodeGraphSurfaceCompatRetainedProps::new(...)` no longer manufacture default config
+    ownership internally.
+  - retained widget test harnesses now also provide combined `graph + view + editor_config`
+    setup helpers, keeping explicit editor-config ownership visible in conformance tests without
+    leaving repeated host/model bootstrap blocks as accidental public teaching surface.
+  - overlay-oriented retained harnesses now also provide combined `view + editor_config` setup
+    helpers, so focused controls/minimap conformance gates can stay on the same explicit
+    editor-config seam without duplicating local bootstrap code.
+  - edge label/marker/cache, edge-insert, paint-overrides, skin, invalidation,
+    selection/preview/semantic-zoom, measured/spatial, and a11y/fit-view/connection-validity
+    retained conformance gates now also consume the shared `graph + view + editor_config` harness
+    setup, keeping renderer-focused, edge-insert interaction, paint-only, skin-chrome,
+    invalidation, selection/preview, measured/spatial, and a11y/fit-view tests aligned with the
+    same explicit editor-config ownership contract.
+  - background-style/color-mode, custom-edge-path, derived-geometry invalidation,
+    edit-command-availability, escape-cancel, and insert-node-drag retained conformance gates now
+    also consume the shared `graph + view + editor_config` harness setup, keeping canvas
+    chrome/theme sync, custom-path hit-testing, derived-geometry cache invalidation,
+    command-availability gating, pointer-capture cancel, and insert-node threshold coverage aligned
+    with the same explicit editor-config ownership contract.
+  - drag-preview, node-resize-preview, overlay invalidation, and overlay menu/searcher retained
+    conformance gates now also consume the shared `graph + view + editor_config` harness setup,
+    keeping preview cache reuse, preview geometry/index drift, overlay-only invalidation, and
+    overlay clamp coverage aligned with the same explicit editor-config ownership contract.
+  - callback-oriented retained conformance gates now also consume the shared
+    `graph + view + editor_config` harness setup, keeping connect/reconnect, pan, and node-drag
+    callback coverage aligned with the same explicit editor-config ownership contract.
+  - hit-testing and internals retained conformance gates now also consume the shared
+    `graph + view + editor_config` harness setup, keeping target-port picking, edge/anchor hit
+    resolution, internals snapshot publication, and internals/measured-output stability coverage
+    aligned with the same explicit editor-config ownership contract.
+  - insert-node-drag-drop, middleware, op-batching determinism, portal measured-internals,
+    set-viewport queue, and perf-cache-prune retained conformance gates now also consume the
+    shared `graph + view + editor_config` harness setup, keeping drag-drop, middleware rejection,
+    group-op batching, portal-measurement-to-internals, view-queue viewport, and cache-prune
+    coverage aligned with the same explicit editor-config ownership contract.
+  - perf-cache retained coverage now also consumes the shared `graph + view + editor_config`
+    harness setup, keeping static node/edge cache reuse, tile-boundary reuse, incremental
+    edge-label/marker warmup, and repeated-label auto-measure coverage aligned with the same
+    explicit editor-config ownership contract.
+  - interaction-conformance and the remaining root retained widget tests now also consume the
+    shared `graph + view + editor_config` harness setup, and the now-unused implicit
+    `make_host_graph_view(...)` helper plus the test-only 3-arg `new_canvas!(...)` arm are
+    deleted from the retained test harness, so no retained conformance gate still teaches implicit
+    default editor-config ownership.
 
 ### Done criteria
 
@@ -141,8 +191,10 @@ runtime tuning.
 - The resulting shapes make it harder to persist accidental performance knobs as if they were view
   semantics.
 - Controlled sync and diagnostics still have a stable data contract.
-- The remaining compatibility residue is explicit and bounded to test-only bridges; it is no longer
-  taught by examples or release-facing runtime paths.
+- The previous test-only compatibility bridge is removed; examples, runtime paths, and tests now all
+  use explicit editor-config seams.
+- Retained public compatibility widgets no longer hide default editor-config ownership behind their
+  constructor boundary.
 
 ### Required regression protection
 
@@ -299,8 +351,9 @@ points rather than direct graph mutation.
     tests aggregate that companion surface so the public contract is no longer coupled to one
     monolithic file.
   - The advanced mirror-owned binding constructor is now spelled
-    `NodeGraphSurfaceBinding::from_models_and_controller(...)`, so explicit
-    graph/view/controller ownership does not masquerade as the default constructor family.
+    `NodeGraphSurfaceBinding::from_models_and_controller(...)`, and it now requires explicit
+    `graph + view_state + editor_config + controller` ownership so advanced mirror wiring does not
+    masquerade as the default constructor family or silently synthesize config defaults.
   - Internally, `NodeGraphSurfaceBinding` now stores the authoritative `NodeGraphStore` handle rather
     than privately holding a controller instance, so the implementation matches the public
     ownership story: controller construction is explicit, while the binding stays store-backed.
@@ -308,6 +361,10 @@ points rather than direct graph mutation.
     (`set_viewport*`, `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, including option-bearing
     and action-host variants), so routine app-facing viewport hooks can stay on the instance-style
     binding surface instead of dropping to explicit controller wiring.
+  - Focused controller/binding gates now also lock viewport read/projection plus
+    `set_viewport*`, `set_center_in_bounds*`, `fit_view_nodes_in_bounds*`, and
+    `fit_canvas_rect_in_bounds*`, so the current controller-facing XyFlow viewport mapping is
+    reviewable as a closed slice rather than an open-ended helper-breadth backlog item.
   - `NodeGraphSurfaceBinding` now also mirrors routine bound-store edit/sync/history helpers
     (`dispatch_transaction*`, `submit_transaction*`, `replace_*_action_host`,
     `set_selection_action_host`, `undo_action_host`, `redo_action_host`), so object-safe app hooks
@@ -436,7 +493,8 @@ real editors.
 
 - Retained portal + rename overlay glue now has a controller-first path
   (`NodeGraphPortalHost::with_controller`, `NodeGraphOverlayHost::new(...).with_controller(...)`),
-  and `compat_retained` now relies on a controller binding instead of public queue transport props.
+  and `compat_retained` now relies on a controller binding plus explicit editor-config model
+  instead of public queue transport props or retained-only default policy payloads.
 - `node_graph_domain_demo` and `compat_retained` now exercise that path, reducing how often new
   app-facing examples need to teach raw `edit_queue` mutation.
 - The retained widget test harness is back in sync with the latest `fret-ui` retained bridge

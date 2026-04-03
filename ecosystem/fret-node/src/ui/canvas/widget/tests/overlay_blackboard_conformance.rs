@@ -158,6 +158,7 @@ fn blackboard_add_symbol_prefers_controller_over_raw_edit_queue() {
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
+        crate::io::NodeGraphEditorConfig::default(),
     ));
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());

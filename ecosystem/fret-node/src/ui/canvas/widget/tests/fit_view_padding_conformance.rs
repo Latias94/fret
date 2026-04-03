@@ -2,9 +2,8 @@ use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::CanvasPoint;
 
-use super::prelude::NodeGraphCanvas;
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_size,
+    TestUiHostImpl, insert_graph_view_editor_config_with, make_test_graph_two_nodes_with_size,
 };
 
 #[test]
@@ -18,15 +17,13 @@ fn frame_view_padding_reduces_zoom_for_same_nodes() {
     graph_value.nodes.get_mut(&b).expect("node b exists").pos = CanvasPoint { x: 600.0, y: 0.0 };
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.frame_view_duration_ms = 0;
+            state.interaction.frame_view_padding = 0.0;
+        });
 
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.frame_view_duration_ms = 0;
-        state.interaction.frame_view_padding = 0.0;
-    });
-
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     assert!(canvas.frame_nodes_in_view(&mut host, None, bounds, &[a, b]));
     let no_padding = canvas.sync_view_state(&mut host).zoom;
 
@@ -34,15 +31,13 @@ fn frame_view_padding_reduces_zoom_for_same_nodes() {
     graph_value.nodes.get_mut(&b).expect("node b exists").pos = CanvasPoint { x: 600.0, y: 0.0 };
 
     let mut host2 = TestUiHostImpl::default();
-    let graph2 = host2.models.insert(graph_value);
+    let (graph2, view2, editor_config2) =
+        insert_graph_view_editor_config_with(&mut host2, graph_value, |state| {
+            state.interaction.frame_view_duration_ms = 0;
+            state.interaction.frame_view_padding = 0.2;
+        });
 
-    let view2 = insert_view(&mut host2);
-    let editor_config2 = insert_editor_config_with(&mut host2, |state| {
-        state.interaction.frame_view_duration_ms = 0;
-        state.interaction.frame_view_padding = 0.2;
-    });
-
-    let mut canvas2 = NodeGraphCanvas::new(graph2, view2).with_editor_config_model(editor_config2);
+    let mut canvas2 = new_canvas!(host2, graph2, view2, editor_config2);
     assert!(canvas2.frame_nodes_in_view(&mut host2, None, bounds, &[a, b]));
     let with_padding = canvas2.sync_view_state(&mut host2).zoom;
 

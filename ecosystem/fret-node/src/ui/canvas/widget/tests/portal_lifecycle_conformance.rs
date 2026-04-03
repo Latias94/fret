@@ -160,6 +160,7 @@ fn portal_command_prefers_controller_over_raw_edit_queue() {
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
+        crate::io::NodeGraphEditorConfig::default(),
     ));
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let controller = NodeGraphController::new(store.clone());

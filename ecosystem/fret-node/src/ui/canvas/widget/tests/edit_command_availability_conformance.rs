@@ -22,9 +22,9 @@ fn availability_cx<'a>(
 fn node_graph_blocks_edit_copy_without_selection() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let canvas = NodeGraphCanvas::new(graph, view);
+    let canvas = new_canvas!(host, graph, view, editor_config);
     let tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
 
     let mut cx = availability_cx(&mut host, &tree);
@@ -39,13 +39,13 @@ fn node_graph_blocks_edit_copy_without_selection() {
 fn node_graph_enables_edit_copy_with_selected_nodes() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let _ = host.models.update(&view, |state| {
         state.selected_nodes = vec![a];
     });
 
-    let canvas = NodeGraphCanvas::new(graph, view);
+    let canvas = new_canvas!(host, graph, view, editor_config);
     let tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
 
     let mut cx = availability_cx(&mut host, &tree);
@@ -60,13 +60,13 @@ fn node_graph_enables_edit_copy_with_selected_nodes() {
 fn node_graph_blocks_edit_copy_without_window() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let _ = host.models.update(&view, |state| {
         state.selected_nodes = vec![a];
     });
 
-    let canvas = NodeGraphCanvas::new(graph, view);
+    let canvas = new_canvas!(host, graph, view, editor_config);
     let tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
 
     let mut cx = availability_cx(&mut host, &tree);

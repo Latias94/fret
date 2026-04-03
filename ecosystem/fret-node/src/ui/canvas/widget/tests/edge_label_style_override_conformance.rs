@@ -12,7 +12,7 @@ use crate::ui::presenter::{EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 use crate::ui::style::NodeGraphStyle;
 
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+    TestUiHostImpl, insert_graph_view_editor_config_with, make_test_graph_two_nodes_with_ports,
 };
 
 #[derive(Default)]
@@ -156,12 +156,11 @@ fn edge_label_border_uses_edge_render_hint_color_override() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.frame_view_duration_ms = 0;
-        state.interaction.bezier_hit_test_steps = 8;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.frame_view_duration_ms = 0;
+            state.interaction.bezier_hit_test_steps = 8;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
     });
@@ -177,9 +176,7 @@ fn edge_label_border_uses_edge_render_hint_color_override() {
         color: override_color,
     };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_presenter(presenter)
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_presenter(presenter);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

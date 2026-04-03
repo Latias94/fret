@@ -4,6 +4,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub fn new_with_middleware(
         graph: Model<Graph>,
         view_state: Model<NodeGraphViewState>,
+        editor_config_model: Model<NodeGraphEditorConfig>,
         middleware: M,
     ) -> Self {
         let auto_measured = Arc::new(MeasuredGeometryStore::new());
@@ -11,7 +12,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             graph,
             view_state,
             editor_config: NodeGraphEditorConfig::default(),
-            editor_config_model: None,
+            editor_config_model: Some(editor_config_model),
             store: None,
             store_rev: None,
             presenter: Box::new(FallbackMeasuredNodeGraphPresenter::new(

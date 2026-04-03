@@ -457,9 +457,10 @@ fn commit_graph_transaction_syncs_graph_and_view_models_through_binding() {
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
+        default_editor_config(),
     ));
     let controller = NodeGraphController::new(store.clone());
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     let tx = host
         .models
@@ -528,9 +529,10 @@ fn commit_node_drag_transaction_notifies_store_callbacks_through_binding() {
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
+        default_editor_config(),
     ));
     let controller = NodeGraphController::new(store.clone());
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let commits: Rc<RefCell<Vec<(Option<String>, usize)>>> = Rc::new(RefCell::new(Vec::new()));
     let _callbacks_token = host
         .models
@@ -724,13 +726,17 @@ impl DeclarativeControllerFixture {
         graph_value.nodes.insert(node_b, test_node(node_b_pos));
         let graph = host.models.insert(graph_value.clone());
         let view_state = host.models.insert(initial_view.clone());
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, initial_view));
+        let editor_config = host.models.insert(default_editor_config());
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            initial_view,
+            default_editor_config(),
+        ));
         let controller = NodeGraphController::new(store.clone());
         let binding = NodeGraphSurfaceBinding::from_models_and_controller(
             graph.clone(),
             view_state.clone(),
+            editor_config.clone(),
             controller.clone(),
         );
         Self {
@@ -775,15 +781,33 @@ fn assert_pointer_session_finished(
 }
 
 fn test_binding(
+    host: &mut TestActionHostImpl,
     graph: &Model<Graph>,
     view_state: &Model<NodeGraphViewState>,
     controller: &NodeGraphController,
 ) -> NodeGraphSurfaceBinding {
+    let editor_config = controller.store();
+    let editor_config = host
+        .models
+        .read(&editor_config, |store| store.editor_config())
+        .expect("binding test store readable");
+    let editor_config = host.models.insert(editor_config);
     NodeGraphSurfaceBinding::from_models_and_controller(
         graph.clone(),
         view_state.clone(),
+        editor_config,
         controller.clone(),
     )
+}
+
+fn test_editor_config(f: impl FnOnce(&mut NodeGraphEditorConfig)) -> NodeGraphEditorConfig {
+    let mut editor_config = NodeGraphEditorConfig::default();
+    f(&mut editor_config);
+    editor_config
+}
+
+fn default_editor_config() -> NodeGraphEditorConfig {
+    NodeGraphEditorConfig::default()
 }
 
 #[test]
@@ -925,9 +949,10 @@ fn handle_declarative_pointer_up_action_host_ignores_non_left_non_pan_buttons() 
     let store = host.models.insert(NodeGraphStore::new(
         Graph::new(GraphId::from_u128(121)),
         view_value,
+        default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     assert!(!handle_declarative_pointer_up_action_host(
         &mut host,
@@ -972,9 +997,10 @@ fn handle_declarative_pointer_up_action_host_pan_release_clears_drag_and_finishe
     let store = host.models.insert(NodeGraphStore::new(
         Graph::new(GraphId::from_u128(122)),
         view_value,
+        default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     assert!(handle_declarative_pointer_up_action_host(
         &mut host,
@@ -1133,9 +1159,10 @@ fn complete_left_pointer_release_action_host_none_when_no_left_release_state_exi
     let store = host.models.insert(NodeGraphStore::new(
         Graph::new(GraphId::from_u128(12)),
         view_value,
+        default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let node_drag = host.models.insert(None::<NodeDragState>);
     let marquee = host.models.insert(None::<MarqueeDragState>);
     let pending = host.models.insert(None::<PendingSelectionState>);
@@ -1227,11 +1254,13 @@ fn handle_pending_selection_left_pointer_release_action_host_commits_and_clears_
         .nodes
         .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
     let graph = host.models.insert(graph_value.clone());
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, view_value));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        view_value,
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let pending = host.models.insert(Some(PendingSelectionState {
         nodes: Arc::from([node_b]),
         clear_edges: true,
@@ -1274,9 +1303,10 @@ fn handle_marquee_left_pointer_release_action_host_clears_pending_and_marquee_wi
     let store = host.models.insert(NodeGraphStore::new(
         Graph::new(GraphId::from_u128(9949)),
         view_value,
+        default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let marquee = host.models.insert(Some(MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(4.0), Px(4.0)),
@@ -1337,11 +1367,13 @@ fn complete_node_drag_release_action_host_selection_only_release_notifies_select
         ..Default::default()
     };
     let view_state = host.models.insert(initial_view.clone());
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        initial_view.clone(),
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store.clone());
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let trace = install_declarative_callback_trace(&mut host, &store);
     let node_drag = NodeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
@@ -1685,11 +1717,13 @@ fn read_authoritative_view_state_in_models_uses_store_when_bound_view_is_stale()
     };
     let view_state = host.models.insert(stale_view);
     let graph = host.models.insert(Graph::new(GraphId::from_u128(99729)));
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(authoritative_graph, authoritative_view));
+    let store = host.models.insert(NodeGraphStore::new(
+        authoritative_graph,
+        authoritative_view,
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     let projection = read_authoritative_view_state_in_models(&mut host.models, &binding, |state| {
         (state.pan, state.zoom, state.selected_nodes.clone())
@@ -1728,11 +1762,13 @@ fn read_left_pointer_down_snapshot_action_host_uses_authoritative_store_view_sta
     };
     let view_state = host.models.insert(stale_view);
     let graph = host.models.insert(Graph::new(graph_value.graph_id));
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, authoritative_view));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        authoritative_view,
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let hit_scratch = host.models.insert(Vec::<NodeId>::new());
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -1761,13 +1797,10 @@ fn read_left_pointer_down_snapshot_action_host_uses_authoritative_store_view_sta
 fn handle_node_drag_pointer_move_action_host_activation_commits_pending_selection_and_requests_capture()
  {
     let mut host = TestActionHostImpl::default();
-    let view_value = NodeGraphViewState {
-        interaction: crate::io::NodeGraphInteractionConfig {
-            node_drag_threshold: 4.0,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
+    let view_value = NodeGraphViewState::default();
+    let editor_config = test_editor_config(|state| {
+        state.interaction.node_drag_threshold = 4.0;
+    });
     let view_state = host.models.insert(view_value.clone());
     let mut graph_value = Graph::new(GraphId::from_u128(9973));
     graph_value.nodes.insert(
@@ -1780,10 +1813,10 @@ fn handle_node_drag_pointer_move_action_host_activation_commits_pending_selectio
     );
     let store = host
         .models
-        .insert(NodeGraphStore::new(graph_value, view_value));
+        .insert(NodeGraphStore::new(graph_value, view_value, editor_config));
     let controller = NodeGraphController::new(store);
     let graph = host.models.insert(Graph::new(GraphId::from_u128(9973)));
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let node_drag = host.models.insert(Some(NodeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -1843,24 +1876,13 @@ fn handle_node_drag_pointer_move_action_host_activation_commits_pending_selectio
 }
 
 #[test]
-fn handle_node_drag_pointer_move_action_host_uses_authoritative_store_interaction_when_bound_view_is_stale()
- {
+fn handle_node_drag_pointer_move_action_host_uses_authoritative_store_interaction() {
     let mut host = TestActionHostImpl::default();
-    let authoritative_view = NodeGraphViewState {
-        interaction: crate::io::NodeGraphInteractionConfig {
-            node_drag_threshold: 4.0,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-    let stale_view = NodeGraphViewState {
-        interaction: crate::io::NodeGraphInteractionConfig {
-            node_drag_threshold: 40.0,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-    let view_state = host.models.insert(stale_view);
+    let authoritative_view = NodeGraphViewState::default();
+    let editor_config = test_editor_config(|state| {
+        state.interaction.node_drag_threshold = 4.0;
+    });
+    let view_state = host.models.insert(NodeGraphViewState::default());
     let mut graph_value = Graph::new(GraphId::from_u128(99731));
     graph_value.nodes.insert(
         NodeId::from_u128(99741),
@@ -1870,12 +1892,14 @@ fn handle_node_drag_pointer_move_action_host_uses_authoritative_store_interactio
         NodeId::from_u128(99751),
         test_node(CanvasPoint { x: 40.0, y: 20.0 }),
     );
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, authoritative_view));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        authoritative_view,
+        editor_config,
+    ));
     let controller = NodeGraphController::new(store);
     let graph = host.models.insert(Graph::new(GraphId::from_u128(99731)));
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let node_drag = host.models.insert(Some(NodeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -1926,10 +1950,11 @@ fn handle_node_drag_pointer_move_action_host_canceled_session_clears_hover_witho
     let store = host.models.insert(NodeGraphStore::new(
         Graph::new(GraphId::from_u128(9976)),
         view_value,
+        default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
     let graph = host.models.insert(Graph::new(GraphId::from_u128(9976)));
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let node_drag = host.models.insert(Some(NodeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -1970,21 +1995,19 @@ fn handle_node_drag_pointer_move_action_host_canceled_session_clears_hover_witho
 #[test]
 fn handle_marquee_pointer_move_action_host_non_selectable_clears_session_without_touching_hover() {
     let mut host = TestActionHostImpl::default();
-    let view_value = NodeGraphViewState {
-        interaction: crate::io::NodeGraphInteractionConfig {
-            elements_selectable: false,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
+    let view_value = NodeGraphViewState::default();
+    let editor_config = test_editor_config(|state| {
+        state.interaction.elements_selectable = false;
+    });
     let view_state = host.models.insert(view_value.clone());
     let graph = host.models.insert(Graph::new(GraphId::from_u128(9979)));
     let store = host.models.insert(NodeGraphStore::new(
         Graph::new(GraphId::from_u128(9979)),
         view_value,
+        editor_config,
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let marquee = host.models.insert(Some(MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -2043,19 +2066,18 @@ fn handle_marquee_pointer_move_action_host_updates_preview_and_clears_hover() {
         geom: Some(Arc::new(geom)),
         index: Some(Arc::new(spatial)),
     });
-    let view_value = NodeGraphViewState {
-        interaction: crate::io::NodeGraphInteractionConfig {
-            elements_selectable: true,
-            selection_mode: crate::io::NodeGraphSelectionMode::Partial,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
+    let view_value = NodeGraphViewState::default();
+    let editor_config = test_editor_config(|state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.selection_mode = crate::io::NodeGraphSelectionMode::Partial;
+    });
     let view_state = host.models.insert(view_value.clone());
     let graph_model = host.models.insert(graph.clone());
-    let store = host.models.insert(NodeGraphStore::new(graph, view_value));
+    let store = host
+        .models
+        .insert(NodeGraphStore::new(graph, view_value, editor_config));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph_model, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph_model, &view_state, &controller);
     let marquee = host.models.insert(Some(MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -2116,32 +2138,28 @@ fn handle_marquee_pointer_move_action_host_uses_authoritative_store_view_when_bo
         index: Some(Arc::new(spatial)),
     });
     let authoritative_view = NodeGraphViewState {
-        interaction: crate::io::NodeGraphInteractionConfig {
-            elements_selectable: true,
-            selection_mode: crate::io::NodeGraphSelectionMode::Partial,
-            ..Default::default()
-        },
         pan: CanvasPoint { x: 0.0, y: 0.0 },
         zoom: 1.0,
         ..Default::default()
     };
     let stale_view = NodeGraphViewState {
-        interaction: crate::io::NodeGraphInteractionConfig {
-            elements_selectable: false,
-            selection_mode: crate::io::NodeGraphSelectionMode::Partial,
-            ..Default::default()
-        },
         pan: CanvasPoint { x: 400.0, y: 300.0 },
         zoom: 1.0,
         ..Default::default()
     };
+    let editor_config = test_editor_config(|state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.selection_mode = crate::io::NodeGraphSelectionMode::Partial;
+    });
     let view_state = host.models.insert(stale_view);
     let graph = host.models.insert(Graph::new(graph_value.graph_id));
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, authoritative_view));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        authoritative_view,
+        editor_config,
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let marquee = host.models.insert(Some(MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -2195,9 +2213,13 @@ fn update_hovered_node_pointer_move_action_host_sets_hit_node_from_geometry() {
     let view_value = NodeGraphViewState::default();
     let view_state = host.models.insert(view_value.clone());
     let graph_model = host.models.insert(graph.clone());
-    let store = host.models.insert(NodeGraphStore::new(graph, view_value));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph,
+        view_value,
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph_model, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph_model, &view_state, &controller);
     let hovered = host.models.insert(None::<NodeId>);
     let hit_scratch = host.models.insert(Vec::<NodeId>::new());
     let bounds = Rect::new(
@@ -2244,19 +2266,20 @@ fn update_hovered_node_pointer_move_action_host_uses_authoritative_store_view_wh
     let stale_view = NodeGraphViewState {
         pan: CanvasPoint { x: 400.0, y: 300.0 },
         zoom: 1.0,
-        interaction: crate::io::NodeGraphInteractionConfig {
-            node_click_distance: 0.0,
-            ..Default::default()
-        },
         ..Default::default()
     };
+    let editor_config = test_editor_config(|state| {
+        state.interaction.node_click_distance = 6.0;
+    });
     let view_state = host.models.insert(stale_view);
     let graph = host.models.insert(Graph::new(graph_value.graph_id));
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, authoritative_view));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        authoritative_view,
+        editor_config,
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let hovered = host.models.insert(None::<NodeId>);
     let hit_scratch = host.models.insert(Vec::<NodeId>::new());
     let bounds = Rect::new(
@@ -2317,9 +2340,10 @@ fn apply_declarative_diag_view_preset_action_host_offset_partial_marquee_clears_
     let store = host.models.insert(NodeGraphStore::new(
         Graph::new(GraphId::from_u128(9964)),
         view_value,
+        default_editor_config(),
     ));
     let controller = NodeGraphController::new(store.clone());
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     assert!(apply_declarative_diag_view_preset_action_host(
         &mut host,
@@ -2356,9 +2380,10 @@ fn handle_declarative_diag_key_action_host_disable_portals_clears_pending_fit_an
     let store = host.models.insert(NodeGraphStore::new(
         Graph::new(GraphId::from_u128(9965)),
         view_value,
+        default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let mut portal_bounds_state = PortalBoundsStore::default();
     portal_bounds_state.pending_fit_to_portals = true;
     portal_bounds_state.nodes_canvas_bounds.insert(
@@ -2407,9 +2432,10 @@ fn handle_declarative_keyboard_zoom_action_host_reset_normalizes_zoom() {
     let store = host.models.insert(NodeGraphStore::new(
         Graph::new(GraphId::from_u128(9966)),
         view_value,
+        default_editor_config(),
     ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     assert!(handle_declarative_keyboard_zoom_action_host(
         &mut host,
@@ -2445,11 +2471,13 @@ fn handle_declarative_diag_key_action_host_toggle_paint_overrides_sets_first_edg
     );
     let view_value = NodeGraphViewState::default();
     let view_state = host.models.insert(view_value.clone());
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(authoritative_graph, view_value));
+    let store = host.models.insert(NodeGraphStore::new(
+        authoritative_graph,
+        view_value,
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let portal_bounds = host.models.insert(PortalBoundsStore::default());
     let portal_debug = host.models.insert(PortalDebugFlags::default());
     let diag_paint_overrides_enabled = host.models.insert(false);
@@ -2673,11 +2701,13 @@ fn commit_pending_selection_action_host_preserves_edges_and_groups_when_not_requ
         },
     );
     let graph = host.models.insert(graph_value.clone());
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, view_value));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        view_value,
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let pending = PendingSelectionState {
         nodes: Arc::from([node_b]),
         clear_edges: false,
@@ -2783,11 +2813,13 @@ fn commit_pending_selection_action_host_preserves_authoritative_selection_when_b
         },
     );
     let graph = host.models.insert(graph_value.clone());
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, view_value));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        view_value,
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let _ = host.models.update(&view_state, |state| {
         state.selected_nodes = vec![node_a];
         state.selected_edges.clear();
@@ -2897,11 +2929,13 @@ fn commit_pending_selection_action_host_can_clear_all_selection_kinds() {
         },
     );
     let graph = host.models.insert(graph_value.clone());
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, view_value));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        view_value,
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let pending = PendingSelectionState {
         nodes: Arc::from([]),
         clear_edges: true,
@@ -2949,11 +2983,13 @@ fn update_view_state_action_host_uses_authoritative_store_view_state_when_bound_
         ..Default::default()
     };
     let view_state = host.models.insert(stale);
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(authoritative_graph, authoritative));
+    let store = host.models.insert(NodeGraphStore::new(
+        authoritative_graph,
+        authoritative,
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
 
     assert!(update_view_state_action_host(
         &mut host,
@@ -4133,11 +4169,13 @@ fn commit_marquee_selection_action_host_clears_edges_and_groups_for_non_toggle()
         },
     );
     let graph = host.models.insert(graph_value.clone());
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, view_value));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        view_value,
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let marquee = MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -4245,11 +4283,13 @@ fn commit_marquee_selection_action_host_preserves_edges_and_groups_for_toggle() 
         },
     );
     let graph = host.models.insert(graph_value.clone());
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, view_value));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        view_value,
+        default_editor_config(),
+    ));
     let controller = NodeGraphController::new(store);
-    let binding = test_binding(&graph, &view_state, &controller);
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
     let marquee = MarqueeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
         current_screen: Point::new(Px(0.0), Px(0.0)),

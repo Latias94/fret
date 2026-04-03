@@ -1,26 +1,23 @@
 use std::sync::Arc;
 
-use super::prelude::NodeGraphCanvas;
 use super::{
-    TestUiHostImpl, insert_editor_config_with, insert_view, make_test_graph_two_nodes_with_ports,
+    make_host_graph_view_editor_config, make_host_graph_view_editor_config_with,
+    make_test_graph_two_nodes_with_ports,
 };
 
 #[test]
 fn selection_updates_do_not_rebuild_geometry_when_elevate_nodes_on_select_is_enabled() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.elevate_nodes_on_select = true;
-    });
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(graph_value, |state| {
+            state.interaction.elevate_nodes_on_select = true;
+        });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.draw_order = vec![a, b];
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 
@@ -45,18 +42,14 @@ fn selection_updates_do_not_rebuild_geometry_when_elevate_nodes_on_select_is_ena
 
 #[test]
 fn draw_order_updates_rebuild_derived_geometry_and_spatial_index() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |_| {});
+    let (mut host, graph, view, editor_config) = make_host_graph_view_editor_config(graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.draw_order = vec![a, b];
     });
 
-    let mut canvas =
-        NodeGraphCanvas::new(graph, view.clone()).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 

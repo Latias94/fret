@@ -4,8 +4,9 @@ use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind};
 
-use super::prelude::NodeGraphCanvas;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{
+    TestUiHostImpl, insert_graph_view_editor_config, make_test_graph_two_nodes_with_ports_spaced_x,
+};
 
 fn assert_near(a: f32, b: f32) {
     assert!((a - b).abs() <= 1.0e-5, "{a} != {b}");
@@ -16,9 +17,8 @@ fn node_resize_preview_cache_reuses_geometry_across_preview_rev_updates() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config.clone());
 
     // Ensure base geometry + spatial index caches exist (resize previews are keyed off base_index_key).
     let snapshot0 = canvas.sync_view_state(&mut host);
@@ -78,8 +78,8 @@ fn node_resize_preview_cache_reuses_geometry_across_preview_rev_updates() {
     drop(index2);
 
     // If the base spatial index key changes, the preview cache must be invalidated and rebuilt.
-    let _ = view.update(&mut host, |s, _cx| {
-        s.runtime_tuning.spatial_index.edge_aabb_pad_screen_px = 200.0;
+    let _ = editor_config.update(&mut host, |state, _cx| {
+        state.runtime_tuning.spatial_index.edge_aabb_pad_screen_px = 200.0;
     });
     let snapshot1 = canvas.sync_view_state(&mut host);
     let _ = canvas.canvas_derived(&host, &snapshot1);
@@ -117,9 +117,8 @@ fn node_resize_preview_updates_node_rect_ports_and_edge_index() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let (base_geom, _base_index) = canvas.canvas_derived(&host, &snapshot);
@@ -190,9 +189,8 @@ fn node_resize_preview_rev_updates_do_not_drift() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
 
     let snapshot = canvas.sync_view_state(&mut host);
     let _ = canvas.canvas_derived(&host, &snapshot);

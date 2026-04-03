@@ -744,11 +744,7 @@ impl NodeGraphDomainDemoDriver {
             return;
         };
 
-        let file = NodeGraphViewStateFileV1::new_with_editor_config(
-            persist.graph_id,
-            state,
-            editor_config,
-        );
+        let file = NodeGraphViewStateFileV1::new(persist.graph_id, state, editor_config);
         if let Err(err) = file.save_json(&persist.path) {
             tracing::warn!(?err, "failed to save node graph view state");
         }
@@ -825,9 +821,8 @@ impl NodeGraphDomainDemoDriver {
             );
 
         let presenter = DemoTypedPresenter::default();
-        let canvas = NodeGraphCanvas::new(graph.clone(), view)
+        let canvas = NodeGraphCanvas::new(graph.clone(), view, editor_config)
             .with_controller(controller.clone())
-            .with_editor_config_model(editor_config)
             .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_style(style.clone())
@@ -1117,8 +1112,7 @@ pub fn run() -> anyhow::Result<()> {
         };
     view_value.sanitize_for_graph(&graph_value);
 
-    let store_value =
-        NodeGraphStore::new_with_editor_config(graph_value, view_value, editor_config);
+    let store_value = NodeGraphStore::new(graph_value, view_value, editor_config);
     let graph = app.models_mut().insert(store_value.graph().clone());
     let view = app.models_mut().insert(store_value.view_state().clone());
     let editor_config = app.models_mut().insert(store_value.editor_config());

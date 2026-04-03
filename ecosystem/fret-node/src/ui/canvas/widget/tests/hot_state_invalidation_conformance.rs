@@ -3,17 +3,18 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 use crate::rules::{DiagnosticSeverity, EdgeEndpoint};
 
-use super::prelude::NodeGraphCanvas;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    TestUiHostImpl, insert_graph_view_editor_config, insert_graph_view_editor_config_with,
+    make_test_graph_two_nodes_with_ports,
+};
 
 #[test]
 fn hover_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_index() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 
@@ -56,15 +57,16 @@ fn selection_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_ind
  {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.elevate_nodes_on_select = false;
+        });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.draw_order = vec![a, b];
-        s.interaction.elevate_nodes_on_select = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 
@@ -125,8 +127,7 @@ fn presenter_geometry_revision_rebuilds_canvas_derived_geometry_and_spatial_inde
 
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let rev = Arc::new(AtomicU64::new(0));
     let w_bits = Arc::new(AtomicU32::new(420.0f32.to_bits()));
@@ -137,7 +138,7 @@ fn presenter_geometry_revision_rebuilds_canvas_derived_geometry_and_spatial_inde
         h_bits: h_bits.clone(),
     };
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(presenter);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_presenter(presenter);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
     let rect0 = geom0.nodes.get(&a).expect("node must exist").rect;

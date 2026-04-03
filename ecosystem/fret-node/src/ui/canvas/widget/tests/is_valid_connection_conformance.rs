@@ -3,10 +3,9 @@ use fret_core::{Modifiers, Point, Px, Rect, Size};
 use crate::core::{CanvasPoint, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind};
 
 use super::prelude::wire_drag;
-use crate::ui::NodeGraphCanvas;
 
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
+    NullServices, TestUiHostImpl, event_cx, insert_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::ui::canvas::state::{WireDrag, WireDragKind};
@@ -44,18 +43,17 @@ fn wire_drag_hover_tracks_invalid_port_in_strict_mode() {
     );
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.connection_mode = crate::interaction::NodeGraphConnectionMode::Strict;
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.connection_mode = crate::interaction::NodeGraphConnectionMode::Strict;
+            state.interaction.frame_view_duration_ms = 0;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let pos = geom.ports.get(&b_out).expect("b_out handle exists").center;
@@ -115,18 +113,17 @@ fn wire_drag_hover_tracks_non_connectable_end_port_as_invalid() {
         .and_modify(|p| p.connectable_end = Some(false));
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.connection_mode = crate::interaction::NodeGraphConnectionMode::Strict;
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.connection_mode = crate::interaction::NodeGraphConnectionMode::Strict;
+            state.interaction.frame_view_duration_ms = 0;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let pos = geom.ports.get(&b_in).expect("b_in handle exists").center;
@@ -182,18 +179,17 @@ fn wire_drag_hover_marks_valid_target_port_as_valid() {
         make_test_graph_two_nodes_with_ports_spaced_x(200.0);
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.connection_mode = crate::interaction::NodeGraphConnectionMode::Strict;
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.connection_mode = crate::interaction::NodeGraphConnectionMode::Strict;
+            state.interaction.frame_view_duration_ms = 0;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
     let pos = geom.ports.get(&b_in).expect("b_in handle exists").center;

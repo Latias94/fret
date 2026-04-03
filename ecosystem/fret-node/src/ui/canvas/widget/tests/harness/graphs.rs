@@ -174,7 +174,7 @@ pub(crate) fn insert_view(host: &mut TestUiHostImpl) -> Model<NodeGraphViewState
     host.models.insert(NodeGraphViewState::default())
 }
 
-pub(crate) fn insert_editor_config(host: &mut TestUiHostImpl) -> Model<NodeGraphEditorConfig> {
+fn insert_editor_config(host: &mut TestUiHostImpl) -> Model<NodeGraphEditorConfig> {
     host.models.insert(NodeGraphEditorConfig::default())
 }
 
@@ -189,6 +189,25 @@ pub(crate) fn insert_editor_config_with(
     editor_config
 }
 
+pub(crate) fn insert_view_editor_config(
+    host: &mut TestUiHostImpl,
+) -> (Model<NodeGraphViewState>, Model<NodeGraphEditorConfig>) {
+    let view = insert_view(host);
+    let editor_config = insert_editor_config(host);
+    (view, editor_config)
+}
+
+pub(crate) fn insert_view_editor_config_with(
+    host: &mut TestUiHostImpl,
+    configure: impl FnOnce(&mut NodeGraphEditorConfig),
+) -> (Model<NodeGraphViewState>, Model<NodeGraphEditorConfig>) {
+    let (view, editor_config) = insert_view_editor_config(host);
+    let _ = editor_config.update(host, |state, _cx| {
+        configure(state);
+    });
+    (view, editor_config)
+}
+
 pub(crate) fn insert_graph_view(
     host: &mut TestUiHostImpl,
     graph_value: Graph,
@@ -197,10 +216,82 @@ pub(crate) fn insert_graph_view(
     let view = insert_view(host);
     (graph, view)
 }
-pub(crate) fn make_host_graph_view(
+
+pub(crate) fn insert_graph_view_editor_config(
+    host: &mut TestUiHostImpl,
     graph_value: Graph,
-) -> (TestUiHostImpl, Model<Graph>, Model<NodeGraphViewState>) {
+) -> (
+    Model<Graph>,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
+    let (graph, view) = insert_graph_view(host, graph_value);
+    let editor_config = insert_editor_config(host);
+    (graph, view, editor_config)
+}
+
+pub(crate) fn insert_graph_view_editor_config_with(
+    host: &mut TestUiHostImpl,
+    graph_value: Graph,
+    configure: impl FnOnce(&mut NodeGraphEditorConfig),
+) -> (
+    Model<Graph>,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
+    let (graph, view, editor_config) = insert_graph_view_editor_config(host, graph_value);
+    let _ = editor_config.update(host, |state, _cx| {
+        configure(state);
+    });
+    (graph, view, editor_config)
+}
+
+pub(crate) fn make_host_view_editor_config() -> (
+    TestUiHostImpl,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
     let mut host = TestUiHostImpl::default();
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
-    (host, graph, view)
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    (host, view, editor_config)
+}
+
+pub(crate) fn make_host_view_editor_config_with(
+    configure: impl FnOnce(&mut NodeGraphEditorConfig),
+) -> (
+    TestUiHostImpl,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
+    let mut host = TestUiHostImpl::default();
+    let (view, editor_config) = insert_view_editor_config_with(&mut host, configure);
+    (host, view, editor_config)
+}
+
+pub(crate) fn make_host_graph_view_editor_config(
+    graph_value: Graph,
+) -> (
+    TestUiHostImpl,
+    Model<Graph>,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
+    let mut host = TestUiHostImpl::default();
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    (host, graph, view, editor_config)
+}
+
+pub(crate) fn make_host_graph_view_editor_config_with(
+    graph_value: Graph,
+    configure: impl FnOnce(&mut NodeGraphEditorConfig),
+) -> (
+    TestUiHostImpl,
+    Model<Graph>,
+    Model<NodeGraphViewState>,
+    Model<NodeGraphEditorConfig>,
+) {
+    let mut host = TestUiHostImpl::default();
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, configure);
+    (host, graph, view, editor_config)
 }

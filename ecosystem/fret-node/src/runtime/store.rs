@@ -90,24 +90,13 @@ impl std::fmt::Debug for NodeGraphStore {
 }
 
 impl NodeGraphStore {
-    /// Creates a store without a profile pipeline (raw ops apply + undo/redo).
-    pub fn new(graph: Graph, view_state: NodeGraphViewState) -> Self {
-        Self::new_with_editor_config(graph, view_state, NodeGraphEditorConfig::default())
-    }
-
     /// Creates a store with an explicit editor configuration payload.
-    pub fn new_with_editor_config(
+    pub fn new(
         graph: Graph,
         mut view_state: NodeGraphViewState,
         editor_config: NodeGraphEditorConfig,
     ) -> Self {
         view_state.sanitize_for_graph(&graph);
-        #[cfg(test)]
-        let mut editor_config = editor_config;
-        #[cfg(test)]
-        Self::sync_editor_config_from_test_view_state(&view_state, &mut editor_config);
-        #[cfg(not(test))]
-        let editor_config = editor_config;
         let mut lookups = NodeGraphLookups::default();
         lookups.rebuild_from(&graph);
         Self {
@@ -130,29 +119,11 @@ impl NodeGraphStore {
     pub fn with_profile(
         graph: Graph,
         view_state: NodeGraphViewState,
-        profile: Box<dyn GraphProfile>,
-    ) -> Self {
-        Self::with_profile_and_editor_config(
-            graph,
-            view_state,
-            NodeGraphEditorConfig::default(),
-            profile,
-        )
-    }
-
-    pub fn with_profile_and_editor_config(
-        graph: Graph,
-        mut view_state: NodeGraphViewState,
         editor_config: NodeGraphEditorConfig,
         profile: Box<dyn GraphProfile>,
     ) -> Self {
+        let mut view_state = view_state;
         view_state.sanitize_for_graph(&graph);
-        #[cfg(test)]
-        let mut editor_config = editor_config;
-        #[cfg(test)]
-        Self::sync_editor_config_from_test_view_state(&view_state, &mut editor_config);
-        #[cfg(not(test))]
-        let editor_config = editor_config;
         let mut lookups = NodeGraphLookups::default();
         lookups.rebuild_from(&graph);
         Self {
@@ -320,8 +291,6 @@ impl NodeGraphStore {
     /// This is the controlled-mode counterpart of `set_viewport`/`set_selection`.
     pub fn replace_view_state(&mut self, mut view_state: NodeGraphViewState) {
         view_state.sanitize_for_graph(&self.graph);
-        #[cfg(test)]
-        self.apply_test_view_state_editor_config(&view_state);
         let before = self.view_state.clone();
         if view_state_eq(&before, &view_state) {
             return;
@@ -347,8 +316,6 @@ impl NodeGraphStore {
         let before = self.view_state.clone();
         f(&mut self.view_state);
         self.view_state.sanitize_for_graph(&self.graph);
-        #[cfg(test)]
-        self.apply_test_view_state_editor_config(&self.view_state.clone());
         let after = self.view_state.clone();
 
         if view_state_eq(&before, &after) {
@@ -829,21 +796,6 @@ impl NodeGraphStore {
             (sub.callback)(&*sub.last, &*next);
             sub.last = next;
         }
-    }
-
-    #[cfg(test)]
-    fn sync_editor_config_from_test_view_state(
-        view_state: &NodeGraphViewState,
-        editor_config: &mut NodeGraphEditorConfig,
-    ) {
-        editor_config.interaction = view_state.interaction.clone();
-        editor_config.runtime_tuning = view_state.runtime_tuning;
-    }
-
-    #[cfg(test)]
-    fn apply_test_view_state_editor_config(&mut self, view_state: &NodeGraphViewState) {
-        self.interaction = view_state.interaction.clone();
-        self.runtime_tuning = view_state.runtime_tuning;
     }
 }
 

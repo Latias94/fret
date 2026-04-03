@@ -12,9 +12,9 @@ use crate::interaction::NodeGraphConnectionMode;
 use crate::rules::{ConnectPlan, EdgeEndpoint, InsertNodeTemplate, PortTemplate};
 use crate::ui::presenter::NodeGraphPresenter;
 
-use super::prelude::{NodeGraphCanvas, wire_drag};
+use super::prelude::wire_drag;
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_view,
+    NullServices, TestUiHostImpl, event_cx, insert_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::ui::canvas::state::{ContextMenuTarget, WireDrag, WireDragKind};
@@ -225,12 +225,10 @@ fn connect_drop_opens_conversion_picker_when_multiple_conversions() {
         let mut host = TestUiHostImpl::default();
         let (graph_value, _a, _a_in, a_out, _b, b_in) =
             make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-        let graph = host.models.insert(graph_value);
-        let view = insert_view(&mut host);
-
-        let _ = view.update(&mut host, |s, _cx| {
-            s.interaction.connection_mode = mode;
-        });
+        let (graph, view, editor_config) =
+            insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+                state.interaction.connection_mode = mode;
+            });
 
         let presenter = RejectingConversionPresenter {
             conversions: vec![
@@ -240,7 +238,7 @@ fn connect_drop_opens_conversion_picker_when_multiple_conversions() {
         };
 
         let mut canvas =
-            NodeGraphCanvas::new(graph.clone(), view.clone()).with_presenter(presenter);
+            new_canvas!(host, graph.clone(), view.clone(), editor_config).with_presenter(presenter);
         let snapshot = canvas.sync_view_state(&mut host);
 
         let bounds = Rect::new(
@@ -304,19 +302,17 @@ fn connect_drop_auto_inserts_conversion_when_single_choice() {
         let mut host = TestUiHostImpl::default();
         let (graph_value, _a, _a_in, a_out, _b, b_in) =
             make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-        let graph = host.models.insert(graph_value);
-        let view = insert_view(&mut host);
-
-        let _ = view.update(&mut host, |s, _cx| {
-            s.interaction.connection_mode = mode;
-        });
+        let (graph, view, editor_config) =
+            insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+                state.interaction.connection_mode = mode;
+            });
 
         let presenter = RejectingConversionPresenter {
             conversions: vec![make_conversion_template("test.conv")],
         };
 
         let mut canvas =
-            NodeGraphCanvas::new(graph.clone(), view.clone()).with_presenter(presenter);
+            new_canvas!(host, graph.clone(), view.clone(), editor_config).with_presenter(presenter);
         let snapshot = canvas.sync_view_state(&mut host);
 
         let bounds = Rect::new(
@@ -422,14 +418,12 @@ fn connect_drop_auto_inserts_conversion_when_single_choice() {
 fn reconnect_preserves_edge_identity_and_updates_endpoint() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, from, old_to, new_to) = make_graph_reconnect_to_new_target();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.edges_reconnectable = true;
+        });
 
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edges_reconnectable = true;
-    });
-
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(

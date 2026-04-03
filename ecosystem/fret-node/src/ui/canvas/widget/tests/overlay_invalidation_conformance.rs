@@ -3,8 +3,9 @@ use std::sync::Arc;
 use crate::core::CanvasPoint;
 use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
 
-use super::prelude::NodeGraphCanvas;
-use super::{TestUiHostImpl, insert_graph_view, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{
+    TestUiHostImpl, insert_graph_view_editor_config, make_test_graph_two_nodes_with_ports_spaced_x,
+};
 use crate::ui::canvas::state::{
     ContextMenuState, ContextMenuTarget, SearcherRowsMode, SearcherState,
 };
@@ -14,9 +15,9 @@ fn overlay_state_changes_do_not_rebuild_derived_geometry_or_spatial_index() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 
@@ -75,9 +76,9 @@ fn overlay_hover_and_scroll_updates_do_not_rebuild_derived_geometry_or_spatial_i
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let (graph, view) = insert_graph_view(&mut host, graph_value);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot0 = canvas.sync_view_state(&mut host);
     let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
 

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "slug": "action-write-surface-fearless-refactor-v1",
+  "title": "Action Write Surface (Fearless Refactor v1)",
+  "status": "closed",
+  "updated": "2026-04-02",
+  "scope_kind": "closeout",
+  "problem": "This lane froze the default app-lane write-side budget on `cx.actions()` and now exists to preserve the closeout evidence without accidentally reopening archived scope.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md"
+    },
+    {
+      "role": "target",
+      "path": "docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/action-write-surface-fearless-refactor-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/action-write-surface-fearless-refactor-v1/MILESTONES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md"
+    }
+  ],
+  "repro": {
+    "summary": "Historical closeout validation for the frozen write budget.",
+    "commands": [
+      "CARGO_TARGET_DIR=target-codex-verify cargo nextest run -p fretboard template"
+    ]
+  },
+  "gates": [
+    {
+      "name": "template-closeout",
+      "command": "CARGO_TARGET_DIR=target-codex-verify cargo nextest run -p fretboard template"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md",
+    "apps/fretboard/src/scaffold/templates.rs",
+    "apps/fret-cookbook/examples/simple_todo.rs",
+    "apps/fret-examples/src/todo_demo.rs"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Do not reopen this lane from archived TODO rows. Start a narrower follow-on only if fresh cross-surface evidence shows the frozen write budget is no longer sufficient."
+  }
+}

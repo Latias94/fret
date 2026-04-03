@@ -40,11 +40,10 @@ fn run_case(zoom: f32, edge_interaction_width: f32, wire_width: f32) -> (bool, b
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.interaction.edge_interaction_width = edge_interaction_width;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.edge_interaction_width = edge_interaction_width;
+        });
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = zoom;
     });
@@ -54,9 +53,7 @@ fn run_case(zoom: f32, edge_interaction_width: f32, wire_width: f32) -> (bool, b
         h
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view)
-        .with_edge_types(edge_types)
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_edge_types(edge_types);
     canvas.style.geometry.wire_width = wire_width;
 
     let mut services = NullServices::default();

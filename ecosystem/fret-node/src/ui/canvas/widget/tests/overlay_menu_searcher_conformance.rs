@@ -10,7 +10,7 @@ use crate::ui::style::NodeGraphStyle;
 
 use super::prelude::NodeGraphCanvas;
 use super::prelude::overlay_hit;
-use super::{TestUiHostImpl, insert_graph_view};
+use super::{TestUiHostImpl, insert_graph_view_editor_config};
 use crate::ui::canvas::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use crate::ui::canvas::state::{
     ContextMenuState, ContextMenuTarget, SearcherRowsMode, SearcherState,
@@ -283,14 +283,15 @@ fn first_enabled_context_menu_item_skips_disabled_entries() {
 #[test]
 fn clamp_context_menu_origin_keeps_menu_rect_inside_visible_canvas_rect() {
     let mut host = TestUiHostImpl::default();
-    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config(&mut host, Graph::new(GraphId::new()));
 
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint { x: 100.0, y: -50.0 };
         s.zoom = 2.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let viewport = NodeGraphCanvas::viewport_from_snapshot(bounds(), &snapshot);
@@ -312,14 +313,15 @@ fn clamp_context_menu_origin_keeps_menu_rect_inside_visible_canvas_rect() {
 #[test]
 fn clamp_searcher_origin_keeps_rect_inside_visible_canvas_rect() {
     let mut host = TestUiHostImpl::default();
-    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config(&mut host, Graph::new(GraphId::new()));
 
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint { x: -250.0, y: 75.0 };
         s.zoom = 0.75;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let viewport = NodeGraphCanvas::viewport_from_snapshot(bounds(), &snapshot);

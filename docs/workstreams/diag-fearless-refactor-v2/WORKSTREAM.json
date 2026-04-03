@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "slug": "diag-fearless-refactor-v2",
+  "title": "Diag Fearless Refactor v2",
+  "status": "active",
+  "updated": "2026-04-02",
+  "scope_kind": "execution",
+  "problem": "Diagnostics is now a shared automation, debugging, and evidence platform. This lane keeps contracts, artifact vocabulary, and orchestration refactors coherent across CLI, GUI, MCP, and CI without reintroducing monolithic growth.",
+  "authoritative_docs": [
+    {
+      "role": "positioning",
+      "path": "docs/workstreams/diag-fearless-refactor-v2/README.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/diag-fearless-refactor-v2/CURRENT_STATUS_AND_PRIORITIES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/diag-fearless-refactor-v2/NEXT_DEVELOPMENT_PRIORITIES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/diag-fearless-refactor-v2/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/diag-fearless-refactor-v2/MILESTONES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Resume this lane from the shared campaign and diagnostics authoring surfaces before touching deeper internals.",
+    "commands": [
+      "cargo run -p fretboard -- diag doctor campaigns",
+      "cargo run -p fretboard -- diag campaign list"
+    ]
+  },
+  "gates": [
+    {
+      "name": "campaign-doctor",
+      "command": "cargo run -p fretboard -- diag doctor campaigns"
+    },
+    {
+      "name": "campaign-manifest-validate",
+      "command": "cargo run -p fretboard -- diag campaign validate tools/diag-campaigns/ui-gallery-smoke.json"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_AUTOMATION_FLOW.md",
+    "docs/workstreams/diag-fearless-refactor-v2/M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md",
+    "docs/workstreams/diag-fearless-refactor-v2/ORCHESTRATED_OUTPUT_EVIDENCE_PATH_CONTRACT_V1.md",
+    "tools/diag-campaigns/ui-gallery-smoke.json",
+    "crates/fret-diag/src/diag_campaign.rs"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane for diagnostics contract, vocabulary, campaign, and maintainer-flow work. Split a new follow-on only when the ask no longer belongs to the shared diagnostics platform boundary."
+  },
+  "follow_on_of": "diag-fearless-refactor-v1"
+}

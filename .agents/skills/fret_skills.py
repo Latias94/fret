@@ -53,7 +53,7 @@ SYMBOL_CHECKS: dict[str, list[tuple[str, str]]] = {
         (".agents/skills/fret-app-ui-builder/references/recipes/INDEX.md", r""),
     ],
     "fret-diag-workflow": [
-        ("apps/fretboard/src/cli.rs", r"\bfretboard\s+diag\s+run\b"),
+        ("apps/fretboard/src/cli/help.rs", r"\bfretboard\s+diag\s+run\b"),
         ("crates/fret-diag-protocol/src/lib.rs", r"\bClickStable\b"),
         ("crates/fret-diag-protocol/src/lib.rs", r"\bEnsureVisible\b"),
         ("crates/fret-diag-protocol/src/lib.rs", r"\bTypeTextInto\b"),
@@ -65,7 +65,7 @@ SYMBOL_CHECKS: dict[str, list[tuple[str, str]]] = {
         ("ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs", r"diag\.script_v2"),
         ("ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs", r"diag\.screenshot_png"),
         ("ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs", r"\bpush_click_stable_trace\b"),
-        ("crates/fret-diag/src/lib.rs", r"\bFRET_DIAG_FIXED_FRAME_DELTA_MS\b"),
+        ("crates/fret-core/src/window.rs", r"\bFRET_DIAG_FIXED_FRAME_DELTA_MS\b"),
         (".agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py", r""),
     ],
     "fret-framework-maintainer-guide": [

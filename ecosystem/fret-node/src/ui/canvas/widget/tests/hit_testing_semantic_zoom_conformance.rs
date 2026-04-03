@@ -4,7 +4,10 @@ use uuid::Uuid;
 use crate::core::{Edge, EdgeId, EdgeKind};
 
 use super::prelude::*;
-use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{
+    TestUiHostImpl, insert_graph_view_editor_config, insert_graph_view_editor_config_with,
+    make_test_graph_two_nodes_with_ports_spaced_x,
+};
 
 fn pan_for_canvas_point_at_window_point(
     canvas_point: Point,
@@ -54,10 +57,8 @@ fn port_hit_testing_is_screen_px_invariant_under_semantic_zoom() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
 
     let anchor_window = Point::new(Px(300.0), Px(200.0));
     let r_px = canvas.style.geometry.pin_radius.max(0.0);
@@ -124,9 +125,6 @@ fn edge_hit_testing_is_screen_px_invariant_under_semantic_zoom() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-
     // Force a straight-line path so the screen-space distance assertions are stable.
     let edge_types =
         crate::ui::NodeGraphEdgeTypes::new().with_fallback_path(|_g, _e, _style, _hint, input| {
@@ -139,15 +137,16 @@ fn edge_hit_testing_is_screen_px_invariant_under_semantic_zoom() {
             })
         });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_edge_types(edge_types);
-
-    let anchor_window = Point::new(Px(320.0), Px(260.0));
-
     // Ensure edge slop dominates wire width so the threshold is unambiguous.
     let edge_slop_px = 12.0_f32;
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edge_interaction_width = edge_slop_px;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.interaction.edge_interaction_width = edge_slop_px;
+        });
+    let mut canvas =
+        new_canvas!(host, graph, view.clone(), editor_config).with_edge_types(edge_types);
+
+    let anchor_window = Point::new(Px(320.0), Px(260.0));
 
     for zoom in [0.5, 1.0, 1.25, 2.0, 4.0] {
         let _ = view.update(&mut host, |s, _cx| {

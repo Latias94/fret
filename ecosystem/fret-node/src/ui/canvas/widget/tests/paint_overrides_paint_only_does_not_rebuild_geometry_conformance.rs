@@ -9,7 +9,7 @@ use crate::core::{Edge, EdgeId, EdgeKind};
 use crate::ui::{EdgePaintOverrideV1, NodeGraphCanvas, NodeGraphPaintOverridesMap, NodeGraphStyle};
 
 use super::{
-    NullServices, TestUiHostImpl, insert_editor_config_with, insert_view,
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config_with,
     make_test_graph_two_nodes_with_ports,
 };
 
@@ -69,21 +69,19 @@ fn paint_overrides_revision_bump_does_not_rebuild_geometry_or_spatial_index() {
     );
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let editor_config = insert_editor_config_with(&mut host, |state| {
-        state.runtime_tuning.only_render_visible_elements = true;
-        state.interaction.frame_view_duration_ms = 0;
-    });
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
+            state.runtime_tuning.only_render_visible_elements = true;
+            state.interaction.frame_view_duration_ms = 0;
+        });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
     });
 
     let overrides = Arc::new(NodeGraphPaintOverridesMap::default());
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-        .with_paint_overrides(overrides.clone())
-        .with_editor_config_model(editor_config);
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config)
+        .with_paint_overrides(overrides.clone());
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);

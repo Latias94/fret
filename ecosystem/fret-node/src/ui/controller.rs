@@ -114,6 +114,10 @@ mod tests {
         NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphSurfaceBinding,
     };
 
+    fn default_editor_config() -> crate::io::NodeGraphEditorConfig {
+        crate::io::NodeGraphEditorConfig::default()
+    }
+
     #[derive(Default)]
     struct TestUiHostImpl {
         globals: HashMap<TypeId, Box<dyn Any>>,
@@ -423,6 +427,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store.clone());
 
@@ -471,9 +476,11 @@ mod tests {
         initial_view.selected_nodes = vec![node_b];
         let graph = host.models.insert(graph_value.clone());
         let view = host.models.insert(initial_view.clone());
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, initial_view));
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            initial_view,
+            default_editor_config(),
+        ));
         let controller = NodeGraphController::new(store.clone());
 
         let mut replacement = Graph::new(
@@ -535,6 +542,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store.clone());
 
@@ -625,6 +633,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store.clone());
         let mut next_view = NodeGraphViewState::default();
@@ -663,9 +672,11 @@ mod tests {
             },
         );
         let view = host.models.insert(NodeGraphViewState::default());
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph, NodeGraphViewState::default()));
+        let store = host.models.insert(NodeGraphStore::new(
+            graph,
+            NodeGraphViewState::default(),
+            default_editor_config(),
+        ));
         let controller = NodeGraphController::new(store.clone());
 
         controller
@@ -696,6 +707,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store);
 
@@ -713,6 +725,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store);
 
@@ -734,6 +747,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store);
 
@@ -759,9 +773,11 @@ mod tests {
         let mut view_state = NodeGraphViewState::default();
         view_state.pan = CanvasPoint { x: 10.0, y: 20.0 };
         view_state.zoom = 2.0;
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, view_state));
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            view_state,
+            default_editor_config(),
+        ));
         let controller = NodeGraphController::new(store);
         let bounds = Rect::new(
             Point::new(Px(100.0), Px(50.0)),
@@ -783,9 +799,11 @@ mod tests {
         let mut view_state = NodeGraphViewState::default();
         view_state.pan = CanvasPoint { x: 10.0, y: 20.0 };
         view_state.zoom = 2.0;
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, view_state));
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            view_state,
+            default_editor_config(),
+        ));
         let controller = NodeGraphController::new(store);
         let bounds = Rect::new(
             Point::new(Px(100.0), Px(50.0)),
@@ -807,6 +825,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store);
         let bounds = Rect::new(
@@ -833,9 +852,11 @@ mod tests {
         let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
         let mut store_view = NodeGraphViewState::default();
         store_view.zoom = 2.0;
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, store_view));
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            store_view,
+            default_editor_config(),
+        ));
         let controller = NodeGraphController::new(store);
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -863,6 +884,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store);
         let bounds = Rect::new(
@@ -912,9 +934,11 @@ mod tests {
                 Vec::new(),
             ),
         );
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph, NodeGraphViewState::default()));
+        let store = host.models.insert(NodeGraphStore::new(
+            graph,
+            NodeGraphViewState::default(),
+            default_editor_config(),
+        ));
         let controller = NodeGraphController::new(store);
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -991,9 +1015,11 @@ mod tests {
                 Vec::new(),
             ),
         );
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph, NodeGraphViewState::default()));
+        let store = host.models.insert(NodeGraphStore::new(
+            graph,
+            NodeGraphViewState::default(),
+            default_editor_config(),
+        ));
         let controller = NodeGraphController::new(store);
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1051,6 +1077,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store);
         let bounds = Rect::new(
@@ -1102,6 +1129,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store);
         let bounds = Rect::new(
@@ -1164,9 +1192,11 @@ mod tests {
                 reconnectable: None,
             },
         );
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph, NodeGraphViewState::default()));
+        let store = host.models.insert(NodeGraphStore::new(
+            graph,
+            NodeGraphViewState::default(),
+            default_editor_config(),
+        ));
         let controller = NodeGraphController::new(store);
         let expected = HandleConnection {
             edge,
@@ -1256,13 +1286,16 @@ mod tests {
         );
         let graph = host.models.insert(graph_value.clone());
         let view = host.models.insert(NodeGraphViewState::default());
+        let editor_config = host.models.insert(default_editor_config());
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let binding = NodeGraphSurfaceBinding::from_models_and_controller(
             graph,
             view,
+            editor_config,
             NodeGraphController::new(store),
         );
         let expected = HandleConnection {
@@ -1308,6 +1341,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store.clone());
 
@@ -1340,6 +1374,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store);
         let missing = NodeId::from_u128(0x9007);
@@ -1373,6 +1408,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store.clone());
 
@@ -1418,13 +1454,16 @@ mod tests {
         );
         let graph = host.models.insert(graph_value.clone());
         let view = host.models.insert(NodeGraphViewState::default());
+        let editor_config = host.models.insert(default_editor_config());
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let binding = NodeGraphSurfaceBinding::from_models_and_controller(
             graph.clone(),
             view,
+            editor_config,
             NodeGraphController::new(store.clone()),
         );
 
@@ -1475,6 +1514,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store.clone());
         let tx = GraphTransaction {
@@ -1506,6 +1546,7 @@ mod tests {
         let store = host.models.insert(NodeGraphStore::new(
             graph_value,
             NodeGraphViewState::default(),
+            default_editor_config(),
         ));
         let controller = NodeGraphController::new(store);
         let tx = GraphTransaction {
@@ -1536,9 +1577,11 @@ mod tests {
         let graph = host.models.insert(graph_value.clone());
         let initial_view = NodeGraphViewState::default();
         let view_state = host.models.insert(initial_view.clone());
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, initial_view));
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            initial_view,
+            default_editor_config(),
+        ));
         let controller = NodeGraphController::new(store.clone());
         let tx = GraphTransaction {
             label: Some("Move Node".to_string()),

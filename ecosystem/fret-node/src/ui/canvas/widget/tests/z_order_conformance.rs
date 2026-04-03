@@ -3,8 +3,7 @@ use crate::core::{
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 
-use super::prelude::NodeGraphCanvas;
-use super::{TestUiHostImpl, insert_view};
+use super::{TestUiHostImpl, insert_graph_view_editor_config};
 
 #[test]
 fn edges_are_sorted_by_endpoint_z_order() {
@@ -153,15 +152,14 @@ fn edges_are_sorted_by_endpoint_z_order() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         // Put node C on top (highest z). Edge C->B should therefore be drawn above A->B.
         s.draw_order = vec![a, b, c];
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, index) = canvas.canvas_derived(&host, &snapshot);
     let render = canvas.collect_render_data(

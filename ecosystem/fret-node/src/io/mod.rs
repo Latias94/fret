@@ -205,15 +205,6 @@ pub struct NodeGraphViewState {
     /// Explicit group draw order (optional).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub group_draw_order: Vec<GroupId>,
-    #[cfg(test)]
-    #[serde(
-        default,
-        skip_serializing_if = "NodeGraphInteractionConfig::is_default"
-    )]
-    pub interaction: NodeGraphInteractionConfig,
-    #[cfg(test)]
-    #[serde(default, skip_serializing_if = "NodeGraphRuntimeTuning::is_default")]
-    pub runtime_tuning: NodeGraphRuntimeTuning,
 }
 
 impl Default for NodeGraphViewState {
@@ -226,20 +217,11 @@ impl Default for NodeGraphViewState {
             selected_groups: Vec::new(),
             draw_order: Vec::new(),
             group_draw_order: Vec::new(),
-            #[cfg(test)]
-            interaction: NodeGraphInteractionConfig::default(),
-            #[cfg(test)]
-            runtime_tuning: NodeGraphRuntimeTuning::default(),
         }
     }
 }
 
 impl NodeGraphViewState {
-    #[cfg(test)]
-    pub fn resolved_interaction_state(&self) -> NodeGraphInteractionState {
-        NodeGraphInteractionState::from_parts(&self.interaction, &self.runtime_tuning)
-    }
-
     /// Removes stale IDs (selection / draw order) that no longer exist in the target graph.
     pub fn sanitize_for_graph(&mut self, graph: &Graph) {
         let visible_node = |id: &NodeId| graph.nodes.get(id).is_some_and(|n| !n.hidden);
@@ -275,10 +257,6 @@ impl From<NodeGraphPureViewState> for NodeGraphViewState {
             selected_groups: value.selected_groups,
             draw_order: value.draw_order,
             group_draw_order: value.group_draw_order,
-            #[cfg(test)]
-            interaction: NodeGraphInteractionConfig::default(),
-            #[cfg(test)]
-            runtime_tuning: NodeGraphRuntimeTuning::default(),
         }
     }
 }
@@ -1385,25 +1363,7 @@ pub struct NodeGraphViewStateFileV1 {
 
 impl NodeGraphViewStateFileV1 {
     /// Wraps state for a graph.
-    pub fn new(graph_id: GraphId, state: NodeGraphViewState) -> Self {
-        #[cfg(test)]
-        {
-            return Self::new_with_editor_config(
-                graph_id,
-                state.clone(),
-                NodeGraphEditorConfig {
-                    interaction: state.interaction.clone(),
-                    runtime_tuning: state.runtime_tuning,
-                },
-            );
-        }
-        #[cfg(not(test))]
-        {
-            Self::new_with_editor_config(graph_id, state, NodeGraphEditorConfig::default())
-        }
-    }
-
-    pub fn new_with_editor_config(
+    pub fn new(
         graph_id: GraphId,
         state: NodeGraphViewState,
         editor_config: NodeGraphEditorConfig,
@@ -1575,13 +1535,6 @@ fn parse_wrapped_view_state_json_values(
         migrated_runtime_tuning
     };
     let state = NodeGraphViewState::from(state);
-    #[cfg(test)]
-    let mut state = state;
-    #[cfg(test)]
-    {
-        state.interaction = interaction.clone();
-        state.runtime_tuning = runtime_tuning;
-    }
     Ok(ParsedNodeGraphViewDocument {
         state,
         interaction,
@@ -1658,13 +1611,7 @@ fn parse_view_state_json_value(
         selected_groups: legacy.selected_groups,
         draw_order: legacy.draw_order,
         group_draw_order: legacy.group_draw_order,
-        #[cfg(test)]
-        interaction: interaction.clone(),
-        #[cfg(test)]
-        runtime_tuning,
     };
-    #[cfg(not(test))]
-    let _ = (&interaction, runtime_tuning);
 
     Ok(ParsedNodeGraphViewDocument {
         state,
@@ -1695,11 +1642,7 @@ mod tests {
         editor_config.interaction.selection_on_drag = true;
         editor_config.runtime_tuning.only_render_visible_elements = false;
 
-        let file = NodeGraphViewStateFileV1::new_with_editor_config(
-            graph_id,
-            state.clone(),
-            editor_config.clone(),
-        );
+        let file = NodeGraphViewStateFileV1::new(graph_id, state.clone(), editor_config.clone());
         file.save_json(&path).unwrap();
 
         let root: serde_json::Value =
@@ -1829,7 +1772,11 @@ mod tests {
         let other = GraphId::new();
         let path = temp_path("view_state_wrong_graph_id", graph_id);
 
-        let file = NodeGraphViewStateFileV1::new(graph_id, NodeGraphViewState::default());
+        let file = NodeGraphViewStateFileV1::new(
+            graph_id,
+            NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
+        );
         file.save_json(&path).unwrap();
 
         let err = NodeGraphViewStateFileV1::load_json(&path, other).unwrap_err();

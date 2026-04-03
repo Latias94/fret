@@ -18,7 +18,7 @@ use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 
 use super::prelude::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl, insert_view};
+use super::{NullServices, TestUiHostImpl, insert_view_editor_config};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -113,7 +113,7 @@ fn portal_measured_node_sizes_are_observed_by_canvas_internals_on_next_paint() {
     set_portal_content_size(&mut graph_value, node_id, 320.0, 180.0);
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
     let measured = Arc::new(MeasuredGeometryStore::new());
     let internals = Arc::new(NodeGraphInternalsStore::new());
@@ -123,7 +123,7 @@ fn portal_measured_node_sizes_are_observed_by_canvas_internals_on_next_paint() {
     // surface: the canvas stays policy-light, while hosts can push measured geometry in.
     let presenter =
         MeasuredNodeGraphPresenter::new(DefaultNodeGraphPresenter::default(), measured.clone());
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+    let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config)
         .with_presenter(presenter)
         .with_internals_store(internals.clone());
 

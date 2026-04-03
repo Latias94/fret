@@ -1,6 +1,6 @@
 # Workstream: `fret-node` Fearless Refactor (v1)
 
-Status: Reframed and active (last updated 2026-04-01)
+Status: Reframed and active (last updated 2026-04-02)
 Quick navigation:
 
 - `design.md` - current surface map + next worktree order
@@ -49,7 +49,8 @@ However, the overall authoring story is still not fully converged:
 
 - the public recommendation is split between paint-only and retained-backed paths,
 - the declarative surface is not yet the transaction-safe editor-grade path,
-- `NodeGraphViewState` currently mixes pure view state with interaction policy and runtime tuning,
+- the pure view-state vs editor-config split is now landed in code, but the authoring story still
+  needs to teach that boundary consistently,
 - runtime capabilities are spread across store, queues, lookups, commands, and helpers without one
   obvious app-facing facade pair (`NodeGraphSurfaceBinding` + `NodeGraphController`),
 - some workstream content has become too implementation-local and no longer helps reviewers decide
@@ -140,14 +141,21 @@ update rather than an incidental refactor.
   - Persistence ownership is now explicit: `NodeGraphViewStateFileV1` writes pure view-state in
     `state`, with `interaction` and `runtime_tuning` promoted to wrapper-owned fields.
   - Example surfaces now follow that split too: retained canvas mirrors an explicit
-    `NodeGraphEditorConfig`, tuning/controls overlays consume the editor-config seam, and
+    `NodeGraphEditorConfig`, tuning/controls overlays consume the editor-config seam from their
+    constructor boundary, and
     view-state persistence saves the wrapper payload instead of mutating `NodeGraphViewState`.
-  - The remaining compatibility residue is test-only: `cfg(test)` bridges still mirror editor
-    config back into `NodeGraphViewState` so older tests keep compiling while the suite migrates.
+  - The last test-only compatibility bridge is now removed: retained/declarative tests bind
+    explicit editor-config seams instead of mirroring editor config back into `NodeGraphViewState`.
+  - Retained compatibility surfaces now also teach explicit editor-config ownership at their public
+    constructor boundary: `NodeGraphCanvas::new(...)`, `NodeGraphCanvas::new_with_middleware(...)`,
+    `NodeGraphSurfaceCompatRetainedProps::new(...)`, and `NodeGraphControlsOverlay::new(...)` all
+    require an editor-config model instead of manufacturing one internally.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing
     bundle) plus `NodeGraphController` (lower-level imperative/runtime facade).
+  - Advanced mirror-owned bindings now also carry an explicit `NodeGraphEditorConfig` model, so
+    binding-driven controlled sync no longer depends on optional config mirrors or implicit defaults.
   - The remaining gap is helper breadth and internal organization: viewport helpers, lookups,
     commands, store subscriptions, and controlled updates still need to keep converging on that
     pair without regrowing god files.
@@ -170,19 +178,22 @@ convergence slices.
   - `ecosystem/fret-node/src/ui/controller.rs`
   - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` focused controller/store-backed tests
 
-### H2. Test-only compatibility bridges still obscure the pure view-state boundary
+### H2. Retained compatibility surfaces must keep teaching explicit editor-config ownership
 
-- Release/runtime `NodeGraphViewState` is now pure view state; the remaining hazard is narrower:
-  old tests still rely on a `cfg(test)` bridge that mirrors `NodeGraphEditorConfig` back into
-  `NodeGraphViewState`.
-- That bridge is intentionally temporary and should be deleted once the remaining tests and helper
-  surfaces are moved to the explicit editor-config seam.
+- Release/runtime `NodeGraphViewState` is now pure view state, and the old `cfg(test)` mirror
+  bridge is gone. The remaining hazard is API-story drift on retained compatibility surfaces.
+- If retained constructors or first-party demos reintroduce implicit `NodeGraphEditorConfig`
+  fallbacks, downstream authors will relearn the wrong seam even though the runtime split is
+  already correct.
 - Evidence:
   - `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphViewState`, `NodeGraphInteractionConfig`,
     `NodeGraphRuntimeTuning`, `NodeGraphInteractionState`)
   - `ecosystem/fret-node/src/runtime/store.rs`
   - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
   - `ecosystem/fret-node/src/ui/canvas/widget/view_state/sync.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/widget_surface.rs`
+  - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
+  - `ecosystem/fret-node/src/ui/overlays/controls.rs`
   - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md` (`M2`)
 
 ### H3. `NodeGraphController` is landed, but not yet fully closed as the teaching surface
@@ -296,8 +307,9 @@ Source-policy tests now lock that posture across retained canvas / portal / rena
 blackboard / minimap surfaces, and the workflow gallery now constructs its retained controller from
 `binding.store_model()` instead of teaching a hidden controller escape hatch on the binding.
 The explicit advanced binding constructor is now named
-`NodeGraphSurfaceBinding::from_models_and_controller(...)`, so mirror-owned/controller-owned wiring
-does not read like a routine convenience constructor.
+`NodeGraphSurfaceBinding::from_models_and_controller(...)`, and it now requires explicit
+`graph + view_state + editor_config + controller` ownership, so mirror-owned/controller-owned
+wiring does not read like a routine convenience constructor or silently fall back to default config.
 `NodeGraphSurfaceBinding` itself is now split across `binding.rs` plus focused companion modules
 (`binding_queries.rs`, `binding_store_sync.rs`, `binding_viewport.rs`), and source-policy tests now
 aggregate that surface instead of forcing the contract to live in one growing file.
@@ -463,7 +475,7 @@ Concretely:
 
 For new editor surfaces, teach and copy this shape first:
 
-1. create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`,
+1. create one `NodeGraphSurfaceBinding::new(models, graph, view_state, editor_config)`,
 2. render `node_graph_surface(cx, binding.surface_props())` for the default surface props,
 3. use the binding itself for common app-facing helpers (`viewport`, `graph_snapshot`,
    `view_state_snapshot`, `set_viewport`, `set_center_in_bounds`, `fit_view_nodes_in_bounds`,
@@ -499,6 +511,8 @@ Until then, the compatibility path should stay bounded to:
 - the legacy demo as a compatibility harness,
 - focused retained conformance tests,
 - temporary parity investigations where declarative evidence is still missing.
+- even there, the declarative boundary should still pass explicit controller/editor-config seams
+  into the retained subtree rather than letting retained widgets synthesize policy defaults.
 
 ### Exit criteria for `compat-retained-canvas`
 

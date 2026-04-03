@@ -4,7 +4,19 @@ Use this note when the framework change touches a hard contract or crosses crate
 
 Goal: leave behind a change that is reviewable, reproducible, and aligned with ADR-driven evolution.
 
-## 1) ADR and alignment checklist
+## 1) Goal-backward verify first
+
+Before choosing gates or updating docs, write 3-5 must-be-true outcomes.
+
+For each outcome, name:
+
+- the supporting artifacts,
+- the critical wiring,
+- and the proof you will leave behind.
+
+Use `.agents/skills/fret-skills-playbook/references/goal-backward-verification.md` as the shared reference.
+
+## 2) ADR and alignment checklist
 
 If the change affects input, focus, overlays, text, diagnostics, or other hard-to-change behavior:
 
@@ -14,7 +26,7 @@ If the change affects input, focus, overlays, text, diagnostics, or other hard-t
   - 1–3 evidence anchors (paths + tests/scripts)
 - Keep the implementation note narrow: document the contract change, not every incidental refactor.
 
-## 2) Diagnostics and perf gates
+## 3) Diagnostics and perf gates
 
 Treat diagnostics artifacts as first-class regression protection:
 
@@ -26,7 +38,7 @@ Treat diagnostics artifacts as first-class regression protection:
 
 Use `.agents/skills/fret-diag-workflow/SKILL.md` as the canonical runbook for running and packaging artifacts.
 
-## 3) Refactor guardrails
+## 4) Refactor guardrails
 
 Before/after a refactor that may cross boundaries:
 
@@ -40,7 +52,7 @@ Before/after a refactor that may cross boundaries:
   - `apps/fret-ui-gallery/src/ui/snippets/**`
   - `apps/fret-ui-gallery/src/lib.rs`
 
-## 4) Deliverables 3-pack
+## 5) Deliverables 3-pack
 
 Every non-trivial maintainer change should leave:
 
@@ -50,7 +62,7 @@ Every non-trivial maintainer change should leave:
 
 See `fret-skills-playbook` for the shared wording and expectations.
 
-## 5) Release-facing follow-up
+## 6) Release-facing follow-up
 
 If the change affects publishable crates or release automation, do not improvise release policy inside this skill.
 
@@ -59,7 +71,7 @@ Instead:
 - switch to `fret-release-check-and-publish` for release scope, version-group, and CI publish checks
 - leave a clear note in the maintainer change summary if release follow-up is required
 
-## 6) High-signal anchors to keep handy
+## 7) High-signal anchors to keep handy
 
 - `docs/architecture.md`
 - `docs/dependency-policy.md`

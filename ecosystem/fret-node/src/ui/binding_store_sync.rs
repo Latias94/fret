@@ -1,15 +1,12 @@
 use super::*;
-use crate::io::NodeGraphEditorConfig;
-
 impl NodeGraphSurfaceBinding {
     /// Re-syncs the graph/view mirrors from the authoritative store.
     pub fn sync_from_store<H: UiHost>(&self, host: &mut H) -> bool {
         let controller = self.controller();
         let graph_view_synced =
             controller.sync_models_from_store(host, &self.graph, &self.view_state);
-        let config_synced = self.editor_config.as_ref().is_none_or(|editor_config| {
-            controller.sync_editor_config_model_from_store(host, editor_config)
-        });
+        let config_synced =
+            controller.sync_editor_config_model_from_store(host, &self.editor_config);
         graph_view_synced && config_synced
     }
 
@@ -18,9 +15,8 @@ impl NodeGraphSurfaceBinding {
         let controller = self.controller();
         let graph_view_synced =
             controller.sync_models_from_store_action_host(host, &self.graph, &self.view_state);
-        let config_synced = self.editor_config.as_ref().is_none_or(|editor_config| {
-            controller.sync_editor_config_model_from_store_action_host(host, editor_config)
-        });
+        let config_synced =
+            controller.sync_editor_config_model_from_store_action_host(host, &self.editor_config);
         graph_view_synced && config_synced
     }
 
@@ -105,9 +101,8 @@ impl NodeGraphSurfaceBinding {
     ) -> Result<(), NodeGraphControllerError> {
         let editor_config = self
             .editor_config
-            .as_ref()
-            .and_then(|editor_config| editor_config.read_ref(host, |config| config.clone()).ok())
-            .unwrap_or_default();
+            .read_ref(host, |config| config.clone())
+            .expect("binding editor-config model must stay readable");
         self.controller().replace_document_with_editor_config(
             host,
             graph,
@@ -126,14 +121,10 @@ impl NodeGraphSurfaceBinding {
         graph: Graph,
         view_state: NodeGraphViewState,
     ) -> Result<(), NodeGraphControllerError> {
-        let editor_config = if let Some(editor_config) = self.editor_config.as_ref() {
-            host.models_mut()
-                .read(editor_config, |config| config.clone())
-                .ok()
-                .unwrap_or_default()
-        } else {
-            NodeGraphEditorConfig::default()
-        };
+        let editor_config = host
+            .models_mut()
+            .read(&self.editor_config, |config| config.clone())
+            .expect("binding editor-config model must stay readable");
         self.controller()
             .replace_document_with_editor_config_action_host(
                 host,

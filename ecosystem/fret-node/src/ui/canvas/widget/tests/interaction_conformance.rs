@@ -14,8 +14,9 @@ use super::prelude::{
     node_drag, node_resize, pending_drag, pointer_up, wire_drag,
 };
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_view,
-    make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
+    NullServices, TestUiHostImpl, event_cx, insert_editor_config_with, insert_view,
+    insert_view_editor_config, make_test_graph_two_nodes_with_ports_spaced_x,
+    make_test_graph_two_nodes_with_size,
 };
 use crate::ui::canvas::state::{EdgeDrag, PendingGroupDrag, PendingGroupResize, WireDragKind};
 use crate::ui::canvas::state::{GroupResize, NodeDrag, NodeResize, NodeResizeHandle};
@@ -170,8 +171,8 @@ fn child_node_drag_is_clamped_to_group_when_expand_parent_is_false() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {
@@ -297,8 +298,8 @@ fn child_node_drag_expands_group_when_expand_parent_is_true() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {
@@ -430,8 +431,8 @@ fn node_drag_respects_per_node_extent_rect() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {
@@ -566,11 +567,12 @@ fn multi_node_drag_clamps_by_selection_bounds_in_node_extent_rect() {
             height: 100.0,
         },
     };
-    let mut view_state = NodeGraphViewState::default();
-    view_state.interaction.node_extent = Some(extent);
-    let view = host.models.insert(view_state);
+    let view = host.models.insert(NodeGraphViewState::default());
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.node_extent = Some(extent);
+    });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_drag = Some(NodeDrag {
@@ -715,8 +717,8 @@ fn node_resize_expands_group_when_expand_parent_is_true() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.node_resize = Some(NodeResize {
@@ -864,8 +866,8 @@ fn group_resize_is_previewed_and_committed_on_pointer_up() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     canvas.interaction.group_resize = Some(GroupResize {
@@ -954,15 +956,17 @@ fn group_header_click_selects_group_and_arms_pending_group_drag() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+    });
     let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
         s.selected_nodes.clear();
         s.selected_edges.clear();
         s.selected_groups.clear();
         s.group_draw_order.clear();
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -1032,8 +1036,8 @@ fn pending_group_drag_release_clears_session_without_committing() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     canvas.interaction.pending_group_drag = Some(PendingGroupDrag {
         group: group_id,
@@ -1097,8 +1101,8 @@ fn pending_group_resize_release_clears_session_without_committing() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     canvas.interaction.pending_group_resize = Some(PendingGroupResize {
         group: group_id,
@@ -1145,13 +1149,15 @@ fn background_click_does_not_start_marquee_when_elements_not_selectable() {
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = false;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a];
-        s.interaction.elements_selectable = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -1202,13 +1208,15 @@ fn background_click_starts_pending_marquee_and_clears_selection_on_up() {
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a];
-        s.interaction.elements_selectable = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -1258,14 +1266,16 @@ fn shift_clicking_a_node_does_not_clear_selection() {
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.selection_on_drag = false;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a];
-        s.interaction.elements_selectable = true;
-        s.interaction.selection_on_drag = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -1322,15 +1332,17 @@ fn marquee_replace_mode_replaces_selection_even_with_ctrl_pressed() {
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.selection_on_drag = true;
+        state.interaction.pane_click_distance = 0.0;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a];
-        s.interaction.elements_selectable = true;
-        s.interaction.selection_on_drag = true;
-        s.interaction.pane_click_distance = 0.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -1393,16 +1405,15 @@ fn marquee_selects_connected_edges_for_selected_nodes() {
         .flatten()
         .expect("from port exists");
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
-        s.interaction.edges_selectable = true;
-        s.interaction.selection_on_drag = true;
-        s.interaction.pane_click_distance = 0.0;
-        s.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::Connected;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.edges_selectable = true;
+        state.interaction.selection_on_drag = true;
+        state.interaction.pane_click_distance = 0.0;
+        state.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::Connected;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -1462,20 +1473,24 @@ fn marquee_selects_connected_edges_for_selected_nodes_with_store() {
         .map(|p| p.node)
         .expect("from port exists");
 
-    let mut store_view = NodeGraphViewState::default();
-    store_view.interaction.elements_selectable = true;
-    store_view.interaction.edges_selectable = true;
-    store_view.interaction.selection_on_drag = true;
-    store_view.interaction.pane_click_distance = 0.0;
-    store_view.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::Connected;
+    let store_view = NodeGraphViewState::default();
+    let mut store_editor_config = crate::io::NodeGraphEditorConfig::default();
+    store_editor_config.interaction.elements_selectable = true;
+    store_editor_config.interaction.edges_selectable = true;
+    store_editor_config.interaction.selection_on_drag = true;
+    store_editor_config.interaction.pane_click_distance = 0.0;
+    store_editor_config.interaction.box_select_edges =
+        crate::io::NodeGraphBoxSelectEdges::Connected;
 
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value, store_view));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        store_view,
+        store_editor_config,
+    ));
     let graph = host.models.insert(Graph::default());
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_store(store.clone());
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_store(store.clone());
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -1539,16 +1554,15 @@ fn marquee_does_not_select_edges_when_edge_selectable_is_false() {
         .flatten()
         .expect("from port exists");
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
-        s.interaction.edges_selectable = true;
-        s.interaction.selection_on_drag = true;
-        s.interaction.pane_click_distance = 0.0;
-        s.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::Connected;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.edges_selectable = true;
+        state.interaction.selection_on_drag = true;
+        state.interaction.pane_click_distance = 0.0;
+        state.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::Connected;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -1607,16 +1621,15 @@ fn marquee_does_not_select_edges_when_box_select_edges_is_none() {
         .flatten()
         .expect("from port exists");
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
-        s.interaction.edges_selectable = true;
-        s.interaction.selection_on_drag = true;
-        s.interaction.pane_click_distance = 0.0;
-        s.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::None;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.edges_selectable = true;
+        state.interaction.selection_on_drag = true;
+        state.interaction.pane_click_distance = 0.0;
+        state.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::None;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -1686,16 +1699,15 @@ fn marquee_selects_edges_only_when_both_endpoints_selected_in_both_endpoints_mod
         .flatten()
         .expect("to port exists");
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
-        s.interaction.edges_selectable = true;
-        s.interaction.selection_on_drag = true;
-        s.interaction.pane_click_distance = 0.0;
-        s.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::BothEndpoints;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.edges_selectable = true;
+        state.interaction.selection_on_drag = true;
+        state.interaction.pane_click_distance = 0.0;
+        state.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::BothEndpoints;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -1799,15 +1811,17 @@ fn multi_selection_active_does_not_clear_edge_selection_when_clicking_node() {
         .flatten()
         .expect("port exists");
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.edges_selectable = true;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
-        s.interaction.edges_selectable = true;
         s.selected_edges = vec![edge];
         s.selected_nodes.clear();
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -1874,10 +1888,12 @@ fn edge_click_clears_node_selection_when_not_in_multi_select_mode() {
         .flatten()
         .expect("from port exists");
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.edges_selectable = true;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
-        s.interaction.edges_selectable = true;
         s.selected_nodes = vec![a];
         s.selected_edges.clear();
         s.selected_groups.clear();
@@ -1889,7 +1905,8 @@ fn edge_click_clears_node_selection_when_not_in_multi_select_mode() {
             h
         });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_edge_types(edge_types);
+    let mut canvas =
+        new_canvas!(host, graph, view.clone(), editor_config).with_edge_types(edge_types);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let geom = canvas.canvas_geometry(&host, &snapshot);
@@ -1963,10 +1980,12 @@ fn edge_click_does_not_select_edge_when_edge_selectable_is_false() {
         .flatten()
         .expect("from port exists");
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.edges_selectable = true;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
-        s.interaction.edges_selectable = true;
         s.selected_nodes = vec![a];
         s.selected_edges.clear();
         s.selected_groups.clear();
@@ -1978,7 +1997,8 @@ fn edge_click_does_not_select_edge_when_edge_selectable_is_false() {
             h
         });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_edge_types(edge_types);
+    let mut canvas =
+        new_canvas!(host, graph, view.clone(), editor_config).with_edge_types(edge_types);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let geom = canvas.canvas_geometry(&host, &snapshot);
@@ -2055,15 +2075,17 @@ fn node_click_does_not_select_node_when_node_selectable_is_false() {
         .flatten()
         .expect("to port exists");
     let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+    });
 
     let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
         s.selected_nodes = vec![b];
         s.selected_edges.clear();
         s.selected_groups.clear();
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -2118,14 +2140,13 @@ fn node_drag_does_not_start_when_node_draggable_is_false() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
-        s.interaction.nodes_draggable = true;
-        s.interaction.node_drag_threshold = 0.0;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.nodes_draggable = true;
+        state.interaction.node_drag_threshold = 0.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -2177,14 +2198,13 @@ fn node_drag_does_not_start_when_nodes_draggable_is_false() {
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
-        s.interaction.nodes_draggable = false;
-        s.interaction.node_drag_threshold = 0.0;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.nodes_draggable = false;
+        state.interaction.node_drag_threshold = 0.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -2257,16 +2277,15 @@ fn marquee_does_not_select_nodes_when_node_selectable_is_false() {
         .flatten()
         .expect("to node exists");
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.elements_selectable = true;
-        s.interaction.edges_selectable = true;
-        s.interaction.selection_on_drag = true;
-        s.interaction.pane_click_distance = 0.0;
-        s.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::Connected;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.elements_selectable = true;
+        state.interaction.edges_selectable = true;
+        state.interaction.selection_on_drag = true;
+        state.interaction.pane_click_distance = 0.0;
+        state.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::Connected;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -2321,13 +2340,12 @@ fn port_click_does_not_start_wire_drag_when_nodes_connectable_is_false() {
     let (graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.nodes_connectable = false;
-        s.interaction.connect_on_click = false;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.nodes_connectable = false;
+        state.interaction.connect_on_click = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
     let pos = geom.port_center(from).expect("from port center");
@@ -2374,13 +2392,12 @@ fn port_click_starts_wire_drag_when_node_connectable_true_even_if_nodes_connecta
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.nodes_connectable = false;
-        s.interaction.connect_on_click = false;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.nodes_connectable = false;
+        state.interaction.connect_on_click = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
     let pos = geom.port_center(from).expect("from port center");
@@ -2422,13 +2439,12 @@ fn port_click_does_not_start_wire_drag_when_port_connectable_start_is_false() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.nodes_connectable = true;
-        s.interaction.connect_on_click = false;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.nodes_connectable = true;
+        state.interaction.connect_on_click = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
     let pos = geom.port_center(from).expect("from port center");
@@ -2465,18 +2481,21 @@ fn ctrl_click_port_yanks_edges_and_starts_reconnect_with_store() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, from, to) = make_test_graph_edge_reconnect();
 
-    let mut store_view = NodeGraphViewState::default();
-    store_view.interaction.nodes_connectable = true;
-    store_view.interaction.edges_reconnectable = true;
-    store_view.interaction.connect_on_click = false;
+    let store_view = NodeGraphViewState::default();
+    let mut store_editor_config = crate::io::NodeGraphEditorConfig::default();
+    store_editor_config.interaction.nodes_connectable = true;
+    store_editor_config.interaction.edges_reconnectable = true;
+    store_editor_config.interaction.connect_on_click = false;
 
-    let store = host
-        .models
-        .insert(NodeGraphStore::new(graph_value.clone(), store_view));
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value.clone(),
+        store_view,
+        store_editor_config,
+    ));
     let graph = host.models.insert(Graph::default());
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_store(store);
+    let mut canvas = new_canvas!(host, graph, view, editor_config).with_store(store);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
     let pos = geom.port_center(from).expect("from port center");
@@ -2534,13 +2553,12 @@ fn port_connectable_override_allows_start_even_when_nodes_connectable_is_false()
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.nodes_connectable = false;
-        s.interaction.connect_on_click = false;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.nodes_connectable = false;
+        state.interaction.connect_on_click = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
     let pos = geom.port_center(from).expect("from port center");
@@ -2577,13 +2595,12 @@ fn click_connect_target_port_click_commits_wire_and_clears_click_connect_state()
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.nodes_connectable = true;
-        s.interaction.connect_on_click = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.nodes_connectable = true;
+        state.interaction.connect_on_click = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
     let pos = geom.port_center(b_in).expect("target port center");
@@ -2646,13 +2663,12 @@ fn pick_target_port_respects_port_connectable_end() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.nodes_connectable = true;
-        s.interaction.connection_mode = crate::interaction::NodeGraphConnectionMode::Strict;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.nodes_connectable = true;
+        state.interaction.connection_mode = crate::interaction::NodeGraphConnectionMode::Strict;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
     let to_center = geom.port_center(to).expect("to port center");
@@ -2764,9 +2780,9 @@ fn connectable_false_prevents_connecting_to_target_port() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -2805,9 +2821,9 @@ fn edge_reconnect_requires_drag_threshold_before_starting_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let geom = canvas.canvas_geometry(&host, &snapshot);
@@ -2884,9 +2900,9 @@ fn edge_reconnect_drag_cancels_when_endpoint_not_reconnectable() {
     ));
 
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let geom = canvas.canvas_geometry(&host, &snapshot);
@@ -2939,12 +2955,11 @@ fn edge_reconnectable_endpoint_override_allows_anchors_even_when_global_is_disab
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edges_reconnectable = false;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.edges_reconnectable = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
 
@@ -3006,12 +3021,11 @@ fn edge_reconnectable_target_override_allows_only_target_anchor_when_global_disa
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edges_reconnectable = false;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.edges_reconnectable = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
 
@@ -3071,12 +3085,11 @@ fn edge_reconnectable_bool_false_disables_anchors_even_when_global_enabled() {
 
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edges_reconnectable = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.edges_reconnectable = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
 
@@ -3116,12 +3129,11 @@ fn edge_reconnectable_none_follows_global_gate_for_anchors() {
     let (graph_value, edge, from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edges_reconnectable = false;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.edges_reconnectable = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);
 
@@ -3161,11 +3173,11 @@ fn edge_reconnect_drop_on_empty_can_disconnect_edge() {
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
 
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.reconnect_on_drop_empty = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.reconnect_on_drop_empty = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
@@ -3205,9 +3217,9 @@ fn window_focus_lost_cancels_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
             edge,
@@ -3249,9 +3261,9 @@ fn pointer_left_cancels_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
             edge,
@@ -3307,14 +3319,13 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.snaplines = false;
-        s.interaction.snap_to_grid = false;
-        s.interaction.auto_pan.on_node_drag = false;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.snaplines = false;
+        state.interaction.snap_to_grid = false;
+        state.interaction.auto_pan.on_node_drag = false;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let bounds = Rect::new(
@@ -3377,9 +3388,9 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_wire_reconnec
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let mut canvas = new_canvas!(host, graph.clone(), view, editor_config);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
             edge,
@@ -3432,9 +3443,9 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_new_wire_drag
     let mut host = TestUiHostImpl::default();
     let (graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::New {
             from,
@@ -3489,9 +3500,9 @@ fn right_click_cancels_wire_drag_and_opens_context_menu() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
 
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
@@ -3536,12 +3547,11 @@ fn right_pan_defers_context_menu_until_pointer_up() {
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.pan_on_drag.right = true;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.pan_on_drag.right = true;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -3592,14 +3602,13 @@ fn right_pan_drag_does_not_open_context_menu() {
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
     let view = insert_view(&mut host);
-
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.pan_on_drag.right = true;
-        s.interaction.pan_on_scroll = false;
-        s.interaction.pane_click_distance = 2.0;
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.pan_on_drag.right = true;
+        state.interaction.pan_on_scroll = false;
+        state.interaction.pane_click_distance = 2.0;
     });
 
-    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),

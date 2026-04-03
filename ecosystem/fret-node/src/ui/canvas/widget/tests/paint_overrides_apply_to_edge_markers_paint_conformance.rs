@@ -10,7 +10,10 @@ use crate::ui::edge_types::NodeGraphEdgeTypes;
 use crate::ui::presenter::EdgeMarker;
 use crate::ui::{EdgePaintOverrideV1, NodeGraphCanvas, NodeGraphPaintOverridesMap};
 
-use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+use super::{
+    NullServices, TestUiHostImpl, insert_graph_view_editor_config,
+    make_test_graph_two_nodes_with_ports,
+};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -68,11 +71,11 @@ fn paint_overrides_can_drive_edge_marker_paint_binding() {
     );
 
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = insert_view(&mut host);
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
 
     let overrides = Arc::new(NodeGraphPaintOverridesMap::default());
-    let mut canvas = NodeGraphCanvas::new(graph, view).with_paint_overrides(overrides.clone());
+    let mut canvas =
+        new_canvas!(host, graph, view, editor_config).with_paint_overrides(overrides.clone());
 
     // Ensure the edge has both markers so the scene should contain:
     // - 1 wire path (paint override)

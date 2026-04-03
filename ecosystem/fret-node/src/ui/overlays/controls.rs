@@ -74,8 +74,7 @@ struct ControlsLayout {
 pub struct NodeGraphControlsOverlay {
     canvas_node: fret_core::NodeId,
     view_state: Model<NodeGraphViewState>,
-    editor_config: NodeGraphEditorConfig,
-    editor_config_model: Option<Model<NodeGraphEditorConfig>>,
+    editor_config: Model<NodeGraphEditorConfig>,
     style: NodeGraphStyle,
     bindings: NodeGraphControlsBindings,
     hovered: Option<ControlsButton>,
@@ -89,13 +88,13 @@ impl NodeGraphControlsOverlay {
     pub fn new(
         canvas_node: fret_core::NodeId,
         view_state: Model<NodeGraphViewState>,
+        editor_config: Model<NodeGraphEditorConfig>,
         style: NodeGraphStyle,
     ) -> Self {
         Self {
             canvas_node,
             view_state,
-            editor_config: NodeGraphEditorConfig::default(),
-            editor_config_model: None,
+            editor_config,
             style,
             bindings: NodeGraphControlsBindings::default(),
             hovered: None,
@@ -108,11 +107,6 @@ impl NodeGraphControlsOverlay {
 
     pub fn with_bindings(mut self, bindings: NodeGraphControlsBindings) -> Self {
         self.bindings = bindings;
-        self
-    }
-
-    pub fn with_editor_config_model(mut self, editor_config: Model<NodeGraphEditorConfig>) -> Self {
-        self.editor_config_model = Some(editor_config);
         self
     }
 
@@ -423,18 +417,11 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
         }
 
         cx.observe_model(&self.view_state, Invalidation::Paint);
-        if let Some(editor_config) = self.editor_config_model.as_ref() {
-            cx.observe_model(editor_config, Invalidation::Paint);
-        }
+        cx.observe_model(&self.editor_config, Invalidation::Paint);
         let mode = self
-            .editor_config_model
-            .as_ref()
-            .and_then(|editor_config| {
-                editor_config
-                    .read_ref(cx.app, |state| state.interaction.connection_mode)
-                    .ok()
-            })
-            .unwrap_or(self.editor_config.interaction.connection_mode);
+            .editor_config
+            .read_ref(cx.app, |state| state.interaction.connection_mode)
+            .expect("controls overlay editor-config model must stay readable");
 
         let layout = self.compute_layout(cx.bounds);
         let bg = self.style.paint.context_menu_background;

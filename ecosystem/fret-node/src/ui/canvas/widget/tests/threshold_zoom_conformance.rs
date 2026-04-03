@@ -1,7 +1,10 @@
 use fret_core::{Modifiers, Point, Px, Rect, Size};
 
-use super::prelude::{NodeGraphCanvas, pending_drag, pending_wire_drag};
-use super::{NullServices, event_cx, make_host_graph_view, make_test_graph_two_nodes_with_ports};
+use super::prelude::{pending_drag, pending_wire_drag};
+use super::{
+    NullServices, event_cx, make_host_graph_view_editor_config_with,
+    make_test_graph_two_nodes_with_ports,
+};
 use crate::ui::canvas::state::{
     PendingNodeDrag, PendingNodeSelectAction, PendingWireDrag, WireDragKind,
 };
@@ -17,18 +20,19 @@ fn bounds() -> Rect {
 #[test]
 fn node_drag_threshold_is_zoom_invariant_in_screen_space() {
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
-
     let threshold_screen = 8.0;
     let eps_screen = 0.1;
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(graph_value, |state| {
+            state.interaction.node_drag_threshold = threshold_screen;
+        });
 
     for zoom in [0.5, 2.0] {
         let _ = view.update(&mut host, |s, _cx| {
             s.zoom = zoom;
-            s.interaction.node_drag_threshold = threshold_screen;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
         let snapshot = canvas.sync_view_state(&mut host);
         assert!((snapshot.zoom - zoom).abs() <= 1.0e-6);
 
@@ -92,20 +96,21 @@ fn node_drag_threshold_is_zoom_invariant_in_screen_space() {
 #[test]
 fn connection_drag_threshold_is_zoom_invariant_in_screen_space() {
     let (graph_value, _a, _a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let (mut host, graph, view) = make_host_graph_view(graph_value);
-
     let threshold_screen = 8.0;
     let eps_screen = 0.1;
+    let (mut host, graph, view, editor_config) =
+        make_host_graph_view_editor_config_with(graph_value, |state| {
+            state.interaction.connection_drag_threshold = threshold_screen;
+            state.interaction.connection_radius = 0.0;
+            state.interaction.edge_interaction_width = 0.0;
+        });
 
     for zoom in [0.5, 2.0] {
         let _ = view.update(&mut host, |s, _cx| {
             s.zoom = zoom;
-            s.interaction.connection_drag_threshold = threshold_screen;
-            s.interaction.connection_radius = 0.0;
-            s.interaction.edge_interaction_width = 0.0;
         });
 
-        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        let mut canvas = new_canvas!(host, graph.clone(), view.clone(), editor_config.clone());
         let snapshot = canvas.sync_view_state(&mut host);
         assert!((snapshot.zoom - zoom).abs() <= 1.0e-6);
 
