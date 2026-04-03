@@ -1042,6 +1042,7 @@ impl<H: UiHost> UiTree<H> {
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             available,
         );
+        self.update_interactive_resize_state_for_layout(app.frame_id(), bounds, scale_factor);
         let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
         if force_post_resize_rebuild {
             self.mark_subtree_invalidation_local(root, Invalidation::Layout);
@@ -1098,6 +1099,7 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
     ) -> Size {
+        self.update_interactive_resize_state_for_layout(app.frame_id(), bounds, scale_factor);
         let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
         if force_post_resize_rebuild {
             self.mark_subtree_invalidation_local(root, Invalidation::Layout);

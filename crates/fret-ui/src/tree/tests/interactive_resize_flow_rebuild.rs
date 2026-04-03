@@ -405,23 +405,17 @@ fn interactive_resize_layout_in_clears_deferred_rebuild_flag_after_forced_rebuil
     );
 
     app.advance_frame();
-    ui.update_interactive_resize_state_for_layout(app.frame_id(), compact_bounds, 1.0);
+    let steady_size = ui.layout_in(&mut app, &mut services, roomy_root, compact_bounds, 1.0);
+    assert_eq!(
+        steady_size, compact_bounds.size,
+        "first stable layout_in should preserve the compact root size while resize is still active"
+    );
     assert!(
         ui.interactive_resize_active(),
-        "first stable frame should still count as interactive resize"
+        "first stable layout_in should still count as interactive resize"
     );
 
     app.advance_frame();
-    ui.update_interactive_resize_state_for_layout(app.frame_id(), compact_bounds, 1.0);
-    assert!(
-        !ui.interactive_resize_active(),
-        "second stable frame should settle interactive resize state"
-    );
-    assert!(
-        ui.interactive_resize_requires_full_rebuild(),
-        "settled resize state should require one forced rebuild"
-    );
-
     let rebuilt_size = ui.layout_in(&mut app, &mut services, roomy_root, compact_bounds, 1.0);
     assert_eq!(
         rebuilt_size, compact_bounds.size,
@@ -430,6 +424,10 @@ fn interactive_resize_layout_in_clears_deferred_rebuild_flag_after_forced_rebuil
     assert!(
         !ui.interactive_resize_needs_full_rebuild,
         "layout_in forced rebuild should clear the deferred rebuild flag"
+    );
+    assert!(
+        !ui.interactive_resize_active(),
+        "second stable layout_in should settle interactive resize state"
     );
 
     let page_node = ui.children(roomy_root)[0];
@@ -461,5 +459,115 @@ fn interactive_resize_layout_in_clears_deferred_rebuild_flag_after_forced_rebuil
     assert!(
         rebuilt_card_bounds.origin.y.0 <= 0.5,
         "layout_in forced rebuild should refresh retained bounds; rebuilt_card_bounds={rebuilt_card_bounds:?}"
+    );
+}
+
+#[test]
+fn interactive_resize_layout_advances_resize_state_and_rebuilds_after_settle() {
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let roomy_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(680.0), Px(760.0)),
+    );
+    let compact_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(560.0)),
+    );
+    let mut services = FakeUiServices;
+
+    let roomy_root =
+        render_resize_sensitive_root(&mut ui, &mut app, &mut services, window, roomy_bounds, true);
+    ui.set_root(roomy_root);
+    ui.layout_all(&mut app, &mut services, roomy_bounds, 1.0);
+
+    app.advance_frame();
+    let compact_root = render_resize_sensitive_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        compact_bounds,
+        false,
+    );
+    assert_eq!(compact_root, roomy_root, "expected stable root identity");
+    ui.set_root(roomy_root);
+    clear_all_invalidations(&mut ui);
+    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
+    assert!(
+        ui.interactive_resize_needs_full_rebuild,
+        "cached-flow resize frame should arm the deferred rebuild flag"
+    );
+
+    app.advance_frame();
+    let steady_size = ui.layout(
+        &mut app,
+        &mut services,
+        roomy_root,
+        compact_bounds.size,
+        1.0,
+    );
+    assert_eq!(
+        steady_size, compact_bounds.size,
+        "first stable layout should preserve the compact root size while resize is still active"
+    );
+    assert!(
+        ui.interactive_resize_active(),
+        "first stable layout should still count as interactive resize"
+    );
+
+    app.advance_frame();
+    let rebuilt_size = ui.layout(
+        &mut app,
+        &mut services,
+        roomy_root,
+        compact_bounds.size,
+        1.0,
+    );
+    assert_eq!(
+        rebuilt_size, compact_bounds.size,
+        "settled layout should still return the compact root size after the forced rebuild"
+    );
+    assert!(
+        !ui.interactive_resize_active(),
+        "second stable layout should settle interactive resize state"
+    );
+    assert!(
+        !ui.interactive_resize_needs_full_rebuild,
+        "forced rebuild via layout should clear the deferred rebuild flag"
+    );
+
+    let page_node = ui.children(roomy_root)[0];
+    let card_node = ui.children(page_node)[0];
+    let rebuilt_card_bounds = ui
+        .debug_node_bounds(card_node)
+        .expect("card bounds after layout forced rebuild");
+    let engine = ui.take_layout_engine();
+    let page_style = engine
+        .debug_style_for_node(page_node)
+        .cloned()
+        .expect("page style after layout forced rebuild");
+    let card_style = engine
+        .debug_style_for_node(card_node)
+        .cloned()
+        .expect("card style after layout forced rebuild");
+    ui.put_layout_engine(engine);
+
+    assert_eq!(
+        page_style.justify_content,
+        Some(taffy::style::JustifyContent::FlexStart),
+        "layout forced rebuild should rebuild the compact page style"
+    );
+    assert_eq!(
+        card_style.min_size.height,
+        taffy::style::Dimension::length(120.0),
+        "layout forced rebuild should forward compact min-height constraints"
+    );
+    assert!(
+        rebuilt_card_bounds.origin.y.0 <= 0.5,
+        "layout forced rebuild should refresh retained bounds; rebuilt_card_bounds={rebuilt_card_bounds:?}"
     );
 }
