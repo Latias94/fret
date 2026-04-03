@@ -581,22 +581,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if pass_kind == LayoutPassKind::Final {
-            self.layout_engine.end_frame();
-            if let Some(window) = self.window {
-                let frame_id = app.frame_id();
-                crate::elements::with_window_state(app, window, |st| {
-                    st.clear_stale_interaction_targets_for_frame(frame_id);
-                });
-            }
-            // Keep cross-frame `bounds_for_element(...)` queries in sync with the latest layout.
-            // These bounds are used by component-layer policies (e.g. overlay placement) and are
-            // expected to reflect the most recent layout pass.
-            self.sync_element_bounds_cache_after_layout(app);
-
-            self.validate_subtree_layout_dirty_counts_if_enabled();
-            if !self.interactive_resize_active() {
-                self.interactive_resize_needs_full_rebuild = false;
-            }
+            self.finish_final_layout_frame(app);
         }
 
         if pass_kind == LayoutPassKind::Final {
@@ -1101,14 +1086,7 @@ impl<H: UiHost> UiTree<H> {
             &mut viewport_cursor,
         );
 
-        self.layout_engine.end_frame();
-        if let Some(window) = self.window {
-            let frame_id = app.frame_id();
-            crate::elements::with_window_state(app, window, |st| {
-                st.clear_stale_interaction_targets_for_frame(frame_id);
-            });
-        }
-        self.sync_element_bounds_cache_after_layout(app);
+        self.finish_final_layout_frame(app);
         size
     }
 
@@ -1162,14 +1140,7 @@ impl<H: UiHost> UiTree<H> {
             LayoutPassKind::Final,
             &mut viewport_cursor,
         );
-        self.layout_engine.end_frame();
-        if let Some(window) = self.window {
-            let frame_id = app.frame_id();
-            crate::elements::with_window_state(app, window, |st| {
-                st.clear_stale_interaction_targets_for_frame(frame_id);
-            });
-        }
-        self.sync_element_bounds_cache_after_layout(app);
+        self.finish_final_layout_frame(app);
         size
     }
 
@@ -1212,6 +1183,25 @@ impl<H: UiHost> UiTree<H> {
                 st.record_bounds(element, rect);
             }
         });
+    }
+
+    fn finish_final_layout_frame(&mut self, app: &mut H) {
+        self.layout_engine.end_frame();
+        if let Some(window) = self.window {
+            let frame_id = app.frame_id();
+            crate::elements::with_window_state(app, window, |st| {
+                st.clear_stale_interaction_targets_for_frame(frame_id);
+            });
+        }
+
+        // Keep cross-frame `bounds_for_element(...)` queries in sync with the latest layout.
+        // These bounds are used by component-layer policies (e.g. overlay placement) and are
+        // expected to reflect the most recent layout pass.
+        self.sync_element_bounds_cache_after_layout(app);
+        self.validate_subtree_layout_dirty_counts_if_enabled();
+        if !self.interactive_resize_active() {
+            self.interactive_resize_needs_full_rebuild = false;
+        }
     }
 
     pub fn measure_in(
