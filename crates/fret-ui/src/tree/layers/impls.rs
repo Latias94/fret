@@ -99,6 +99,32 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(in crate::tree) fn prune_interaction_state_outside_active_layers(
+        &mut self,
+        focus_reason: &'static str,
+    ) {
+        let (active_input_roots, _) = self.active_input_layers();
+        let to_remove: Vec<PointerId> = self
+            .captured
+            .iter()
+            .filter_map(|(pointer, node)| {
+                (!self
+                    .is_reachable_from_any_root_via_children(*node, active_input_roots.as_slice()))
+                .then_some(*pointer)
+            })
+            .collect();
+        for pointer in to_remove {
+            self.captured.remove(&pointer);
+        }
+
+        let (active_focus_roots, _) = self.active_focus_layers();
+        if self.focus.is_some_and(|node| {
+            !self.is_reachable_from_any_root_via_children(node, active_focus_roots.as_slice())
+        }) {
+            self.set_focus_unchecked(None, focus_reason);
+        }
+    }
+
     pub fn base_root(&self) -> Option<NodeId> {
         self.base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root))
@@ -558,12 +584,19 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn update_layer_root(&mut self, layer: UiLayerId, root: NodeId) {
-        let Some(l) = self.layers.get_mut(layer) else {
+        let Some(old_root) = self.layers.get(layer).map(|layer| layer.root) else {
             return;
         };
+        if old_root == root {
+            return;
+        }
 
-        self.root_to_layer.remove(&l.root);
-        l.root = root;
+        self.root_to_layer.remove(&old_root);
+        let Some(layer_entry) = self.layers.get_mut(layer) else {
+            return;
+        };
+        layer_entry.root = root;
         self.root_to_layer.insert(root, layer);
+        self.prune_interaction_state_outside_active_layers("layers: update_layer_root");
     }
 }

@@ -51,6 +51,9 @@ Status: Active
   - [x] `set_children(...same_children...)` and `set_children_in_mount(...same_children...)`
     reconnect authoritative layout when they repaired stale parent pointers under pending
     descendant layout work,
+  - [x] `set_root(...)` / `set_base_root(...)` now prune detached focus/capture immediately when a
+    layer-root replacement rebases the active layer roots, while preserving still-active overlay
+    interaction state,
   - [ ] remaining child list mutation helpers,
   - [x] contained cache-root dirty markers now align with main-pass layout consumption and
     descendant-truncated contained relayout scheduling,
@@ -63,6 +66,8 @@ Status: Active
     schedules contained relayout,
   - [x] same-children parent repair reconnects detached descendant layout for normal and mount-time
     child-list mutation helpers,
+  - [x] layer-root replacement clears detached interaction state without clearing still-active
+    overlay interaction state,
   - [ ] scroll handle revision-only bumps stay classified correctly.
 
 ## Wheel/trackpad delta coalescing

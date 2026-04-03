@@ -233,6 +233,7 @@ mod hit_test_cache_reuse_policy;
 mod interactive_resize_flow_rebuild;
 mod interactivity_gate;
 mod key_dispatch_barrier_root;
+mod layer_root_replacement;
 mod measure_in;
 mod models;
 mod outside_press;

@@ -58,6 +58,17 @@ This follow-on slice locks the contract that:
   work,
 - `set_children_in_mount(...same_children...)` must honor the same reconnect contract.
 
+## Follow-on slice — Layer root replacement must prune detached interaction state
+
+This follow-on slice locks the contract that:
+
+- replacing a layer root must immediately clear `focus` / pointer captures that are no longer
+  reachable from the current active input/focus roots,
+- root replacement must preserve interaction state that remains reachable from another active layer
+  root (for example, an overlay that stays mounted across base-root replacement),
+- input-arbitration snapshots must reflect the pruned interaction state immediately instead of
+  waiting for a later dispatch/command entry point to clean it up lazily.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -88,6 +99,10 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::children::set_children_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
 - Mount-time same-children parent repair reconnects detached descendant layout:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::children::set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
+- Root replacement clears detached base-layer interaction state:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::layer_root_replacement::set_root_replacement_clears_detached_base_layer_interaction_state`
+- Root replacement preserves still-active overlay interaction state:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::layer_root_replacement::set_root_replacement_preserves_overlay_interaction_state`
 
 ## Evidence anchors
 
@@ -114,6 +129,9 @@ This follow-on slice locks the contract that:
   - `crates/fret-ui/src/tree/ui_tree_mutation/core.rs`
   - `crates/fret-ui/src/tree/ui_tree_mutation/mount.rs`
   - `crates/fret-ui/src/tree/tests/children.rs`
+- Layer-root replacement interaction pruning:
+  - `crates/fret-ui/src/tree/layers/impls.rs`
+  - `crates/fret-ui/src/tree/tests/layer_root_replacement.rs`
 - Lane positioning:
   - `docs/workstreams/scroll-optimization-v1/DESIGN.md`
   - `docs/workstreams/scroll-optimization-v1/TODO.md`
@@ -167,3 +185,10 @@ This follow-on slice locks the contract that:
   - `tree::tests::children::set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
   - `tree::tests::barrier_subtree_layout_dirty_aggregation::*`
   - `tree::tests::view_cache::*` targeted contained-relayout gates
+- 2026-04-03: layer-root replacement interaction-pruning gates confirmed via `cargo nextest`:
+  - `tree::tests::layer_root_replacement::set_root_replacement_clears_detached_base_layer_interaction_state`
+  - `tree::tests::layer_root_replacement::set_root_replacement_preserves_overlay_interaction_state`
+  - `tree::tests::window_input_arbitration_snapshot::dispatch_event_publishes_post_dispatch_input_arbitration_snapshot`
+  - `tree::tests::window_input_arbitration_snapshot::dispatch_command_publishes_post_dispatch_input_arbitration_snapshot`
+  - `tree::tests::window_input_arbitration_snapshot::modal_barrier_scopes_pointer_capture_to_active_roots`
+  - `tree::tests::semantics_focus_shortcuts::remove_layer_uninstalls_overlay_and_removes_subtree`
