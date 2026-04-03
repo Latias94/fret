@@ -519,6 +519,144 @@ fn retained_virtual_list_keep_alive_reuses_detached_items_when_scrolling_back() 
 }
 
 #[test]
+fn retained_virtual_list_reconcile_waits_for_authoritative_viewport_before_consuming_pending() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_tree(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> AnyElement {
+        let mut cache = crate::element::ViewCacheProps::default();
+        cache.layout.size.width = crate::element::Length::Fill;
+        cache.layout.size.height = crate::element::Length::Fill;
+        cache.cache_key = 1;
+
+        cx.view_cache(cache, move |cx| {
+            let list_layout = crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: crate::element::Length::Fill,
+                    height: crate::element::Length::Fill,
+                    ..Default::default()
+                },
+                overflow: crate::element::Overflow::Clip,
+                ..Default::default()
+            };
+
+            let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn =
+                Arc::new(|i| i as crate::ItemKey);
+            let row: crate::windowed_surface_host::RetainedVirtualListRowFn<TestHost> =
+                Arc::new(|cx, i| cx.text(format!("row {i}")));
+
+            vec![cx.virtual_list_keyed_retained_with_layout(
+                list_layout,
+                100,
+                crate::element::VirtualListOptions::new(Px(10.0), 0),
+                scroll_handle,
+                key_at,
+                row,
+            )]
+        })
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "retained-virt-pending-reconcile-awaits-viewport",
+        |cx| vec![build_tree(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let cache_node = ui.children(root)[0];
+    let list_node = ui.children(cache_node)[0];
+    let list_element = app
+        .with_global_mut(
+            crate::declarative::frame::ElementFrame::default,
+            |frame, _app| {
+                frame
+                    .windows
+                    .get(&window)
+                    .and_then(|w| w.instances.get(list_node))
+                    .map(|record| record.element)
+            },
+        )
+        .expect("expected retained virtual list element");
+
+    crate::elements::with_element_state(
+        &mut app,
+        window,
+        list_element,
+        crate::element::VirtualListState::default,
+        |state| {
+            state.viewport_h = Px(0.0);
+            state.window_range = None;
+            state.render_window_range = None;
+            state.has_final_viewport = false;
+        },
+    );
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        window_state.mark_retained_virtual_list_needs_reconcile(
+            list_element,
+            crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape,
+        );
+    });
+
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "retained-virt-pending-reconcile-awaits-viewport",
+        |cx| vec![build_tree(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        ui.debug_retained_virtual_list_reconciles().is_empty(),
+        "expected pending reconcile to defer while viewport/window range are still unavailable"
+    );
+
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "retained-virt-pending-reconcile-awaits-viewport",
+        |cx| vec![build_tree(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert!(
+        ui.debug_retained_virtual_list_reconciles()
+            .iter()
+            .any(|r| r.element == list_element
+                && r.reconcile_kind
+                    == crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape),
+        "expected deferred retained-host reconcile to survive the viewport-unknown frame and complete once layout produced an authoritative viewport"
+    );
+}
+
+#[test]
 fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

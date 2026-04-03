@@ -1808,6 +1808,11 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
         return;
     }
 
+    enum RetainedVirtualListReconcileItems {
+        Ready(Vec<crate::virtual_list::VirtualItem>),
+        DeferUntilViewportKnown,
+    }
+
     for (element, reconcile_kind) in elements {
         let node = window_state
             .node_entry(element)
@@ -1856,79 +1861,93 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             continue;
         };
 
-        let desired_items: Option<Vec<crate::virtual_list::VirtualItem>> = window_state
-            .with_state_mut(
-                element,
-                crate::element::VirtualListState::default,
-                |state| {
-                    state.metrics.ensure_with_mode(
-                        props.measure_mode,
-                        props.len,
-                        props.estimate_row_height,
-                        props.gap,
-                        props.scroll_margin,
-                    );
+        let desired_items = window_state.with_state_mut(
+            element,
+            crate::element::VirtualListState::default,
+            |state| {
+                state.metrics.ensure_with_mode(
+                    props.measure_mode,
+                    props.len,
+                    props.estimate_row_height,
+                    props.gap,
+                    props.scroll_margin,
+                );
 
-                    let viewport = match props.axis {
-                        fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
-                        fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                if props.len == 0 {
+                    state.window_range = None;
+                    state.render_window_range = None;
+                    return RetainedVirtualListReconcileItems::Ready(Vec::new());
+                }
+
+                let viewport = match props.axis {
+                    fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
+                    fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                };
+
+                // Prefer the prepaint-derived window range (ADR 0175). This lets retained
+                // virtual surfaces update row membership on cache-hit frames without
+                // re-deriving the window from scroll state during reconcile.
+                let mut window_range =
+                    state
+                        .window_range
+                        .or(state.render_window_range)
+                        .filter(|r| {
+                            r.count == props.len
+                                && r.overscan == props.overscan
+                                && r.start_index <= r.end_index
+                                && r.end_index < r.count
+                        });
+
+                if window_range.is_none() {
+                    if viewport.0 <= 0.0 {
+                        return RetainedVirtualListReconcileItems::DeferUntilViewportKnown;
+                    }
+
+                    let offset_point = props.scroll_handle.offset();
+                    let offset_axis = match props.axis {
+                        fret_core::Axis::Vertical => offset_point.y,
+                        fret_core::Axis::Horizontal => offset_point.x,
                     };
-                    if viewport.0 <= 0.0 || props.len == 0 {
-                        return None;
-                    }
-
-                    // Prefer the prepaint-derived window range (ADR 0175). This lets retained
-                    // virtual surfaces update row membership on cache-hit frames without
-                    // re-deriving the window from scroll state during reconcile.
-                    let mut window_range =
+                    let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
+                    window_range =
                         state
-                            .window_range
-                            .or(state.render_window_range)
-                            .filter(|r| {
-                                r.count == props.len
-                                    && r.overscan == props.overscan
-                                    && r.start_index <= r.end_index
-                                    && r.end_index < r.count
-                            });
+                            .metrics
+                            .visible_range(offset_axis, viewport, props.overscan);
+                }
 
-                    if window_range.is_none() {
-                        let offset_point = props.scroll_handle.offset();
-                        let offset_axis = match props.axis {
-                            fret_core::Axis::Vertical => offset_point.y,
-                            fret_core::Axis::Horizontal => offset_point.x,
-                        };
-                        let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
-                        window_range =
-                            state
-                                .metrics
-                                .visible_range(offset_axis, viewport, props.overscan);
-                    }
+                let Some(range) = window_range else {
+                    return RetainedVirtualListReconcileItems::DeferUntilViewportKnown;
+                };
 
-                    state.window_range = window_range;
-                    state.render_window_range = window_range;
-                    let range = window_range?;
+                state.window_range = Some(range);
+                state.render_window_range = Some(range);
 
-                    let mut indices = (range_extractor)(range)
-                        .into_iter()
-                        .filter(|&idx| idx < props.len)
-                        .collect::<Vec<_>>();
-                    indices.sort_unstable();
-                    indices.dedup();
+                let mut indices = (range_extractor)(range)
+                    .into_iter()
+                    .filter(|&idx| idx < props.len)
+                    .collect::<Vec<_>>();
+                indices.sort_unstable();
+                indices.dedup();
 
-                    let items = indices
-                        .iter()
-                        .copied()
-                        .map(|idx| {
-                            let key = (key_at)(idx);
-                            state.metrics.virtual_item(idx, key)
-                        })
-                        .collect::<Vec<_>>();
-                    Some(items)
-                },
-            );
+                let items = indices
+                    .iter()
+                    .copied()
+                    .map(|idx| {
+                        let key = (key_at)(idx);
+                        state.metrics.virtual_item(idx, key)
+                    })
+                    .collect::<Vec<_>>();
+                RetainedVirtualListReconcileItems::Ready(items)
+            },
+        );
 
-        let Some(desired_items) = desired_items else {
-            continue;
+        let desired_items = match desired_items {
+            RetainedVirtualListReconcileItems::Ready(items) => items,
+            RetainedVirtualListReconcileItems::DeferUntilViewportKnown => {
+                window_state.mark_retained_virtual_list_needs_reconcile(element, reconcile_kind);
+                ui.request_redraw_coalesced(app);
+                continue;
+            }
         };
 
         let reconcile_start = fret_core::time::Instant::now();
