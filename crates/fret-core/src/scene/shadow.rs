@@ -65,19 +65,31 @@ fn shadow_alpha_weight(step_index: usize) -> f32 {
     1.0 / (1.0 + step_index as f32)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ShadowRRectFallbackSpec {
+    pub order: DrawOrder,
+    pub rect: Rect,
+    pub corner_radii: Corners,
+    pub offset: Point,
+    pub spread: Px,
+    pub blur_radius: Px,
+    pub color: Color,
+}
+
 /// Return the deterministic quad-approximation fallback for a rounded-rect shadow primitive.
 ///
 /// This helper exists for backends and tools that need an explicit degradation path for
 /// `SceneOp::ShadowRRect` without routing back through `fret-ui` authoring APIs.
-pub fn shadow_rrect_fallback_quads(
-    order: DrawOrder,
-    rect: Rect,
-    corner_radii: Corners,
-    offset: Point,
-    spread: Px,
-    blur_radius: Px,
-    color: Color,
-) -> Vec<SceneOp> {
+pub fn shadow_rrect_fallback_quads(spec: ShadowRRectFallbackSpec) -> Vec<SceneOp> {
+    let ShadowRRectFallbackSpec {
+        order,
+        rect,
+        corner_radii,
+        offset,
+        spread,
+        blur_radius,
+        color,
+    } = spec;
     if rect.size.width.0 <= 0.0 || rect.size.height.0 <= 0.0 {
         return Vec::new();
     }
@@ -137,25 +149,8 @@ pub fn shadow_rrect_fallback_quads(
 
 impl SceneRecording {
     /// Replay the deterministic quad fallback for a rounded-rect shadow primitive into this scene.
-    pub fn push_shadow_rrect_quad_fallback(
-        &mut self,
-        order: DrawOrder,
-        rect: Rect,
-        corner_radii: Corners,
-        offset: Point,
-        spread: Px,
-        blur_radius: Px,
-        color: Color,
-    ) {
-        for op in shadow_rrect_fallback_quads(
-            order,
-            rect,
-            corner_radii,
-            offset,
-            spread,
-            blur_radius,
-            color,
-        ) {
+    pub fn push_shadow_rrect_quad_fallback(&mut self, spec: ShadowRRectFallbackSpec) {
+        for op in shadow_rrect_fallback_quads(spec) {
             self.push(op);
         }
     }
@@ -167,23 +162,23 @@ mod tests {
 
     #[test]
     fn shadow_rrect_fallback_quads_keep_expected_profile() {
-        let ops = shadow_rrect_fallback_quads(
-            DrawOrder(3),
-            Rect::new(
+        let ops = shadow_rrect_fallback_quads(ShadowRRectFallbackSpec {
+            order: DrawOrder(3),
+            rect: Rect::new(
                 Point::new(Px(20.0), Px(10.0)),
                 Size::new(Px(40.0), Px(24.0)),
             ),
-            Corners::all(Px(6.0)),
-            Point::new(Px(0.0), Px(2.0)),
-            Px(1.0),
-            Px(4.0),
-            Color {
+            corner_radii: Corners::all(Px(6.0)),
+            offset: Point::new(Px(0.0), Px(2.0)),
+            spread: Px(1.0),
+            blur_radius: Px(4.0),
+            color: Color {
                 r: 0.0,
                 g: 0.0,
                 b: 0.0,
                 a: 0.18,
             },
-        );
+        });
 
         assert_eq!(ops.len(), 5);
         let SceneOp::Quad {
@@ -221,20 +216,20 @@ mod tests {
     #[test]
     fn push_shadow_rrect_quad_fallback_replays_ops_into_scene() {
         let mut scene = Scene::default();
-        scene.push_shadow_rrect_quad_fallback(
-            DrawOrder(0),
-            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(12.0), Px(8.0))),
-            Corners::all(Px(4.0)),
-            Point::new(Px(1.0), Px(2.0)),
-            Px(0.0),
-            Px(2.0),
-            Color {
+        scene.push_shadow_rrect_quad_fallback(ShadowRRectFallbackSpec {
+            order: DrawOrder(0),
+            rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(12.0), Px(8.0))),
+            corner_radii: Corners::all(Px(4.0)),
+            offset: Point::new(Px(1.0), Px(2.0)),
+            spread: Px(0.0),
+            blur_radius: Px(2.0),
+            color: Color {
                 r: 0.0,
                 g: 0.0,
                 b: 0.0,
                 a: 0.12,
             },
-        );
+        });
 
         assert_eq!(scene.ops_len(), 3);
         assert!(

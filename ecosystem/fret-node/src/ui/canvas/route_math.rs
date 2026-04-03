@@ -10,8 +10,8 @@ use crate::ui::presenter::EdgeRouteKind;
 mod route_math_curve;
 mod route_math_tangent;
 
-#[cfg(any(test, feature = "compat-retained-canvas"))]
+#[cfg(feature = "compat-retained-canvas")]
 pub(crate) use route_math_curve::{cubic_bezier, normal_from_tangent};
 pub(crate) use route_math_curve::{cubic_bezier_derivative, wire_ctrl_points};
-#[cfg(any(test, feature = "compat-retained-canvas"))]
+#[cfg(feature = "compat-retained-canvas")]
 pub(crate) use route_math_tangent::{edge_route_end_tangent, edge_route_start_tangent};

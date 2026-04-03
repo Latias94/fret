@@ -505,7 +505,7 @@ mod tests {
         match &el.kind {
             fret_ui::element::ElementKind::Pressable(_) => el.children.first().and_then(|child| {
                 if let fret_ui::element::ElementKind::Container(props) = &child.kind {
-                    Some(props.clone())
+                    Some(*props)
                 } else {
                     None
                 }

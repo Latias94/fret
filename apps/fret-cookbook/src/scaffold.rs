@@ -5,7 +5,7 @@
 //! cookbook crate into a reusable product API.
 
 use fret::app::prelude::*;
-use fret::style::{ColorRef, Space, Theme};
+use fret::style::{ColorRef, Space};
 
 /// Builds a centered cookbook page with a single primary surface (typically a Card).
 ///

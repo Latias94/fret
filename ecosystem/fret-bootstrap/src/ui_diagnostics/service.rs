@@ -1607,7 +1607,7 @@ impl UiDiagnosticsService {
 }
 
 #[cfg(test)]
-mod tests {
+mod service_tests {
     use super::*;
 
     fn app_window(ffi: u64) -> AppWindowId {

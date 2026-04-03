@@ -44,7 +44,7 @@ where
             len,
             runtime_options(&options, resolved_measure_mode),
             &handle,
-            move |index| key_at(index),
+            &mut key_at,
             move |cx, index| {
                 if first_rendered.get().is_none() {
                     first_rendered.set(Some(index));

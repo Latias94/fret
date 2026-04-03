@@ -85,7 +85,7 @@ impl<H: UiHost> UiTree<H> {
             let children: Vec<NodeId> = self
                 .nodes
                 .get(node)
-                .map(|entry| entry.children.iter().copied().collect())
+                .map(|entry| entry.children.to_vec())
                 .unwrap_or_default();
             self.mark_invalidation_local(node, inv);
             self.scratch_node_stack.extend(children);

@@ -955,7 +955,7 @@ mod tests {
             &mut host,
             bounds,
             vec![node_a, node_b],
-            options.clone(),
+            options,
         ));
 
         let expected = compute_fit_view_target(
@@ -1037,7 +1037,7 @@ mod tests {
                 &mut host,
                 bounds,
                 vec![node_a, node_b],
-                options.clone(),
+                options,
             )
         );
 

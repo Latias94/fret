@@ -24,7 +24,7 @@ pub use paint::{
     ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, PaintBindingV1,
     PaintEvalSpaceV1, RadialGradient, SweepGradient, TileMode,
 };
-pub use shadow::shadow_rrect_fallback_quads;
+pub use shadow::{ShadowRRectFallbackSpec, shadow_rrect_fallback_quads};
 pub use stroke::{DashPatternV1, StrokeStyleV1};
 pub use validate::{SceneValidationError, SceneValidationErrorKind};
 

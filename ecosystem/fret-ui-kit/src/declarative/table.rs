@@ -3730,7 +3730,7 @@ where
                                                 },
                                             );
 
-                                        let header_cell = cx.container(
+                                        cx.container(
                                             ContainerProps {
                                                 border: if props.optimize_grid_lines {
                                                     Edges::default()
@@ -3899,9 +3899,7 @@ where
                                                     },
                                                 )]
                                             },
-                                        );
-
-                                        header_cell
+                                        )
                                     })
                                     .collect::<Vec<_>>()
                         })

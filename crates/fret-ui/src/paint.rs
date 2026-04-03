@@ -1,5 +1,5 @@
 use crate::element::{RingPlacement, RingStyle, ShadowLayerStyle, ShadowStyle};
-use fret_core::scene::shadow_rrect_fallback_quads;
+use fret_core::scene::{ShadowRRectFallbackSpec, shadow_rrect_fallback_quads};
 use fret_core::{Color, Corners, DrawOrder, Edges, Paint, Point, Px, Rect, Scene, SceneOp, Size};
 
 fn corners_inflate(mut corners: Corners, delta: Px) -> Corners {
@@ -48,15 +48,15 @@ fn paint_shadow_layer_quad_fallback(
     layer: ShadowLayerStyle,
     corner_radii: Corners,
 ) {
-    for op in shadow_rrect_fallback_quads(
+    for op in shadow_rrect_fallback_quads(ShadowRRectFallbackSpec {
         order,
-        bounds,
+        rect: bounds,
         corner_radii,
-        Point::new(layer.offset_x, layer.offset_y),
-        layer.spread,
-        layer.blur,
-        layer.color,
-    ) {
+        offset: Point::new(layer.offset_x, layer.offset_y),
+        spread: layer.spread,
+        blur_radius: layer.blur,
+        color: layer.color,
+    }) {
         scene.push(op);
     }
 }

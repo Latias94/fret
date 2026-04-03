@@ -787,7 +787,7 @@ impl Default for NodeGraphInteractionConfig {
 }
 
 /// Persisted editor configuration stored alongside pure view state.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphEditorConfig {
     #[serde(
         default,
@@ -805,15 +805,6 @@ impl NodeGraphEditorConfig {
 
     pub fn resolved_interaction_state(&self) -> NodeGraphInteractionState {
         NodeGraphInteractionState::from_parts(&self.interaction, &self.runtime_tuning)
-    }
-}
-
-impl Default for NodeGraphEditorConfig {
-    fn default() -> Self {
-        Self {
-            interaction: NodeGraphInteractionConfig::default(),
-            runtime_tuning: NodeGraphRuntimeTuning::default(),
-        }
     }
 }
 
