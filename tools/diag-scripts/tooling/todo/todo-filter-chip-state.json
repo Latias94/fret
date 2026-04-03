@@ -1,0 +1,64 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "button": "left",
+      "target": {
+        "id": "todo_demo.filter.active",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 4,
+      "type": "wait_frames"
+    },
+    {
+      "label": "todo-filter-active",
+      "type": "capture_bundle"
+    },
+    {
+      "label": "todo-filter-active",
+      "type": "capture_screenshot"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "todo_demo.filter.completed",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 4,
+      "type": "wait_frames"
+    },
+    {
+      "label": "todo-filter-completed",
+      "type": "capture_bundle"
+    },
+    {
+      "label": "todo-filter-completed",
+      "type": "capture_screenshot"
+    },
+    {
+      "target": {
+        "id": "todo_demo.filter.all",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "n": 4,
+      "type": "wait_frames"
+    },
+    {
+      "label": "todo-filter-hover-all-after-completed",
+      "type": "capture_bundle"
+    },
+    {
+      "label": "todo-filter-hover-all-after-completed",
+      "type": "capture_screenshot"
+    }
+  ]
+}

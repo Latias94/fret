@@ -10,8 +10,10 @@ use fret_core::{
     AttributedText, Color, Corners, DecorationLineStyle, Px, StrikethroughStyle, TextPaintStyle,
     TextSpan,
 };
+use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::AnyElement;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::{
     ElementContextThemeExt as _, ViewportQueryHysteresis, primary_pointer_can_hover,
     viewport_tailwind, viewport_width_at_least,
@@ -21,10 +23,7 @@ use fret_ui_kit::{WidgetStateProperty, WidgetStates, typography};
 mod act {
     fret::actions!([
         Add = "todo_demo.add.v1",
-        ClearDone = "todo_demo.clear_done.v1",
-        FilterAll = "todo_demo.filter_all.v1",
-        FilterActive = "todo_demo.filter_active.v1",
-        FilterCompleted = "todo_demo.filter_completed.v1"
+        ClearDone = "todo_demo.clear_done.v1"
     ]);
 
     fret::payload_actions!([
@@ -142,11 +141,26 @@ impl TodoFilter {
             Self::Completed => "Completed",
         }
     }
+
+    fn value(self) -> &'static str {
+        match self {
+            Self::All => "all",
+            Self::Active => "active",
+            Self::Completed => "completed",
+        }
+    }
+
+    fn from_value(value: Option<&str>) -> Self {
+        match value {
+            Some("active") => Self::Active,
+            Some("completed") => Self::Completed,
+            _ => Self::All,
+        }
+    }
 }
 
 struct TodoLocals {
     draft: LocalState<String>,
-    filter: LocalState<TodoFilter>,
     next_id: LocalState<u64>,
     todos: LocalState<Vec<TodoRow>>,
 }
@@ -155,7 +169,6 @@ impl TodoLocals {
     fn new(cx: &mut AppUi<'_, '_>) -> Self {
         Self {
             draft: cx.state().local::<String>(),
-            filter: cx.state().local_init(|| TodoFilter::All),
             next_id: cx.state().local_init(|| 4u64),
             todos: cx.state().local_init(|| {
                 vec![
@@ -215,16 +228,6 @@ impl TodoLocals {
             });
 
         cx.actions()
-            .local(&self.filter)
-            .set::<act::FilterAll>(TodoFilter::All);
-        cx.actions()
-            .local(&self.filter)
-            .set::<act::FilterActive>(TodoFilter::Active);
-        cx.actions()
-            .local(&self.filter)
-            .set::<act::FilterCompleted>(TodoFilter::Completed);
-
-        cx.actions()
             .local(&self.todos)
             .payload_update_if::<act::Toggle>(|rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
@@ -245,11 +248,17 @@ impl TodoLocals {
     }
 }
 
-struct TodoDemoView;
+struct TodoDemoView {
+    filter: Model<Option<Arc<str>>>,
+}
 
 impl View for TodoDemoView {
-    fn init(_app: &mut App, _window: WindowId) -> Self {
-        Self
+    fn init(app: &mut App, _window: WindowId) -> Self {
+        Self {
+            filter: app
+                .models_mut()
+                .insert(Some(Arc::from(TodoFilter::All.value()))),
+        }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
@@ -272,7 +281,12 @@ impl View for TodoDemoView {
 
         let todos = locals.todos.layout_value(cx);
         let draft_value = locals.draft.layout_value(cx);
-        let filter_value = locals.filter.layout_value(cx);
+        let filter_value = TodoFilter::from_value(
+            cx.watch_model(&self.filter)
+                .layout()
+                .value_or(Some(Arc::<str>::from(TodoFilter::All.value())))
+                .as_deref(),
+        );
 
         let filtered_todos: Vec<TodoRow> = todos
             .iter()
@@ -523,27 +537,7 @@ impl View for TodoDemoView {
             .flex_1()
             .min_h_0();
 
-        let filters = ui::h_flex(|cx| {
-            ui::children![
-                cx;
-                filter_chip(TodoFilter::All, filter_value, act::FilterAll, TEST_ID_FILTER_ALL),
-                filter_chip(
-                    TodoFilter::Active,
-                    filter_value,
-                    act::FilterActive,
-                    TEST_ID_FILTER_ACTIVE,
-                ),
-                filter_chip(
-                    TodoFilter::Completed,
-                    filter_value,
-                    act::FilterCompleted,
-                    TEST_ID_FILTER_COMPLETED,
-                ),
-            ]
-        })
-        .gap(Space::N1)
-        .items_center()
-        .wrap();
+        let filters = filter_group(cx, self.filter.clone(), theme.clone());
 
         let clear_done_btn = shadcn::Button::new("Clear completed")
             .variant(shadcn::ButtonVariant::Ghost)
@@ -563,7 +557,7 @@ impl View for TodoDemoView {
 
         let footer = if responsive.stack_footer {
             ui::v_flex(|cx| {
-                let mut children = vec![filters.into_element(cx)];
+                let mut children = vec![filters];
                 if has_completed {
                     children.push(
                         ui::h_flex(|cx| ui::single(cx, clear_done_btn))
@@ -580,7 +574,7 @@ impl View for TodoDemoView {
             .into_element(cx)
         } else {
             ui::h_flex(|cx| {
-                let mut children = vec![filters.into_element(cx)];
+                let mut children = vec![filters];
                 if has_completed {
                     children.push(clear_done_btn.into_element(cx));
                 }
@@ -669,31 +663,78 @@ fn todo_page(
     .h_full()
 }
 
-fn filter_chip(
-    filter: TodoFilter,
-    current: TodoFilter,
-    action: impl Into<fret::ActionId>,
-    test_id: &str,
-) -> impl UiChild {
-    let selected = filter == current;
-    let action: fret::ActionId = action.into();
+fn filter_group<'a, Cx>(
+    cx: &mut Cx,
+    filter: Model<Option<Arc<str>>>,
+    theme: ThemeSnapshot,
+) -> AnyElement
+where
+    Cx: fret::app::ElementContextAccess<'a, App>,
+{
+    let style = fret::shadcn::raw::toggle_group::ToggleGroupStyle::default()
+        .item_background(
+            WidgetStateProperty::new(None)
+                .when(
+                    WidgetStates::HOVERED,
+                    Some(ColorRef::Color(theme.color_token("accent"))),
+                )
+                .when(
+                    WidgetStates::ACTIVE,
+                    Some(ColorRef::Color(theme.color_token("accent"))),
+                )
+                .when(
+                    WidgetStates::SELECTED,
+                    Some(ColorRef::Color(theme.color_token("secondary"))),
+                ),
+        )
+        .item_foreground(
+            WidgetStateProperty::new(None)
+                .when(
+                    WidgetStates::HOVERED,
+                    Some(ColorRef::Color(theme.color_token("foreground"))),
+                )
+                .when(
+                    WidgetStates::ACTIVE,
+                    Some(ColorRef::Color(theme.color_token("foreground"))),
+                )
+                .when(
+                    WidgetStates::SELECTED,
+                    Some(ColorRef::Color(theme.color_token("secondary-foreground"))),
+                ),
+        );
 
-    ui::keyed(("todo-filter-chip", filter.label()), move |_cx| {
-        shadcn::Button::new(filter.label())
-            .variant(if selected {
-                shadcn::ButtonVariant::Secondary
-            } else {
-                shadcn::ButtonVariant::Ghost
-            })
-            .size(shadcn::ButtonSize::Xs)
-            .corner_radii_override(Corners::all(Px(9999.0)))
-            .ui()
-            .px(Space::N3)
+    shadcn::ToggleGroup::single(filter)
+        .deselectable(false)
+        .spacing(Space::N1)
+        .style(style)
+        .items([
+            filter_group_item(cx, TodoFilter::All, TEST_ID_FILTER_ALL),
+            filter_group_item(cx, TodoFilter::Active, TEST_ID_FILTER_ACTIVE),
+            filter_group_item(cx, TodoFilter::Completed, TEST_ID_FILTER_COMPLETED),
+        ])
+        .into_element_in(cx)
+}
+
+fn filter_group_item<'a, Cx>(
+    cx: &mut Cx,
+    filter: TodoFilter,
+    test_id: &str,
+) -> shadcn::ToggleGroupItem
+where
+    Cx: fret::app::ElementContextAccess<'a, App>,
+{
+    shadcn::ToggleGroupItem::new(
+        filter.value(),
+        [ui::text(filter.label()).into_element_in(cx)],
+    )
+    .a11y_label(format!("Show {} tasks", filter.label().to_lowercase()))
+    .test_id(test_id)
+    .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+    .refine_layout(
+        fret_ui_kit::LayoutRefinement::default()
             .h_px(Px(28.0))
-            .build()
-            .action(action)
-            .test_id(test_id)
-    })
+            .min_h(Px(28.0)),
+    )
 }
 
 fn todo_row<'a, Cx>(

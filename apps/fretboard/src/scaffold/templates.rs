@@ -275,7 +275,7 @@ use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::{
 __ICON_IMPORT__    query::{QueryKey, QueryPolicy},
-    style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
+    style::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, Theme, ThemeSnapshot},
 };
 
 __GENERATED_ASSET_MODULE__
@@ -283,10 +283,7 @@ mod act {
     fret::actions!([
         Add = "__PACKAGE_NAME__.todo.add.v1",
         ClearDone = "__PACKAGE_NAME__.todo.clear_done.v1",
-        RefreshTip = "__PACKAGE_NAME__.todo.refresh_tip.v1",
-        FilterAll = "__PACKAGE_NAME__.todo.filter_all.v1",
-        FilterActive = "__PACKAGE_NAME__.todo.filter_active.v1",
-        FilterCompleted = "__PACKAGE_NAME__.todo.filter_completed.v1"
+        RefreshTip = "__PACKAGE_NAME__.todo.refresh_tip.v1"
     ]);
 
     fret::payload_actions!([Toggle(u64) = "__PACKAGE_NAME__.todo.toggle.v1"]);
@@ -320,6 +317,22 @@ impl TodoFilter {
             Self::All => "All",
             Self::Active => "Active",
             Self::Completed => "Completed",
+        }
+    }
+
+    fn value(self) -> &'static str {
+        match self {
+            Self::All => "all",
+            Self::Active => "active",
+            Self::Completed => "completed",
+        }
+    }
+
+    fn from_value(value: Option<&str>) -> Self {
+        match value {
+            Some("active") => Self::Active,
+            Some("completed") => Self::Completed,
+            _ => Self::All,
         }
     }
 }
@@ -359,7 +372,7 @@ struct TodoRowSnapshot {
 
 struct TodoLocals {
     draft: LocalState<String>,
-    filter: LocalState<TodoFilter>,
+    filter: LocalState<Option<Arc<str>>>,
     next_id: LocalState<u64>,
     tip_nonce: LocalState<u64>,
     todos: LocalState<Vec<TodoRow>>,
@@ -369,7 +382,9 @@ impl TodoLocals {
     fn new(cx: &mut AppUi<'_, '_>) -> Self {
         Self {
             draft: cx.state().local::<String>(),
-            filter: cx.state().local_init(|| TodoFilter::All),
+            filter: cx
+                .state()
+                .local_init(|| Some(Arc::from(TodoFilter::All.value()))),
             next_id: cx.state().local_init(|| 3u64),
             tip_nonce: cx.state().local_init(|| 0u64),
             todos: cx.state().local_init(|| vec![
@@ -429,16 +444,6 @@ impl TodoLocals {
             });
 
         cx.actions()
-            .local(&self.filter)
-            .set::<act::FilterAll>(TodoFilter::All);
-        cx.actions()
-            .local(&self.filter)
-            .set::<act::FilterActive>(TodoFilter::Active);
-        cx.actions()
-            .local(&self.filter)
-            .set::<act::FilterCompleted>(TodoFilter::Completed);
-
-        cx.actions()
             .local(&self.todos)
             .payload_update_if::<act::Toggle>(|rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
@@ -465,7 +470,7 @@ impl View for TodoView {
         locals.bind_actions(cx);
 
         let draft_value = locals.draft.layout_value(cx);
-        let filter_value = locals.filter.layout_value(cx);
+        let filter_value = TodoFilter::from_value(locals.filter.layout_value(cx).as_deref());
 
         let add_enabled = !draft_value.trim().is_empty();
         let muted_foreground = theme.color_token("muted-foreground");
@@ -473,6 +478,7 @@ impl View for TodoView {
         let derived: TodoDerived = cx
             .data()
             .selector_layout((&locals.todos, &locals.filter), |(todos, filter)| {
+                let filter = TodoFilter::from_value(filter.as_deref());
                 let mut rows = Vec::new();
                 let mut completed = 0usize;
                 for t in todos.iter() {
@@ -600,21 +606,15 @@ __ADD_BTN_DEF__
             .items_center()
             .w_full();
 
-        let chip_all = filter_chip(TodoFilter::All, filter_value, act::FilterAll);
-        let chip_active = filter_chip(TodoFilter::Active, filter_value, act::FilterActive);
-        let chip_completed = filter_chip(
-            TodoFilter::Completed,
-            filter_value,
-            act::FilterCompleted,
-        );
-
-        let chips = ui::h_flex(|cx| ui::children![cx;
-            chip_all,
-            chip_active,
-            chip_completed,
-        ])
-        .gap(Space::N1)
-        .items_center();
+        let chips = shadcn::ToggleGroup::single(&locals.filter)
+            .deselectable(false)
+            .spacing(Space::N1)
+            .refine_layout(LayoutRefinement::default().flex_none())
+            .items([
+                filter_group_item(cx, TodoFilter::All),
+                filter_group_item(cx, TodoFilter::Active),
+                filter_group_item(cx, TodoFilter::Completed),
+            ]);
 
         let tip_callout = ui::container(|cx| {
             ui::single(
@@ -770,21 +770,11 @@ fn todo_page(
     .h_full()
 }
 
-fn filter_chip(
-    filter: TodoFilter,
-    current: TodoFilter,
-    action: impl Into<fret::ActionId>,
-) -> impl UiChild {
-    let selected = filter == current;
-    let action: fret::ActionId = action.into();
-    shadcn::Button::new(filter.as_label())
-        .variant(if selected {
-            shadcn::ButtonVariant::Secondary
-        } else {
-            shadcn::ButtonVariant::Ghost
-        })
-        .size(shadcn::ButtonSize::Sm)
-        .action(action)
+fn filter_group_item(cx: &mut AppUi<'_, '_>, filter: TodoFilter) -> shadcn::ToggleGroupItem {
+    shadcn::ToggleGroupItem::new(filter.value(), [cx.text(filter.as_label())])
+        .a11y_label(format!("Show {} tasks", filter.as_label().to_lowercase()))
+        .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+        .refine_layout(LayoutRefinement::default().h_px(Px(28.0)).min_h(Px(28.0)))
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChild {
@@ -1608,7 +1598,9 @@ mod tests {
         let src = todo_template_main_rs("todo-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("icons::{icon, IconId},"));
-        assert!(src.contains("style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},"));
+        assert!(src.contains(
+            "style::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, Theme, ThemeSnapshot},"
+        ));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(!src.contains("cx: &mut UiCx<'_>,"));
@@ -1643,7 +1635,8 @@ mod tests {
         assert!(src.contains("let locals = TodoLocals::new(cx);"));
         assert!(src.contains("locals.bind_actions(cx);"));
         assert!(src.contains("draft: cx.state().local::<String>(),"));
-        assert!(src.contains("filter: cx.state().local_init(|| TodoFilter::All),"));
+        assert!(src.contains("filter: LocalState<Option<Arc<str>>>,"));
+        assert!(src.contains("local_init(|| Some(Arc::from(TodoFilter::All.value())))"));
         assert!(src.contains("next_id: cx.state().local_init(|| 3u64),"));
         assert!(src.contains("tip_nonce: cx.state().local_init(|| 0u64),"));
         assert!(src.contains("todos: cx.state().local_init(|| vec!["));
@@ -1658,18 +1651,19 @@ mod tests {
         assert!(!src.contains(".submit_command(act::Add.into())"));
         assert!(src.contains(".local(&self.tip_nonce)"));
         assert!(src.contains(".update::<act::RefreshTip>(|v| {"));
-        assert!(src.contains(".local(&self.filter)"));
-        assert!(src.contains(".set::<act::FilterAll>(TodoFilter::All);"));
         assert!(src.contains(".local(&self.todos)"));
         assert!(src.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
+        assert!(src.contains("let chips = shadcn::ToggleGroup::single(&locals.filter)"));
+        assert!(src.contains(".deselectable(false)"));
         assert!(src.contains(
-            "let chip_all = filter_chip(TodoFilter::All, filter_value, act::FilterAll);"
+            "shadcn::ToggleGroupItem::new(filter.value(), [cx.text(filter.as_label())])"
         ));
-        assert!(src.contains(
-            "let chip_active = filter_chip(TodoFilter::Active, filter_value, act::FilterActive);"
-        ));
-        assert!(src.contains("let chip_completed = filter_chip("));
         assert!(!src.contains("filter_chip(cx, TodoFilter::All, filter_value)"));
+        assert!(!src.contains("filter_chip("));
+        assert!(!src.contains("FilterAll = \""));
+        assert!(!src.contains("FilterActive = \""));
+        assert!(!src.contains("FilterCompleted = \""));
+        assert!(!src.contains(".set::<act::FilterAll>(TodoFilter::All);"));
         assert!(!src.contains(".action(match filter {"));
         assert!(src.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
         assert!(src.contains("cx.data()"));
@@ -1704,15 +1698,17 @@ mod tests {
         assert!(!src.contains("cx.watch_model(&todos_model).layout().value_or_default();"));
         assert!(!src.contains("cx.watch_model(&filter_model).layout().value_or(TodoFilter::All);"));
         assert!(src.contains("let draft_value = locals.draft.layout_value(cx);"));
-        assert!(src.contains("let filter_value = locals.filter.layout_value(cx);"));
+        assert!(src.contains(
+            "let filter_value = TodoFilter::from_value(locals.filter.layout_value(cx).as_deref());"
+        ));
+        assert!(src.contains("let filter = TodoFilter::from_value(filter.as_deref());"));
         assert!(src.contains("let tip_nonce_value = locals.tip_nonce.paint_value(cx);"));
         assert!(src.contains("let footer_summary = if derived.total == 0 {"));
         assert!(!src.contains("draft_state.layout(cx).value_or_default()"));
         assert!(!src.contains("filter_state.layout(cx).value_or(TodoFilter::All)"));
         assert!(!src.contains("bind_todo_actions("));
         assert!(src.contains("fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {"));
-        assert!(src.contains("fn filter_chip("));
-        assert!(src.contains("action: impl Into<fret::ActionId>,"));
+        assert!(src.contains("fn filter_group_item("));
         assert!(src.contains("ui::single(cx, todo_page(theme, card))"));
         assert!(src.contains("ui::v_flex(|cx| ui::single(cx, content))"));
         assert!(!src.contains("ui::v_flex(|cx| ui::children![cx; content])"));
@@ -1727,8 +1723,10 @@ mod tests {
         assert!(!src.contains("Model<bool>"));
         assert!(!src.contains(".models_mut().insert("));
         assert!(!src.contains("decl_style::container_props"));
-        assert!(!src.contains(".refine_style("));
-        assert!(!src.contains(".refine_layout("));
+        assert!(src.contains(".refine_style(ChromeRefinement::default().rounded(Radius::Full))"));
+        assert!(src.contains(
+            ".refine_layout(LayoutRefinement::default().h_px(Px(28.0)).min_h(Px(28.0)))"
+        ));
         assert!(!src.contains("UiIntoElement"));
         assert!(!src.contains("UiHostBoundIntoElement"));
         assert!(!src.contains("UiChildIntoElement"));

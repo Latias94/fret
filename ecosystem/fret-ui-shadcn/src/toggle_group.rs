@@ -303,6 +303,7 @@ pub struct ToggleGroup {
     model: ToggleGroupModel,
     items: Vec<ToggleGroupItem>,
     disabled: bool,
+    deselectable: bool,
     control_id: Option<ControlId>,
     test_id_prefix: Option<Arc<str>>,
     roving_focus: bool,
@@ -327,6 +328,7 @@ impl std::fmt::Debug for ToggleGroup {
             .field("kind", &kind)
             .field("items_len", &self.items.len())
             .field("disabled", &self.disabled)
+            .field("deselectable", &self.deselectable)
             .field("roving_focus", &self.roving_focus)
             .field("orientation", &self.orientation)
             .field("loop_navigation", &self.loop_navigation)
@@ -353,6 +355,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            deselectable: true,
             control_id: None,
             test_id_prefix: None,
             roving_focus: true,
@@ -378,6 +381,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            deselectable: true,
             control_id: None,
             test_id_prefix: None,
             roving_focus: true,
@@ -401,6 +405,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            deselectable: true,
             control_id: None,
             test_id_prefix: None,
             roving_focus: true,
@@ -431,6 +436,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            deselectable: true,
             control_id: None,
             test_id_prefix: None,
             roving_focus: true,
@@ -448,6 +454,17 @@ impl ToggleGroup {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Controls whether a single-select group may clear the current item when it is activated
+    /// again.
+    ///
+    /// Defaults to `true` for source compatibility with the existing toggle-group behavior.
+    /// Set this to `false` when the group represents a required single choice (for example a view
+    /// filter or segmented control that must always keep one option selected).
+    pub fn deselectable(mut self, deselectable: bool) -> Self {
+        self.deselectable = deselectable;
         self
     }
 
@@ -558,6 +575,7 @@ impl ToggleGroup {
         let variant = self.variant;
         let size_token = self.size;
         let spacing = self.spacing;
+        let deselectable = self.deselectable;
         let chrome = self.chrome;
         let layout = self.layout;
         let style_override = self.style;
@@ -898,6 +916,7 @@ impl ToggleGroup {
                                         let next = if current
                                             .as_ref()
                                             .is_some_and(|cur| cur.as_ref() == value.as_ref())
+                                            && deselectable
                                         {
                                             None
                                         } else {
@@ -1153,6 +1172,18 @@ mod tests {
         bounds: Rect,
         model: Model<Option<Arc<str>>>,
     ) -> fret_core::NodeId {
+        render_single_with_deselectable(ui, app, services, window, bounds, model, true)
+    }
+
+    fn render_single_with_deselectable(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        deselectable: bool,
+    ) -> fret_core::NodeId {
         let root = fret_ui::declarative::render_root(
             ui,
             app,
@@ -1166,7 +1197,12 @@ mod tests {
                     ToggleGroupItem::new("beta", vec![]),
                     ToggleGroupItem::new("gamma", vec![]),
                 ];
-                vec![ToggleGroup::single(model).items(items).into_element(cx)]
+                vec![
+                    ToggleGroup::single(model)
+                        .deselectable(deselectable)
+                        .items(items)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1336,6 +1372,68 @@ mod tests {
 
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected, None);
+    }
+
+    #[test]
+    fn toggle_group_single_deselectable_false_keeps_selected_item_active() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = render_single_with_deselectable(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            false,
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let _ = render_single_with_deselectable(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            false,
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
     }
 
     #[test]
