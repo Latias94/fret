@@ -1,9 +1,11 @@
 use super::*;
 
 use fret_runtime::{
-    CommandMeta, CommandScope, InputDispatchPhase, WindowCommandActionAvailabilityService,
-    WindowMenuBarFocusService,
+    CommandMeta, CommandScope, InputDispatchPhase, WhenExpr,
+    WindowCommandActionAvailabilityService, WindowKeyContextStackService,
+    WindowMenuBarFocusService, command_is_enabled_for_window_with_input_ctx_fallback,
 };
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
 struct AvailabilityLeaf;
@@ -310,5 +312,46 @@ fn dispatch_event_publishes_action_availability_snapshot() {
     assert_eq!(
         svc.available(window, &CommandId::from("test.available")),
         Some(true)
+    );
+}
+
+#[test]
+fn publish_snapshot_refreshes_key_context_stack_for_cross_surface_gating() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let command = CommandId::from("test.keyctx_gated");
+    app.register_command(
+        command.clone(),
+        CommandMeta::new("Key Context Gated")
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("keyctx.demo").unwrap()),
+    );
+
+    app.with_global_mut(WindowKeyContextStackService::default, |svc, _app| {
+        svc.set_snapshot(window, vec![Arc::<str>::from("demo")]);
+    });
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+
+    assert!(
+        !command_is_enabled_for_window_with_input_ctx_fallback(
+            &app,
+            window,
+            &command,
+            InputContext::default(),
+        ),
+        "publishing a fresh action-availability snapshot should also refresh key-context snapshots so cross-surface gating does not keep stale keyctx values alive"
     );
 }

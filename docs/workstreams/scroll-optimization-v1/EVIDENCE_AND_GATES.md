@@ -80,6 +80,17 @@ This follow-on slice locks the contract that:
 - stale pending shortcut key contexts must not dispatch commands after the authoritative routing
   context changed.
 
+## Follow-on slice — Cross-surface command gating snapshots must refresh key contexts
+
+This follow-on slice locks the contract that:
+
+- publishing command/action availability snapshots must also refresh the current
+  `WindowKeyContextStackService` snapshot,
+- cross-surface command gating must not keep stale `keyctx.*` values alive after rebuild/root
+  replacement or other retained-tree reconfiguration,
+- app/window-scope command gating must observe the same authoritative key-context stack as the
+  current UI tree rather than the last input-event snapshot.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -116,6 +127,8 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::layer_root_replacement::set_root_replacement_preserves_overlay_interaction_state`
 - Pending shortcut is cleared when root replacement changes the key-context stack:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::shortcuts::tests::pending_sequence_is_cleared_when_root_replacement_changes_key_contexts`
+- Publishing action availability refreshes key-context snapshots for cross-surface gating:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::window_command_action_availability_snapshot::publish_snapshot_refreshes_key_context_stack_for_cross_surface_gating`
 
 ## Evidence anchors
 
@@ -148,6 +161,9 @@ This follow-on slice locks the contract that:
 - Pending shortcut authoritative-context revalidation:
   - `crates/fret-ui/src/tree/dispatch/window.rs`
   - `crates/fret-ui/src/tree/shortcuts.rs`
+- Cross-surface command gating key-context snapshot refresh:
+  - `crates/fret-ui/src/tree/commands.rs`
+  - `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs`
 - Lane positioning:
   - `docs/workstreams/scroll-optimization-v1/DESIGN.md`
   - `docs/workstreams/scroll-optimization-v1/TODO.md`
@@ -214,3 +230,9 @@ This follow-on slice locks the contract that:
   - `tree::tests::command_enabled_service::shortcut_dispatch_respects_window_command_enabled_service`
   - `tree::tests::command_enabled_service::shortcut_dispatch_respects_window_command_action_availability_snapshot`
   - `tree::tests::command_enabled_service::focus_menu_bar_shortcut_dispatches_when_menu_bar_focus_service_is_present`
+- 2026-04-03: cross-surface command-gating key-context refresh gates confirmed via `cargo nextest`:
+  - `tree::tests::window_command_action_availability_snapshot::publish_snapshot_refreshes_key_context_stack_for_cross_surface_gating`
+  - `tree::tests::window_command_action_availability_snapshot::action_availability_snapshot_marks_unhandled_commands_unavailable`
+  - `tree::tests::window_command_action_availability_snapshot::action_availability_snapshot_publishes_focus_traversal_gating`
+  - `tree::tests::window_command_action_availability_snapshot::action_availability_snapshot_publishes_focus_menu_bar_gating`
+  - `tree::tests::window_command_action_availability_snapshot::dispatch_event_publishes_action_availability_snapshot`

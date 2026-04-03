@@ -241,6 +241,7 @@ impl<H: UiHost> UiTree<H> {
         let focus = self.focus;
         let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
         let start = focus.unwrap_or(default_root);
+        let next_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
 
         let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
         let widget_commands: Vec<CommandId> = app
@@ -294,6 +295,19 @@ impl<H: UiHost> UiTree<H> {
                     snapshot.insert(id, false);
                 }
             }
+        }
+
+        let needs_key_contexts_update = app
+            .global::<fret_runtime::WindowKeyContextStackService>()
+            .and_then(|svc| svc.snapshot(window))
+            .is_none_or(|prev| prev != next_key_contexts.as_slice());
+        if needs_key_contexts_update {
+            app.with_global_mut(
+                fret_runtime::WindowKeyContextStackService::default,
+                |svc, _app| {
+                    svc.set_snapshot(window, next_key_contexts);
+                },
+            );
         }
 
         let needs_update = app
