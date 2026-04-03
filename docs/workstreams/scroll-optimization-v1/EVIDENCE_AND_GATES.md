@@ -103,6 +103,18 @@ This follow-on slice locks the contract that:
 - rebuild-time focus/key-context changes must revalidate pending shortcut state before stale
   overlay or gating consumers can observe it.
 
+## Follow-on slice — Imperative tree mutations require explicit window snapshot commit
+
+This follow-on slice locks the contract that:
+
+- raw `UiTree` mutation APIs update retained tree state only; they do not silently republish
+  window-level services,
+- imperative mutation flows can make same-frame cross-surface consumers authoritative by calling
+  `UiTree::publish_window_runtime_snapshots(...)`,
+- the explicit commit surface must revalidate focus and pending shortcut/key-context state before
+  writing `WindowInputContextService`, `WindowKeyContextStackService`, and
+  `WindowCommandActionAvailabilityService`.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -147,6 +159,12 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::render_root_rebuild_refreshes_window_key_context_snapshot_before_next_publish`
 - Declarative rebuild refreshes widget command availability before the next explicit publish:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::render_root_rebuild_refreshes_command_action_availability_before_next_publish`
+- Imperative tree mutation refreshes window input context only after explicit snapshot commit:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_input_context`
+- Imperative tree mutation refreshes key-context snapshots only after explicit snapshot commit:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_key_contexts`
+- Imperative tree mutation refreshes widget command availability only after explicit snapshot commit:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui declarative::tests::core::imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_command_availability`
 
 ## Evidence anchors
 
@@ -186,6 +204,11 @@ This follow-on slice locks the contract that:
   - `crates/fret-ui/src/declarative/mount.rs`
   - `crates/fret-ui/src/tree/commands.rs`
   - `crates/fret-ui/src/declarative/tests/core.rs`
+- Imperative window-snapshot commit surface:
+  - `crates/fret-ui/src/tree/commands.rs`
+  - `crates/fret-ui/src/tree/dispatch/window.rs`
+  - `crates/fret-ui/src/declarative/tests/core.rs`
+  - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - Lane positioning:
   - `docs/workstreams/scroll-optimization-v1/DESIGN.md`
   - `docs/workstreams/scroll-optimization-v1/TODO.md`
@@ -268,3 +291,15 @@ This follow-on slice locks the contract that:
   - `tree::tests::window_input_context_snapshot::dispatch_command_publishes_post_dispatch_input_context_snapshot`
   - `tree::tests::window_input_arbitration_snapshot::dispatch_event_publishes_post_dispatch_input_arbitration_snapshot`
   - `tree::tests::window_input_arbitration_snapshot::dispatch_command_publishes_post_dispatch_input_arbitration_snapshot`
+- 2026-04-03: imperative window-snapshot commit gates confirmed via `cargo nextest`:
+  - `declarative::tests::core::imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_input_context`
+  - `declarative::tests::core::imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_key_contexts`
+  - `declarative::tests::core::imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_command_availability`
+  - `declarative::tests::core::render_root_rebuild_refreshes_window_input_context_snapshot_before_paint`
+  - `declarative::tests::core::render_root_rebuild_refreshes_window_key_context_snapshot_before_next_publish`
+  - `declarative::tests::core::render_root_rebuild_refreshes_command_action_availability_before_next_publish`
+  - `tree::shortcuts::tests::pending_sequence_is_cleared_when_root_replacement_changes_key_contexts`
+  - `tree::tests::window_command_action_availability_snapshot::publish_snapshot_refreshes_key_context_stack_for_cross_surface_gating`
+  - `tree::tests::window_command_action_availability_snapshot::dispatch_event_publishes_action_availability_snapshot`
+  - `tree::tests::window_input_context_snapshot::dispatch_event_publishes_post_dispatch_input_context_snapshot`
+  - `tree::tests::window_input_context_snapshot::dispatch_command_publishes_post_dispatch_input_context_snapshot`

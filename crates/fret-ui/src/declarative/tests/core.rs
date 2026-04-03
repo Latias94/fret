@@ -1052,6 +1052,240 @@ fn render_root_rebuild_refreshes_command_action_availability_before_next_publish
 }
 
 #[test]
+fn imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_input_context() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+    let value = app.models_mut().insert(String::new());
+
+    let mut input_element = None;
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "imperative-input-ctx-commit",
+        |cx| {
+            let input = cx.text_input(TextInputProps::new(value.clone()));
+            input_element = Some(input.id);
+            vec![input]
+        },
+    );
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let input_node = crate::declarative::mount::node_for_element_in_window_frame(
+        &mut app,
+        window,
+        input_element.expect("text input element id"),
+    )
+    .expect("text input node");
+    ui.set_focus(Some(input_node));
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let initial_snapshot = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("initial window input context snapshot");
+    assert!(initial_snapshot.focus_is_text_input);
+
+    let replacement_root = ui.create_node(FillStack);
+    ui.set_root(replacement_root);
+
+    let stale_snapshot = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("stale window input context snapshot");
+    assert!(
+        stale_snapshot.focus_is_text_input,
+        "raw tree mutation should not silently republish window snapshots before the explicit commit boundary"
+    );
+
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let committed_snapshot = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("committed window input context snapshot");
+    assert!(
+        !committed_snapshot.focus_is_text_input,
+        "explicit window snapshot commit should refresh the authoritative input context after raw tree mutation"
+    );
+}
+
+#[test]
+fn imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_key_contexts() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let mut keyed_element = None;
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "imperative-keyctx-commit",
+        |cx| {
+            let element = cx.text("demo ctx").key_context("demo");
+            keyed_element = Some(element.id);
+            vec![element]
+        },
+    );
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let keyed_node = crate::declarative::mount::node_for_element_in_window_frame(
+        &mut app,
+        window,
+        keyed_element.expect("keyed element id"),
+    )
+    .expect("keyed node");
+    ui.set_focus(Some(keyed_node));
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let initial_key_contexts = app
+        .global::<fret_runtime::WindowKeyContextStackService>()
+        .and_then(|svc| svc.snapshot(window))
+        .map(|v| v.to_vec())
+        .unwrap_or_default();
+    assert_eq!(initial_key_contexts, vec![Arc::<str>::from("demo")]);
+
+    let replacement_root = ui.create_node(FillStack);
+    ui.set_root(replacement_root);
+
+    let stale_key_contexts = app
+        .global::<fret_runtime::WindowKeyContextStackService>()
+        .and_then(|svc| svc.snapshot(window))
+        .map(|v| v.to_vec())
+        .unwrap_or_default();
+    assert_eq!(
+        stale_key_contexts,
+        vec![Arc::<str>::from("demo")],
+        "raw tree mutation should leave the previous key-context snapshot published until the explicit commit boundary"
+    );
+
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let committed_key_contexts = app
+        .global::<fret_runtime::WindowKeyContextStackService>()
+        .and_then(|svc| svc.snapshot(window))
+        .map(|v| v.to_vec())
+        .unwrap_or_default();
+    assert!(
+        committed_key_contexts.is_empty(),
+        "explicit window snapshot commit should refresh the authoritative key-context stack after raw tree mutation"
+    );
+}
+
+#[test]
+fn imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_command_availability() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let command = CommandId::from("test.imperative_commit_available");
+    app.register_command(
+        command.clone(),
+        fret_runtime::CommandMeta::new("Imperative Commit Available")
+            .with_scope(fret_runtime::CommandScope::Widget),
+    );
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+    let mut availability_element = None;
+
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "imperative-command-availability-commit",
+        |cx| {
+            let root = cx.container(crate::element::ContainerProps::default(), |_cx| Vec::new());
+            availability_element = Some(root.id);
+            cx.command_on_command_availability_for(
+                root.id,
+                Arc::new(|_host, _acx, requested| {
+                    if requested.as_str() == "test.imperative_commit_available" {
+                        return crate::widget::CommandAvailability::Available;
+                    }
+                    crate::widget::CommandAvailability::NotHandled
+                }),
+            );
+            vec![root]
+        },
+    );
+
+    let availability_node = crate::declarative::mount::node_for_element_in_window_frame(
+        &mut app,
+        window,
+        availability_element.expect("availability element id"),
+    )
+    .expect("availability node");
+    ui.set_focus(Some(availability_node));
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let initial_availability = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &command));
+    assert_eq!(initial_availability, Some(true));
+
+    let replacement_root = ui.create_node(FillStack);
+    ui.set_root(replacement_root);
+
+    let stale_availability = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &command));
+    assert_eq!(
+        stale_availability,
+        Some(true),
+        "raw tree mutation should not silently republish command availability before the explicit commit boundary"
+    );
+
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let committed_availability = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &command));
+    assert_eq!(
+        committed_availability,
+        Some(false),
+        "explicit window snapshot commit should refresh widget command availability after raw tree mutation"
+    );
+}
+
+#[test]
 fn key_hook_can_request_focus() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

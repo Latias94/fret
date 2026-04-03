@@ -813,7 +813,7 @@ where
 
             root_node
         });
-    ui.publish_window_runtime_snapshots_after_rebuild(app);
+    ui.publish_window_runtime_snapshots(app);
     root_node
 }
 
@@ -1304,7 +1304,7 @@ where
 
             root_node
         });
-    ui.publish_window_runtime_snapshots_after_rebuild(app);
+    ui.publish_window_runtime_snapshots(app);
     root_node
 }
 

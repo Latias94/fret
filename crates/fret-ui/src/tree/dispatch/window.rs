@@ -1,5 +1,4 @@
 use super::*;
-use fret_runtime::WindowKeyContextStackService;
 use std::collections::HashMap;
 
 use super::event_chain::pointer_cancel_event_for_capture_switch;
@@ -338,18 +337,7 @@ impl<H: UiHost> UiTree<H> {
                         }
 
                         let next_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
-                        let needs_key_contexts_update = app
-                            .global::<WindowKeyContextStackService>()
-                            .and_then(|svc| svc.snapshot(window))
-                            .is_none_or(|prev| prev != next_key_contexts.as_slice());
-                        if needs_key_contexts_update {
-                            app.with_global_mut(
-                                WindowKeyContextStackService::default,
-                                |svc, _app| {
-                                    svc.set_snapshot(window, next_key_contexts);
-                                },
-                            );
-                        }
+                        self.publish_window_key_context_stack_snapshot(app, next_key_contexts);
                     }
                 }
                 input_ctx
@@ -447,19 +435,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if !self.replaying_pending_shortcut && !self.pending_shortcut.keystrokes.is_empty() {
-            // `focus` / `barrier_root` are only proxies for the shortcut-routing context. Root
-            // replacement and other retained-tree repairs can change the authoritative key-context
-            // stack without changing either proxy (for example, when no node is focused). Re-check
-            // the current key-context stack before continuing a multi-stroke sequence.
-            let current_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
-            if (self.pending_shortcut.focus.is_some() && self.pending_shortcut.focus != self.focus)
-                || self.pending_shortcut.barrier_root != barrier_root
-                || self.pending_shortcut.key_contexts.as_slice() != current_key_contexts.as_slice()
-            {
-                self.clear_pending_shortcut(app);
-            }
-        }
+        self.revalidate_pending_shortcut_for_current_routing_context(app, barrier_root);
 
         if let Event::Timer { token } = event
             && !self.replaying_pending_shortcut

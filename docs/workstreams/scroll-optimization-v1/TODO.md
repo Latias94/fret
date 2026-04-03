@@ -63,6 +63,9 @@ Status: Active
   - [x] declarative rebuild commit points (`render_root(...)` / `render_dismissible_root_with_hooks(...)`)
     now republish authoritative window input/key-context/action-availability snapshots after tree
     GC/root reuse, so later same-frame surfaces cannot keep consuming stale window services,
+  - [x] raw imperative `UiTree` mutations now have an explicit authoritative window-snapshot
+    commit surface, so same-frame consumers can republish input/key-context/action-availability
+    after retained-state changes without waiting for rebuild/dispatch/paint,
   - [ ] remaining child list mutation helpers,
   - [x] contained cache-root dirty markers now align with main-pass layout consumption and
     descendant-truncated contained relayout scheduling,
@@ -85,6 +88,8 @@ Status: Active
     consumers read them,
   - [x] declarative rebuild republished widget command availability before the next explicit
     publish/dispatch boundary,
+  - [x] imperative raw tree mutation only refreshes window input/key-context/action-availability
+    after an explicit window snapshot commit,
   - [ ] scroll handle revision-only bumps stay classified correctly.
 
 ## Wheel/trackpad delta coalescing

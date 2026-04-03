@@ -215,6 +215,31 @@ Reference:
 - GPUI/Zed style-context traversal outcomes for text styling,
 - shadcn/Radix reliance on `currentColor` for icon/text alignment.
 
+#### 3.7 Window snapshot publish contract (Stable)
+
+Some cross-surface/runtime consumers read window-level snapshots rather than traversing the
+retained tree directly. The runtime therefore needs an explicit commit contract for publishing
+authoritative window state.
+
+Mechanism (runtime-provided):
+
+- raw retained-tree mutation APIs may change local `UiTree` state without immediately republishing
+  window-level services,
+- authoritative window snapshots are published at explicit commit boundaries (`dispatch_event`,
+  `dispatch_command`, paint/declarative rebuild boundaries, or
+  `UiTree::publish_window_runtime_snapshots(...)` for imperative mutation flows),
+- snapshot publication must revalidate focus and pending shortcut/key-context state against the
+  current authoritative tree before writing `WindowInputContextService`,
+  `WindowKeyContextStackService`, and `WindowCommandActionAvailabilityService`.
+
+Invariants:
+
+- same-frame consumers must not observe tree-local repairs without a matching snapshot commit,
+- imperative mutation flows may opt into immediate cross-surface consistency by calling the
+  explicit publish API,
+- this commit responsibility stays in `crates/fret-ui`; policy/component crates must not paper over
+  stale window snapshots with recipe-local workarounds.
+
 ### 4) Declarative-only authoring (no retained widget primitives)
 
 The component ecosystem is declarative-first (ADR 0028 / ADR 0039). We treat retained widgets

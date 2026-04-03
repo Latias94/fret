@@ -1,9 +1,10 @@
 use super::*;
 use crate::widget::{CommandAvailability, CommandAvailabilityCx};
 use fret_runtime::CommandScope;
+use std::sync::Arc;
 
 impl<H: UiHost> UiTree<H> {
-    fn revalidate_focus_for_dispatch_snapshot(
+    pub(in crate::tree) fn revalidate_focus_for_dispatch_snapshot(
         &mut self,
         frame_id: fret_runtime::FrameId,
         active_focus_layers: &[NodeId],
@@ -20,6 +21,28 @@ impl<H: UiHost> UiTree<H> {
             .is_some_and(|node| dispatch_snapshot.pre.get(node).is_none())
         {
             self.set_focus_unchecked(None, reason);
+        }
+    }
+
+    pub(in crate::tree) fn revalidate_pending_shortcut_for_current_routing_context(
+        &mut self,
+        app: &mut H,
+        barrier_root: Option<NodeId>,
+    ) {
+        if self.replaying_pending_shortcut || self.pending_shortcut.keystrokes.is_empty() {
+            return;
+        }
+
+        // `focus` / `barrier_root` are only proxies for the shortcut-routing context. Root
+        // replacement and other retained-tree repairs can change the authoritative key-context
+        // stack without changing either proxy (for example, when no node is focused). Re-check
+        // the current key-context stack before continuing a multi-stroke sequence.
+        let current_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
+        if (self.pending_shortcut.focus.is_some() && self.pending_shortcut.focus != self.focus)
+            || self.pending_shortcut.barrier_root != barrier_root
+            || self.pending_shortcut.key_contexts.as_slice() != current_key_contexts.as_slice()
+        {
+            self.clear_pending_shortcut(app);
         }
     }
 
@@ -69,7 +92,11 @@ impl<H: UiHost> UiTree<H> {
         Some(input_ctx)
     }
 
-    fn publish_window_input_context_snapshot(&self, app: &mut H, input_ctx: &InputContext) {
+    pub(in crate::tree) fn publish_window_input_context_snapshot(
+        &self,
+        app: &mut H,
+        input_ctx: &InputContext,
+    ) {
         let Some(window) = self.window else {
             return;
         };
@@ -87,7 +114,40 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    pub(crate) fn publish_window_runtime_snapshots_after_rebuild(&mut self, app: &mut H) {
+    pub(in crate::tree) fn publish_window_key_context_stack_snapshot(
+        &self,
+        app: &mut H,
+        key_contexts: Vec<Arc<str>>,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+        let needs_update = app
+            .global::<fret_runtime::WindowKeyContextStackService>()
+            .and_then(|svc| svc.snapshot(window))
+            .is_none_or(|prev| prev != key_contexts.as_slice());
+        if needs_update {
+            app.with_global_mut(
+                fret_runtime::WindowKeyContextStackService::default,
+                |svc, _app| {
+                    svc.set_snapshot(window, key_contexts);
+                },
+            );
+        }
+    }
+
+    /// Publishes authoritative window-level runtime snapshots for the tree's current retained
+    /// state.
+    ///
+    /// Raw `UiTree` mutation APIs (`set_root`, `set_focus`, overlay/layer mutation, subtree
+    /// removal, and similar helpers) only update retained tree state. Cross-surface consumers that
+    /// read `WindowInputContextService`, `WindowKeyContextStackService`, or
+    /// `WindowCommandActionAvailabilityService` become authoritative only after this publish step
+    /// or another explicit commit boundary such as declarative rebuild, input dispatch, or paint.
+    ///
+    /// Call this after imperative tree mutations when later same-frame consumers must observe the
+    /// new authoritative window state immediately.
+    pub fn publish_window_runtime_snapshots(&mut self, app: &mut H) {
         let (_active_input_layers, input_barrier_root) = self.active_input_layers();
         let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
         let barrier_root = focus_barrier_root.or(input_barrier_root);
@@ -99,15 +159,7 @@ impl<H: UiHost> UiTree<H> {
             "commands: focus missing from dispatch snapshot",
         );
 
-        if !self.replaying_pending_shortcut && !self.pending_shortcut.keystrokes.is_empty() {
-            let current_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
-            if (self.pending_shortcut.focus.is_some() && self.pending_shortcut.focus != self.focus)
-                || self.pending_shortcut.barrier_root != barrier_root
-                || self.pending_shortcut.key_contexts.as_slice() != current_key_contexts.as_slice()
-            {
-                self.clear_pending_shortcut(app);
-            }
-        }
+        self.revalidate_pending_shortcut_for_current_routing_context(app, barrier_root);
 
         let focus_is_text_input = self.focus_is_text_input(app);
         let Some(input_ctx) = self.current_window_input_context(
@@ -416,18 +468,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        let needs_key_contexts_update = app
-            .global::<fret_runtime::WindowKeyContextStackService>()
-            .and_then(|svc| svc.snapshot(window))
-            .is_none_or(|prev| prev != next_key_contexts.as_slice());
-        if needs_key_contexts_update {
-            app.with_global_mut(
-                fret_runtime::WindowKeyContextStackService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, next_key_contexts);
-                },
-            );
-        }
+        self.publish_window_key_context_stack_snapshot(app, next_key_contexts);
 
         let needs_update = app
             .global::<fret_runtime::WindowCommandActionAvailabilityService>()
