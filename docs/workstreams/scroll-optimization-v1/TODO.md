@@ -41,6 +41,10 @@ Status: Active
   - `crates/fret-ui/src/tree/layout/entrypoints.rs`
   - `crates/fret-ui/src/tree/ui_tree_view_cache.rs`
   - `crates/fret-ui/src/tree/tests/view_cache.rs`
+- [x] Prune detached roots from layout follow-up scheduling before final layout:
+  - `crates/fret-ui/src/tree/layout/entrypoints.rs`
+  - `crates/fret-ui/src/tree/tests/view_cache.rs`
+  - `crates/fret-ui/src/tree/tests/barrier_subtree_layout_dirty_aggregation.rs`
 - [ ] Audit all barrier-related paths that can affect scroll surfaces:
   - [ ] child list mutation helpers,
   - [ ] contained relayout scheduling,

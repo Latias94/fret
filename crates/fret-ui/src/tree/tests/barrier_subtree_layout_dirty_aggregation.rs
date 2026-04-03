@@ -84,3 +84,46 @@ fn set_children_barrier_same_children_recomputes_subtree_layout_dirty_counts() {
     assert_eq!(ui.nodes[barrier].subtree_layout_dirty_count, 1);
     assert_eq!(ui.nodes[root].subtree_layout_dirty_count, 1);
 }
+
+#[test]
+fn detached_pending_barrier_relayout_is_pruned_before_layout() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let barrier = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![barrier]);
+
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(120.0), fret_core::Px(60.0)),
+    );
+    ui.nodes[root].bounds = bounds;
+    ui.nodes[root].measured_size = bounds.size;
+    ui.nodes[barrier].bounds = bounds;
+    ui.nodes[barrier].measured_size = bounds.size;
+
+    ui.test_clear_node_invalidations(root);
+    ui.test_clear_node_invalidations(barrier);
+
+    ui.schedule_barrier_relayout_with_source_and_detail(
+        barrier,
+        UiDebugInvalidationSource::Other,
+        UiDebugInvalidationDetail::Unknown,
+    );
+    ui.set_children(root, Vec::new());
+    assert_eq!(ui.node_parent(barrier), None);
+
+    let mut services = FakeUiServices;
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().barrier_relayouts_performed,
+        0,
+        "detached barrier roots must not keep running pending barrier relayouts"
+    );
+}

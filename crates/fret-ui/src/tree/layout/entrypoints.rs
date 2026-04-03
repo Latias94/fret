@@ -65,6 +65,7 @@ impl<H: UiHost> UiTree<H> {
 
         if pass_kind == LayoutPassKind::Final {
             self.update_interactive_resize_state_for_layout(app.frame_id(), bounds, scale_factor);
+            self.prune_detached_layout_followups();
         }
         let force_post_resize_rebuild =
             pass_kind == LayoutPassKind::Final && self.interactive_resize_requires_full_rebuild();
@@ -151,15 +152,18 @@ impl<H: UiHost> UiTree<H> {
                 .is_some_and(|node| node.invalidation.layout || node.bounds != bounds)
         });
         let any_pending_barrier_needs_layout = self.pending_barrier_relayouts.iter().any(|&root| {
-            self.nodes
-                .get(root)
-                .is_some_and(|node| node.invalidation.layout)
+            self.node_is_attached_to_layer_tree(root)
+                && self
+                    .nodes
+                    .get(root)
+                    .is_some_and(|node| node.invalidation.layout)
         });
         let any_view_cache_root_needs_layout = self.view_cache_active()
-            && self
-                .nodes
-                .iter()
-                .any(|(_, node)| node.view_cache.enabled && node.invalidation.layout);
+            && self.nodes.iter().any(|(id, node)| {
+                self.node_is_attached_to_layer_tree(id)
+                    && node.view_cache.enabled
+                    && node.invalidation.layout
+            });
 
         if pass_kind == LayoutPassKind::Final
             && !any_root_needs_layout_or_bounds
@@ -240,7 +244,7 @@ impl<H: UiHost> UiTree<H> {
             && self.pending_barrier_relayouts.is_empty()
             && self.last_layout_bounds == Some(bounds)
             && self.last_layout_scale_factor == Some(scale_factor)
-            && self.layout_invalidations_count == 0
+            && !self.any_attached_layout_invalidations()
             && !force_post_resize_rebuild
         {
             self.debug_stats.layout_fast_path_taken = true;
@@ -1215,6 +1219,35 @@ impl<H: UiHost> UiTree<H> {
         scale_factor: f32,
     ) -> Size {
         self.measure_node(app, services, node, constraints, scale_factor)
+    }
+
+    fn node_is_attached_to_layer_tree(&self, node: NodeId) -> bool {
+        self.node_root(node)
+            .is_some_and(|root| self.root_to_layer.contains_key(&root))
+    }
+
+    fn any_attached_layout_invalidations(&self) -> bool {
+        self.nodes
+            .iter()
+            .any(|(id, node)| node.invalidation.layout && self.node_is_attached_to_layer_tree(id))
+    }
+
+    fn prune_detached_layout_followups(&mut self) {
+        let retained_dirty_cache_roots: std::collections::HashSet<NodeId> = self
+            .dirty_cache_roots
+            .iter()
+            .copied()
+            .filter(|&root| self.node_is_attached_to_layer_tree(root))
+            .collect();
+        self.dirty_cache_roots = retained_dirty_cache_roots;
+        self.dirty_cache_root_reasons
+            .retain(|root, _| self.dirty_cache_roots.contains(root));
+        self.pending_barrier_relayouts = self
+            .pending_barrier_relayouts
+            .iter()
+            .copied()
+            .filter(|&root| self.node_is_attached_to_layer_tree(root))
+            .collect();
     }
 
     fn begin_layout_engine_frame(&mut self, app: &mut H) {

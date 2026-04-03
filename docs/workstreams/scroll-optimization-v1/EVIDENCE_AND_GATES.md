@@ -19,6 +19,14 @@ This follow-on slice locks the contract that:
 - `view_cache_needs_rerender` remains authoritative for declarative rerender pressure,
 - scheduling-only dirty markers clear once layout invalidation and rerender pressure are both gone.
 
+## Follow-on slice — Detached roots must not keep layout follow-up state alive
+
+This follow-on slice locks the contract that:
+
+- detached/unreachable cache roots must be pruned before contained-relayout candidate selection,
+- detached/unreachable barrier roots must be pruned before pending barrier relayout execution,
+- detached layout follow-up state must not block later stable frames from taking a layout-skip path.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -35,6 +43,10 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui view_cache_layout_invalidations_allow_reuse_for_definite_contained_roots`
 - Explicit scroll-handle layout invalidations still force rerender:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender`
+- Detached dirty cache roots are pruned before contained relayout:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups`
+- Detached pending barrier relayouts are pruned before execution:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui detached_pending_barrier_relayout_is_pruned_before_layout`
 
 ## Evidence anchors
 
@@ -46,6 +58,10 @@ This follow-on slice locks the contract that:
 - Contained relayout dirty/rerender bookkeeping:
   - `crates/fret-ui/src/tree/layout/entrypoints.rs`
   - `crates/fret-ui/src/tree/ui_tree_view_cache.rs`
+- Detached follow-up pruning + regression coverage:
+  - `crates/fret-ui/src/tree/layout/entrypoints.rs`
+  - `crates/fret-ui/src/tree/tests/view_cache.rs`
+  - `crates/fret-ui/src/tree/tests/barrier_subtree_layout_dirty_aggregation.rs`
 - Lane positioning:
   - `docs/workstreams/scroll-optimization-v1/DESIGN.md`
   - `docs/workstreams/scroll-optimization-v1/TODO.md`
@@ -68,3 +84,8 @@ This follow-on slice locks the contract that:
   - `tree::tests::view_cache::view_cache_runs_contained_relayout_for_invalidated_boundaries`
   - `tree::tests::view_cache::view_cache_layout_invalidations_allow_reuse_for_definite_contained_roots`
   - `tree::tests::view_cache::view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender`
+- 2026-04-03: detached-root follow-up pruning gates confirmed via `cargo nextest` with
+  `CARGO_TARGET_DIR=target-codex-verify5`:
+  - `tree::tests::view_cache::detached_dirty_view_cache_root_is_pruned_before_layout_followups`
+  - `tree::tests::barrier_subtree_layout_dirty_aggregation::detached_pending_barrier_relayout_is_pruned_before_layout`
+  - `tree::tests::view_cache::view_cache_runs_contained_relayout_for_invalidated_boundaries`
