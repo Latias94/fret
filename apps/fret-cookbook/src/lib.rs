@@ -648,6 +648,30 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn viewport_interop_examples_model_required_single_choice_with_toggle_groups() {
+        assert!(EMBEDDED_VIEWPORT_EXAMPLE.contains("shadcn::ToggleGroup::single(&st.size_preset)"));
+        assert!(EMBEDDED_VIEWPORT_EXAMPLE.contains("shadcn::ToggleGroup::single(&st.fit)"));
+        assert!(EMBEDDED_VIEWPORT_EXAMPLE.contains(".deselectable(false)"));
+        assert!(!EMBEDDED_VIEWPORT_EXAMPLE.contains(".disabled(preset == 0)"));
+        assert!(!EMBEDDED_VIEWPORT_EXAMPLE.contains(".disabled(fit == ViewportFit::Contain)"));
+        assert!(!EMBEDDED_VIEWPORT_EXAMPLE.contains(".setup(install_commands)"));
+        assert!(!EMBEDDED_VIEWPORT_EXAMPLE.contains(".on_command(on_command)"));
+
+        assert!(
+            EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("shadcn::ToggleGroup::single(&st.preset)")
+        );
+        assert!(EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("shadcn::ToggleGroup::single(&st.fit)"));
+        assert!(EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains(".deselectable(false)"));
+        assert!(!EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains(".disabled(preset == 0)"));
+        assert!(
+            !EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains(".disabled(fit == ViewportFit::Contain)")
+        );
+        assert!(!EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains(".with_command_default_keybindings()"));
+        assert!(!EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains(".setup(install_commands)"));
+        assert!(!EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains(".on_command(on_command)"));
+    }
+
+    #[test]
     fn date_picker_example_prefers_local_state_bridges_over_clone_model() {
         assert!(
             DATE_PICKER_EXAMPLE
@@ -1228,7 +1252,8 @@ mod authoring_surface_policy_tests {
             EXTERNAL_TEXTURE_IMPORT_EXAMPLE,
             &[
                 "let preset = st.preset.paint_in(cx).value_or_default();",
-                "let fit = st.fit.paint_in(cx).value_or(ViewportFit::Contain);",
+                "let fit_value = st.fit.paint_in(cx).value_or_default();",
+                "let fit = selected_fit(fit_value.as_deref());",
                 "let target_w = st.target_w.paint_in(cx).value_or_default();",
                 "let target_h = st.target_h.paint_in(cx).value_or_default();",
                 "let ingest = st.ingest.paint_in(cx).value_or_default();",
@@ -1252,7 +1277,8 @@ mod authoring_surface_policy_tests {
                 "let target_h = diag.target_h.paint_in(cx).value_or_default();",
                 "let kind = diag.kind.paint_in(cx).value_or_default();",
                 "let preset = st.size_preset.paint_in(cx).value_or_default();",
-                "let fit = st.fit.paint_in(cx).value_or(ViewportFit::Contain);",
+                "let fit_value = st.fit.paint_in(cx).value_or_default();",
+                "let fit = selected_fit(fit_value.as_deref());",
             ],
             &[
                 "cx.watch_model(&embedded_models.clicks)",

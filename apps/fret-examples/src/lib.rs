@@ -2344,16 +2344,56 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             EMBEDDED_VIEWPORT_DEMO,
             &[
-                "let size_preset_state = cx.state().local_init(|| 1usize);",
+                "let size_preset_state = cx.state().local_init(|| Some(Arc::<str>::from(SIZE_PRESET_960)));",
                 "let preset = size_preset_state.layout_value(cx);",
-                "cx.actions().local(&size_preset_state).set::<act::PickSize640>(0);",
+                "shadcn::ToggleGroup::single(&size_preset_state)",
+                ".deselectable(false)",
             ],
             &[
                 "cx.use_local_with(|| 1usize)",
                 "cx.on_action_notify_local_set::<act::PickSize640, usize>",
                 "let preset = size_preset_state.layout(cx).value_or_default();",
+                "cx.actions().local(&size_preset_state).set::<act::PickSize640>(0);",
+                ".disabled(preset == 0)",
             ],
         );
+    }
+
+    #[test]
+    fn embedded_viewport_demo_models_size_presets_as_required_toggle_group() {
+        let normalized = EMBEDDED_VIEWPORT_DEMO
+            .split_whitespace()
+            .collect::<String>();
+
+        assert!(
+            normalized.contains(
+                &"shadcn::ToggleGroup::single(&size_preset_state)"
+                    .split_whitespace()
+                    .collect::<String>(),
+            )
+        );
+        assert!(
+            normalized.contains(
+                &".deselectable(false)"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            normalized.contains(
+                &"cx.state().local_init(|| Some(Arc::<str>::from(SIZE_PRESET_960)))"
+                    .split_whitespace()
+                    .collect::<String>(),
+            )
+        );
+        assert!(
+            !normalized.contains(
+                &".disabled(preset == 0)"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(!normalized.contains(&"PickSize640".split_whitespace().collect::<String>()));
     }
 
     #[test]

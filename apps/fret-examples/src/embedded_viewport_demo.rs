@@ -7,17 +7,20 @@ use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
 
 const DEFAULT_VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
+const SIZE_PRESET_640: &str = "640x360";
+const SIZE_PRESET_960: &str = "960x540";
+const SIZE_PRESET_1280: &str = "1280x720";
 
 fn diag_enabled() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty() && v != "0")
 }
 
-mod act {
-    fret::actions!([
-        PickSize640 = "embedded_viewport_demo.pick_size.640.v1",
-        PickSize960 = "embedded_viewport_demo.pick_size.960.v1",
-        PickSize1280 = "embedded_viewport_demo.pick_size.1280.v1",
-    ]);
+fn selected_target_px_size(value: Option<&str>) -> ((u32, u32), &'static str) {
+    match value {
+        Some(SIZE_PRESET_640) => ((640, 360), "640×360"),
+        Some(SIZE_PRESET_1280) => ((1280, 720), "1280×720"),
+        _ => (DEFAULT_VIEWPORT_PX_SIZE, "960×540"),
+    }
 }
 
 struct EmbeddedViewportDemoView {
@@ -53,13 +56,11 @@ impl View for EmbeddedViewportDemoView {
             .paint(cx)
             .value_or_else(|| Arc::from("<no input yet>"));
 
-        let size_preset_state = cx.state().local_init(|| 1usize);
+        let size_preset_state = cx
+            .state()
+            .local_init(|| Some(Arc::<str>::from(SIZE_PRESET_960)));
         let preset = size_preset_state.layout_value(cx);
-        let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
-            0 => ((640, 360), "640×360"),
-            2 => ((1280, 720), "1280×720"),
-            _ => (DEFAULT_VIEWPORT_PX_SIZE, "960×540"),
-        };
+        let (target_px_size, preset_label) = selected_target_px_size(preset.as_deref());
         self.embedded.set_target_px_size(target_px_size);
 
         let header = ui::v_flex(|cx| {
@@ -74,26 +75,20 @@ impl View for EmbeddedViewportDemoView {
         .gap(Space::N1)
         .into_element(cx);
 
-        let size_controls = ui::h_flex(|cx| {
-            ui::children![
-                cx;
-                shadcn::Button::new("640×360")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .action(act::PickSize640)
-                    .disabled(preset == 0),
-                shadcn::Button::new("960×540")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .action(act::PickSize960)
-                    .disabled(preset == 1),
-                shadcn::Button::new("1280×720")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .action(act::PickSize1280)
-                    .disabled(preset == 2),
-            ]
-        })
-        .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        let size_controls = shadcn::ToggleGroup::single(&size_preset_state)
+            .deselectable(false)
+            .variant(shadcn::ToggleVariant::Outline)
+            .spacing(Space::N2)
+            .items([
+                shadcn::ToggleGroupItem::new(SIZE_PRESET_640, [cx.text("640×360")])
+                    .a11y_label("Viewport size 640 by 360"),
+                shadcn::ToggleGroupItem::new(SIZE_PRESET_960, [cx.text("960×540")])
+                    .a11y_label("Viewport size 960 by 540"),
+                shadcn::ToggleGroupItem::new(SIZE_PRESET_1280, [cx.text("1280×720")])
+                    .a11y_label("Viewport size 1280 by 720"),
+            ])
+            .refine_layout(LayoutRefinement::default().flex_none())
+            .into_element(cx);
 
         let info = ui::v_flex(|cx| {
             ui::children![
@@ -142,16 +137,6 @@ impl View for EmbeddedViewportDemoView {
         .w_full()
         .max_w(Px(980.0))
         .into_element(cx);
-
-        cx.actions()
-            .local(&size_preset_state)
-            .set::<act::PickSize640>(0);
-        cx.actions()
-            .local(&size_preset_state)
-            .set::<act::PickSize960>(1);
-        cx.actions()
-            .local(&size_preset_state)
-            .set::<act::PickSize1280>(2);
 
         embedded_viewport_page(cx.elements(), theme, viewport_card, diag_enabled())
     }

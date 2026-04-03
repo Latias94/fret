@@ -1,12 +1,12 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use fret::advanced::interop::embedded_viewport as embedded;
 use fret::component::prelude::*;
 use fret::{advanced::prelude::*, shadcn};
-use fret_app::{CommandMeta, CommandScope};
 use fret_core::{AppWindowId, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind};
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
-use fret_runtime::{CommandId, FrameId, Model, TickId};
+use fret_runtime::{FrameId, Model, TickId};
 use fret_ui::element::SemanticsDecoration;
 
 const ROOT_NAME: &str = "cookbook.embedded_viewport_basics";
@@ -30,13 +30,28 @@ const TEST_ID_TARGET_H: &str = "cookbook.embedded_viewport_basics.target_h";
 const TEST_ID_KIND: &str = "cookbook.embedded_viewport_basics.kind";
 
 const DEFAULT_VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
+const SIZE_PRESET_640: &str = "640x360";
+const SIZE_PRESET_960: &str = "960x540";
+const SIZE_PRESET_1280: &str = "1280x720";
+const FIT_CONTAIN: &str = "contain";
+const FIT_COVER: &str = "cover";
+const FIT_STRETCH: &str = "stretch";
 
-const CMD_SIZE_640: &str = "cookbook.embedded_viewport_basics.size_640";
-const CMD_SIZE_960: &str = "cookbook.embedded_viewport_basics.size_960";
-const CMD_SIZE_1280: &str = "cookbook.embedded_viewport_basics.size_1280";
-const CMD_FIT_CONTAIN: &str = "cookbook.embedded_viewport_basics.fit_contain";
-const CMD_FIT_COVER: &str = "cookbook.embedded_viewport_basics.fit_cover";
-const CMD_FIT_STRETCH: &str = "cookbook.embedded_viewport_basics.fit_stretch";
+fn selected_target_px_size(value: Option<&str>) -> ((u32, u32), &'static str) {
+    match value {
+        Some(SIZE_PRESET_640) => ((640, 360), "640×360"),
+        Some(SIZE_PRESET_1280) => ((1280, 720), "1280×720"),
+        _ => (DEFAULT_VIEWPORT_PX_SIZE, "960×540"),
+    }
+}
+
+fn selected_fit(value: Option<&str>) -> ViewportFit {
+    match value {
+        Some(FIT_COVER) => ViewportFit::Cover,
+        Some(FIT_STRETCH) => ViewportFit::Stretch,
+        _ => ViewportFit::Contain,
+    }
+}
 
 #[derive(Debug, Clone)]
 struct EmbeddedViewportBasicsDiagModels {
@@ -140,87 +155,8 @@ fn on_viewport_input(app: &mut KernelApp, event: ViewportInputEvent) {
 #[derive(Debug)]
 struct EmbeddedViewportBasicsWindowState {
     embedded: embedded::EmbeddedViewportSurface,
-    size_preset: Model<usize>,
-    fit: Model<ViewportFit>,
-}
-
-fn install_commands(app: &mut KernelApp) {
-    let scope = CommandScope::Widget;
-
-    app.commands_mut().register(
-        CommandId::from(CMD_SIZE_640),
-        CommandMeta::new("Viewport size: 640×360")
-            .with_description("Set the embedded viewport render target size preset.")
-            .with_category("Embedded viewport")
-            .with_scope(scope),
-    );
-    app.commands_mut().register(
-        CommandId::from(CMD_SIZE_960),
-        CommandMeta::new("Viewport size: 960×540")
-            .with_description("Set the embedded viewport render target size preset.")
-            .with_category("Embedded viewport")
-            .with_scope(scope),
-    );
-    app.commands_mut().register(
-        CommandId::from(CMD_SIZE_1280),
-        CommandMeta::new("Viewport size: 1280×720")
-            .with_description("Set the embedded viewport render target size preset.")
-            .with_category("Embedded viewport")
-            .with_scope(scope),
-    );
-
-    app.commands_mut().register(
-        CommandId::from(CMD_FIT_CONTAIN),
-        CommandMeta::new("Viewport fit: Contain")
-            .with_description("Set the viewport surface fit to Contain.")
-            .with_category("Embedded viewport")
-            .with_scope(scope),
-    );
-    app.commands_mut().register(
-        CommandId::from(CMD_FIT_COVER),
-        CommandMeta::new("Viewport fit: Cover")
-            .with_description("Set the viewport surface fit to Cover.")
-            .with_category("Embedded viewport")
-            .with_scope(scope),
-    );
-    app.commands_mut().register(
-        CommandId::from(CMD_FIT_STRETCH),
-        CommandMeta::new("Viewport fit: Stretch")
-            .with_description("Set the viewport surface fit to Stretch.")
-            .with_category("Embedded viewport")
-            .with_scope(scope),
-    );
-}
-
-fn on_command(
-    app: &mut KernelApp,
-    _services: &mut dyn fret_core::UiServices,
-    _window: AppWindowId,
-    _ui: &mut UiTree<KernelApp>,
-    st: &mut EmbeddedViewportBasicsWindowState,
-    command: &CommandId,
-) {
-    let cmd = command.as_str();
-
-    if cmd == CMD_SIZE_640 {
-        let _ = app.models_mut().update(&st.size_preset, |v| *v = 0);
-    } else if cmd == CMD_SIZE_960 {
-        let _ = app.models_mut().update(&st.size_preset, |v| *v = 1);
-    } else if cmd == CMD_SIZE_1280 {
-        let _ = app.models_mut().update(&st.size_preset, |v| *v = 2);
-    } else if cmd == CMD_FIT_CONTAIN {
-        let _ = app
-            .models_mut()
-            .update(&st.fit, |v| *v = ViewportFit::Contain);
-    } else if cmd == CMD_FIT_COVER {
-        let _ = app
-            .models_mut()
-            .update(&st.fit, |v| *v = ViewportFit::Cover);
-    } else if cmd == CMD_FIT_STRETCH {
-        let _ = app
-            .models_mut()
-            .update(&st.fit, |v| *v = ViewportFit::Stretch);
-    }
+    size_preset: Model<Option<Arc<str>>>,
+    fit: Model<Option<Arc<str>>>,
 }
 
 impl embedded::EmbeddedViewportRecord for EmbeddedViewportBasicsWindowState {
@@ -278,8 +214,10 @@ fn init_window(app: &mut KernelApp, window: AppWindowId) -> EmbeddedViewportBasi
             RenderTargetColorSpace::Srgb,
             DEFAULT_VIEWPORT_PX_SIZE,
         ),
-        size_preset: app.models_mut().insert(1usize),
-        fit: app.models_mut().insert(ViewportFit::Contain),
+        size_preset: app
+            .models_mut()
+            .insert(Some(Arc::<str>::from(SIZE_PRESET_960))),
+        fit: app.models_mut().insert(Some(Arc::<str>::from(FIT_CONTAIN))),
     }
 }
 
@@ -302,14 +240,11 @@ fn view(
     let kind = diag.kind.paint_in(cx).value_or_default();
 
     let preset = st.size_preset.paint_in(cx).value_or_default();
-    let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
-        0 => ((640, 360), "640×360"),
-        2 => ((1280, 720), "1280×720"),
-        _ => (DEFAULT_VIEWPORT_PX_SIZE, "960×540"),
-    };
+    let (target_px_size, preset_label) = selected_target_px_size(preset.as_deref());
     st.embedded.set_target_px_size(target_px_size);
 
-    let fit = st.fit.paint_in(cx).value_or(ViewportFit::Contain);
+    let fit_value = st.fit.paint_in(cx).value_or_default();
+    let fit = selected_fit(fit_value.as_deref());
 
     let header = ui::v_flex(|cx| {
         ui::children![
@@ -322,41 +257,47 @@ fn view(
     })
     .gap(Space::N1);
 
+    let size_controls = shadcn::ToggleGroup::single(&st.size_preset)
+        .deselectable(false)
+        .variant(shadcn::ToggleVariant::Outline)
+        .spacing(Space::N2)
+        .items([
+            shadcn::ToggleGroupItem::new(SIZE_PRESET_640, [cx.text("640×360")])
+                .a11y_label("Viewport size 640 by 360")
+                .test_id(TEST_ID_SIZE_640),
+            shadcn::ToggleGroupItem::new(SIZE_PRESET_960, [cx.text("960×540")])
+                .a11y_label("Viewport size 960 by 540")
+                .test_id(TEST_ID_SIZE_960),
+            shadcn::ToggleGroupItem::new(SIZE_PRESET_1280, [cx.text("1280×720")])
+                .a11y_label("Viewport size 1280 by 720")
+                .test_id(TEST_ID_SIZE_1280),
+        ])
+        .refine_layout(LayoutRefinement::default().flex_none());
+
+    let fit_controls = shadcn::ToggleGroup::single(&st.fit)
+        .deselectable(false)
+        .variant(shadcn::ToggleVariant::Outline)
+        .spacing(Space::N2)
+        .items([
+            shadcn::ToggleGroupItem::new(FIT_CONTAIN, [cx.text("Fit: Contain")])
+                .a11y_label("Viewport fit contain")
+                .test_id(TEST_ID_FIT_CONTAIN),
+            shadcn::ToggleGroupItem::new(FIT_COVER, [cx.text("Cover")])
+                .a11y_label("Viewport fit cover")
+                .test_id(TEST_ID_FIT_COVER),
+            shadcn::ToggleGroupItem::new(FIT_STRETCH, [cx.text("Stretch")])
+                .a11y_label("Viewport fit stretch")
+                .test_id(TEST_ID_FIT_STRETCH),
+        ])
+        .refine_layout(LayoutRefinement::default().flex_none());
+
     let size_controls = ui::h_flex(|cx| {
         ui::children![
             cx;
-            shadcn::Button::new("640?360")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .action(CMD_SIZE_640)
-                .disabled(preset == 0)
-                .test_id(TEST_ID_SIZE_640),
-            shadcn::Button::new("960?540")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .action(CMD_SIZE_960)
-                .disabled(preset == 1)
-                .test_id(TEST_ID_SIZE_960),
-            shadcn::Button::new("1280?720")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .action(CMD_SIZE_1280)
-                .disabled(preset == 2)
-                .test_id(TEST_ID_SIZE_1280),
+            size_controls,
             shadcn::Separator::new()
                 .orientation(shadcn::SeparatorOrientation::Vertical),
-            shadcn::Button::new("Fit: Contain")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .action(CMD_FIT_CONTAIN)
-                .disabled(fit == ViewportFit::Contain)
-                .test_id(TEST_ID_FIT_CONTAIN),
-            shadcn::Button::new("Cover")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .action(CMD_FIT_COVER)
-                .disabled(fit == ViewportFit::Cover)
-                .test_id(TEST_ID_FIT_COVER),
-            shadcn::Button::new("Stretch")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .action(CMD_FIT_STRETCH)
-                .disabled(fit == ViewportFit::Stretch)
-                .test_id(TEST_ID_FIT_STRETCH),
+            fit_controls,
         ]
     })
     .gap(Space::N2)
@@ -480,7 +421,6 @@ fn configure_driver(
     driver: UiAppDriver<EmbeddedViewportBasicsWindowState>,
 ) -> UiAppDriver<EmbeddedViewportBasicsWindowState> {
     driver
-        .on_command(on_command)
         .viewport_input(on_viewport_input)
         .record_engine_frame(embedded::record_engine_frame::<EmbeddedViewportBasicsWindowState>)
 }
@@ -488,7 +428,6 @@ fn configure_driver(
 fn main() -> anyhow::Result<()> {
     let builder = ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
         .with_main_window("cookbook-embedded-viewport-basics", (1120.0, 780.0))
-        .setup(install_commands)
         .setup((shadcn::app::install, fret_icons_lucide::app::install))
         .setup(fret_cookbook::install_cookbook_defaults)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
