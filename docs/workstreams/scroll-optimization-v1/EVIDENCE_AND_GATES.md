@@ -27,6 +27,16 @@ This follow-on slice locks the contract that:
 - detached/unreachable barrier roots must be pruned before pending barrier relayout execution,
 - detached layout follow-up state must not block later stable frames from taking a layout-skip path.
 
+## Follow-on slice — Barrier same-children fast path must still reach authoritative relayout
+
+This follow-on slice locks the contract that:
+
+- re-applying an unchanged barrier child list is still a no-op when the barrier subtree is clean,
+- re-applying an unchanged barrier child list must schedule a contained barrier relayout when the
+  barrier subtree still has pending layout work,
+- descendant layout invalidations under a clean ancestor must not remain pinned just because the
+  barrier child list was structurally unchanged.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -47,6 +57,10 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups`
 - Detached pending barrier relayouts are pruned before execution:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui detached_pending_barrier_relayout_is_pruned_before_layout`
+- Clean barrier same-children remounts stay no-op:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui set_children_barrier_same_children_clean_subtree_stays_noop`
+- Dirty barrier same-children remounts still converge via authoritative relayout:
+  - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui set_children_barrier_same_children_with_dirty_descendant_reaches_authoritative_relayout`
 
 ## Evidence anchors
 
@@ -61,6 +75,9 @@ This follow-on slice locks the contract that:
 - Detached follow-up pruning + regression coverage:
   - `crates/fret-ui/src/tree/layout/entrypoints.rs`
   - `crates/fret-ui/src/tree/tests/view_cache.rs`
+  - `crates/fret-ui/src/tree/tests/barrier_subtree_layout_dirty_aggregation.rs`
+- Barrier same-children follow-up scheduling:
+  - `crates/fret-ui/src/tree/ui_tree_mutation/barrier.rs`
   - `crates/fret-ui/src/tree/tests/barrier_subtree_layout_dirty_aggregation.rs`
 - Lane positioning:
   - `docs/workstreams/scroll-optimization-v1/DESIGN.md`
@@ -89,3 +106,12 @@ This follow-on slice locks the contract that:
   - `tree::tests::view_cache::detached_dirty_view_cache_root_is_pruned_before_layout_followups`
   - `tree::tests::barrier_subtree_layout_dirty_aggregation::detached_pending_barrier_relayout_is_pruned_before_layout`
   - `tree::tests::view_cache::view_cache_runs_contained_relayout_for_invalidated_boundaries`
+- 2026-04-03: barrier same-children follow-up gates confirmed via `cargo nextest` with
+  `CARGO_TARGET_DIR=target-codex-verify6`:
+  - `tree::tests::barrier_subtree_layout_dirty_aggregation::set_children_barrier_same_children_clean_subtree_stays_noop`
+  - `tree::tests::barrier_subtree_layout_dirty_aggregation::set_children_barrier_same_children_with_dirty_descendant_schedules_barrier_relayout`
+  - `tree::tests::barrier_subtree_layout_dirty_aggregation::set_children_barrier_same_children_with_dirty_descendant_reaches_authoritative_relayout`
+  - `tree::tests::view_cache::view_cache_contained_relayout_does_not_force_next_frame_rerender`
+  - `tree::tests::view_cache::view_cache_runs_contained_relayout_for_invalidated_boundaries`
+  - `tree::tests::view_cache::view_cache_layout_invalidations_allow_reuse_for_definite_contained_roots`
+  - `tree::tests::view_cache::view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender`

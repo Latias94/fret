@@ -46,11 +46,15 @@ Status: Active
   - `crates/fret-ui/src/tree/tests/view_cache.rs`
   - `crates/fret-ui/src/tree/tests/barrier_subtree_layout_dirty_aggregation.rs`
 - [ ] Audit all barrier-related paths that can affect scroll surfaces:
-  - [ ] child list mutation helpers,
+  - [x] `set_children_barrier(...same_children...)` schedules authoritative follow-up relayout when
+    descendant layout work is still pending,
+  - [ ] remaining child list mutation helpers,
   - [ ] contained relayout scheduling,
   - [x] subtree dirty aggregation bookkeeping.
 - [ ] Add/extend unit tests to cover:
   - [x] barrier relayout sets `subtree_layout_dirty_count` consistently,
+  - [x] barrier same-children clean remount stays no-op,
+  - [x] barrier same-children dirty descendant converges via contained relayout,
   - [ ] scroll handle revision-only bumps stay classified correctly.
 
 ## Wheel/trackpad delta coalescing

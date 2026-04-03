@@ -30,6 +30,19 @@ impl<H: UiHost> UiTree<H> {
             // that may be remounted without changing the child list. Ensure the subtree dirty
             // aggregation stays consistent even when the structural list is identical.
             self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
+            if self.barrier_subtree_has_pending_layout_work(parent) {
+                if self.debug_enabled {
+                    self.debug_stats.barrier_relayouts_scheduled = self
+                        .debug_stats
+                        .barrier_relayouts_scheduled
+                        .saturating_add(1);
+                }
+                self.schedule_barrier_relayout_with_source_and_detail(
+                    parent,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::Unknown,
+                );
+            }
             return;
         }
 
@@ -245,5 +258,23 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn take_pending_barrier_relayouts(&mut self) -> Vec<NodeId> {
         std::mem::take(&mut self.pending_barrier_relayouts)
+    }
+
+    fn barrier_subtree_has_pending_layout_work(&self, root: NodeId) -> bool {
+        if self.subtree_layout_dirty_aggregation_enabled() {
+            return self.node_subtree_layout_dirty(root);
+        }
+
+        let mut stack: Vec<NodeId> = vec![root];
+        while let Some(node) = stack.pop() {
+            let Some(entry) = self.nodes.get(node) else {
+                continue;
+            };
+            if entry.invalidation.layout {
+                return true;
+            }
+            stack.extend(entry.children.iter().copied());
+        }
+        false
     }
 }
