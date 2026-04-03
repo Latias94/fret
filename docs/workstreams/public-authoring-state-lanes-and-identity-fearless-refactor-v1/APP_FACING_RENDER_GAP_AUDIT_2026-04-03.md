@@ -87,8 +87,9 @@ Current pressure points:
 - the first helper-local hover/text proof has also closed:
   `todo_row(...)` now uses `ui::hover_region(...)` and `ui::rich_text(...)` instead of spelling
   `HoverRegionProps`, `StyledTextProps`, or `cx.elements()` directly,
-- `todo_demo` still keeps a smaller amount of direct `LayoutRefinement` / `ChromeRefinement`
-  sharing for footer-pill chrome/layout fragments.
+- `todo_demo` no longer keeps shared footer-pill chrome/layout fragments on direct refinement
+  helper returns; the remaining direct refinement spelling is now narrower app-local style escape
+  hatch usage (`subtle_destructive_button_style(...)` and the dashed empty-state border style).
 
 Why this matters:
 
@@ -145,10 +146,9 @@ The follow-on question is different:
 
 ### Follow-on app-facing render-sugar audit/cleanup
 
-- helper-local hover/layout assembly and shared chrome/layout fragments after the first `Progress` /
-  `ScrollArea` plus `ui::hover_region(...)` / `ui::rich_text(...)` proof corrections
-- shared chrome/layout fragment cleanup that still spells `LayoutRefinement` / `ChromeRefinement`
-  directly in app helpers
+- explicit environment/responsive helpers should stay off the default lane rather than being
+  mistaken for raw debt
+- app-local raw style escape hatches should stay explicit unless a real reusable recipe emerges
 - narrowing the ordinary `AppUi` / extracted-helper surface before any future `Deref` removal
 
 ## Outcome

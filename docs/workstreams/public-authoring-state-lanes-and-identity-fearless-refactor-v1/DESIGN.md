@@ -321,7 +321,8 @@ The target is:
   `Progress` and `ScrollArea` already fit the existing `.ui()` patch-builder lane, and the first
   helper-local follow-on now also lands on ecosystem recipe sugar rather than a new facade proxy:
   `todo_row(...)` uses `ui::hover_region(...)` and `ui::rich_text(...)`. The still-open pressure is
-  now mostly shared chrome/layout fragments that still spell direct refinement types.
+  now mostly deliberate raw style escape hatches and explicit environment/responsive helpers,
+  rather than ordinary helper-local composition.
 
 That means this lane must classify Todo-surfaced render pressure precisely instead of treating every
 low-level noun as the same kind of problem.

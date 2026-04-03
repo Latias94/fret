@@ -93,8 +93,8 @@ Companion docs:
     removal:
     - [x] prove that the first ordinary app-composition slice (`Progress` / `ScrollArea`) can stay
       on the existing `.ui()` patch-builder lane instead of spelling `LayoutRefinement` directly,
-    - [ ] helper-local hover/layout assembly and shared chrome/layout fragments still spelling
-      `LayoutRefinement` / `ChromeRefinement` directly,
+    - [x] remove the shared footer-pill chrome/layout fragments so ordinary app composition no
+      longer needs helper-returned `LayoutRefinement` / `ChromeRefinement` for that slice,
     - [x] land the first helper-local hover-region sugar replacement (`ui::hover_region(...)`)
       instead of spelling `HoverRegionProps` plus `cx.elements()` in app-facing helpers,
     - [x] land the first helper-local rich-text sugar replacement (`ui::rich_text(...)`) instead

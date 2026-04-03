@@ -63,7 +63,9 @@ Related:
     patch-builder lane, and a second proof correction now lands the first app-facing render-sugar
     replacements in `fret-ui-kit::ui`: `todo_row(...)` uses `ui::hover_region(...)` and
     `ui::rich_text(...)` instead of spelling `HoverRegionProps`, `StyledTextProps`, or
-    `cx.elements()` directly. The remaining pressure is now mostly shared chrome/layout fragments.
+    `cx.elements()` directly. A follow-on cleanup also removes the shared footer-pill
+    `ChromeRefinement` / `LayoutRefinement` helpers from `todo_demo`, so the remaining pressure is
+    now mostly deliberate raw style escape hatches plus explicit environment/responsive helpers.
   - the cookbook scaffold proof surface and dedicated source-policy tests now lock this minimal
     capability lane so future cleanup can continue without regressing to implicit `Deref`.
 - **M3**: Met

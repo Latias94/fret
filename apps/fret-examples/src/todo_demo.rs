@@ -3,8 +3,8 @@ use std::sync::Arc;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::icons::IconId;
-use fret::shadcn::raw::{LayoutRefinement, icon};
-use fret::style::{ChromeRefinement, ColorRef, MetricRef, Radius, Space, Theme, ThemeSnapshot};
+use fret::shadcn::raw::icon;
+use fret::style::{ChromeRefinement, ColorRef, Radius, Space, Theme, ThemeSnapshot};
 use fret_core::scene::DashPatternV1;
 use fret_core::{
     AttributedText, Color, Corners, DecorationLineStyle, Px, StrikethroughStyle, TextPaintStyle,
@@ -417,7 +417,9 @@ impl View for TodoDemoView {
             .action(act::Add)
             .a11y_label("添加任务")
             .corner_radii_override(Corners::all(Px(14.0)))
-            .refine_style(ChromeRefinement::default().shadow_sm())
+            .ui()
+            .shadow_sm()
+            .build()
             .children([icon::icon(cx, IconId::new("lucide.plus"))])
             .test_id(TEST_ID_ADD);
 
@@ -426,11 +428,12 @@ impl View for TodoDemoView {
             .placeholder("添加新任务...")
             .submit_action(act::Add)
             .corner_radii_override(Corners::all(Px(14.0)))
-            .refine_style(ChromeRefinement::default().shadow_sm())
             .test_id(TEST_ID_DRAFT)
             .ui()
+            .shadow_sm()
             .flex_1()
-            .min_w_0();
+            .min_w_0()
+            .build();
 
         let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
@@ -543,8 +546,10 @@ impl View for TodoDemoView {
             ))
             .disabled(!has_completed)
             .action(act::ClearDone)
-            .refine_style(footer_pill_chrome())
-            .refine_layout(footer_pill_layout())
+            .ui()
+            .px(Space::N3)
+            .h_px(Px(28.0))
+            .build()
             .test_id(TEST_ID_CLEAR_DONE);
 
         let footer = if responsive.stack_footer {
@@ -682,8 +687,10 @@ fn filter_chip(
             })
             .size(shadcn::ButtonSize::Xs)
             .corner_radii_override(Corners::all(Px(9999.0)))
-            .refine_style(footer_pill_chrome())
-            .refine_layout(footer_pill_layout())
+            .ui()
+            .px(Space::N3)
+            .h_px(Px(28.0))
+            .build()
             .action(action)
             .test_id(test_id)
     })
@@ -845,14 +852,6 @@ where
     ui::container(move |cx| ui::single(cx, hover_region))
         .w_full()
         .into_element_in(cx)
-}
-
-fn footer_pill_chrome() -> ChromeRefinement {
-    ChromeRefinement::default().px(Space::N3)
-}
-
-fn footer_pill_layout() -> LayoutRefinement {
-    LayoutRefinement::default().h_px(MetricRef::Px(Px(28.0)))
 }
 
 fn todo_card_section(

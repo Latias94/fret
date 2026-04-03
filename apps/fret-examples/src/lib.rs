@@ -831,10 +831,23 @@ mod authoring_surface_policy_tests {
         );
         assert!(!normalized.contains(".a11y_label(\"Todocompletionprogress\").refine_style("));
         assert!(!normalized.contains(".viewport_test_id(TEST_ID_ROWS).refine_layout("));
+        assert!(
+            normalized.contains(
+                ".corner_radii_override(Corners::all(Px(14.0))).ui().shadow_sm().build()"
+            )
+        );
+        assert!(
+            normalized
+                .contains(".test_id(TEST_ID_DRAFT).ui().shadow_sm().flex_1().min_w_0().build()")
+        );
+        assert!(normalized.contains(".ui().px(Space::N3).h_px(Px(28.0)).build().action(action)"));
+        assert!(!TODO_DEMO.contains("footer_pill_chrome()"));
+        assert!(!TODO_DEMO.contains("footer_pill_layout()"));
         assert!(TODO_DEMO.contains("ui::hover_region(move |cx, hovered| {"));
         assert!(TODO_DEMO.contains("ui::rich_text(rich)"));
         assert!(!TODO_DEMO.contains("HoverRegionProps"));
         assert!(!TODO_DEMO.contains("StyledTextProps"));
+        assert!(!TODO_DEMO.contains("LayoutRefinement"));
         assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
         assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
         assert!(!TODO_DEMO.contains("cx: &mut fret_ui::ElementContext<'_, App>,"));
