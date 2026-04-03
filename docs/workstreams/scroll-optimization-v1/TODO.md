@@ -37,6 +37,10 @@ Status: Active
 
 - [x] Fix view-cache contained relayout bookkeeping (layout invalidation clears must keep subtree aggregation in sync):
   - `crates/fret-ui/src/tree/layout/entrypoints.rs`
+- [x] Keep layout-only contained relayout from forcing next-frame cache-root rerender / dirty-view carry-over:
+  - `crates/fret-ui/src/tree/layout/entrypoints.rs`
+  - `crates/fret-ui/src/tree/ui_tree_view_cache.rs`
+  - `crates/fret-ui/src/tree/tests/view_cache.rs`
 - [ ] Audit all barrier-related paths that can affect scroll surfaces:
   - [ ] child list mutation helpers,
   - [ ] contained relayout scheduling,

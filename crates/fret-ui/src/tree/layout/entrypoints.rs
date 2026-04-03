@@ -1359,7 +1359,6 @@ impl<H: UiHost> UiTree<H> {
                 viewport_cursor,
             );
             let layout_transition = self.nodes.get_mut(root).map(|node| {
-                node.view_cache_needs_rerender = true;
                 let prev = node.invalidation;
                 let layout_before = node.invalidation.layout;
                 node.invalidation.layout = false;
@@ -1382,6 +1381,11 @@ impl<H: UiHost> UiTree<H> {
                 );
                 self.update_invalidation_counters(prev, next);
             }
+            // Contained relayout is a layout-only repair path. It may consume a layout-invalidated
+            // cache root without implying that the declarative subtree must rerun next frame.
+            // Keep an explicit `needs_rerender` bit authoritative, and clear the scheduling-only
+            // dirty marker once both layout invalidation and rerender pressure are gone.
+            self.clear_cache_root_dirty_tracking_if_clean(root);
 
             // Contained view-cache relayouts run after the main root layout pass, so any scroll
             // ancestor that inferred its content extent earlier in the frame can be left with a

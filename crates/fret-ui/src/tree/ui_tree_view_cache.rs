@@ -155,6 +155,17 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(in crate::tree) fn clear_cache_root_dirty_tracking_if_clean(&mut self, node: NodeId) {
+        let should_clear = self
+            .nodes
+            .get(node)
+            .is_none_or(|n| !n.view_cache_needs_rerender && !n.invalidation.layout);
+        if should_clear {
+            self.dirty_cache_roots.remove(&node);
+            self.dirty_cache_root_reasons.remove(&node);
+        }
+    }
+
     pub(in crate::tree) fn mark_view_cache_roots_needs_rerender_from_snapshot(
         &mut self,
         start: NodeId,
