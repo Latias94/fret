@@ -186,6 +186,8 @@ This follow-on slice locks the contract that:
   - `cargo nextest run -p fret-runtime snapshot_for_window_overlays_authoritative_command_availability_over_stale_input_context`
 - shadcn shortcut display prefers authoritative command availability over stale published input snapshots:
   - `cargo nextest run -p fret-ui-shadcn shortcut_display_input_context_prefers_authoritative_command_availability`
+- Source-policy gate forbids raw window input snapshots from bypassing command-availability helpers:
+  - `python3 tools/check_window_input_context_command_availability_usage.py`
 
 ## Evidence anchors
 
@@ -199,6 +201,9 @@ This follow-on slice locks the contract that:
 - Cross-surface consumer regression coverage:
   - `crates/fret-runtime/src/window_command_gating/tests.rs`
   - `ecosystem/fret-ui-shadcn/src/shortcut_display.rs`
+- Source-policy guardrail:
+  - `tools/check_window_input_context_command_availability_usage.py`
+  - `.github/workflows/consistency-checks.yml`
   - `crates/fret-ui/src/tree/tests/view_cache.rs`
 - Contained relayout dirty/rerender bookkeeping:
   - `crates/fret-ui/src/tree/layout/entrypoints.rs`
@@ -337,3 +342,8 @@ This follow-on slice locks the contract that:
   - `best_effort_input_context_overlays_authoritative_command_availability`
   - `best_effort_input_context_fallback_inherits_command_availability`
   - `snapshot_for_window_overlays_authoritative_command_availability_over_stale_input_context`
+- 2026-04-03: source-policy guardrail added so raw `WindowInputContextService` reads cannot feed
+  command/shortcut consumers or own `edit.can_*` / `router.can_*` truth outside the runtime
+  publisher/helper allowlist:
+  - `python3 tools/check_window_input_context_command_availability_usage.py`
+  - `.github/workflows/consistency-checks.yml`

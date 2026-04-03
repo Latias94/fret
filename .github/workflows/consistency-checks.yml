@@ -47,6 +47,9 @@ jobs:
       - name: Check consumption profiles (portable)
         run: python3 tools/check_consumption_profiles.py
 
+      - name: Check raw window input command-availability usage
+        run: python3 tools/check_window_input_context_command_availability_usage.py
+
       - name: Check repo-local skills
         run: python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
 

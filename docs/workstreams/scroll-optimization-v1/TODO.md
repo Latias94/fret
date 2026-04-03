@@ -69,6 +69,8 @@ Status: Active
   - [x] best-effort `WindowInputContextService` consumers now overlay the authoritative
     `WindowCommandAvailabilityService` before using `edit.can_*` / `router.can_*`, so stale
     published input snapshots cannot suppress cross-surface gating or shortcut lookup,
+  - [x] add a source-policy guardrail so future first-party code cannot reintroduce raw
+    `WindowInputContextService` command-availability drift outside the runtime owner files,
   - [ ] remaining child list mutation helpers,
   - [x] contained cache-root dirty markers now align with main-pass layout consumption and
     descendant-truncated contained relayout scheduling,
