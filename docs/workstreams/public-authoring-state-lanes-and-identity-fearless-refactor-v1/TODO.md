@@ -8,6 +8,7 @@ Companion docs:
 - `TODO.md`
 - `MILESTONES.md`
 - `MIGRATION_MATRIX.md`
+- `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -32,6 +33,11 @@ Companion docs:
   - [ ] freeze the render-authoring wording for `AppUi` / extracted helper surfaces so the repo
     can distinguish ordinary app-facing render sugar from the raw component/internal
     `ElementContext` lane.
+  - [ ] freeze the Todo-surfaced render-gap classification from
+    `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`:
+    - [ ] keep-raw escape hatches,
+    - [ ] explicit non-default environment/responsive lane,
+    - [ ] missing app-facing render sugar.
 - [ ] Freeze the advanced raw-model lane wording:
   - [x] choose the explicit model-oriented replacement name (`AppUiRawModelExt::raw_model::<T>()`),
   - [x] decide whether pre-release migration uses hard delete or a short-lived compatibility alias (`hard delete` for the old name),
@@ -83,6 +89,15 @@ Companion docs:
     reexports, `AppUi` impl, cookbook scaffold proof surface).
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
+  - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`
+    removal:
+    - [ ] ordinary app composition still spelling `LayoutRefinement` directly,
+    - [ ] helper-local hover-region assembly (`ElementContextAccess` / `HoverRegionProps`),
+    - [ ] helper-local styled-text assembly (`StyledTextProps` / `styled_text_props(...)`),
+    - [ ] explicit environment/responsive helpers that should stay off the default lane rather than
+      being mistaken for raw debt.
+  - [ ] land the first justified app-facing render-sugar replacements without widening
+    `fret::app::prelude::*` or collapsing the documented `raw` lane.
 
 ## M3 — Migrate first-contact docs, templates, and proof surfaces
 

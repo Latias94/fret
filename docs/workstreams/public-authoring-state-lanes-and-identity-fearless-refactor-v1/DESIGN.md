@@ -15,6 +15,7 @@ Related:
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`
 - `docs/workstreams/default-app-productization-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`
 - `ecosystem/fret/src/view.rs`
 - `crates/fret-ui/src/elements/cx.rs`
 
@@ -310,6 +311,19 @@ The target is:
 - one explicit component/internal identity lane,
 - and deliberate escape hatches between them.
 
+`todo_demo` now provides a useful release-facing proof set for this split:
+
+- some low-level usage still belongs on explicit raw lanes (`shadcn::raw::button::ButtonStyle`,
+  low-level icon helpers, state-style graphs),
+- some low-level usage belongs on explicit but non-default environment/responsive lanes
+  (`viewport_width_at_least(...)`, pointer-capability queries, hysteresis nouns),
+- and some current pressure is really missing app-facing render sugar
+  (`LayoutRefinement` for ordinary app composition, helper-local hover/styled-text assembly that
+  currently falls through to `ElementContextAccess` / `HoverRegionProps` / `StyledTextProps`).
+
+That means this lane must classify Todo-surfaced render pressure precisely instead of treating every
+low-level noun as the same kind of problem.
+
 ### D2 — Generic `use_state` naming is no longer the target public raw-model contract
 
 The advanced raw-model seam should use explicit model-oriented naming.
@@ -405,6 +419,10 @@ This batch now also owns the next audit/freeze step for the render-authoring lan
 
 - quantify the `AppUi` `Deref` blast radius,
 - classify which inherited operations are legitimate app-facing render sugar,
+- classify Todo-surfaced low-level pressure into:
+  - keep-raw escape hatch,
+  - explicit non-default render lane,
+  - missing app-facing sugar,
 - and decide the correct target for extracted helper functions (`UiCx` wrapper / trait surface /
   equivalent) before deleting implicit coercions.
 

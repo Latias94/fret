@@ -139,6 +139,9 @@ M5 evidence:
 
 - This lane is release-facing productization, not framework contract redesign.
 - Todo pressure may justify audits and recipe classification, but not automatic public API growth.
+- Residual app-facing render-interface gaps surfaced by `todo_demo` now belong to
+  `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/` rather than
+  reopening this lane.
 - If a decision would change the default public contract, stop and escalate to an ADR-backed slice.
 - Residual follow-up: the grouped-local `*Locals::new(cx)` path still triggers a per-frame
   repeated-call warning during launched diagnostics runs. The proof note records this as an

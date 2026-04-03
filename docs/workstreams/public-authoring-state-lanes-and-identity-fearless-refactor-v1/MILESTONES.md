@@ -1,12 +1,13 @@
 # Public Authoring State Lanes and Identity Fearless Refactor v1 — Milestones
 
-Last updated: 2026-04-02
+Last updated: 2026-04-03
 
 Related:
 
 - Design: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO.md`
 - Migration matrix: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MIGRATION_MATRIX.md`
+- App-facing render gap audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`
 - ADR 0319: `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ---
@@ -22,7 +23,8 @@ Related:
   - bridge/internal lane wording is now source-gated in `ecosystem/fret/src/view.rs` and
     `crates/fret-ui/src/declarative/tests/identity.rs`,
   - but the remaining default-lane wording cleanup, the `AppUi` / `UiCx` render-authoring lane
-    wording, and the internal `render_pass_id` naming decision are still open.
+    wording, the Todo-surfaced render-gap classification, and the internal `render_pass_id`
+    naming decision are still open.
 - **M2**: In progress
   - kernel/facade substrate convergence is partially landed and the default `AppUi` lane now
     requires explicit `elements()` escape-hatch access for component/internal state helpers.
@@ -50,6 +52,11 @@ Related:
     pattern at smaller scale.
   - the next remaining structural gap is therefore explicit render-authoring lane separation for
     `AppUi` and extracted helper surfaces, not a blind `Deref` deletion.
+  - `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md` now classifies the current Todo-derived pressure
+    into:
+    - keep-raw escape hatches,
+    - explicit environment/responsive lanes that should stay non-default,
+    - and missing app-facing render sugar for ordinary app helper extraction.
   - the cookbook scaffold proof surface and dedicated source-policy tests now lock this minimal
     capability lane so future cleanup can continue without regressing to implicit `Deref`.
 - **M3**: Met
@@ -147,6 +154,11 @@ What this milestone proves:
 - app-facing code must opt into the component/internal lane explicitly through `elements()`,
 - and the repo has evidence for the remaining `AppUi` / `UiCx` render-authoring split instead of
   guessing at it.
+- the repo can now also distinguish three different follow-on categories for Todo-surfaced
+  low-level pressure:
+  - keep-raw escape hatch,
+  - explicit but non-default render lane,
+  - and missing app-facing sugar.
 
 ## Milestone 3 — Re-land the first-contact story
 
