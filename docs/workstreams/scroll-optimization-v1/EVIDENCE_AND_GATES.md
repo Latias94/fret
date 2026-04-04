@@ -238,6 +238,42 @@ Verified gates (2026-04-04):
 
 - `cargo test -p fret-ui gc_ -- --nocapture`
   - Result: passed.
+
+## Follow-on slice — Overlay owner pruning must use authoring-identity liveness
+
+This follow-on slice locks the contract that:
+
+- declarative owner ids used by ecosystem policy caches may be scope-only authoring identities that
+  do not map to mounted nodes,
+- current-frame owner liveness therefore cannot be inferred from `live_attached_node_for_element`
+  or `node_entry(...).last_seen_frame` alone,
+- view-cache reuse must restore recorded owner authoring identities for cache-hit frames where the
+  producer subtree skips rerender,
+- owned cached overlay requests/layers must prune only when the owner identity disappears from the
+  current frame's declarative authoring pass.
+
+Verified gates (2026-04-05):
+
+- `cargo test -p fret-ui scope_only_authoring_identity_is_live_for_current_frame -- --nocapture`
+  - Result: passed.
+  - Contract: `scope` / `keyed` identities remain current-frame-live even when they do not mount a
+    node themselves.
+- `cargo test -p fret-ui view_cache_reuse_preserves_scope_only_authoring_identity_liveness -- --nocapture`
+  - Result: passed.
+  - Contract: cache-hit view-cache reuse restores recorded scope-only authoring identities without
+    rerendering the producer subtree.
+- `cargo test -p fret-ui-kit owned_cached_ -- --nocapture`
+  - Result: passed.
+  - Contract: owned cached modal / hover overlay requests prune only after the producer owner
+    disappears from the current frame's authoring pass.
+- `cargo test -p fret-ui-kit owned_cached_modal_request_stays_visible_during_view_cache_reuse -- --nocapture`
+  - Result: passed.
+  - Contract: owned cached overlay requests remain visible across cache-hit frames when the
+    producer subtree is still live via view-cache reuse.
+- `cargo test -p fret-ui-kit cached_ -- --nocapture`
+  - Result: passed.
+  - Contract: the owned-owner prune fix preserves the existing cached overlay synthesis behavior
+    for modal / popover / hover / tooltip requests.
 - `cargo test -p fret-ui touch_existing_subtree_can_walk_window_frame_children -- --nocapture`
   - Result: passed.
 

@@ -124,6 +124,67 @@ fn named_scopes_produce_stable_element_ids_across_frames() {
 }
 
 #[test]
+fn scope_only_authoring_identity_is_live_for_current_frame() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let mut owner_identity: Option<GlobalElementId> = None;
+    let mut show_owner = true;
+
+    for frame in 0..2 {
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "scope-only-authoring-identity-liveness",
+            |cx| {
+                let mut out = Vec::new();
+                if show_owner {
+                    out.push(cx.keyed("owner", |cx| {
+                        owner_identity = Some(cx.root_id());
+                        cx.text("owner")
+                    }));
+                } else {
+                    out.push(cx.text("other"));
+                }
+                out
+            },
+        );
+
+        ui.set_root(root_node);
+        let owner_identity = owner_identity.expect("owner identity");
+        assert_eq!(
+            crate::elements::live_node_for_element(&mut app, window, owner_identity),
+            None,
+            "scope-only owner should not require a mounted node"
+        );
+        assert_eq!(
+            crate::elements::element_identity_is_live_in_current_frame(
+                &mut app,
+                window,
+                owner_identity,
+            ),
+            frame == 0,
+            "scope-only authoring identity liveness should follow render participation"
+        );
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        app.advance_frame();
+        show_owner = false;
+    }
+}
+
+#[test]
 fn keyed_list_reorder_preserves_element_identity_for_state() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

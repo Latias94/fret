@@ -7,7 +7,8 @@ use fret_ui::tree::{PointerOcclusion, UiLayerId};
 use fret_ui::{UiHost, UiTree};
 
 use super::requests::{
-    CachedDismissiblePopoverDecl, CachedHoverOverlayDecl, CachedModalDecl, CachedTooltipDecl,
+    CachedDismissiblePopoverDecl, CachedHoverOverlayDecl, CachedModalDecl, CachedToastLayerDecl,
+    CachedTooltipDecl,
 };
 use super::{
     DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
@@ -93,7 +94,7 @@ pub(super) struct WindowOverlays {
     pub(super) cached_modal_requests: HashMap<(AppWindowId, GlobalElementId), CachedModalDecl>,
     /// See `cached_popover_requests`.
     pub(super) cached_toast_layer_requests:
-        HashMap<(AppWindowId, GlobalElementId), ToastLayerRequest>,
+        HashMap<(AppWindowId, GlobalElementId), CachedToastLayerDecl>,
     /// See `cached_popover_requests`.
     pub(super) cached_hover_overlay_requests:
         HashMap<(AppWindowId, GlobalElementId), CachedHoverOverlayDecl>,

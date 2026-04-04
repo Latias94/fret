@@ -176,6 +176,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         runtime.prepare_window_for_frame(window, frame_id);
 
         let window_state = runtime.for_window_mut(window);
+        window_state.mark_authoring_identity_seen(root);
 
         Self {
             app,
@@ -223,6 +224,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         window_state: &'a mut WindowElementState,
     ) -> Self {
         let frame_id = app.frame_id();
+        window_state.mark_authoring_identity_seen(root);
         Self {
             app,
             window,
@@ -457,6 +459,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
         self.stack = vec![root];
         self.callsite_counters = vec![CallsiteCounters::new()];
+        self.window_state.mark_authoring_identity_seen(root);
 
         let out = f(self);
 
@@ -1265,6 +1268,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
         let child_salt = key_hash.unwrap_or(slot);
         let id = derive_child_id(parent, callsite, child_salt);
+        self.window_state.mark_authoring_identity_seen(id);
 
         #[cfg(feature = "diagnostics")]
         self.window_state.record_debug_child(

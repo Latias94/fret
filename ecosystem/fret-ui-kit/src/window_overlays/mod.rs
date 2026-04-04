@@ -25,6 +25,11 @@ pub use frame::{
     begin_frame, request_dismissible_popover_for_window, request_hover_overlay_for_window,
     request_modal_for_window, request_toast_layer_for_window, request_tooltip_for_window,
 };
+pub(crate) use frame::{
+    request_dismissible_popover_for_window_owned, request_hover_overlay_for_window_owned,
+    request_modal_for_window_owned, request_toast_layer_for_window_owned,
+    request_tooltip_for_window_owned,
+};
 
 #[cfg(feature = "unstable-internals")]
 pub use frame::{
@@ -97,7 +102,7 @@ pub fn try_handle_window_command<H: UiHost>(
                     let store = overlays
                         .cached_toast_layer_requests
                         .get(&(*w, *id))
-                        .map(|req| req.store.clone());
+                        .map(|req| req.request.store.clone());
                     Some((*id, active.layer, store))
                 })
                 .collect()

@@ -1684,6 +1684,7 @@ fn mount_element<H: UiHost + 'static>(
         }
 
         let transitioned_into_reuse = window_state.record_view_cache_reuse_frame(id, frame_id);
+        window_state.touch_view_cache_authoring_identities_if_recorded(id);
         let touched = window_state.touch_view_cache_subtree_elements_if_recorded(
             id,
             frame_id,

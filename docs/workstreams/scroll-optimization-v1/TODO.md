@@ -77,6 +77,19 @@ Status: Active
 - [x] Lock explicit `view_cache_keep_alive(...)` reuse with a regression proving stale detached
   recorded members are neither touched nor retained in the refreshed authoritative membership list.
 
+## Follow-on slice — Overlay owner pruning must use authoring-identity liveness
+
+- [x] Track current-frame declarative authoring identities in `fret-ui` even when a `scope` /
+  `keyed` root does not map to a mounted node, and restore those identities on view-cache reuse
+  frames where the producer subtree skips rerender.
+- [x] Expose a public current-frame identity-liveness query distinct from live-node resolution, so
+  ecosystem policy code can reason about scope-only producers without treating `node_entry` or
+  attached-node existence as authoritative.
+- [x] Prune owned cached overlay requests/layers only when the cached owner identity disappears
+  from the current frame's authoring pass, not merely when that identity lacks a mounted node.
+- [x] Lock the contract with focused `fret-ui` and `fret-ui-kit` regressions in
+  `EVIDENCE_AND_GATES.md`.
+
 ## Follow-on slice — Interaction targets resolve authoritative live attached nodes
 
 - [x] Replace hover/pressed interaction target bookkeeping so runtime state stores element identity

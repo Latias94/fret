@@ -458,6 +458,143 @@ impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusHost<'a, H> {
     }
 }
 
+#[derive(Clone, Copy)]
+enum OwnedOverlayKind {
+    Popover,
+    Modal,
+    Hover,
+    Tooltip,
+    ToastLayer,
+}
+
+#[derive(Clone, Copy)]
+struct OwnedOverlayPruneAction {
+    kind: OwnedOverlayKind,
+    key: (AppWindowId, GlobalElementId),
+    layer: Option<UiLayerId>,
+}
+
+fn collect_owned_overlay_prune_actions<H: UiHost>(
+    _ui: &UiTree<H>,
+    app: &mut H,
+    window: AppWindowId,
+) -> Vec<OwnedOverlayPruneAction> {
+    app.with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
+        let mut owner_missing = |owner: Option<GlobalElementId>| {
+            owner.is_some_and(|owner| {
+                !fret_ui::elements::element_identity_is_live_in_current_frame(app, window, owner)
+            })
+        };
+
+        let mut out: Vec<OwnedOverlayPruneAction> = Vec::new();
+
+        for (&key, req) in overlays.cached_popover_requests.iter() {
+            if key.0 != window || !owner_missing(req.owner) {
+                continue;
+            }
+            out.push(OwnedOverlayPruneAction {
+                kind: OwnedOverlayKind::Popover,
+                key,
+                layer: overlays.popovers.get(&key).map(|entry| entry.layer),
+            });
+        }
+
+        for (&key, req) in overlays.cached_modal_requests.iter() {
+            if key.0 != window || !owner_missing(req.owner) {
+                continue;
+            }
+            out.push(OwnedOverlayPruneAction {
+                kind: OwnedOverlayKind::Modal,
+                key,
+                layer: overlays.modals.get(&key).map(|entry| entry.layer),
+            });
+        }
+
+        for (&key, req) in overlays.cached_hover_overlay_requests.iter() {
+            if key.0 != window || !owner_missing(req.owner) {
+                continue;
+            }
+            out.push(OwnedOverlayPruneAction {
+                kind: OwnedOverlayKind::Hover,
+                key,
+                layer: overlays.hover_overlays.get(&key).map(|entry| entry.layer),
+            });
+        }
+
+        for (&key, req) in overlays.cached_tooltip_requests.iter() {
+            if key.0 != window || !owner_missing(req.owner) {
+                continue;
+            }
+            out.push(OwnedOverlayPruneAction {
+                kind: OwnedOverlayKind::Tooltip,
+                key,
+                layer: overlays.tooltips.get(&key).map(|entry| entry.layer),
+            });
+        }
+
+        for (&key, req) in overlays.cached_toast_layer_requests.iter() {
+            if key.0 != window || !owner_missing(req.owner) {
+                continue;
+            }
+            out.push(OwnedOverlayPruneAction {
+                kind: OwnedOverlayKind::ToastLayer,
+                key,
+                layer: overlays.toast_layers.get(&key).map(|entry| entry.layer),
+            });
+        }
+
+        out
+    })
+}
+
+fn prune_owned_overlay_entries<H: UiHost>(
+    ui: &mut UiTree<H>,
+    app: &mut H,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+) {
+    let prune_actions = collect_owned_overlay_prune_actions(ui, app, window);
+    if prune_actions.is_empty() {
+        return;
+    }
+
+    for action in &prune_actions {
+        if let Some(layer) = action.layer {
+            let _ = ui.remove_layer(services, layer);
+        }
+    }
+
+    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        for action in prune_actions {
+            match action.kind {
+                OwnedOverlayKind::Popover => {
+                    overlays.popovers.remove(&action.key);
+                    overlays.cached_popover_requests.remove(&action.key);
+                }
+                OwnedOverlayKind::Modal => {
+                    overlays.modals.remove(&action.key);
+                    overlays.cached_modal_requests.remove(&action.key);
+                }
+                OwnedOverlayKind::Hover => {
+                    overlays.hover_overlays.remove(&action.key);
+                    overlays.cached_hover_overlay_requests.remove(&action.key);
+                    overlays
+                        .cached_hover_overlay_pointer_move_handlers
+                        .remove(&action.key);
+                }
+                OwnedOverlayKind::Tooltip => {
+                    overlays.tooltips.remove(&action.key);
+                    overlays.cached_tooltip_requests.remove(&action.key);
+                }
+                OwnedOverlayKind::ToastLayer => {
+                    overlays.toast_layers.remove(&action.key);
+                    overlays.cached_toast_layer_requests.remove(&action.key);
+                }
+            }
+        }
+    });
+}
+
 pub fn render<H: UiHost + 'static>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -519,6 +656,8 @@ pub fn render<H: UiHost + 'static>(
     {
         ui.set_focus(Some(restore));
     }
+
+    prune_owned_overlay_entries(ui, app, services, window);
 
     let (
         mut modal_requests,
@@ -748,7 +887,7 @@ pub fn render<H: UiHost + 'static>(
                 if *w != window || toast_request_ids.contains(id) {
                     continue;
                 }
-                toasts.push(req.clone());
+                toasts.push(req.request.clone());
             }
 
             (modals, popovers, hover_overlays, tooltips, toasts)

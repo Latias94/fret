@@ -387,6 +387,9 @@ pub struct WindowElementState {
     pub(super) view_cache_state_keys_rendered:
         HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
     pub(super) view_cache_state_keys_next: HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
+    pub(super) view_cache_authoring_identities_rendered:
+        HashMap<GlobalElementId, Vec<GlobalElementId>>,
+    pub(super) view_cache_authoring_identities_next: HashMap<GlobalElementId, Vec<GlobalElementId>>,
     view_cache_keys_rendered: HashMap<GlobalElementId, u64>,
     view_cache_keys_next: HashMap<GlobalElementId, u64>,
     view_cache_key_mismatch_roots: HashSet<GlobalElementId>,
@@ -431,6 +434,7 @@ pub struct WindowElementState {
     element_children_vec_pool_reuses: u32,
     element_children_vec_pool_misses: u32,
     transient_events: HashMap<(GlobalElementId, u64), FrameId>,
+    authoring_identities_current_frame: HashSet<GlobalElementId>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
     prev_bounds: HashMap<GlobalElementId, Rect>,
@@ -622,6 +626,12 @@ impl WindowElementState {
         self.view_cache_state_keys_next.clear();
 
         std::mem::swap(
+            &mut self.view_cache_authoring_identities_rendered,
+            &mut self.view_cache_authoring_identities_next,
+        );
+        self.view_cache_authoring_identities_next.clear();
+
+        std::mem::swap(
             &mut self.view_cache_elements_rendered,
             &mut self.view_cache_elements_next,
         );
@@ -682,6 +692,7 @@ impl WindowElementState {
         self.cur_visual_bounds.clear();
 
         self.focused_element = None;
+        self.authoring_identities_current_frame.clear();
 
         #[cfg(feature = "diagnostics")]
         {
@@ -733,6 +744,28 @@ impl WindowElementState {
     pub(crate) fn record_transient_event(&mut self, element: GlobalElementId, key: u64) {
         self.transient_events
             .insert((element, key), self.prepared_frame);
+    }
+
+    pub(crate) fn mark_authoring_identity_seen(&mut self, element: GlobalElementId) {
+        self.authoring_identities_current_frame.insert(element);
+        for &root in &self.view_cache_stack {
+            self.view_cache_authoring_identities_next
+                .entry(root)
+                .or_default()
+                .push(element);
+        }
+        #[cfg(feature = "diagnostics")]
+        self.touch_debug_identity_for_element(self.prepared_frame, element);
+    }
+
+    pub(crate) fn element_identity_is_live_in_current_frame(
+        &self,
+        element: GlobalElementId,
+    ) -> bool {
+        self.authoring_identities_current_frame.contains(&element)
+            || self
+                .node_entry(element)
+                .is_some_and(|entry| entry.last_seen_frame == self.prepared_frame)
     }
 
     pub(crate) fn take_transient_event(&mut self, element: GlobalElementId, key: u64) -> bool {
@@ -1071,6 +1104,7 @@ impl WindowElementState {
     pub(super) fn begin_view_cache_scope(&mut self, root: GlobalElementId) {
         self.view_cache_stack.push(root);
         self.view_cache_state_keys_next.remove(&root);
+        self.view_cache_authoring_identities_next.remove(&root);
         self.view_cache_elements_next.remove(&root);
     }
 
@@ -1080,6 +1114,10 @@ impl WindowElementState {
         if let Some(keys) = self.view_cache_state_keys_next.get_mut(&root) {
             let mut seen: HashSet<(GlobalElementId, TypeId)> = HashSet::with_capacity(keys.len());
             keys.retain(|&key| seen.insert(key));
+        }
+        if let Some(identities) = self.view_cache_authoring_identities_next.get_mut(&root) {
+            let mut seen: HashSet<GlobalElementId> = HashSet::with_capacity(identities.len());
+            identities.retain(|&id| seen.insert(id));
         }
         if let Some(elements) = self.view_cache_elements_next.get_mut(&root) {
             let mut seen: HashSet<GlobalElementId> = HashSet::with_capacity(elements.len());
@@ -1244,6 +1282,26 @@ impl WindowElementState {
         self.view_cache_state_keys_next.insert(root, keys);
     }
 
+    pub(crate) fn touch_view_cache_authoring_identities_if_recorded(
+        &mut self,
+        root: GlobalElementId,
+    ) {
+        let Some(identities) = self
+            .view_cache_authoring_identities_rendered
+            .get(&root)
+            .cloned()
+        else {
+            return;
+        };
+        for &identity in &identities {
+            self.authoring_identities_current_frame.insert(identity);
+            #[cfg(feature = "diagnostics")]
+            self.touch_debug_identity_for_element(self.prepared_frame, identity);
+        }
+        self.view_cache_authoring_identities_next
+            .insert(root, identities);
+    }
+
     /// Keep action-hook state alive for a cached subtree, even when view-cache reuse skips the
     /// declarative closures that normally re-register those hooks.
     ///
@@ -1312,6 +1370,8 @@ impl WindowElementState {
     }
 
     pub(crate) fn forget_view_cache_subtree_elements(&mut self, root: GlobalElementId) {
+        self.view_cache_authoring_identities_rendered.remove(&root);
+        self.view_cache_authoring_identities_next.remove(&root);
         self.view_cache_elements_rendered.remove(&root);
         self.view_cache_elements_next.remove(&root);
     }

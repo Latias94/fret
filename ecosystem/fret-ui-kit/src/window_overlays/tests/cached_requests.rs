@@ -1,4 +1,6 @@
 use super::*;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]
 fn cached_modal_request_is_synthesized_when_open_without_rerender() {
@@ -240,5 +242,285 @@ fn cached_tooltip_request_is_synthesized_for_short_ttl_when_open_without_rerende
     assert!(
         !ui.is_layer_visible(layer),
         "expected tooltip to expire once cache TTL elapses"
+    );
+}
+
+#[test]
+fn owned_cached_modal_request_is_pruned_when_request_owner_is_removed() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    let modal_id = GlobalElementId(0x41);
+    let mut show_owner = true;
+    let mut modal_layer: Option<fret_ui::tree::UiLayerId> = None;
+    let mut recorded_owner: Option<GlobalElementId> = None;
+
+    for _frame in 0..2 {
+        begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "owned-cached-modal-prune",
+            |cx| {
+                let mut out = Vec::new();
+                if show_owner {
+                    out.push(cx.keyed("owner", |cx| {
+                        crate::OverlayController::request(
+                            cx,
+                            crate::OverlayRequest::modal(
+                                modal_id,
+                                None,
+                                open.clone(),
+                                crate::OverlayPresence::instant(true),
+                                Vec::new(),
+                            ),
+                        );
+                        cx.text("owner")
+                    }));
+                }
+                out
+            },
+        );
+        ui.set_root(root);
+        crate::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        if show_owner {
+            modal_layer =
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                    recorded_owner = overlays
+                        .cached_modal_requests
+                        .get(&(window, modal_id))
+                        .and_then(|entry| entry.owner);
+                    overlays
+                        .modals
+                        .get(&(window, modal_id))
+                        .map(|entry| entry.layer)
+                });
+            let layer = modal_layer.expect("modal layer");
+            assert!(ui.is_layer_visible(layer));
+            assert!(
+                recorded_owner.is_some(),
+                "owned overlay requests should retain their declarative owner while the producer is still rendered"
+            );
+            show_owner = false;
+        }
+    }
+
+    let layer = modal_layer.expect("modal layer");
+    assert!(
+        ui.layer_root(layer).is_none(),
+        "owned overlay layer should be removed once its request owner disappears"
+    );
+    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        assert!(
+            overlays.modals.get(&(window, modal_id)).is_none(),
+            "active modal entry should be pruned with the removed owner"
+        );
+        assert!(
+            overlays
+                .cached_modal_requests
+                .get(&(window, modal_id))
+                .is_none(),
+            "cached modal declaration should be pruned with the removed owner"
+        );
+    });
+}
+
+#[test]
+fn owned_cached_hover_request_is_pruned_immediately_when_request_owner_is_removed() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    let hover_id = GlobalElementId(0x42);
+    let mut show_owner = true;
+    let mut hover_layer: Option<fret_ui::tree::UiLayerId> = None;
+
+    for _frame in 0..2 {
+        begin_frame(&mut app, window);
+        let mut trigger_id: Option<GlobalElementId> = None;
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "owned-cached-hover-prune",
+            |cx| {
+                let mut out = vec![cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(80.0));
+                            layout.size.height = Length::Px(Px(32.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        trigger_id = Some(id);
+                        Vec::new()
+                    },
+                )];
+
+                if show_owner {
+                    let trigger = trigger_id.expect("trigger id");
+                    out.push(cx.keyed("owner", |cx| {
+                        crate::OverlayController::request(
+                            cx,
+                            crate::OverlayRequest::hover(
+                                hover_id,
+                                trigger,
+                                open.clone(),
+                                crate::OverlayPresence::instant(true),
+                                Vec::new(),
+                            ),
+                        );
+                        cx.text("owner")
+                    }));
+                }
+
+                out
+            },
+        );
+        ui.set_root(root);
+        crate::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        if show_owner {
+            hover_layer =
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                    overlays
+                        .hover_overlays
+                        .get(&(window, hover_id))
+                        .map(|entry| entry.layer)
+                });
+            let layer = hover_layer.expect("hover layer");
+            assert!(ui.is_layer_visible(layer));
+            show_owner = false;
+        }
+    }
+
+    let layer = hover_layer.expect("hover layer");
+    assert!(
+        ui.layer_root(layer).is_none(),
+        "hover overlay layer should be removed immediately once its request owner disappears"
+    );
+    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        assert!(
+            overlays.hover_overlays.get(&(window, hover_id)).is_none(),
+            "active hover entry should be pruned with the removed owner"
+        );
+        assert!(
+            overlays
+                .cached_hover_overlay_requests
+                .get(&(window, hover_id))
+                .is_none(),
+            "cached hover declaration should be pruned with the removed owner"
+        );
+        assert!(
+            overlays
+                .cached_hover_overlay_pointer_move_handlers
+                .get(&(window, hover_id))
+                .is_none(),
+            "cached hover pointer-move handler should be pruned with the removed owner"
+        );
+    });
+}
+
+#[test]
+fn owned_cached_modal_request_stays_visible_during_view_cache_reuse() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    let modal_id = GlobalElementId(0x43);
+    let renders = Arc::new(AtomicUsize::new(0));
+    let mut modal_layer: Option<fret_ui::tree::UiLayerId> = None;
+
+    for _frame in 0..4 {
+        begin_frame(&mut app, window);
+        let renders = renders.clone();
+        let open_for_render = open.clone();
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "owned-cached-modal-view-cache-reuse",
+            move |cx| {
+                vec![
+                    cx.view_cache(fret_ui::element::ViewCacheProps::default(), |cx| {
+                        renders.fetch_add(1, Ordering::SeqCst);
+                        vec![cx.keyed("owner", |cx| {
+                            crate::OverlayController::request(
+                                cx,
+                                crate::OverlayRequest::modal(
+                                    modal_id,
+                                    None,
+                                    open_for_render.clone(),
+                                    crate::OverlayPresence::instant(true),
+                                    Vec::new(),
+                                ),
+                            );
+                            cx.text("owner")
+                        })]
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        crate::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        modal_layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .modals
+                .get(&(window, modal_id))
+                .map(|entry| entry.layer)
+                .or(modal_layer)
+        });
+        let layer = modal_layer.expect("modal layer");
+        assert!(
+            ui.is_layer_visible(layer),
+            "owned cached modal should remain visible across cache-hit frames"
+        );
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "cache-hit frames should reuse the producer subtree without rerendering it"
     );
 }

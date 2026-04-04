@@ -609,13 +609,22 @@ impl OverlayController {
     }
 
     pub fn request<H: UiHost>(cx: &mut ElementContext<'_, H>, request: OverlayRequest) {
-        Self::request_for_window(cx.app, cx.window, request);
+        Self::request_for_window_with_owner(cx.app, cx.window, request, Some(cx.root_id()));
     }
 
     pub fn request_for_window<H: UiHost>(
         app: &mut H,
         window: AppWindowId,
         request: OverlayRequest,
+    ) {
+        Self::request_for_window_with_owner(app, window, request, None);
+    }
+
+    fn request_for_window_with_owner<H: UiHost>(
+        app: &mut H,
+        window: AppWindowId,
+        request: OverlayRequest,
+        owner: Option<GlobalElementId>,
     ) {
         match request.kind {
             OverlayKind::NonModalDismissible => {
@@ -628,27 +637,26 @@ impl OverlayController {
                 let root_name = request
                     .root_name
                     .unwrap_or_else(|| window_overlays::popover_root_name(request.id));
-                window_overlays::request_dismissible_popover_for_window(
-                    app,
-                    window,
-                    window_overlays::DismissiblePopoverRequest {
-                        id: request.id,
-                        root_name,
-                        trigger,
-                        dismissable_branches: request.dismissable_branches,
-                        consume_outside_pointer_events: request.consume_outside_pointer_events,
-                        disable_outside_pointer_events: request.disable_outside_pointer_events,
-                        close_on_window_focus_lost: request.close_on_window_focus_lost,
-                        close_on_window_resize: request.close_on_window_resize,
-                        open,
-                        present: request.presence.present,
-                        initial_focus: request.initial_focus,
-                        on_open_auto_focus: request.on_open_auto_focus,
-                        on_close_auto_focus: request.on_close_auto_focus,
-                        on_dismiss_request: request.dismissible_on_dismiss_request,
-                        on_pointer_move: request.dismissible_on_pointer_move,
-                        children: request.children,
-                    },
+                let req = window_overlays::DismissiblePopoverRequest {
+                    id: request.id,
+                    root_name,
+                    trigger,
+                    dismissable_branches: request.dismissable_branches,
+                    consume_outside_pointer_events: request.consume_outside_pointer_events,
+                    disable_outside_pointer_events: request.disable_outside_pointer_events,
+                    close_on_window_focus_lost: request.close_on_window_focus_lost,
+                    close_on_window_resize: request.close_on_window_resize,
+                    open,
+                    present: request.presence.present,
+                    initial_focus: request.initial_focus,
+                    on_open_auto_focus: request.on_open_auto_focus,
+                    on_close_auto_focus: request.on_close_auto_focus,
+                    on_dismiss_request: request.dismissible_on_dismiss_request,
+                    on_pointer_move: request.dismissible_on_pointer_move,
+                    children: request.children,
+                };
+                window_overlays::request_dismissible_popover_for_window_owned(
+                    app, window, req, owner,
                 );
             }
             OverlayKind::Modal => {
@@ -656,24 +664,21 @@ impl OverlayController {
                 let root_name = request
                     .root_name
                     .unwrap_or_else(|| window_overlays::modal_root_name(request.id));
-                window_overlays::request_modal_for_window(
-                    app,
-                    window,
-                    window_overlays::ModalRequest {
-                        id: request.id,
-                        root_name,
-                        trigger: request.trigger,
-                        close_on_window_focus_lost: request.close_on_window_focus_lost,
-                        close_on_window_resize: request.close_on_window_resize,
-                        open,
-                        present: request.presence.present,
-                        initial_focus: request.initial_focus,
-                        on_open_auto_focus: request.on_open_auto_focus,
-                        on_close_auto_focus: request.on_close_auto_focus,
-                        on_dismiss_request: request.dismissible_on_dismiss_request,
-                        children: request.children,
-                    },
-                );
+                let req = window_overlays::ModalRequest {
+                    id: request.id,
+                    root_name,
+                    trigger: request.trigger,
+                    close_on_window_focus_lost: request.close_on_window_focus_lost,
+                    close_on_window_resize: request.close_on_window_resize,
+                    open,
+                    present: request.presence.present,
+                    initial_focus: request.initial_focus,
+                    on_open_auto_focus: request.on_open_auto_focus,
+                    on_close_auto_focus: request.on_close_auto_focus,
+                    on_dismiss_request: request.dismissible_on_dismiss_request,
+                    children: request.children,
+                };
+                window_overlays::request_modal_for_window_owned(app, window, req, owner);
             }
             OverlayKind::Tooltip => {
                 let open = request.open.expect("Tooltip requires open model");
@@ -683,21 +688,18 @@ impl OverlayController {
                 let root_name = request
                     .root_name
                     .unwrap_or_else(|| window_overlays::tooltip_root_name(request.id));
-                window_overlays::request_tooltip_for_window(
-                    app,
-                    window,
-                    window_overlays::TooltipRequest {
-                        id: request.id,
-                        root_name,
-                        interactive: request.presence.interactive,
-                        trigger: request.trigger,
-                        open,
-                        present: request.presence.present,
-                        on_dismiss_request: request.dismissible_on_dismiss_request,
-                        on_pointer_move: request.dismissible_on_pointer_move,
-                        children: request.children,
-                    },
-                );
+                let req = window_overlays::TooltipRequest {
+                    id: request.id,
+                    root_name,
+                    interactive: request.presence.interactive,
+                    trigger: request.trigger,
+                    open,
+                    present: request.presence.present,
+                    on_dismiss_request: request.dismissible_on_dismiss_request,
+                    on_pointer_move: request.dismissible_on_pointer_move,
+                    children: request.children,
+                };
+                window_overlays::request_tooltip_for_window_owned(app, window, req, owner);
             }
             OverlayKind::Hover => {
                 let open = request.open.expect("Hover requires open model");
@@ -708,20 +710,17 @@ impl OverlayController {
                 let root_name = request
                     .root_name
                     .unwrap_or_else(|| window_overlays::hover_overlay_root_name(request.id));
-                window_overlays::request_hover_overlay_for_window(
-                    app,
-                    window,
-                    window_overlays::HoverOverlayRequest {
-                        id: request.id,
-                        root_name,
-                        interactive: request.presence.interactive,
-                        trigger,
-                        open,
-                        present: request.presence.present,
-                        on_pointer_move: request.dismissible_on_pointer_move,
-                        children: request.children,
-                    },
-                );
+                let req = window_overlays::HoverOverlayRequest {
+                    id: request.id,
+                    root_name,
+                    interactive: request.presence.interactive,
+                    trigger,
+                    open,
+                    present: request.presence.present,
+                    on_pointer_move: request.dismissible_on_pointer_move,
+                    children: request.children,
+                };
+                window_overlays::request_hover_overlay_for_window_owned(app, window, req, owner);
             }
             OverlayKind::ToastLayer => {
                 let spec = request
@@ -760,7 +759,9 @@ impl OverlayController {
                 if let Some(width) = spec.toast_max_width {
                     toast_req = toast_req.toast_max_width(width);
                 }
-                window_overlays::request_toast_layer_for_window(app, window, toast_req);
+                window_overlays::request_toast_layer_for_window_owned(
+                    app, window, toast_req, owner,
+                );
             }
         }
     }

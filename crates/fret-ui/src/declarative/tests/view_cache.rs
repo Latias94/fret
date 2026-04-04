@@ -85,6 +85,79 @@ fn view_cache_skips_child_render_when_clean_and_preserves_element_state() {
 }
 
 #[test]
+fn view_cache_reuse_preserves_scope_only_authoring_identity_liveness() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let owner_identity = Arc::new(std::sync::Mutex::new(
+        None::<crate::elements::GlobalElementId>,
+    ));
+
+    for _frame in 0..4 {
+        let renders = renders.clone();
+        let owner_identity = owner_identity.clone();
+        let owner_identity_for_render = owner_identity.clone();
+        let root_node = render_root_for_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "view-cache-scope-authoring-identity-liveness",
+            move |cx| {
+                vec![
+                    cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                        renders.fetch_add(1, Ordering::SeqCst);
+                        vec![cx.keyed("owner", |cx| {
+                            *owner_identity_for_render.lock().unwrap() = Some(cx.root_id());
+                            cx.text("owner")
+                        })]
+                    }),
+                ]
+            },
+        );
+
+        ui.set_root(root_node);
+        let owner_identity = owner_identity
+            .lock()
+            .unwrap()
+            .expect("owner identity should be recorded");
+        assert_eq!(
+            crate::elements::live_node_for_element(&mut app, window, owner_identity),
+            None,
+            "scope-only identity should not require a mounted node"
+        );
+        assert!(
+            crate::elements::element_identity_is_live_in_current_frame(
+                &mut app,
+                window,
+                owner_identity,
+            ),
+            "view-cache reuse should keep scope-only authoring identities live for the current frame"
+        );
+
+        layout_frame(&mut ui, &mut app, &mut services, bounds);
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "clean view-cache reuse should avoid rerendering the scoped owner subtree"
+    );
+}
+
+#[test]
 fn view_cache_preserves_selectable_text_interactive_span_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

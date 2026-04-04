@@ -97,6 +97,23 @@ pub fn element_is_live_in_current_frame<H: UiHost>(
     })
 }
 
+/// Returns whether `element` participated in the current frame's declarative authoring pass.
+///
+/// Unlike [`element_is_live_in_current_frame`], this also returns `true` for scope-only identities
+/// created via `scope` / `keyed` that may not map to a mounted `NodeId` themselves.
+///
+/// This is the correct liveness predicate for policy caches keyed by declarative authoring
+/// identities (for example, overlay request owners).
+pub fn element_identity_is_live_in_current_frame<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> bool {
+    with_window_state(app, window, |st| {
+        st.element_identity_is_live_in_current_frame(element)
+    })
+}
+
 /// Returns the most recent **committed** bounds for a declarative element, if available.
 ///
 /// This is a cross-frame geometry query intended for component-layer policies (e.g. anchored

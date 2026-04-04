@@ -337,6 +337,7 @@ pub struct DismissiblePopoverRequest {
 
 #[derive(Clone)]
 pub(super) struct CachedDismissiblePopoverDecl {
+    pub owner: Option<GlobalElementId>,
     pub id: GlobalElementId,
     pub root_name: String,
     pub trigger: GlobalElementId,
@@ -353,9 +354,13 @@ pub(super) struct CachedDismissiblePopoverDecl {
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
 }
 
-impl From<&DismissiblePopoverRequest> for CachedDismissiblePopoverDecl {
-    fn from(req: &DismissiblePopoverRequest) -> Self {
+impl CachedDismissiblePopoverDecl {
+    pub(super) fn from_request(
+        req: &DismissiblePopoverRequest,
+        owner: Option<GlobalElementId>,
+    ) -> Self {
         Self {
+            owner,
             id: req.id,
             root_name: req.root_name.clone(),
             trigger: req.trigger,
@@ -423,6 +428,7 @@ pub struct ModalRequest {
 
 #[derive(Clone)]
 pub(super) struct CachedModalDecl {
+    pub owner: Option<GlobalElementId>,
     pub id: GlobalElementId,
     pub root_name: String,
     pub trigger: Option<GlobalElementId>,
@@ -435,9 +441,10 @@ pub(super) struct CachedModalDecl {
     pub on_dismiss_request: Option<OnDismissRequest>,
 }
 
-impl From<&ModalRequest> for CachedModalDecl {
-    fn from(req: &ModalRequest) -> Self {
+impl CachedModalDecl {
+    pub(super) fn from_request(req: &ModalRequest, owner: Option<GlobalElementId>) -> Self {
         Self {
+            owner,
             id: req.id,
             root_name: req.root_name.clone(),
             trigger: req.trigger,
@@ -491,6 +498,7 @@ pub struct HoverOverlayRequest {
 
 #[derive(Clone)]
 pub(super) struct CachedHoverOverlayDecl {
+    pub owner: Option<GlobalElementId>,
     pub id: GlobalElementId,
     pub root_name: String,
     pub interactive: bool,
@@ -498,9 +506,10 @@ pub(super) struct CachedHoverOverlayDecl {
     pub open: Model<bool>,
 }
 
-impl From<&HoverOverlayRequest> for CachedHoverOverlayDecl {
-    fn from(req: &HoverOverlayRequest) -> Self {
+impl CachedHoverOverlayDecl {
+    pub(super) fn from_request(req: &HoverOverlayRequest, owner: Option<GlobalElementId>) -> Self {
         Self {
+            owner,
             id: req.id,
             root_name: req.root_name.clone(),
             interactive: req.interactive,
@@ -543,6 +552,7 @@ pub struct TooltipRequest {
 
 #[derive(Clone)]
 pub(super) struct CachedTooltipDecl {
+    pub owner: Option<GlobalElementId>,
     pub id: GlobalElementId,
     pub root_name: String,
     pub interactive: bool,
@@ -552,9 +562,10 @@ pub(super) struct CachedTooltipDecl {
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
 }
 
-impl From<&TooltipRequest> for CachedTooltipDecl {
-    fn from(req: &TooltipRequest) -> Self {
+impl CachedTooltipDecl {
+    pub(super) fn from_request(req: &TooltipRequest, owner: Option<GlobalElementId>) -> Self {
         Self {
+            owner,
             id: req.id,
             root_name: req.root_name.clone(),
             interactive: req.interactive,
@@ -562,6 +573,21 @@ impl From<&TooltipRequest> for CachedTooltipDecl {
             open: req.open.clone(),
             on_dismiss_request: req.on_dismiss_request.clone(),
             on_pointer_move: req.on_pointer_move.clone(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub(super) struct CachedToastLayerDecl {
+    pub owner: Option<GlobalElementId>,
+    pub request: ToastLayerRequest,
+}
+
+impl CachedToastLayerDecl {
+    pub(super) fn from_request(req: &ToastLayerRequest, owner: Option<GlobalElementId>) -> Self {
+        Self {
+            owner,
+            request: req.clone(),
         }
     }
 }
