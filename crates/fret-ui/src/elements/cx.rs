@@ -323,8 +323,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
     /// Returns the last known `NodeId` for a declarative element, if available.
     ///
-    /// This is safe to call during element rendering: it reads from the `ElementCx`'s already
-    /// borrowed window state, avoiding re-entrant `UiHost::with_global_mut` leases.
+    /// This is intentionally a last-known query surface: authoritative render-time correctness
+    /// paths should prefer live window-frame or attached-tree resolution instead of treating this
+    /// as the current attached node.
+    ///
+    /// It remains safe to call during element rendering because it reads from the `ElementCx`'s
+    /// already borrowed window state, avoiding re-entrant `UiHost::with_global_mut` leases.
     pub fn node_for_element(&self, element: GlobalElementId) -> Option<NodeId> {
         self.window_state.node_entry(element).map(|e| e.node)
     }
@@ -347,10 +351,22 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             return true;
         }
 
-        let Some(root_node) = self.window_state.node_entry(element).map(|e| e.node) else {
+        let root_node = crate::declarative::node_for_element_in_window_frame(
+            &mut *self.app,
+            self.window,
+            element,
+        )
+        .or_else(|| self.window_state.node_entry(element).map(|e| e.node));
+        let Some(root_node) = root_node else {
             return false;
         };
-        let Some(focused_node) = self.window_state.node_entry(focused).map(|e| e.node) else {
+        let focused_node = crate::declarative::node_for_element_in_window_frame(
+            &mut *self.app,
+            self.window,
+            focused,
+        )
+        .or_else(|| self.window_state.node_entry(focused).map(|e| e.node));
+        let Some(focused_node) = focused_node else {
             return false;
         };
 
@@ -373,8 +389,11 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub(crate) fn sync_focused_element_from_focused_node(&mut self, focused: Option<NodeId>) {
-        self.window_state.focused_element =
-            focused.and_then(|node| self.window_state.element_for_node(node));
+        self.window_state.focused_element = focused.and_then(|node| {
+            crate::declarative::frame::element_record_for_node(&mut *self.app, self.window, node)
+                .map(|record| record.element)
+                .or_else(|| self.window_state.element_for_node(node))
+        });
     }
 
     /// Returns the last frame's bounds for a declarative element, if available.

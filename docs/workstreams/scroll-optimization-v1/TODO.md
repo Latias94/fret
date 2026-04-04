@@ -54,6 +54,20 @@ Status: Active
 - [x] Lock the interaction-target live-node contract with focused stale-detached regression gates
   in `EVIDENCE_AND_GATES.md`.
 
+## Follow-on slice — Final-layout / dispatch / anchored queries resolve authoritative live attached nodes
+
+- [x] Replace render-time `focus-within` containment and focused-node-to-element sync so they read
+  live window-frame nodes before falling back to retained `node_entry` / `element_for_node`
+  mappings.
+- [x] Replace final-layout focus repair so the canonical focus node resolves from the live attached
+  tree instead of the last-known `elements::node_for_element(...)` mapping.
+- [x] Replace touch-drag locked target and wheel scroll-dismiss element lookups so dispatch uses
+  live attached nodes instead of retained stale `node_entry` mappings.
+- [x] Replace anchored layout `anchor_element` resolution so layout uses the live attached anchor
+  node rather than the last-known `elements::node_for_element(...)` mapping.
+- [x] Record the new regression gates and the non-test mechanism-path audit result in
+  `EVIDENCE_AND_GATES.md`.
+
 ## Gates-first checklist
 
 - [x] Confirm baseline scripts pass:

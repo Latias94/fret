@@ -796,7 +796,9 @@ impl<H: UiHost> UiTree<H> {
             }
             return;
         };
-        let Some(canonical) = crate::elements::node_for_element(app, window, element) else {
+        let Some(canonical) =
+            self.resolve_live_attached_node_for_element(app, Some(window), element)
+        else {
             #[cfg(debug_assertions)]
             if crate::runtime_config::ui_runtime_config().debug_focus_repair {
                 eprintln!(

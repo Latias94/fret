@@ -222,6 +222,7 @@ mod dispatch_phase;
 mod dock_drag;
 mod escape_dismiss;
 mod focus_barrier_transition;
+mod focus_repair;
 mod focus_scope;
 mod focus_scope_layered;
 mod focus_traversal_availability;

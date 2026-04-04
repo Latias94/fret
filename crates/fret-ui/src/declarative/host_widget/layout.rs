@@ -792,9 +792,9 @@ impl ElementHostWidget {
                 let anchor = props
                     .anchor_element
                     .and_then(|element| {
-                        crate::elements::node_for_element(
+                        cx.tree.resolve_live_attached_node_for_element(
                             cx.app,
-                            window,
+                            Some(window),
                             crate::elements::GlobalElementId(element),
                         )
                     })

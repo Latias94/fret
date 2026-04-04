@@ -1116,8 +1116,7 @@ impl<H: UiHost> UiTree<H> {
                 .get(pointer_id)
                 .copied()
                 .and_then(|element| {
-                    self.window
-                        .and_then(|window| crate::elements::node_for_element(app, window, element))
+                    self.resolve_live_attached_node_for_element(app, self.window, element)
                 })
                 .filter(|node| node_in_active_layers(*node)),
             _ => None,
@@ -2693,7 +2692,7 @@ impl<H: UiHost> UiTree<H> {
                         .iter()
                         .copied()
                         .filter_map(|element| {
-                            crate::elements::node_for_element(app, window, element)
+                            self.resolve_live_attached_node_for_element(app, Some(window), element)
                         })
                         .any(|node| self.is_descendant(scroll_target, node));
                     if !should_dismiss {

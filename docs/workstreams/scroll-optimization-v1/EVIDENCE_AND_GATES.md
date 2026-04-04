@@ -225,6 +225,25 @@ This follow-on slice locks the contract that:
 - selectable-text active-selection routing must keep targeting the live attached node even when
   retained selection state or `node_entry` was seeded with a stale detached node.
 
+## Follow-on slice — Final-layout / dispatch / anchored queries resolve authoritative live attached nodes
+
+This follow-on slice locks the contract that:
+
+- render-time `focus-within` containment and focused-node-to-element sync are authoritative
+  relation queries and must prefer the live declarative window frame before falling back to
+  retained mappings,
+- final-layout focus repair, touch-drag dispatch, wheel scroll-dismiss lookup, and anchored layout
+  anchor-element lookup must not treat `elements::node_for_element(...)` as authoritative truth
+  when `UiTree` or the declarative window frame is available,
+- `elements::node_for_element(...)` remains a last-known post-frame / component-policy query
+  surface; it is not the mechanism-layer source of truth for live attached nodes.
+
+Audit note (2026-04-04):
+
+- `rg -n "crate::elements::node_for_element\\(|elements::node_for_element\\(" crates/fret-ui/src --glob '!**/tests/**'`
+  now returns no hits, so non-test mechanism paths in `crates/fret-ui` no longer resolve
+  authoritative live nodes through the raw last-known query surface.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -264,6 +283,11 @@ This follow-on slice locks the contract that:
 - Hover/pressed/timer/selection interaction targets prefer live attached nodes over stale
   detached seeds:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui hovered_pressable_clear_uses_latest_node_for_same_element pressed_pressable_clear_uses_latest_node_for_same_element timer_dispatch_resolves_live_attached_element_target_over_stale_detached_seed final_layout_frame_syncs_hovered_pressable_node_to_live_attached_element selectable_text_set_text_selection_ignores_stale_detached_node_entry selectable_text_sets_active_text_selection`
+- Render-time focus containment and focused-element sync prefer live window-frame nodes over stale
+  detached seeds:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui element_context_reports_focus_within_for_focused_descendant element_context_focus_within_ignores_stale_detached_node_entries`
+- Final-layout / dispatch / anchored live-node queries ignore stale detached seeds:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui focus_repair_prefers_live_attached_node_over_stale_detached_node_entry anchored_anchor_element_ignores_stale_detached_node_entry touch_pan_scroll_live_target_resolution_ignores_stale_detached_node_entry`
 - Detached dirty cache roots are pruned before contained relayout:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups`
 - Detached pending barrier relayouts are pruned before execution:

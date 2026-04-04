@@ -29,6 +29,11 @@ pub fn root_bounds_for_element<H: UiHost>(
     })
 }
 
+/// Returns the most recent retained `NodeId` mapping for `element`.
+///
+/// This is intentionally a last-known query surface for post-frame / component-policy code.
+/// Mechanism paths that already have access to `UiTree` or the declarative window frame should
+/// resolve a live attached node instead of treating this mapping as authoritative truth.
 pub fn node_for_element<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
