@@ -70,6 +70,35 @@ Status: Active
 - [x] Record the new regression gates and the non-test mechanism-path audit result in
   `EVIDENCE_AND_GATES.md`.
 
+## Follow-on slice — Ecosystem runtime paths use explicit live-node query surfaces
+
+- [x] Expose public `fret-ui` query surfaces that distinguish authoritative current/live node
+  resolution from last-known retained mappings:
+  - `UiTree::live_attached_node_for_element(...)`
+  - `elements::live_node_for_element(...)`
+  - `ElementContext::live_node_for_element(...)`
+- [x] Keep `elements::node_for_element(...)` / `ElementContext::node_for_element(...)` as explicit
+  last-known query surfaces instead of silently widening their semantics.
+- [x] Tighten the public live query contract so current-frame liveness comes from
+  `WindowElementState::node_entry(...).last_seen_frame`, not from
+  `ElementFrame::window_frame.instances`, which may retain stale records until subtree GC.
+- [x] Replace ecosystem authoritative runtime call sites with the new live query surfaces:
+  - overlay focus request / restore paths in `window_overlays/render.rs`,
+  - focus-scope initial-focus / restore helpers,
+  - dismissable-layer branch resolution,
+  - live active-descendant helpers in `fret-ui-kit`.
+- [x] Keep render-time semantics authoring surfaces declarative when the parent relationship is
+  known before the current frame's child nodes are mounted:
+  - `fret-ui-kit/declarative/table.rs`,
+  - `fret-ui-shadcn/select.rs`,
+  - use `SemanticsDecoration::active_descendant_element(...)` instead of forcing a current-frame
+    `NodeId` lookup.
+- [x] Let semantics-time declarative relation resolution fall back from the local mounted element
+  map to the authoritative current-frame live mapping so retained / virtualized child subtrees can
+  still resolve `active_descendant`, `controls`, and related element relations.
+- [x] Lock the public-surface contract with stale-last-known regressions in
+  `fret-ui-kit` and record the gates in `EVIDENCE_AND_GATES.md`.
+
 ## Gates-first checklist
 
 - [x] Confirm baseline scripts pass:

@@ -12,7 +12,7 @@ use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, ScrollAxis,
-    ScrollProps, SemanticsProps, WheelRegionProps,
+    ScrollProps, SemanticsDecoration, SemanticsProps, WheelRegionProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -4349,10 +4349,6 @@ fn select_impl<H: UiHost>(
                                             },
                                         );
 
-                                        let active_descendant = active_element_id_out
-                                            .get()
-                                            .and_then(|id| cx.node_for_element(id));
-
                                         let inner = cx.container(
                                             ContainerProps {
                                                 layout: {
@@ -4397,7 +4393,6 @@ fn select_impl<H: UiHost>(
                                                 focus_ring: None,
                                                 a11y: PressableA11y {
                                                     role: Some(SemanticsRole::ListBox),
-                                                    active_descendant,
                                                     test_id: test_id_prefix_for_panel
                                                         .as_ref()
                                                         .map(|prefix| Arc::<str>::from(format!("{prefix}-listbox"))),
@@ -4410,6 +4405,19 @@ fn select_impl<H: UiHost>(
                                         )
                                     },
                                 );
+                                let panel = if let Some(active_element) = active_element_id_out.get()
+                                {
+                                    // The active row is chosen while building the declarative tree.
+                                    // Resolve the relationship declaratively here and let the
+                                    // semantics pass map it to the final mounted node once the
+                                    // current frame commits.
+                                    panel.attach_semantics(
+                                        SemanticsDecoration::default()
+                                            .active_descendant_element(active_element.0),
+                                    )
+                                } else {
+                                    panel
+                                };
 
                                 if let Some(arrow_el) = arrow_el {
                                     vec![arrow_el, panel]
@@ -7102,7 +7110,8 @@ mod tests {
             open.clone(),
             entries.clone(),
         );
-        // Third frame: allow `active_descendant` to resolve via last-frame node IDs.
+        // Third frame: allow the mounted listbox semantics to reflect the active descendant
+        // relationship after the open-state render commits.
         let _ = render_frame_entries(
             &mut ui,
             &mut app,

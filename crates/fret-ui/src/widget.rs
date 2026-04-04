@@ -1320,8 +1320,17 @@ pub struct SemanticsCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> SemanticsCx<'a, H> {
-    pub fn resolve_declarative_element(&self, element: u64) -> Option<NodeId> {
-        self.element_id_map.and_then(|m| m.get(&element).copied())
+    pub fn resolve_declarative_element(&mut self, element: u64) -> Option<NodeId> {
+        if let Some(node) = self.element_id_map.and_then(|m| m.get(&element).copied()) {
+            return Some(node);
+        }
+
+        let window = self.window?;
+        crate::elements::live_node_for_element(
+            self.app,
+            window,
+            crate::elements::GlobalElementId(element),
+        )
     }
 
     pub fn set_role(&mut self, role: SemanticsRole) {

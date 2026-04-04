@@ -244,6 +244,51 @@ Audit note (2026-04-04):
   now returns no hits, so non-test mechanism paths in `crates/fret-ui` no longer resolve
   authoritative live nodes through the raw last-known query surface.
 
+## Follow-on slice — Ecosystem runtime paths use explicit live-node query surfaces
+
+This follow-on slice locks the contract that:
+
+- `elements::node_for_element(...)` and `ElementContext::node_for_element(...)` remain last-known
+  retained query surfaces rather than becoming implicit authoritative correctness APIs,
+- `elements::live_node_for_element(...)`, `ElementContext::live_node_for_element(...)`, and
+  `UiTree::live_attached_node_for_element(...)` are the public authoritative query surfaces for
+  ecosystem correctness paths that genuinely need a current-frame live node,
+- current-frame liveness comes from `WindowElementState::node_entry(...).last_seen_frame`, not from
+  `ElementFrame::window_frame.instances`, because the declarative frame cache retains stale records
+  until subtree GC,
+- ecosystem overlay / focus / active-descendant helpers must resolve authoritative runtime targets
+  through the explicit live query surface instead of trusting stale last-known mappings,
+- render-time semantics authoring surfaces that describe parent/child relationships before the
+  current frame's children mount must keep those relationships declarative (for example via
+  `SemanticsDecoration::active_descendant_element(...)`) and let the semantics pass resolve the
+  final mounted node after commit,
+- semantics-time declarative relation resolution must prefer the local mounted element map and
+  fall back to the authoritative current-frame live mapping for lazy / virtualized child subtrees.
+
+Verified gates (2026-04-04):
+
+- `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui-kit apply_initial_focus_prefers_explicit_element resolve_restore_focus_prefers_trigger_and_falls_back_to_live_node resolve_restore_focus_skips_non_focusable_trigger resolve_branch_nodes_dedupes_and_preserves_order active_descendant_is_set_when_active_item_is_present_and_cleared_when_missing apply_initial_focus_ignores_removed_element_with_only_last_known_mapping resolve_branch_nodes_ignores_removed_trigger_with_only_last_known_mapping active_descendant_helper_ignores_removed_element_with_only_last_known_mapping table_active_descendant_semantics_resolves_from_declarative_active_row_relation --status-level fail`
+  - Result: `9 passed`.
+- `CARGO_TARGET_DIR=target-codex-shadcn-lib cargo test -p fret-ui-shadcn --lib select::tests::select_mouse_hover_leave_clears_active_descendant -- --exact`
+  - Result: `1 passed`.
+- `CARGO_TARGET_DIR=target-codex-shadcn-lib cargo test -p fret-ui-shadcn --lib select::tests::select_label_and_separator_do_not_affect_positions_or_initial_focus -- --exact`
+  - Result: `1 passed`.
+
+Audit note (2026-04-04):
+
+- The ecosystem authoritative runtime call sites in
+  `ecosystem/fret-ui-kit/src/window_overlays/render.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs`,
+  and `ecosystem/fret-ui-kit/src/declarative/active_descendant.rs`
+  now use the explicit live query surface instead of the raw last-known query surface.
+- The render-time semantics surfaces in `ecosystem/fret-ui-kit/src/declarative/table.rs` and
+  `ecosystem/fret-ui-shadcn/src/select.rs` now keep `active_descendant` as a declarative
+  element-to-element relationship until the semantics pass resolves the final mounted node.
+- `crates/fret-ui/src/widget.rs` now lets semantics-time declarative relation resolution fall back
+  from the local mounted element map to the authoritative current-frame live node mapping when a
+  lazy / virtualized subtree is not represented in the local semantics element map yet.
+
 ## Canonical gates
 
 - Seed contract regression:

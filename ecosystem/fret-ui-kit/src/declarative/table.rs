@@ -4,7 +4,7 @@ use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiAc
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RingPlacement, RingStyle, ScrollAxis,
-    ScrollProps, SemanticsProps, SpacerProps, VirtualListOptions,
+    ScrollProps, SemanticsDecoration, SemanticsProps, SpacerProps, VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{
@@ -2749,6 +2749,161 @@ mod tests {
     }
 
     #[test]
+    fn table_active_descendant_semantics_resolves_from_declarative_active_row_relation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 3;
+        let state = app.models_mut().insert(state_value);
+
+        let data: Arc<[u32]> = Arc::from(vec![0u32, 1u32, 2u32]);
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![{
+            let mut col = ColumnDef::new("name");
+            col.size = 220.0;
+            col
+        }]);
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            row_height: Some(Px(36.0)),
+            header_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    props.clone(),
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    None,
+                    Arc::new(
+                        |cx: &mut dyn ElementContextAccess<'_, App>,
+                         _col: &ColumnDef<u32>,
+                         row: &u32| {
+                            crate::ui::text(format!("Row {row}")).into_element(cx.elements())
+                        },
+                    ),
+                    TableDebugIds {
+                        row_test_id_prefix: Some(Arc::<str>::from("table-active-desc-row-")),
+                        ..Default::default()
+                    },
+                )]
+            })
+        };
+
+        let pump =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frames: usize| {
+                for _ in 0..frames {
+                    let root = render(ui, app, services);
+                    ui.set_root(root);
+                    ui.request_semantics_snapshot();
+                    ui.layout_all(app, services, bounds, 1.0);
+                    let mut scene = fret_core::Scene::default();
+                    ui.paint_all(app, services, bounds, &mut scene, 1.0);
+                }
+            };
+
+        let row_center = |snap: &fret_core::SemanticsSnapshot, row_index: usize| {
+            let id = format!("table-active-desc-row-{row_index}");
+            let bounds = snap
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(id.as_str()))
+                .map(|node| node.bounds)
+                .unwrap_or_else(|| panic!("expected row semantics node `{id}`"));
+            Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+                Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+            )
+        };
+
+        pump(&mut ui, &mut app, &mut services, 2);
+
+        let initial_snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after initial table render");
+        let click_pos = row_center(initial_snap, 1);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                is_click: true,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        // Frame N+1 records the active row element while rebuilding the list body.
+        // Frame N+2 lets the parent list semantics resolve the declarative relation against the
+        // now-mounted row node for the current frame.
+        pump(&mut ui, &mut app, &mut services, 2);
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after activating a row");
+        let row = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("table-active-desc-row-1"))
+            .expect("expected active row semantics node");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|node| node.role == SemanticsRole::List)
+            .expect("expected table list semantics node after activation");
+
+        assert_eq!(
+            list.active_descendant,
+            Some(row.id),
+            "expected table list semantics to resolve active_descendant to the mounted active row node"
+        );
+    }
+
+    #[test]
     fn table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -3941,6 +4096,7 @@ where
     struct RetainedTableKeyboardNavState {
         active_index: Rc<Cell<Option<usize>>>,
         anchor_index: Rc<Cell<Option<RowKey>>>,
+        active_element: Rc<Cell<Option<fret_ui::GlobalElementId>>>,
         labels: Rc<RefCell<Arc<[Arc<str>]>>>,
         disabled: Rc<RefCell<Arc<[bool]>>>,
         last_labels_revision: Cell<Option<u64>>,
@@ -3953,6 +4109,7 @@ where
             Self {
                 active_index: Rc::default(),
                 anchor_index: Rc::default(),
+                active_element: Rc::default(),
                 labels: Rc::new(RefCell::new(Arc::from([]))),
                 disabled: Rc::new(RefCell::new(Arc::from([]))),
                 last_labels_revision: Cell::new(None),
@@ -3965,6 +4122,7 @@ where
     let (
         active_index,
         anchor_index,
+        active_element,
         labels,
         disabled,
         _last_labels_revision,
@@ -4002,6 +4160,7 @@ where
         (
             nav.active_index.clone(),
             nav.anchor_index.clone(),
+            nav.active_element.clone(),
             nav.labels.clone(),
             nav.disabled.clone(),
             nav.last_labels_revision.clone(),
@@ -4024,9 +4183,13 @@ where
             let center_col_indices = center_col_indices.clone();
             let right_col_indices = right_col_indices.clone();
             let scroll_x = scroll_x.clone();
+            let active_index_for_row_builder = active_index.clone();
+            let active_element_for_row_builder = active_element.clone();
             let anchor_index_for_row_builder = anchor_index.clone();
 
             move |key_handler: fret_ui::action::OnKeyDown, focus_target: GlobalElementId| {
+                let active_index_for_row = active_index_for_row_builder.clone();
+                let active_element_for_row = active_element_for_row_builder.clone();
                 let anchor_index_for_row = anchor_index_for_row_builder.clone();
                 Arc::new(move |cx: &mut ElementContext<'_, H>, i: usize| {
                     let entry = entries[i];
@@ -4058,6 +4221,8 @@ where
                     let center_col_indices_for_row = center_col_indices.clone();
                     let right_col_indices_for_row = right_col_indices.clone();
                     let scroll_x_for_row = scroll_x.clone();
+                    let active_index = active_index_for_row.clone();
+                    let active_element = active_element_for_row.clone();
                     let focus_target = focus_target_for_row;
                     let single = props.single_row_selection;
                     let policy = props.pointer_row_selection_policy;
@@ -4098,7 +4263,7 @@ where
                         };
 
                     if pointer_row_selection_enabled {
-                        cx.pressable(
+                        cx.pressable_with_id(
                             PressableProps {
                                 enabled: true,
                                 focusable: false,
@@ -4110,7 +4275,23 @@ where
                                 },
                                 ..Default::default()
                             },
-                            move |cx, st| {
+                            move |cx, st, id| {
+                                let active_index_for_pointer_down = active_index.clone();
+                                cx.pressable_add_on_pointer_down(Arc::new(
+                                    move |_host, action_cx, down| {
+                                        if down.button != fret_core::MouseButton::Left {
+                                            return PressablePointerDownResult::Continue;
+                                        }
+                                        if down
+                                            .hit_pressable_target
+                                            .is_some_and(|t| t != action_cx.target)
+                                        {
+                                            return PressablePointerDownResult::Continue;
+                                        }
+                                        active_index_for_pointer_down.set(Some(i));
+                                        PressablePointerDownResult::Continue
+                                    },
+                                ));
                                 if policy == PointerRowSelectionPolicy::ListLike {
                                     let anchor_index_for_pointer_down = anchor_index.clone();
                                     let row_key_for_anchor = row_key;
@@ -4230,11 +4411,14 @@ where
                                     PressablePointerUpResult::SkipActivate
                                 }));
 
+                                if active_index.get() == Some(i) {
+                                    active_element.set(Some(id));
+                                }
                                 render_row_visuals(cx, st.hovered, st.pressed)
                             },
                         )
                     } else {
-                        cx.semantics(
+                        cx.semantics_with_id(
                             SemanticsProps {
                                 layout: row_wrapper_layout,
                                 role: SemanticsRole::ListItem,
@@ -4242,7 +4426,10 @@ where
                                 selected,
                                 ..Default::default()
                             },
-                            move |cx| {
+                            move |cx, id| {
+                                if active_index.get() == Some(i) {
+                                    active_element.set(Some(id));
+                                }
                                 vec![cx.hover_region(
                                     HoverRegionProps {
                                         layout: row_wrapper_layout,
@@ -4256,7 +4443,7 @@ where
             }
         };
 
-    cx.semantics_with_id(
+    let list = cx.semantics_with_id(
         SemanticsProps {
             role: SemanticsRole::List,
             focusable: true,
@@ -4490,7 +4677,15 @@ where
                 move |_cx| vec![content],
             )]
         },
-    )
+    );
+
+    if let Some(active_element) = active_element.get() {
+        list.attach_semantics(
+            SemanticsDecoration::default().active_descendant_element(active_element.0),
+        )
+    } else {
+        list
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -5513,13 +5708,10 @@ where
         })
     };
 
-    let active_descendant = active_element.get().and_then(|id| cx.node_for_element(id));
-
-    cx.semantics_with_id(
+    let list = cx.semantics_with_id(
         SemanticsProps {
             role: SemanticsRole::List,
             focusable: true,
-            active_descendant,
             ..Default::default()
         },
         |cx, list_id| {
@@ -6318,7 +6510,7 @@ where
                                                                 ))
                                                             });
 
-                                                        return cx.pressable(
+                                                        return cx.pressable_with_id(
                                                             PressableProps {
                                                                 enabled,
                                                                 focusable: false,
@@ -6333,7 +6525,7 @@ where
                                                                 .with_collection_position(i, set_size),
                                                                 ..Default::default()
                                                             },
-															|cx, st| {
+															|cx, st, id| {
 																let active_index_for_pointer =
 																	active_index.clone();
 																let anchor_index_for_pointer =
@@ -6385,7 +6577,7 @@ where
 																));
 
 																if active_index.get() == Some(i) {
-																	active_element.set(Some(cx.root_id()));
+																	active_element.set(Some(id));
 																	*active_command.borrow_mut() = None;
 																}
 																let state_model = state.clone();
@@ -6907,7 +7099,7 @@ where
                                             let typeahead_timer = typeahead_timer.clone();
                                             let focus_target = list_id;
 
-                                            cx.pressable(
+                                            cx.pressable_with_id(
                                                 PressableProps {
                                                     enabled,
                                                     focusable: false,
@@ -6920,7 +7112,7 @@ where
                                                     .with_collection_position(i, set_size),
                                                     ..Default::default()
                                                 },
-                                                |cx, st| {
+                                                |cx, st, id| {
                                                     let active_index_for_pointer =
                                                         active_index.clone();
                                                     let anchor_index_for_pointer_down =
@@ -7093,7 +7285,7 @@ where
 	                                                    ));
 
 														if active_index.get() == Some(i) {
-															active_element.set(Some(cx.root_id()));
+															active_element.set(Some(id));
 															*active_command.borrow_mut() = cmd.clone();
 														}
 													cx.pressable_dispatch_command_if_enabled_opt(cmd.clone());
@@ -7518,5 +7710,16 @@ where
                 },
             )]
         },
-    )
+    );
+
+    if let Some(active_element) = active_element.get() {
+        // The active row element is discovered while the table body mounts. Keep the relationship
+        // declarative here and let the semantics pass resolve it against the final mounted node
+        // once the current frame commits.
+        list.attach_semantics(
+            SemanticsDecoration::default().active_descendant_element(active_element.0),
+        )
+    } else {
+        list
+    }
 }

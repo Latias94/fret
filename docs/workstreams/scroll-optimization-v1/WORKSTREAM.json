@@ -3,7 +3,7 @@
   "slug": "scroll-optimization-v1",
   "title": "Scroll Optimization Workstream v1",
   "status": "active",
-  "updated": "2026-04-03",
+  "updated": "2026-04-04",
   "scope_kind": "execution",
   "problem": "Keep scroll extent probing, deferred unbounded probes, and post-layout overflow observation coherent so scroll surfaces stay correct and smooth under resize, invalidation, view-cache reuse, and edge growth/shrink.",
   "authoritative_docs": [
@@ -25,10 +25,10 @@
     }
   ],
   "repro": {
-    "summary": "Resume this lane from the framework-level scroll seed/authority gates before profiling demo surfaces.",
+    "summary": "Resume this lane from the current seed/authority and ecosystem live-node/declarative-semantics gates before profiling demo surfaces.",
     "commands": [
       "cargo run -p fret-demo --bin todo_demo",
-      "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui scroll_deferred_invalidation_uses_intrinsic_cache_seed_before_measure"
+      "CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui-kit apply_initial_focus_prefers_explicit_element resolve_restore_focus_prefers_trigger_and_falls_back_to_live_node resolve_restore_focus_skips_non_focusable_trigger resolve_branch_nodes_dedupes_and_preserves_order active_descendant_is_set_when_active_item_is_present_and_cleared_when_missing apply_initial_focus_ignores_removed_element_with_only_last_known_mapping resolve_branch_nodes_ignores_removed_trigger_with_only_last_known_mapping active_descendant_helper_ignores_removed_element_with_only_last_known_mapping table_active_descendant_semantics_resolves_from_declarative_active_row_relation --status-level fail"
     ]
   },
   "gates": [
@@ -47,6 +47,18 @@
     {
       "name": "scroll-budget-hit-shrink",
       "command": "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui scroll_post_layout_budget_hit_shrink_converges_via_pending_probe_next_frame"
+    },
+    {
+      "name": "ecosystem-live-node-public-surface",
+      "command": "CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui-kit apply_initial_focus_prefers_explicit_element resolve_restore_focus_prefers_trigger_and_falls_back_to_live_node resolve_restore_focus_skips_non_focusable_trigger resolve_branch_nodes_dedupes_and_preserves_order active_descendant_is_set_when_active_item_is_present_and_cleared_when_missing apply_initial_focus_ignores_removed_element_with_only_last_known_mapping resolve_branch_nodes_ignores_removed_trigger_with_only_last_known_mapping active_descendant_helper_ignores_removed_element_with_only_last_known_mapping table_active_descendant_semantics_resolves_from_declarative_active_row_relation --status-level fail"
+    },
+    {
+      "name": "select-active-descendant-clears-on-hover-leave",
+      "command": "CARGO_TARGET_DIR=target-codex-shadcn-lib cargo test -p fret-ui-shadcn --lib select::tests::select_mouse_hover_leave_clears_active_descendant -- --exact"
+    },
+    {
+      "name": "select-active-descendant-ignores-non-items",
+      "command": "CARGO_TARGET_DIR=target-codex-shadcn-lib cargo test -p fret-ui-shadcn --lib select::tests::select_label_and_separator_do_not_affect_positions_or_initial_focus -- --exact"
     }
   ],
   "evidence": [
@@ -54,7 +66,10 @@
     "docs/workstreams/scroll-optimization-v1/TODO.md",
     "docs/workstreams/scroll-optimization-v1/EVIDENCE_AND_GATES.md",
     "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
-    "crates/fret-ui/src/declarative/tests/layout/scroll.rs"
+    "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
+    "crates/fret-ui/src/widget.rs",
+    "ecosystem/fret-ui-kit/src/declarative/table.rs",
+    "ecosystem/fret-ui-shadcn/src/select.rs"
   ],
   "adr_refs": [],
   "continue_policy": {
