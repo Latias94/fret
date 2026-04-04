@@ -40,6 +40,37 @@ where
     out
 }
 
+fn flex_root_needs_fill_height(direction: Axis, layout: &LayoutRefinement) -> bool {
+    let has_height_constraint = layout.size.as_ref().is_some_and(|size| {
+        matches!(
+            size.height,
+            Some(LengthRefinement::Px(_) | LengthRefinement::Fraction(_) | LengthRefinement::Fill)
+        ) || matches!(
+            size.min_height,
+            Some(LengthRefinement::Px(_) | LengthRefinement::Fraction(_) | LengthRefinement::Fill)
+        ) || matches!(
+            size.max_height,
+            Some(LengthRefinement::Px(_) | LengthRefinement::Fraction(_) | LengthRefinement::Fill)
+        )
+    });
+    if has_height_constraint {
+        return true;
+    }
+
+    matches!(direction, Axis::Vertical)
+        && layout.flex_item.as_ref().is_some_and(|flex| {
+            flex.grow.is_some_and(|grow| grow > 0.0)
+                || matches!(
+                    flex.basis,
+                    Some(
+                        LengthRefinement::Px(_)
+                            | LengthRefinement::Fraction(_)
+                            | LengthRefinement::Fill
+                    )
+                )
+        })
+}
+
 /// Late-lands a single typed child into `Ui` / `Elements`.
 ///
 /// This is the narrow default-path helper for render roots or wrapper closures that only need to
@@ -214,6 +245,7 @@ where
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
+        let needs_fill_height = flex_root_needs_fill_height(self.direction, &self.layout);
 
         let container = decl_style::container_props(theme, self.chrome, self.layout);
 
@@ -237,6 +269,9 @@ where
         if self.force_width_fill {
             flex_props.layout.size.width = Length::Fill;
         }
+        if needs_fill_height {
+            flex_props.layout.size.height = Length::Fill;
+        }
 
         let children = self.children.expect("expected flex children closure");
         cx.container(container, move |cx| {
@@ -255,6 +290,7 @@ where
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
+        let needs_fill_height = flex_root_needs_fill_height(self.direction, &self.layout);
 
         let container = decl_style::container_props(theme, self.chrome, self.layout);
 
@@ -277,6 +313,9 @@ where
         };
         if self.force_width_fill {
             flex_props.layout.size.width = Length::Fill;
+        }
+        if needs_fill_height {
+            flex_props.layout.size.height = Length::Fill;
         }
 
         let build = self.build.expect("expected flex build closure");
@@ -1970,7 +2009,7 @@ mod tests {
     use fret_app::App;
     use fret_core::SemanticsRole;
     use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{ElementKind, Length};
 
     #[test]
     fn text_align_start_end_flip_under_rtl() {
@@ -2319,6 +2358,44 @@ mod tests {
                 matches!(el.children[0].kind, ElementKind::Text(_)),
                 "expected ui::hover_region(...) child to late-land text"
             );
+        });
+    }
+
+    #[test]
+    fn flex_box_height_constraints_propagate_fill_height_to_inner_flex_root() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = v_flex(|_cx| [text("hello")])
+                .min_h(Px(100.0))
+                .max_h(Px(100.0))
+                .into_element(cx);
+
+            let inner = match &el.kind {
+                ElementKind::Container(props) => {
+                    assert_eq!(props.layout.size.min_height, Some(Length::Px(Px(100.0))));
+                    assert_eq!(props.layout.size.max_height, Some(Length::Px(Px(100.0))));
+                    el.children
+                        .first()
+                        .expect("flex box container should wrap an inner flex root")
+                }
+                other => panic!("expected outer container wrapper, got {other:?}"),
+            };
+
+            match &inner.kind {
+                ElementKind::Flex(props) => {
+                    assert!(
+                        matches!(props.layout.size.height, Length::Fill),
+                        "inner flex root should fill the constrained outer wrapper height"
+                    );
+                }
+                other => panic!("expected inner flex root, got {other:?}"),
+            }
         });
     }
 }

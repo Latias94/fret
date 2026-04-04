@@ -61,6 +61,17 @@ This follow-on slice locks the contract that:
   must sever the old parent's child edge, avoid duplicate child edges on the new parent, and route
   the resulting structural change through the authoritative layout invalidation path.
 
+## Follow-on slice — Reparent cleanup must respect the old parent's structural policy
+
+This follow-on slice locks the contract that:
+
+- reparent cleanup cannot infer the old parent's detach semantics from the new write path,
+- an old barrier parent must keep contained-relayout semantics when a child moves elsewhere,
+- barrier-to-barrier reparent cleanup must remove stale child edges without forcing ancestor
+  relayout through the old barrier,
+- runtime/view-cache wrapper transitions must not leave stale parent-to-child edges that later GC
+  can interpret as still-live membership.
+
 ## Follow-on slice — Layer root replacement must prune detached interaction state
 
 This follow-on slice locks the contract that:
@@ -351,6 +362,14 @@ Audit note (2026-04-04):
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::children::set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout`
 - `add_child(...)` reparents without stale child edges and no-ops when already attached once:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui add_child_reparents_from_old_parent_without_leaving_stale_child_edges add_child_noops_when_child_is_already_attached_once_to_same_parent`
+- Barrier-parent reparent cleanup keeps contained-relayout semantics on the old parent:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui set_children_reparents_from_old_barrier_using_barrier_detach_semantics`
+- Barrier-to-barrier reparent cleanup removes stale edges without bubbling ancestor relayout:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui set_children_barrier_reparents_from_old_barrier_without_leaving_stale_child_edges`
+- Runtime/cache wrapper transition keeps authoritative footer membership after compact resize:
+  - `cargo test -p fret view_runtime_cache_enable_transition_keeps_toggle_group_footer_semantics_after_compact_resize -- --nocapture`
+- High-fidelity todo repro keeps footer filters after compact resize:
+  - `cargo test -p fret-examples todo_demo_view_runtime_cache_enable_transition_keeps_footer_filters_after_compact_resize -- --nocapture`
 - Root replacement clears detached base-layer interaction state:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui tree::tests::layer_root_replacement::set_root_replacement_clears_detached_base_layer_interaction_state`
 - Root replacement preserves still-active overlay interaction state:
@@ -432,6 +451,14 @@ Audit note (2026-04-04):
   - `crates/fret-ui/src/tree/ui_tree_mutation/core.rs`
   - `crates/fret-ui/src/tree/ui_tree_mutation/mount.rs`
   - `crates/fret-ui/src/tree/tests/children.rs`
+- Old-parent structural policy for reparent cleanup:
+  - `crates/fret-ui/src/tree/node_storage.rs`
+  - `crates/fret-ui/src/tree/ui_tree_mutation/core.rs`
+  - `crates/fret-ui/src/tree/ui_tree_mutation/barrier.rs`
+  - `crates/fret-ui/src/tree/tests/children.rs`
+- Runtime/high-fidelity wrapper-transition coverage:
+  - `ecosystem/fret/src/view.rs`
+  - `apps/fret-examples/src/todo_demo.rs`
 - Layer-root replacement interaction pruning:
   - `crates/fret-ui/src/tree/layers/impls.rs`
   - `crates/fret-ui/src/tree/tests/layer_root_replacement.rs`
@@ -518,7 +545,12 @@ Audit note (2026-04-04):
   - `tree::tests::view_cache::view_cache_layout_invalidations_allow_reuse_for_definite_contained_roots`
   - `tree::tests::view_cache::view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender`
   - `tree::tests::view_cache::detached_dirty_view_cache_root_is_pruned_before_layout_followups`
-  - `tree::tests::barrier_subtree_layout_dirty_aggregation::*`
+- 2026-04-04: old-parent structural policy gates confirmed via targeted tree `cargo nextest`
+  plus runtime/high-fidelity `cargo test`:
+  - `tree::tests::children::set_children_reparents_from_old_barrier_using_barrier_detach_semantics`
+  - `tree::tests::children::set_children_barrier_reparents_from_old_barrier_without_leaving_stale_child_edges`
+  - `view::tests::view_runtime_cache_enable_transition_keeps_toggle_group_footer_semantics_after_compact_resize`
+  - `todo_demo::tests::todo_demo_view_runtime_cache_enable_transition_keeps_footer_filters_after_compact_resize`
 - 2026-04-03: same-children parent-repair reconnect gates confirmed via `cargo nextest` with
   `CARGO_TARGET_DIR=target-codex-verify8`:
   - `tree::tests::children::set_children_noops_when_unchanged`

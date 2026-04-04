@@ -5,7 +5,10 @@ impl<H: UiHost> UiTree<H> {
     pub(crate) fn set_children_in_mount(&mut self, parent: NodeId, children: Vec<NodeId>) {
         if self.nodes.get(parent).is_none() {
             return;
-        };
+        }
+
+        self.set_node_children_write_policy(parent, ChildrenWritePolicy::Standard);
+        self.detach_reparented_children_from_old_parents(parent, &children);
 
         // Keep parent pointers consistent even when the child list is unchanged.
         let same_children = self

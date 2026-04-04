@@ -140,6 +140,57 @@ impl<H: UiHost> UiTree<H> {
         n.parent = parent;
     }
 
+    pub(in crate::tree) fn set_node_children_write_policy(
+        &mut self,
+        node: NodeId,
+        policy: ChildrenWritePolicy,
+    ) {
+        let Some(entry) = self.nodes.get_mut(node) else {
+            return;
+        };
+        entry.children_write_policy = policy;
+    }
+
+    pub(in crate::tree) fn detach_reparented_children_from_old_parents(
+        &mut self,
+        parent: NodeId,
+        children: &[NodeId],
+    ) {
+        let mut removals: HashMap<NodeId, HashSet<NodeId>> = HashMap::new();
+        for &child in children {
+            let Some(old_parent) = self.nodes.get(child).and_then(|node| node.parent) else {
+                continue;
+            };
+            if old_parent == parent {
+                continue;
+            }
+            removals.entry(old_parent).or_default().insert(child);
+        }
+
+        for (old_parent, removing) in removals {
+            let Some(old_children) = self.nodes.get(old_parent).map(|node| node.children.clone())
+            else {
+                continue;
+            };
+            if !old_children.iter().any(|child| removing.contains(child)) {
+                continue;
+            }
+            let filtered: Vec<NodeId> = old_children
+                .into_iter()
+                .filter(|child| !removing.contains(child))
+                .collect();
+            let policy = self
+                .nodes
+                .get(old_parent)
+                .map(|node| node.children_write_policy)
+                .unwrap_or_default();
+            match policy {
+                ChildrenWritePolicy::Standard => self.set_children(old_parent, filtered),
+                ChildrenWritePolicy::Barrier => self.set_children_barrier(old_parent, filtered),
+            }
+        }
+    }
+
     pub fn set_root(&mut self, root: NodeId) {
         let _ = self.set_base_root(root);
     }
@@ -177,6 +228,13 @@ impl<H: UiHost> UiTree<H> {
 
     #[track_caller]
     pub fn set_children(&mut self, parent: NodeId, children: Vec<NodeId>) {
+        if self.nodes.get(parent).is_none() {
+            return;
+        }
+
+        self.set_node_children_write_policy(parent, ChildrenWritePolicy::Standard);
+        self.detach_reparented_children_from_old_parents(parent, &children);
+
         let Some(_old_len) = self.nodes.get(parent).map(|n| n.children.len()) else {
             return;
         };

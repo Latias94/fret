@@ -110,8 +110,8 @@ pub use debug::{
 use layers::UiLayer;
 pub use layers::{OverlayRootOptions, UiLayerId};
 use node_storage::{
-    HitTestPathCache, Node, NodeMeasureCache, NodeMeasureCacheKey, PrepaintHitTestCache,
-    ViewCacheFlags,
+    ChildrenWritePolicy, HitTestPathCache, Node, NodeMeasureCache, NodeMeasureCacheKey,
+    PrepaintHitTestCache, ViewCacheFlags,
 };
 pub use paint_cache::PaintCachePolicy;
 use paint_cache::{PaintCacheEntry, PaintCacheKey, PaintCacheState};

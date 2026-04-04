@@ -192,3 +192,131 @@ fn add_child_noops_when_child_is_already_attached_once_to_same_parent() {
     assert!(!ui.nodes[root].invalidation.layout);
     assert!(!ui.nodes[root].invalidation.paint);
 }
+
+#[test]
+fn set_children_reparents_from_old_parent_without_leaving_stale_child_edges() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let left = ui.create_node(TestStack);
+    let right = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![left, right]);
+    ui.set_children(left, vec![child]);
+
+    ui.test_clear_node_invalidations(root);
+    ui.test_clear_node_invalidations(left);
+    ui.test_clear_node_invalidations(right);
+    ui.test_clear_node_invalidations(child);
+
+    ui.set_children(right, vec![child]);
+
+    assert_eq!(ui.node_parent(child), Some(right));
+    assert_eq!(ui.nodes[left].children, Vec::<NodeId>::new());
+    assert_eq!(ui.nodes[right].children, vec![child]);
+    assert!(ui.nodes[left].invalidation.layout);
+    assert!(ui.nodes[right].invalidation.layout);
+    assert!(ui.nodes[root].invalidation.layout);
+}
+
+#[test]
+fn set_children_in_mount_reparents_from_old_parent_without_leaving_stale_child_edges() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let left = ui.create_node(TestStack);
+    let right = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![left, right]);
+    ui.set_children_in_mount(left, vec![child]);
+
+    ui.test_clear_node_invalidations(root);
+    ui.test_clear_node_invalidations(left);
+    ui.test_clear_node_invalidations(right);
+    ui.test_clear_node_invalidations(child);
+
+    ui.set_children_in_mount(right, vec![child]);
+
+    assert_eq!(ui.node_parent(child), Some(right));
+    assert_eq!(ui.nodes[left].children, Vec::<NodeId>::new());
+    assert_eq!(ui.nodes[right].children, vec![child]);
+    assert!(ui.nodes[left].invalidation.layout);
+    assert!(ui.nodes[right].invalidation.layout);
+    assert!(ui.nodes[root].invalidation.layout);
+}
+
+#[test]
+fn set_children_barrier_reparents_from_old_barrier_without_leaving_stale_child_edges() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let left = ui.create_node(TestStack);
+    let right = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![left, right]);
+    ui.set_children_barrier(left, vec![child]);
+    ui.take_pending_barrier_relayouts();
+
+    ui.test_clear_node_invalidations(root);
+    ui.test_clear_node_invalidations(left);
+    ui.test_clear_node_invalidations(right);
+    ui.test_clear_node_invalidations(child);
+
+    ui.set_children_barrier(right, vec![child]);
+
+    assert_eq!(ui.node_parent(child), Some(right));
+    assert_eq!(ui.nodes[left].children, Vec::<NodeId>::new());
+    assert_eq!(ui.nodes[right].children, vec![child]);
+    assert!(
+        !ui.nodes[root].invalidation.layout,
+        "barrier reparent should not force ancestor relayout through the old barrier parent"
+    );
+
+    let pending = ui.take_pending_barrier_relayouts();
+    assert_eq!(pending, vec![left, right]);
+}
+
+#[test]
+fn set_children_reparents_from_old_barrier_using_barrier_detach_semantics() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let left = ui.create_node(TestStack);
+    let right = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![left, right]);
+    ui.set_children_barrier(left, vec![child]);
+    ui.take_pending_barrier_relayouts();
+
+    ui.test_clear_node_invalidations(root);
+    ui.test_clear_node_invalidations(left);
+    ui.test_clear_node_invalidations(right);
+    ui.test_clear_node_invalidations(child);
+
+    ui.set_children(right, vec![child]);
+
+    assert_eq!(ui.node_parent(child), Some(right));
+    assert_eq!(ui.nodes[left].children, Vec::<NodeId>::new());
+    assert_eq!(ui.nodes[right].children, vec![child]);
+    assert!(ui.nodes[right].invalidation.layout);
+    assert!(ui.nodes[root].invalidation.layout);
+
+    let pending = ui.take_pending_barrier_relayouts();
+    assert_eq!(
+        pending,
+        vec![left],
+        "detaching from a barrier parent must preserve contained relayout scheduling on the old parent"
+    );
+}

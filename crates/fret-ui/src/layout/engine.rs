@@ -270,6 +270,18 @@ impl TaffyLayoutEngine {
             self.layout_to_node.remove(&layout_id);
             self.styles.remove(node);
             self.seen_stamp.remove(node);
+            let stale_parent = self.parent.get(node).copied();
+            if let Some(parent) = stale_parent
+                && let Some(parent_children) = self.children.get_mut(parent)
+            {
+                let old_len = parent_children.len();
+                parent_children.retain(|&child| child != node);
+                if parent_children.len() != old_len {
+                    self.node_solved_stamp.remove(parent);
+                    self.root_solve_stamp.remove(parent);
+                    self.invalidate_solved_ancestors(parent);
+                }
+            }
             if let Some(children) = self.children.remove(node) {
                 for child in children {
                     if self.parent.get(child) == Some(&node) {
@@ -2092,5 +2104,68 @@ mod tests {
         let rect = engine.layout_rect(child_id);
         assert!((rect.origin.x.0 - 0.5).abs() < 0.0001);
         assert!((rect.size.width.0 - 0.0).abs() < 0.0001);
+    }
+
+    #[test]
+    fn end_frame_prunes_stale_children_from_live_parent_edges() {
+        let [root, live_child, stale_child] = fresh_node_ids(3).try_into().unwrap();
+
+        let mut engine = TaffyLayoutEngine::default();
+        engine.begin_frame(FrameId(1));
+
+        engine.set_children(root, &[live_child, stale_child]);
+
+        let block = taffy::Style {
+            display: taffy::style::Display::Block,
+            size: taffy::geometry::Size {
+                width: taffy::style::Dimension::length(100.0),
+                height: taffy::style::Dimension::length(20.0),
+            },
+            ..Default::default()
+        };
+        engine.set_style(root, block.clone());
+        engine.set_style(live_child, block.clone());
+        engine.set_style(stale_child, block);
+
+        engine.end_frame();
+
+        engine.begin_frame(FrameId(2));
+        engine.mark_seen(root);
+        engine.mark_seen(live_child);
+
+        engine.end_frame();
+
+        assert!(
+            engine.layout_id_for_node(stale_child).is_none(),
+            "stale child layout node should be swept at end of frame"
+        );
+        assert_eq!(
+            engine.children.get(root).map(Vec::as_slice),
+            Some([live_child].as_slice()),
+            "sweeping a stale child must also sever the live parent's child edge"
+        );
+        assert_eq!(
+            engine.parent.get(live_child).copied(),
+            Some(root),
+            "live sibling parent pointers must survive stale-child pruning"
+        );
+
+        let dump = engine.debug_dump_subtree_json(root, |node| {
+            Some(match node {
+                n if n == root => "root".to_string(),
+                n if n == live_child => "live".to_string(),
+                n if n == stale_child => "stale".to_string(),
+                _ => format!("{node:?}"),
+            })
+        });
+        let dump_text = dump.to_string();
+        assert!(
+            !dump_text.contains("stale"),
+            "debug dump should not retain swept stale children under a live parent: {dump_text}"
+        );
+        assert!(
+            !dump_text.contains("<unknown>"),
+            "debug dump should not expose placeholder unknown nodes after stale-child pruning: {dump_text}"
+        );
     }
 }

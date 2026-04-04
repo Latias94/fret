@@ -160,6 +160,9 @@ Status: Active
   - [x] remaining child-list mutation helpers now route through the same authoritative structural
     contract; `add_child(...)` reparents by severing old parent edges, avoiding duplicate child
     edges, and delegating the structural write to `set_children(...)`,
+  - [x] reparent cleanup now respects the old parent's structural child-write policy
+    (`Standard` vs `Barrier`) instead of guessing from the new write path, so stale child edges
+    from cached/runtime wrapper transitions cannot force the wrong detach semantics,
   - [x] contained cache-root dirty markers now align with main-pass layout consumption and
     descendant-truncated contained relayout scheduling,
   - [x] subtree dirty aggregation bookkeeping.
@@ -186,6 +189,8 @@ Status: Active
   - [x] best-effort input-context readers inherit authoritative command availability over stale or
     fallback published snapshots,
   - [x] `add_child(...)` reparents without stale child edges and no-ops when already attached once,
+  - [x] barrier-parent reparent cleanup keeps the old parent on contained-relayout semantics,
+  - [x] barrier-to-barrier reparent cleanup removes stale edges without bubbling ancestor relayout,
   - [x] scroll handle revision-only bumps stay classified correctly,
   - [x] scroll handle invalidation ignores detached same-frame stale bindings,
   - [x] scroll handle registry dedupes same-frame duplicate element bindings,

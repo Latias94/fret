@@ -402,6 +402,416 @@ fn environment_viewport_resize_rerender_updates_flow_layout_during_interactive_r
 }
 
 #[test]
+fn viewport_resize_after_cache_enable_keeps_cache_root_membership_complete() {
+    use std::sync::Mutex;
+
+    #[derive(Default)]
+    struct CapturedIds {
+        cache_root: Option<crate::elements::GlobalElementId>,
+        filter: Option<crate::elements::GlobalElementId>,
+        clear: Option<crate::elements::GlobalElementId>,
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(false);
+
+    let roomy_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(660.0)),
+    );
+    let compact_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(560.0)),
+    );
+    let mut services = FakeTextService::default();
+    let ids = Arc::new(Mutex::new(CapturedIds::default()));
+
+    let render_footer = |cx: &mut crate::elements::ElementContext<'_, TestHost>,
+                         ids: &Arc<Mutex<CapturedIds>>| {
+        let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
+        let compact = viewport.size.width.0 < 560.0;
+
+        let filter = cx.named("filter-chip", |cx| cx.text("filter-chip"));
+        ids.lock().unwrap().filter = Some(filter.id);
+
+        let clear = cx.named("clear-chip", |cx| cx.text("clear-chip"));
+        ids.lock().unwrap().clear = Some(clear.id);
+
+        let footer = if compact {
+            cx.flex(
+                crate::element::FlexProps {
+                    direction: fret_core::Axis::Vertical,
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        filter,
+                        cx.flex(
+                            crate::element::FlexProps {
+                                direction: fret_core::Axis::Horizontal,
+                                ..Default::default()
+                            },
+                            move |_cx| vec![clear],
+                        ),
+                    ]
+                },
+            )
+        } else {
+            cx.flex(
+                crate::element::FlexProps {
+                    direction: fret_core::Axis::Horizontal,
+                    ..Default::default()
+                },
+                move |_cx| vec![filter, clear],
+            )
+        };
+
+        let cache = cx.view_cache(
+            crate::element::ViewCacheProps {
+                contained_layout: true,
+                ..Default::default()
+            },
+            move |_cx| vec![footer],
+        );
+        ids.lock().unwrap().cache_root = Some(cache.id);
+        vec![cache]
+    };
+
+    let ids_for_frame0 = ids.clone();
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        roomy_bounds,
+        "viewport-resize-cache-enable-membership",
+        move |cx| render_footer(cx, &ids_for_frame0),
+    );
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut services, roomy_bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, roomy_bounds, &mut scene, 1.0);
+
+    ui.set_view_cache_enabled(true);
+    app.advance_frame();
+
+    let ids_for_frame1 = ids.clone();
+    let root1 = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        compact_bounds,
+        "viewport-resize-cache-enable-membership",
+        move |cx| render_footer(cx, &ids_for_frame1),
+    );
+    assert_eq!(root1, root0, "expected stable root identity across resize");
+    ui.set_root(root1);
+    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, compact_bounds, &mut scene, 1.0);
+
+    let (cache_root, filter, clear) = {
+        let ids = ids.lock().unwrap();
+        (
+            ids.cache_root.expect("cache root id"),
+            ids.filter.expect("filter id"),
+            ids.clear.expect("clear id"),
+        )
+    };
+
+    app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _app| {
+        let window_state = runtime.for_window_mut(window);
+        let elements = window_state
+            .view_cache_elements_for_root(cache_root)
+            .expect("expected cache-root membership list after compact rerender");
+
+        assert!(
+            elements.contains(&filter),
+            "cache-root membership should retain the leading footer subtree after cache-enable transition; elements={elements:?} filter={filter:?}"
+        );
+        assert!(
+            elements.contains(&clear),
+            "cache-root membership should retain the trailing footer subtree after cache-enable transition; elements={elements:?} clear={clear:?}"
+        );
+    });
+}
+
+#[test]
+fn viewport_resize_after_cache_enable_keeps_roving_keyed_semantics_and_membership_complete() {
+    #[derive(Default, Clone, Debug)]
+    struct CapturedIds {
+        cache_root: Option<crate::elements::GlobalElementId>,
+        filter_all: Option<crate::elements::GlobalElementId>,
+        filter_active: Option<crate::elements::GlobalElementId>,
+        filter_completed: Option<crate::elements::GlobalElementId>,
+        clear: Option<crate::elements::GlobalElementId>,
+    }
+
+    impl CapturedIds {
+        fn set_filter(&mut self, test_id: &str, element: crate::elements::GlobalElementId) {
+            match test_id {
+                "roving.filter.all" => self.filter_all = Some(element),
+                "roving.filter.active" => self.filter_active = Some(element),
+                "roving.filter.completed" => self.filter_completed = Some(element),
+                other => panic!("unexpected filter test id: {other}"),
+            }
+        }
+    }
+
+    fn snapshot_test_ids(snapshot: &fret_core::SemanticsSnapshot) -> Vec<String> {
+        let mut ids: Vec<String> = snapshot
+            .nodes
+            .iter()
+            .filter_map(|node| node.test_id.as_ref().map(ToString::to_string))
+            .collect();
+        ids.sort();
+        ids
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(false);
+
+    let roomy_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(660.0)),
+    );
+    let compact_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(560.0)),
+    );
+    let mut services = FakeTextService::default();
+    let ids = Arc::new(Mutex::new(CapturedIds::default()));
+
+    let render_footer = |cx: &mut crate::elements::ElementContext<'_, TestHost>,
+                         ids: &Arc<Mutex<CapturedIds>>| {
+        let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
+        let compact = viewport.size.width.0 < 560.0;
+
+        let action_root = cx.named("__test.action_root", |cx| {
+            let ids_for_cache = ids.clone();
+            let cache = cx.view_cache(
+                crate::element::ViewCacheProps {
+                    contained_layout: true,
+                    ..Default::default()
+                },
+                move |cx| {
+                    let ids_for_roving = ids_for_cache.clone();
+                    let roving = cx.roving_flex(
+                        crate::element::RovingFlexProps {
+                            flex: crate::element::FlexProps {
+                                direction: fret_core::Axis::Horizontal,
+                                ..Default::default()
+                            },
+                            roving: crate::element::RovingFocusProps {
+                                enabled: true,
+                                wrap: true,
+                                disabled: Arc::from([false, false, false]),
+                            },
+                        },
+                        move |cx| {
+                            cx.roving_on_active_change(Arc::new(|_host, _cx, _idx| {}));
+                            cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                                use crate::action::RovingNavigateResult;
+                                use fret_core::KeyCode;
+
+                                let Some(current) = it.current else {
+                                    return RovingNavigateResult::NotHandled;
+                                };
+
+                                let forward = match it.key {
+                                    KeyCode::ArrowRight => true,
+                                    KeyCode::ArrowLeft => false,
+                                    _ => return RovingNavigateResult::NotHandled,
+                                };
+                                let len = it.len;
+                                let next = if forward {
+                                    (current + 1) % len
+                                } else {
+                                    (current + len - 1) % len
+                                };
+                                RovingNavigateResult::Handled { target: Some(next) }
+                            }));
+
+                            let mut out = Vec::new();
+                            for (label, test_id) in [
+                                ("All", "roving.filter.all"),
+                                ("Active", "roving.filter.active"),
+                                ("Completed", "roving.filter.completed"),
+                            ] {
+                                let ids_for_item = ids_for_roving.clone();
+                                out.push(cx.keyed(test_id, move |cx| {
+                                    let label: Arc<str> = Arc::from(label);
+                                    let mut props = crate::element::PressableProps::default();
+                                    props.a11y = crate::element::PressableA11y {
+                                        role: Some(fret_core::SemanticsRole::Button),
+                                        label: Some(label.clone()),
+                                        test_id: Some(Arc::from(test_id)),
+                                        ..Default::default()
+                                    };
+                                    let pressable = cx.pressable(props, move |cx, _st| {
+                                        vec![cx.text(label.clone())]
+                                    });
+                                    ids_for_item
+                                        .lock()
+                                        .unwrap()
+                                        .set_filter(test_id, pressable.id);
+                                    cx.flex(
+                                        crate::element::FlexProps {
+                                            direction: fret_core::Axis::Horizontal,
+                                            ..Default::default()
+                                        },
+                                        move |_cx| vec![pressable],
+                                    )
+                                }));
+                            }
+                            out
+                        },
+                    );
+
+                    let clear = {
+                        let mut props = crate::element::PressableProps::default();
+                        props.a11y = crate::element::PressableA11y {
+                            role: Some(fret_core::SemanticsRole::Button),
+                            label: Some(Arc::from("Clear")),
+                            test_id: Some(Arc::from("roving.clear")),
+                            ..Default::default()
+                        };
+                        let clear = cx.pressable(props, |cx, _st| vec![cx.text("Clear")]);
+                        ids_for_cache.lock().unwrap().clear = Some(clear.id);
+                        clear
+                    };
+
+                    let footer = if compact {
+                        cx.flex(
+                            crate::element::FlexProps {
+                                direction: fret_core::Axis::Vertical,
+                                ..Default::default()
+                            },
+                            move |_cx| vec![roving, clear],
+                        )
+                    } else {
+                        cx.flex(
+                            crate::element::FlexProps {
+                                direction: fret_core::Axis::Horizontal,
+                                ..Default::default()
+                            },
+                            move |_cx| vec![roving, clear],
+                        )
+                    };
+
+                    vec![footer]
+                },
+            );
+            ids.lock().unwrap().cache_root = Some(cache.id);
+            cache
+        });
+
+        vec![action_root]
+    };
+
+    let ids_for_frame0 = ids.clone();
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        roomy_bounds,
+        "viewport-resize-cache-enable-roving-keyed-membership",
+        move |cx| render_footer(cx, &ids_for_frame0),
+    );
+    ui.set_root(root0);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, roomy_bounds, 1.0);
+    let _roomy_snapshot = ui
+        .semantics_snapshot()
+        .expect("roomy semantics snapshot after initial frame");
+
+    ui.set_view_cache_enabled(true);
+    app.advance_frame();
+
+    let mut failures: Vec<String> = Vec::new();
+    for frame in 0..5 {
+        let frame_no = frame + 2;
+        let ids_for_frame = ids.clone();
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            compact_bounds,
+            "viewport-resize-cache-enable-roving-keyed-membership",
+            move |cx| render_footer(cx, &ids_for_frame),
+        );
+        assert_eq!(
+            root, root0,
+            "expected stable root identity across compact frames"
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
+
+        let snapshot = ui
+            .semantics_snapshot()
+            .expect("compact semantics snapshot after cache-enable transition");
+        let test_ids = snapshot_test_ids(snapshot);
+        for expected in [
+            "roving.filter.all",
+            "roving.filter.active",
+            "roving.filter.completed",
+            "roving.clear",
+        ] {
+            if !test_ids.iter().any(|id| id == expected) {
+                failures.push(format!(
+                    "frame{frame_no} should keep {expected} in semantics snapshot after cache-enable transition; ids={test_ids:?}"
+                ));
+            }
+        }
+
+        let captured = ids.lock().unwrap().clone();
+        let cache_root = captured.cache_root.expect("cache root id");
+        let filter_all = captured.filter_all.expect("all filter element id");
+        let filter_active = captured.filter_active.expect("active filter element id");
+        let filter_completed = captured
+            .filter_completed
+            .expect("completed filter element id");
+        let clear = captured.clear.expect("clear button element id");
+
+        app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _app| {
+            let window_state = runtime.for_window_mut(window);
+            let elements = window_state
+                .view_cache_elements_for_root(cache_root)
+                .expect("expected cache-root membership list for roving/keyed subtree");
+
+            for (label, element) in [
+                ("roving.filter.all", filter_all),
+                ("roving.filter.active", filter_active),
+                ("roving.filter.completed", filter_completed),
+                ("roving.clear", clear),
+            ] {
+                if !elements.contains(&element) {
+                    failures.push(format!(
+                        "frame{frame_no} cache-root membership should retain {label}; elements={elements:?} missing={element:?}"
+                    ));
+                }
+            }
+        });
+
+        app.advance_frame();
+    }
+
+    if !failures.is_empty() {
+        panic!("{}", failures.join("\n"));
+    }
+}
+
+#[test]
 fn environment_safe_area_insets_change_invalidates_view_cache_subtree() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

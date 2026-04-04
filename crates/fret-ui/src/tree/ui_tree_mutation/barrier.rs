@@ -15,6 +15,9 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
+        self.set_node_children_write_policy(parent, ChildrenWritePolicy::Barrier);
+        self.detach_reparented_children_from_old_parents(parent, &children);
+
         // Keep parent pointers consistent even when the child list is unchanged.
         let same_children = self
             .nodes

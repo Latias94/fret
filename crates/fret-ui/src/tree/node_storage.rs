@@ -14,6 +14,13 @@ pub(super) struct ViewCacheFlags {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ChildrenWritePolicy {
+    #[default]
+    Standard,
+    Barrier,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(super) struct NodeMeasureCacheKey {
     pub(super) known_w_bits: Option<u32>,
     pub(super) known_h_bits: Option<u32>,
@@ -41,6 +48,7 @@ pub(super) struct Node<H: UiHost> {
     pub(super) element: Option<GlobalElementId>,
     pub(super) parent: Option<NodeId>,
     pub(super) children: Vec<NodeId>,
+    pub(super) children_write_policy: ChildrenWritePolicy,
     pub(super) bounds: Rect,
     pub(super) bounds_written_paint_pass: u64,
     pub(super) measured_size: Size,
@@ -122,6 +130,7 @@ impl<H: UiHost> Node<H> {
             element: None,
             parent: None,
             children: Vec::new(),
+            children_write_policy: ChildrenWritePolicy::Standard,
             bounds: Rect::default(),
             bounds_written_paint_pass: 0,
             measured_size: Size::default(),

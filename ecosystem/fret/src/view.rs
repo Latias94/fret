@@ -2793,10 +2793,11 @@ mod tests {
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
     use fret_core::{
         AppWindowId, FrameId, Modifiers, MouseButton, NodeId, Point, PointerEvent, PointerType, Px,
-        Rect, Size, TextConstraints, TextMetrics,
+        Rect, Size, TextConstraints, TextMetrics, WindowMetricsService,
     };
     use fret_runtime::{
-        ActionId, CommandId, Effect, ModelStore, TimerToken, WindowPendingActionPayloadService,
+        ActionId, CommandId, Effect, ModelStore, TickId, TimerToken,
+        WindowPendingActionPayloadService,
     };
     use fret_ui::action::{ActionCx, ActivateReason, UiActionHost, UiFocusActionHost};
     use fret_ui::declarative::render_root;
@@ -3053,6 +3054,143 @@ mod tests {
         ui.set_root(root);
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    fn seed_runtime_window_metrics(
+        app: &mut crate::app::App,
+        window: AppWindowId,
+        bounds: Rect,
+        scale_factor: f32,
+    ) {
+        app.with_global_mut_untracked(WindowMetricsService::default, |svc, _app| {
+            svc.set_inner_size(window, bounds.size);
+            svc.set_scale_factor(window, scale_factor);
+            svc.set_focused(window, true);
+        });
+        app.with_global_mut_untracked(fret_ui::elements::ElementRuntime::new, |rt, _app| {
+            rt.set_window_primary_pointer_type(window, PointerType::Unknown);
+        });
+    }
+
+    fn render_runtime_view_semantics<V: View>(
+        ui: &mut UiTree<crate::app::App>,
+        app: &mut crate::app::App,
+        services: &mut FakeUiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        scale_factor: f32,
+        frame_id: u64,
+        root_name: &str,
+        st: &mut ViewWindowState<V>,
+    ) -> fret_core::SemanticsSnapshot {
+        app.set_tick_id(TickId(frame_id));
+        app.set_frame_id(FrameId(frame_id));
+        seed_runtime_window_metrics(app, window, bounds, scale_factor);
+
+        let root = render_root(ui, app, services, window, bounds, root_name, |cx| {
+            view_view(cx, st)
+        });
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, scale_factor);
+        ui.semantics_snapshot()
+            .expect("runtime semantics snapshot")
+            .clone()
+    }
+
+    fn snapshot_test_ids(snapshot: &fret_core::SemanticsSnapshot) -> Vec<String> {
+        let mut ids: Vec<String> = snapshot
+            .nodes
+            .iter()
+            .filter_map(|node| node.test_id.as_ref().map(ToString::to_string))
+            .collect();
+        ids.sort();
+        ids
+    }
+
+    struct RuntimeToggleGroupFooterView {
+        filter: fret_runtime::Model<Option<Arc<str>>>,
+        action_flag: Option<LocalState<bool>>,
+    }
+
+    impl View for RuntimeToggleGroupFooterView {
+        fn init(app: &mut crate::app::App, _window: crate::WindowId) -> Self {
+            Self {
+                filter: app.models_mut().insert(Some(Arc::from("all"))),
+                action_flag: None,
+            }
+        }
+
+        fn render(&mut self, cx: &mut crate::AppUi<'_, '_>) -> crate::Ui {
+            if self.action_flag.is_none() {
+                self.action_flag = Some(cx.state().local_init(|| false));
+            }
+            let action_flag = self
+                .action_flag
+                .as_ref()
+                .expect("action flag should exist")
+                .clone();
+            cx.actions()
+                .local(&action_flag)
+                .update::<RuntimeIncrementAction>(|value| *value = !*value);
+            let _flag = action_flag.layout_value(cx);
+
+            let viewport = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
+            let compact = viewport.size.width.0 < 560.0;
+
+            let filters = crate::shadcn::ToggleGroup::single(self.filter.clone())
+                .deselectable(false)
+                .items([
+                    crate::shadcn::ToggleGroupItem::new("all", [cx.text("All")])
+                        .test_id("runtime.toggle.filter.all"),
+                    crate::shadcn::ToggleGroupItem::new("active", [cx.text("Active")])
+                        .test_id("runtime.toggle.filter.active"),
+                    crate::shadcn::ToggleGroupItem::new("completed", [cx.text("Completed")])
+                        .test_id("runtime.toggle.filter.completed"),
+                ])
+                .into_element(cx);
+
+            let clear = crate::shadcn::Button::new("Clear")
+                .test_id("runtime.toggle.clear")
+                .into_element(cx);
+            let body = cx.text("Body").test_id("runtime.toggle.body");
+
+            let footer = if compact {
+                let clear_row = cx
+                    .flex(
+                        fret_ui::element::FlexProps {
+                            direction: fret_core::Axis::Horizontal,
+                            ..Default::default()
+                        },
+                        move |_cx| vec![clear],
+                    )
+                    .test_id("runtime.toggle.clear_row");
+                cx.flex(
+                    fret_ui::element::FlexProps {
+                        direction: fret_core::Axis::Vertical,
+                        ..Default::default()
+                    },
+                    move |_cx| vec![filters, clear_row],
+                )
+                .test_id("runtime.toggle.footer.compact")
+            } else {
+                cx.flex(
+                    fret_ui::element::FlexProps {
+                        direction: fret_core::Axis::Horizontal,
+                        ..Default::default()
+                    },
+                    move |_cx| vec![filters, clear],
+                )
+                .test_id("runtime.toggle.footer.roomy")
+            };
+
+            let mut page_props = fret_ui::element::FlexProps::default();
+            page_props.direction = fret_core::Axis::Vertical;
+            page_props.layout.size.width = Length::Fill;
+            page_props.layout.size.height = Length::Fill;
+
+            cx.flex(page_props, move |_cx| vec![body, footer]).into()
+        }
     }
 
     struct ManualRuntimeLocalsWithRoot {
@@ -3501,6 +3639,78 @@ mod tests {
             "notify should force the cached view root to rerender on the next frame"
         );
         assert_eq!(st.view.last_seen_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn view_runtime_cache_enable_transition_keeps_toggle_group_footer_semantics_after_compact_resize()
+     {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let roomy_bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(660.0)),
+        );
+        let compact_bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(560.0)),
+        );
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let mut services = FakeUiServices;
+        let mut st = view_init_window::<RuntimeToggleGroupFooterView>(&mut app, window);
+
+        let _frame1 = render_runtime_view_semantics(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            roomy_bounds,
+            2.0,
+            1,
+            "runtime-toggle-group-footer",
+            &mut st,
+        );
+
+        ui.set_view_cache_enabled(true);
+
+        let mut failures: Vec<String> = Vec::new();
+        for frame_id in 2..=8 {
+            let snapshot = render_runtime_view_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                compact_bounds,
+                2.0,
+                frame_id,
+                "runtime-toggle-group-footer",
+                &mut st,
+            );
+            let ids = snapshot_test_ids(&snapshot);
+            for expected in [
+                "runtime.toggle.body",
+                "runtime.toggle.footer.compact",
+                "runtime.toggle.clear_row",
+                "runtime.toggle.clear",
+                "runtime.toggle.filter.all",
+                "runtime.toggle.filter.active",
+                "runtime.toggle.filter.completed",
+            ] {
+                if !ids.iter().any(|id| id == expected) {
+                    let cache_roots = ui.debug_cache_root_stats();
+                    let removed = ui.debug_removed_subtrees();
+                    failures.push(format!(
+                        "frame{frame_id} should keep {expected} after runtime cache-enable transition; ids={ids:?}; cache_roots={cache_roots:?}; removed={removed:?}"
+                    ));
+                }
+            }
+        }
+
+        if !failures.is_empty() {
+            panic!("{}", failures.join("\n"));
+        }
     }
 
     #[test]
