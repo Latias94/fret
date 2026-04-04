@@ -58,6 +58,59 @@ fn render_resize_sensitive_root(
     )
 }
 
+fn assert_authoritative_compact_flow(
+    ui: &mut UiTree<crate::test_host::TestHost>,
+    app: &mut crate::test_host::TestHost,
+    window: AppWindowId,
+    root: NodeId,
+    context: &str,
+) {
+    let page_node = ui.children(root)[0];
+    let card_node = ui.children(page_node)[0];
+    let page_instance = crate::declarative::frame::element_record_for_node(app, window, page_node)
+        .map(|r| r.instance)
+        .expect("page instance for compact flow");
+    match page_instance {
+        crate::declarative::frame::ElementInstance::Flex(props) => {
+            assert_eq!(
+                props.justify,
+                crate::element::MainAlign::Start,
+                "{context}: compact flow should author justify-start"
+            );
+        }
+        other => panic!("{context}: expected page node to remain a Flex, got {other:?}"),
+    }
+
+    let card_bounds = ui
+        .debug_node_bounds(card_node)
+        .expect("card bounds for compact flow");
+    let engine = ui.take_layout_engine();
+    let page_style = engine
+        .debug_style_for_node(page_node)
+        .cloned()
+        .expect("page style for compact flow");
+    let card_style = engine
+        .debug_style_for_node(card_node)
+        .cloned()
+        .expect("card style for compact flow");
+    ui.put_layout_engine(engine);
+
+    assert_eq!(
+        page_style.justify_content,
+        Some(taffy::style::JustifyContent::FlexStart),
+        "{context}: layout engine should rebuild the compact page style in the same resize frame"
+    );
+    assert_eq!(
+        card_style.min_size.height,
+        taffy::style::Dimension::length(120.0),
+        "{context}: compact flow should forward min-height constraints immediately"
+    );
+    assert!(
+        card_bounds.origin.y.0 <= 0.5,
+        "{context}: compact flow should pin the card to the top immediately; card_bounds={card_bounds:?}"
+    );
+}
+
 struct DynamicViewportRoot {
     child: NodeId,
     viewport: std::sync::Arc<std::sync::Mutex<Rect>>,
@@ -72,7 +125,7 @@ impl<H: UiHost> Widget<H> for DynamicViewportRoot {
 }
 
 #[test]
-fn interactive_resize_cached_flow_rebuilds_once_bounds_stabilize() {
+fn interactive_resize_cached_flow_rebuilds_authoritatively_when_descendants_turn_layout_dirty() {
     let mut app = crate::test_host::TestHost::new();
     let window = AppWindowId::default();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
@@ -93,7 +146,7 @@ fn interactive_resize_cached_flow_rebuilds_once_bounds_stabilize() {
     ui.set_root(roomy_root);
     ui.layout_all(&mut app, &mut services, roomy_bounds, 1.0);
 
-    let mut page_node = ui.children(roomy_root)[0];
+    let page_node = ui.children(roomy_root)[0];
     let engine = ui.take_layout_engine();
     let page_style = engine
         .debug_style_for_node(page_node)
@@ -120,126 +173,53 @@ fn interactive_resize_cached_flow_rebuilds_once_bounds_stabilize() {
     clear_all_invalidations(&mut ui);
     ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
 
-    page_node = ui.children(roomy_root)[0];
-    let mut card_node = ui.children(page_node)[0];
-    let page_instance =
-        crate::declarative::frame::element_record_for_node(&mut app, window, page_node)
-            .map(|r| r.instance)
-            .expect("page instance after compact render");
-    match page_instance {
-        crate::declarative::frame::ElementInstance::Flex(props) => {
-            assert_eq!(
-                props.justify,
-                crate::element::MainAlign::Start,
-                "compact render should already author justify-start on the current page node"
-            );
-        }
-        other => panic!("expected page node to remain a Flex, got {other:?}"),
-    }
     assert!(
-        ui.interactive_resize_needs_full_rebuild,
-        "cached-flow resize frame should remember that a post-resize rebuild is required"
+        !ui.interactive_resize_needs_full_rebuild,
+        "layout-dirty descendant changes should not defer the flow rebuild until resize settles"
     );
-    let stale_card_bounds = ui
-        .debug_node_bounds(card_node)
-        .expect("card bounds after resize");
-    let engine = ui.take_layout_engine();
-    let page_style = engine
-        .debug_style_for_node(page_node)
-        .cloned()
-        .expect("page style after cached resize frame");
-    ui.put_layout_engine(engine);
-    assert_eq!(
-        page_style.justify_content,
-        Some(taffy::style::JustifyContent::Center),
-        "cached-flow resize frame should still reflect the roomy style before settle rebuild"
-    );
-    assert!(
-        stale_card_bounds.origin.y.0 > 0.0,
-        "expected stale centered layout before the settle rebuild"
+    assert_authoritative_compact_flow(
+        &mut ui,
+        &mut app,
+        window,
+        roomy_root,
+        "cached-flow resize frame",
     );
 
     app.advance_frame();
     ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
     assert!(
-        ui.interactive_resize_needs_full_rebuild,
-        "settle frame should keep the deferred rebuild flag armed until a full rebuild runs"
+        ui.interactive_resize_active(),
+        "first stable frame should still count as interactive resize"
+    );
+    assert_authoritative_compact_flow(
+        &mut ui,
+        &mut app,
+        window,
+        roomy_root,
+        "first stable frame after cached-flow resize",
     );
 
     app.advance_frame();
     ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
-
-    page_node = ui.children(roomy_root)[0];
-    card_node = ui.children(page_node)[0];
-    let root_in_engine = ui.layout_engine_has_node(roomy_root);
-    let page_in_engine = ui.layout_engine_has_node(page_node);
-    let card_in_engine = ui.layout_engine_has_node(card_node);
-    let page_instance =
-        crate::declarative::frame::element_record_for_node(&mut app, window, page_node)
-            .map(|r| r.instance)
-            .expect("page instance after settle rebuild");
-    match page_instance {
-        crate::declarative::frame::ElementInstance::Flex(props) => {
-            assert_eq!(
-                props.justify,
-                crate::element::MainAlign::Start,
-                "settled frame should still be authored with justify-start"
-            );
-        }
-        other => panic!("expected page node to remain a Flex, got {other:?}"),
-    }
-    let rebuilt_card_bounds = ui
-        .debug_node_bounds(card_node)
-        .expect("card bounds after rebuild");
-    let engine = ui.take_layout_engine();
-    let root_style = engine.debug_style_for_node(roomy_root).cloned();
-    let page_style = engine.debug_style_for_node(page_node).cloned();
-    let card_style = engine.debug_style_for_node(card_node).cloned();
-    ui.put_layout_engine(engine);
-
     assert!(
-        root_in_engine,
-        "settle rebuild should keep the root in the engine"
+        !ui.interactive_resize_active(),
+        "second stable frame should settle interactive resize state"
     );
     assert!(
-        page_in_engine,
-        "settle rebuild should rebuild the page node into the engine"
+        !ui.interactive_resize_needs_full_rebuild,
+        "authoritative same-frame rebuild should not leave a deferred rebuild armed"
     );
-    assert!(
-        card_in_engine,
-        "settle rebuild should rebuild the card node into the engine"
-    );
-    assert!(
-        root_style.is_some(),
-        "settle rebuild should retain a root style in the engine"
-    );
-    assert!(
-        page_style.is_some(),
-        "page style after settle rebuild: root_in_engine={root_in_engine} page_in_engine={page_in_engine} card_in_engine={card_in_engine} root_style={root_style:?}"
-    );
-    assert!(
-        card_style.is_some(),
-        "card style after settle rebuild: root_in_engine={root_in_engine} page_in_engine={page_in_engine} card_in_engine={card_in_engine} root_style={root_style:?} page_style={page_style:?}"
-    );
-
-    assert_eq!(
-        page_style.unwrap().justify_content,
-        Some(taffy::style::JustifyContent::FlexStart),
-        "expected a full flow rebuild once interactive resize stabilizes"
-    );
-    assert_eq!(
-        card_style.unwrap().min_size.height,
-        taffy::style::Dimension::length(120.0),
-        "expected compact min-height constraints to be forwarded after the settle rebuild"
-    );
-    assert!(
-        rebuilt_card_bounds.origin.y.0 <= 0.5,
-        "expected compact layout to pin the card to the top once stale flow is rebuilt; rebuilt_card_bounds={rebuilt_card_bounds:?}"
+    assert_authoritative_compact_flow(
+        &mut ui,
+        &mut app,
+        window,
+        roomy_root,
+        "settled frame after cached-flow resize",
     );
 }
 
 #[test]
-fn interactive_resize_viewport_root_rebuilds_once_bounds_stabilize() {
+fn interactive_resize_viewport_root_rebuilds_authoritatively_when_descendants_turn_layout_dirty() {
     use std::sync::{Arc, Mutex};
 
     let mut app = crate::test_host::TestHost::new();
@@ -268,7 +248,7 @@ fn interactive_resize_viewport_root_rebuilds_once_bounds_stabilize() {
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, roomy_bounds, 1.0);
 
-    let mut page_node = ui.children(viewport_root)[0];
+    let page_node = ui.children(viewport_root)[0];
     let engine = ui.take_layout_engine();
     let page_style = engine
         .debug_style_for_node(page_node)
@@ -297,75 +277,53 @@ fn interactive_resize_viewport_root_rebuilds_once_bounds_stabilize() {
     clear_all_invalidations(&mut ui);
     ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
 
-    page_node = ui.children(viewport_root)[0];
-    let card_node = ui.children(page_node)[0];
-    let stale_card_bounds = ui
-        .debug_node_bounds(card_node)
-        .expect("card bounds after cached viewport resize");
-    let engine = ui.take_layout_engine();
-    let page_style = engine
-        .debug_style_for_node(page_node)
-        .cloned()
-        .expect("page style after cached viewport resize");
-    ui.put_layout_engine(engine);
     assert!(
-        ui.interactive_resize_needs_full_rebuild,
-        "cached viewport resize should arm the deferred rebuild flag"
+        !ui.interactive_resize_needs_full_rebuild,
+        "viewport-root resize should not defer rebuild when descendant authoring changed"
     );
-    assert_eq!(
-        page_style.justify_content,
-        Some(taffy::style::JustifyContent::Center),
-        "interactive resize should still reuse the previous viewport flow before settle"
-    );
-    assert!(
-        stale_card_bounds.origin.y.0 > 0.0,
-        "expected stale centered viewport layout before the settle rebuild"
+    assert_authoritative_compact_flow(
+        &mut ui,
+        &mut app,
+        window,
+        viewport_root,
+        "viewport-root resize frame",
     );
 
     app.advance_frame();
     ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
     assert!(
-        ui.interactive_resize_needs_full_rebuild,
-        "first stable frame should keep the deferred viewport rebuild armed"
+        ui.interactive_resize_active(),
+        "first stable viewport frame should still count as interactive resize"
+    );
+    assert_authoritative_compact_flow(
+        &mut ui,
+        &mut app,
+        window,
+        viewport_root,
+        "first stable viewport frame",
     );
 
     app.advance_frame();
     ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
-
-    page_node = ui.children(viewport_root)[0];
-    let card_node = ui.children(page_node)[0];
-    let rebuilt_card_bounds = ui
-        .debug_node_bounds(card_node)
-        .expect("card bounds after viewport settle rebuild");
-    let engine = ui.take_layout_engine();
-    let page_style = engine
-        .debug_style_for_node(page_node)
-        .cloned()
-        .expect("page style after viewport settle rebuild");
-    let card_style = engine
-        .debug_style_for_node(card_node)
-        .cloned()
-        .expect("card style after viewport settle rebuild");
-    ui.put_layout_engine(engine);
-
-    assert_eq!(
-        page_style.justify_content,
-        Some(taffy::style::JustifyContent::FlexStart),
-        "settled viewport frame should rebuild the compact page style"
-    );
-    assert_eq!(
-        card_style.min_size.height,
-        taffy::style::Dimension::length(120.0),
-        "settled viewport frame should forward compact min-height constraints"
+    assert!(
+        !ui.interactive_resize_active(),
+        "second stable viewport frame should settle interactive resize state"
     );
     assert!(
-        rebuilt_card_bounds.origin.y.0 <= 0.5,
-        "expected viewport root bounds to refresh after the forced rebuild; rebuilt_card_bounds={rebuilt_card_bounds:?}"
+        !ui.interactive_resize_needs_full_rebuild,
+        "viewport-root resize should not leave a deferred rebuild armed"
+    );
+    assert_authoritative_compact_flow(
+        &mut ui,
+        &mut app,
+        window,
+        viewport_root,
+        "settled viewport frame",
     );
 }
 
 #[test]
-fn interactive_resize_layout_in_clears_deferred_rebuild_flag_after_forced_rebuild() {
+fn interactive_resize_layout_in_keeps_authoritative_flow_without_deferred_rebuild() {
     let mut app = crate::test_host::TestHost::new();
     let window = AppWindowId::default();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
@@ -400,8 +358,15 @@ fn interactive_resize_layout_in_clears_deferred_rebuild_flag_after_forced_rebuil
     clear_all_invalidations(&mut ui);
     ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
     assert!(
-        ui.interactive_resize_needs_full_rebuild,
-        "cached-flow resize frame should arm the deferred rebuild flag"
+        !ui.interactive_resize_needs_full_rebuild,
+        "layout_in path should start from an authoritative compact flow without a deferred rebuild"
+    );
+    assert_authoritative_compact_flow(
+        &mut ui,
+        &mut app,
+        window,
+        roomy_root,
+        "layout_in compact resize frame",
     );
 
     app.advance_frame();
@@ -419,51 +384,27 @@ fn interactive_resize_layout_in_clears_deferred_rebuild_flag_after_forced_rebuil
     let rebuilt_size = ui.layout_in(&mut app, &mut services, roomy_root, compact_bounds, 1.0);
     assert_eq!(
         rebuilt_size, compact_bounds.size,
-        "layout_in should still return the compact root size after the forced rebuild"
+        "layout_in should still return the compact root size after resize settles"
     );
     assert!(
         !ui.interactive_resize_needs_full_rebuild,
-        "layout_in forced rebuild should clear the deferred rebuild flag"
+        "layout_in should keep the deferred rebuild flag clear"
     );
     assert!(
         !ui.interactive_resize_active(),
         "second stable layout_in should settle interactive resize state"
     );
-
-    let page_node = ui.children(roomy_root)[0];
-    let card_node = ui.children(page_node)[0];
-    let rebuilt_card_bounds = ui
-        .debug_node_bounds(card_node)
-        .expect("card bounds after layout_in forced rebuild");
-    let engine = ui.take_layout_engine();
-    let page_style = engine
-        .debug_style_for_node(page_node)
-        .cloned()
-        .expect("page style after layout_in forced rebuild");
-    let card_style = engine
-        .debug_style_for_node(card_node)
-        .cloned()
-        .expect("card style after layout_in forced rebuild");
-    ui.put_layout_engine(engine);
-
-    assert_eq!(
-        page_style.justify_content,
-        Some(taffy::style::JustifyContent::FlexStart),
-        "layout_in forced rebuild should rebuild the compact page style"
-    );
-    assert_eq!(
-        card_style.min_size.height,
-        taffy::style::Dimension::length(120.0),
-        "layout_in forced rebuild should forward compact min-height constraints"
-    );
-    assert!(
-        rebuilt_card_bounds.origin.y.0 <= 0.5,
-        "layout_in forced rebuild should refresh retained bounds; rebuilt_card_bounds={rebuilt_card_bounds:?}"
+    assert_authoritative_compact_flow(
+        &mut ui,
+        &mut app,
+        window,
+        roomy_root,
+        "settled layout_in frame",
     );
 }
 
 #[test]
-fn interactive_resize_layout_advances_resize_state_and_rebuilds_after_settle() {
+fn interactive_resize_layout_advances_resize_state_without_deferred_rebuild() {
     let mut app = crate::test_host::TestHost::new();
     let window = AppWindowId::default();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
@@ -498,8 +439,15 @@ fn interactive_resize_layout_advances_resize_state_and_rebuilds_after_settle() {
     clear_all_invalidations(&mut ui);
     ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
     assert!(
-        ui.interactive_resize_needs_full_rebuild,
-        "cached-flow resize frame should arm the deferred rebuild flag"
+        !ui.interactive_resize_needs_full_rebuild,
+        "layout path should start from an authoritative compact flow without a deferred rebuild"
+    );
+    assert_authoritative_compact_flow(
+        &mut ui,
+        &mut app,
+        window,
+        roomy_root,
+        "layout compact resize frame",
     );
 
     app.advance_frame();
@@ -537,37 +485,13 @@ fn interactive_resize_layout_advances_resize_state_and_rebuilds_after_settle() {
     );
     assert!(
         !ui.interactive_resize_needs_full_rebuild,
-        "forced rebuild via layout should clear the deferred rebuild flag"
+        "layout path should keep the deferred rebuild flag clear"
     );
-
-    let page_node = ui.children(roomy_root)[0];
-    let card_node = ui.children(page_node)[0];
-    let rebuilt_card_bounds = ui
-        .debug_node_bounds(card_node)
-        .expect("card bounds after layout forced rebuild");
-    let engine = ui.take_layout_engine();
-    let page_style = engine
-        .debug_style_for_node(page_node)
-        .cloned()
-        .expect("page style after layout forced rebuild");
-    let card_style = engine
-        .debug_style_for_node(card_node)
-        .cloned()
-        .expect("card style after layout forced rebuild");
-    ui.put_layout_engine(engine);
-
-    assert_eq!(
-        page_style.justify_content,
-        Some(taffy::style::JustifyContent::FlexStart),
-        "layout forced rebuild should rebuild the compact page style"
-    );
-    assert_eq!(
-        card_style.min_size.height,
-        taffy::style::Dimension::length(120.0),
-        "layout forced rebuild should forward compact min-height constraints"
-    );
-    assert!(
-        rebuilt_card_bounds.origin.y.0 <= 0.5,
-        "layout forced rebuild should refresh retained bounds; rebuilt_card_bounds={rebuilt_card_bounds:?}"
+    assert_authoritative_compact_flow(
+        &mut ui,
+        &mut app,
+        window,
+        roomy_root,
+        "settled layout frame",
     );
 }

@@ -1505,15 +1505,21 @@ impl<H: UiHost> UiTree<H> {
         }
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
         for &root in roots {
-            let Some((has_element, layout_invalidated, prev_bounds, measured)) =
-                self.nodes.get(root).map(|node| {
-                    (
-                        node.element.is_some(),
-                        node.invalidation.layout,
-                        node.bounds,
-                        node.measured_size,
-                    )
-                })
+            let Some((
+                has_element,
+                layout_invalidated,
+                subtree_layout_dirty,
+                prev_bounds,
+                measured,
+            )) = self.nodes.get(root).map(|node| {
+                (
+                    node.element.is_some(),
+                    node.invalidation.layout,
+                    self.node_subtree_layout_dirty(root),
+                    node.bounds,
+                    node.measured_size,
+                )
+            })
             else {
                 continue;
             };
@@ -1532,7 +1538,10 @@ impl<H: UiHost> UiTree<H> {
                 self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
                 continue;
             }
-            if reuse_cached_flow && engine.layout_id_for_node(root).is_some() && !layout_invalidated
+            if reuse_cached_flow
+                && engine.layout_id_for_node(root).is_some()
+                && !layout_invalidated
+                && !subtree_layout_dirty
             {
                 engine.set_viewport_root_override_size(root, bounds.size, sf);
                 self.note_interactive_resize_cached_flow_reuse();
@@ -1708,6 +1717,7 @@ impl<H: UiHost> UiTree<H> {
                 needs_layout: bool,
                 is_translation_only: bool,
                 layout_invalidated: bool,
+                subtree_layout_dirty: bool,
             }
 
             let mut batch: Vec<ViewportWorkItem> = Vec::with_capacity(batch_end - batch_start);
@@ -1732,6 +1742,7 @@ impl<H: UiHost> UiTree<H> {
                     needs_layout,
                     is_translation_only,
                     layout_invalidated: invalidated,
+                    subtree_layout_dirty: self.node_subtree_layout_dirty(root),
                 });
             }
 
@@ -1767,6 +1778,7 @@ impl<H: UiHost> UiTree<H> {
                     if reuse_cached_flow
                         && engine.layout_id_for_node(item.root).is_some()
                         && !item.layout_invalidated
+                        && !item.subtree_layout_dirty
                     {
                         engine.set_viewport_root_override_size(item.root, item.bounds.size, sf);
                         self.note_interactive_resize_cached_flow_reuse();
