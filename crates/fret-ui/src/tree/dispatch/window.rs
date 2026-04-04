@@ -1491,6 +1491,7 @@ impl<H: UiHost> UiTree<H> {
                             );
                             let (
                                 invalidations,
+                                scroll_handle_invalidations,
                                 requested_focus,
                                 requested_capture,
                                 requested_cursor,
@@ -1525,6 +1526,7 @@ impl<H: UiHost> UiTree<H> {
                                         .and_then(|p| tree.captured.get(&p).copied()),
                                     bounds,
                                     invalidations: Vec::new(),
+                                    scroll_handle_invalidations: Vec::new(),
                                     requested_focus: None,
                                     requested_capture: None,
                                     requested_cursor: None,
@@ -1535,6 +1537,7 @@ impl<H: UiHost> UiTree<H> {
                                 widget.event_capture(&mut cx, event_for_node);
                                 (
                                     cx.invalidations,
+                                    cx.scroll_handle_invalidations,
                                     cx.requested_focus,
                                     cx.requested_capture,
                                     cx.requested_cursor,
@@ -1545,6 +1548,7 @@ impl<H: UiHost> UiTree<H> {
                             });
 
                             if !invalidations.is_empty()
+                                || !scroll_handle_invalidations.is_empty()
                                 || requested_focus.is_some()
                                 || requested_capture.is_some()
                                 || notify_requested
@@ -1553,6 +1557,15 @@ impl<H: UiHost> UiTree<H> {
                             }
 
                             for (id, inv) in invalidations {
+                                self.mark_invalidation(id, inv);
+                            }
+                            let mut resolved_scroll_handle_invalidations = Vec::new();
+                            self.extend_live_bound_scroll_handle_invalidations(
+                                app,
+                                &scroll_handle_invalidations,
+                                &mut resolved_scroll_handle_invalidations,
+                            );
+                            for (id, inv) in resolved_scroll_handle_invalidations {
                                 self.mark_invalidation(id, inv);
                             }
                             if notify_requested {
@@ -1684,6 +1697,7 @@ impl<H: UiHost> UiTree<H> {
                             );
                             let (
                                 invalidations,
+                                scroll_handle_invalidations,
                                 requested_focus,
                                 requested_capture,
                                 requested_cursor,
@@ -1718,6 +1732,7 @@ impl<H: UiHost> UiTree<H> {
                                         .and_then(|p| tree.captured.get(&p).copied()),
                                     bounds,
                                     invalidations: Vec::new(),
+                                    scroll_handle_invalidations: Vec::new(),
                                     requested_focus: None,
                                     requested_capture: None,
                                     requested_cursor: None,
@@ -1736,6 +1751,7 @@ impl<H: UiHost> UiTree<H> {
                                 }
                                 (
                                     cx.invalidations,
+                                    cx.scroll_handle_invalidations,
                                     cx.requested_focus,
                                     cx.requested_capture,
                                     cx.requested_cursor,
@@ -1746,6 +1762,7 @@ impl<H: UiHost> UiTree<H> {
                             });
 
                             if !invalidations.is_empty()
+                                || !scroll_handle_invalidations.is_empty()
                                 || requested_focus.is_some()
                                 || requested_capture.is_some()
                                 || notify_requested
@@ -1754,6 +1771,15 @@ impl<H: UiHost> UiTree<H> {
                             }
 
                             for (id, inv) in invalidations {
+                                self.mark_invalidation(id, inv);
+                            }
+                            let mut resolved_scroll_handle_invalidations = Vec::new();
+                            self.extend_live_bound_scroll_handle_invalidations(
+                                app,
+                                &scroll_handle_invalidations,
+                                &mut resolved_scroll_handle_invalidations,
+                            );
+                            for (id, inv) in resolved_scroll_handle_invalidations {
                                 self.mark_invalidation(id, inv);
                             }
                             if notify_requested {
@@ -1910,6 +1936,7 @@ impl<H: UiHost> UiTree<H> {
                         for &node_id in chain.iter().rev() {
                             let (
                                 invalidations,
+                                scroll_handle_invalidations,
                                 requested_focus,
                                 requested_capture,
                                 requested_cursor,
@@ -1944,6 +1971,7 @@ impl<H: UiHost> UiTree<H> {
                                         .and_then(|p| tree.captured.get(&p).copied()),
                                     bounds,
                                     invalidations: Vec::new(),
+                                    scroll_handle_invalidations: Vec::new(),
                                     requested_focus: None,
                                     requested_capture: None,
                                     requested_cursor: None,
@@ -1954,6 +1982,7 @@ impl<H: UiHost> UiTree<H> {
                                 widget.event_capture(&mut cx, event);
                                 (
                                     cx.invalidations,
+                                    cx.scroll_handle_invalidations,
                                     cx.requested_focus,
                                     cx.requested_capture,
                                     cx.requested_cursor,
@@ -1964,6 +1993,7 @@ impl<H: UiHost> UiTree<H> {
                             });
 
                             if !invalidations.is_empty()
+                                || !scroll_handle_invalidations.is_empty()
                                 || requested_focus.is_some()
                                 || requested_capture.is_some()
                                 || notify_requested
@@ -1972,6 +2002,15 @@ impl<H: UiHost> UiTree<H> {
                             }
 
                             for (id, inv) in invalidations {
+                                self.mark_invalidation(id, inv);
+                            }
+                            let mut resolved_scroll_handle_invalidations = Vec::new();
+                            self.extend_live_bound_scroll_handle_invalidations(
+                                app,
+                                &scroll_handle_invalidations,
+                                &mut resolved_scroll_handle_invalidations,
+                            );
+                            for (id, inv) in resolved_scroll_handle_invalidations {
                                 self.mark_invalidation(id, inv);
                             }
                             if notify_requested {
@@ -2055,6 +2094,7 @@ impl<H: UiHost> UiTree<H> {
                         for node_id in chain {
                             let (
                                 invalidations,
+                                scroll_handle_invalidations,
                                 requested_focus,
                                 requested_capture,
                                 requested_cursor,
@@ -2089,6 +2129,7 @@ impl<H: UiHost> UiTree<H> {
                                         .and_then(|p| tree.captured.get(&p).copied()),
                                     bounds,
                                     invalidations: Vec::new(),
+                                    scroll_handle_invalidations: Vec::new(),
                                     requested_focus: None,
                                     requested_capture: None,
                                     requested_cursor: None,
@@ -2099,6 +2140,7 @@ impl<H: UiHost> UiTree<H> {
                                 widget.event(&mut cx, event);
                                 (
                                     cx.invalidations,
+                                    cx.scroll_handle_invalidations,
                                     cx.requested_focus,
                                     cx.requested_capture,
                                     cx.requested_cursor,
@@ -2109,6 +2151,7 @@ impl<H: UiHost> UiTree<H> {
                             });
 
                             if !invalidations.is_empty()
+                                || !scroll_handle_invalidations.is_empty()
                                 || requested_focus.is_some()
                                 || requested_capture.is_some()
                                 || notify_requested
@@ -2117,6 +2160,15 @@ impl<H: UiHost> UiTree<H> {
                             }
 
                             for (id, inv) in invalidations {
+                                self.mark_invalidation(id, inv);
+                            }
+                            let mut resolved_scroll_handle_invalidations = Vec::new();
+                            self.extend_live_bound_scroll_handle_invalidations(
+                                app,
+                                &scroll_handle_invalidations,
+                                &mut resolved_scroll_handle_invalidations,
+                            );
+                            for (id, inv) in resolved_scroll_handle_invalidations {
                                 self.mark_invalidation(id, inv);
                             }
                             if notify_requested {
@@ -2222,6 +2274,7 @@ impl<H: UiHost> UiTree<H> {
             loop {
                 let (
                     invalidations,
+                    scroll_handle_invalidations,
                     requested_focus,
                     requested_capture,
                     requested_cursor,
@@ -2256,6 +2309,7 @@ impl<H: UiHost> UiTree<H> {
                             .and_then(|p| tree.captured.get(&p).copied()),
                         bounds,
                         invalidations: Vec::new(),
+                        scroll_handle_invalidations: Vec::new(),
                         requested_focus: None,
                         requested_capture: None,
                         requested_cursor: None,
@@ -2266,6 +2320,7 @@ impl<H: UiHost> UiTree<H> {
                     widget.event(&mut cx, event);
                     (
                         cx.invalidations,
+                        cx.scroll_handle_invalidations,
                         cx.requested_focus,
                         cx.requested_capture,
                         cx.requested_cursor,
@@ -2275,6 +2330,7 @@ impl<H: UiHost> UiTree<H> {
                     )
                 });
                 if !invalidations.is_empty()
+                    || !scroll_handle_invalidations.is_empty()
                     || requested_focus.is_some()
                     || requested_capture.is_some()
                     || notify_requested
@@ -2283,6 +2339,15 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 for (id, inv) in invalidations {
+                    self.mark_invalidation(id, inv);
+                }
+                let mut resolved_scroll_handle_invalidations = Vec::new();
+                self.extend_live_bound_scroll_handle_invalidations(
+                    app,
+                    &scroll_handle_invalidations,
+                    &mut resolved_scroll_handle_invalidations,
+                );
+                for (id, inv) in resolved_scroll_handle_invalidations {
                     self.mark_invalidation(id, inv);
                 }
                 if notify_requested {

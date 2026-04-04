@@ -45,7 +45,7 @@ Status: Active
   - `crates/fret-ui/src/tree/layout/entrypoints.rs`
   - `crates/fret-ui/src/tree/tests/view_cache.rs`
   - `crates/fret-ui/src/tree/tests/barrier_subtree_layout_dirty_aggregation.rs`
-- [ ] Audit all barrier-related paths that can affect scroll surfaces:
+- [x] Audit all barrier-related paths that can affect scroll surfaces:
   - [x] `set_children_barrier(...same_children...)` schedules authoritative follow-up relayout when
     descendant layout work is still pending,
   - [x] `set_children(...same_children...)` and `set_children_in_mount(...same_children...)`
@@ -79,7 +79,7 @@ Status: Active
   - [x] contained cache-root dirty markers now align with main-pass layout consumption and
     descendant-truncated contained relayout scheduling,
   - [x] subtree dirty aggregation bookkeeping.
-- [ ] Add/extend unit tests to cover:
+- [x] Add/extend unit tests to cover:
   - [x] barrier relayout sets `subtree_layout_dirty_count` consistently,
   - [x] barrier same-children clean remount stays no-op,
   - [x] barrier same-children dirty descendant converges via contained relayout,
@@ -102,7 +102,10 @@ Status: Active
   - [x] best-effort input-context readers inherit authoritative command availability over stale or
     fallback published snapshots,
   - [x] `add_child(...)` reparents without stale child edges and no-ops when already attached once,
-  - [ ] scroll handle revision-only bumps stay classified correctly.
+  - [x] scroll handle revision-only bumps stay classified correctly,
+  - [x] scroll handle invalidation ignores detached same-frame stale bindings,
+  - [x] scroll handle registry dedupes same-frame duplicate element bindings,
+  - [x] event-time scroll handle invalidation resolves authoritative live bindings across layers.
 
 ## Wheel/trackpad delta coalescing
 

@@ -1221,7 +1221,7 @@ impl<H: UiHost> UiTree<H> {
         self.measure_node(app, services, node, constraints, scale_factor)
     }
 
-    fn node_is_attached_to_layer_tree(&self, node: NodeId) -> bool {
+    pub(crate) fn node_is_attached_to_layer_tree(&self, node: NodeId) -> bool {
         self.node_root(node)
             .is_some_and(|root| self.root_to_layer.contains_key(&root))
     }

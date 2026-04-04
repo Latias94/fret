@@ -1,6 +1,158 @@
 use super::*;
 use fret_core::Modifiers;
 
+struct ScrollHandleInvalidationRequester {
+    handle_key: usize,
+}
+
+impl<H: UiHost> Widget<H> for ScrollHandleInvalidationRequester {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        true
+    }
+
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        if matches!(
+            event,
+            Event::Pointer(PointerEvent::Up {
+                button: fret_core::MouseButton::Left,
+                ..
+            })
+        ) {
+            cx.invalidate_scroll_handle_bindings(self.handle_key, Invalidation::HitTestOnly);
+            cx.stop_propagation();
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
+#[test]
+fn event_scroll_handle_invalidation_targets_live_bindings_across_layers_only() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeUiServices;
+
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let handle_key = scroll_handle.binding_key();
+
+    let root = ui.create_node(TestStack);
+    let requester = ui.create_node(ScrollHandleInvalidationRequester { handle_key });
+    let overlay_root = ui.create_node(TestStack);
+    let overlay_bound = ui.create_node(TestStack);
+    let stale_root = ui.create_node(TestStack);
+    let stale_bound = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![requester]);
+    ui.set_children(overlay_root, vec![overlay_bound]);
+    ui.set_children(stale_root, vec![stale_bound]);
+
+    let overlay_layer = ui.push_overlay_root(overlay_root, false);
+    ui.set_layer_hit_testable(overlay_layer, false);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let requester_element = crate::GlobalElementId(80);
+    let overlay_element = crate::GlobalElementId(81);
+    let stale_element = crate::GlobalElementId(82);
+
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+        for (node, element) in [
+            (requester, requester_element),
+            (overlay_bound, overlay_element),
+            (stale_bound, stale_element),
+        ] {
+            window_frame.instances.insert(
+                node,
+                crate::declarative::frame::ElementRecord {
+                    element,
+                    instance: crate::declarative::frame::ElementInstance::Scroll(
+                        crate::element::ScrollProps {
+                            scroll_handle: Some(scroll_handle.clone()),
+                            ..Default::default()
+                        },
+                    ),
+                    inherited_foreground: None,
+                    inherited_text_style: None,
+                    semantics_decoration: None,
+                    key_context: None,
+                },
+            );
+        }
+    });
+
+    let frame_id = app.frame_id();
+    crate::declarative::frame::register_scroll_handle_bindings_batch(
+        &mut app,
+        window,
+        frame_id,
+        [
+            crate::declarative::frame::ScrollHandleBinding {
+                handle_key,
+                element: requester_element,
+                handle: scroll_handle.clone(),
+            },
+            crate::declarative::frame::ScrollHandleBinding {
+                handle_key,
+                element: overlay_element,
+                handle: scroll_handle.clone(),
+            },
+            crate::declarative::frame::ScrollHandleBinding {
+                handle_key,
+                element: stale_element,
+                handle: scroll_handle.clone(),
+            },
+        ],
+    );
+
+    for id in [
+        root,
+        requester,
+        overlay_root,
+        overlay_bound,
+        stale_root,
+        stale_bound,
+    ] {
+        ui.test_clear_node_invalidations(id);
+    }
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        ui.nodes[requester].invalidation.hit_test,
+        "the live requester binding in the active base layer should be invalidated"
+    );
+    assert!(
+        ui.nodes[overlay_bound].invalidation.hit_test,
+        "event-time scroll-handle invalidation must still reach live bindings in other attached layers"
+    );
+    assert!(
+        !ui.nodes[stale_bound].invalidation.hit_test,
+        "detached stale bindings must not receive event-time scroll-handle invalidation"
+    );
+}
+
 #[test]
 fn scroll_wheel_invalidation_is_hit_test_only() {
     let mut app = crate::test_host::TestHost::new();

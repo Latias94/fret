@@ -87,6 +87,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub captured: Option<NodeId>,
     pub bounds: Rect,
     pub invalidations: Vec<(NodeId, Invalidation)>,
+    pub(crate) scroll_handle_invalidations: Vec<ScrollHandleInvalidationRequest>,
     pub requested_focus: Option<NodeId>,
     pub requested_capture: Option<Option<NodeId>>,
     pub requested_cursor: Option<fret_core::CursorIcon>,
@@ -200,6 +201,15 @@ impl<'a, H: UiHost> EventCx<'a, H> {
         self.invalidations.push((node, kind));
     }
 
+    /// Request invalidation for all live nodes currently bound to a scroll handle.
+    ///
+    /// Resolution is deferred until the dispatch runtime regains access to `UiTree`, so widgets
+    /// do not need to reason about stale registry bindings or attachment state.
+    pub fn invalidate_scroll_handle_bindings(&mut self, handle_key: usize, kind: Invalidation) {
+        self.scroll_handle_invalidations
+            .push(ScrollHandleInvalidationRequest { handle_key, kind });
+    }
+
     pub fn invalidate_self(&mut self, kind: Invalidation) {
         self.invalidate(self.node, kind);
     }
@@ -285,6 +295,12 @@ impl<'a, H: UiHost> EventCx<'a, H> {
         }
         self.requested_cursor = Some(icon);
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ScrollHandleInvalidationRequest {
+    pub(crate) handle_key: usize,
+    pub(crate) kind: Invalidation,
 }
 
 /// Observer-only event context for the `InputDispatchPhase::Preview` pass.

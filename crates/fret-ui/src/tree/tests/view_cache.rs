@@ -860,6 +860,446 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
 }
 
 #[test]
+fn view_cache_scroll_windowed_paint_revision_only_bump_after_internal_offset_update_stays_hit_test_only()
+ {
+    let mut app = crate::test_host::TestHost::new();
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let scroll_node = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![scroll_node]);
+
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+    ui.nodes[boundary].bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+    );
+
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let handle_key = scroll_handle.binding_key();
+
+    let scroll_element = crate::GlobalElementId(3);
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+        window_frame.instances.insert(
+            scroll_node,
+            crate::declarative::frame::ElementRecord {
+                element: scroll_element,
+                instance: crate::declarative::frame::ElementInstance::Scroll(
+                    crate::element::ScrollProps {
+                        layout: crate::element::LayoutStyle::default(),
+                        axis: crate::element::ScrollAxis::Y,
+                        scroll_handle: Some(scroll_handle.clone()),
+                        intrinsic_measure_mode: crate::element::ScrollIntrinsicMeasureMode::Content,
+                        windowed_paint: true,
+                        probe_unbounded: true,
+                    },
+                ),
+                inherited_foreground: None,
+                inherited_text_style: None,
+                semantics_decoration: None,
+                key_context: None,
+            },
+        );
+    });
+
+    let frame_id = app.frame_id();
+    crate::declarative::frame::register_scroll_handle_bindings_batch(
+        &mut app,
+        window,
+        frame_id,
+        [crate::declarative::frame::ScrollHandleBinding {
+            handle_key,
+            element: scroll_element,
+            handle: scroll_handle.clone(),
+        }],
+    );
+
+    // Prime the registry so later checks observe deltas from the authoritative baselines.
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
+    );
+    for id in [root, boundary, scroll_node] {
+        ui.test_clear_node_invalidations(id);
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    // Simulate a runtime-driven offset sync that should update baselines without producing a
+    // revision delta.
+    scroll_handle.set_offset_internal(fret_core::Point::new(
+        fret_core::Px(0.0),
+        fret_core::Px(250.0),
+    ));
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
+    );
+
+    for id in [root, boundary, scroll_node] {
+        ui.test_clear_node_invalidations(id);
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    let prev_change_count = ui.debug_scroll_handle_changes().len();
+    let prev_walk_count = ui.debug_invalidation_walks().len();
+
+    // The next revision-only bump must see the updated baseline and stay off the window-update
+    // path for windowed paint.
+    scroll_handle.bump_revision();
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
+    );
+
+    let changes = &ui.debug_scroll_handle_changes()[prev_change_count..];
+    assert_eq!(changes.len(), 1);
+    assert_eq!(changes[0].handle_key, handle_key);
+    assert_eq!(
+        changes[0].kind,
+        crate::tree::UiDebugScrollHandleChangeKind::Layout
+    );
+    assert!(
+        !changes[0].offset_changed && !changes[0].viewport_changed && !changes[0].content_changed,
+        "revision-only bump must reuse the internal-update baseline instead of reclassifying as an offset change"
+    );
+
+    let walks = &ui.debug_invalidation_walks()[prev_walk_count..];
+    assert!(
+        walks.iter().any(|walk| {
+            walk.inv == Invalidation::HitTestOnly
+                && walk.detail == UiDebugInvalidationDetail::ScrollHandleHitTestOnly
+        }),
+        "final invalidation should downgrade revision-only bumps to hit-test-only"
+    );
+    assert!(
+        walks.iter().all(|walk| {
+            !(walk.inv == Invalidation::Layout
+                && walk.detail == UiDebugInvalidationDetail::ScrollHandleLayout)
+        }),
+        "revision-only bumps must not force a layout invalidation walk for windowed paint"
+    );
+
+    assert!(ui.nodes[boundary].invalidation.hit_test);
+    assert!(ui.nodes[boundary].invalidation.paint);
+    assert!(
+        !ui.nodes[boundary].view_cache_needs_rerender,
+        "windowed-paint cache roots should stay reusable when the follow-up bump is revision-only"
+    );
+    assert!(ui.should_reuse_view_cache_node(boundary));
+}
+
+#[test]
+fn view_cache_virtual_list_revision_only_bump_after_internal_offset_update_marks_window_update() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let vlist_node = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![vlist_node]);
+
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+    ui.nodes[boundary].bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+    );
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let handle_key = scroll_handle.base_handle().binding_key();
+
+    let vlist_element = crate::GlobalElementId(4);
+    let len = 100usize;
+    let overscan = 2usize;
+    let viewport = fret_core::Px(100.0);
+    let mut metrics = crate::virtual_list::VirtualListMetrics::default();
+    metrics.ensure_with_mode(
+        crate::element::VirtualListMeasureMode::Fixed,
+        len,
+        fret_core::Px(10.0),
+        fret_core::Px(0.0),
+        fret_core::Px(0.0),
+    );
+    let initial_window = metrics
+        .visible_range(fret_core::Px(0.0), viewport, overscan)
+        .expect("initial window range");
+
+    crate::elements::with_element_state(
+        &mut app,
+        window,
+        vlist_element,
+        crate::element::VirtualListState::default,
+        |state| {
+            state.viewport_h = viewport;
+            state.metrics = metrics.clone();
+            state.render_window_range = Some(initial_window);
+        },
+    );
+
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+        window_frame.instances.insert(
+            vlist_node,
+            crate::declarative::frame::ElementRecord {
+                element: vlist_element,
+                instance: crate::declarative::frame::ElementInstance::VirtualList(
+                    crate::element::VirtualListProps {
+                        layout: crate::element::LayoutStyle::default(),
+                        axis: fret_core::Axis::Vertical,
+                        len,
+                        items_revision: 0,
+                        estimate_row_height: fret_core::Px(10.0),
+                        measure_mode: crate::element::VirtualListMeasureMode::Fixed,
+                        key_cache: crate::element::VirtualListKeyCacheMode::AllKeys,
+                        overscan,
+                        keep_alive: 0,
+                        scroll_margin: fret_core::Px(0.0),
+                        gap: fret_core::Px(0.0),
+                        scroll_handle: scroll_handle.clone(),
+                        visible_items: Vec::new(),
+                    },
+                ),
+                inherited_foreground: None,
+                inherited_text_style: None,
+                semantics_decoration: None,
+                key_context: None,
+            },
+        );
+    });
+
+    let frame_id = app.frame_id();
+    crate::declarative::frame::register_scroll_handle_bindings_batch(
+        &mut app,
+        window,
+        frame_id,
+        [crate::declarative::frame::ScrollHandleBinding {
+            handle_key,
+            element: vlist_element,
+            handle: scroll_handle.base_handle().clone(),
+        }],
+    );
+
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
+    );
+    for id in [root, boundary, vlist_node] {
+        ui.test_clear_node_invalidations(id);
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    scroll_handle.set_offset_internal(fret_core::Point::new(
+        fret_core::Px(0.0),
+        fret_core::Px(250.0),
+    ));
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
+    );
+
+    for id in [root, boundary, vlist_node] {
+        ui.test_clear_node_invalidations(id);
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    let prev_change_count = ui.debug_scroll_handle_changes().len();
+    let prev_walk_count = ui.debug_invalidation_walks().len();
+
+    scroll_handle.bump_revision();
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
+    );
+
+    let changes = &ui.debug_scroll_handle_changes()[prev_change_count..];
+    assert_eq!(changes.len(), 1);
+    assert_eq!(changes[0].handle_key, handle_key);
+    assert_eq!(
+        changes[0].kind,
+        crate::tree::UiDebugScrollHandleChangeKind::Layout
+    );
+    assert!(
+        !changes[0].offset_changed && !changes[0].viewport_changed && !changes[0].content_changed,
+        "revision-only bump must see the post-layout internal offset as the last committed baseline"
+    );
+
+    let walks = &ui.debug_invalidation_walks()[prev_walk_count..];
+    assert!(
+        walks.iter().any(|walk| {
+            walk.inv == Invalidation::HitTestOnly
+                && walk.detail == UiDebugInvalidationDetail::ScrollHandleHitTestOnly
+        }),
+        "final invalidation should still downgrade revision-only bumps to hit-test-only before window-update escalation"
+    );
+    assert!(
+        walks.iter().all(|walk| {
+            !(walk.inv == Invalidation::Layout
+                && walk.detail == UiDebugInvalidationDetail::ScrollHandleLayout)
+        }),
+        "window mismatch should not force a layout invalidation walk when the change is revision-only"
+    );
+
+    assert!(ui.nodes[boundary].invalidation.hit_test);
+    assert!(ui.nodes[boundary].invalidation.paint);
+    assert!(
+        ui.nodes[boundary].view_cache_needs_rerender,
+        "revision-only bumps must still trigger a window update when the visible range escaped the cached overscan window"
+    );
+    assert!(!ui.should_reuse_view_cache_node(boundary));
+}
+
+#[test]
+fn view_cache_scroll_handle_ignores_detached_same_frame_stale_bindings() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let live_boundary = ui.create_node(TestStack);
+    let live_scroll = ui.create_node(TestStack);
+    let stale_boundary = ui.create_node(TestStack);
+    let stale_scroll = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![live_boundary]);
+    ui.set_children(live_boundary, vec![live_scroll]);
+    ui.set_children(stale_boundary, vec![stale_scroll]);
+
+    for boundary in [live_boundary, stale_boundary] {
+        ui.set_node_view_cache_flags(boundary, true, true, true);
+        ui.nodes[boundary].bounds = Rect::new(
+            Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+        );
+    }
+
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let handle_key = scroll_handle.binding_key();
+    let live_element = crate::GlobalElementId(5);
+    let stale_element = crate::GlobalElementId(6);
+
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+        for (node, element) in [(live_scroll, live_element), (stale_scroll, stale_element)] {
+            window_frame.instances.insert(
+                node,
+                crate::declarative::frame::ElementRecord {
+                    element,
+                    instance: crate::declarative::frame::ElementInstance::Scroll(
+                        crate::element::ScrollProps {
+                            layout: crate::element::LayoutStyle::default(),
+                            axis: crate::element::ScrollAxis::Y,
+                            scroll_handle: Some(scroll_handle.clone()),
+                            intrinsic_measure_mode:
+                                crate::element::ScrollIntrinsicMeasureMode::Content,
+                            windowed_paint: true,
+                            probe_unbounded: true,
+                        },
+                    ),
+                    inherited_foreground: None,
+                    inherited_text_style: None,
+                    semantics_decoration: None,
+                    key_context: None,
+                },
+            );
+        }
+    });
+
+    let frame_id = app.frame_id();
+    crate::declarative::frame::register_scroll_handle_bindings_batch(
+        &mut app,
+        window,
+        frame_id,
+        [crate::declarative::frame::ScrollHandleBinding {
+            handle_key,
+            element: stale_element,
+            handle: scroll_handle.clone(),
+        }],
+    );
+    crate::declarative::frame::register_scroll_handle_bindings_batch(
+        &mut app,
+        window,
+        frame_id,
+        [crate::declarative::frame::ScrollHandleBinding {
+            handle_key,
+            element: live_element,
+            handle: scroll_handle.clone(),
+        }],
+    );
+
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
+    );
+    for id in [
+        root,
+        live_boundary,
+        live_scroll,
+        stale_boundary,
+        stale_scroll,
+    ] {
+        ui.test_clear_node_invalidations(id);
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    scroll_handle.set_offset(fret_core::Point::new(
+        fret_core::Px(0.0),
+        fret_core::Px(250.0),
+    ));
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
+    );
+
+    assert!(
+        ui.nodes[live_boundary].view_cache_needs_rerender,
+        "the attached cache root should still observe the windowed-paint scroll update"
+    );
+    assert!(
+        !ui.nodes[stale_boundary].view_cache_needs_rerender,
+        "detached same-frame stale bindings must not dirty detached cache roots"
+    );
+    assert!(
+        !ui.nodes[stale_scroll].invalidation.hit_test,
+        "detached stale scroll nodes must not receive scroll-handle invalidations"
+    );
+}
+
+#[test]
 fn widget_request_animation_frame_marks_nearest_view_cache_root_dirty() {
     let mut app = crate::test_host::TestHost::new();
 

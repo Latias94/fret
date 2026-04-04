@@ -129,6 +129,54 @@ This follow-on slice locks the contract that:
 - stale published input snapshots must not suppress command gating or shortcut lookup once the
   authoritative command-availability service has changed.
 
+## Follow-on slice — Scroll-handle revision-only bumps must preserve baseline vs window-update semantics
+
+This follow-on slice locks the contract that:
+
+- runtime-driven internal scroll-handle updates still commit offset/value baselines even when they
+  do not bump the public revision,
+- a later revision-only bump must remain a revision-only delta at the frame registry layer rather
+  than being reclassified as a fresh offset change,
+- final invalidation must still downgrade revision-only bumps to `HitTestOnly` by default,
+- windowed-paint scroll surfaces stay reusable on revision-only bumps, while `VirtualList`
+  surfaces can still escalate to cache-root window updates when the visible window escaped the
+  rendered overscan window.
+
+## Follow-on slice — Scroll-handle invalidation must ignore detached same-frame stale bindings
+
+This follow-on slice locks the contract that:
+
+- scroll-handle invalidation operates on the current live attached binding set, not a multiset of
+  every same-frame registration that ever happened,
+- detached/dead declarative nodes that are still present in retained same-frame bookkeeping must
+  not receive scroll-handle invalidations,
+- detached cache roots must not be dirtied by stale same-frame bindings,
+- debug scroll-handle binding samples/counts must reflect the authoritative live attached nodes
+  rather than stale or duplicate registrations.
+
+## Follow-on slice — Scroll-handle registry writes must dedupe same-frame duplicate elements
+
+This follow-on slice locks the contract that:
+
+- repeated same-frame declarative registrations for the same `handle_key + element` pair must not
+  accumulate duplicate registry entries,
+- same-frame rebuilds may append new bindings for other elements, but repeated registrations of the
+  same element must keep the registry set-like for that element,
+- raw registry reads used by diagnostics/tests remain stable and do not grow with duplicate
+  same-frame rebuilds.
+
+## Follow-on slice — Event-time scroll-handle invalidation resolves authoritative live bindings
+
+This follow-on slice locks the contract that:
+
+- widget event handlers do not treat the raw scroll-handle registry as the authoritative invalidation
+  target set,
+- event-time scroll-handle invalidation requests are resolved by the dispatch/runtime layer after it
+  regains access to `UiTree`,
+- event-time invalidation still reaches live attached bindings across active layers,
+- detached stale same-frame bindings remain ignored on the event path as well as the final
+  invalidation path.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -145,6 +193,14 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui view_cache_layout_invalidations_allow_reuse_for_definite_contained_roots`
 - Explicit scroll-handle layout invalidations still force rerender:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender`
+- Revision-only scroll-handle bumps after internal offset sync stay classified correctly:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui scroll_handle_revision_only_bumps_after_internal_offset_updates_classify_as_layout view_cache_scroll_windowed_paint_revision_only_bump_after_internal_offset_update_stays_hit_test_only view_cache_virtual_list_revision_only_bump_after_internal_offset_update_marks_window_update`
+- Detached same-frame stale scroll bindings are ignored:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui view_cache_scroll_handle_ignores_detached_same_frame_stale_bindings`
+- Scroll-handle registry dedupes same-frame duplicate elements:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui scroll_handle_registry_dedupes_same_frame_duplicate_element_bindings`
+- Event-time scroll-handle invalidation resolves authoritative live bindings across layers:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui event_scroll_handle_invalidation_targets_live_bindings_across_layers_only`
 - Detached dirty cache roots are pruned before contained relayout:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups`
 - Detached pending barrier relayouts are pruned before execution:
@@ -198,8 +254,19 @@ This follow-on slice locks the contract that:
 
 - Seed / deferred policy / authoritative commit helpers:
   - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+- Scroll-handle baseline commit / revision classification:
+  - `crates/fret-ui/src/declarative/frame.rs`
+- Live attached scroll-handle binding resolution:
+  - `crates/fret-ui/src/tree/layout/state.rs`
+  - `crates/fret-ui/src/tree/layout/entrypoints.rs`
+- Immediate event/paint scroll-handle binding consumers:
+  - `crates/fret-ui/src/declarative/host_widget/event/mod.rs`
+  - `crates/fret-ui/src/declarative/host_widget/paint.rs`
 - Mechanism regression coverage:
   - `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
+- Final scroll-handle invalidation / window-update escalation coverage:
+  - `crates/fret-ui/src/tree/layout/state.rs`
+  - `crates/fret-ui/src/tree/tests/view_cache.rs`
 - Child-list mutation helper coverage:
   - `crates/fret-ui/src/tree/ui_tree_mutation/core.rs`
   - `crates/fret-ui/src/tree/tests/children.rs`
@@ -273,6 +340,27 @@ This follow-on slice locks the contract that:
   - `tree::tests::view_cache::view_cache_runs_contained_relayout_for_invalidated_boundaries`
   - `tree::tests::view_cache::view_cache_layout_invalidations_allow_reuse_for_definite_contained_roots`
   - `tree::tests::view_cache::view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender`
+- 2026-04-03: revision-only scroll-handle classification gates confirmed via `cargo nextest` with
+  `CARGO_TARGET_DIR=target-codex-ui`:
+  - `declarative::frame::tests::scroll_handle_revision_only_bumps_after_internal_offset_updates_classify_as_layout`
+  - `tree::tests::view_cache::view_cache_scroll_windowed_paint_revision_only_bump_after_internal_offset_update_stays_hit_test_only`
+  - `tree::tests::view_cache::view_cache_virtual_list_revision_only_bump_after_internal_offset_update_marks_window_update`
+  - `tree::tests::view_cache::view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender`
+  - `tree::tests::view_cache::view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender`
+- 2026-04-04: live-binding filtering for same-frame stale scroll registrations confirmed via
+  `cargo nextest` with `CARGO_TARGET_DIR=target-codex-ui`:
+  - `tree::tests::view_cache::view_cache_scroll_handle_ignores_detached_same_frame_stale_bindings`
+  - `tree::tests::view_cache::view_cache_scroll_windowed_paint_revision_only_bump_after_internal_offset_update_stays_hit_test_only`
+  - `tree::tests::view_cache::view_cache_virtual_list_revision_only_bump_after_internal_offset_update_marks_window_update`
+  - `tree::tests::view_cache::view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender`
+  - `tree::tests::view_cache::view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender`
+  - `declarative::frame::tests::scroll_handle_revision_only_bumps_after_internal_offset_updates_classify_as_layout`
+- 2026-04-04: same-frame duplicate scroll binding registrations dedupe correctly via
+  `cargo nextest` with `CARGO_TARGET_DIR=target-codex-ui`:
+  - `declarative::frame::tests::scroll_handle_registry_dedupes_same_frame_duplicate_element_bindings`
+  - `tree::tests::view_cache::view_cache_scroll_handle_ignores_detached_same_frame_stale_bindings`
+  - `tree::tests::view_cache::view_cache_scroll_windowed_paint_revision_only_bump_after_internal_offset_update_stays_hit_test_only`
+  - `tree::tests::view_cache::view_cache_virtual_list_revision_only_bump_after_internal_offset_update_marks_window_update`
 - 2026-04-03: detached-root follow-up pruning gates confirmed via `cargo nextest` with
   `CARGO_TARGET_DIR=target-codex-verify5`:
   - `tree::tests::view_cache::detached_dirty_view_cache_root_is_pruned_before_layout_followups`

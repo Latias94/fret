@@ -102,6 +102,7 @@ impl<H: UiHost> UiTree<H> {
                 });
                 let (
                     invalidations,
+                    scroll_handle_invalidations,
                     requested_focus,
                     requested_capture,
                     notify_requested,
@@ -135,6 +136,7 @@ impl<H: UiHost> UiTree<H> {
                             .and_then(|p| tree.captured.get(&p).copied()),
                         bounds,
                         invalidations: Vec::new(),
+                        scroll_handle_invalidations: Vec::new(),
                         requested_focus: None,
                         requested_capture: None,
                         requested_cursor: None,
@@ -145,6 +147,7 @@ impl<H: UiHost> UiTree<H> {
                     widget.event(&mut cx, &event_for_node);
                     (
                         cx.invalidations,
+                        cx.scroll_handle_invalidations,
                         cx.requested_focus,
                         cx.requested_capture,
                         cx.notify_requested,
@@ -154,6 +157,7 @@ impl<H: UiHost> UiTree<H> {
                 });
 
                 if !invalidations.is_empty()
+                    || !scroll_handle_invalidations.is_empty()
                     || requested_focus.is_some()
                     || requested_capture.is_some()
                     || notify_requested
@@ -162,6 +166,21 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 for (id, inv) in invalidations {
+                    Self::pending_invalidation_merge(
+                        &mut pending_invalidations,
+                        id,
+                        inv,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::Unknown,
+                    );
+                }
+                let mut resolved_scroll_handle_invalidations = Vec::new();
+                self.extend_live_bound_scroll_handle_invalidations(
+                    app,
+                    &scroll_handle_invalidations,
+                    &mut resolved_scroll_handle_invalidations,
+                );
+                for (id, inv) in resolved_scroll_handle_invalidations {
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
                         id,
@@ -283,6 +302,7 @@ impl<H: UiHost> UiTree<H> {
         loop {
             let (
                 invalidations,
+                scroll_handle_invalidations,
                 requested_focus,
                 requested_capture,
                 notify_requested,
@@ -315,6 +335,7 @@ impl<H: UiHost> UiTree<H> {
                     captured: pointer_id_for_capture.and_then(|p| tree.captured.get(&p).copied()),
                     bounds,
                     invalidations: Vec::new(),
+                    scroll_handle_invalidations: Vec::new(),
                     requested_focus: None,
                     requested_capture: None,
                     requested_cursor: None,
@@ -325,6 +346,7 @@ impl<H: UiHost> UiTree<H> {
                 widget.event(&mut cx, event);
                 (
                     cx.invalidations,
+                    cx.scroll_handle_invalidations,
                     cx.requested_focus,
                     cx.requested_capture,
                     cx.notify_requested,
@@ -334,6 +356,7 @@ impl<H: UiHost> UiTree<H> {
             });
 
             if !invalidations.is_empty()
+                || !scroll_handle_invalidations.is_empty()
                 || requested_focus.is_some()
                 || requested_capture.is_some()
                 || notify_requested
@@ -342,6 +365,21 @@ impl<H: UiHost> UiTree<H> {
             }
 
             for (id, inv) in invalidations {
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    id,
+                    inv,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::Unknown,
+                );
+            }
+            let mut resolved_scroll_handle_invalidations = Vec::new();
+            self.extend_live_bound_scroll_handle_invalidations(
+                app,
+                &scroll_handle_invalidations,
+                &mut resolved_scroll_handle_invalidations,
+            );
+            for (id, inv) in resolved_scroll_handle_invalidations {
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
                     id,
@@ -525,52 +563,73 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
-            let (invalidations, notify_requested, notify_requested_location, stop_propagation) =
-                self.with_widget_mut(node_id, |widget, tree| {
-                    let (children, bounds) = tree
-                        .nodes
-                        .get(node_id)
-                        .map(|n| (n.children.as_slice(), n.bounds))
-                        .unwrap_or((&[][..], Rect::default()));
-                    let mut cx = EventCx {
-                        app,
-                        services: &mut *services,
-                        node: node_id,
-                        layer_root: tree.node_root(node_id),
-                        window: tree.window,
-                        pointer_id: pointer_id_for_capture,
-                        scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
-                        event_window_position,
-                        event_window_wheel_delta,
-                        input_ctx: input_ctx.clone(),
-                        pointer_hit_is_text_input: false,
-                        pointer_hit_is_pressable: false,
-                        pointer_hit_pressable_target: None,
-                        pointer_hit_pressable_target_in_descendant_subtree: false,
-                        prevented_default_actions: &mut prevented_default_actions,
-                        children,
-                        focus: tree.focus,
-                        captured: pointer_id_for_capture
-                            .and_then(|p| tree.captured.get(&p).copied()),
-                        bounds,
-                        invalidations: Vec::new(),
-                        requested_focus: None,
-                        requested_capture: None,
-                        requested_cursor: None,
-                        notify_requested: false,
-                        notify_requested_location: None,
-                        stop_propagation: false,
-                    };
-                    widget.event(&mut cx, event);
-                    (
-                        cx.invalidations,
-                        cx.notify_requested,
-                        cx.notify_requested_location,
-                        cx.stop_propagation,
-                    )
-                });
+            let (
+                invalidations,
+                scroll_handle_invalidations,
+                notify_requested,
+                notify_requested_location,
+                stop_propagation,
+            ) = self.with_widget_mut(node_id, |widget, tree| {
+                let (children, bounds) = tree
+                    .nodes
+                    .get(node_id)
+                    .map(|n| (n.children.as_slice(), n.bounds))
+                    .unwrap_or((&[][..], Rect::default()));
+                let mut cx = EventCx {
+                    app,
+                    services: &mut *services,
+                    node: node_id,
+                    layer_root: tree.node_root(node_id),
+                    window: tree.window,
+                    pointer_id: pointer_id_for_capture,
+                    scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                    event_window_position,
+                    event_window_wheel_delta,
+                    input_ctx: input_ctx.clone(),
+                    pointer_hit_is_text_input: false,
+                    pointer_hit_is_pressable: false,
+                    pointer_hit_pressable_target: None,
+                    pointer_hit_pressable_target_in_descendant_subtree: false,
+                    prevented_default_actions: &mut prevented_default_actions,
+                    children,
+                    focus: tree.focus,
+                    captured: pointer_id_for_capture.and_then(|p| tree.captured.get(&p).copied()),
+                    bounds,
+                    invalidations: Vec::new(),
+                    scroll_handle_invalidations: Vec::new(),
+                    requested_focus: None,
+                    requested_capture: None,
+                    requested_cursor: None,
+                    notify_requested: false,
+                    notify_requested_location: None,
+                    stop_propagation: false,
+                };
+                widget.event(&mut cx, event);
+                (
+                    cx.invalidations,
+                    cx.scroll_handle_invalidations,
+                    cx.notify_requested,
+                    cx.notify_requested_location,
+                    cx.stop_propagation,
+                )
+            });
 
             for (id, inv) in invalidations {
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    id,
+                    inv,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::Unknown,
+                );
+            }
+            let mut resolved_scroll_handle_invalidations = Vec::new();
+            self.extend_live_bound_scroll_handle_invalidations(
+                app,
+                &scroll_handle_invalidations,
+                &mut resolved_scroll_handle_invalidations,
+            );
+            for (id, inv) in resolved_scroll_handle_invalidations {
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
                     id,

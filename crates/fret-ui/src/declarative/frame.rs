@@ -291,11 +291,10 @@ pub(crate) fn register_scroll_handle_bindings_batch<H: UiHost>(
             let handle_key = binding.handle_key;
             let element = binding.element;
             let handle = binding.handle;
-            window_registry
-                .by_handle
-                .entry(handle_key)
-                .or_default()
-                .push(element);
+            let bound = window_registry.by_handle.entry(handle_key).or_default();
+            if !bound.contains(&element) {
+                bound.push(element);
+            }
             window_registry.handles.entry(handle_key).or_insert(handle);
         }
     });
@@ -684,6 +683,30 @@ mod tests {
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].handle_key, handle_key);
         assert_eq!(changes[0].kind, ScrollHandleChangeKind::Layout);
+    }
+
+    #[test]
+    fn scroll_handle_registry_dedupes_same_frame_duplicate_element_bindings() {
+        let mut app = crate::test_host::TestHost::new();
+        let window = AppWindowId::default();
+        let handle = crate::scroll::ScrollHandle::default();
+        let handle_key = handle.binding_key();
+        let element = GlobalElementId(1);
+        let binding = ScrollHandleBinding {
+            handle_key,
+            element,
+            handle: handle.clone(),
+        };
+
+        register_scroll_handle_bindings_batch(&mut app, window, FrameId(1), [binding.clone()]);
+        register_scroll_handle_bindings_batch(&mut app, window, FrameId(1), [binding]);
+
+        let bound = bound_elements_for_scroll_handle(&mut app, window, handle_key);
+        assert_eq!(
+            bound,
+            vec![element],
+            "same-frame rebuilds must not accumulate duplicate element registrations for one scroll handle"
+        );
     }
 }
 

@@ -65,6 +65,48 @@ impl<H: UiHost> UiTree<H> {
         )
     }
 
+    pub(crate) fn live_bound_scroll_handle_nodes(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        handle_key: usize,
+    ) -> Vec<NodeId> {
+        let mut seen = std::collections::HashSet::new();
+        let mut out = Vec::new();
+        for element in crate::declarative::frame::bound_elements_for_scroll_handle(
+            &mut *app, window, handle_key,
+        ) {
+            let Some(node) =
+                crate::declarative::node_for_element_in_window_frame(&mut *app, window, element)
+            else {
+                continue;
+            };
+            if !self.node_is_attached_to_layer_tree(node) {
+                continue;
+            }
+            if seen.insert(node) {
+                out.push(node);
+            }
+        }
+        out
+    }
+
+    pub(crate) fn extend_live_bound_scroll_handle_invalidations(
+        &self,
+        app: &mut H,
+        requests: &[crate::widget::ScrollHandleInvalidationRequest],
+        out: &mut Vec<(NodeId, Invalidation)>,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+        for request in requests {
+            for node in self.live_bound_scroll_handle_nodes(app, window, request.handle_key) {
+                out.push((node, request.kind));
+            }
+        }
+    }
+
     pub(crate) fn take_layout_engine(&mut self) -> crate::layout_engine::TaffyLayoutEngine {
         std::mem::take(&mut self.layout_engine)
     }
@@ -286,10 +328,8 @@ impl<H: UiHost> UiTree<H> {
         let mut request_followup_redraw = false;
         for change in changed {
             let handle_key = change.handle_key;
-            let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
-                &mut *app, window, handle_key,
-            );
-            if bound.is_empty() {
+            let bound_nodes = self.live_bound_scroll_handle_nodes(&mut *app, window, handle_key);
+            if bound_nodes.is_empty() {
                 continue;
             }
 
@@ -315,15 +355,10 @@ impl<H: UiHost> UiTree<H> {
             // deferred request whenever we can.
             if consume_deferred_scroll_to_item {
                 let mut consumed_scroll_to_item = false;
-                for element in &bound {
+                for &node in &bound_nodes {
                     if consumed_scroll_to_item {
                         break;
                     }
-                    let Some(node) = crate::declarative::node_for_element_in_window_frame(
-                        &mut *app, window, *element,
-                    ) else {
-                        continue;
-                    };
                     let Some((
                         vlist_element,
                         vlist_axis,
@@ -442,31 +477,25 @@ impl<H: UiHost> UiTree<H> {
             if self.debug_enabled && self.debug_scroll_handle_changes.len() < 256 {
                 let mut upgraded_to_layout_bindings = 0u32;
                 let mut bound_nodes_sample = Vec::new();
-                for element in &bound {
-                    if let Some(node) = crate::declarative::node_for_element_in_window_frame(
-                        &mut *app, window, *element,
-                    ) {
-                        if bound_nodes_sample.len() < 8 {
-                            bound_nodes_sample.push(node);
-                        }
+                for &node in &bound_nodes {
+                    if bound_nodes_sample.len() < 8 {
+                        bound_nodes_sample.push(node);
+                    }
 
-                        if change_kind
-                            == crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly
-                            && let Some(record) = crate::declarative::frame::element_record_for_node(
-                                &mut *app, window, node,
-                            )
-                            && let crate::declarative::frame::ElementInstance::VirtualList(props) =
-                                &record.instance
-                            && Self::virtual_list_scroll_handle_requires_layout(
-                                &mut *app,
-                                window,
-                                record.element,
-                                props,
-                            )
-                        {
-                            upgraded_to_layout_bindings =
-                                upgraded_to_layout_bindings.saturating_add(1);
-                        }
+                    if change_kind == crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly
+                        && let Some(record) = crate::declarative::frame::element_record_for_node(
+                            &mut *app, window, node,
+                        )
+                        && let crate::declarative::frame::ElementInstance::VirtualList(props) =
+                            &record.instance
+                        && Self::virtual_list_scroll_handle_requires_layout(
+                            &mut *app,
+                            window,
+                            record.element,
+                            props,
+                        )
+                    {
+                        upgraded_to_layout_bindings = upgraded_to_layout_bindings.saturating_add(1);
                     }
                 }
 
@@ -492,19 +521,13 @@ impl<H: UiHost> UiTree<H> {
                         offset_changed: change.offset_changed,
                         viewport_changed: change.viewport_changed,
                         content_changed: change.content_changed,
-                        bound_elements: bound.len() as u32,
+                        bound_elements: bound_nodes.len() as u32,
                         bound_nodes_sample,
                         upgraded_to_layout_bindings,
                     });
             }
 
-            for element in bound {
-                let Some(node) = crate::declarative::node_for_element_in_window_frame(
-                    &mut *app, window, element,
-                ) else {
-                    continue;
-                };
-
+            for node in bound_nodes {
                 let mut inv = match change_kind {
                     crate::declarative::frame::ScrollHandleChangeKind::Layout => {
                         Invalidation::Layout

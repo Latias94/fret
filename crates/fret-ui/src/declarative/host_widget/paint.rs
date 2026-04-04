@@ -1535,23 +1535,10 @@ impl ElementHostWidget {
 
                         if did_scroll {
                             if let Some(handle_key) = handle_key {
-                                let bound =
-                                    crate::declarative::frame::bound_elements_for_scroll_handle(
-                                        cx.app, window, handle_key,
-                                    );
-                                let mut unique =
-                                    std::collections::HashSet::with_capacity(bound.len());
-                                for element in bound {
-                                    if !unique.insert(element) {
-                                        continue;
-                                    }
-                                    let Some(node) =
-                                        crate::declarative::mount::node_for_element_in_window_frame(
-                                            cx.app, window, element,
-                                        )
-                                    else {
-                                        continue;
-                                    };
+                                let bound = cx
+                                    .tree
+                                    .live_bound_scroll_handle_nodes(cx.app, window, handle_key);
+                                for node in bound {
                                     cx.tree.invalidate(node, Invalidation::Layout);
                                     cx.tree.invalidate(node, Invalidation::Paint);
                                 }

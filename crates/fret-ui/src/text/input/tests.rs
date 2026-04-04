@@ -198,6 +198,7 @@ fn event_cx<'a>(
         captured: None,
         bounds,
         invalidations: Vec::new(),
+        scroll_handle_invalidations: Vec::new(),
         requested_focus: None,
         requested_capture: None,
         requested_cursor: None,
