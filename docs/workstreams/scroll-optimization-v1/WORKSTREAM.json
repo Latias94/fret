@@ -55,6 +55,10 @@
       "command": "CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui set_children_reparents_from_old_barrier_using_barrier_detach_semantics set_children_barrier_reparents_from_old_barrier_without_leaving_stale_child_edges"
     },
     {
+      "name": "gc-liveness-ignores-stale-layer-membership",
+      "command": "CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui gc_retention_ignores_stale_parent_pointer_layer_membership gc_reachability_unions_ui_and_window_frame_children touch_existing_subtree_can_walk_window_frame_children --status-level fail"
+    },
+    {
       "name": "ecosystem-live-node-public-surface",
       "command": "CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui-kit apply_initial_focus_prefers_explicit_element resolve_restore_focus_prefers_trigger_and_falls_back_to_live_node resolve_restore_focus_skips_non_focusable_trigger resolve_branch_nodes_dedupes_and_preserves_order active_descendant_is_set_when_active_item_is_present_and_cleared_when_missing apply_initial_focus_ignores_removed_element_with_only_last_known_mapping resolve_branch_nodes_ignores_removed_trigger_with_only_last_known_mapping active_descendant_helper_ignores_removed_element_with_only_last_known_mapping table_active_descendant_semantics_resolves_from_declarative_active_row_relation --status-level fail"
     },
@@ -73,6 +77,7 @@
     "docs/workstreams/scroll-optimization-v1/EVIDENCE_AND_GATES.md",
     "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
     "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
+    "crates/fret-ui/src/declarative/mount.rs",
     "crates/fret-ui/src/tree/node_storage.rs",
     "crates/fret-ui/src/tree/ui_tree_mutation/core.rs",
     "crates/fret-ui/src/tree/ui_tree_mutation/barrier.rs",

@@ -39,6 +39,16 @@ Status: Active
 - [x] Lock the declarative rebuild/invalidation live-node contract with focused stale-detached
   regression gates in `EVIDENCE_AND_GATES.md`.
 
+## Follow-on slice — GC liveness must ignore parent-pointer-derived layer membership
+
+- [x] Replace GC retain-time `UiTree::node_layer(...)` keepalive shortcuts so stale detached nodes
+  are not preserved solely because a stale parent pointer still resolves to a layer.
+- [x] Make GC liveness authoritative on retained liveness roots plus reachable child edges
+  (`UiTree` children and `WindowFrame` children union), while keeping view-cache reuse memberships
+  and retained keep-alive roots as explicit inputs.
+- [x] Lock the contract with a focused regression that proves a stale parent path can keep
+  `node_layer(...)` non-`None` without keeping the detached node alive.
+
 ## Follow-on slice — Interaction targets resolve authoritative live attached nodes
 
 - [x] Replace hover/pressed interaction target bookkeeping so runtime state stores element identity

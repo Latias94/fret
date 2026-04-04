@@ -41,6 +41,55 @@ pub(super) fn element_tree_duplicate_ids(elements: &[AnyElement]) -> Vec<GlobalE
     out
 }
 
+enum GcNodeRetentionDecision {
+    Keep,
+    Drop,
+    NeedLayerReachability,
+}
+
+fn gc_node_retention_decision(
+    id: GlobalElementId,
+    entry_node: NodeId,
+    entry_last_seen_frame: &mut FrameId,
+    entry_root: GlobalElementId,
+    root_id: GlobalElementId,
+    frame_id: FrameId,
+    cutoff: u64,
+    keep_alive_view_cache_elements: &HashSet<GlobalElementId>,
+    reachable_from_layers: Option<&HashSet<NodeId>>,
+    reachable_from_view_cache_roots_active: bool,
+    reachable_from_view_cache_roots: &HashSet<NodeId>,
+) -> GcNodeRetentionDecision {
+    if id == root_id {
+        return GcNodeRetentionDecision::Keep;
+    }
+    if entry_root != root_id {
+        return GcNodeRetentionDecision::Keep;
+    }
+    if !keep_alive_view_cache_elements.is_empty() && keep_alive_view_cache_elements.contains(&id) {
+        *entry_last_seen_frame = frame_id;
+        return GcNodeRetentionDecision::Keep;
+    }
+    if entry_last_seen_frame.0 >= cutoff {
+        return GcNodeRetentionDecision::Keep;
+    }
+    // Parent-pointer-derived layer membership is not authoritative for GC: fearless refactors can
+    // temporarily or accidentally leave a stale parent path even after the child is detached from
+    // the authoritative UI/window-frame child lists.
+    if reachable_from_view_cache_roots_active
+        && reachable_from_view_cache_roots.contains(&entry_node)
+    {
+        return GcNodeRetentionDecision::Keep;
+    }
+    let Some(reachable_from_layers) = reachable_from_layers else {
+        return GcNodeRetentionDecision::NeedLayerReachability;
+    };
+    if reachable_from_layers.contains(&entry_node) {
+        return GcNodeRetentionDecision::Keep;
+    }
+    GcNodeRetentionDecision::Drop
+}
+
 fn debug_path_for_element(
     runtime: &crate::elements::ElementRuntime,
     window: AppWindowId,
@@ -371,10 +420,9 @@ where
                 },
             );
 
-            // Declarative GC uses `UiTree::node_layer` to detect whether nodes are detached from any UI
-            // layer. On the first frame, the base layer is typically registered by the app after
-            // `render_root` returns (e.g. `ui.set_root(root_node)`), which is too late for the GC pass
-            // below.
+            // Declarative GC walks from the current layer roots. On the first frame, the base layer is
+            // typically registered by the app after `render_root` returns (e.g. `ui.set_root(root_node)`),
+            // which is too late for the GC pass below unless we install the base root here first.
             //
             // However, `render_root` is also used for non-base roots (e.g. overlay helper roots). Do not
             // steal the base layer if it is already installed.
@@ -644,25 +692,20 @@ where
                 reachable_from_view_cache_roots_active = true;
             }
             window_state.retain_nodes(|id, entry| {
-                if *id == root_id {
-                    return true;
-                }
-                if entry.root != root_id {
-                    return true;
-                }
-                if !keep_alive_view_cache_elements.is_empty()
-                    && keep_alive_view_cache_elements.contains(id)
-                {
-                    entry.last_seen_frame = frame_id;
-                    return true;
-                }
-                if entry.last_seen_frame.0 >= cutoff {
-                    return true;
-                }
-                if ui.node_layer(entry.node).is_some() {
-                    return true;
-                }
-                if !reachable_from_layers_computed {
+                let mut decision = gc_node_retention_decision(
+                    *id,
+                    entry.node,
+                    &mut entry.last_seen_frame,
+                    entry.root,
+                    root_id,
+                    frame_id,
+                    cutoff,
+                    &keep_alive_view_cache_elements,
+                    reachable_from_layers_computed.then_some(&reachable_from_layers),
+                    reachable_from_view_cache_roots_active,
+                    &reachable_from_view_cache_roots,
+                );
+                if matches!(decision, GcNodeRetentionDecision::NeedLayerReachability) {
                     with_window_frame(app, window, |window_frame| {
                         if liveness_roots.is_empty() {
                             collect_reachable_nodes_for_gc_in_place(
@@ -686,13 +729,21 @@ where
                         }
                     });
                     reachable_from_layers_computed = true;
+                    decision = gc_node_retention_decision(
+                        *id,
+                        entry.node,
+                        &mut entry.last_seen_frame,
+                        entry.root,
+                        root_id,
+                        frame_id,
+                        cutoff,
+                        &keep_alive_view_cache_elements,
+                        Some(&reachable_from_layers),
+                        reachable_from_view_cache_roots_active,
+                        &reachable_from_view_cache_roots,
+                    );
                 }
-                if reachable_from_layers.contains(&entry.node) {
-                    return true;
-                }
-                if reachable_from_view_cache_roots_active
-                    && reachable_from_view_cache_roots.contains(&entry.node)
-                {
+                if matches!(decision, GcNodeRetentionDecision::Keep) {
                     return true;
                 }
                 stale.push(StaleNodeRecord {
@@ -1138,27 +1189,20 @@ where
                 reachable_from_view_cache_roots_active = true;
             }
             window_state.retain_nodes(|id, entry| {
-                if *id == root_id {
-                    return true;
-                }
-                if entry.root != root_id {
-                    return true;
-                }
-
-                if !keep_alive_view_cache_elements.is_empty()
-                    && keep_alive_view_cache_elements.contains(id)
-                {
-                    entry.last_seen_frame = frame_id;
-                    return true;
-                }
-
-                if entry.last_seen_frame.0 >= cutoff {
-                    return true;
-                }
-                if ui.node_layer(entry.node).is_some() {
-                    return true;
-                }
-                if !reachable_from_layers_computed {
+                let mut decision = gc_node_retention_decision(
+                    *id,
+                    entry.node,
+                    &mut entry.last_seen_frame,
+                    entry.root,
+                    root_id,
+                    frame_id,
+                    cutoff,
+                    &keep_alive_view_cache_elements,
+                    reachable_from_layers_computed.then_some(&reachable_from_layers),
+                    reachable_from_view_cache_roots_active,
+                    &reachable_from_view_cache_roots,
+                );
+                if matches!(decision, GcNodeRetentionDecision::NeedLayerReachability) {
                     with_window_frame(app, window, |window_frame| {
                         if liveness_roots.is_empty() {
                             collect_reachable_nodes_for_gc_in_place(
@@ -1182,13 +1226,21 @@ where
                         }
                     });
                     reachable_from_layers_computed = true;
+                    decision = gc_node_retention_decision(
+                        *id,
+                        entry.node,
+                        &mut entry.last_seen_frame,
+                        entry.root,
+                        root_id,
+                        frame_id,
+                        cutoff,
+                        &keep_alive_view_cache_elements,
+                        Some(&reachable_from_layers),
+                        reachable_from_view_cache_roots_active,
+                        &reachable_from_view_cache_roots,
+                    );
                 }
-                if reachable_from_layers.contains(&entry.node) {
-                    return true;
-                }
-                if reachable_from_view_cache_roots_active
-                    && reachable_from_view_cache_roots.contains(&entry.node)
-                {
+                if matches!(decision, GcNodeRetentionDecision::Keep) {
                     return true;
                 }
                 stale.push(StaleNodeRecord {
@@ -2630,6 +2682,89 @@ mod tests {
         assert_eq!(entry.node, child_node);
         assert_eq!(entry.last_seen_frame, FrameId(1));
         assert_eq!(entry.root, root_id);
+    }
+
+    #[test]
+    fn gc_retention_ignores_stale_parent_pointer_layer_membership() {
+        use crate::UiHost;
+        use crate::tree::UiTree;
+        use crate::widget::{LayoutCx, PaintCx, Widget};
+
+        #[derive(Default)]
+        struct TestWidget;
+
+        impl<H: UiHost> Widget<H> for TestWidget {
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                for &child in cx.children {
+                    let _ = cx.layout_in(child, cx.bounds);
+                }
+                cx.available
+            }
+
+            fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+        }
+
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let root = ui.create_node(TestWidget);
+        let stale = ui.create_node(TestWidget);
+        let root_id = GlobalElementId(900);
+        let stale_id = GlobalElementId(901);
+        let frame_id = FrameId(2);
+        let cutoff = 1;
+
+        ui.set_root(root);
+        ui.test_set_node_parent(stale, Some(root));
+
+        assert!(
+            ui.node_layer(stale).is_some(),
+            "reproducer requires a stale parent path that still resolves to a layer"
+        );
+
+        let reachable = collect_reachable_nodes_for_gc(&ui, None, [root]);
+        assert!(
+            !reachable.contains(&stale),
+            "stale node must stay unreachable from authoritative children traversal"
+        );
+
+        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = HashSet::new();
+        let reachable_from_view_cache_roots: HashSet<NodeId> = HashSet::new();
+        let mut last_seen_frame = FrameId(0);
+
+        assert!(matches!(
+            gc_node_retention_decision(
+                stale_id,
+                stale,
+                &mut last_seen_frame,
+                root_id,
+                root_id,
+                frame_id,
+                cutoff,
+                &keep_alive_view_cache_elements,
+                None,
+                false,
+                &reachable_from_view_cache_roots,
+            ),
+            GcNodeRetentionDecision::NeedLayerReachability
+        ));
+
+        assert!(matches!(
+            gc_node_retention_decision(
+                stale_id,
+                stale,
+                &mut last_seen_frame,
+                root_id,
+                root_id,
+                frame_id,
+                cutoff,
+                &keep_alive_view_cache_elements,
+                Some(&reachable),
+                false,
+                &reachable_from_view_cache_roots,
+            ),
+            GcNodeRetentionDecision::Drop
+        ));
     }
 }
 
