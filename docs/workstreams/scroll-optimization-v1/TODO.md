@@ -65,6 +65,8 @@ Status: Active
   live attached nodes instead of retained stale `node_entry` mappings.
 - [x] Replace anchored layout `anchor_element` resolution so layout uses the live attached anchor
   node rather than the last-known `elements::node_for_element(...)` mapping.
+- [x] Add a dedicated wheel scroll-dismiss regression so this dispatch path is locked directly
+  instead of only being covered by the broader stale-detached live-node suite.
 - [x] Record the new regression gates and the non-test mechanism-path audit result in
   `EVIDENCE_AND_GATES.md`.
 

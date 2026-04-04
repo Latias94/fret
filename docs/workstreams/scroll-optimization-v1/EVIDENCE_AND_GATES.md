@@ -288,6 +288,8 @@ Audit note (2026-04-04):
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui element_context_reports_focus_within_for_focused_descendant element_context_focus_within_ignores_stale_detached_node_entries`
 - Final-layout / dispatch / anchored live-node queries ignore stale detached seeds:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui focus_repair_prefers_live_attached_node_over_stale_detached_node_entry anchored_anchor_element_ignores_stale_detached_node_entry touch_pan_scroll_live_target_resolution_ignores_stale_detached_node_entry`
+- Wheel scroll-dismiss lookup resolves the live attached element instead of a stale detached seed:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui dismissible_scroll_dismiss_ignores_stale_detached_node_entry`
 - Detached dirty cache roots are pruned before contained relayout:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups`
 - Detached pending barrier relayouts are pruned before execution:
