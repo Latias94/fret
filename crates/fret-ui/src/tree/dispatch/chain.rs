@@ -105,6 +105,7 @@ impl<H: UiHost> UiTree<H> {
                     scroll_handle_invalidations,
                     scroll_target_invalidations,
                     requested_focus,
+                    requested_focus_target,
                     requested_capture,
                     notify_requested,
                     notify_requested_location,
@@ -140,6 +141,7 @@ impl<H: UiHost> UiTree<H> {
                         scroll_handle_invalidations: Vec::new(),
                         scroll_target_invalidations: Vec::new(),
                         requested_focus: None,
+                        requested_focus_target: None,
                         requested_capture: None,
                         requested_cursor: None,
                         notify_requested: false,
@@ -152,6 +154,7 @@ impl<H: UiHost> UiTree<H> {
                         cx.scroll_handle_invalidations,
                         cx.scroll_target_invalidations,
                         cx.requested_focus,
+                        cx.requested_focus_target,
                         cx.requested_capture,
                         cx.notify_requested,
                         cx.notify_requested_location,
@@ -163,6 +166,7 @@ impl<H: UiHost> UiTree<H> {
                     || !scroll_handle_invalidations.is_empty()
                     || !scroll_target_invalidations.is_empty()
                     || requested_focus.is_some()
+                    || requested_focus_target.is_some()
                     || requested_capture.is_some()
                     || notify_requested
                 {
@@ -225,7 +229,8 @@ impl<H: UiHost> UiTree<H> {
                     *needs_redraw = true;
                 }
 
-                if let Some(focus) = requested_focus
+                if let Some(focus) =
+                    self.resolve_requested_focus(app, requested_focus, requested_focus_target)
                     && self.focus_request_is_allowed(
                         app,
                         self.window,
@@ -324,6 +329,7 @@ impl<H: UiHost> UiTree<H> {
                 scroll_handle_invalidations,
                 scroll_target_invalidations,
                 requested_focus,
+                requested_focus_target,
                 requested_capture,
                 notify_requested,
                 notify_requested_location,
@@ -358,6 +364,7 @@ impl<H: UiHost> UiTree<H> {
                     scroll_handle_invalidations: Vec::new(),
                     scroll_target_invalidations: Vec::new(),
                     requested_focus: None,
+                    requested_focus_target: None,
                     requested_capture: None,
                     requested_cursor: None,
                     notify_requested: false,
@@ -370,6 +377,7 @@ impl<H: UiHost> UiTree<H> {
                     cx.scroll_handle_invalidations,
                     cx.scroll_target_invalidations,
                     cx.requested_focus,
+                    cx.requested_focus_target,
                     cx.requested_capture,
                     cx.notify_requested,
                     cx.notify_requested_location,
@@ -381,6 +389,7 @@ impl<H: UiHost> UiTree<H> {
                 || !scroll_handle_invalidations.is_empty()
                 || !scroll_target_invalidations.is_empty()
                 || requested_focus.is_some()
+                || requested_focus_target.is_some()
                 || requested_capture.is_some()
                 || notify_requested
             {
@@ -443,7 +452,8 @@ impl<H: UiHost> UiTree<H> {
                 *needs_redraw = true;
             }
 
-            if let Some(focus) = requested_focus
+            if let Some(focus) =
+                self.resolve_requested_focus(app, requested_focus, requested_focus_target)
                 && self.focus_request_is_allowed(
                     app,
                     self.window,
@@ -638,6 +648,7 @@ impl<H: UiHost> UiTree<H> {
                     scroll_handle_invalidations: Vec::new(),
                     scroll_target_invalidations: Vec::new(),
                     requested_focus: None,
+                    requested_focus_target: None,
                     requested_capture: None,
                     requested_cursor: None,
                     notify_requested: false,

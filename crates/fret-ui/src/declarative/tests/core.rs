@@ -1405,6 +1405,117 @@ fn key_hook_can_request_focus() {
 }
 
 #[test]
+fn key_hook_focus_request_ignores_stale_detached_node_entry() {
+    use crate::elements::NodeEntry;
+
+    #[derive(Default)]
+    struct DetachedDummy;
+
+    impl<H: UiHost> Widget<H> for DetachedDummy {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let mut first_id: Option<crate::elements::GlobalElementId> = None;
+    let mut second_id: Option<crate::elements::GlobalElementId> = None;
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "key-hook-focus-stale-node-entry",
+        |cx| {
+            let mut props = crate::element::PressableProps::default();
+            props.layout.size.width = Length::Px(Px(80.0));
+            props.layout.size.height = Length::Px(Px(32.0));
+            props.focusable = true;
+
+            let first = cx.pressable_with_id(props, |_cx, _st, id| {
+                first_id = Some(id);
+                Vec::new()
+            });
+
+            let mut props2 = crate::element::PressableProps::default();
+            props2.layout.size.width = Length::Px(Px(80.0));
+            props2.layout.size.height = Length::Px(Px(32.0));
+            props2.focusable = true;
+
+            let second = cx.pressable_with_id(props2, |_cx, _st, id| {
+                second_id = Some(id);
+                Vec::new()
+            });
+
+            let second_target = second.id;
+            cx.key_on_key_down_for(
+                first.id,
+                Arc::new(move |host, _cx, down| {
+                    if down.repeat || down.key != fret_core::KeyCode::ArrowRight {
+                        return false;
+                    }
+                    host.request_focus(second_target);
+                    true
+                }),
+            );
+
+            vec![cx.column(crate::element::ColumnProps::default(), |_| {
+                vec![first, second]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let first_id = first_id.expect("first element id");
+    let second_id = second_id.expect("second element id");
+    let first_node = crate::elements::node_for_element(&mut app, window, first_id).expect("first");
+    let second_node =
+        crate::elements::node_for_element(&mut app, window, second_id).expect("second");
+    let stale_detached = ui.create_node_for_element(second_id, DetachedDummy);
+
+    let frame_id = app.frame_id();
+    crate::elements::with_window_state(&mut app, window, |st| {
+        st.set_node_entry(
+            second_id,
+            NodeEntry {
+                node: stale_detached,
+                last_seen_frame: frame_id,
+                root: second_id,
+            },
+        );
+    });
+
+    ui.set_focus(Some(first_node));
+    assert_eq!(ui.focus(), Some(first_node));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert_eq!(ui.focus(), Some(second_node));
+}
+
+#[test]
 fn continuous_frames_lease_requests_animation_frames_while_held() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

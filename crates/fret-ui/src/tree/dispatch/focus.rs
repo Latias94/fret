@@ -91,6 +91,19 @@ impl<H: UiHost> UiTree<H> {
         self.is_reachable_from_root_via_children(trap_root, requested_focus)
     }
 
+    pub(in crate::tree) fn resolve_requested_focus(
+        &self,
+        app: &mut H,
+        requested_focus: Option<NodeId>,
+        requested_focus_target: Option<crate::GlobalElementId>,
+    ) -> Option<NodeId> {
+        requested_focus.or_else(|| {
+            requested_focus_target.and_then(|target| {
+                self.resolve_live_attached_node_for_element(app, self.window, target)
+            })
+        })
+    }
+
     pub(in crate::tree) fn is_reachable_from_any_root_via_children(
         &self,
         target: NodeId,

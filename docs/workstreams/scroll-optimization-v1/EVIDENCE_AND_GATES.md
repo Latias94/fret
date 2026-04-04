@@ -1,6 +1,6 @@
 # Scroll Optimization Workstream (v1) — Evidence And Gates
 
-Date: 2026-04-03  
+Date: 2026-04-04  
 Status: Active
 
 ## Current slice — Deferred probe seed vs authoritative extent
@@ -187,6 +187,18 @@ This follow-on slice locks the contract that:
 - explicit scroll-target invalidation resolves live attached target nodes only,
 - detached stale same-frame target entries do not win explicit scroll-target resolution.
 
+## Follow-on slice — Command and event focus targets resolve authoritative live attached nodes
+
+This follow-on slice locks the contract that:
+
+- command dispatch must not treat `window_state.node_entry(element)` as the authoritative source
+  node when pending command metadata only carries an element id,
+- command hooks and event-side focus hooks may request focus by element, but the live attached node
+  resolution must happen in `UiTree` / dispatch after runtime regains access to the authoritative
+  retained tree,
+- stale detached same-frame `node_entry` seeds must not win over a still-live attached node for the
+  same element.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -213,6 +225,14 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui event_scroll_handle_invalidation_targets_live_bindings_across_layers_only`
 - Event-time explicit scroll-target invalidation resolves the live attached target:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui event_scroll_target_invalidation_prefers_live_attached_node_over_stale_same_frame_entry`
+- Pending command source elements resolve the live attached node instead of a stale detached seed:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui dispatch_command_source_element_ignores_stale_detached_node_entry`
+- Command hook focus requests resolve the live attached node instead of a stale detached seed:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui command_hooks_focus_request_ignores_stale_detached_node_entry`
+- Key hook focus requests resolve the live attached node instead of a stale detached seed:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui key_hook_focus_request_ignores_stale_detached_node_entry`
+- Pointer-region focus requests resolve the live attached node instead of a stale detached seed:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui declarative_pointer_region_focus_request_ignores_stale_detached_node_entry`
 - Detached dirty cache roots are pruned before contained relayout:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups`
 - Detached pending barrier relayouts are pruned before execution:

@@ -97,11 +97,11 @@ impl<H: UiHost> UiTree<H> {
         window: AppWindowId,
         element: GlobalElementId,
     ) -> Vec<NodeId> {
-        crate::declarative::with_window_frame(app, window, |window_frame| {
+        let mut seen = std::collections::HashSet::new();
+        let mut out = crate::declarative::with_window_frame(app, window, |window_frame| {
             let Some(window_frame) = window_frame else {
                 return Vec::new();
             };
-            let mut seen = std::collections::HashSet::new();
             let mut out = Vec::new();
             for (node, record) in window_frame.instances.iter() {
                 if record.element != element || !self.node_is_attached_to_layer_tree(node) {
@@ -112,6 +112,47 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
             out
+        });
+        for (node, entry) in self.nodes.iter() {
+            if entry.element != Some(element) || !self.node_is_attached_to_layer_tree(node) {
+                continue;
+            }
+            if seen.insert(node) {
+                out.push(node);
+            }
+        }
+        out
+    }
+
+    pub(crate) fn resolve_live_attached_node_for_element(
+        &self,
+        app: &mut H,
+        window: Option<AppWindowId>,
+        element: GlobalElementId,
+    ) -> Option<NodeId> {
+        if let Some(window) = window {
+            let seeded = crate::elements::with_window_state(app, window, |window_state| {
+                window_state.node_entry(element).map(|entry| entry.node)
+            });
+            if let Some(node) = seeded
+                && self.nodes.get(node).and_then(|entry| entry.element) == Some(element)
+                && self.node_is_attached_to_layer_tree(node)
+            {
+                return Some(node);
+            }
+
+            if let Some(node) = self
+                .live_nodes_for_element(app, window, element)
+                .into_iter()
+                .next()
+            {
+                return Some(node);
+            }
+        }
+
+        self.nodes.iter().find_map(|(node, entry)| {
+            (entry.element == Some(element) && self.node_is_attached_to_layer_tree(node))
+                .then_some(node)
         })
     }
 

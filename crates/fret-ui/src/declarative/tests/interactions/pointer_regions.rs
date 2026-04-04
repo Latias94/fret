@@ -1225,6 +1225,125 @@ fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
 }
 
 #[test]
+fn declarative_pointer_region_focus_request_ignores_stale_detached_node_entry() {
+    use crate::elements::NodeEntry;
+
+    #[derive(Default)]
+    struct DetachedDummy;
+
+    impl<H: UiHost> Widget<H> for DetachedDummy {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(60.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let target_id: std::rc::Rc<std::cell::Cell<Option<crate::elements::GlobalElementId>>> =
+        std::rc::Rc::new(std::cell::Cell::new(None));
+    let target_id_for_children = target_id.clone();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pointer-region-focus-stale-node-entry",
+        |cx| {
+            vec![cx.semantics(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Slider,
+                    label: Some(Arc::from("focus-target")),
+                    ..Default::default()
+                },
+                |cx| {
+                    let target = cx.root_id();
+                    target_id_for_children.set(Some(target));
+
+                    vec![cx.pointer_region(
+                        crate::element::PointerRegionProps {
+                            layout: crate::element::LayoutStyle {
+                                size: crate::element::SizeStyle {
+                                    width: crate::element::Length::Fill,
+                                    height: crate::element::Length::Fill,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            enabled: true,
+                            ..Default::default()
+                        },
+                        |cx| {
+                            cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, down| {
+                                if down.button != MouseButton::Left {
+                                    return false;
+                                }
+                                host.request_focus(target);
+                                true
+                            }));
+                            vec![]
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let target_id = target_id.get().expect("target element id");
+    let target_node =
+        crate::elements::node_for_element(&mut app, window, target_id).expect("target node");
+    let stale_detached = ui.create_node_for_element(target_id, DetachedDummy);
+
+    let frame_id = app.frame_id();
+    crate::elements::with_window_state(&mut app, window, |st| {
+        st.set_node_entry(
+            target_id,
+            NodeEntry {
+                node: stale_detached,
+                last_seen_frame: frame_id,
+                root: target_id,
+            },
+        );
+    });
+
+    let semantics_node = ui.children(root)[0];
+    let pointer_node = ui.children(semantics_node)[0];
+    let pointer_bounds = ui.debug_node_bounds(pointer_node).expect("pointer bounds");
+    let position = Point::new(
+        Px(pointer_bounds.origin.x.0 + 2.0),
+        Px(pointer_bounds.origin.y.0 + 2.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(ui.focus(), Some(target_node));
+}
+
+#[test]
 fn declarative_pointer_region_capture_phase_pointer_moves_do_not_double_dispatch() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

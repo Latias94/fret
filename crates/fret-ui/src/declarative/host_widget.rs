@@ -233,6 +233,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         if !action_hooks.is_empty() || legacy_hook.is_some() {
             struct CommandHookHost<'a, H: UiHost> {
                 app: &'a mut H,
+                tree: &'a mut crate::tree::UiTree<H>,
                 window: AppWindowId,
                 element: crate::GlobalElementId,
                 requested_focus: &'a mut Option<NodeId>,
@@ -324,10 +325,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
             impl<H: UiHost> crate::action::UiFocusActionHost for CommandHookHost<'_, H> {
                 fn request_focus(&mut self, target: crate::GlobalElementId) {
-                    let Some(node) = crate::elements::with_window_state(
+                    let Some(node) = self.tree.resolve_live_attached_node_for_element(
                         &mut *self.app,
-                        self.window,
-                        |window_state| window_state.node_entry(target).map(|e| e.node),
+                        Some(self.window),
+                        target,
                     ) else {
                         return;
                     };
@@ -337,6 +338,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
             let mut host = CommandHookHost {
                 app: &mut *cx.app,
+                tree: &mut *cx.tree,
                 window,
                 element: self.element,
                 requested_focus: &mut cx.requested_focus,

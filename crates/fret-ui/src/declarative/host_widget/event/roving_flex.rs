@@ -71,7 +71,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         app: &'a mut H,
         window: AppWindowId,
         element: crate::GlobalElementId,
-        requested_focus: &'a mut Option<NodeId>,
+        requested_focus_target: &'a mut Option<crate::GlobalElementId>,
         notify_requested: &'a mut bool,
         notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
     }
@@ -135,14 +135,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
 
     impl<H: UiHost> action::UiFocusActionHost for RovingHookHost<'_, H> {
         fn request_focus(&mut self, target: crate::GlobalElementId) {
-            let Some(node) =
-                crate::elements::with_window_state(&mut *self.app, self.window, |window_state| {
-                    window_state.node_entry(target).map(|e| e.node)
-                })
-            else {
-                return;
-            };
-            *self.requested_focus = Some(node);
+            *self.requested_focus_target = Some(target);
         }
     }
 
@@ -176,7 +169,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             app: &mut *cx.app,
             window,
             element: this.element,
-            requested_focus: &mut cx.requested_focus,
+            requested_focus_target: &mut cx.requested_focus_target,
             notify_requested: &mut cx.notify_requested,
             notify_requested_location: &mut cx.notify_requested_location,
         };
@@ -257,7 +250,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             app: &mut *cx.app,
             window,
             element: this.element,
-            requested_focus: &mut cx.requested_focus,
+            requested_focus_target: &mut cx.requested_focus_target,
             notify_requested: &mut cx.notify_requested,
             notify_requested_location: &mut cx.notify_requested_location,
         };
@@ -306,7 +299,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
                 app: &mut *cx.app,
                 window,
                 element: this.element,
-                requested_focus: &mut cx.requested_focus,
+                requested_focus_target: &mut cx.requested_focus_target,
                 notify_requested: &mut cx.notify_requested,
                 notify_requested_location: &mut cx.notify_requested_location,
             };
@@ -361,7 +354,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             app: &mut *cx.app,
             window,
             element: this.element,
-            requested_focus: &mut cx.requested_focus,
+            requested_focus_target: &mut cx.requested_focus_target,
             notify_requested: &mut cx.notify_requested,
             notify_requested_location: &mut cx.notify_requested_location,
         };

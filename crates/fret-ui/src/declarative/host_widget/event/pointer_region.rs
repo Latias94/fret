@@ -53,7 +53,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
         bounds: Rect,
         input_ctx: &'a fret_runtime::InputContext,
         prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
-        requested_focus: &'a mut Option<NodeId>,
+        requested_focus_target: &'a mut Option<crate::GlobalElementId>,
         requested_capture: &'a mut Option<Option<NodeId>>,
         requested_cursor: &'a mut Option<fret_core::CursorIcon>,
         notify_requested: &'a mut bool,
@@ -165,14 +165,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
 
     impl<H: UiHost> action::UiFocusActionHost for PointerHookHost<'_, H> {
         fn request_focus(&mut self, target: crate::GlobalElementId) {
-            let Some(node) =
-                crate::elements::with_window_state(&mut *self.app, self.window, |window_state| {
-                    window_state.node_entry(target).map(|e| e.node)
-                })
-            else {
-                return;
-            };
-            *self.requested_focus = Some(node);
+            *self.requested_focus_target = Some(target);
         }
     }
 
@@ -314,7 +307,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 bounds: cx.bounds,
                 input_ctx: &cx.input_ctx,
                 prevented_default_actions: cx.prevented_default_actions,
-                requested_focus: &mut cx.requested_focus,
+                requested_focus_target: &mut cx.requested_focus_target,
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
                 notify_requested: &mut cx.notify_requested,
@@ -401,7 +394,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 bounds: cx.bounds,
                 input_ctx: &cx.input_ctx,
                 prevented_default_actions: cx.prevented_default_actions,
-                requested_focus: &mut cx.requested_focus,
+                requested_focus_target: &mut cx.requested_focus_target,
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
                 notify_requested: &mut cx.notify_requested,
@@ -462,7 +455,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 bounds: cx.bounds,
                 input_ctx: &cx.input_ctx,
                 prevented_default_actions: cx.prevented_default_actions,
-                requested_focus: &mut cx.requested_focus,
+                requested_focus_target: &mut cx.requested_focus_target,
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
                 notify_requested: &mut cx.notify_requested,
@@ -522,7 +515,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 bounds: cx.bounds,
                 input_ctx: &cx.input_ctx,
                 prevented_default_actions: cx.prevented_default_actions,
-                requested_focus: &mut cx.requested_focus,
+                requested_focus_target: &mut cx.requested_focus_target,
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
                 notify_requested: &mut cx.notify_requested,
@@ -608,7 +601,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                     bounds: cx.bounds,
                     input_ctx: &cx.input_ctx,
                     prevented_default_actions: cx.prevented_default_actions,
-                    requested_focus: &mut cx.requested_focus,
+                    requested_focus_target: &mut cx.requested_focus_target,
                     requested_capture: &mut cx.requested_capture,
                     requested_cursor: &mut cx.requested_cursor,
                     notify_requested: &mut cx.notify_requested,
@@ -666,7 +659,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                     bounds: cx.bounds,
                     input_ctx: &cx.input_ctx,
                     prevented_default_actions: cx.prevented_default_actions,
-                    requested_focus: &mut cx.requested_focus,
+                    requested_focus_target: &mut cx.requested_focus_target,
                     requested_capture: &mut cx.requested_capture,
                     requested_cursor: &mut cx.requested_cursor,
                     notify_requested: &mut cx.notify_requested,

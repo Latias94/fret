@@ -611,14 +611,12 @@ impl<H: UiHost> UiTree<H> {
             fret_runtime::CommandDispatchSourceV1::programmatic()
         };
 
-        let source_node = self.window.and_then(|window| {
-            source.element.and_then(|element| {
-                crate::elements::with_window_state(app, window, |window_state| {
-                    window_state
-                        .node_entry(crate::GlobalElementId(element))
-                        .map(|e| e.node)
-                })
-            })
+        let source_node = source.element.and_then(|element| {
+            self.resolve_live_attached_node_for_element(
+                app,
+                self.window,
+                crate::GlobalElementId(element),
+            )
         });
 
         let start = source_node.or(focus).unwrap_or(default_root);

@@ -201,6 +201,7 @@ fn event_cx<'a>(
         scroll_handle_invalidations: Vec::new(),
         scroll_target_invalidations: Vec::new(),
         requested_focus: None,
+        requested_focus_target: None,
         requested_capture: None,
         requested_cursor: None,
         notify_requested: false,

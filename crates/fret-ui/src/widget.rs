@@ -90,6 +90,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub(crate) scroll_handle_invalidations: Vec<ScrollHandleInvalidationRequest>,
     pub(crate) scroll_target_invalidations: Vec<crate::GlobalElementId>,
     pub requested_focus: Option<NodeId>,
+    pub requested_focus_target: Option<crate::GlobalElementId>,
     pub requested_capture: Option<Option<NodeId>>,
     pub requested_cursor: Option<fret_core::CursorIcon>,
     pub notify_requested: bool,

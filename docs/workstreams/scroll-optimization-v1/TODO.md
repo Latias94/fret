@@ -1,6 +1,6 @@
 # Scroll Optimization Workstream (v1) — TODO
 
-Date: 2026-03-03  
+Date: 2026-04-04  
 Status: Active
 
 ## Current slice — Deferred probe seed vs authoritative extent
@@ -14,6 +14,21 @@ Status: Active
   pending state instead of forcing an extra at-edge probe on the next frame.
 - [x] Record the dedicated verification results for the seed/authority regression gates in
   `EVIDENCE_AND_GATES.md`.
+
+## Follow-on slice — Command and event focus targets resolve authoritative live attached nodes
+
+- [x] Replace command dispatch source-element resolution so pending command metadata falls back from
+  stale detached `node_entry` seeds to the live attached node.
+- [x] Replace command-hook `request_focus(element)` resolution so the hook host no longer trusts
+  `window_state.node_entry(target)` directly.
+- [x] Add event-side `requested_focus_target` plumbing so key/pointer focus hooks defer element
+  target resolution until dispatch regains access to `UiTree`.
+- [x] Lock the command/event live-node resolution contract with focused stale-detached regression
+  gates in `EVIDENCE_AND_GATES.md`.
+- [ ] Audit remaining rebuild/invalidation element-targeted paths that still read
+  `window_state.node_entry(element)` directly:
+  - `crates/fret-ui/src/declarative/mount.rs`
+  - `crates/fret-ui/src/tree/ui_tree_invalidation_walk/propagate.rs`
 
 ## Gates-first checklist
 

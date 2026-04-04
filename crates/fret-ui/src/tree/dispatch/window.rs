@@ -1494,6 +1494,7 @@ impl<H: UiHost> UiTree<H> {
                                 scroll_handle_invalidations,
                                 scroll_target_invalidations,
                                 requested_focus,
+                                requested_focus_target,
                                 requested_capture,
                                 requested_cursor,
                                 notify_requested,
@@ -1530,6 +1531,7 @@ impl<H: UiHost> UiTree<H> {
                                     scroll_handle_invalidations: Vec::new(),
                                     scroll_target_invalidations: Vec::new(),
                                     requested_focus: None,
+                                    requested_focus_target: None,
                                     requested_capture: None,
                                     requested_cursor: None,
                                     notify_requested: false,
@@ -1542,6 +1544,7 @@ impl<H: UiHost> UiTree<H> {
                                     cx.scroll_handle_invalidations,
                                     cx.scroll_target_invalidations,
                                     cx.requested_focus,
+                                    cx.requested_focus_target,
                                     cx.requested_capture,
                                     cx.requested_cursor,
                                     cx.notify_requested,
@@ -1554,6 +1557,7 @@ impl<H: UiHost> UiTree<H> {
                                 || !scroll_handle_invalidations.is_empty()
                                 || !scroll_target_invalidations.is_empty()
                                 || requested_focus.is_some()
+                                || requested_focus_target.is_some()
                                 || requested_capture.is_some()
                                 || notify_requested
                             {
@@ -1594,15 +1598,19 @@ impl<H: UiHost> UiTree<H> {
                                 );
                             }
 
-                            if let Some(focus) = requested_focus
-                                && self.focus_request_is_allowed(
-                                    app,
-                                    self.window,
-                                    dispatch_cx.active_focus_roots.as_slice(),
-                                    focus,
-                                    Some(&dispatch_cx.focus_snapshot),
-                                )
-                            {
+                            let focus_requested_now =
+                                requested_focus.is_some() || requested_focus_target.is_some();
+                            if let Some(focus) = self.resolve_requested_focus(
+                                app,
+                                requested_focus,
+                                requested_focus_target,
+                            ) && self.focus_request_is_allowed(
+                                app,
+                                self.window,
+                                dispatch_cx.active_focus_roots.as_slice(),
+                                focus,
+                                Some(&dispatch_cx.focus_snapshot),
+                            ) {
                                 focus_requested = true;
                                 if let Some(prev) = self.focus {
                                     self.mark_invalidation(prev, Invalidation::Paint);
@@ -1617,7 +1625,7 @@ impl<H: UiHost> UiTree<H> {
                                 if !matches!(event, Event::Pointer(_) | Event::PointerCancel(_)) {
                                     self.scroll_node_into_view(app, focus);
                                 }
-                            } else if requested_focus.is_some() {
+                            } else if focus_requested_now {
                                 focus_requested = true;
                             }
 
@@ -1713,6 +1721,7 @@ impl<H: UiHost> UiTree<H> {
                                 scroll_handle_invalidations,
                                 scroll_target_invalidations,
                                 requested_focus,
+                                requested_focus_target,
                                 requested_capture,
                                 requested_cursor,
                                 notify_requested,
@@ -1749,6 +1758,7 @@ impl<H: UiHost> UiTree<H> {
                                     scroll_handle_invalidations: Vec::new(),
                                     scroll_target_invalidations: Vec::new(),
                                     requested_focus: None,
+                                    requested_focus_target: None,
                                     requested_capture: None,
                                     requested_cursor: None,
                                     notify_requested: false,
@@ -1769,6 +1779,7 @@ impl<H: UiHost> UiTree<H> {
                                     cx.scroll_handle_invalidations,
                                     cx.scroll_target_invalidations,
                                     cx.requested_focus,
+                                    cx.requested_focus_target,
                                     cx.requested_capture,
                                     cx.requested_cursor,
                                     cx.notify_requested,
@@ -1781,6 +1792,7 @@ impl<H: UiHost> UiTree<H> {
                                 || !scroll_handle_invalidations.is_empty()
                                 || !scroll_target_invalidations.is_empty()
                                 || requested_focus.is_some()
+                                || requested_focus_target.is_some()
                                 || requested_capture.is_some()
                                 || notify_requested
                             {
@@ -1821,15 +1833,19 @@ impl<H: UiHost> UiTree<H> {
                                 );
                             }
 
-                            if let Some(focus) = requested_focus
-                                && self.focus_request_is_allowed(
-                                    app,
-                                    self.window,
-                                    dispatch_cx.active_focus_roots.as_slice(),
-                                    focus,
-                                    Some(&dispatch_cx.focus_snapshot),
-                                )
-                            {
+                            let focus_requested_now =
+                                requested_focus.is_some() || requested_focus_target.is_some();
+                            if let Some(focus) = self.resolve_requested_focus(
+                                app,
+                                requested_focus,
+                                requested_focus_target,
+                            ) && self.focus_request_is_allowed(
+                                app,
+                                self.window,
+                                dispatch_cx.active_focus_roots.as_slice(),
+                                focus,
+                                Some(&dispatch_cx.focus_snapshot),
+                            ) {
                                 focus_requested = true;
                                 if let Some(prev) = self.focus {
                                     self.mark_invalidation(prev, Invalidation::Paint);
@@ -1847,7 +1863,7 @@ impl<H: UiHost> UiTree<H> {
                                 ) {
                                     self.scroll_node_into_view(app, focus);
                                 }
-                            } else if requested_focus.is_some() {
+                            } else if focus_requested_now {
                                 focus_requested = true;
                             }
 
@@ -1965,6 +1981,7 @@ impl<H: UiHost> UiTree<H> {
                                 scroll_handle_invalidations,
                                 scroll_target_invalidations,
                                 requested_focus,
+                                requested_focus_target,
                                 requested_capture,
                                 requested_cursor,
                                 notify_requested,
@@ -2001,6 +2018,7 @@ impl<H: UiHost> UiTree<H> {
                                     scroll_handle_invalidations: Vec::new(),
                                     scroll_target_invalidations: Vec::new(),
                                     requested_focus: None,
+                                    requested_focus_target: None,
                                     requested_capture: None,
                                     requested_cursor: None,
                                     notify_requested: false,
@@ -2013,6 +2031,7 @@ impl<H: UiHost> UiTree<H> {
                                     cx.scroll_handle_invalidations,
                                     cx.scroll_target_invalidations,
                                     cx.requested_focus,
+                                    cx.requested_focus_target,
                                     cx.requested_capture,
                                     cx.requested_cursor,
                                     cx.notify_requested,
@@ -2025,6 +2044,7 @@ impl<H: UiHost> UiTree<H> {
                                 || !scroll_handle_invalidations.is_empty()
                                 || !scroll_target_invalidations.is_empty()
                                 || requested_focus.is_some()
+                                || requested_focus_target.is_some()
                                 || requested_capture.is_some()
                                 || notify_requested
                             {
@@ -2065,15 +2085,19 @@ impl<H: UiHost> UiTree<H> {
                                 );
                             }
 
-                            if let Some(focus) = requested_focus
-                                && self.focus_request_is_allowed(
-                                    app,
-                                    self.window,
-                                    dispatch_cx.active_focus_roots.as_slice(),
-                                    focus,
-                                    Some(&dispatch_cx.focus_snapshot),
-                                )
-                            {
+                            let focus_requested_now =
+                                requested_focus.is_some() || requested_focus_target.is_some();
+                            if let Some(focus) = self.resolve_requested_focus(
+                                app,
+                                requested_focus,
+                                requested_focus_target,
+                            ) && self.focus_request_is_allowed(
+                                app,
+                                self.window,
+                                dispatch_cx.active_focus_roots.as_slice(),
+                                focus,
+                                Some(&dispatch_cx.focus_snapshot),
+                            ) {
                                 focus_requested = true;
                                 if let Some(prev) = self.focus {
                                     self.mark_invalidation(prev, Invalidation::Paint);
@@ -2081,7 +2105,7 @@ impl<H: UiHost> UiTree<H> {
                                 self.focus = Some(focus);
                                 self.mark_invalidation(focus, Invalidation::Paint);
                                 self.scroll_node_into_view(app, focus);
-                            } else if requested_focus.is_some() {
+                            } else if focus_requested_now {
                                 focus_requested = true;
                             }
 
@@ -2136,6 +2160,7 @@ impl<H: UiHost> UiTree<H> {
                                 scroll_handle_invalidations,
                                 scroll_target_invalidations,
                                 requested_focus,
+                                requested_focus_target,
                                 requested_capture,
                                 requested_cursor,
                                 notify_requested,
@@ -2172,6 +2197,7 @@ impl<H: UiHost> UiTree<H> {
                                     scroll_handle_invalidations: Vec::new(),
                                     scroll_target_invalidations: Vec::new(),
                                     requested_focus: None,
+                                    requested_focus_target: None,
                                     requested_capture: None,
                                     requested_cursor: None,
                                     notify_requested: false,
@@ -2184,6 +2210,7 @@ impl<H: UiHost> UiTree<H> {
                                     cx.scroll_handle_invalidations,
                                     cx.scroll_target_invalidations,
                                     cx.requested_focus,
+                                    cx.requested_focus_target,
                                     cx.requested_capture,
                                     cx.requested_cursor,
                                     cx.notify_requested,
@@ -2196,6 +2223,7 @@ impl<H: UiHost> UiTree<H> {
                                 || !scroll_handle_invalidations.is_empty()
                                 || !scroll_target_invalidations.is_empty()
                                 || requested_focus.is_some()
+                                || requested_focus_target.is_some()
                                 || requested_capture.is_some()
                                 || notify_requested
                             {
@@ -2236,15 +2264,19 @@ impl<H: UiHost> UiTree<H> {
                                 );
                             }
 
-                            if let Some(focus) = requested_focus
-                                && self.focus_request_is_allowed(
-                                    app,
-                                    self.window,
-                                    dispatch_cx.active_focus_roots.as_slice(),
-                                    focus,
-                                    Some(&dispatch_cx.focus_snapshot),
-                                )
-                            {
+                            let focus_requested_now =
+                                requested_focus.is_some() || requested_focus_target.is_some();
+                            if let Some(focus) = self.resolve_requested_focus(
+                                app,
+                                requested_focus,
+                                requested_focus_target,
+                            ) && self.focus_request_is_allowed(
+                                app,
+                                self.window,
+                                dispatch_cx.active_focus_roots.as_slice(),
+                                focus,
+                                Some(&dispatch_cx.focus_snapshot),
+                            ) {
                                 focus_requested = true;
                                 if let Some(prev) = self.focus {
                                     self.mark_invalidation(prev, Invalidation::Paint);
@@ -2252,7 +2284,7 @@ impl<H: UiHost> UiTree<H> {
                                 self.focus = Some(focus);
                                 self.mark_invalidation(focus, Invalidation::Paint);
                                 self.scroll_node_into_view(app, focus);
-                            } else if requested_focus.is_some() {
+                            } else if focus_requested_now {
                                 focus_requested = true;
                             }
 
@@ -2329,6 +2361,7 @@ impl<H: UiHost> UiTree<H> {
                     scroll_handle_invalidations,
                     scroll_target_invalidations,
                     requested_focus,
+                    requested_focus_target,
                     requested_capture,
                     requested_cursor,
                     notify_requested,
@@ -2365,6 +2398,7 @@ impl<H: UiHost> UiTree<H> {
                         scroll_handle_invalidations: Vec::new(),
                         scroll_target_invalidations: Vec::new(),
                         requested_focus: None,
+                        requested_focus_target: None,
                         requested_capture: None,
                         requested_cursor: None,
                         notify_requested: false,
@@ -2377,6 +2411,7 @@ impl<H: UiHost> UiTree<H> {
                         cx.scroll_handle_invalidations,
                         cx.scroll_target_invalidations,
                         cx.requested_focus,
+                        cx.requested_focus_target,
                         cx.requested_capture,
                         cx.requested_cursor,
                         cx.notify_requested,
@@ -2388,6 +2423,7 @@ impl<H: UiHost> UiTree<H> {
                     || !scroll_handle_invalidations.is_empty()
                     || !scroll_target_invalidations.is_empty()
                     || requested_focus.is_some()
+                    || requested_focus_target.is_some()
                     || requested_capture.is_some()
                     || notify_requested
                 {
@@ -2428,7 +2464,10 @@ impl<H: UiHost> UiTree<H> {
                     );
                 }
 
-                if let Some(focus) = requested_focus
+                let focus_requested_now =
+                    requested_focus.is_some() || requested_focus_target.is_some();
+                if let Some(focus) =
+                    self.resolve_requested_focus(app, requested_focus, requested_focus_target)
                     && self.focus_request_is_allowed(
                         app,
                         self.window,
@@ -2451,7 +2490,7 @@ impl<H: UiHost> UiTree<H> {
                     if !matches!(event, Event::Pointer(_) | Event::PointerCancel(_)) {
                         self.scroll_node_into_view(app, focus);
                     }
-                } else if requested_focus.is_some() {
+                } else if focus_requested_now {
                     focus_requested = true;
                 }
 
