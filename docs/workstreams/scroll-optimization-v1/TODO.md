@@ -51,6 +51,13 @@ Status: Active
 - [x] Lock the contract with a focused regression that proves a stale parent path can keep
   `node_layer(...)` non-`None` without keeping the detached node alive.
 
+## Follow-on slice — Runtime-owned subtree updates must refresh cache-root membership
+
+- [x] Refresh ancestor cache-root membership lists when retained virtual-list reconcile mutates a
+  subtree under a reused cache root without rerendering the cache-root closure.
+- [x] Lock the contract with a regression asserting the cache-root membership list includes the new
+  visible retained rows after the runtime-owned window update.
+
 ## Follow-on slice — Interaction targets resolve authoritative live attached nodes
 
 - [x] Replace hover/pressed interaction target bookkeeping so runtime state stores element identity

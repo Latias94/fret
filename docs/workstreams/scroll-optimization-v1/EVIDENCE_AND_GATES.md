@@ -257,6 +257,32 @@ Audit note (2026-04-04):
   proves the keep-alive regression directly: a removed retained keep-alive root no longer survives
   as a liveness root, and the raw GC walk ignores dead root ids.
 
+## Follow-on slice — Runtime-owned subtree updates must refresh cache-root membership
+
+This follow-on slice locks the contract that:
+
+- `view_cache_elements_for_root(...)` remains an authoritative keep-alive source only if runtime-owned
+  subtree mutations refresh the membership list after they update the retained subtree,
+- retained virtual-list reconcile under a reused cache root must refresh ancestor cache-root
+  membership lists even though the cache-root closure itself did not rerender,
+- later cache-hit frames must keep touching the new visible retained rows rather than an older
+  window snapshot.
+
+Verified gates (2026-04-04):
+
+- `cargo test -p fret-ui retained_virtual_list_host_updates_window_without_rerendering_view_cache_root -- --nocapture`
+  - Result: passed.
+- `cargo test -p fret-ui retained_virtual_list_ -- --nocapture`
+  - Result: passed.
+
+Audit note (2026-04-04):
+
+- `crates/fret-ui/src/declarative/mount.rs` now refreshes ancestor cache-root membership lists
+  after retained virtual-list reconcile updates the live subtree under a reused cache root.
+- `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs::retained_virtual_list_host_updates_window_without_rerendering_view_cache_root`
+  now asserts the cache-root membership list includes the newly visible retained rows after the
+  runtime-owned window update.
+
 ## Follow-on slice — Interaction targets resolve authoritative live attached nodes
 
 This follow-on slice locks the contract that:
@@ -374,6 +400,8 @@ Audit note (2026-04-04):
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui model_observation_invalidation_ignores_stale_detached_node_entry global_observation_invalidation_ignores_stale_detached_node_entry seeded_live_node_resolution_ignores_stale_detached_node_entry seeded_reusable_node_resolution_reuses_detached_seed_when_no_live_attached_node_exists`
 - GC liveness ignores parent-pointer-derived layer membership:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui gc_prunes_removed_retained_keep_alive_roots_before_reachability gc_retention_ignores_stale_parent_pointer_layer_membership gc_reachability_unions_ui_and_window_frame_children touch_existing_subtree_can_walk_window_frame_children --status-level fail`
+- Retained virtual-list window updates refresh cache-root membership without rerendering the cache root:
+  - `cargo test -p fret-ui retained_virtual_list_host_updates_window_without_rerendering_view_cache_root -- --nocapture`
 - Hover/pressed/timer/selection interaction targets prefer live attached nodes over stale
   detached seeds:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui hovered_pressable_clear_uses_latest_node_for_same_element pressed_pressable_clear_uses_latest_node_for_same_element timer_dispatch_resolves_live_attached_element_target_over_stale_detached_seed final_layout_frame_syncs_hovered_pressable_node_to_live_attached_element selectable_text_set_text_selection_ignores_stale_detached_node_entry selectable_text_sets_active_text_selection`
@@ -463,6 +491,8 @@ Audit note (2026-04-04):
   - `crates/fret-ui/src/tree/tests/children.rs`
 - Declarative GC liveness reachability / retain-time decisions:
   - `crates/fret-ui/src/declarative/mount.rs`
+- Retained virtual-list membership refresh under cache-hit runtime-owned updates:
+  - `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs`
 - Best-effort window snapshot / command-availability overlay helpers:
   - `crates/fret-runtime/src/window_input_context.rs`
   - `crates/fret-runtime/src/window_command_gating/helpers.rs`

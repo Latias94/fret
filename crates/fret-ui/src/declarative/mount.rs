@@ -2207,6 +2207,11 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             props.visible_items = desired_items;
         }
 
+        // Retained virtual-list reconcile mutates descendants under a live cache root without
+        // rerendering the cache-root closure. Refresh ancestor cache-root membership lists so
+        // later cache-hit frames touch the updated subtree rather than an older visible window.
+        refresh_view_cache_membership_for_ancestor_roots(ui, window_state, window_frame, node);
+
         let reconcile_time_us = reconcile_start.elapsed().as_micros().min(u32::MAX as u128) as u32;
 
         ui.debug_record_retained_virtual_list_reconcile(
@@ -2530,6 +2535,33 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
         push_existing_subtree_children(ui, window_frame, node, &mut stack);
     }
     out
+}
+
+fn refresh_view_cache_membership_for_ancestor_roots<H: UiHost>(
+    ui: &UiTree<H>,
+    window_state: &mut crate::elements::WindowElementState,
+    window_frame: &WindowFrame,
+    node: NodeId,
+) {
+    let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+    let mut current = Some(node);
+    while let Some(node) = current {
+        if let Some(record) = window_frame.instances.get(node)
+            && matches!(record.instance, ElementInstance::ViewCache(_))
+            && visited_roots.insert(record.element)
+        {
+            window_state.record_view_cache_subtree_elements(
+                record.element,
+                collect_declarative_elements_for_existing_subtree(
+                    ui,
+                    window_state,
+                    window_frame,
+                    node,
+                ),
+            );
+        }
+        current = ui.node_parent(node);
+    }
 }
 
 #[cfg(test)]

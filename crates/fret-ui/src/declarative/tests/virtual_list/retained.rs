@@ -658,6 +658,12 @@ fn retained_virtual_list_reconcile_waits_for_authoritative_viewport_before_consu
 
 #[test]
 fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root() {
+    #[derive(Default)]
+    struct CapturedIds {
+        cache_root: Option<crate::elements::GlobalElementId>,
+        rows: std::collections::HashMap<usize, crate::elements::GlobalElementId>,
+    }
+
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -670,30 +676,44 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
         Size::new(Px(200.0), Px(30.0)),
     );
     let mut text = FakeTextService::default();
+    let captured_ids = Arc::new(std::sync::Mutex::new(CapturedIds::default()));
 
     fn build_list(
         cx: &mut ElementContext<'_, TestHost>,
         scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        captured_ids: &Arc<std::sync::Mutex<CapturedIds>>,
     ) -> AnyElement {
         let mut options = crate::element::VirtualListOptions::new(Px(10.0), 0);
         options.measure_mode = crate::element::VirtualListMeasureMode::Fixed;
         let mut layout = crate::element::LayoutStyle::default();
         layout.size.height = crate::element::Length::Fill;
 
+        {
+            let mut captured = captured_ids.lock().expect("capture cache root");
+            captured.cache_root = Some(cx.root_id());
+        }
+
         let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn =
             Arc::new(|i| i as crate::ItemKey);
 
+        let row_ids = Arc::clone(captured_ids);
         let row: crate::windowed_surface_host::RetainedVirtualListRowFn<TestHost> =
-            Arc::new(|cx, index| {
+            Arc::new(move |cx, index| {
                 let mut style = crate::element::LayoutStyle::default();
                 style.size.height = crate::element::Length::Px(Px(10.0));
-                cx.semantics(
+                let row_ids = Arc::clone(&row_ids);
+                cx.semantics_with_id(
                     crate::element::SemanticsProps {
                         role: fret_core::SemanticsRole::ListItem,
                         label: Some(Arc::<str>::from(format!("Row {index}"))),
                         ..Default::default()
                     },
-                    |cx| {
+                    move |cx, id| {
+                        row_ids
+                            .lock()
+                            .expect("capture row id")
+                            .rows
+                            .insert(index, id);
                         vec![cx.container(
                             crate::element::ContainerProps {
                                 layout: style,
@@ -720,6 +740,7 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
     // populated during layout, then allow the next render to build the initial children.
     for _frame in 0..2 {
         let scroll_handle = scroll_handle.clone();
+        let captured_ids = Arc::clone(&captured_ids);
         let root_node = render_root(
             &mut ui,
             &mut app,
@@ -730,7 +751,7 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
             move |cx| {
                 vec![
                     cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
-                        vec![build_list(cx, &scroll_handle)]
+                        vec![build_list(cx, &scroll_handle, &captured_ids)]
                     }),
                 ]
             },
@@ -751,6 +772,7 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
     for _frame in 0..6 {
         let renders = Arc::clone(&renders);
         let scroll_handle = scroll_handle.clone();
+        let captured_ids = Arc::clone(&captured_ids);
         let root_node = render_root(
             &mut ui,
             &mut app,
@@ -762,7 +784,7 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
                 vec![
                     cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
                         renders.fetch_add(1, Ordering::SeqCst);
-                        vec![build_list(cx, &scroll_handle)]
+                        vec![build_list(cx, &scroll_handle, &captured_ids)]
                     }),
                 ]
             },
@@ -867,6 +889,7 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
     for _frame in 0..2 {
         let renders_for_closure = Arc::clone(&renders);
         let scroll_handle = scroll_handle.clone();
+        let captured_ids = Arc::clone(&captured_ids);
         let root_node = render_root(
             &mut ui,
             &mut app,
@@ -878,7 +901,7 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
                 vec![
                     cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
                         renders_for_closure.fetch_add(1, Ordering::SeqCst);
-                        vec![build_list(cx, &scroll_handle)]
+                        vec![build_list(cx, &scroll_handle, &captured_ids)]
                     }),
                 ]
             },
@@ -953,4 +976,48 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
         "expected the reconciled window to include index {} (visible_indices={visible_indices:?})",
         expected_start + 2
     );
+
+    let (cache_root, expected_row_membership) = {
+        let captured = captured_ids.lock().expect("captured row ids");
+        (
+            captured.cache_root.expect("cache root id"),
+            vec![
+                (
+                    expected_start,
+                    *captured
+                        .rows
+                        .get(&expected_start)
+                        .expect("captured id for first expected row"),
+                ),
+                (
+                    expected_start + 1,
+                    *captured
+                        .rows
+                        .get(&(expected_start + 1))
+                        .expect("captured id for second expected row"),
+                ),
+                (
+                    expected_start + 2,
+                    *captured
+                        .rows
+                        .get(&(expected_start + 2))
+                        .expect("captured id for third expected row"),
+                ),
+            ],
+        )
+    };
+
+    app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _app| {
+        let window_state = runtime.for_window_mut(window);
+        let elements = window_state
+            .view_cache_elements_for_root(cache_root)
+            .expect("expected cache-root membership after retained-host reconcile");
+
+        for (index, row_id) in &expected_row_membership {
+            assert!(
+                elements.contains(row_id),
+                "expected cache-root membership to refresh after retained-host reconcile; missing row index {index} id {row_id:?} from {elements:?}"
+            );
+        }
+    });
 }
