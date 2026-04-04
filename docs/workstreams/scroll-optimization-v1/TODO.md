@@ -58,6 +58,15 @@ Status: Active
 - [x] Lock the contract with a regression asserting the cache-root membership list includes the new
   visible retained rows after the runtime-owned window update.
 
+## Follow-on slice — Recursive cache-root keep-alive closure must ignore stale nested roots
+
+- [x] Make the recursive keep-alive closure for `view_cache_reuse_roots -> view_cache_elements_for_root`
+  accept only elements that still resolve to a live attached node.
+- [x] Prevent stale nested cache-root membership lists from recursively widening the keep-alive
+  closure after structural removal or root replacement.
+- [x] Lock the contract with a focused regression proving stale nested cache roots no longer keep
+  detached descendants inside the keep-alive closure.
+
 ## Follow-on slice — Interaction targets resolve authoritative live attached nodes
 
 - [x] Replace hover/pressed interaction target bookkeeping so runtime state stores element identity

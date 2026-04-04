@@ -283,6 +283,35 @@ Audit note (2026-04-04):
   now asserts the cache-root membership list includes the newly visible retained rows after the
   runtime-owned window update.
 
+## Follow-on slice — Recursive cache-root keep-alive closure must ignore stale nested roots
+
+This follow-on slice locks the contract that:
+
+- `view_cache_reuse_roots -> view_cache_elements_for_root` recursive keep-alive closure is only
+  authoritative for elements that still resolve to a live attached node,
+- a stale nested cache-root membership list must not recursively widen keep-alive closure after the
+  nested root is structurally detached or otherwise no longer attached to the layer tree,
+- valid live nested cache roots still remain part of the closure, so the existing nested cache-root
+  membership contract stays intact.
+
+Verified gates (2026-04-04):
+
+- `cargo test -p fret-ui keep_alive_view_cache_membership_ignores_stale_nested_cache_roots -- --nocapture`
+  - Result: passed.
+- `cargo test -p fret-ui view_cache_subtree_membership_includes_nested_cache_roots -- --nocapture`
+  - Result: passed.
+- `cargo test -p fret-ui gc_ -- --nocapture`
+  - Result: passed.
+
+Audit note (2026-04-04):
+
+- `crates/fret-ui/src/declarative/mount.rs` now centralizes recursive keep-alive closure
+  construction and filters both top-level reuse roots and recursively discovered nested cache roots
+  through live attached node resolution before treating their membership lists as authoritative.
+- `crates/fret-ui/src/declarative/mount.rs::keep_alive_view_cache_membership_ignores_stale_nested_cache_roots`
+  proves the regression directly: recorded membership alone is no longer sufficient to recurse into
+  a stale nested cache root or keep its detached descendants alive.
+
 ## Follow-on slice — Interaction targets resolve authoritative live attached nodes
 
 This follow-on slice locks the contract that:
@@ -402,6 +431,9 @@ Audit note (2026-04-04):
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui gc_prunes_removed_retained_keep_alive_roots_before_reachability gc_retention_ignores_stale_parent_pointer_layer_membership gc_reachability_unions_ui_and_window_frame_children touch_existing_subtree_can_walk_window_frame_children --status-level fail`
 - Retained virtual-list window updates refresh cache-root membership without rerendering the cache root:
   - `cargo test -p fret-ui retained_virtual_list_host_updates_window_without_rerendering_view_cache_root -- --nocapture`
+- Recursive keep-alive closure ignores stale nested cache roots while preserving valid nested membership:
+  - `cargo test -p fret-ui keep_alive_view_cache_membership_ignores_stale_nested_cache_roots -- --nocapture`
+  - `cargo test -p fret-ui view_cache_subtree_membership_includes_nested_cache_roots -- --nocapture`
 - Hover/pressed/timer/selection interaction targets prefer live attached nodes over stale
   detached seeds:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui hovered_pressable_clear_uses_latest_node_for_same_element pressed_pressable_clear_uses_latest_node_for_same_element timer_dispatch_resolves_live_attached_element_target_over_stale_detached_seed final_layout_frame_syncs_hovered_pressable_node_to_live_attached_element selectable_text_set_text_selection_ignores_stale_detached_node_entry selectable_text_sets_active_text_selection`
@@ -493,6 +525,8 @@ Audit note (2026-04-04):
   - `crates/fret-ui/src/declarative/mount.rs`
 - Retained virtual-list membership refresh under cache-hit runtime-owned updates:
   - `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs`
+- Recursive cache-root keep-alive closure filtering:
+  - `crates/fret-ui/src/declarative/mount.rs`
 - Best-effort window snapshot / command-availability overlay helpers:
   - `crates/fret-runtime/src/window_input_context.rs`
   - `crates/fret-runtime/src/window_command_gating/helpers.rs`

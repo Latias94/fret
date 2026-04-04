@@ -63,6 +63,10 @@
       "command": "cargo test -p fret-ui retained_virtual_list_host_updates_window_without_rerendering_view_cache_root -- --nocapture"
     },
     {
+      "name": "recursive-cache-root-keepalive-ignores-stale-nested-roots",
+      "command": "cargo test -p fret-ui keep_alive_view_cache_membership_ignores_stale_nested_cache_roots -- --nocapture"
+    },
+    {
       "name": "ecosystem-live-node-public-surface",
       "command": "CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui-kit apply_initial_focus_prefers_explicit_element resolve_restore_focus_prefers_trigger_and_falls_back_to_live_node resolve_restore_focus_skips_non_focusable_trigger resolve_branch_nodes_dedupes_and_preserves_order active_descendant_is_set_when_active_item_is_present_and_cleared_when_missing apply_initial_focus_ignores_removed_element_with_only_last_known_mapping resolve_branch_nodes_ignores_removed_trigger_with_only_last_known_mapping active_descendant_helper_ignores_removed_element_with_only_last_known_mapping table_active_descendant_semantics_resolves_from_declarative_active_row_relation --status-level fail"
     },

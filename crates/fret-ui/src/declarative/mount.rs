@@ -102,6 +102,52 @@ fn collect_live_retained_keep_alive_roots<H: UiHost>(
         .collect()
 }
 
+fn element_resolves_live_attached_node<H: UiHost>(
+    ui: &UiTree<H>,
+    window_state: &crate::elements::WindowElementState,
+    element: GlobalElementId,
+) -> bool {
+    let seeded = window_state.node_entry(element).map(|entry| entry.node);
+    ui.resolve_live_attached_node_for_element_seeded(element, seeded)
+        .is_some()
+}
+
+fn collect_keep_alive_view_cache_elements_in_place<H: UiHost>(
+    ui: &UiTree<H>,
+    window_state: &crate::elements::WindowElementState,
+    out: &mut HashSet<GlobalElementId>,
+    visited_roots: &mut HashSet<GlobalElementId>,
+    stack: &mut Vec<GlobalElementId>,
+) {
+    out.clear();
+    visited_roots.clear();
+    stack.clear();
+    stack.extend(window_state.view_cache_reuse_roots());
+
+    while let Some(root) = stack.pop() {
+        if !visited_roots.insert(root) {
+            continue;
+        }
+        if !element_resolves_live_attached_node(ui, window_state, root) {
+            continue;
+        }
+        let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+            continue;
+        };
+        for &element in elements {
+            if !element_resolves_live_attached_node(ui, window_state, element) {
+                continue;
+            }
+            out.insert(element);
+            if !visited_roots.contains(&element)
+                && window_state.view_cache_elements_for_root(element).is_some()
+            {
+                stack.push(element);
+            }
+        }
+    }
+}
+
 fn debug_path_for_element(
     runtime: &crate::elements::ElementRuntime,
     window: AppWindowId,
@@ -552,60 +598,30 @@ where
             if keep_alive_view_cache_scratch_disabled() {
                 keep_alive_view_cache_elements = HashSet::new();
                 keep_alive_view_cache_elements_from_scratch = false;
-
                 let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
-                let mut stack: Vec<GlobalElementId> =
-                    window_state.view_cache_reuse_roots().collect();
-
-                while let Some(root) = stack.pop() {
-                    if !visited_roots.insert(root) {
-                        continue;
-                    }
-                    let Some(elements) = window_state.view_cache_elements_for_root(root) else {
-                        continue;
-                    };
-                    for &element in elements {
-                        keep_alive_view_cache_elements.insert(element);
-                        if !visited_roots.contains(&element)
-                            && window_state.view_cache_elements_for_root(element).is_some()
-                        {
-                            stack.push(element);
-                        }
-                    }
-                }
+                let mut stack: Vec<GlobalElementId> = Vec::new();
+                collect_keep_alive_view_cache_elements_in_place(
+                    ui,
+                    window_state,
+                    &mut keep_alive_view_cache_elements,
+                    &mut visited_roots,
+                    &mut stack,
+                );
             } else {
                 keep_alive_view_cache_elements =
                     window_state.take_scratch_view_cache_keep_alive_elements();
                 keep_alive_view_cache_elements_from_scratch = true;
-                keep_alive_view_cache_elements.clear();
-
                 {
                     let mut visited_roots =
                         window_state.take_scratch_view_cache_keep_alive_visited_roots();
                     let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
-                    visited_roots.clear();
-                    stack.clear();
-                    stack.extend(window_state.view_cache_reuse_roots());
-
-                    while let Some(root) = stack.pop() {
-                        if !visited_roots.insert(root) {
-                            continue;
-                        }
-                        let Some(elements) = window_state.view_cache_elements_for_root(root) else {
-                            continue;
-                        };
-                        for &element in elements {
-                            keep_alive_view_cache_elements.insert(element);
-                            if !visited_roots.contains(&element)
-                                && window_state.view_cache_elements_for_root(element).is_some()
-                            {
-                                stack.push(element);
-                            }
-                        }
-                    }
-
-                    visited_roots.clear();
-                    stack.clear();
+                    collect_keep_alive_view_cache_elements_in_place(
+                        ui,
+                        window_state,
+                        &mut keep_alive_view_cache_elements,
+                        &mut visited_roots,
+                        &mut stack,
+                    );
                     window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
                     window_state.restore_scratch_view_cache_keep_alive_stack(stack);
                 }
@@ -1064,60 +1080,30 @@ where
             if keep_alive_view_cache_scratch_disabled() {
                 keep_alive_view_cache_elements = HashSet::new();
                 keep_alive_view_cache_elements_from_scratch = false;
-
                 let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
-                let mut stack: Vec<GlobalElementId> =
-                    window_state.view_cache_reuse_roots().collect();
-
-                while let Some(root) = stack.pop() {
-                    if !visited_roots.insert(root) {
-                        continue;
-                    }
-                    let Some(elements) = window_state.view_cache_elements_for_root(root) else {
-                        continue;
-                    };
-                    for &element in elements {
-                        keep_alive_view_cache_elements.insert(element);
-                        if !visited_roots.contains(&element)
-                            && window_state.view_cache_elements_for_root(element).is_some()
-                        {
-                            stack.push(element);
-                        }
-                    }
-                }
+                let mut stack: Vec<GlobalElementId> = Vec::new();
+                collect_keep_alive_view_cache_elements_in_place(
+                    ui,
+                    window_state,
+                    &mut keep_alive_view_cache_elements,
+                    &mut visited_roots,
+                    &mut stack,
+                );
             } else {
                 keep_alive_view_cache_elements =
                     window_state.take_scratch_view_cache_keep_alive_elements();
                 keep_alive_view_cache_elements_from_scratch = true;
-                keep_alive_view_cache_elements.clear();
-
                 {
                     let mut visited_roots =
                         window_state.take_scratch_view_cache_keep_alive_visited_roots();
                     let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
-                    visited_roots.clear();
-                    stack.clear();
-                    stack.extend(window_state.view_cache_reuse_roots());
-
-                    while let Some(root) = stack.pop() {
-                        if !visited_roots.insert(root) {
-                            continue;
-                        }
-                        let Some(elements) = window_state.view_cache_elements_for_root(root) else {
-                            continue;
-                        };
-                        for &element in elements {
-                            keep_alive_view_cache_elements.insert(element);
-                            if !visited_roots.contains(&element)
-                                && window_state.view_cache_elements_for_root(element).is_some()
-                            {
-                                stack.push(element);
-                            }
-                        }
-                    }
-
-                    visited_roots.clear();
-                    stack.clear();
+                    collect_keep_alive_view_cache_elements_in_place(
+                        ui,
+                        window_state,
+                        &mut keep_alive_view_cache_elements,
+                        &mut visited_roots,
+                        &mut stack,
+                    );
                     window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
                     window_state.restore_scratch_view_cache_keep_alive_stack(stack);
                 }
@@ -2931,6 +2917,77 @@ mod tests {
             ),
             GcNodeRetentionDecision::Drop
         ));
+    }
+
+    #[test]
+    fn keep_alive_view_cache_membership_ignores_stale_nested_cache_roots() {
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let outer_node = ui.create_node(TestWidget);
+        let stale_inner_node = ui.create_node(TestWidget);
+        let stale_leaf_node = ui.create_node(TestWidget);
+        let outer = GlobalElementId(960);
+        let inner = GlobalElementId(961);
+        let leaf = GlobalElementId(962);
+
+        ui.set_root(outer_node);
+        ui.set_node_element(outer_node, Some(outer));
+        ui.set_node_element(stale_inner_node, Some(inner));
+        ui.set_node_element(stale_leaf_node, Some(leaf));
+
+        let mut window_state = crate::elements::WindowElementState::default();
+        window_state.set_node_entry(
+            outer,
+            NodeEntry {
+                node: outer_node,
+                last_seen_frame: FrameId(1),
+                root: outer,
+            },
+        );
+        window_state.set_node_entry(
+            inner,
+            NodeEntry {
+                node: stale_inner_node,
+                last_seen_frame: FrameId(0),
+                root: outer,
+            },
+        );
+        window_state.set_node_entry(
+            leaf,
+            NodeEntry {
+                node: stale_leaf_node,
+                last_seen_frame: FrameId(0),
+                root: outer,
+            },
+        );
+        window_state.mark_view_cache_reuse_root(outer);
+        window_state.record_view_cache_subtree_elements(outer, vec![outer, inner, leaf]);
+        window_state.record_view_cache_subtree_elements(inner, vec![inner, leaf]);
+
+        let mut keep_alive_view_cache_elements: HashSet<GlobalElementId> = HashSet::new();
+        let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+        let mut stack: Vec<GlobalElementId> = Vec::new();
+        collect_keep_alive_view_cache_elements_in_place(
+            &ui,
+            &window_state,
+            &mut keep_alive_view_cache_elements,
+            &mut visited_roots,
+            &mut stack,
+        );
+
+        assert!(
+            keep_alive_view_cache_elements.contains(&outer),
+            "expected live reused cache root to stay in the keep-alive closure"
+        );
+        assert!(
+            !keep_alive_view_cache_elements.contains(&inner),
+            "stale nested cache root membership must not recurse into detached roots"
+        );
+        assert!(
+            !keep_alive_view_cache_elements.contains(&leaf),
+            "stale nested descendants must not remain in the keep-alive closure"
+        );
     }
 }
 
