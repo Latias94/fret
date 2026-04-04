@@ -210,6 +210,21 @@ This follow-on slice locks the contract that:
 - view-cache GC / retained virtual-list reconcile roots must ignore detached stale `node_entry`
   seeds instead of keeping them alive as authoritative rebuild roots.
 
+## Follow-on slice — Interaction targets resolve authoritative live attached nodes
+
+This follow-on slice locks the contract that:
+
+- hover/pressed/timer/selection runtime state may retain element identity across frames, but
+  authoritative node resolution must happen against the live attached `UiTree` rather than by
+  directly trusting a stale detached `node_entry(element)`,
+- retained interaction target nodes are cache-like seeds that must be refreshed at final
+  layout-frame commit, so a same-element rebuild/remount cannot keep clearing or dispatching to the
+  old detached node,
+- event helpers may carry `(element, node)` pairs when they already have a live dispatch target,
+  but clearing or later dispatch must still consume the authoritative live node snapshot,
+- selectable-text active-selection routing must keep targeting the live attached node even when
+  retained selection state or `node_entry` was seeded with a stale detached node.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -246,6 +261,9 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui declarative_pointer_region_focus_request_ignores_stale_detached_node_entry`
 - Declarative model/global invalidation and rebuild seed resolution prefer live attached nodes:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui model_observation_invalidation_ignores_stale_detached_node_entry global_observation_invalidation_ignores_stale_detached_node_entry seeded_live_node_resolution_ignores_stale_detached_node_entry seeded_reusable_node_resolution_reuses_detached_seed_when_no_live_attached_node_exists`
+- Hover/pressed/timer/selection interaction targets prefer live attached nodes over stale
+  detached seeds:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui hovered_pressable_clear_uses_latest_node_for_same_element pressed_pressable_clear_uses_latest_node_for_same_element timer_dispatch_resolves_live_attached_element_target_over_stale_detached_seed final_layout_frame_syncs_hovered_pressable_node_to_live_attached_element selectable_text_set_text_selection_ignores_stale_detached_node_entry selectable_text_sets_active_text_selection`
 - Detached dirty cache roots are pruned before contained relayout:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups`
 - Detached pending barrier relayouts are pruned before execution:

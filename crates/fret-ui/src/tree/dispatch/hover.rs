@@ -106,13 +106,13 @@ impl<H: UiHost> UiTree<H> {
         );
     }
 
-    pub(super) fn pressable_element_for_hit(
+    pub(super) fn pressable_target_for_hit(
         &self,
         app: &mut H,
         window: AppWindowId,
         hit: Option<NodeId>,
         snapshot: Option<&UiDispatchSnapshot>,
-    ) -> Option<crate::elements::GlobalElementId> {
+    ) -> Option<(crate::elements::GlobalElementId, NodeId)> {
         declarative::with_window_frame(app, window, |window_frame| {
             let window_frame = window_frame?;
             let mut node = hit;
@@ -120,7 +120,7 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(record) = window_frame.instances.get(id)
                     && matches!(record.instance, declarative::ElementInstance::Pressable(_))
                 {
-                    return Some(record.element);
+                    return Some((record.element, id));
                 }
                 node = self.snapshot_parent_or_retained(snapshot, id);
             }
@@ -142,11 +142,10 @@ impl<H: UiHost> UiTree<H> {
         invalidation_visited: &mut HashMap<NodeId, u8>,
         needs_redraw: &mut bool,
     ) {
-        let hovered_pressable =
-            self.pressable_element_for_hit(app, window, hit_for_hover, snapshot);
+        let hovered_pressable = self.pressable_target_for_hit(app, window, hit_for_hover, snapshot);
 
         let (prev_element, prev_node, next_element, next_node) =
-            crate::elements::update_hovered_pressable(app, window, hovered_pressable);
+            crate::elements::update_hovered_pressable_with_node(app, window, hovered_pressable);
         if prev_node.is_some() || next_node.is_some() {
             *needs_redraw = true;
             self.debug_record_hover_edge_pressable();
@@ -210,9 +209,13 @@ impl<H: UiHost> UiTree<H> {
         // Raw hover is pressable-targeted hover derived directly from hit testing, regardless of
         // component-local interactivity policy (e.g. disabled scopes).
         let hovered_pressable_raw =
-            self.pressable_element_for_hit(app, window, hit_for_hover, snapshot);
+            self.pressable_target_for_hit(app, window, hit_for_hover, snapshot);
         let (prev_raw_element, prev_raw_node, next_raw_element, next_raw_node) =
-            crate::elements::update_hovered_pressable_raw(app, window, hovered_pressable_raw);
+            crate::elements::update_hovered_pressable_raw_with_node(
+                app,
+                window,
+                hovered_pressable_raw,
+            );
         if prev_raw_node.is_some() || next_raw_node.is_some() {
             *needs_redraw = true;
             if let Some(node) = prev_raw_node {
@@ -249,7 +252,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let hovered_pressable_raw_below_barrier = if hit_for_raw_below_barrier.is_some() {
-            self.pressable_element_for_hit(app, window, hit_for_raw_below_barrier, snapshot)
+            self.pressable_target_for_hit(app, window, hit_for_raw_below_barrier, snapshot)
         } else if let (Some(barrier_root), Some(position)) = (barrier_root, position) {
             let mut roots: Vec<NodeId> = Vec::new();
             let mut hit_barrier = false;
@@ -288,7 +291,7 @@ impl<H: UiHost> UiTree<H> {
                         roots.as_slice(),
                         Some(barrier_root),
                     );
-                    self.pressable_element_for_hit(app, window, hit, Some(&snapshot))
+                    self.pressable_target_for_hit(app, window, hit, Some(&snapshot))
                 }
             }
         } else {
@@ -296,7 +299,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let (prev_below_element, prev_below_node, next_below_element, next_below_node) =
-            crate::elements::update_hovered_pressable_raw_below_barrier(
+            crate::elements::update_hovered_pressable_raw_below_barrier_with_node(
                 app,
                 window,
                 hovered_pressable_raw_below_barrier,

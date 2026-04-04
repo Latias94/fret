@@ -494,9 +494,11 @@ pub(super) fn handle_pressable<H: UiHost>(
                 // activation.
                 cx.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
                 cx.capture_pointer(cx.node);
-                if let Some(prev_node) =
-                    crate::elements::set_pressed_pressable(&mut *cx.app, window, Some(this.element))
-                {
+                if let Some(prev_node) = crate::elements::set_pressed_pressable_with_node(
+                    &mut *cx.app,
+                    window,
+                    Some((this.element, cx.node)),
+                ) {
                     cx.invalidate(prev_node, Invalidation::Paint);
                 }
                 crate::elements::with_element_state(
@@ -732,9 +734,11 @@ pub(super) fn handle_pressable<H: UiHost>(
             if !props.key_activation.allows(*key) {
                 return;
             }
-            if let Some(prev_node) =
-                crate::elements::set_pressed_pressable(&mut *cx.app, window, Some(this.element))
-            {
+            if let Some(prev_node) = crate::elements::set_pressed_pressable_with_node(
+                &mut *cx.app,
+                window,
+                Some((this.element, cx.node)),
+            ) {
                 cx.invalidate(prev_node, Invalidation::Paint);
             }
             cx.invalidate_self(Invalidation::Paint);

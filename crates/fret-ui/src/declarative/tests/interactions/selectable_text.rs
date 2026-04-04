@@ -1822,6 +1822,7 @@ fn selectable_text_sets_active_text_selection() {
         Some(crate::elements::ActiveTextSelection {
             root: crate::elements::global_root(window, root_name),
             element,
+            node: selectable_node,
         }),
         "expected active text selection to be tracked while selection is non-empty"
     );
@@ -1840,6 +1841,109 @@ fn selectable_text_sets_active_text_selection() {
     assert_eq!(
         active, None,
         "expected active text selection to clear when selection is collapsed"
+    );
+}
+
+#[test]
+fn selectable_text_set_text_selection_ignores_stale_detached_node_entry() {
+    use crate::elements::NodeEntry;
+
+    struct DetachedDummy;
+
+    impl<H: UiHost> Widget<H> for DetachedDummy {
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            Size::new(Px(0.0), Px(0.0))
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let rich = attributed_plain("hello world");
+    let root_name = "selectable-text-stale-active-selection";
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        root_name,
+        |cx| vec![cx.selectable_text(rich.clone())],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    let record =
+        crate::declarative::frame::element_record_for_node(&mut app, window, selectable_node)
+            .expect("selectable record");
+    let element = record.element;
+
+    let pos = Point::new(Px(5.0), Px(5.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let stale_detached = ui.create_node_for_element(element, DetachedDummy);
+    let frame_id = app.frame_id();
+    crate::elements::with_window_state(&mut app, window, |st| {
+        st.set_node_entry(
+            element,
+            NodeEntry {
+                node: stale_detached,
+                last_seen_frame: frame_id,
+                root: crate::elements::global_root(window, root_name),
+            },
+        );
+        st.set_active_text_selection(Some(crate::elements::ActiveTextSelection {
+            root: crate::elements::global_root(window, root_name),
+            element,
+            node: stale_detached,
+        }));
+    });
+
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        root_name,
+        |cx| vec![cx.selectable_text(rich.clone())],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::SetTextSelection {
+            anchor: 0,
+            focus: 0,
+        },
+    );
+
+    let active =
+        crate::elements::with_window_state(&mut app, window, |st| st.active_text_selection());
+    assert_eq!(
+        active, None,
+        "expected SetTextSelection dispatch to keep targeting the live attached selectable-text node even when the retained active-selection state and node_entry were seeded with a stale detached node"
     );
 }
 

@@ -26,7 +26,7 @@ use super::GlobalElementId;
 use super::hash::stable_hash;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) enum TimerTarget {
+pub(crate) enum TimerTarget {
     Element(GlobalElementId),
     Node(NodeId),
 }
@@ -452,9 +452,13 @@ pub struct WindowElementState {
     pub(super) focused_element: Option<GlobalElementId>,
     pub(super) active_text_selection: Option<ActiveTextSelection>,
     pub(super) hovered_pressable: Option<GlobalElementId>,
+    pub(super) hovered_pressable_node: Option<NodeId>,
     pub(super) hovered_pressable_raw: Option<GlobalElementId>,
+    pub(super) hovered_pressable_raw_node: Option<NodeId>,
     pub(super) hovered_pressable_raw_below_barrier: Option<GlobalElementId>,
+    pub(super) hovered_pressable_raw_below_barrier_node: Option<NodeId>,
     pub(super) pressed_pressable: Option<GlobalElementId>,
+    pub(super) pressed_pressable_node: Option<NodeId>,
     pub(super) hovered_hover_region: Option<GlobalElementId>,
     pub(super) hovered_hover_region_node: Option<NodeId>,
     continuous_frames: Arc<AtomicUsize>,
@@ -472,6 +476,7 @@ pub struct WindowElementState {
 pub(crate) struct ActiveTextSelection {
     pub root: GlobalElementId,
     pub element: GlobalElementId,
+    pub node: NodeId,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1477,21 +1482,25 @@ impl WindowElementState {
             && !is_live_this_frame(id)
         {
             self.hovered_pressable = None;
+            self.hovered_pressable_node = None;
         }
         if let Some(id) = self.hovered_pressable_raw
             && !is_live_this_frame(id)
         {
             self.hovered_pressable_raw = None;
+            self.hovered_pressable_raw_node = None;
         }
         if let Some(id) = self.hovered_pressable_raw_below_barrier
             && !is_live_this_frame(id)
         {
             self.hovered_pressable_raw_below_barrier = None;
+            self.hovered_pressable_raw_below_barrier_node = None;
         }
         if let Some(id) = self.pressed_pressable
             && !is_live_this_frame(id)
         {
             self.pressed_pressable = None;
+            self.pressed_pressable_node = None;
         }
         if let Some(id) = self.hovered_hover_region
             && !is_live_this_frame(id)
@@ -1499,6 +1508,81 @@ impl WindowElementState {
             self.hovered_hover_region = None;
             self.hovered_hover_region_node = None;
         }
+    }
+
+    pub(crate) fn sync_interaction_target_nodes(
+        &mut self,
+        mut resolve: impl FnMut(GlobalElementId, Option<NodeId>) -> Option<NodeId>,
+    ) {
+        let hovered_pressable = self.hovered_pressable;
+        self.hovered_pressable_node = hovered_pressable.and_then(|element| {
+            resolve(
+                element,
+                self.hovered_pressable_node
+                    .or_else(|| self.node_entry(element).map(|entry| entry.node)),
+            )
+        });
+
+        let hovered_pressable_raw = self.hovered_pressable_raw;
+        self.hovered_pressable_raw_node = hovered_pressable_raw.and_then(|element| {
+            resolve(
+                element,
+                self.hovered_pressable_raw_node
+                    .or_else(|| self.node_entry(element).map(|entry| entry.node)),
+            )
+        });
+
+        let hovered_pressable_raw_below_barrier = self.hovered_pressable_raw_below_barrier;
+        self.hovered_pressable_raw_below_barrier_node = hovered_pressable_raw_below_barrier
+            .and_then(|element| {
+                resolve(
+                    element,
+                    self.hovered_pressable_raw_below_barrier_node
+                        .or_else(|| self.node_entry(element).map(|entry| entry.node)),
+                )
+            });
+
+        let pressed_pressable = self.pressed_pressable;
+        self.pressed_pressable_node = pressed_pressable.and_then(|element| {
+            resolve(
+                element,
+                self.pressed_pressable_node
+                    .or_else(|| self.node_entry(element).map(|entry| entry.node)),
+            )
+        });
+
+        let hovered_hover_region = self.hovered_hover_region;
+        self.hovered_hover_region_node = hovered_hover_region.and_then(|element| {
+            resolve(
+                element,
+                self.hovered_hover_region_node
+                    .or_else(|| self.node_entry(element).map(|entry| entry.node)),
+            )
+        });
+    }
+
+    pub(crate) fn sync_active_text_selection_node(
+        &mut self,
+        mut resolve: impl FnMut(GlobalElementId, Option<NodeId>) -> Option<NodeId>,
+    ) {
+        let Some(mut selection) = self.active_text_selection else {
+            return;
+        };
+
+        let Some(node) = resolve(
+            selection.element,
+            Some(selection.node)
+                .or_else(|| self.node_entry(selection.element).map(|entry| entry.node)),
+        ) else {
+            self.active_text_selection = None;
+            return;
+        };
+
+        selection.node = node;
+        if let Some(root) = self.node_entry(selection.element).map(|entry| entry.root) {
+            selection.root = root;
+        }
+        self.active_text_selection = Some(selection);
     }
 
     pub(crate) fn set_root_bounds(&mut self, root: GlobalElementId, bounds: Rect) {
@@ -2181,11 +2265,11 @@ impl WindowElementState {
                 .active_text_selection
                 .map(|sel| (sel.root, sel.element)),
             hovered_pressable: self.hovered_pressable,
-            hovered_pressable_node: node_for(self.hovered_pressable),
+            hovered_pressable_node: self.hovered_pressable_node,
             hovered_pressable_bounds: bounds_for(self.hovered_pressable),
             hovered_pressable_visual_bounds: visual_bounds_for(self.hovered_pressable),
             pressed_pressable: self.pressed_pressable,
-            pressed_pressable_node: node_for(self.pressed_pressable),
+            pressed_pressable_node: self.pressed_pressable_node,
             pressed_pressable_bounds: bounds_for(self.pressed_pressable),
             pressed_pressable_visual_bounds: visual_bounds_for(self.pressed_pressable),
             hovered_hover_region: self.hovered_hover_region,

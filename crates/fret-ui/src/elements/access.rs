@@ -10,6 +10,30 @@ use fret_runtime::{ModelId, TimerToken};
 
 use super::{ElementRuntime, GlobalElementId, WindowElementState};
 
+fn update_element_target(
+    current_element: &mut Option<GlobalElementId>,
+    current_node: &mut Option<NodeId>,
+    next_element: Option<GlobalElementId>,
+    next_node: Option<NodeId>,
+) -> (
+    Option<GlobalElementId>,
+    Option<NodeId>,
+    Option<GlobalElementId>,
+    Option<NodeId>,
+) {
+    let prev_element = *current_element;
+    let prev_node = *current_node;
+
+    if prev_element == next_element {
+        *current_node = next_node;
+        return (None, None, None, None);
+    }
+
+    *current_element = next_element;
+    *current_node = next_node;
+    (prev_element, prev_node, next_element, next_node)
+}
+
 pub(crate) fn with_observed_deps_for_element<H: UiHost, R>(
     app: &mut H,
     window: AppWindowId,
@@ -109,19 +133,33 @@ pub(crate) fn record_transient_event<H: UiHost>(
     });
 }
 
-pub(crate) fn timer_target_node<H: UiHost>(
+pub(crate) fn timer_target<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     token: TimerToken,
-) -> Option<NodeId> {
+) -> Option<crate::elements::runtime::TimerTarget> {
+    with_window_state(app, window, |st| st.timer_targets.get(&token).copied())
+}
+
+pub(crate) fn update_hovered_pressable_with_node<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    next: Option<(GlobalElementId, NodeId)>,
+) -> (
+    Option<GlobalElementId>,
+    Option<NodeId>,
+    Option<GlobalElementId>,
+    Option<NodeId>,
+) {
     with_window_state(app, window, |st| {
-        let target = st.timer_targets.get(&token).copied()?;
-        match target {
-            crate::elements::runtime::TimerTarget::Element(element) => {
-                st.node_entry(element).map(|e| e.node)
-            }
-            crate::elements::runtime::TimerTarget::Node(node) => Some(node),
-        }
+        let next_element = next.map(|(element, _)| element);
+        let next_node = next.map(|(_, node)| node);
+        update_element_target(
+            &mut st.hovered_pressable,
+            &mut st.hovered_pressable_node,
+            next_element,
+            next_node,
+        )
     })
 }
 
@@ -136,21 +174,19 @@ pub(crate) fn update_hovered_pressable<H: UiHost>(
     Option<NodeId>,
 ) {
     with_window_state(app, window, |st| {
-        let prev = st.hovered_pressable;
-        if prev == next {
-            return (None, None, None, None);
-        }
-        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
-        let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
-        st.hovered_pressable = next;
-        (prev, prev_node, next, next_node)
+        update_element_target(
+            &mut st.hovered_pressable,
+            &mut st.hovered_pressable_node,
+            next,
+            None,
+        )
     })
 }
 
-pub(crate) fn update_hovered_pressable_raw<H: UiHost>(
+pub(crate) fn update_hovered_pressable_raw_with_node<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
-    next: Option<GlobalElementId>,
+    next: Option<(GlobalElementId, NodeId)>,
 ) -> (
     Option<GlobalElementId>,
     Option<NodeId>,
@@ -158,21 +194,21 @@ pub(crate) fn update_hovered_pressable_raw<H: UiHost>(
     Option<NodeId>,
 ) {
     with_window_state(app, window, |st| {
-        let prev = st.hovered_pressable_raw;
-        if prev == next {
-            return (None, None, None, None);
-        }
-        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
-        let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
-        st.hovered_pressable_raw = next;
-        (prev, prev_node, next, next_node)
+        let next_element = next.map(|(element, _)| element);
+        let next_node = next.map(|(_, node)| node);
+        update_element_target(
+            &mut st.hovered_pressable_raw,
+            &mut st.hovered_pressable_raw_node,
+            next_element,
+            next_node,
+        )
     })
 }
 
-pub(crate) fn update_hovered_pressable_raw_below_barrier<H: UiHost>(
+pub(crate) fn update_hovered_pressable_raw_below_barrier_with_node<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
-    next: Option<GlobalElementId>,
+    next: Option<(GlobalElementId, NodeId)>,
 ) -> (
     Option<GlobalElementId>,
     Option<NodeId>,
@@ -180,14 +216,14 @@ pub(crate) fn update_hovered_pressable_raw_below_barrier<H: UiHost>(
     Option<NodeId>,
 ) {
     with_window_state(app, window, |st| {
-        let prev = st.hovered_pressable_raw_below_barrier;
-        if prev == next {
-            return (None, None, None, None);
-        }
-        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
-        let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
-        st.hovered_pressable_raw_below_barrier = next;
-        (prev, prev_node, next, next_node)
+        let next_element = next.map(|(element, _)| element);
+        let next_node = next.map(|(_, node)| node);
+        update_element_target(
+            &mut st.hovered_pressable_raw_below_barrier,
+            &mut st.hovered_pressable_raw_below_barrier_node,
+            next_element,
+            next_node,
+        )
     })
 }
 
@@ -202,14 +238,12 @@ pub(crate) fn update_hovered_hover_region<H: UiHost>(
     Option<NodeId>,
 ) {
     with_window_state(app, window, |st| {
-        let prev = st.hovered_hover_region;
-        if prev == next {
-            return (None, None, None, None);
-        }
-        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
-        let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
-        st.hovered_hover_region = next;
-        (prev, prev_node, next, next_node)
+        update_element_target(
+            &mut st.hovered_hover_region,
+            &mut st.hovered_hover_region_node,
+            next,
+            None,
+        )
     })
 }
 
@@ -224,16 +258,34 @@ pub(crate) fn update_hovered_hover_region_with_node<H: UiHost>(
     Option<NodeId>,
 ) {
     with_window_state(app, window, |st| {
-        let prev = st.hovered_hover_region;
-        let prev_node = st.hovered_hover_region_node;
         let next_element = next.map(|(element, _)| element);
         let next_node = next.map(|(_, node)| node);
-        if prev == next_element {
-            return (None, None, None, None);
+        update_element_target(
+            &mut st.hovered_hover_region,
+            &mut st.hovered_hover_region_node,
+            next_element,
+            next_node,
+        )
+    })
+}
+
+pub(crate) fn set_pressed_pressable_with_node<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    pressed: Option<(GlobalElementId, NodeId)>,
+) -> Option<NodeId> {
+    with_window_state(app, window, |st| {
+        let next_element = pressed.map(|(element, _)| element);
+        let next_node = pressed.map(|(_, node)| node);
+        let prev_element = st.pressed_pressable;
+        let prev_node = st.pressed_pressable_node;
+        if prev_element == next_element {
+            st.pressed_pressable_node = next_node;
+            return None;
         }
-        st.hovered_hover_region = next_element;
-        st.hovered_hover_region_node = next_node;
-        (prev, prev_node, next_element, next_node)
+        st.pressed_pressable = next_element;
+        st.pressed_pressable_node = next_node;
+        prev_node
     })
 }
 
@@ -247,8 +299,9 @@ pub(crate) fn set_pressed_pressable<H: UiHost>(
         if prev == pressed {
             return None;
         }
-        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
+        let prev_node = st.pressed_pressable_node;
         st.pressed_pressable = pressed;
+        st.pressed_pressable_node = None;
         prev_node
     })
 }
@@ -379,5 +432,56 @@ mod tests {
         assert_eq!(prev_node, Some(node));
         assert_eq!(next_element, None);
         assert_eq!(next_node, None);
+    }
+
+    #[test]
+    fn hovered_pressable_clear_uses_latest_node_for_same_element() {
+        let mut app = crate::test_host::TestHost::new();
+        let window = AppWindowId::default();
+        let element = GlobalElementId(11);
+        let node_a = NodeId::from(KeyData::from_ffi(11));
+        let node_b = NodeId::from(KeyData::from_ffi(12));
+
+        let (_prev_element, _prev_node, next_element, next_node) =
+            update_hovered_pressable_with_node(&mut app, window, Some((element, node_a)));
+        assert_eq!(next_element, Some(element));
+        assert_eq!(next_node, Some(node_a));
+
+        let (prev_element, prev_node, next_element, next_node) =
+            update_hovered_pressable_with_node(&mut app, window, Some((element, node_b)));
+        assert_eq!(
+            (prev_element, prev_node, next_element, next_node),
+            (None, None, None, None)
+        );
+
+        let (prev_element, prev_node, next_element, next_node) =
+            update_hovered_pressable(&mut app, window, None);
+        assert_eq!(prev_element, Some(element));
+        assert_eq!(prev_node, Some(node_b));
+        assert_eq!(next_element, None);
+        assert_eq!(next_node, None);
+    }
+
+    #[test]
+    fn pressed_pressable_clear_uses_latest_node_for_same_element() {
+        let mut app = crate::test_host::TestHost::new();
+        let window = AppWindowId::default();
+        let element = GlobalElementId(21);
+        let node_a = NodeId::from(KeyData::from_ffi(21));
+        let node_b = NodeId::from(KeyData::from_ffi(22));
+
+        assert_eq!(
+            set_pressed_pressable_with_node(&mut app, window, Some((element, node_a))),
+            None
+        );
+        assert_eq!(
+            set_pressed_pressable_with_node(&mut app, window, Some((element, node_b))),
+            None
+        );
+        assert_eq!(
+            set_pressed_pressable(&mut app, window, None),
+            Some(node_b),
+            "expected clearing the pressed target to invalidate the latest authoritative node for the element"
+        );
     }
 }

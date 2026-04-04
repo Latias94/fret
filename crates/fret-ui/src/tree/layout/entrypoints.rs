@@ -1197,6 +1197,12 @@ impl<H: UiHost> UiTree<H> {
             let frame_id = app.frame_id();
             crate::elements::with_window_state(app, window, |st| {
                 st.clear_stale_interaction_targets_for_frame(frame_id);
+                st.sync_active_text_selection_node(|element, seeded| {
+                    self.resolve_live_attached_node_for_element_seeded(element, seeded)
+                });
+                st.sync_interaction_target_nodes(|element, seeded| {
+                    self.resolve_live_attached_node_for_element_seeded(element, seeded)
+                });
             });
         }
 

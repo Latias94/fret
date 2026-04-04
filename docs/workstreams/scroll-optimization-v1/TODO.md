@@ -39,6 +39,21 @@ Status: Active
 - [x] Lock the declarative rebuild/invalidation live-node contract with focused stale-detached
   regression gates in `EVIDENCE_AND_GATES.md`.
 
+## Follow-on slice — Interaction targets resolve authoritative live attached nodes
+
+- [x] Replace hover/pressed interaction target bookkeeping so runtime state stores element identity
+  separately from the current authoritative live node instead of resolving `node_entry(element)`
+  at mutation time.
+- [x] Sync retained hover/pressed/hover-region target nodes against the live attached tree during
+  final layout-frame commit so same-element rebuild/remount does not keep clearing a stale node.
+- [x] Replace timer element-target dispatch so `Event::Timer` resolves the live attached node in
+  `UiTree` / dispatch instead of trusting `window_state.node_entry(element)` directly.
+- [x] Replace selectable-text active-selection dispatch so `Event::SetTextSelection` keeps routing
+  through the live attached selectable-text node even if retained runtime state or `node_entry`
+  was seeded with a stale detached node.
+- [x] Lock the interaction-target live-node contract with focused stale-detached regression gates
+  in `EVIDENCE_AND_GATES.md`.
+
 ## Gates-first checklist
 
 - [x] Confirm baseline scripts pass:

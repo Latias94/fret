@@ -423,113 +423,123 @@ impl<H: UiHost> UiTree<H> {
             let mut stopped = false;
             let mut broadcast_attempted = false;
 
-            let ((), timer_elapsed) = fret_perf::measure_span(
-                self.debug_enabled,
-                trace_enabled,
-                || {
-                    tracing::trace_span!(
-                        "fret.ui.dispatch.timer",
-                        window = ?window,
-                        frame_id = frame_id.0,
-                        token = token.0,
-                    )
-                },
-                || {
-                    if let Some(window) = window {
-                        timer_target = crate::elements::timer_target_node(app, window, token);
-                    }
-                    if let Some(node) = timer_target {
-                        let (targeted_stopped, _) = fret_perf::measure_span(
-                            self.debug_enabled,
-                            trace_enabled,
-                            || {
-                                tracing::trace_span!(
-                                    "fret.ui.dispatch.timer.targeted",
-                                    window = ?window,
-                                    frame_id = frame_id.0,
-                                    token = token.0,
-                                    node = ?node,
-                                )
-                            },
-                            || {
-                                self.dispatch_event_to_node_chain(
-                                    app,
-                                    services,
-                                    &timer_dispatch_cx,
-                                    &input_ctx,
-                                    node,
-                                    event,
-                                    &mut needs_redraw,
-                                    &mut invalidation_visited,
-                                )
-                            },
-                        );
-                        stopped = targeted_stopped;
-                    }
-
-                    if !stopped {
-                        broadcast_attempted = true;
-                        let (layers, rebuild_elapsed) = fret_perf::measure_span(
-                            self.debug_enabled,
-                            trace_enabled,
-                            || {
-                                tracing::trace_span!(
-                                    "fret.ui.dispatch.timer.broadcast.rebuild_visible_layers",
-                                    window = ?window,
-                                    frame_id = frame_id.0,
-                                    token = token.0,
-                                )
-                            },
-                            || {
-                                self.visible_layers_in_paint_order()
-                                    .collect::<Vec<UiLayerId>>()
-                            },
-                        );
-                        broadcast_rebuild_visible_layers_elapsed = rebuild_elapsed;
-
-                        let (broadcast_stopped, loop_elapsed) = fret_perf::measure_span(
-                            self.debug_enabled,
-                            trace_enabled,
-                            || {
-                                tracing::trace_span!(
-                                    "fret.ui.dispatch.timer.broadcast.loop",
-                                    window = ?window,
-                                    frame_id = frame_id.0,
-                                    token = token.0,
-                                )
-                            },
-                            || {
-                                for layer_id in layers.into_iter().rev() {
-                                    broadcast_layers_visited =
-                                        broadcast_layers_visited.saturating_add(1);
-                                    let Some(layer) = self.layers.get(layer_id) else {
-                                        continue;
-                                    };
-                                    if !layer.wants_timer_events || !layer.visible {
-                                        continue;
-                                    }
-                                    let stopped = self.dispatch_event_to_node_chain(
+            let ((), timer_elapsed) =
+                fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_enabled,
+                    || {
+                        tracing::trace_span!(
+                            "fret.ui.dispatch.timer",
+                            window = ?window,
+                            frame_id = frame_id.0,
+                            token = token.0,
+                        )
+                    },
+                    || {
+                        if let Some(window) = window {
+                            timer_target = crate::elements::timer_target(app, window, token)
+                                .and_then(|target| match target {
+                                    crate::elements::TimerTarget::Element(element) => self
+                                        .resolve_live_attached_node_for_element(
+                                            app,
+                                            Some(window),
+                                            element,
+                                        ),
+                                    crate::elements::TimerTarget::Node(node) => Some(node),
+                                });
+                        }
+                        if let Some(node) = timer_target {
+                            let (targeted_stopped, _) = fret_perf::measure_span(
+                                self.debug_enabled,
+                                trace_enabled,
+                                || {
+                                    tracing::trace_span!(
+                                        "fret.ui.dispatch.timer.targeted",
+                                        window = ?window,
+                                        frame_id = frame_id.0,
+                                        token = token.0,
+                                        node = ?node,
+                                    )
+                                },
+                                || {
+                                    self.dispatch_event_to_node_chain(
                                         app,
                                         services,
                                         &timer_dispatch_cx,
                                         &input_ctx,
-                                        layer.root,
+                                        node,
                                         event,
                                         &mut needs_redraw,
                                         &mut invalidation_visited,
-                                    );
-                                    if stopped {
-                                        return true;
+                                    )
+                                },
+                            );
+                            stopped = targeted_stopped;
+                        }
+
+                        if !stopped {
+                            broadcast_attempted = true;
+                            let (layers, rebuild_elapsed) = fret_perf::measure_span(
+                                self.debug_enabled,
+                                trace_enabled,
+                                || {
+                                    tracing::trace_span!(
+                                        "fret.ui.dispatch.timer.broadcast.rebuild_visible_layers",
+                                        window = ?window,
+                                        frame_id = frame_id.0,
+                                        token = token.0,
+                                    )
+                                },
+                                || {
+                                    self.visible_layers_in_paint_order()
+                                        .collect::<Vec<UiLayerId>>()
+                                },
+                            );
+                            broadcast_rebuild_visible_layers_elapsed = rebuild_elapsed;
+
+                            let (broadcast_stopped, loop_elapsed) = fret_perf::measure_span(
+                                self.debug_enabled,
+                                trace_enabled,
+                                || {
+                                    tracing::trace_span!(
+                                        "fret.ui.dispatch.timer.broadcast.loop",
+                                        window = ?window,
+                                        frame_id = frame_id.0,
+                                        token = token.0,
+                                    )
+                                },
+                                || {
+                                    for layer_id in layers.into_iter().rev() {
+                                        broadcast_layers_visited =
+                                            broadcast_layers_visited.saturating_add(1);
+                                        let Some(layer) = self.layers.get(layer_id) else {
+                                            continue;
+                                        };
+                                        if !layer.wants_timer_events || !layer.visible {
+                                            continue;
+                                        }
+                                        let stopped = self.dispatch_event_to_node_chain(
+                                            app,
+                                            services,
+                                            &timer_dispatch_cx,
+                                            &input_ctx,
+                                            layer.root,
+                                            event,
+                                            &mut needs_redraw,
+                                            &mut invalidation_visited,
+                                        );
+                                        if stopped {
+                                            return true;
+                                        }
                                     }
-                                }
-                                false
-                            },
-                        );
-                        broadcast_loop_elapsed = loop_elapsed;
-                        stopped = broadcast_stopped;
-                    }
-                },
-            );
+                                    false
+                                },
+                            );
+                            broadcast_loop_elapsed = loop_elapsed;
+                            stopped = broadcast_stopped;
+                        }
+                    },
+                );
 
             if self.debug_enabled {
                 let is_targeted = timer_target.is_some();
@@ -1282,8 +1292,7 @@ impl<H: UiHost> UiTree<H> {
                         crate::elements::with_window_state(app, window, |window_state| {
                             window_state
                                 .active_text_selection()
-                                .and_then(|selection| window_state.node_entry(selection.element))
-                                .map(|entry| entry.node)
+                                .map(|selection| selection.node)
                         })
                     });
                     selection_node.or(self.focus).or(Some(default_root))

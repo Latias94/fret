@@ -17,6 +17,7 @@ fn sync_active_text_selection<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     element: crate::elements::GlobalElementId,
+    node: NodeId,
 ) {
     let (anchor, caret) = crate::elements::with_element_state(
         app,
@@ -34,6 +35,7 @@ fn sync_active_text_selection<H: UiHost>(
             window_state.set_active_text_selection(Some(crate::elements::ActiveTextSelection {
                 root: entry.root,
                 element,
+                node,
             }));
             return;
         }
@@ -303,7 +305,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
 
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
-                    sync_active_text_selection(&mut *cx.app, window, this.element);
+                    sync_active_text_selection(&mut *cx.app, window, this.element, cx.node);
                     cx.stop_propagation();
                 };
 
@@ -367,7 +369,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
 
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
-                    sync_active_text_selection(&mut *cx.app, window, this.element);
+                    sync_active_text_selection(&mut *cx.app, window, this.element, cx.node);
                     cx.stop_propagation();
                 };
 
@@ -478,7 +480,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 cx.request_redraw();
             }
 
-            sync_active_text_selection(&mut *cx.app, window, this.element);
+            sync_active_text_selection(&mut *cx.app, window, this.element, cx.node);
             cx.stop_propagation();
         }
         Event::SetTextSelection { anchor, focus } => {
@@ -503,7 +505,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             );
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
-            sync_active_text_selection(&mut *cx.app, window, this.element);
+            sync_active_text_selection(&mut *cx.app, window, this.element, cx.node);
             cx.stop_propagation();
         }
         Event::Pointer(fret_core::PointerEvent::Down {
@@ -624,7 +626,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
 
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
-            sync_active_text_selection(&mut *cx.app, window, this.element);
+            sync_active_text_selection(&mut *cx.app, window, this.element, cx.node);
             if matches!(*button, fret_core::MouseButton::Left) {
                 cx.stop_propagation();
             }
@@ -704,7 +706,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 );
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
-                sync_active_text_selection(&mut *cx.app, window, this.element);
+                sync_active_text_selection(&mut *cx.app, window, this.element, cx.node);
             }
 
             cx.stop_propagation();
@@ -888,7 +890,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             );
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
-            sync_active_text_selection(&mut *cx.app, window, this.element);
+            sync_active_text_selection(&mut *cx.app, window, this.element, cx.node);
             cx.stop_propagation();
         }
         _ => {}
