@@ -105,7 +105,8 @@ Status: Active
   - [x] scroll handle revision-only bumps stay classified correctly,
   - [x] scroll handle invalidation ignores detached same-frame stale bindings,
   - [x] scroll handle registry dedupes same-frame duplicate element bindings,
-  - [x] event-time scroll handle invalidation resolves authoritative live bindings across layers.
+  - [x] event-time scroll handle invalidation resolves authoritative live bindings across layers,
+  - [x] explicit scroll-target invalidation resolves authoritative live target nodes.
 
 ## Wheel/trackpad delta coalescing
 

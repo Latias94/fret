@@ -91,6 +91,30 @@ impl<H: UiHost> UiTree<H> {
         out
     }
 
+    pub(crate) fn live_nodes_for_element(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        element: GlobalElementId,
+    ) -> Vec<NodeId> {
+        crate::declarative::with_window_frame(app, window, |window_frame| {
+            let Some(window_frame) = window_frame else {
+                return Vec::new();
+            };
+            let mut seen = std::collections::HashSet::new();
+            let mut out = Vec::new();
+            for (node, record) in window_frame.instances.iter() {
+                if record.element != element || !self.node_is_attached_to_layer_tree(node) {
+                    continue;
+                }
+                if seen.insert(node) {
+                    out.push(node);
+                }
+            }
+            out
+        })
+    }
+
     pub(crate) fn extend_live_bound_scroll_handle_invalidations(
         &self,
         app: &mut H,
@@ -103,6 +127,30 @@ impl<H: UiHost> UiTree<H> {
         for request in requests {
             for node in self.live_bound_scroll_handle_nodes(app, window, request.handle_key) {
                 out.push((node, request.kind));
+            }
+        }
+    }
+
+    pub(crate) fn extend_live_scroll_target_invalidations(
+        &self,
+        app: &mut H,
+        requests: &[GlobalElementId],
+        out: &mut Vec<(NodeId, Invalidation)>,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+        for &element in requests {
+            for node in self.live_nodes_for_element(app, window, element) {
+                let inv = crate::declarative::frame::element_record_for_node(app, window, node)
+                    .map(|record| match record.instance {
+                        crate::declarative::frame::ElementInstance::VirtualList(_) => {
+                            Invalidation::Layout
+                        }
+                        _ => Invalidation::HitTestOnly,
+                    })
+                    .unwrap_or(Invalidation::HitTestOnly);
+                out.push((node, inv));
             }
         }
     }

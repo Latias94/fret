@@ -177,6 +177,16 @@ This follow-on slice locks the contract that:
 - detached stale same-frame bindings remain ignored on the event path as well as the final
   invalidation path.
 
+## Follow-on slice — Explicit scroll-target invalidation resolves authoritative live target nodes
+
+This follow-on slice locks the contract that:
+
+- mechanism widgets do not resolve explicit `scroll_target` elements by directly trusting
+  `window_frame.instances.find_map(...)` during event handling,
+- event-time `scroll_target` invalidation is deferred until dispatch regains access to `UiTree`,
+- explicit scroll-target invalidation resolves live attached target nodes only,
+- detached stale same-frame target entries do not win explicit scroll-target resolution.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -201,6 +211,8 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui scroll_handle_registry_dedupes_same_frame_duplicate_element_bindings`
 - Event-time scroll-handle invalidation resolves authoritative live bindings across layers:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui event_scroll_handle_invalidation_targets_live_bindings_across_layers_only`
+- Event-time explicit scroll-target invalidation resolves the live attached target:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui event_scroll_target_invalidation_prefers_live_attached_node_over_stale_same_frame_entry`
 - Detached dirty cache roots are pruned before contained relayout:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups`
 - Detached pending barrier relayouts are pruned before execution:

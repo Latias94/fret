@@ -103,6 +103,7 @@ impl<H: UiHost> UiTree<H> {
                 let (
                     invalidations,
                     scroll_handle_invalidations,
+                    scroll_target_invalidations,
                     requested_focus,
                     requested_capture,
                     notify_requested,
@@ -137,6 +138,7 @@ impl<H: UiHost> UiTree<H> {
                         bounds,
                         invalidations: Vec::new(),
                         scroll_handle_invalidations: Vec::new(),
+                        scroll_target_invalidations: Vec::new(),
                         requested_focus: None,
                         requested_capture: None,
                         requested_cursor: None,
@@ -148,6 +150,7 @@ impl<H: UiHost> UiTree<H> {
                     (
                         cx.invalidations,
                         cx.scroll_handle_invalidations,
+                        cx.scroll_target_invalidations,
                         cx.requested_focus,
                         cx.requested_capture,
                         cx.notify_requested,
@@ -158,6 +161,7 @@ impl<H: UiHost> UiTree<H> {
 
                 if !invalidations.is_empty()
                     || !scroll_handle_invalidations.is_empty()
+                    || !scroll_target_invalidations.is_empty()
                     || requested_focus.is_some()
                     || requested_capture.is_some()
                     || notify_requested
@@ -181,6 +185,21 @@ impl<H: UiHost> UiTree<H> {
                     &mut resolved_scroll_handle_invalidations,
                 );
                 for (id, inv) in resolved_scroll_handle_invalidations {
+                    Self::pending_invalidation_merge(
+                        &mut pending_invalidations,
+                        id,
+                        inv,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::Unknown,
+                    );
+                }
+                let mut resolved_scroll_target_invalidations = Vec::new();
+                self.extend_live_scroll_target_invalidations(
+                    app,
+                    &scroll_target_invalidations,
+                    &mut resolved_scroll_target_invalidations,
+                );
+                for (id, inv) in resolved_scroll_target_invalidations {
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
                         id,
@@ -303,6 +322,7 @@ impl<H: UiHost> UiTree<H> {
             let (
                 invalidations,
                 scroll_handle_invalidations,
+                scroll_target_invalidations,
                 requested_focus,
                 requested_capture,
                 notify_requested,
@@ -336,6 +356,7 @@ impl<H: UiHost> UiTree<H> {
                     bounds,
                     invalidations: Vec::new(),
                     scroll_handle_invalidations: Vec::new(),
+                    scroll_target_invalidations: Vec::new(),
                     requested_focus: None,
                     requested_capture: None,
                     requested_cursor: None,
@@ -347,6 +368,7 @@ impl<H: UiHost> UiTree<H> {
                 (
                     cx.invalidations,
                     cx.scroll_handle_invalidations,
+                    cx.scroll_target_invalidations,
                     cx.requested_focus,
                     cx.requested_capture,
                     cx.notify_requested,
@@ -357,6 +379,7 @@ impl<H: UiHost> UiTree<H> {
 
             if !invalidations.is_empty()
                 || !scroll_handle_invalidations.is_empty()
+                || !scroll_target_invalidations.is_empty()
                 || requested_focus.is_some()
                 || requested_capture.is_some()
                 || notify_requested
@@ -380,6 +403,21 @@ impl<H: UiHost> UiTree<H> {
                 &mut resolved_scroll_handle_invalidations,
             );
             for (id, inv) in resolved_scroll_handle_invalidations {
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    id,
+                    inv,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::Unknown,
+                );
+            }
+            let mut resolved_scroll_target_invalidations = Vec::new();
+            self.extend_live_scroll_target_invalidations(
+                app,
+                &scroll_target_invalidations,
+                &mut resolved_scroll_target_invalidations,
+            );
+            for (id, inv) in resolved_scroll_target_invalidations {
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
                     id,
@@ -566,6 +604,7 @@ impl<H: UiHost> UiTree<H> {
             let (
                 invalidations,
                 scroll_handle_invalidations,
+                scroll_target_invalidations,
                 notify_requested,
                 notify_requested_location,
                 stop_propagation,
@@ -597,6 +636,7 @@ impl<H: UiHost> UiTree<H> {
                     bounds,
                     invalidations: Vec::new(),
                     scroll_handle_invalidations: Vec::new(),
+                    scroll_target_invalidations: Vec::new(),
                     requested_focus: None,
                     requested_capture: None,
                     requested_cursor: None,
@@ -608,6 +648,7 @@ impl<H: UiHost> UiTree<H> {
                 (
                     cx.invalidations,
                     cx.scroll_handle_invalidations,
+                    cx.scroll_target_invalidations,
                     cx.notify_requested,
                     cx.notify_requested_location,
                     cx.stop_propagation,
@@ -630,6 +671,21 @@ impl<H: UiHost> UiTree<H> {
                 &mut resolved_scroll_handle_invalidations,
             );
             for (id, inv) in resolved_scroll_handle_invalidations {
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    id,
+                    inv,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::Unknown,
+                );
+            }
+            let mut resolved_scroll_target_invalidations = Vec::new();
+            self.extend_live_scroll_target_invalidations(
+                app,
+                &scroll_target_invalidations,
+                &mut resolved_scroll_target_invalidations,
+            );
+            for (id, inv) in resolved_scroll_target_invalidations {
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
                     id,

@@ -88,6 +88,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub bounds: Rect,
     pub invalidations: Vec<(NodeId, Invalidation)>,
     pub(crate) scroll_handle_invalidations: Vec<ScrollHandleInvalidationRequest>,
+    pub(crate) scroll_target_invalidations: Vec<crate::GlobalElementId>,
     pub requested_focus: Option<NodeId>,
     pub requested_capture: Option<Option<NodeId>>,
     pub requested_cursor: Option<fret_core::CursorIcon>,
@@ -208,6 +209,15 @@ impl<'a, H: UiHost> EventCx<'a, H> {
     pub fn invalidate_scroll_handle_bindings(&mut self, handle_key: usize, kind: Invalidation) {
         self.scroll_handle_invalidations
             .push(ScrollHandleInvalidationRequest { handle_key, kind });
+    }
+
+    /// Request invalidation for the live attached node currently associated with an element-backed
+    /// scroll target.
+    ///
+    /// Resolution is deferred until the dispatch runtime regains access to `UiTree`, so widgets
+    /// do not need to interpret same-frame retained bookkeeping directly.
+    pub(crate) fn invalidate_scroll_target(&mut self, element: crate::GlobalElementId) {
+        self.scroll_target_invalidations.push(element);
     }
 
     pub fn invalidate_self(&mut self, kind: Invalidation) {

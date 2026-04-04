@@ -1,6 +1,4 @@
 use super::ElementHostWidget;
-use crate::declarative::frame::element_record_for_node;
-use crate::declarative::mount::node_for_element_in_window_frame;
 use crate::declarative::prelude::*;
 
 const SCROLL_CONSUMED_EPS: f32 = 0.001;
@@ -54,23 +52,8 @@ pub(super) fn handle_wheel_region<H: UiHost>(
         Invalidation::HitTestOnly,
     );
 
-    if let Some(target) = props.scroll_target
-        && let Some(node) = node_for_element_in_window_frame(&mut *cx.app, window, target)
-    {
-        let is_vlist = element_record_for_node(&mut *cx.app, window, node)
-            .map(|r| {
-                matches!(
-                    r.instance,
-                    crate::declarative::frame::ElementInstance::VirtualList(_)
-                )
-            })
-            .unwrap_or(false);
-        let inv = if is_vlist {
-            Invalidation::Layout
-        } else {
-            Invalidation::HitTestOnly
-        };
-        cx.invalidate(node, inv);
+    if let Some(target) = props.scroll_target {
+        cx.invalidate_scroll_target(target);
     }
 
     cx.invalidate_self(Invalidation::HitTestOnly);

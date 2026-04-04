@@ -1,6 +1,4 @@
 use super::ElementHostWidget;
-use crate::declarative::frame::element_record_for_node;
-use crate::declarative::mount::node_for_element_in_window_frame;
 use crate::declarative::paint_helpers::scrollbar_thumb_rect;
 use crate::declarative::paint_helpers::scrollbar_thumb_rect_horizontal;
 use crate::declarative::paint_helpers::scrollbar_track_padding_px;
@@ -24,26 +22,9 @@ pub(super) fn handle_scrollbar<H: UiHost>(
     let scroll_target = props.scroll_target;
 
     let invalidate_scroll_target = |cx: &mut EventCx<'_, H>| {
-        let Some(target) = scroll_target else {
-            return;
-        };
-        let Some(node) = node_for_element_in_window_frame(&mut *cx.app, window, target) else {
-            return;
-        };
-        let is_vlist = element_record_for_node(&mut *cx.app, window, node)
-            .map(|r| {
-                matches!(
-                    r.instance,
-                    crate::declarative::frame::ElementInstance::VirtualList(_)
-                )
-            })
-            .unwrap_or(false);
-        let inv = if is_vlist {
-            Invalidation::Layout
-        } else {
-            Invalidation::HitTestOnly
-        };
-        cx.invalidate(node, inv);
+        if let Some(target) = scroll_target {
+            cx.invalidate_scroll_target(target);
+        }
     };
 
     match pe {

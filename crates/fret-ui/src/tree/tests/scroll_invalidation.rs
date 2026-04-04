@@ -28,6 +28,33 @@ impl<H: UiHost> Widget<H> for ScrollHandleInvalidationRequester {
     }
 }
 
+struct ScrollTargetInvalidationRequester {
+    target: crate::GlobalElementId,
+}
+
+impl<H: UiHost> Widget<H> for ScrollTargetInvalidationRequester {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        true
+    }
+
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        if matches!(
+            event,
+            Event::Pointer(PointerEvent::Up {
+                button: fret_core::MouseButton::Left,
+                ..
+            })
+        ) {
+            cx.invalidate_scroll_target(self.target);
+            cx.stop_propagation();
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
 #[test]
 fn event_scroll_handle_invalidation_targets_live_bindings_across_layers_only() {
     let mut app = crate::test_host::TestHost::new();
@@ -150,6 +177,107 @@ fn event_scroll_handle_invalidation_targets_live_bindings_across_layers_only() {
     assert!(
         !ui.nodes[stale_bound].invalidation.hit_test,
         "detached stale bindings must not receive event-time scroll-handle invalidation"
+    );
+}
+
+#[test]
+fn event_scroll_target_invalidation_prefers_live_attached_node_over_stale_same_frame_entry() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeUiServices;
+
+    let target_element = crate::GlobalElementId(90);
+
+    let root = ui.create_node(TestStack);
+    let requester = ui.create_node(ScrollTargetInvalidationRequester {
+        target: target_element,
+    });
+    let stale_root = ui.create_node(TestStack);
+    let stale_target = ui.create_node(TestStack);
+    let overlay_root = ui.create_node(TestStack);
+    let live_target = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![requester]);
+    ui.set_children(stale_root, vec![stale_target]);
+    ui.set_children(overlay_root, vec![live_target]);
+
+    let overlay_layer = ui.push_overlay_root(overlay_root, false);
+    ui.set_layer_hit_testable(overlay_layer, false);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let requester_element = crate::GlobalElementId(91);
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+        window_frame.instances.insert(
+            requester,
+            crate::declarative::frame::ElementRecord {
+                element: requester_element,
+                instance: crate::declarative::frame::ElementInstance::Scroll(
+                    crate::element::ScrollProps::default(),
+                ),
+                inherited_foreground: None,
+                inherited_text_style: None,
+                semantics_decoration: None,
+                key_context: None,
+            },
+        );
+        for node in [stale_target, live_target] {
+            window_frame.instances.insert(
+                node,
+                crate::declarative::frame::ElementRecord {
+                    element: target_element,
+                    instance: crate::declarative::frame::ElementInstance::Scroll(
+                        crate::element::ScrollProps::default(),
+                    ),
+                    inherited_foreground: None,
+                    inherited_text_style: None,
+                    semantics_decoration: None,
+                    key_context: None,
+                },
+            );
+        }
+    });
+
+    for id in [
+        root,
+        requester,
+        stale_root,
+        stale_target,
+        overlay_root,
+        live_target,
+    ] {
+        ui.test_clear_node_invalidations(id);
+    }
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        ui.nodes[live_target].invalidation.hit_test,
+        "event-time scroll target invalidation must resolve the live attached target node"
+    );
+    assert!(
+        !ui.nodes[stale_target].invalidation.hit_test,
+        "detached stale same-frame target entries must not win explicit scroll target resolution"
     );
 }
 
