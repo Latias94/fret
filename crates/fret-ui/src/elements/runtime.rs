@@ -722,6 +722,14 @@ impl WindowElementState {
         self.retained_virtual_list_keep_alive_roots.remove(&node);
     }
 
+    pub(crate) fn retain_retained_virtual_list_keep_alive_roots(
+        &mut self,
+        mut f: impl FnMut(NodeId) -> bool,
+    ) {
+        self.retained_virtual_list_keep_alive_roots
+            .retain(|node| f(*node));
+    }
+
     pub(crate) fn record_transient_event(&mut self, element: GlobalElementId, key: u64) {
         self.transient_events
             .insert((element, key), self.prepared_frame);

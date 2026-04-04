@@ -229,6 +229,8 @@ This follow-on slice locks the contract that:
   because stale parent pointers can keep detached nodes appearing to belong to a layer,
 - declarative GC liveness must be derived from explicit liveness roots plus authoritative child
   reachability (`UiTree` children and `WindowFrame` children union),
+- dead retained keep-alive root `NodeId`s must be pruned before they participate in GC liveness,
+  and dead root ids must not be treated as reachable by the GC walk itself,
 - view-cache reuse memberships and retained keep-alive roots remain explicit GC inputs, but they do
   not widen parent-pointer-derived layer membership into truth.
 
@@ -244,10 +246,16 @@ Audit note (2026-04-04):
 - `crates/fret-ui/src/declarative/mount.rs` now routes both declarative GC retain callbacks through
   `gc_node_retention_decision(...)`, which no longer trusts `UiTree::node_layer(...)` as an
   authoritative keepalive shortcut.
+- `crates/fret-ui/src/declarative/mount.rs` now prunes dead retained virtual-list keep-alive roots
+  before computing GC liveness and makes `collect_reachable_nodes_for_gc_in_place(...)` ignore dead
+  root ids, so structural removal cannot leave a stale keep-alive root widening reachability.
 - `crates/fret-ui/src/declarative/mount.rs::gc_retention_ignores_stale_parent_pointer_layer_membership`
   proves the regression directly: a stale parent path can keep `node_layer(...)` non-`None` while
   `collect_reachable_nodes_for_gc(...)` still excludes the node and GC drops it once layer-root
   reachability is evaluated.
+- `crates/fret-ui/src/declarative/mount.rs::gc_prunes_removed_retained_keep_alive_roots_before_reachability`
+  proves the keep-alive regression directly: a removed retained keep-alive root no longer survives
+  as a liveness root, and the raw GC walk ignores dead root ids.
 
 ## Follow-on slice — Interaction targets resolve authoritative live attached nodes
 
@@ -365,7 +373,7 @@ Audit note (2026-04-04):
 - Declarative model/global invalidation and rebuild seed resolution prefer live attached nodes:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui model_observation_invalidation_ignores_stale_detached_node_entry global_observation_invalidation_ignores_stale_detached_node_entry seeded_live_node_resolution_ignores_stale_detached_node_entry seeded_reusable_node_resolution_reuses_detached_seed_when_no_live_attached_node_exists`
 - GC liveness ignores parent-pointer-derived layer membership:
-  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui gc_retention_ignores_stale_parent_pointer_layer_membership gc_reachability_unions_ui_and_window_frame_children touch_existing_subtree_can_walk_window_frame_children --status-level fail`
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui gc_prunes_removed_retained_keep_alive_roots_before_reachability gc_retention_ignores_stale_parent_pointer_layer_membership gc_reachability_unions_ui_and_window_frame_children touch_existing_subtree_can_walk_window_frame_children --status-level fail`
 - Hover/pressed/timer/selection interaction targets prefer live attached nodes over stale
   detached seeds:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui hovered_pressable_clear_uses_latest_node_for_same_element pressed_pressable_clear_uses_latest_node_for_same_element timer_dispatch_resolves_live_attached_element_target_over_stale_detached_seed final_layout_frame_syncs_hovered_pressable_node_to_live_attached_element selectable_text_set_text_selection_ignores_stale_detached_node_entry selectable_text_sets_active_text_selection`

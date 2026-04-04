@@ -90,6 +90,18 @@ fn gc_node_retention_decision(
     GcNodeRetentionDecision::Drop
 }
 
+fn collect_live_retained_keep_alive_roots<H: UiHost>(
+    ui: &UiTree<H>,
+    window_state: &mut crate::elements::WindowElementState,
+) -> Vec<NodeId> {
+    // Retained keep-alive roots are authoritative only while the retained node still exists.
+    // Structural removal must not leave a dead NodeId widening GC reachability forever.
+    window_state.retain_retained_virtual_list_keep_alive_roots(|node| ui.node_exists(node));
+    window_state
+        .retained_virtual_list_keep_alive_roots()
+        .collect()
+}
+
 fn debug_path_for_element(
     runtime: &crate::elements::ElementRuntime,
     window: AppWindowId,
@@ -636,9 +648,7 @@ where
             // must never be treated as a sufficient signal for liveness. Reachability from the
             // liveness roots is the authoritative predicate for GC.
             let liveness_roots = ui.all_layer_roots();
-            let keep_alive_roots: Vec<NodeId> = window_state
-                .retained_virtual_list_keep_alive_roots()
-                .collect();
+            let keep_alive_roots = collect_live_retained_keep_alive_roots(ui, window_state);
             let mut stale: Vec<StaleNodeRecord> = Vec::new();
             let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
             reachable_from_layers.clear();
@@ -1135,9 +1145,7 @@ where
             // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
             // only detached nodes that have been stale beyond the configured lag window.
             let liveness_roots = ui.all_layer_roots();
-            let keep_alive_roots: Vec<NodeId> = window_state
-                .retained_virtual_list_keep_alive_roots()
-                .collect();
+            let keep_alive_roots = collect_live_retained_keep_alive_roots(ui, window_state);
             let mut stale: Vec<StaleNodeRecord> = Vec::new();
             let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
             reachable_from_layers.clear();
@@ -2547,6 +2555,9 @@ fn collect_reachable_nodes_for_gc_in_place<H: UiHost>(
     stack.clear();
     stack.extend(roots);
     while let Some(node) = stack.pop() {
+        if !ui.node_exists(node) {
+            continue;
+        }
         if !out.insert(node) {
             continue;
         }
@@ -2578,28 +2589,82 @@ fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(
 #[allow(clippy::items_after_test_module)]
 mod tests {
     use super::*;
+    use fret_core::{PathConstraints, PathMetrics, PathStyle, TextConstraints, TextMetrics};
+
+    #[derive(Default)]
+    struct TestWidget;
+
+    impl<H: UiHost> Widget<H> for TestWidget {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                let _ = cx.layout_in(child, cx.bounds);
+            }
+            cx.available
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    #[derive(Default)]
+    struct FakeUiServices;
+
+    impl fret_core::TextService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+                    baseline: fret_core::Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (fret_core::PathId, PathMetrics) {
+            (fret_core::PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeUiServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
+    impl fret_core::MaterialService for FakeUiServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
 
     #[test]
     fn gc_reachability_unions_ui_and_window_frame_children() {
-        use crate::UiHost;
-        use crate::declarative::frame::WindowFrame;
-        use crate::tree::UiTree;
-        use crate::widget::{LayoutCx, PaintCx, Widget};
         use fret_runtime::FrameId;
-
-        #[derive(Default)]
-        struct TestWidget;
-
-        impl<H: UiHost> Widget<H> for TestWidget {
-            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-                for &child in cx.children {
-                    let _ = cx.layout_in(child, cx.bounds);
-                }
-                cx.available
-            }
-
-            fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
-        }
 
         let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
         ui.set_window(AppWindowId::default());
@@ -2686,24 +2751,6 @@ mod tests {
 
     #[test]
     fn gc_retention_ignores_stale_parent_pointer_layer_membership() {
-        use crate::UiHost;
-        use crate::tree::UiTree;
-        use crate::widget::{LayoutCx, PaintCx, Widget};
-
-        #[derive(Default)]
-        struct TestWidget;
-
-        impl<H: UiHost> Widget<H> for TestWidget {
-            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-                for &child in cx.children {
-                    let _ = cx.layout_in(child, cx.bounds);
-                }
-                cx.available
-            }
-
-            fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
-        }
-
         let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
         ui.set_window(AppWindowId::default());
 
@@ -2749,6 +2796,93 @@ mod tests {
             GcNodeRetentionDecision::NeedLayerReachability
         ));
 
+        assert!(matches!(
+            gc_node_retention_decision(
+                stale_id,
+                stale,
+                &mut last_seen_frame,
+                root_id,
+                root_id,
+                frame_id,
+                cutoff,
+                &keep_alive_view_cache_elements,
+                Some(&reachable),
+                false,
+                &reachable_from_view_cache_roots,
+            ),
+            GcNodeRetentionDecision::Drop
+        ));
+    }
+
+    #[test]
+    fn gc_prunes_removed_retained_keep_alive_roots_before_reachability() {
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let root = ui.create_node(TestWidget);
+        let stale = ui.create_node(TestWidget);
+        let root_id = GlobalElementId(950);
+        let stale_id = GlobalElementId(951);
+        let frame_id = FrameId(2);
+        let cutoff = 1;
+
+        ui.set_root(root);
+
+        let mut services = FakeUiServices;
+        let removed = ui.remove_subtree(&mut services, stale);
+        assert_eq!(
+            removed,
+            vec![stale],
+            "expected stale keep-alive root to be removed"
+        );
+        assert!(
+            !ui.node_exists(stale),
+            "removed keep-alive roots must not remain live in UiTree"
+        );
+
+        let raw_reachable = collect_reachable_nodes_for_gc(&ui, None, [stale]);
+        assert!(
+            raw_reachable.is_empty(),
+            "dead NodeId roots must not be treated as reachable by the GC walk"
+        );
+
+        let mut window_state = crate::elements::WindowElementState::default();
+        window_state.add_retained_virtual_list_keep_alive_root(stale);
+        window_state.set_node_entry(
+            stale_id,
+            NodeEntry {
+                node: stale,
+                last_seen_frame: FrameId(0),
+                root: root_id,
+            },
+        );
+
+        let keep_alive_roots = collect_live_retained_keep_alive_roots(&ui, &mut window_state);
+        assert!(
+            keep_alive_roots.is_empty(),
+            "removed keep-alive roots must be pruned before they participate in GC liveness"
+        );
+        assert!(
+            window_state
+                .retained_virtual_list_keep_alive_roots()
+                .next()
+                .is_none(),
+            "pruning should update the retained keep-alive root set itself"
+        );
+
+        let reachable = collect_reachable_nodes_for_gc(
+            &ui,
+            None,
+            std::iter::once(root).chain(keep_alive_roots.iter().copied()),
+        );
+        assert!(
+            !reachable.contains(&stale),
+            "a removed keep-alive root must not keep the stale node reachable"
+        );
+
+        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = HashSet::new();
+        let reachable_from_view_cache_roots: HashSet<NodeId> = HashSet::new();
+        let mut last_seen_frame = FrameId(0);
         assert!(matches!(
             gc_node_retention_decision(
                 stale_id,

@@ -46,6 +46,8 @@ Status: Active
 - [x] Make GC liveness authoritative on retained liveness roots plus reachable child edges
   (`UiTree` children and `WindowFrame` children union), while keeping view-cache reuse memberships
   and retained keep-alive roots as explicit inputs.
+- [x] Prune dead retained keep-alive root `NodeId`s before they participate in GC liveness, and
+  make the reachability walk ignore nonexistent root ids as a guardrail.
 - [x] Lock the contract with a focused regression that proves a stale parent path can keep
   `node_layer(...)` non-`None` without keeping the detached node alive.
 

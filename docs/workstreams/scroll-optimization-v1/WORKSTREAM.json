@@ -56,7 +56,7 @@
     },
     {
       "name": "gc-liveness-ignores-stale-layer-membership",
-      "command": "CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui gc_retention_ignores_stale_parent_pointer_layer_membership gc_reachability_unions_ui_and_window_frame_children touch_existing_subtree_can_walk_window_frame_children --status-level fail"
+      "command": "CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui gc_prunes_removed_retained_keep_alive_roots_before_reachability gc_retention_ignores_stale_parent_pointer_layer_membership gc_reachability_unions_ui_and_window_frame_children touch_existing_subtree_can_walk_window_frame_children --status-level fail"
     },
     {
       "name": "ecosystem-live-node-public-surface",
