@@ -2,6 +2,14 @@ use super::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+fn zero_motion_toast_style() -> ToastLayerStyle {
+    let mut style = ToastLayerStyle::default();
+    style.open_ticks = 0;
+    style.close_ticks = 0;
+    style.slide_distance = Px(0.0);
+    style
+}
+
 #[test]
 fn cached_modal_request_is_synthesized_when_open_without_rerender() {
     let mut app = App::new();
@@ -522,5 +530,566 @@ fn owned_cached_modal_request_stays_visible_during_view_cache_reuse() {
         renders.load(Ordering::SeqCst),
         1,
         "cache-hit frames should reuse the producer subtree without rerendering it"
+    );
+}
+
+#[test]
+fn owned_cached_popover_request_is_pruned_when_request_owner_is_removed() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    let popover_id = GlobalElementId(0x44);
+    let mut show_owner = true;
+    let mut popover_layer: Option<fret_ui::tree::UiLayerId> = None;
+
+    for _frame in 0..2 {
+        begin_frame(&mut app, window);
+        let mut trigger_id: Option<GlobalElementId> = None;
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "owned-cached-popover-prune",
+            |cx| {
+                let mut out = vec![cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(80.0));
+                            layout.size.height = Length::Px(Px(32.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        trigger_id = Some(id);
+                        Vec::new()
+                    },
+                )];
+
+                if show_owner {
+                    let trigger = trigger_id.expect("trigger id");
+                    out.push(cx.keyed("owner", |cx| {
+                        crate::OverlayController::request(
+                            cx,
+                            crate::OverlayRequest::dismissible_popover(
+                                popover_id,
+                                trigger,
+                                open.clone(),
+                                crate::OverlayPresence::instant(true),
+                                Vec::new(),
+                            ),
+                        );
+                        cx.text("owner")
+                    }));
+                }
+
+                out
+            },
+        );
+        ui.set_root(root);
+        crate::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        if show_owner {
+            popover_layer =
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                    overlays
+                        .popovers
+                        .get(&(window, popover_id))
+                        .map(|entry| entry.layer)
+                });
+            let layer = popover_layer.expect("popover layer");
+            assert!(ui.is_layer_visible(layer));
+            show_owner = false;
+        }
+    }
+
+    let layer = popover_layer.expect("popover layer");
+    assert!(
+        ui.layer_root(layer).is_none(),
+        "owned popover layer should be removed once its request owner disappears"
+    );
+    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        assert!(
+            overlays.popovers.get(&(window, popover_id)).is_none(),
+            "active popover entry should be pruned with the removed owner"
+        );
+        assert!(
+            overlays
+                .cached_popover_requests
+                .get(&(window, popover_id))
+                .is_none(),
+            "cached popover declaration should be pruned with the removed owner"
+        );
+    });
+}
+
+#[test]
+fn owned_cached_popover_request_stays_visible_during_view_cache_reuse() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    let popover_id = GlobalElementId(0x45);
+    let renders = Arc::new(AtomicUsize::new(0));
+    let mut popover_layer: Option<fret_ui::tree::UiLayerId> = None;
+
+    for _frame in 0..4 {
+        begin_frame(&mut app, window);
+        let renders = renders.clone();
+        let open_for_render = open.clone();
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "owned-cached-popover-view-cache-reuse",
+            move |cx| {
+                vec![
+                    cx.view_cache(fret_ui::element::ViewCacheProps::default(), |cx| {
+                        renders.fetch_add(1, Ordering::SeqCst);
+                        let mut trigger_id: Option<GlobalElementId> = None;
+                        let mut out = vec![cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(80.0));
+                                    layout.size.height = Length::Px(Px(32.0));
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            |_cx, _st, id| {
+                                trigger_id = Some(id);
+                                Vec::new()
+                            },
+                        )];
+                        let trigger = trigger_id.expect("trigger id");
+                        out.push(cx.keyed("owner", |cx| {
+                            crate::OverlayController::request(
+                                cx,
+                                crate::OverlayRequest::dismissible_popover(
+                                    popover_id,
+                                    trigger,
+                                    open_for_render.clone(),
+                                    crate::OverlayPresence::instant(true),
+                                    Vec::new(),
+                                ),
+                            );
+                            cx.text("owner")
+                        }));
+                        out
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        crate::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        popover_layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .popovers
+                .get(&(window, popover_id))
+                .map(|entry| entry.layer)
+                .or(popover_layer)
+        });
+        let layer = popover_layer.expect("popover layer");
+        assert!(
+            ui.is_layer_visible(layer),
+            "owned cached popover should remain visible across cache-hit frames"
+        );
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "cache-hit frames should reuse the popover producer subtree without rerendering it"
+    );
+}
+
+#[test]
+fn owned_cached_tooltip_request_is_pruned_immediately_when_request_owner_is_removed() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    let tooltip_id = GlobalElementId(0x46);
+    let mut show_owner = true;
+    let mut tooltip_layer: Option<fret_ui::tree::UiLayerId> = None;
+
+    for _frame in 0..2 {
+        begin_frame(&mut app, window);
+        let mut trigger_id: Option<GlobalElementId> = None;
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "owned-cached-tooltip-prune",
+            |cx| {
+                let mut out = vec![cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(80.0));
+                            layout.size.height = Length::Px(Px(32.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        trigger_id = Some(id);
+                        Vec::new()
+                    },
+                )];
+
+                if show_owner {
+                    let trigger = trigger_id.expect("trigger id");
+                    out.push(cx.keyed("owner", |cx| {
+                        let mut request = crate::OverlayRequest::tooltip(
+                            tooltip_id,
+                            open.clone(),
+                            crate::OverlayPresence::instant(true),
+                            Vec::new(),
+                        );
+                        request.trigger = Some(trigger);
+                        crate::OverlayController::request(cx, request);
+                        cx.text("owner")
+                    }));
+                }
+
+                out
+            },
+        );
+        ui.set_root(root);
+        crate::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        if show_owner {
+            tooltip_layer =
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                    overlays
+                        .tooltips
+                        .get(&(window, tooltip_id))
+                        .map(|entry| entry.layer)
+                });
+            let layer = tooltip_layer.expect("tooltip layer");
+            assert!(ui.is_layer_visible(layer));
+            show_owner = false;
+        }
+    }
+
+    let layer = tooltip_layer.expect("tooltip layer");
+    assert!(
+        ui.layer_root(layer).is_none(),
+        "owned tooltip layer should be removed immediately once its request owner disappears"
+    );
+    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        assert!(
+            overlays.tooltips.get(&(window, tooltip_id)).is_none(),
+            "active tooltip entry should be pruned with the removed owner"
+        );
+        assert!(
+            overlays
+                .cached_tooltip_requests
+                .get(&(window, tooltip_id))
+                .is_none(),
+            "cached tooltip declaration should be pruned with the removed owner"
+        );
+    });
+}
+
+#[test]
+fn owned_cached_tooltip_request_stays_visible_during_view_cache_reuse() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    let tooltip_id = GlobalElementId(0x47);
+    let renders = Arc::new(AtomicUsize::new(0));
+    let mut tooltip_layer: Option<fret_ui::tree::UiLayerId> = None;
+
+    for _frame in 0..4 {
+        begin_frame(&mut app, window);
+        let renders = renders.clone();
+        let open_for_render = open.clone();
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "owned-cached-tooltip-view-cache-reuse",
+            move |cx| {
+                vec![
+                    cx.view_cache(fret_ui::element::ViewCacheProps::default(), |cx| {
+                        renders.fetch_add(1, Ordering::SeqCst);
+                        let mut trigger_id: Option<GlobalElementId> = None;
+                        let mut out = vec![cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(80.0));
+                                    layout.size.height = Length::Px(Px(32.0));
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            |_cx, _st, id| {
+                                trigger_id = Some(id);
+                                Vec::new()
+                            },
+                        )];
+                        let trigger = trigger_id.expect("trigger id");
+                        out.push(cx.keyed("owner", |cx| {
+                            let mut request = crate::OverlayRequest::tooltip(
+                                tooltip_id,
+                                open_for_render.clone(),
+                                crate::OverlayPresence::instant(true),
+                                Vec::new(),
+                            );
+                            request.trigger = Some(trigger);
+                            crate::OverlayController::request(cx, request);
+                            cx.text("owner")
+                        }));
+                        out
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        crate::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        tooltip_layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .tooltips
+                .get(&(window, tooltip_id))
+                .map(|entry| entry.layer)
+                .or(tooltip_layer)
+        });
+        let layer = tooltip_layer.expect("tooltip layer");
+        assert!(
+            ui.is_layer_visible(layer),
+            "owned cached tooltip should remain visible across cache-hit frames"
+        );
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "cache-hit frames should reuse the tooltip producer subtree without rerendering it"
+    );
+}
+
+#[test]
+fn owned_cached_toast_layer_request_is_pruned_when_request_owner_is_removed() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let store = crate::OverlayController::toast_store(&mut app);
+    let _ = crate::OverlayController::toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Hello"),
+    );
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    let toast_layer_id = GlobalElementId(0x48);
+    let mut show_owner = true;
+    let mut toast_layer: Option<fret_ui::tree::UiLayerId> = None;
+
+    for _frame in 0..2 {
+        begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "owned-cached-toast-layer-prune",
+            |cx| {
+                let mut out = Vec::new();
+                if show_owner {
+                    out.push(cx.keyed("owner", |cx| {
+                        crate::OverlayController::request(
+                            cx,
+                            crate::OverlayRequest::toast_layer(toast_layer_id, store.clone())
+                                .toast_style(zero_motion_toast_style()),
+                        );
+                        cx.text("owner")
+                    }));
+                }
+                out
+            },
+        );
+        ui.set_root(root);
+        crate::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        if show_owner {
+            toast_layer =
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                    overlays
+                        .toast_layers
+                        .get(&(window, toast_layer_id))
+                        .map(|entry| entry.layer)
+                });
+            let layer = toast_layer.expect("toast layer");
+            assert!(ui.is_layer_visible(layer));
+            show_owner = false;
+        }
+    }
+
+    let layer = toast_layer.expect("toast layer");
+    assert!(
+        ui.layer_root(layer).is_none(),
+        "owned toast layer should be removed once its request owner disappears"
+    );
+    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        assert!(
+            overlays
+                .toast_layers
+                .get(&(window, toast_layer_id))
+                .is_none(),
+            "active toast layer entry should be pruned with the removed owner"
+        );
+        assert!(
+            overlays
+                .cached_toast_layer_requests
+                .get(&(window, toast_layer_id))
+                .is_none(),
+            "cached toast layer declaration should be pruned with the removed owner"
+        );
+    });
+}
+
+#[test]
+fn owned_cached_toast_layer_request_stays_visible_during_view_cache_reuse() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let store = crate::OverlayController::toast_store(&mut app);
+    let _ = crate::OverlayController::toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Hello"),
+    );
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    let toast_layer_id = GlobalElementId(0x49);
+    let renders = Arc::new(AtomicUsize::new(0));
+    let mut toast_layer: Option<fret_ui::tree::UiLayerId> = None;
+
+    for _frame in 0..4 {
+        begin_frame(&mut app, window);
+        let renders = renders.clone();
+        let store_for_render = store.clone();
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "owned-cached-toast-layer-view-cache-reuse",
+            move |cx| {
+                vec![
+                    cx.view_cache(fret_ui::element::ViewCacheProps::default(), |cx| {
+                        renders.fetch_add(1, Ordering::SeqCst);
+                        vec![cx.keyed("owner", |cx| {
+                            crate::OverlayController::request(
+                                cx,
+                                crate::OverlayRequest::toast_layer(
+                                    toast_layer_id,
+                                    store_for_render.clone(),
+                                )
+                                .toast_style(zero_motion_toast_style()),
+                            );
+                            cx.text("owner")
+                        })]
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        crate::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        toast_layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .toast_layers
+                .get(&(window, toast_layer_id))
+                .map(|entry| entry.layer)
+                .or(toast_layer)
+        });
+        let layer = toast_layer.expect("toast layer");
+        assert!(
+            ui.is_layer_visible(layer),
+            "owned cached toast layer should remain visible across cache-hit frames"
+        );
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "cache-hit frames should reuse the toast-layer producer subtree without rerendering it"
     );
 }
