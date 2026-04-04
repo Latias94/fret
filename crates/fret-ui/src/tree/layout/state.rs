@@ -134,9 +134,7 @@ impl<H: UiHost> UiTree<H> {
             let seeded = crate::elements::with_window_state(app, window, |window_state| {
                 window_state.node_entry(element).map(|entry| entry.node)
             });
-            if let Some(node) = seeded
-                && self.nodes.get(node).and_then(|entry| entry.element) == Some(element)
-                && self.node_is_attached_to_layer_tree(node)
+            if let Some(node) = self.resolve_live_attached_node_for_element_seeded(element, seeded)
             {
                 return Some(node);
             }
@@ -150,10 +148,34 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        self.resolve_live_attached_node_for_element_seeded(element, None)
+    }
+
+    pub(crate) fn resolve_live_attached_node_for_element_seeded(
+        &self,
+        element: GlobalElementId,
+        seeded: Option<NodeId>,
+    ) -> Option<NodeId> {
+        if let Some(node) = seeded
+            && self.nodes.get(node).and_then(|entry| entry.element) == Some(element)
+            && self.node_is_attached_to_layer_tree(node)
+        {
+            return Some(node);
+        }
+
         self.nodes.iter().find_map(|(node, entry)| {
             (entry.element == Some(element) && self.node_is_attached_to_layer_tree(node))
                 .then_some(node)
         })
+    }
+
+    pub(crate) fn resolve_reusable_node_for_element_seeded(
+        &self,
+        element: GlobalElementId,
+        seeded: Option<NodeId>,
+    ) -> Option<NodeId> {
+        self.resolve_live_attached_node_for_element_seeded(element, seeded)
+            .or_else(|| seeded.filter(|&node| self.node_element(node) == Some(element)))
     }
 
     pub(crate) fn extend_live_bound_scroll_handle_invalidations(

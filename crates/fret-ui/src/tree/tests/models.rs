@@ -72,6 +72,41 @@ fn model_change_invalidates_bound_text_input() {
 }
 
 #[test]
+fn seeded_live_node_resolution_ignores_stale_detached_node_entry() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let element = crate::elements::GlobalElementId(4242);
+    let root = ui.create_node(TestStack);
+    let live_node = ui.create_node_for_element(element, TestStack);
+    let stale_detached = ui.create_node_for_element(element, TestStack);
+
+    ui.set_root(root);
+    ui.add_child(root, live_node);
+
+    assert_eq!(
+        ui.resolve_live_attached_node_for_element_seeded(element, Some(stale_detached)),
+        Some(live_node),
+        "expected seeded live-node resolution to fall back from a stale detached node to the live attached node for the same element"
+    );
+}
+
+#[test]
+fn seeded_reusable_node_resolution_reuses_detached_seed_when_no_live_attached_node_exists() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let element = crate::elements::GlobalElementId(4343);
+    let detached = ui.create_node_for_element(element, TestStack);
+
+    assert_eq!(
+        ui.resolve_reusable_node_for_element_seeded(element, Some(detached)),
+        Some(detached),
+        "expected reusable seeded-node resolution to reuse the retained detached seed when no live attached node exists for the element"
+    );
+}
+
+#[test]
 fn debug_invalidation_walks_record_model_change_root() {
     let mut app = crate::test_host::TestHost::new();
     let model = app.models_mut().insert(0u32);

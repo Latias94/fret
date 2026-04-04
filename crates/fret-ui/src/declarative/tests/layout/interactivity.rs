@@ -1166,6 +1166,214 @@ fn model_observation_persists_after_frame_advance_without_render_root() {
 }
 
 #[test]
+fn model_observation_invalidation_ignores_stale_detached_node_entry() {
+    use crate::elements::NodeEntry;
+
+    #[derive(Default)]
+    struct DetachedDummy;
+
+    impl<H: UiHost> Widget<H> for DetachedDummy {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let model = app.models_mut().insert(0u32);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let observed_id = std::rc::Rc::new(std::cell::Cell::new(None));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "model-observation-stale-node-entry",
+        {
+            let observed_id = observed_id.clone();
+            let model = model.clone();
+            |cx| {
+                let mut props = crate::element::PressableProps::default();
+                props.layout.size.width = Length::Px(Px(80.0));
+                props.layout.size.height = Length::Px(Px(32.0));
+                vec![cx.pressable_with_id(props, move |cx, _state, id| {
+                    observed_id.set(Some(id));
+                    cx.observe_model(&model, Invalidation::Layout);
+                    vec![cx.text("observed")]
+                })]
+            }
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        ui.debug_stats().layout_nodes_performed,
+        0,
+        "expected a clean follow-up frame before injecting the stale node_entry"
+    );
+
+    let observed_id = observed_id.get().expect("observed element id");
+    let live_node =
+        crate::elements::node_for_element(&mut app, window, observed_id).expect("live node");
+    ui.test_clear_node_invalidations(live_node);
+
+    let stale_detached = ui.create_node_for_element(observed_id, DetachedDummy);
+    ui.test_clear_node_invalidations(stale_detached);
+    let frame_id = app.frame_id();
+    crate::elements::with_window_state(&mut app, window, |st| {
+        st.set_node_entry(
+            observed_id,
+            NodeEntry {
+                node: stale_detached,
+                last_seen_frame: frame_id,
+                root: observed_id,
+            },
+        );
+    });
+
+    let _ = model.update(&mut app, |v, _cx| *v += 1);
+    let changed = app.take_changed_models();
+    assert!(ui.propagate_model_changes(&mut app, &changed));
+    assert!(
+        ui.test_node_invalidations(live_node)
+            .map(|inv| inv.layout)
+            .unwrap_or(false),
+        "expected declarative model invalidation to mark the live attached node dirty even when the seeded node_entry points at a stale detached node"
+    );
+    assert!(
+        !ui.test_node_invalidations(stale_detached)
+            .map(|inv| inv.layout)
+            .unwrap_or(false),
+        "expected declarative model invalidation to avoid reusing the stale detached node as the invalidation target"
+    );
+    let counters_after_propagate = ui.test_invalidation_counters();
+    let root_after_propagate = ui.test_node_invalidations(root);
+    let live_after_propagate = ui.test_node_invalidations(live_node);
+    let stale_after_propagate = ui.test_node_invalidations(stale_detached);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        ui.debug_stats().layout_nodes_performed > 0,
+        "expected declarative model invalidation to trigger relayout on the live attached node instead of disappearing behind a stale detached node_entry; counters_after_propagate={counters_after_propagate:?}; root_after_propagate={root_after_propagate:?}; live_after_propagate={live_after_propagate:?}; stale_after_propagate={stale_after_propagate:?}; layout_stats={:?}",
+        ui.debug_stats(),
+    );
+}
+
+#[test]
+fn global_observation_invalidation_ignores_stale_detached_node_entry() {
+    use crate::elements::NodeEntry;
+
+    #[derive(Default)]
+    struct DetachedDummy;
+
+    impl<H: UiHost> Widget<H> for DetachedDummy {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    app.set_global::<u32>(1);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let observed_id = std::rc::Rc::new(std::cell::Cell::new(None));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "global-observation-stale-node-entry",
+        {
+            let observed_id = observed_id.clone();
+            |cx| {
+                let mut props = crate::element::PressableProps::default();
+                props.layout.size.width = Length::Px(Px(80.0));
+                props.layout.size.height = Length::Px(Px(32.0));
+                vec![cx.pressable_with_id(props, move |cx, _state, id| {
+                    observed_id.set(Some(id));
+                    cx.observe_global::<u32>(Invalidation::Layout);
+                    vec![cx.text("observed")]
+                })]
+            }
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        ui.debug_stats().layout_nodes_performed,
+        0,
+        "expected a clean follow-up frame before injecting the stale node_entry"
+    );
+
+    let observed_id = observed_id.get().expect("observed element id");
+    let live_node =
+        crate::elements::node_for_element(&mut app, window, observed_id).expect("live node");
+    ui.test_clear_node_invalidations(live_node);
+
+    let stale_detached = ui.create_node_for_element(observed_id, DetachedDummy);
+    ui.test_clear_node_invalidations(stale_detached);
+    let frame_id = app.frame_id();
+    crate::elements::with_window_state(&mut app, window, |st| {
+        st.set_node_entry(
+            observed_id,
+            NodeEntry {
+                node: stale_detached,
+                last_seen_frame: frame_id,
+                root: observed_id,
+            },
+        );
+    });
+
+    assert!(ui.propagate_global_changes(&mut app, &[std::any::TypeId::of::<u32>()]));
+    assert!(
+        ui.test_node_invalidations(live_node)
+            .map(|inv| inv.layout)
+            .unwrap_or(false),
+        "expected declarative global invalidation to mark the live attached node dirty even when the seeded node_entry points at a stale detached node"
+    );
+    assert!(
+        !ui.test_node_invalidations(stale_detached)
+            .map(|inv| inv.layout)
+            .unwrap_or(false),
+        "expected declarative global invalidation to avoid reusing the stale detached node as the invalidation target"
+    );
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        ui.debug_stats().layout_nodes_performed > 0,
+        "expected declarative global invalidation to trigger relayout on the live attached node instead of disappearing behind a stale detached node_entry"
+    );
+}
+
+#[test]
 fn pressable_dispatches_click_command_when_released_over_self() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

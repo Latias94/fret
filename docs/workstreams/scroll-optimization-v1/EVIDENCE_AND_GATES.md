@@ -199,6 +199,17 @@ This follow-on slice locks the contract that:
 - stale detached same-frame `node_entry` seeds must not win over a still-live attached node for the
   same element.
 
+## Follow-on slice — Declarative rebuild and invalidation element paths resolve authoritative live nodes
+
+This follow-on slice locks the contract that:
+
+- declarative model/global/notify invalidation paths must not treat
+  `window_state.node_entry(element)` as authoritative when `UiTree` is available,
+- declarative mount/root reuse must prefer the live attached node for an element and only reuse a
+  retained seed when no live attached node exists,
+- view-cache GC / retained virtual-list reconcile roots must ignore detached stale `node_entry`
+  seeds instead of keeping them alive as authoritative rebuild roots.
+
 ## Canonical gates
 
 - Seed contract regression:
@@ -233,6 +244,8 @@ This follow-on slice locks the contract that:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui key_hook_focus_request_ignores_stale_detached_node_entry`
 - Pointer-region focus requests resolve the live attached node instead of a stale detached seed:
   - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui declarative_pointer_region_focus_request_ignores_stale_detached_node_entry`
+- Declarative model/global invalidation and rebuild seed resolution prefer live attached nodes:
+  - `CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui model_observation_invalidation_ignores_stale_detached_node_entry global_observation_invalidation_ignores_stale_detached_node_entry seeded_live_node_resolution_ignores_stale_detached_node_entry seeded_reusable_node_resolution_reuses_detached_seed_when_no_live_attached_node_exists`
 - Detached dirty cache roots are pruned before contained relayout:
   - `CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups`
 - Detached pending barrier relayouts are pruned before execution:

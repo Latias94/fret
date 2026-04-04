@@ -105,7 +105,10 @@ impl<H: UiHost> UiTree<H> {
                     if mask.is_empty() {
                         return;
                     }
-                    let Some(node) = window_state.node_entry(element).map(|e| e.node) else {
+                    let seeded = window_state.node_entry(element).map(|e| e.node);
+                    let Some(node) =
+                        self.resolve_live_attached_node_for_element_seeded(element, seeded)
+                    else {
                         return;
                     };
                     combined
@@ -150,7 +153,10 @@ impl<H: UiHost> UiTree<H> {
                     if mask.is_empty() {
                         return;
                     }
-                    let Some(node) = window_state.node_entry(element).map(|e| e.node) else {
+                    let seeded = window_state.node_entry(element).map(|e| e.node);
+                    let Some(node) =
+                        self.resolve_live_attached_node_for_element_seeded(element, seeded)
+                    else {
                         return;
                     };
                     combined

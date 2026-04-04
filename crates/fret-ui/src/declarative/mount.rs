@@ -344,10 +344,9 @@ where
             let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> =
                 Vec::new();
 
-            let root_node = window_state
-                .node_entry(root_id)
-                .map(|e| e.node)
-                .filter(|&node| ui.node_exists(node))
+            let seeded_root = window_state.node_entry(root_id).map(|e| e.node);
+            let root_node = ui
+                .resolve_reusable_node_for_element_seeded(root_id, seeded_root)
                 .unwrap_or_else(|| {
                     let node = ui.create_node(ElementHostWidget::new(root_id));
                     ui.set_node_element(node, Some(root_id));
@@ -465,7 +464,10 @@ where
             }
 
             for element in window_state.take_notify_for_animation_frame() {
-                if let Some(node) = window_state.node_entry(element).map(|e| e.node) {
+                let seeded = window_state.node_entry(element).map(|e| e.node);
+                if let Some(node) =
+                    ui.resolve_live_attached_node_for_element_seeded(element, seeded)
+                {
                     ui.invalidate_with_source_and_detail(
                         node,
                         Invalidation::Paint,
@@ -606,7 +608,10 @@ where
                     window_state.view_cache_reuse_roots().collect();
                 let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
                     .iter()
-                    .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
+                    .filter_map(|root| {
+                        let seeded = window_state.node_entry(*root).map(|e| e.node);
+                        ui.resolve_live_attached_node_for_element_seeded(*root, seeded)
+                    })
                     .collect();
 
                 if !view_cache_reuse_root_nodes.is_empty() {
@@ -627,8 +632,11 @@ where
                 for root in view_cache_reuse_roots {
                     if let Some(elements) = window_state.view_cache_elements_for_root(root) {
                         for &element in elements {
-                            if let Some(entry) = window_state.node_entry(element) {
-                                reachable_from_view_cache_roots.insert(entry.node);
+                            let seeded = window_state.node_entry(element).map(|entry| entry.node);
+                            if let Some(node) =
+                                ui.resolve_live_attached_node_for_element_seeded(element, seeded)
+                            {
+                                reachable_from_view_cache_roots.insert(node);
                             }
                         }
                     }
@@ -900,10 +908,9 @@ where
             let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> =
                 Vec::new();
 
-            let root_node = window_state
-                .node_entry(root_id)
-                .map(|e| e.node)
-                .filter(|&node| ui.node_exists(node))
+            let seeded_root = window_state.node_entry(root_id).map(|e| e.node);
+            let root_node = ui
+                .resolve_reusable_node_for_element_seeded(root_id, seeded_root)
                 .unwrap_or_else(|| {
                     let node = ui.create_node(ElementHostWidget::new(root_id));
                     ui.set_node_element(node, Some(root_id));
@@ -1097,7 +1104,10 @@ where
                     window_state.view_cache_reuse_roots().collect();
                 let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
                     .iter()
-                    .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
+                    .filter_map(|root| {
+                        let seeded = window_state.node_entry(*root).map(|e| e.node);
+                        ui.resolve_live_attached_node_for_element_seeded(*root, seeded)
+                    })
                     .collect();
 
                 if !view_cache_reuse_root_nodes.is_empty() {
@@ -1115,8 +1125,11 @@ where
                 for root in view_cache_reuse_roots {
                     if let Some(elements) = window_state.view_cache_elements_for_root(root) {
                         for &element in elements {
-                            if let Some(entry) = window_state.node_entry(element) {
-                                reachable_from_view_cache_roots.insert(entry.node);
+                            let seeded = window_state.node_entry(element).map(|entry| entry.node);
+                            if let Some(node) =
+                                ui.resolve_live_attached_node_for_element_seeded(element, seeded)
+                            {
+                                reachable_from_view_cache_roots.insert(node);
                             }
                         }
                     }
@@ -1372,10 +1385,9 @@ fn mount_element<H: UiHost + 'static>(
     };
     let _span_guard = span.enter();
 
-    let node = window_state
-        .node_entry(id)
-        .map(|e| e.node)
-        .filter(|&node| ui.node_exists(node))
+    let seeded = window_state.node_entry(id).map(|e| e.node);
+    let node = ui
+        .resolve_reusable_node_for_element_seeded(id, seeded)
         .unwrap_or_else(|| {
             let node = ui.create_node(ElementHostWidget::new(id));
             ui.set_node_element(node, Some(id));
@@ -1828,9 +1840,9 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
     }
 
     for (element, reconcile_kind) in elements {
-        let node = window_state
-            .node_entry(element)
-            .map(|e| e.node)
+        let seeded = window_state.node_entry(element).map(|e| e.node);
+        let node = ui
+            .resolve_live_attached_node_for_element_seeded(element, seeded)
             .or_else(|| {
                 // View-cache reuse can skip declarative re-mounting of subtrees, which means the
                 // element runtime may not have a fresh `NodeEntry` mapping for all elements that
@@ -1854,6 +1866,16 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
         let Some(node) = node else {
             continue;
         };
+        if seeded != Some(node) {
+            window_state.set_node_entry(
+                element,
+                NodeEntry {
+                    node,
+                    last_seen_frame: frame_id,
+                    root: root_id,
+                },
+            );
+        }
 
         let Some(record) = window_frame.instances.get(node) else {
             continue;

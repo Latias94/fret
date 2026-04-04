@@ -72,6 +72,20 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(test)]
+    pub(crate) fn test_node_invalidations(&self, node: NodeId) -> Option<InvalidationFlags> {
+        self.nodes.get(node).map(|n| n.invalidation)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_invalidation_counters(&self) -> (u32, u32, u32) {
+        (
+            self.layout_invalidations_count,
+            self.invalidated_layout_nodes,
+            self.invalidated_paint_nodes,
+        )
+    }
+
+    #[cfg(test)]
     pub(crate) fn test_set_layout_invalidation(&mut self, node: NodeId, value: bool) {
         let view_cache_active = self.view_cache_active();
         let Some((layout_before, layout_after, should_mark_contained_cache_root_dirty)) =

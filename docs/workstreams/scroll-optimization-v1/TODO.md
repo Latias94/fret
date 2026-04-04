@@ -25,10 +25,19 @@ Status: Active
   target resolution until dispatch regains access to `UiTree`.
 - [x] Lock the command/event live-node resolution contract with focused stale-detached regression
   gates in `EVIDENCE_AND_GATES.md`.
-- [ ] Audit remaining rebuild/invalidation element-targeted paths that still read
-  `window_state.node_entry(element)` directly:
-  - `crates/fret-ui/src/declarative/mount.rs`
-  - `crates/fret-ui/src/tree/ui_tree_invalidation_walk/propagate.rs`
+
+## Follow-on slice — Declarative rebuild and invalidation element paths resolve authoritative live nodes
+
+- [x] Replace element-runtime model/global invalidation target resolution so stale detached
+  `node_entry` seeds fall back to the live attached node.
+- [x] Replace rebuild-time `notify_for_animation_frame` invalidation target resolution so it no
+  longer trusts `window_state.node_entry(element)` directly.
+- [x] Replace declarative mount/root reuse node resolution so rebuild prefers the live attached
+  node and only reuses a retained seed when no live attached node exists for the element.
+- [x] Replace view-cache GC / retained virtual-list reconcile root resolution so detached stale
+  `node_entry` seeds do not become authoritative keep-alive roots.
+- [x] Lock the declarative rebuild/invalidation live-node contract with focused stale-detached
+  regression gates in `EVIDENCE_AND_GATES.md`.
 
 ## Gates-first checklist
 
