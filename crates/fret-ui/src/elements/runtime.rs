@@ -1321,6 +1321,7 @@ impl WindowElementState {
         root: GlobalElementId,
         frame_id: FrameId,
         root_id: GlobalElementId,
+        mut resolve_live_attached_node: impl FnMut(GlobalElementId, Option<NodeId>) -> Option<NodeId>,
     ) -> bool {
         if self.view_cache_elements_next.contains_key(&root) {
             return true;
@@ -1330,30 +1331,42 @@ impl WindowElementState {
             return false;
         };
 
-        self.view_cache_elements_next.insert(root, elements.clone());
-
-        let mut missing_node_entries: u32 = 0;
-        for element in elements {
-            let Some(entry) = self.nodes.get_mut(&element) else {
-                missing_node_entries = missing_node_entries.saturating_add(1);
-                continue;
+        let mut authoritative_nodes: Vec<(GlobalElementId, NodeId, GlobalElementId)> =
+            Vec::with_capacity(elements.len());
+        for &element in &elements {
+            let seeded_entry = self.nodes.get(&element).copied();
+            let Some(node) =
+                resolve_live_attached_node(element, seeded_entry.map(|entry| entry.node))
+            else {
+                return false;
             };
-            entry.last_seen_frame = frame_id;
+            let owner_root = seeded_entry.map(|entry| entry.root).unwrap_or(root_id);
+            authoritative_nodes.push((element, node, owner_root));
+        }
+
+        self.view_cache_elements_next.insert(root, elements);
+
+        for (element, node, owner_root) in authoritative_nodes {
             // Touching a retained subtree must not reassign cross-root ownership (ADR 0176).
             // If the element is already owned by a different root, keep the original owner and
             // rely on diagnostics to flag the mismatch rather than "repairing" it implicitly.
-            if entry.root == root_id {
+            if owner_root == root_id {
                 // Fast path: expected owner.
             }
+            self.nodes.insert(
+                element,
+                NodeEntry {
+                    node,
+                    last_seen_frame: frame_id,
+                    root: owner_root,
+                },
+            );
 
             #[cfg(feature = "diagnostics")]
             self.touch_debug_identity_for_element(frame_id, element);
         }
 
-        // If the recorded list references elements that no longer have node entries, treat the
-        // list as potentially incomplete/stale so the caller can fall back to a retained-subtree
-        // walk and re-record the membership deterministically.
-        missing_node_entries == 0
+        true
     }
 
     pub(crate) fn view_cache_elements_for_root(

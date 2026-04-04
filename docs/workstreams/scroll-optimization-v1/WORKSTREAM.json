@@ -3,7 +3,7 @@
   "slug": "scroll-optimization-v1",
   "title": "Scroll Optimization Workstream v1",
   "status": "active",
-  "updated": "2026-04-04",
+  "updated": "2026-04-05",
   "scope_kind": "execution",
   "problem": "Keep scroll extent probing, deferred unbounded probes, and post-layout overflow observation coherent so scroll surfaces stay correct and smooth under resize, invalidation, view-cache reuse, and edge growth/shrink.",
   "authoritative_docs": [
@@ -67,6 +67,10 @@
       "command": "cargo test -p fret-ui keep_alive_view_cache_membership_ignores_stale_nested_cache_roots -- --nocapture"
     },
     {
+      "name": "reuse-membership-touch-revalidates-live-attached-elements",
+      "command": "cargo test -p fret-ui view_cache_keep_alive_revalidates_recorded_membership_before_touching_stale_detached_elements -- --nocapture"
+    },
+    {
       "name": "ecosystem-live-node-public-surface",
       "command": "CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui-kit apply_initial_focus_prefers_explicit_element resolve_restore_focus_prefers_trigger_and_falls_back_to_live_node resolve_restore_focus_skips_non_focusable_trigger resolve_branch_nodes_dedupes_and_preserves_order active_descendant_is_set_when_active_item_is_present_and_cleared_when_missing apply_initial_focus_ignores_removed_element_with_only_last_known_mapping resolve_branch_nodes_ignores_removed_trigger_with_only_last_known_mapping active_descendant_helper_ignores_removed_element_with_only_last_known_mapping table_active_descendant_semantics_resolves_from_declarative_active_row_relation --status-level fail"
     },
@@ -86,6 +90,8 @@
     "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
     "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
     "crates/fret-ui/src/declarative/mount.rs",
+    "crates/fret-ui/src/elements/runtime.rs",
+    "crates/fret-ui/src/declarative/tests/view_cache.rs",
     "crates/fret-ui/src/declarative/tests/virtual_list/retained.rs",
     "crates/fret-ui/src/tree/node_storage.rs",
     "crates/fret-ui/src/tree/ui_tree_mutation/core.rs",

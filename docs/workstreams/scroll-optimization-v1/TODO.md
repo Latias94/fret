@@ -67,6 +67,16 @@ Status: Active
 - [x] Lock the contract with a focused regression proving stale nested cache roots no longer keep
   detached descendants inside the keep-alive closure.
 
+## Follow-on slice — Reuse-frame membership touch must revalidate recorded members
+
+- [x] Treat recorded `view_cache_elements_for_root(...)` membership as reusable only after every
+  recorded member resolves to a live attached node for the current frame.
+- [x] If any recorded member is stale/detached, invalidate the whole recorded membership list for
+  that reuse frame and fall back to an authoritative retained-subtree walk plus membership
+  re-record.
+- [x] Lock explicit `view_cache_keep_alive(...)` reuse with a regression proving stale detached
+  recorded members are neither touched nor retained in the refreshed authoritative membership list.
+
 ## Follow-on slice — Interaction targets resolve authoritative live attached nodes
 
 - [x] Replace hover/pressed interaction target bookkeeping so runtime state stores element identity

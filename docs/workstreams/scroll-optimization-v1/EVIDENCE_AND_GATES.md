@@ -312,6 +312,43 @@ Audit note (2026-04-04):
   proves the regression directly: recorded membership alone is no longer sufficient to recurse into
   a stale nested cache root or keep its detached descendants alive.
 
+## Follow-on slice — Reuse-frame membership touch must revalidate recorded members
+
+This follow-on slice locks the contract that:
+
+- recorded `view_cache_elements_for_root(...)` membership is only a reuse seed until every member
+  revalidates against the current live attached tree,
+- reuse frames must not refresh `last_seen_frame` or carry forward the recorded membership list if
+  any recorded member has become stale/detached,
+- invalid recorded membership must force the reuse path back onto an authoritative retained-subtree
+  walk plus membership re-record, including explicit `view_cache_keep_alive(...)` reuse.
+
+Verified gates (2026-04-05):
+
+- `cargo test -p fret-ui view_cache_keep_alive_revalidates_recorded_membership_before_touching_stale_detached_elements -- --nocapture`
+  - Result: passed.
+- `cargo test -p fret-ui keep_alive_view_cache_ -- --nocapture`
+  - Result: passed.
+- `cargo test -p fret-ui retained_virtual_list_host_updates_window_without_rerendering_view_cache_root -- --nocapture`
+  - Result: passed.
+- `cargo test -p fret-ui viewport_resize_after_cache_enable_ -- --nocapture`
+  - Result: passed.
+- `cargo test -p fret-ui gc_ -- --nocapture`
+  - Result: passed.
+
+Audit note (2026-04-05):
+
+- `crates/fret-ui/src/elements/runtime.rs::touch_view_cache_subtree_elements_if_recorded(...)`
+  now validates every recorded member through authoritative live attached node resolution before it
+  refreshes `last_seen_frame` or carries the recorded membership forward into the next frame.
+- `crates/fret-ui/src/declarative/mount.rs` now passes
+  `UiTree::resolve_live_attached_node_for_element_seeded(...)` into the reuse touch path, so any
+  stale/detached recorded member invalidates the whole list and forces the existing retained-subtree
+  walk plus membership re-record fallback.
+- `crates/fret-ui/src/declarative/tests/view_cache.rs::view_cache_keep_alive_revalidates_recorded_membership_before_touching_stale_detached_elements`
+  proves the regression directly: explicit keep-alive reuse no longer touches or retains a stale
+  detached recorded member.
+
 ## Follow-on slice — Interaction targets resolve authoritative live attached nodes
 
 This follow-on slice locks the contract that:
@@ -527,6 +564,9 @@ Audit note (2026-04-04):
   - `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs`
 - Recursive cache-root keep-alive closure filtering:
   - `crates/fret-ui/src/declarative/mount.rs`
+- Reuse-frame recorded membership revalidation:
+  - `crates/fret-ui/src/elements/runtime.rs`
+  - `crates/fret-ui/src/declarative/tests/view_cache.rs`
 - Best-effort window snapshot / command-availability overlay helpers:
   - `crates/fret-runtime/src/window_input_context.rs`
   - `crates/fret-runtime/src/window_command_gating/helpers.rs`

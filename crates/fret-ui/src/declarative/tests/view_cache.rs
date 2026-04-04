@@ -589,3 +589,150 @@ fn view_cache_matches_non_cached_output_for_stable_frames() {
         "view cache should not change hit-test outcomes for stable frames"
     );
 }
+
+#[test]
+fn view_cache_keep_alive_revalidates_recorded_membership_before_touching_stale_detached_elements() {
+    use crate::elements::NodeEntry;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let cache_root_id = Arc::new(std::sync::Mutex::new(
+        None::<crate::elements::GlobalElementId>,
+    ));
+    let live_leaf_id = Arc::new(std::sync::Mutex::new(
+        None::<crate::elements::GlobalElementId>,
+    ));
+    let root_name = "view-cache-keep-alive-revalidates-membership";
+    let owner_root = crate::elements::global_root(window, root_name);
+    let frame0 = app.frame_id();
+
+    let stale = crate::elements::GlobalElementId(0xCACE_5001);
+    let stale_node = ui.create_node(FillStack);
+    ui.set_node_element(stale_node, Some(stale));
+    assert!(
+        ui.resolve_live_attached_node_for_element_seeded(stale, Some(stale_node))
+            .is_none(),
+        "reproducer requires a stale detached node entry"
+    );
+
+    let mut root0: Option<NodeId> = None;
+    let mut cache_root: Option<crate::elements::GlobalElementId> = None;
+    let mut live_leaf: Option<crate::elements::GlobalElementId> = None;
+
+    for frame in 0..2 {
+        let keep_alive = frame == 1;
+        let root = render_root_for_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            root_name,
+            {
+                let renders = renders.clone();
+                let cache_root_id = cache_root_id.clone();
+                let live_leaf_id = live_leaf_id.clone();
+                move |cx| {
+                    let subtree = cx.view_cache_keep_alive(
+                        crate::element::ViewCacheProps::default(),
+                        keep_alive,
+                        {
+                            let renders = renders.clone();
+                            let live_leaf_id = live_leaf_id.clone();
+                            move |cx| {
+                                renders.fetch_add(1, Ordering::SeqCst);
+                                let leaf = cx.text("live");
+                                *live_leaf_id.lock().unwrap() = Some(leaf.id);
+                                vec![leaf]
+                            }
+                        },
+                    );
+                    *cache_root_id.lock().unwrap() = Some(subtree.id);
+                    vec![subtree]
+                }
+            },
+        );
+
+        if frame == 0 {
+            root0 = Some(root);
+            cache_root = Some(cache_root_id.lock().unwrap().expect("cache root id"));
+            live_leaf = Some(live_leaf_id.lock().unwrap().expect("live leaf id"));
+
+            app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _app| {
+                let window_state = runtime.for_window_mut(window);
+                window_state.set_node_entry(
+                    stale,
+                    NodeEntry {
+                        node: stale_node,
+                        last_seen_frame: frame0,
+                        root: owner_root,
+                    },
+                );
+                window_state.record_view_cache_subtree_elements(
+                    cache_root.expect("cache root set on frame 0"),
+                    vec![
+                        cache_root.expect("cache root set on frame 0"),
+                        live_leaf.expect("live leaf set on frame 0"),
+                        stale,
+                    ],
+                );
+            });
+
+            app.advance_frame();
+            continue;
+        }
+
+        assert_eq!(
+            Some(root),
+            root0,
+            "expected stable root identity across keep-alive reuse"
+        );
+    }
+
+    let cache_root = cache_root.expect("cache root");
+    let live_leaf = live_leaf.expect("live leaf");
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "keep-alive reuse should skip the child render closure"
+    );
+
+    app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _app| {
+        let window_state = runtime.for_window_mut(window);
+        let elements = window_state
+            .view_cache_elements_for_root(cache_root)
+            .expect("expected authoritative membership after keep-alive reuse");
+        assert!(
+            elements.contains(&cache_root),
+            "cache root should remain in its own membership list"
+        );
+        assert!(
+            elements.contains(&live_leaf),
+            "live retained descendants should remain in the authoritative membership list"
+        );
+        assert!(
+            !elements.contains(&stale),
+            "stale detached recorded members must be dropped when keep-alive reuse revalidates membership"
+        );
+
+        let stale_entry = window_state
+            .node_entry(stale)
+            .expect("stale entry should remain until GC lag expires");
+        assert_eq!(
+            stale_entry.last_seen_frame, frame0,
+            "stale detached node entries must not be touched by invalid recorded membership"
+        );
+    });
+}

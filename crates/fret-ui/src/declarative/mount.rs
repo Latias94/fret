@@ -1684,8 +1684,12 @@ fn mount_element<H: UiHost + 'static>(
         }
 
         let transitioned_into_reuse = window_state.record_view_cache_reuse_frame(id, frame_id);
-        let touched =
-            window_state.touch_view_cache_subtree_elements_if_recorded(id, frame_id, root_id);
+        let touched = window_state.touch_view_cache_subtree_elements_if_recorded(
+            id,
+            frame_id,
+            root_id,
+            |element, seeded| ui.resolve_live_attached_node_for_element_seeded(element, seeded),
+        );
         if transitioned_into_reuse && !touched {
             // If a cache root transitions into reuse without having a recorded subtree list yet,
             // fall back to walking the retained subtree so GC liveness bookkeeping remains
