@@ -89,13 +89,13 @@ pub fn resolve_branch_nodes_for_trigger_and_elements<H: UiHost>(
     branches: &[GlobalElementId],
 ) -> Vec<NodeId> {
     let mut out: Vec<NodeId> = Vec::with_capacity(1 + branches.len());
-    if let Some(node) = fret_ui::elements::node_for_element(app, window, trigger) {
+    if let Some(node) = fret_ui::elements::live_node_for_element(app, window, trigger) {
         out.push(node);
     }
     out.extend(
         branches
             .iter()
-            .filter_map(|branch| fret_ui::elements::node_for_element(app, window, *branch)),
+            .filter_map(|branch| fret_ui::elements::live_node_for_element(app, window, *branch)),
     );
     let mut seen: HashSet<NodeId> = HashSet::with_capacity(out.len());
     out.retain(|id| seen.insert(*id));
@@ -115,7 +115,7 @@ pub fn resolve_branch_nodes_for_elements<H: UiHost>(
 ) -> Vec<NodeId> {
     let mut out: Vec<NodeId> = branches
         .iter()
-        .filter_map(|branch| fret_ui::elements::node_for_element(app, window, *branch))
+        .filter_map(|branch| fret_ui::elements::live_node_for_element(app, window, *branch))
         .collect();
     let mut seen: HashSet<NodeId> = HashSet::with_capacity(out.len());
     out.retain(|id| seen.insert(*id));
@@ -199,6 +199,8 @@ mod tests {
         TextMetrics, TextService,
     };
     use fret_ui::element::{LayoutStyle, Length, PressableProps, SemanticsProps};
+    use std::cell::Cell;
+    use std::rc::Rc;
 
     #[derive(Default)]
     struct FakeServices;
@@ -552,5 +554,75 @@ mod tests {
             Some(in_layer_node),
             &[]
         ));
+    }
+
+    #[test]
+    fn resolve_branch_nodes_ignores_removed_trigger_with_only_last_known_mapping() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let b = bounds();
+
+        let trigger: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let branch: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let show_trigger = Cell::new(true);
+
+        let props = PressableProps {
+            layout: LayoutStyle::default(),
+            focusable: true,
+            ..Default::default()
+        };
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices| {
+                let trigger = trigger.clone();
+                let branch = branch.clone();
+                fret_ui::declarative::render_root(ui, app, services, window, b, "test", |cx| {
+                    let mut out = Vec::new();
+                    if show_trigger.get() {
+                        out.push(cx.keyed("trigger", |cx| {
+                            cx.pressable_with_id(props.clone(), |_cx, _st, id| {
+                                trigger.set(Some(id));
+                                Vec::new()
+                            })
+                        }));
+                    }
+                    out.push(cx.keyed("branch", |cx| {
+                        cx.pressable_with_id(props.clone(), |_cx, _st, id| {
+                            branch.set(Some(id));
+                            Vec::new()
+                        })
+                    }));
+                    out
+                })
+            };
+
+        let root = render_frame(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let trigger = trigger.get().expect("trigger id");
+
+        show_trigger.set(false);
+        app.set_frame_id(fret_runtime::FrameId(app.frame_id().0.saturating_add(1)));
+        let root = render_frame(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let branch = branch.get().expect("branch id");
+        let branch_node =
+            fret_ui::elements::node_for_element(&mut app, window, branch).expect("branch node");
+
+        let out =
+            resolve_branch_nodes_for_trigger_and_elements(&mut app, window, trigger, &[branch]);
+
+        assert_eq!(
+            out,
+            vec![branch_node],
+            "expected branch resolution to ignore a removed trigger that only still has a last-known node mapping"
+        );
     }
 }

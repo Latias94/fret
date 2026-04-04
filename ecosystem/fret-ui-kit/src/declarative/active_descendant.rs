@@ -28,7 +28,7 @@ pub fn active_option_for_index<H: UiHost>(
     active_index: Option<usize>,
 ) -> Option<ActiveOption> {
     let element = active_index.and_then(|idx| elements.get(idx).copied())?;
-    let node = cx.node_for_element(element)?;
+    let node = cx.live_node_for_element(element)?;
     Some(ActiveOption { element, node })
 }
 

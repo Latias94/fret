@@ -13,6 +13,18 @@ impl<H: UiHost> UiTree<H> {
         app.request_redraw(window);
     }
 
+    /// Resolve the live attached node currently associated with `element` in this tree.
+    ///
+    /// This is the authoritative element-to-node query when callers already have access to the
+    /// current `UiTree` and need a node that is still attached to an active layer tree.
+    pub fn live_attached_node_for_element(
+        &self,
+        app: &mut H,
+        element: GlobalElementId,
+    ) -> Option<NodeId> {
+        self.resolve_live_attached_node_for_element(app, self.window, element)
+    }
+
     pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
         self.nodes.get(node).map(|n| n.bounds)
     }

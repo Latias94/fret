@@ -73,7 +73,6 @@ fn toast_icon_from_override<H: UiHost>(
 struct OverlayFocusActionHostAdapter<'a, H: UiHost> {
     app: &'a mut H,
     ui: &'a mut UiTree<H>,
-    window: AppWindowId,
 }
 
 impl<'a, H: UiHost> UiActionHost for OverlayFocusActionHostAdapter<'a, H> {
@@ -104,7 +103,7 @@ impl<'a, H: UiHost> UiActionHost for OverlayFocusActionHostAdapter<'a, H> {
 
 impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusActionHostAdapter<'a, H> {
     fn request_focus(&mut self, target: GlobalElementId) {
-        if let Some(node) = fret_ui::elements::node_for_element(self.app, self.window, target) {
+        if let Some(node) = self.ui.live_attached_node_for_element(self.app, target) {
             self.ui.set_focus(Some(node));
         }
     }
@@ -423,7 +422,6 @@ fn should_suspend_pointer_gating_for_capture(
 struct OverlayFocusHost<'a, H: UiHost> {
     ui: &'a mut UiTree<H>,
     app: &'a mut H,
-    window: AppWindowId,
 }
 
 impl<'a, H: UiHost> UiActionHost for OverlayFocusHost<'a, H> {
@@ -454,7 +452,7 @@ impl<'a, H: UiHost> UiActionHost for OverlayFocusHost<'a, H> {
 
 impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusHost<'a, H> {
     fn request_focus(&mut self, target: fret_ui::elements::GlobalElementId) {
-        if let Some(node) = fret_ui::elements::node_for_element(self.app, self.window, target) {
+        if let Some(node) = self.ui.live_attached_node_for_element(self.app, target) {
             self.ui.set_focus(Some(node));
         }
     }
@@ -884,7 +882,7 @@ pub fn render<H: UiHost + 'static>(
         let mut open_auto_focus_prevented = false;
         if opening {
             if let Some(on_open_auto_focus) = on_open_auto_focus.as_ref() {
-                let mut host = OverlayFocusActionHostAdapter { app, ui, window };
+                let mut host = OverlayFocusActionHostAdapter { app, ui };
                 let mut req_cx = AutoFocusRequestCx::new();
                 on_open_auto_focus(
                     &mut host,
@@ -908,7 +906,7 @@ pub fn render<H: UiHost + 'static>(
         if closing {
             let mut close_auto_focus_prevented = false;
             if let Some(on_close_auto_focus) = on_close_auto_focus.as_ref() {
-                let mut host = OverlayFocusActionHostAdapter { app, ui, window };
+                let mut host = OverlayFocusActionHostAdapter { app, ui };
                 let mut req_cx = AutoFocusRequestCx::new();
                 on_close_auto_focus(
                     &mut host,
@@ -1244,7 +1242,7 @@ pub fn render<H: UiHost + 'static>(
         let mut open_auto_focus_prevented = false;
         if opening {
             if let Some(on_open_auto_focus) = on_open_auto_focus.as_ref() {
-                let mut host = OverlayFocusActionHostAdapter { app, ui, window };
+                let mut host = OverlayFocusActionHostAdapter { app, ui };
                 let mut req_cx = AutoFocusRequestCx::new();
                 on_open_auto_focus(
                     &mut host,
@@ -1259,8 +1257,8 @@ pub fn render<H: UiHost + 'static>(
 
             app.with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
                 if let Some(entry) = overlays.popovers.get_mut(&key) {
-                    entry.restore_focus = restore_focus
-                        .or_else(|| fret_ui::elements::node_for_element(app, window, trigger));
+                    entry.restore_focus =
+                        restore_focus.or_else(|| ui.live_attached_node_for_element(app, trigger));
                     entry.pending_initial_focus = !open_auto_focus_prevented;
                 }
             });
@@ -1276,7 +1274,8 @@ pub fn render<H: UiHost + 'static>(
             let focus_in_layer = layer
                 .is_some_and(|layer| focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer)));
             let focus_cleared_by_modal_scope = modal_barrier_active && focus_now.is_none();
-            let focus_on_trigger = fret_ui::elements::node_for_element(app, window, trigger)
+            let focus_on_trigger = ui
+                .live_attached_node_for_element(app, trigger)
                 .is_some_and(|node| focus_now == Some(node));
             let should_run_close_auto_focus = focus_in_layer
                 || focus_on_trigger
@@ -1287,7 +1286,7 @@ pub fn render<H: UiHost + 'static>(
                 && !focus_cleared_by_modal_scope
                 && let Some(on_close_auto_focus) = on_close_auto_focus.as_ref()
             {
-                let mut host = OverlayFocusActionHostAdapter { app, ui, window };
+                let mut host = OverlayFocusActionHostAdapter { app, ui };
                 let mut req_cx = AutoFocusRequestCx::new();
                 on_close_auto_focus(
                     &mut host,
@@ -1344,7 +1343,7 @@ pub fn render<H: UiHost + 'static>(
                 && (should_focus_initial || pending_initial_focus)
                 && let Some(on_open_auto_focus) = &on_open_auto_focus
             {
-                let mut host = OverlayFocusHost { ui, app, window };
+                let mut host = OverlayFocusHost { ui, app };
                 on_open_auto_focus(
                     &mut host,
                     ActionCx {
@@ -1478,7 +1477,7 @@ pub fn render<H: UiHost + 'static>(
         let mut close_auto_focus_prevented = close_auto_focus_prevented;
         if !close_auto_focus_handled && let Some(on_close_auto_focus) = on_close_auto_focus.as_ref()
         {
-            let mut host = OverlayFocusActionHostAdapter { app, ui, window };
+            let mut host = OverlayFocusActionHostAdapter { app, ui };
             let mut req_cx = AutoFocusRequestCx::new();
             on_close_auto_focus(
                 &mut host,
@@ -1562,7 +1561,7 @@ pub fn render<H: UiHost + 'static>(
         let mut close_auto_focus_prevented = close_auto_focus_prevented;
         if !close_auto_focus_handled && let Some(on_close_auto_focus) = on_close_auto_focus.as_ref()
         {
-            let mut host = OverlayFocusActionHostAdapter { app, ui, window };
+            let mut host = OverlayFocusActionHostAdapter { app, ui };
             let mut req_cx = AutoFocusRequestCx::new();
             on_close_auto_focus(
                 &mut host,
@@ -1692,7 +1691,7 @@ pub fn render<H: UiHost + 'static>(
     for (layer, trigger) in to_hide_hover_overlays {
         let focus = ui.focus();
         if focus.is_some_and(|n| ui.node_layer(n) == Some(layer))
-            && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
+            && let Some(trigger_node) = ui.live_attached_node_for_element(app, trigger)
         {
             apply_hover_layer(ui, layer, false, false);
             ui.set_focus(Some(trigger_node));

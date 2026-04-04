@@ -42,6 +42,26 @@ pub fn node_for_element<H: UiHost>(
     with_window_state(app, window, |st| st.node_entry(element).map(|e| e.node))
 }
 
+/// Returns the current-frame node mapping for `element`, if available.
+///
+/// The authoritative liveness signal is the retained `node_entry` record being touched in the
+/// current frame (`last_seen_frame == app.frame_id()`). The declarative window-frame cache keeps
+/// stale records until subtree GC, so it must not be treated as a standalone liveness oracle.
+///
+/// Prefer this for render-time/component-policy code that needs a node that is still live for the
+/// current frame rather than a purely cross-frame cached mapping.
+pub fn live_node_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<NodeId> {
+    let frame_id = app.frame_id();
+    with_window_state(app, window, |st| {
+        st.node_entry(element)
+            .and_then(|entry| (entry.last_seen_frame == frame_id).then_some(entry.node))
+    })
+}
+
 /// Returns the most recent `NodeId` mapping for `element` without preparing element runtime for the
 /// current frame.
 ///

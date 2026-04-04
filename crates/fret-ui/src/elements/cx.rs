@@ -333,6 +333,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.window_state.node_entry(element).map(|e| e.node)
     }
 
+    /// Returns the current-frame node mapping for `element`, if available.
+    ///
+    /// The authoritative liveness signal is the retained `node_entry` record being touched in the
+    /// current frame (`last_seen_frame == self.frame_id`).
+    pub fn live_node_for_element(&mut self, element: GlobalElementId) -> Option<NodeId> {
+        self.window_state
+            .node_entry(element)
+            .and_then(|entry| (entry.last_seen_frame == self.frame_id).then_some(entry.node))
+    }
+
     pub fn focused_element(&self) -> Option<GlobalElementId> {
         self.window_state.focused_element
     }

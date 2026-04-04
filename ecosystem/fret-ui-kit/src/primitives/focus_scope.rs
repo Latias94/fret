@@ -72,7 +72,7 @@ pub fn apply_initial_focus_for_overlay<H: UiHost>(
     initial_focus: Option<GlobalElementId>,
 ) -> bool {
     if let Some(focus) = initial_focus
-        && let Some(node) = fret_ui::elements::node_for_element(app, window, focus)
+        && let Some(node) = ui.live_attached_node_for_element(app, focus)
     {
         ui.set_focus(Some(node));
         return true;
@@ -113,7 +113,7 @@ pub fn resolve_restore_focus_node<H: UiHost>(
     restore_focus: Option<NodeId>,
 ) -> Option<NodeId> {
     if let Some(trigger) = trigger
-        && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
+        && let Some(trigger_node) = ui.live_attached_node_for_element(app, trigger)
     {
         let trigger_focusable =
             ui.first_focusable_ancestor_including_declarative(app, window, trigger_node)
@@ -148,6 +148,8 @@ mod tests {
         TextMetrics, TextService,
     };
     use fret_ui::element::{LayoutStyle, Length, PressableProps};
+    use std::cell::Cell;
+    use std::rc::Rc;
 
     #[derive(Default)]
     struct FakeServices;
@@ -411,6 +413,93 @@ mod tests {
         assert_eq!(
             resolve_restore_focus_node(&ui, &mut app, window, Some(trigger), Some(other_node)),
             Some(other_node)
+        );
+    }
+
+    #[test]
+    fn apply_initial_focus_ignores_removed_element_with_only_last_known_mapping() {
+        fn bounds() -> Rect {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(200.0), Px(120.0)),
+            )
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let b = bounds();
+
+        let removed_focus: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let fallback_focus: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let show_removed = Cell::new(true);
+
+        let props = PressableProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(10.0));
+                layout.size.height = Length::Px(Px(10.0));
+                layout
+            },
+            focusable: true,
+            ..Default::default()
+        };
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices| {
+                let removed_focus = removed_focus.clone();
+                let fallback_focus = fallback_focus.clone();
+                fret_ui::declarative::render_root(ui, app, services, window, b, "test", |cx| {
+                    let mut out = Vec::new();
+                    if show_removed.get() {
+                        out.push(cx.keyed("removed", |cx| {
+                            cx.pressable_with_id(props.clone(), |_cx, _st, id| {
+                                removed_focus.set(Some(id));
+                                Vec::new()
+                            })
+                        }));
+                    }
+                    out.push(cx.keyed("fallback", |cx| {
+                        cx.pressable_with_id(props.clone(), |_cx, _st, id| {
+                            fallback_focus.set(Some(id));
+                            Vec::new()
+                        })
+                    }));
+                    out
+                })
+            };
+
+        let root = render_frame(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let removed_focus = removed_focus.get().expect("removed focus id");
+
+        show_removed.set(false);
+        app.set_frame_id(fret_runtime::FrameId(app.frame_id().0.saturating_add(1)));
+        let root = render_frame(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let fallback_focus = fallback_focus.get().expect("fallback focus id");
+        let fallback_node = fret_ui::elements::node_for_element(&mut app, window, fallback_focus)
+            .expect("fallback node");
+
+        ui.set_focus(None);
+        assert!(apply_initial_focus_for_overlay(
+            &mut ui,
+            &mut app,
+            window,
+            root,
+            Some(removed_focus)
+        ));
+        assert_eq!(
+            ui.focus(),
+            Some(fallback_node),
+            "expected initial-focus resolution to ignore a removed element that only still has a last-known node mapping"
         );
     }
 }

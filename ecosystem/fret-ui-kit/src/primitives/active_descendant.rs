@@ -25,6 +25,7 @@ mod tests {
     use fret_ui::scroll::ScrollHandle;
     use fret_ui::{Theme, ThemeConfig, UiTree};
     use std::cell::Cell;
+    use std::cell::RefCell;
     use std::rc::Rc;
     use std::sync::Arc;
 
@@ -300,6 +301,153 @@ mod tests {
         assert!(
             input.active_descendant.is_none(),
             "active_descendant should clear when the active option is not present"
+        );
+    }
+
+    #[test]
+    fn active_descendant_helper_ignores_removed_element_with_only_last_known_mapping() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let show_second = app.models_mut().insert(true);
+        let option_elements_out: Rc<RefCell<Vec<GlobalElementId>>> =
+            Rc::new(RefCell::new(Vec::new()));
+
+        let mut services = FakeServices;
+        let bounds = bounds();
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            show_second: fret_runtime::Model<bool>,
+            option_elements_out: Rc<RefCell<Vec<GlobalElementId>>>,
+        ) -> NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let show_second = cx.watch_model(&show_second).copied().unwrap_or(true);
+                let option_elements_out = option_elements_out.clone();
+
+                vec![cx.flex(
+                    fret_ui::element::FlexProps {
+                        layout: LayoutStyle::default(),
+                        direction: fret_core::Axis::Vertical,
+                        gap: Px(0.0).into(),
+                        padding: fret_core::Edges::all(Px(0.0)).into(),
+                        justify: fret_ui::element::MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Stretch,
+                        wrap: false,
+                    },
+                    move |cx| {
+                        let mut option_elements = Vec::new();
+                        let alpha = cx.keyed("alpha", |cx| {
+                            cx.pressable_with_id(
+                                PressableProps {
+                                    layout: LayoutStyle::default(),
+                                    enabled: true,
+                                    focusable: false,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::ListBoxOption),
+                                        label: Some(Arc::from("Alpha")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |_cx, _st, _id| Vec::new(),
+                            )
+                        });
+                        option_elements.push(alpha.id);
+
+                        let beta = if show_second {
+                            let beta = cx.keyed("beta", |cx| {
+                                cx.pressable_with_id(
+                                    PressableProps {
+                                        layout: LayoutStyle::default(),
+                                        enabled: true,
+                                        focusable: false,
+                                        a11y: PressableA11y {
+                                            role: Some(SemanticsRole::ListBoxOption),
+                                            label: Some(Arc::from("Beta")),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx, _st, _id| Vec::new(),
+                                )
+                            });
+                            option_elements.push(beta.id);
+                            Some(beta)
+                        } else {
+                            None
+                        };
+
+                        option_elements_out.replace(option_elements.clone());
+
+                        let mut out = vec![alpha];
+                        if let Some(beta) = beta {
+                            out.push(beta);
+                        }
+                        out
+                    },
+                )]
+            })
+        }
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            show_second.clone(),
+            option_elements_out.clone(),
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let stale_option_elements = option_elements_out.borrow().clone();
+        assert_eq!(
+            stale_option_elements.len(),
+            2,
+            "expected two initial options"
+        );
+
+        let _ = app.models_mut().update(&show_second, |v| *v = false);
+        app.set_frame_id(fret_runtime::FrameId(app.frame_id().0.saturating_add(1)));
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            show_second,
+            option_elements_out,
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, stale_option_elements[1])
+                .is_some(),
+            "expected the removed option to keep a last-known mapping for this regression"
+        );
+
+        let active = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            active_descendant_for_index(cx, &stale_option_elements, Some(1))
+        });
+        assert!(
+            active.is_none(),
+            "expected active-descendant helper to ignore removed elements that only still have a last-known node mapping"
         );
     }
 
