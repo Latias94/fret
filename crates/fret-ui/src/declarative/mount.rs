@@ -907,6 +907,14 @@ where
 /// The root handles:
 /// - Escape dismissal (bubbling from any focused descendant).
 /// - Outside-press dismissal via the runtime outside-press observer pass (ADR 0069).
+///
+/// Notes:
+/// - If the returned root is already attached to a parent or layer, this helper finishes the
+///   authoritative window-snapshot commit before returning.
+/// - If the root is still detached (for example, it will be attached later via
+///   `push_overlay_root(...)` or `set_children(...)`), the window-snapshot commit is deferred.
+///   Call `UiTree::commit_pending_declarative_window_runtime_snapshots(...)` after attachment when
+///   same-frame window-level consumers must observe the rebuilt root immediately.
 #[allow(clippy::too_many_arguments)]
 pub fn render_dismissible_root_with_hooks<H, I>(
     ui: &mut UiTree<H>,
@@ -1363,7 +1371,13 @@ where
 
             root_node
         });
-    ui.publish_window_runtime_snapshots(app);
+    let root_attached = ui.node_layer(root_node).is_some() || ui.node_parent(root_node).is_some();
+    if root_attached {
+        ui.clear_declarative_window_snapshot_commit(root_node);
+        ui.publish_window_runtime_snapshots(app);
+    } else {
+        ui.defer_declarative_window_snapshot_commit(root_node);
+    }
     root_node
 }
 

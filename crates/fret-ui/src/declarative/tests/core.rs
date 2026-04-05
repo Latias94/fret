@@ -1052,6 +1052,159 @@ fn render_root_rebuild_refreshes_command_action_availability_before_next_publish
 }
 
 #[test]
+fn render_dismissible_root_initial_attach_commits_window_snapshot_after_root_attachment() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "dismissible-attach-base",
+        |cx| vec![cx.text("base")],
+    );
+
+    let initial_snapshot = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("initial window input context snapshot");
+    assert!(
+        !initial_snapshot.ui_has_modal,
+        "baseline snapshot should not report a modal before overlay attachment"
+    );
+
+    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "dismissible-attach-overlay",
+        |cx| vec![cx.text("overlay")],
+    );
+
+    let snapshot_after_render = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("snapshot after detached dismissible rebuild");
+    assert!(
+        !snapshot_after_render.ui_has_modal,
+        "detached dismissible rebuild must not publish a modal snapshot before the root is attached"
+    );
+
+    let _layer = ui.push_overlay_root(overlay_root, true);
+    let stale_after_attach = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("stale snapshot after raw overlay attach");
+    assert!(
+        !stale_after_attach.ui_has_modal,
+        "raw overlay attachment should remain stale until the pending declarative commit is finished"
+    );
+
+    assert!(
+        ui.commit_pending_declarative_window_runtime_snapshots(&mut app, overlay_root),
+        "expected detached dismissible root attachment to finish a pending window snapshot commit"
+    );
+
+    let committed_snapshot = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("committed window input context snapshot");
+    assert!(committed_snapshot.ui_has_modal);
+    assert_eq!(
+        committed_snapshot
+            .window_arbitration
+            .expect("window arbitration")
+            .modal_barrier_root,
+        Some(overlay_root),
+        "the committed snapshot should reflect the attached modal barrier root"
+    );
+}
+
+#[test]
+fn render_dismissible_root_parent_attach_commits_window_snapshot_after_root_attachment() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+    let value = app.models_mut().insert(String::new());
+
+    let base_root = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "dismissible-parent-attach-base",
+        |cx| vec![cx.text("base")],
+    );
+
+    let initial_snapshot = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("initial window input context snapshot");
+    assert!(
+        !initial_snapshot.focus_is_text_input,
+        "baseline snapshot should not report text-input focus before the detached root is attached"
+    );
+
+    let attached_root = crate::declarative::render_dismissible_root_with_hooks(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "dismissible-parent-attach-overlay",
+        |cx| vec![cx.text_input(TextInputProps::new(value.clone()))],
+    );
+
+    ui.set_children(base_root, vec![attached_root]);
+    let text_input = ui.children(attached_root)[0];
+    ui.set_focus(Some(text_input));
+
+    assert!(
+        ui.commit_pending_declarative_window_runtime_snapshots(&mut app, attached_root),
+        "expected parent attachment to finish the pending declarative window snapshot commit"
+    );
+
+    let committed_snapshot = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("committed window input context snapshot");
+    assert!(
+        committed_snapshot.focus_is_text_input,
+        "committed snapshot should observe text-input focus once the detached root is attached as a child"
+    );
+}
+
+#[test]
 fn imperative_tree_mutation_requires_explicit_window_snapshot_commit_for_input_context() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities::default());

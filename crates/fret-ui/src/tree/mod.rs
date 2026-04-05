@@ -234,6 +234,7 @@ pub struct UiTree<H: UiHost> {
     interactive_resize_last_bounds_delta: Option<(fret_core::Px, fret_core::Px)>,
     viewport_roots: Vec<(NodeId, Rect)>,
     pending_barrier_relayouts: Vec<NodeId>,
+    pending_declarative_window_snapshot_roots: HashSet<NodeId>,
 
     #[cfg(debug_assertions)]
     debug_last_declarative_render_root_frame_id: Option<FrameId>,

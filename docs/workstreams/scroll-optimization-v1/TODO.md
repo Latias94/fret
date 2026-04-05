@@ -239,6 +239,8 @@ Status: Active
     consumers read them,
   - [x] declarative rebuild republished widget command availability before the next explicit
     publish/dispatch boundary,
+  - [x] detached dismissible roots only finish the declarative snapshot commit after their parent
+    or overlay attachment becomes authoritative,
   - [x] imperative raw tree mutation only refreshes window input/key-context/action-availability
     after an explicit window snapshot commit,
   - [x] best-effort input-context readers inherit authoritative command availability over stale or

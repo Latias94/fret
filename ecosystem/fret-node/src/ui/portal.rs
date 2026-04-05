@@ -529,6 +529,9 @@ where
                 });
 
         cx.tree.set_children(cx.node, vec![root_node]);
+        let _ = cx
+            .tree
+            .commit_pending_declarative_window_runtime_snapshots(cx.app, root_node);
         cx.layout_in(root_node, cx.bounds);
 
         // Publish measured node sizes for the node view containers we just rendered.

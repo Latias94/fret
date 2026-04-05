@@ -1129,6 +1129,8 @@ pub fn render<H: UiHost + 'static>(
                 });
             }
         }
+
+        let _ = ui.commit_pending_declarative_window_runtime_snapshots(app, root);
     }
 
     let modal_barrier_active = !seen_modals.is_empty();
@@ -1499,6 +1501,7 @@ pub fn render<H: UiHost + 'static>(
                         entry.pending_initial_focus = false;
                     }
                 });
+                let _ = ui.commit_pending_declarative_window_runtime_snapshots(app, root);
                 continue;
             }
 
@@ -1530,6 +1533,8 @@ pub fn render<H: UiHost + 'static>(
                 ui.set_focus(Some(root));
             }
         }
+
+        let _ = ui.commit_pending_declarative_window_runtime_snapshots(app, root);
     }
 
     type HidePopoverEntry = (
@@ -1811,6 +1816,7 @@ pub fn render<H: UiHost + 'static>(
                 present && interactive && req.on_pointer_move.is_some(),
             );
         });
+        let _ = ui.commit_pending_declarative_window_runtime_snapshots(app, root);
     }
 
     let to_hide_hover_overlays: Vec<(UiLayerId, GlobalElementId)> =
@@ -1938,6 +1944,7 @@ pub fn render<H: UiHost + 'static>(
                 ui.set_layer_scroll_dismiss_elements(entry.layer, Vec::new());
             }
         });
+        let _ = ui.commit_pending_declarative_window_runtime_snapshots(app, root);
     }
 
     let to_hide_tooltips: Vec<UiLayerId> =
@@ -3359,6 +3366,7 @@ pub fn render<H: UiHost + 'static>(
             entry.root_name = req.root_name.clone();
             OverlayLayer::toast(has_toasts, has_toasts).apply(ui, entry.layer);
         });
+        let _ = ui.commit_pending_declarative_window_runtime_snapshots(app, root);
     }
 
     let to_hide_toast_layers: Vec<UiLayerId> =

@@ -4,6 +4,16 @@ use fret_runtime::CommandScope;
 use std::sync::Arc;
 
 impl<H: UiHost> UiTree<H> {
+    pub(crate) fn defer_declarative_window_snapshot_commit(&mut self, root: NodeId) {
+        self.pending_declarative_window_snapshot_roots
+            .retain(|pending| self.nodes.contains_key(*pending));
+        self.pending_declarative_window_snapshot_roots.insert(root);
+    }
+
+    pub(crate) fn clear_declarative_window_snapshot_commit(&mut self, root: NodeId) {
+        self.pending_declarative_window_snapshot_roots.remove(&root);
+    }
+
     pub(in crate::tree) fn revalidate_focus_for_dispatch_snapshot(
         &mut self,
         frame_id: fret_runtime::FrameId,
@@ -179,6 +189,8 @@ impl<H: UiHost> UiTree<H> {
     /// Call this after imperative tree mutations when later same-frame consumers must observe the
     /// new authoritative window state immediately.
     pub fn publish_window_runtime_snapshots(&mut self, app: &mut H) {
+        self.pending_declarative_window_snapshot_roots
+            .retain(|pending| self.nodes.contains_key(*pending));
         let (_active_input_layers, input_barrier_root) = self.active_input_layers();
         let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
         let barrier_root = focus_barrier_root.or(input_barrier_root);
@@ -201,6 +213,42 @@ impl<H: UiHost> UiTree<H> {
 
         self.publish_window_input_context_snapshot(app, &input_ctx);
         self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+    }
+
+    /// Finalize a declarative rebuild that mounted a detached root and only later attached it to
+    /// the retained tree.
+    ///
+    /// `render_dismissible_root_with_hooks(...)` can rebuild an overlay/portal root before the
+    /// caller attaches that root to a layer or parent. In that case the helper defers the window
+    /// snapshot commit until the root is actually attached. Call this after `push_overlay_root`,
+    /// `set_children`, or another attach operation that makes the returned root authoritative for
+    /// same-frame window-level consumers.
+    ///
+    /// This is intentionally narrower than `publish_window_runtime_snapshots(...)`: raw imperative
+    /// tree mutation still requires an explicit commit, while declarative detached-root authoring
+    /// can finish its pending commit once attachment is complete.
+    pub fn commit_pending_declarative_window_runtime_snapshots(
+        &mut self,
+        app: &mut H,
+        root: NodeId,
+    ) -> bool {
+        self.pending_declarative_window_snapshot_roots
+            .retain(|pending| self.nodes.contains_key(*pending));
+        if !self
+            .pending_declarative_window_snapshot_roots
+            .contains(&root)
+        {
+            return false;
+        }
+
+        let attached = self.node_layer(root).is_some() || self.node_parent(root).is_some();
+        if !attached {
+            return false;
+        }
+
+        self.pending_declarative_window_snapshot_roots.remove(&root);
+        self.publish_window_runtime_snapshots(app);
+        true
     }
 
     fn focus_menu_bar_command_availability(&self, app: &mut H) -> CommandAvailability {

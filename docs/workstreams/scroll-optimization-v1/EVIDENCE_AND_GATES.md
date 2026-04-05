@@ -126,6 +126,9 @@ This follow-on slice locks the contract that:
 
 - `render_root(...)` / `render_dismissible_root_with_hooks(...)` are authoritative declarative
   rebuild commit points for window-level snapshot consumers,
+- detached declarative roots may defer that commit until the returned root is actually attached to
+  a parent/layer, but they must still finish the same-frame authoritative publish once attachment
+  completes,
 - once rebuild GC/root reuse has committed, later same-frame consumers must see refreshed
   `WindowInputContextService`, `WindowKeyContextStackService`, and
   `WindowCommandActionAvailabilityService` state,
