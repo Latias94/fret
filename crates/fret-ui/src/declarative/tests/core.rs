@@ -1052,6 +1052,182 @@ fn render_root_rebuild_refreshes_command_action_availability_before_next_publish
 }
 
 #[test]
+fn render_root_rebuild_refreshes_focus_traversal_availability_before_layout() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    app.register_command(
+        CommandId::from("focus.next"),
+        fret_runtime::CommandMeta::new("Focus Next").with_scope(fret_runtime::CommandScope::Widget),
+    );
+    app.register_command(
+        CommandId::from("focus.previous"),
+        fret_runtime::CommandMeta::new("Focus Previous")
+            .with_scope(fret_runtime::CommandScope::Widget),
+    );
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "rebuild-focus-traversal-availability",
+        |cx| vec![cx.text("plain text")],
+    );
+
+    let initial_next = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &CommandId::from("focus.next")));
+    let initial_previous = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &CommandId::from("focus.previous")));
+    assert_eq!(initial_next, Some(false));
+    assert_eq!(initial_previous, Some(false));
+
+    app.advance_frame();
+
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "rebuild-focus-traversal-availability",
+        |cx| {
+            vec![cx.pressable(
+                crate::element::PressableProps {
+                    layout: {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(48.0));
+                        layout.size.height = Length::Px(Px(20.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st| Vec::new(),
+            )]
+        },
+    );
+
+    let rebuilt_next = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &CommandId::from("focus.next")));
+    let rebuilt_previous = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &CommandId::from("focus.previous")));
+    assert_eq!(
+        rebuilt_next,
+        Some(true),
+        "render_root should republish focus traversal availability as soon as rebuild introduces focusable descendants, even before layout"
+    );
+    assert_eq!(
+        rebuilt_previous,
+        Some(true),
+        "render_root should republish reverse focus traversal availability as soon as rebuild introduces focusable descendants, even before layout"
+    );
+}
+
+#[test]
+fn layout_refines_focus_traversal_availability_after_structural_fallback() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    app.register_command(
+        CommandId::from("focus.next"),
+        fret_runtime::CommandMeta::new("Focus Next").with_scope(fret_runtime::CommandScope::Widget),
+    );
+    app.register_command(
+        CommandId::from("focus.previous"),
+        fret_runtime::CommandMeta::new("Focus Previous")
+            .with_scope(fret_runtime::CommandScope::Widget),
+    );
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "focus-traversal-layout-refine",
+        |cx| {
+            vec![cx.pressable(
+                crate::element::PressableProps {
+                    layout: {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(0.0));
+                        layout.size.height = Length::Px(Px(0.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st| Vec::new(),
+            )]
+        },
+    );
+
+    let pre_layout_next = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &CommandId::from("focus.next")));
+    let pre_layout_previous = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &CommandId::from("focus.previous")));
+    assert_eq!(
+        pre_layout_next,
+        Some(true),
+        "dirty rebuild should publish a structural fallback for focus traversal availability before layout resolves bounds"
+    );
+    assert_eq!(
+        pre_layout_previous,
+        Some(true),
+        "dirty rebuild should publish the same structural fallback for reverse focus traversal availability before layout resolves bounds"
+    );
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let refined_next = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &CommandId::from("focus.next")));
+    let refined_previous = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &CommandId::from("focus.previous")));
+    assert_eq!(
+        refined_next,
+        Some(false),
+        "final layout should republish authoritative focus traversal availability once structural fallback can be replaced with bounds-qualified truth"
+    );
+    assert_eq!(
+        refined_previous,
+        Some(false),
+        "final layout should republish authoritative reverse focus traversal availability once structural fallback can be replaced with bounds-qualified truth"
+    );
+}
+
+#[test]
 fn render_dismissible_root_initial_attach_commits_window_snapshot_after_root_attachment() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities::default());

@@ -205,6 +205,8 @@ impl<H: UiHost> UiTree<H> {
             if let Some(deferred_cleanup_started) = deferred_cleanup_started {
                 self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_started.elapsed();
             }
+            self.last_layout_frame_id = Some(app.frame_id());
+            self.refine_pending_window_runtime_snapshots_after_layout(app);
             if let Some(started) = started {
                 self.debug_stats.layout_time = started
                     .elapsed()
@@ -257,6 +259,8 @@ impl<H: UiHost> UiTree<H> {
                 self.refresh_semantics_snapshot(app);
             }
             self.flush_deferred_cleanup(services);
+            self.last_layout_frame_id = Some(app.frame_id());
+            self.refine_pending_window_runtime_snapshots_after_layout(app);
 
             self.last_layout_bounds = Some(bounds);
             self.last_layout_scale_factor = Some(scale_factor);
@@ -586,6 +590,11 @@ impl<H: UiHost> UiTree<H> {
 
         if pass_kind == LayoutPassKind::Final {
             self.finish_final_layout_frame(app);
+        }
+
+        if pass_kind == LayoutPassKind::Final {
+            self.last_layout_frame_id = Some(app.frame_id());
+            self.refine_pending_window_runtime_snapshots_after_layout(app);
         }
 
         if pass_kind == LayoutPassKind::Final {

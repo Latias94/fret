@@ -40,6 +40,7 @@ impl<H: UiHost> Default for UiTree<H> {
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             layout_invalidations_count: 0,
+            last_layout_frame_id: None,
             last_layout_bounds: None,
             last_layout_scale_factor: None,
             interactive_resize_active: false,
@@ -50,6 +51,7 @@ impl<H: UiHost> Default for UiTree<H> {
             viewport_roots: Vec::new(),
             pending_barrier_relayouts: Vec::new(),
             pending_declarative_window_snapshot_roots: HashSet::new(),
+            pending_post_layout_window_runtime_snapshot_refine: false,
             #[cfg(debug_assertions)]
             debug_last_declarative_render_root_frame_id: None,
             debug_enabled: false,

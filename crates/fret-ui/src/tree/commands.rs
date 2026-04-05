@@ -367,7 +367,12 @@ impl<H: UiHost> UiTree<H> {
         if availability == CommandAvailability::NotHandled
             && matches!(command.as_str(), "focus.next" | "focus.previous")
         {
-            return self.focus_traversal_command_availability(&dispatch_snapshot, barrier_root);
+            return self.focus_traversal_command_availability(
+                app,
+                app.frame_id(),
+                &dispatch_snapshot,
+                barrier_root,
+            );
         }
 
         availability
@@ -375,33 +380,149 @@ impl<H: UiHost> UiTree<H> {
 
     fn focus_traversal_command_availability(
         &mut self,
+        app: &mut H,
+        frame_id: fret_runtime::FrameId,
         dispatch_snapshot: &UiDispatchSnapshot,
         barrier_root: Option<NodeId>,
     ) -> CommandAvailability {
+        self.focus_traversal_command_availability_for_snapshot(
+            app,
+            frame_id,
+            dispatch_snapshot,
+            barrier_root,
+        )
+        .0
+    }
+
+    fn focus_traversal_command_availability_for_snapshot(
+        &mut self,
+        app: &mut H,
+        frame_id: fret_runtime::FrameId,
+        dispatch_snapshot: &UiDispatchSnapshot,
+        barrier_root: Option<NodeId>,
+    ) -> (CommandAvailability, bool) {
         let Some(base_root) = self
             .base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root))
         else {
-            return CommandAvailability::NotHandled;
+            return (CommandAvailability::NotHandled, false);
         };
 
         let scope_root = barrier_root.unwrap_or(base_root);
-        let scope_bounds = self
-            .nodes
-            .get(scope_root)
-            .map(|n| n.bounds)
-            .unwrap_or_default();
-
         let mut focusables: Vec<NodeId> = Vec::new();
-        for &root in &dispatch_snapshot.active_layer_roots {
-            self.collect_focusables(root, dispatch_snapshot, scope_bounds, &mut focusables);
+        let needs_layout_refine = self.last_layout_frame_id != Some(frame_id)
+            || self.node_subtree_layout_dirty(scope_root);
+        if needs_layout_refine {
+            for &root in &dispatch_snapshot.active_layer_roots {
+                self.collect_focusables_structural(app, root, dispatch_snapshot, &mut focusables);
+            }
+        } else {
+            let scope_bounds = self
+                .nodes
+                .get(scope_root)
+                .map(|n| n.bounds)
+                .unwrap_or_default();
+            for &root in &dispatch_snapshot.active_layer_roots {
+                self.collect_focusables(root, dispatch_snapshot, scope_bounds, &mut focusables);
+            }
         }
 
-        if focusables.is_empty() {
-            CommandAvailability::NotHandled
-        } else {
-            CommandAvailability::Available
+        (
+            if focusables.is_empty() {
+                CommandAvailability::NotHandled
+            } else {
+                CommandAvailability::Available
+            },
+            needs_layout_refine && !focusables.is_empty(),
+        )
+    }
+
+    fn collect_focusables_structural(
+        &self,
+        app: &mut H,
+        node: NodeId,
+        dispatch_snapshot: &UiDispatchSnapshot,
+        out: &mut Vec<NodeId>,
+    ) {
+        if dispatch_snapshot.pre.get(node).is_none() {
+            return;
         }
+
+        let Some(n) = self.nodes.get(node) else {
+            return;
+        };
+
+        let (is_focusable, traverse_children) =
+            self.structural_focus_traversal_state_for_node(app, node);
+        if is_focusable {
+            out.push(node);
+        }
+
+        if traverse_children {
+            for &child in &n.children {
+                self.collect_focusables_structural(app, child, dispatch_snapshot, out);
+            }
+        }
+    }
+
+    fn structural_focus_traversal_state_for_node(&self, app: &mut H, node: NodeId) -> (bool, bool) {
+        if let Some(window) = self.window
+            && let Some((is_focusable, traverse_children)) =
+                crate::declarative::frame::with_element_record_for_node(
+                    app,
+                    window,
+                    node,
+                    |record| match &record.instance {
+                        crate::declarative::frame::ElementInstance::TextInput(_)
+                        | crate::declarative::frame::ElementInstance::TextArea(_)
+                        | crate::declarative::frame::ElementInstance::TextInputRegion(_) => {
+                            (true, true)
+                        }
+                        crate::declarative::frame::ElementInstance::SelectableText(_) => {
+                            (true, true)
+                        }
+                        crate::declarative::frame::ElementInstance::Pressable(props) => {
+                            (props.enabled && props.focusable, props.enabled)
+                        }
+                        crate::declarative::frame::ElementInstance::Semantics(props) => {
+                            (props.focusable && !props.disabled && !props.hidden, true)
+                        }
+                        crate::declarative::frame::ElementInstance::InteractivityGate(props) => {
+                            (false, props.present && props.interactive)
+                        }
+                        crate::declarative::frame::ElementInstance::FocusTraversalGate(props) => {
+                            (false, props.traverse)
+                        }
+                        crate::declarative::frame::ElementInstance::Spinner(_) => (false, false),
+                        _ => (false, true),
+                    },
+                )
+        {
+            return (is_focusable, traverse_children);
+        }
+
+        let Some(n) = self.nodes.get(node) else {
+            return (false, true);
+        };
+        let prepaint =
+            (!self.inspection_active && !n.invalidation.hit_test && !n.invalidation.layout)
+                .then_some(n.prepaint_hit_test)
+                .flatten();
+        (
+            prepaint
+                .as_ref()
+                .map(|p| p.is_focusable)
+                .unwrap_or_else(|| n.widget.as_ref().is_some_and(|w| w.is_focusable())),
+            prepaint
+                .as_ref()
+                .map(|p| p.focus_traversal_children)
+                .unwrap_or_else(|| {
+                    n.widget
+                        .as_ref()
+                        .map(|w| w.focus_traversal_children())
+                        .unwrap_or(true)
+                }),
+        )
     }
 
     #[stacksafe::stacksafe]
@@ -490,6 +611,7 @@ impl<H: UiHost> UiTree<H> {
         let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
         let start = focus.unwrap_or(default_root);
         let next_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
+        let mut focus_traversal_snapshot: Option<(CommandAvailability, bool)> = None;
 
         let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
         let widget_commands: Vec<CommandId> = app
@@ -519,8 +641,19 @@ impl<H: UiHost> UiTree<H> {
             if availability == CommandAvailability::NotHandled
                 && matches!(id.as_str(), "focus.next" | "focus.previous")
             {
-                availability =
-                    self.focus_traversal_command_availability(&dispatch_snapshot, barrier_root);
+                let (focus_traversal_availability, needs_layout_refine) = *focus_traversal_snapshot
+                    .get_or_insert_with(|| {
+                        self.focus_traversal_command_availability_for_snapshot(
+                            app,
+                            app.frame_id(),
+                            &dispatch_snapshot,
+                            barrier_root,
+                        )
+                    });
+                availability = focus_traversal_availability;
+                if needs_layout_refine {
+                    self.pending_post_layout_window_runtime_snapshot_refine = true;
+                }
             }
             if availability == CommandAvailability::NotHandled && id.as_str() == "focus.menu_bar" {
                 let present = app
@@ -559,6 +692,16 @@ impl<H: UiHost> UiTree<H> {
                 },
             );
         }
+    }
+
+    pub(in crate::tree) fn refine_pending_window_runtime_snapshots_after_layout(
+        &mut self,
+        app: &mut H,
+    ) {
+        if !std::mem::take(&mut self.pending_post_layout_window_runtime_snapshot_refine) {
+            return;
+        }
+        self.publish_window_runtime_snapshots(app);
     }
 
     #[stacksafe::stacksafe]

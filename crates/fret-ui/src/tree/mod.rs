@@ -225,6 +225,7 @@ pub struct UiTree<H: UiHost> {
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
     layout_invalidations_count: u32,
+    last_layout_frame_id: Option<FrameId>,
     last_layout_bounds: Option<Rect>,
     last_layout_scale_factor: Option<f32>,
     interactive_resize_active: bool,
@@ -235,6 +236,7 @@ pub struct UiTree<H: UiHost> {
     viewport_roots: Vec<(NodeId, Rect)>,
     pending_barrier_relayouts: Vec<NodeId>,
     pending_declarative_window_snapshot_roots: HashSet<NodeId>,
+    pending_post_layout_window_runtime_snapshot_refine: bool,
 
     #[cfg(debug_assertions)]
     debug_last_declarative_render_root_frame_id: Option<FrameId>,
