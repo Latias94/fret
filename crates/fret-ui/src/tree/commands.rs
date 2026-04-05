@@ -180,7 +180,8 @@ impl<H: UiHost> UiTree<H> {
     ///
     /// Raw `UiTree` mutation APIs (`set_root`, `set_focus`, overlay/layer mutation, subtree
     /// removal, and similar helpers) only update retained tree state. Cross-surface consumers that
-    /// read `WindowInputContextService`, `WindowKeyContextStackService`, or
+    /// read `WindowInputContextService`, `WindowKeyContextStackService`,
+    /// `PendingShortcutOverlayState`, or
     /// `WindowCommandActionAvailabilityService` become authoritative only after this publish step
     /// or another full snapshot commit boundary such as declarative rebuild or non-pointer input
     /// dispatch. Paint-only boundaries refresh `WindowInputContextService`, but they do not
@@ -213,6 +214,7 @@ impl<H: UiHost> UiTree<H> {
 
         self.publish_window_input_context_snapshot(app, &input_ctx);
         self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+        self.refresh_pending_shortcut_overlay_state_if_needed(app, &input_ctx);
     }
 
     /// Finalize a declarative rebuild that mounted a detached root and only later attached it to

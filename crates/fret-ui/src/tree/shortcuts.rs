@@ -253,6 +253,17 @@ impl<H: UiHost> UiTree<H> {
         );
     }
 
+    pub(in crate::tree) fn refresh_pending_shortcut_overlay_state_if_needed(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+    ) {
+        if self.pending_shortcut.keystrokes.is_empty() {
+            return;
+        }
+        self.sync_pending_shortcut_overlay_state(app, Some(input_ctx));
+    }
+
     pub(super) fn should_defer_keydown_shortcut_matching_to_text_input(
         key: KeyCode,
         modifiers: fret_core::Modifiers,
@@ -1008,6 +1019,148 @@ mod tests {
                 .iter()
                 .all(|e| !matches!(e, Effect::Command { command: c, .. } if c == &command)),
             "stale pending shortcut contexts must not dispatch commands after root replacement"
+        );
+    }
+
+    #[derive(Default)]
+    struct FocusableLeaf;
+
+    impl<H: UiHost> Widget<H> for FocusableLeaf {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    #[test]
+    fn publish_window_runtime_snapshots_refreshes_pending_shortcut_overlay_input_context() {
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+
+        let ctrl_k = KeyChord::new(
+            KeyCode::KeyK,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        let mut keymap = Keymap::empty();
+        keymap.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![
+                ctrl_k,
+                KeyChord::new(KeyCode::ArrowLeft, Modifiers::default()),
+            ],
+            when: Some(WhenExpr::parse("focus.is_text_input == false").unwrap()),
+            command: Some(CommandId::from("test.pending_overlay_non_text")),
+        });
+        keymap.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![
+                ctrl_k,
+                KeyChord::new(KeyCode::ArrowRight, Modifiers::default()),
+            ],
+            when: Some(WhenExpr::parse("focus.is_text_input").unwrap()),
+            command: Some(CommandId::from("test.pending_overlay_text")),
+        });
+        app.set_global(KeymapService { keymap });
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(RootStack);
+        let focusable = ui.create_node(FocusableLeaf);
+        ui.add_child(root, focusable);
+        ui.set_root(root);
+        ui.set_focus(Some(focusable));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut services = FakeUiServices;
+        ui.layout_in(&mut app, &mut services, root, bounds, 1.0);
+
+        crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+            window_frame.instances.insert(
+                focusable,
+                crate::declarative::frame::ElementRecord {
+                    element: crate::elements::GlobalElementId(11),
+                    instance: crate::declarative::frame::ElementInstance::Stack(
+                        crate::element::StackProps::default(),
+                    ),
+                    inherited_foreground: None,
+                    inherited_text_style: None,
+                    semantics_decoration: None,
+                    key_context: None,
+                },
+            );
+        });
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::KeyK,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        let (initial_ctx, initial_sequence, initial_continuations) = app
+            .global::<crate::PendingShortcutOverlayState>()
+            .and_then(|state| state.snapshot_for_window(window))
+            .map(|(ctx, seq, conts)| (ctx.clone(), seq.to_vec(), conts.to_vec()))
+            .expect("initial pending shortcut overlay snapshot");
+        assert!(!initial_ctx.focus_is_text_input);
+        assert_eq!(initial_sequence, vec![ctrl_k]);
+        assert_eq!(
+            initial_continuations
+                .iter()
+                .map(|c| c.next)
+                .collect::<Vec<_>>(),
+            vec![KeyChord::new(KeyCode::ArrowLeft, Modifiers::default())],
+            "initial continuation set should reflect the non-text-input context"
+        );
+
+        let value = app.models_mut().insert(String::new());
+        crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+            let record = window_frame
+                .instances
+                .get_mut(focusable)
+                .expect("focused element record");
+            record.instance = crate::declarative::frame::ElementInstance::TextInput(
+                crate::element::TextInputProps::new(value.clone()),
+            );
+        });
+
+        ui.publish_window_runtime_snapshots(&mut app);
+
+        assert_eq!(ui.pending_shortcut.keystrokes.len(), 1);
+        assert_eq!(ui.pending_shortcut.keystrokes[0].chord, ctrl_k);
+        assert_eq!(ui.pending_shortcut.keystrokes[0].text, None);
+
+        let (refreshed_ctx, refreshed_sequence, refreshed_continuations) = app
+            .global::<crate::PendingShortcutOverlayState>()
+            .and_then(|state| state.snapshot_for_window(window))
+            .map(|(ctx, seq, conts)| (ctx.clone(), seq.to_vec(), conts.to_vec()))
+            .expect("refreshed pending shortcut overlay snapshot");
+        assert!(refreshed_ctx.focus_is_text_input);
+        assert_eq!(refreshed_sequence, vec![ctrl_k]);
+        assert_eq!(
+            refreshed_continuations
+                .iter()
+                .map(|c| c.next)
+                .collect::<Vec<_>>(),
+            vec![KeyChord::new(KeyCode::ArrowRight, Modifiers::default())],
+            "authoritative snapshot publish should refresh pending shortcut continuations for the new input context"
         );
     }
 }
