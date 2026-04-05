@@ -37,7 +37,11 @@ impl<H: UiHost> UiTree<H> {
         if self.focus != focus {
             self.ime_composing = false;
         }
+        let changed = self.focus != focus;
         self.focus = focus;
+        if changed {
+            self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
+        }
     }
 
     /// Internal focus mutation helper that skips focus-barrier gating.
@@ -69,7 +73,11 @@ impl<H: UiHost> UiTree<H> {
         if self.focus != focus {
             self.ime_composing = false;
         }
+        let changed = self.focus != focus;
         self.focus = focus;
+        if changed {
+            self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
+        }
     }
 
     const TOUCH_POINTER_DOWN_OUTSIDE_SLOP_PX: f32 = 6.0;

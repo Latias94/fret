@@ -593,11 +593,6 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if pass_kind == LayoutPassKind::Final {
-            self.last_layout_frame_id = Some(app.frame_id());
-            self.refine_pending_window_runtime_snapshots_after_layout(app);
-        }
-
-        if pass_kind == LayoutPassKind::Final {
             self.last_layout_bounds = Some(bounds);
             self.last_layout_scale_factor = Some(scale_factor);
         }
@@ -825,6 +820,7 @@ impl<H: UiHost> UiTree<H> {
         }
         if canonical != focused && self.node_exists(canonical) {
             self.set_focus(Some(canonical));
+            self.request_post_layout_window_runtime_snapshot_refine();
         }
 
         let Some(focused) = self.focus() else {
@@ -842,6 +838,7 @@ impl<H: UiHost> UiTree<H> {
                 );
             }
             self.set_focus(None);
+            self.request_post_layout_window_runtime_snapshot_refine();
         }
     }
 
@@ -1225,6 +1222,8 @@ impl<H: UiHost> UiTree<H> {
         if !self.interactive_resize_active() {
             self.interactive_resize_needs_full_rebuild = false;
         }
+        self.last_layout_frame_id = Some(app.frame_id());
+        self.refine_pending_window_runtime_snapshots_after_layout(app);
     }
 
     pub fn measure_in(

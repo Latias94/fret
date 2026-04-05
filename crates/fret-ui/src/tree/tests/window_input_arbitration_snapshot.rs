@@ -302,6 +302,60 @@ fn imperative_focus_barrier_mutation_requires_explicit_window_snapshot_commit() 
 }
 
 #[test]
+fn layout_all_focus_barrier_mutation_publishes_post_layout_input_arbitration_snapshot() {
+    struct EnableBarrierDuringLayout {
+        overlay_layer: UiLayerId,
+    }
+
+    impl<H: UiHost> Widget<H> for EnableBarrierDuringLayout {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.tree
+                .set_layer_blocks_underlay_focus(self.overlay_layer, true);
+            cx.available
+        }
+    }
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let overlay_root = ui.create_node(TestStack);
+    let overlay_layer = ui.push_overlay_root_with_options(
+        overlay_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: false,
+            hit_testable: false,
+        },
+    );
+    let base_root = ui.create_node(EnableBarrierDuringLayout { overlay_layer });
+    ui.set_root(base_root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window input context snapshot after layout-time barrier mutation");
+    let arbitration = input_ctx
+        .window_arbitration
+        .expect("expected `InputContext.window_arbitration` to be populated");
+    assert_eq!(
+        arbitration.focus_barrier_root,
+        Some(overlay_root),
+        "layout-time focus-barrier changes should publish the authoritative arbitration snapshot at the final layout boundary"
+    );
+}
+
+#[test]
 fn modal_barrier_hides_pointer_occlusion_layers_below_barrier_in_arbitration_snapshot() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());

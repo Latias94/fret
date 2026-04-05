@@ -56,6 +56,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.layer_order = next;
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
 
         // Layer order changes can move the active modal/focus barriers. Ensure focus/capture do
         // not remain under a barrier after reordering.
@@ -153,6 +154,7 @@ impl<H: UiHost> UiTree<H> {
         self.root_to_layer.insert(root, id);
         self.layer_order.insert(0, id);
         self.base_layer = Some(id);
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
         id
     }
 
@@ -181,6 +183,7 @@ impl<H: UiHost> UiTree<H> {
         });
         self.root_to_layer.insert(root, id);
         self.layer_order.push(id);
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
 
         if options.blocks_underlay_input {
             let (active_roots, _barrier_root) = self.active_input_layers();
@@ -216,6 +219,7 @@ impl<H: UiHost> UiTree<H> {
 
         self.layer_order.retain(|&id| id != layer);
         let _ = self.layers.remove(layer);
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
 
         let mut removed: Vec<NodeId> = Vec::new();
         self.remove_subtree_inner(services, root, &mut removed);
@@ -258,6 +262,7 @@ impl<H: UiHost> UiTree<H> {
         // visibility instead of creating/removing roots each time (fearless refactors should keep
         // the behavior consistent).
         if prev_visible != Some(visible) {
+            self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
             let (active_roots, barrier_root) = self.active_input_layers();
             if barrier_root.is_some() {
                 self.enforce_modal_barrier_scope(&active_roots);
@@ -307,6 +312,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if prev_hit_testable != Some(hit_testable) {
+            self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
             let (active_roots, barrier_root) = self.active_input_layers();
             if barrier_root.is_some() {
                 self.enforce_modal_barrier_scope(&active_roots);
@@ -318,7 +324,11 @@ impl<H: UiHost> UiTree<H> {
         let Some(l) = self.layers.get_mut(layer) else {
             return;
         };
+        if l.pointer_occlusion == occlusion {
+            return;
+        }
         l.pointer_occlusion = occlusion;
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
     }
 
     pub fn set_layer_blocks_underlay_focus(&mut self, layer: UiLayerId, blocks: bool) {
@@ -329,6 +339,7 @@ impl<H: UiHost> UiTree<H> {
         l.blocks_underlay_focus = blocks;
 
         if prev != Some(blocks) {
+            self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
             let (active_roots, barrier_root) = self.active_focus_layers();
             if barrier_root.is_some() {
                 self.enforce_focus_barrier_scope(&active_roots);
@@ -355,14 +366,22 @@ impl<H: UiHost> UiTree<H> {
         let Some(l) = self.layers.get_mut(layer) else {
             return;
         };
+        if l.wants_pointer_move_events == wants {
+            return;
+        }
         l.wants_pointer_move_events = wants;
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
     }
 
     pub fn set_layer_wants_pointer_down_outside_events(&mut self, layer: UiLayerId, wants: bool) {
         let Some(l) = self.layers.get_mut(layer) else {
             return;
         };
+        if l.wants_pointer_down_outside_events == wants {
+            return;
+        }
         l.wants_pointer_down_outside_events = wants;
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
     }
 
     pub fn set_layer_consume_pointer_down_outside_events(
@@ -373,7 +392,11 @@ impl<H: UiHost> UiTree<H> {
         let Some(l) = self.layers.get_mut(layer) else {
             return;
         };
+        if l.consume_pointer_down_outside_events == consume {
+            return;
+        }
         l.consume_pointer_down_outside_events = consume;
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
     }
 
     pub fn set_layer_pointer_down_outside_branches(
@@ -384,7 +407,11 @@ impl<H: UiHost> UiTree<H> {
         let Some(l) = self.layers.get_mut(layer) else {
             return;
         };
+        if l.pointer_down_outside_branches == branches {
+            return;
+        }
         l.pointer_down_outside_branches = branches;
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
     }
 
     /// Register elements that should dismiss this overlay when a scroll event targets an ancestor
@@ -400,14 +427,22 @@ impl<H: UiHost> UiTree<H> {
         let Some(l) = self.layers.get_mut(layer) else {
             return;
         };
+        if l.scroll_dismiss_elements == elements {
+            return;
+        }
         l.scroll_dismiss_elements = elements;
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
     }
 
     pub fn set_layer_wants_timer_events(&mut self, layer: UiLayerId, wants: bool) {
         let Some(l) = self.layers.get_mut(layer) else {
             return;
         };
+        if l.wants_timer_events == wants {
+            return;
+        }
         l.wants_timer_events = wants;
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
     }
 
     pub fn node_layer(&self, node: NodeId) -> Option<UiLayerId> {
@@ -598,5 +633,6 @@ impl<H: UiHost> UiTree<H> {
         layer_entry.root = root;
         self.root_to_layer.insert(root, layer);
         self.prune_interaction_state_outside_active_layers("layers: update_layer_root");
+        self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
     }
 }

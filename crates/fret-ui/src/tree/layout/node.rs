@@ -165,6 +165,16 @@ impl<H: UiHost> UiTree<H> {
             });
         }
         let size = self.with_widget_mut(node, |widget, tree| {
+            struct LayoutCallDepthGuard(*mut u32);
+
+            impl Drop for LayoutCallDepthGuard {
+                fn drop(&mut self) {
+                    unsafe {
+                        *self.0 = (*self.0).saturating_sub(1);
+                    }
+                }
+            }
+
             if tree.debug_enabled {
                 widget_type = widget.debug_type_name();
             }
@@ -172,6 +182,14 @@ impl<H: UiHost> UiTree<H> {
             if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
                 children_buf.set(children);
             }
+            let _layout_call_depth_guard = if pass_kind == LayoutPassKind::Final {
+                tree.layout_call_depth = tree.layout_call_depth.saturating_add(1);
+                Some(LayoutCallDepthGuard(
+                    &mut tree.layout_call_depth as *mut u32,
+                ))
+            } else {
+                None
+            };
             let mut cx = LayoutCx {
                 app,
                 node,

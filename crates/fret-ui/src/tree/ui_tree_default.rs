@@ -39,6 +39,7 @@ impl<H: UiHost> Default for UiTree<H> {
             scratch_visual_bounds_records: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
+            layout_call_depth: 0,
             layout_invalidations_count: 0,
             last_layout_frame_id: None,
             last_layout_bounds: None,

@@ -205,6 +205,10 @@ impl<H: UiHost> UiTree<H> {
     /// dispatch. Paint-only boundaries refresh `WindowInputContextService`, but they do not
     /// republish the full key-context / command-availability snapshot set.
     ///
+    /// Layout-time raw focus/layer mutations are the one exception: they automatically schedule a
+    /// post-layout refine so final layout boundaries can republish authoritative snapshots without
+    /// forcing policy code to publish from inside `layout()`.
+    ///
     /// Call this after imperative tree mutations when later same-frame consumers must observe the
     /// new authoritative window state immediately.
     pub fn publish_window_runtime_snapshots(&mut self, app: &mut H) {
@@ -233,6 +237,18 @@ impl<H: UiHost> UiTree<H> {
         self.publish_window_input_context_snapshot(app, &input_ctx);
         self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         self.refresh_pending_shortcut_overlay_state_if_needed(app, &input_ctx);
+    }
+
+    pub(in crate::tree) fn request_post_layout_window_runtime_snapshot_refine(&mut self) {
+        self.pending_post_layout_window_runtime_snapshot_refine = true;
+    }
+
+    pub(in crate::tree) fn request_post_layout_window_runtime_snapshot_refine_if_layout_active(
+        &mut self,
+    ) {
+        if self.layout_call_depth > 0 {
+            self.request_post_layout_window_runtime_snapshot_refine();
+        }
     }
 
     /// Finalize a declarative rebuild that mounted a detached root and only later attached it to

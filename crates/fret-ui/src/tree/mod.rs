@@ -224,6 +224,7 @@ pub struct UiTree<H: UiHost> {
     scratch_visual_bounds_records: Vec<(GlobalElementId, Rect)>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
+    layout_call_depth: u32,
     layout_invalidations_count: u32,
     last_layout_frame_id: Option<FrameId>,
     last_layout_bounds: Option<Rect>,

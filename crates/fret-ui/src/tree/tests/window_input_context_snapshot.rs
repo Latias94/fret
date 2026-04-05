@@ -296,6 +296,69 @@ fn imperative_focus_mutation_requires_explicit_window_snapshot_commit() {
 }
 
 #[test]
+fn layout_in_focus_mutation_publishes_post_layout_input_context_snapshot() {
+    struct FocusableTextInput;
+
+    impl<H: UiHost> Widget<H> for FocusableTextInput {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn is_text_input(&self) -> bool {
+            true
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    struct FocusChildDuringLayout {
+        target: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for FocusChildDuringLayout {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                let _ = cx.layout_in(child, cx.bounds);
+            }
+            cx.tree.set_focus(Some(self.target));
+            cx.available
+        }
+    }
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let text = ui.create_node(FocusableTextInput);
+    let root = ui.create_node(FocusChildDuringLayout { target: text });
+    ui.add_child(root, text);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_in(&mut app, &mut services, root, bounds, 1.0);
+
+    assert_eq!(ui.focus(), Some(text));
+    let input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window input context snapshot after layout-time focus mutation");
+    assert!(
+        input_ctx.focus_is_text_input,
+        "layout-time focus changes should publish the authoritative input context at the final layout boundary"
+    );
+}
+
+#[test]
 fn outside_press_consume_publishes_post_dispatch_input_context_snapshot() {
     struct UnderlayTarget;
 
