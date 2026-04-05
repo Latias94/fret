@@ -9,6 +9,31 @@ use super::inspect_tree::build_inspect_tree_model;
 use super::selector::SemanticsIndex;
 
 #[cfg(feature = "diagnostics")]
+fn apply_diag_inspect_overlay_layer_policy(
+    ui: &mut fret_ui::UiTree<App>,
+    root_node: fret_core::NodeId,
+    visible: bool,
+) {
+    let layer = ui.node_layer(root_node).unwrap_or_else(|| {
+        ui.push_overlay_root_with_options(
+            root_node,
+            fret_ui::OverlayRootOptions {
+                blocks_underlay_input: false,
+                hit_testable: false,
+            },
+        )
+    });
+
+    // Keep the diagnostics inspect overlay input-transparent and non-authoritative for window
+    // runtime snapshots. Attaching or hiding it must not change barrier/focus/command snapshots.
+    ui.set_layer_visible(layer, visible);
+    ui.set_layer_hit_testable(layer, false);
+    ui.set_layer_wants_pointer_down_outside_events(layer, false);
+    ui.set_layer_wants_pointer_move_events(layer, false);
+    ui.set_layer_wants_timer_events(layer, false);
+}
+
+#[cfg(feature = "diagnostics")]
 pub(crate) fn render_diag_inspect_overlay(
     ui: &mut fret_ui::UiTree<App>,
     app: &mut App,
@@ -52,20 +77,7 @@ pub(crate) fn render_diag_inspect_overlay(
             ROOT_NAME,
             |_cx| Vec::new(),
         );
-        let layer = ui.node_layer(root_node).unwrap_or_else(|| {
-            ui.push_overlay_root_with_options(
-                root_node,
-                fret_ui::OverlayRootOptions {
-                    blocks_underlay_input: false,
-                    hit_testable: false,
-                },
-            )
-        });
-        ui.set_layer_visible(layer, false);
-        ui.set_layer_hit_testable(layer, false);
-        ui.set_layer_wants_pointer_down_outside_events(layer, false);
-        ui.set_layer_wants_pointer_move_events(layer, false);
-        ui.set_layer_wants_timer_events(layer, false);
+        apply_diag_inspect_overlay_layer_policy(ui, root_node, false);
         return;
     }
 
@@ -480,18 +492,5 @@ pub(crate) fn render_diag_inspect_overlay(
         },
     );
 
-    let layer = ui.node_layer(root_node).unwrap_or_else(|| {
-        ui.push_overlay_root_with_options(
-            root_node,
-            fret_ui::OverlayRootOptions {
-                blocks_underlay_input: false,
-                hit_testable: false,
-            },
-        )
-    });
-    ui.set_layer_visible(layer, true);
-    ui.set_layer_hit_testable(layer, false);
-    ui.set_layer_wants_pointer_down_outside_events(layer, false);
-    ui.set_layer_wants_pointer_move_events(layer, false);
-    ui.set_layer_wants_timer_events(layer, false);
+    apply_diag_inspect_overlay_layer_policy(ui, root_node, true);
 }

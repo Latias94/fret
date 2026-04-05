@@ -3766,6 +3766,131 @@ mod tests {
         assert_eq!(svc.inspect_overlay_model(window).help_scroll_offset, 0);
     }
 
+    #[cfg(feature = "diagnostics")]
+    #[test]
+    fn inspect_overlay_render_keeps_window_runtime_snapshots_authoritative_to_base_ui() {
+        fn render_base(
+            app: &mut App,
+            ui: &mut fret_ui::UiTree<App>,
+            services: &mut FakeUiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            value: fret_app::Model<String>,
+        ) {
+            let mut input_element = None;
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "diag-inspect-snapshot-base",
+                |cx| {
+                    let input = cx.text_input(fret_ui::element::TextInputProps::new(value.clone()));
+                    input_element = Some(input.id);
+                    let root = cx
+                        .container(fret_ui::element::ContainerProps::default(), |_cx| {
+                            vec![input]
+                        })
+                        .key_context("demo");
+                    cx.command_on_command_availability_for(
+                        root.id,
+                        Arc::new(|_host, _acx, requested| {
+                            if requested.as_str() == "test.inspect_overlay_available" {
+                                return fret_ui::CommandAvailability::Available;
+                            }
+                            fret_ui::CommandAvailability::NotHandled
+                        }),
+                    );
+                    vec![root]
+                },
+            );
+            ui.set_root(root);
+            let input_node = fret_ui::elements::node_for_element(
+                app,
+                window,
+                input_element.expect("text input element id"),
+            )
+            .expect("text input node");
+            ui.set_focus(Some(input_node));
+        }
+
+        let mut app = App::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+
+        let command = fret_runtime::CommandId::from("test.inspect_overlay_available");
+        app.commands_mut().register(
+            command.clone(),
+            fret_runtime::CommandMeta::new("Inspect Overlay Available")
+                .with_scope(fret_runtime::CommandScope::Widget),
+        );
+
+        let window = AppWindowId::default();
+        let bounds = rect(0.0, 0.0, 240.0, 120.0);
+        let mut ui: fret_ui::UiTree<App> = fret_ui::UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeUiServices;
+
+        let value = app.models_mut().insert(String::new());
+        app.set_frame_id(fret_runtime::FrameId(1));
+        render_base(
+            &mut app,
+            &mut ui,
+            &mut services,
+            window,
+            bounds,
+            value.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        ui.publish_window_runtime_snapshots(&mut app);
+
+        let control_input_context = app
+            .global::<fret_runtime::WindowInputContextService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("control window input context snapshot");
+        let control_key_contexts = app
+            .global::<fret_runtime::WindowKeyContextStackService>()
+            .and_then(|svc| svc.snapshot(window))
+            .map(|v| v.to_vec())
+            .unwrap_or_default();
+        let control_availability = app
+            .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+            .and_then(|svc| svc.available(window, &command));
+
+        app.set_frame_id(fret_runtime::FrameId(2));
+        render_base(&mut app, &mut ui, &mut services, window, bounds, value);
+        render_diag_inspect_overlay(&mut ui, &mut app, &mut services, window, bounds, true);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        ui.publish_window_runtime_snapshots(&mut app);
+
+        let after_layout_input_context = app
+            .global::<fret_runtime::WindowInputContextService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("window input context snapshot after inspect layout");
+        let after_layout_key_contexts = app
+            .global::<fret_runtime::WindowKeyContextStackService>()
+            .and_then(|svc| svc.snapshot(window))
+            .map(|v| v.to_vec())
+            .unwrap_or_default();
+        let after_layout_availability = app
+            .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+            .and_then(|svc| svc.available(window, &command));
+        assert_eq!(
+            after_layout_input_context, control_input_context,
+            "attaching the input-transparent inspect overlay should keep the base UI as the authoritative input-context source after an explicit publish"
+        );
+        assert_eq!(
+            after_layout_key_contexts, control_key_contexts,
+            "attaching the input-transparent inspect overlay should keep the base UI as the authoritative key-context source after an explicit publish"
+        );
+        assert_eq!(
+            after_layout_availability, control_availability,
+            "attaching the input-transparent inspect overlay should keep the base UI as the authoritative command-availability source after an explicit publish"
+        );
+    }
+
     #[test]
     fn pick_by_bounds_respects_modal_barrier() {
         let snapshot = SemanticsSnapshot {
