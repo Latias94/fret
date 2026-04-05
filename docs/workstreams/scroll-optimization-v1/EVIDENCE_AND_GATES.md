@@ -9,7 +9,22 @@ This slice locks the contract that:
 
 - deferred probing can only happen when a retained seed extent exists,
 - retained caches are seeds, not authoritative truth,
-- pending probes clear only after an explicit probe or authoritative post-layout observation.
+- pending probes clear only after an explicit probe or authoritative post-layout observation,
+- authoritative extent commits end deferred probe state entirely instead of leaving deferred-mode
+  stability bookkeeping armed for later frames.
+
+Verified gates (2026-04-05):
+
+- `cargo nextest run -p fret-ui authoritative_extent_commit_clears_deferred_probe_state`
+  - Result: passed.
+  - Contract: once a probe/observation path produces an authoritative extent, deferred invalidation
+    state is fully cleared rather than leaving `kind/stable_frames` armed behind a cleared pending
+    bit.
+- `cargo nextest run -p fret-ui scroll_authoritative_observation_same_extent_clears_resize_deferred_state`
+  - Result: passed.
+  - Contract: an unchanged authoritative observation on a resize-deferred frame clears the resize
+    defer state immediately, so the first stable frame does not schedule a redundant follow-up
+    barrier relayout/redraw.
 
 ## Follow-on slice — Contained relayout dirty vs rerender semantics
 

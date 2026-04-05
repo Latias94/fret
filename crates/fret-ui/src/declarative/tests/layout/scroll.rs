@@ -644,6 +644,118 @@ fn scroll_authoritative_observation_same_extent_clears_deferred_invalidation_pen
 }
 
 #[test]
+fn scroll_authoritative_observation_same_extent_clears_resize_deferred_state() {
+    struct FixedMeasureLayoutNode {
+        size: Size,
+    }
+
+    impl<H: UiHost> Widget<H> for FixedMeasureLayoutNode {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    let mut cfg = crate::runtime_config::ui_runtime_config().clone();
+    cfg.scroll_defer_unbounded_probe_on_resize = true;
+    cfg.scroll_defer_unbounded_probe_stable_frames = 2;
+    let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let roomy_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let compact_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        roomy_bounds,
+        "scroll-authoritative-observation-clears-resize-deferred-state",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Both,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+    ui.set_root(root);
+
+    let scroll_node = ui.children(root)[0];
+    let child = ui.create_node(FixedMeasureLayoutNode {
+        size: Size::new(Px(160.0), Px(160.0)),
+    });
+    ui.set_children(scroll_node, vec![child]);
+
+    layout_frame(&mut ui, &mut app, &mut text, roomy_bounds);
+    ui.take_pending_barrier_relayouts();
+    let _ = app.flush_effects();
+
+    app.advance_frame();
+    layout_frame(&mut ui, &mut app, &mut text, compact_bounds);
+
+    assert!(
+        ui.interactive_resize_active(),
+        "expected changed bounds to enter interactive-resize mode"
+    );
+    assert!(
+        ui.take_pending_barrier_relayouts().is_empty(),
+        "expected the active resize frame to avoid scheduling a follow-up barrier relayout while the viewport is still changing"
+    );
+    let compact_effects = app.flush_effects();
+    assert!(
+        !compact_effects
+            .iter()
+            .any(|effect| matches!(effect, Effect::Redraw(w) if *w == window)),
+        "expected no redraw carry-over from the authoritative resize frame; effects={compact_effects:?}"
+    );
+
+    app.advance_frame();
+    layout_frame(&mut ui, &mut app, &mut text, compact_bounds);
+
+    assert!(
+        ui.take_pending_barrier_relayouts().is_empty(),
+        "expected authoritative same-extent observation during the resize frame to clear resize-deferred probe state instead of scheduling a later follow-up barrier relayout"
+    );
+    let settled_effects = app.flush_effects();
+    assert!(
+        !settled_effects
+            .iter()
+            .any(|effect| matches!(effect, Effect::Redraw(w) if *w == window)),
+        "expected no follow-up redraw once authoritative observation has already closed the resize-deferred probe state; effects={settled_effects:?}"
+    );
+}
+
+#[test]
 fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

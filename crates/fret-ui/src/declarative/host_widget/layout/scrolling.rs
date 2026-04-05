@@ -825,7 +825,7 @@ fn commit_scroll_authoritative_extent<H: UiHost>(
             window,
             element,
             ScrollDeferredUnboundedProbeState::default,
-            |state| state.pending_invalidation_probe = false,
+            |state| clear_scroll_deferred_probe_state(state),
         );
     }
 
@@ -2448,10 +2448,12 @@ impl ElementHostWidget {
                 }
             }
 
+            let deferred_probe_state_still_armed =
+                defer_state.kind != ScrollDeferredUnboundedProbeKind::None || pending_extent_probe;
             let authoritative_observation_completed_without_extent_change =
                 !authoritative_observation_cleared_pending
                     && scroll_overflow_observation_is_authoritative(observation)
-                    && (defer_state.pending_invalidation_probe || pending_extent_probe);
+                    && deferred_probe_state_still_armed;
             if authoritative_observation_completed_without_extent_change {
                 commit_scroll_authoritative_extent(
                     &mut *cx.app,
@@ -2461,7 +2463,8 @@ impl ElementHostWidget {
                         max_child: Size::new(content_w, content_h),
                         intrinsic_cache_key,
                         probe_cache_key: None,
-                        clear_pending_invalidation_probe: defer_state.pending_invalidation_probe,
+                        clear_pending_invalidation_probe: defer_state.kind
+                            != ScrollDeferredUnboundedProbeKind::None,
                         clear_pending_extent_probe: pending_extent_probe,
                     },
                 );
@@ -3278,5 +3281,58 @@ mod tests {
         assert!(!telemetry.deep_scan_enabled);
         assert_eq!(telemetry.deep_scan_visited, 0);
         assert!(!telemetry.deep_scan_budget_hit);
+    }
+
+    #[test]
+    fn authoritative_extent_commit_clears_deferred_probe_state() {
+        let mut app = crate::test_host::TestHost::new();
+        let window = AppWindowId::default();
+        let element = GlobalElementId(9001);
+
+        crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            ScrollDeferredUnboundedProbeState::default,
+            |state| {
+                state.kind = ScrollDeferredUnboundedProbeKind::Invalidation;
+                state.stable_frames = 2;
+                state.pending_invalidation_probe = true;
+            },
+        );
+
+        commit_scroll_authoritative_extent(
+            &mut app,
+            window,
+            element,
+            ScrollAuthoritativeExtentCommit {
+                max_child: Size::new(Px(120.0), Px(160.0)),
+                intrinsic_cache_key: None,
+                probe_cache_key: None,
+                clear_pending_invalidation_probe: true,
+                clear_pending_extent_probe: false,
+            },
+        );
+
+        let state = crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            ScrollDeferredUnboundedProbeState::default,
+            |state| *state,
+        );
+        assert_eq!(
+            state.kind,
+            ScrollDeferredUnboundedProbeKind::None,
+            "authoritative extent commit should end deferred probe mode instead of leaving the state machine armed"
+        );
+        assert_eq!(
+            state.stable_frames, 0,
+            "authoritative extent commit should clear deferred probe stability bookkeeping"
+        );
+        assert!(
+            !state.pending_invalidation_probe,
+            "authoritative extent commit should clear the pending invalidation probe flag"
+        );
     }
 }

@@ -10,8 +10,12 @@ Status: Active
   when retained child measured sizes are absent.
 - [x] Centralize authoritative extent commits so pending probe clearing only happens on explicit
   probe / authoritative observation paths.
+- [x] Make authoritative extent commits end deferred probe state entirely, instead of clearing only
+  the pending invalidation bit and leaving deferred mode armed for later frames.
 - [x] Ensure unchanged authoritative post-layout observation still clears deferred invalidation
   pending state instead of forcing an extra at-edge probe on the next frame.
+- [x] Ensure unchanged authoritative observation on resize-deferred frames also clears deferred
+  resize state instead of arming a redundant follow-up relayout/redraw on the first stable frame.
 - [x] Record the dedicated verification results for the seed/authority regression gates in
   `EVIDENCE_AND_GATES.md`.
 

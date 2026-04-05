@@ -43,6 +43,14 @@
       "command": "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui scroll_authoritative_observation_same_extent_clears_deferred_invalidation_pending_state"
     },
     {
+      "name": "scroll-authoritative-observation-clears-resize-deferred-state",
+      "command": "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui scroll_authoritative_observation_same_extent_clears_resize_deferred_state"
+    },
+    {
+      "name": "scroll-authoritative-commit-clears-deferred-state",
+      "command": "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui authoritative_extent_commit_clears_deferred_probe_state"
+    },
+    {
       "name": "scroll-budget-hit-growth",
       "command": "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui scroll_post_layout_budget_hit_growth_converges_via_pending_probe_next_frame"
     },
