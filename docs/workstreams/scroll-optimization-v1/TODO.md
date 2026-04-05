@@ -1,6 +1,6 @@
 # Scroll Optimization Workstream (v1) — TODO
 
-Date: 2026-04-04  
+Date: 2026-04-05  
 Status: Active
 
 ## Current slice — Deferred probe seed vs authoritative extent
@@ -243,8 +243,12 @@ Status: Active
     or overlay attachment becomes authoritative,
   - [x] imperative raw tree mutation only refreshes window input/key-context/action-availability
     after an explicit window snapshot commit,
+  - [x] `layout_all()` after an imperative raw tree mutation still requires that same explicit
+    window snapshot commit instead of acting as an implicit authoritative publish boundary,
   - [x] best-effort input-context readers inherit authoritative command availability over stale or
     fallback published snapshots,
+  - [x] diagnostics inspect overlays stay input-transparent and non-authoritative for window
+    runtime snapshots across a full rebuild/layout/publish frame sequence,
   - [x] `add_child(...)` reparents without stale child edges and no-ops when already attached once,
   - [x] barrier-parent reparent cleanup keeps the old parent on contained-relayout semantics,
   - [x] barrier-to-barrier reparent cleanup removes stale edges without bubbling ancestor relayout,

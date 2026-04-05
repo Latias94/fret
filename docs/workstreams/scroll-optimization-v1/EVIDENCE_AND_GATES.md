@@ -1,6 +1,6 @@
 # Scroll Optimization Workstream (v1) — Evidence And Gates
 
-Date: 2026-04-04  
+Date: 2026-04-05  
 Status: Active
 
 ## Current slice — Deferred probe seed vs authoritative extent
@@ -146,6 +146,35 @@ This follow-on slice locks the contract that:
 - the explicit commit surface must revalidate focus and pending shortcut/key-context state before
   writing `WindowInputContextService`, `WindowKeyContextStackService`, and
   `WindowCommandActionAvailabilityService`.
+
+Verified gates (2026-04-05):
+
+- `cargo nextest run -p fret-ui -E 'test(layout_all_after_imperative_tree_mutation_still_requires_explicit_window_snapshot_commit)'`
+  - Result: passed.
+  - Contract: `layout_all()` after a raw retained rebuild is still not an implicit authoritative
+    window-snapshot commit boundary; `WindowInputContextService`,
+    `WindowKeyContextStackService`, and `WindowCommandActionAvailabilityService` remain stale until
+    `UiTree::publish_window_runtime_snapshots(...)` is called explicitly.
+
+## Follow-on slice — Diagnostics inspect overlay remains non-authoritative for window snapshots
+
+This follow-on slice locks the contract that:
+
+- the diagnostics inspect overlay is input-transparent and non-authoritative for window runtime
+  snapshots,
+- attaching or hiding the overlay may mutate layer policy, but it must not change the final
+  authoritative `WindowInputContextService`, `WindowKeyContextStackService`, or
+  `WindowCommandActionAvailabilityService` state once the base UI frame republishes,
+- diagnostics overlay policy should stay centralized so future changes do not accidentally widen
+  it into an input barrier or snapshot owner.
+
+Verified gates (2026-04-05):
+
+- `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics -E 'test(inspect_overlay_render_keeps_window_runtime_snapshots_authoritative_to_base_ui)'`
+  - Result: passed.
+  - Contract: under a real `render_root(...) -> render_diag_inspect_overlay(...) -> layout_all() ->
+    publish_window_runtime_snapshots(...)` frame sequence, the inspect overlay leaves the base UI
+    authoritative for input-context, key-context, and command-availability snapshots.
 
 ## Follow-on slice — Published input-context consumers must overlay authoritative command availability
 

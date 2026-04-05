@@ -105,6 +105,14 @@
     {
       "name": "select-active-descendant-ignores-non-items",
       "command": "CARGO_TARGET_DIR=target-codex-shadcn-lib cargo test -p fret-ui-shadcn --lib select::tests::select_label_and_separator_do_not_affect_positions_or_initial_focus -- --exact"
+    },
+    {
+      "name": "imperative-layout-does-not-implicitly-commit-window-snapshots",
+      "command": "cargo nextest run -p fret-ui -E 'test(layout_all_after_imperative_tree_mutation_still_requires_explicit_window_snapshot_commit)'"
+    },
+    {
+      "name": "diag-inspect-overlay-non-authoritative-window-snapshots",
+      "command": "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics -E 'test(inspect_overlay_render_keeps_window_runtime_snapshots_authoritative_to_base_ui)'"
     }
   ],
   "evidence": [
@@ -125,6 +133,9 @@
     "crates/fret-ui/src/widget.rs",
     "ecosystem/fret/src/view.rs",
     "apps/fret-examples/src/todo_demo.rs",
+    "crates/fret-ui/src/declarative/tests/core.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_overlay.rs",
     "ecosystem/fret-ui-kit/src/window_overlays/render.rs",
     "ecosystem/fret-ui-kit/src/window_overlays/tests/cached_requests.rs",
     "ecosystem/fret-ui-kit/src/declarative/table.rs",
