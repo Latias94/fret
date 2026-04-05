@@ -229,6 +229,7 @@ impl<H: UiHost> UiTree<H> {
         let dispatch_cx = self.build_dispatch_cx(app.frame_id(), active_layers, barrier_root);
         let active_layers: &[NodeId] = dispatch_cx.active_input_roots.as_slice();
         let barrier_root = dispatch_cx.input_barrier_root;
+        let routing_barrier_root = dispatch_cx.barrier_root;
 
         let hit_test_layer_roots: &[NodeId] = active_layers;
         let pointer_chain_snapshot: &UiDispatchSnapshot = &dispatch_cx.input_snapshot;
@@ -284,7 +285,8 @@ impl<H: UiHost> UiTree<H> {
                     self.publish_window_input_context_snapshot_untracked(app, &input_ctx, false);
                 } else {
                     self.publish_window_input_context_snapshot(app, &input_ctx);
-                    let next_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
+                    let next_key_contexts =
+                        self.shortcut_key_context_stack(app, routing_barrier_root);
                     self.publish_window_key_context_stack_snapshot(app, next_key_contexts);
                 }
                 input_ctx
@@ -382,7 +384,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        self.revalidate_pending_shortcut_for_current_routing_context(app, barrier_root);
+        self.revalidate_pending_shortcut_for_current_routing_context(app, routing_barrier_root);
 
         if let Event::Timer { token } = event
             && !self.replaying_pending_shortcut
@@ -726,7 +728,7 @@ impl<H: UiHost> UiTree<H> {
                 services,
                 KeydownShortcutParams {
                     input_ctx: &input_ctx,
-                    barrier_root,
+                    barrier_root: routing_barrier_root,
                     focus_is_text_input,
                     #[cfg(feature = "diagnostics")]
                     phase: fret_runtime::ShortcutRoutingPhase::PreDispatch,
@@ -2802,7 +2804,7 @@ impl<H: UiHost> UiTree<H> {
             let key_contexts = if !self.pending_shortcut.keystrokes.is_empty() {
                 self.pending_shortcut.key_contexts.clone()
             } else {
-                self.shortcut_key_context_stack(app, barrier_root)
+                self.shortcut_key_context_stack(app, routing_barrier_root)
             };
             app.with_global_mut_untracked(
                 fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
@@ -2863,7 +2865,7 @@ impl<H: UiHost> UiTree<H> {
                 let key_contexts = if !self.pending_shortcut.keystrokes.is_empty() {
                     self.pending_shortcut.key_contexts.clone()
                 } else {
-                    self.shortcut_key_context_stack(app, barrier_root)
+                    self.shortcut_key_context_stack(app, routing_barrier_root)
                 };
                 app.with_global_mut_untracked(
                     fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
@@ -2902,7 +2904,7 @@ impl<H: UiHost> UiTree<H> {
                     services,
                     KeydownShortcutParams {
                         input_ctx: &input_ctx_for_shortcuts,
-                        barrier_root,
+                        barrier_root: routing_barrier_root,
                         focus_is_text_input,
                         #[cfg(feature = "diagnostics")]
                         phase: fret_runtime::ShortcutRoutingPhase::PostDispatch,
