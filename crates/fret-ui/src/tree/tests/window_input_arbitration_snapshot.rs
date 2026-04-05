@@ -231,6 +231,77 @@ fn dispatch_command_publishes_post_dispatch_input_arbitration_snapshot() {
 }
 
 #[test]
+fn imperative_focus_barrier_mutation_requires_explicit_window_snapshot_commit() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let base_root = ui.create_node(TestStack);
+    ui.set_root(base_root);
+
+    let overlay_root = ui.create_node(TestStack);
+    let overlay_layer = ui.push_overlay_root_with_options(
+        overlay_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: false,
+            hit_testable: false,
+        },
+    );
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let initial = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected an initial window input context snapshot");
+    let initial_arbitration = initial
+        .window_arbitration
+        .expect("expected `InputContext.window_arbitration` to be populated");
+    assert_eq!(initial_arbitration.focus_barrier_root, None);
+
+    ui.set_layer_blocks_underlay_focus(overlay_layer, true);
+
+    let stale = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a stale window input context snapshot");
+    let stale_arbitration = stale
+        .window_arbitration
+        .expect("expected `InputContext.window_arbitration` to be populated");
+    assert_eq!(
+        stale_arbitration.focus_barrier_root, None,
+        "raw focus-barrier mutation should not silently republish arbitration snapshots"
+    );
+
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let committed = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a committed window input context snapshot");
+    let committed_arbitration = committed
+        .window_arbitration
+        .expect("expected `InputContext.window_arbitration` to be populated");
+    assert_eq!(
+        committed_arbitration.focus_barrier_root,
+        Some(overlay_root),
+        "explicit window snapshot commit should publish the authoritative focus barrier root"
+    );
+}
+
+#[test]
 fn modal_barrier_hides_pointer_occlusion_layers_below_barrier_in_arbitration_snapshot() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());

@@ -223,6 +223,79 @@ fn focused_node_text_boundary_mode_override_is_published_in_input_context_snapsh
 }
 
 #[test]
+fn imperative_focus_mutation_requires_explicit_window_snapshot_commit() {
+    struct FocusableTextInput;
+
+    impl<H: UiHost> Widget<H> for FocusableTextInput {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn is_text_input(&self) -> bool {
+            true
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let text = ui.create_node(FocusableTextInput);
+    ui.add_child(root, text);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_in(&mut app, &mut services, root, bounds, 1.0);
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let initial = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected an initial window input context snapshot");
+    assert!(
+        !initial.focus_is_text_input,
+        "baseline snapshot should not report text-input focus before the raw focus mutation"
+    );
+
+    ui.set_focus(Some(text));
+
+    let stale = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a stale window input context snapshot");
+    assert!(
+        !stale.focus_is_text_input,
+        "raw focus mutation should not silently republish the authoritative input context"
+    );
+
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let committed = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a committed window input context snapshot");
+    assert!(
+        committed.focus_is_text_input,
+        "explicit window snapshot commit should publish the authoritative focus state"
+    );
+}
+
+#[test]
 fn outside_press_consume_publishes_post_dispatch_input_context_snapshot() {
     struct UnderlayTarget;
 
