@@ -1163,4 +1163,96 @@ mod tests {
             "authoritative snapshot publish should refresh pending shortcut continuations for the new input context"
         );
     }
+
+    struct FocusTargetCommand {
+        target: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for FocusTargetCommand {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
+            if command.as_str() != "test.focus_second" {
+                return false;
+            }
+            cx.request_focus(self.target);
+            true
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    #[test]
+    fn dispatch_command_clears_pending_shortcut_when_focus_changes_routing_context() {
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(RootStack);
+        let second = ui.create_node(FocusableLeaf);
+        let first = ui.create_node(FocusTargetCommand { target: second });
+        ui.add_child(root, first);
+        ui.add_child(root, second);
+        ui.set_root(root);
+        ui.set_focus(Some(first));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut services = FakeUiServices;
+        ui.layout_in(&mut app, &mut services, root, bounds, 1.0);
+
+        let ctrl_k = KeyChord::new(
+            KeyCode::KeyK,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        ui.pending_shortcut = PendingShortcut {
+            keystrokes: vec![CapturedKeystroke {
+                chord: ctrl_k,
+                text: None,
+            }],
+            focus: Some(first),
+            barrier_root: None,
+            fallback: None,
+            timer: None,
+            capture_next_text_input_key: None,
+            key_contexts: Vec::new(),
+        };
+        ui.sync_pending_shortcut_overlay_state(&mut app, Some(&InputContext::default()));
+        assert!(
+            app.global::<crate::PendingShortcutOverlayState>()
+                .and_then(|state| state.snapshot_for_window(window))
+                .is_some(),
+            "expected a pending shortcut overlay snapshot before command dispatch"
+        );
+
+        let handled = ui.dispatch_command(
+            &mut app,
+            &mut services,
+            &CommandId::from("test.focus_second"),
+        );
+        assert!(handled);
+        assert_eq!(ui.focus(), Some(second));
+        assert!(
+            ui.pending_shortcut.keystrokes.is_empty(),
+            "command-driven focus changes should invalidate pending shortcut state immediately"
+        );
+        assert!(
+            app.global::<crate::PendingShortcutOverlayState>()
+                .and_then(|state| state.snapshot_for_window(window))
+                .is_none(),
+            "post-command snapshot publish should clear the stale pending shortcut overlay"
+        );
+    }
 }

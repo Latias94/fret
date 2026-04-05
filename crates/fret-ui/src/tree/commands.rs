@@ -805,6 +805,7 @@ impl<H: UiHost> UiTree<H> {
         {
             self.set_focus_unchecked(None, "commands: focus missing from dispatch snapshot");
         }
+        self.revalidate_pending_shortcut_for_current_routing_context(app, barrier_root);
 
         let default_root = barrier_root.unwrap_or(base_root);
         let focus = self.focus;
@@ -973,7 +974,10 @@ impl<H: UiHost> UiTree<H> {
         // Publish a post-dispatch snapshot so runner-level integration surfaces (e.g. OS menubars)
         // see the latest focus/modal state without waiting for the next paint pass.
         if let Some(window) = self.window {
-            let (_active_layers, barrier_root) = self.active_input_layers();
+            let (_active_layers, input_barrier_root) = self.active_input_layers();
+            let (_active_focus_layers, focus_barrier_root) = self.active_focus_layers();
+            let barrier_root = focus_barrier_root.or(input_barrier_root);
+            self.revalidate_pending_shortcut_for_current_routing_context(app, barrier_root);
             let caps = app
                 .global::<PlatformCapabilities>()
                 .cloned()
@@ -981,7 +985,7 @@ impl<H: UiHost> UiTree<H> {
             let mut input_ctx = InputContext {
                 platform: Platform::current(),
                 caps,
-                ui_has_modal: barrier_root.is_some(),
+                ui_has_modal: input_barrier_root.is_some(),
                 window_arbitration: None,
                 focus_is_text_input: self.focus_is_text_input(app),
                 text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
@@ -1025,6 +1029,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+            self.refresh_pending_shortcut_overlay_state_if_needed(app, &input_ctx);
         }
 
         if let Some(window) = self.window {
