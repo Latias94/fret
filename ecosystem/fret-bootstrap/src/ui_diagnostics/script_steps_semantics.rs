@@ -2,6 +2,7 @@ use super::*;
 
 pub(super) fn handle_focus_step(
     svc: &mut UiDiagnosticsService,
+    app: &mut App,
     window: AppWindowId,
     step_index: usize,
     step: UiActionStepV2,
@@ -69,6 +70,7 @@ pub(super) fn handle_focus_step(
     };
 
     ui.set_focus(Some(node.id));
+    ui.publish_window_runtime_snapshots(app);
     let injected_step_index = step_index.min(u32::MAX as usize) as u32;
     active.last_injected_step = Some(injected_step_index);
     active.next_step = active.next_step.saturating_add(1);

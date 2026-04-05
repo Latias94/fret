@@ -674,12 +674,12 @@ fn semantics_snapshot(
 
 fn accessibility_focus(
     _driver: &mut DockingDemoDriver,
-    _app: &mut App,
+    app: &mut App,
     _window: AppWindowId,
     state: &mut DockingDemoWindowState,
     target: fret_core::NodeId,
 ) {
-    state.ui.set_focus(Some(target));
+    fret_ui_app::accessibility_actions::focus(&mut state.ui, app, target);
 }
 
 fn accessibility_invoke(

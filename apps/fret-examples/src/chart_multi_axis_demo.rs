@@ -765,6 +765,7 @@ fn render(
 
         state.ui.set_root(root);
         state.ui.set_focus(Some(top_node));
+        state.ui.publish_window_runtime_snapshots(app);
         state.root = Some(root);
         state.top_node = Some(top_node);
         state.bottom_node = Some(bottom_node);

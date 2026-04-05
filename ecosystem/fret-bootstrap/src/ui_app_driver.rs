@@ -2541,12 +2541,12 @@ fn ui_app_accessibility_snapshot<S>(
 
 fn ui_app_accessibility_focus<S>(
     _driver: &mut UiAppDriver<S>,
-    _app: &mut App,
+    app: &mut App,
     _window: AppWindowId,
     state: &mut UiAppWindowState<S>,
     target: NodeId,
 ) {
-    state.ui.set_focus(Some(target));
+    fret_ui_app::accessibility_actions::focus(&mut state.ui, app, target);
 }
 
 fn ui_app_accessibility_invoke<S>(

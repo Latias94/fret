@@ -758,6 +758,7 @@ pub(super) fn dispatch_drive_script_step(
         step @ UiActionStepV2::Focus { .. } => {
             let handled = script_steps_semantics::handle_focus_step(
                 service,
+                app,
                 window,
                 step_index,
                 step,

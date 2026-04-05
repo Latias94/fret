@@ -3265,13 +3265,13 @@ fn semantics_snapshot(
 }
 
 fn accessibility_focus(
-    driver: &mut DockingArbitrationDriver,
+    _driver: &mut DockingArbitrationDriver,
     app: &mut App,
-    window: AppWindowId,
+    _window: AppWindowId,
     state: &mut DockingArbitrationWindowState,
     target: fret_core::NodeId,
 ) {
-    state.ui.set_focus(Some(target));
+    fret_ui_app::accessibility_actions::focus(&mut state.ui, app, target);
 }
 
 fn accessibility_invoke(

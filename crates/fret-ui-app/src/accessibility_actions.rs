@@ -188,6 +188,11 @@ pub fn invoke(ui: &mut UiTree, app: &mut App, services: &mut dyn UiServices, tar
     invoke_with_role(ui, app, services, target, None);
 }
 
+pub fn focus(ui: &mut UiTree, app: &mut App, target: NodeId) {
+    ui.set_focus(Some(target));
+    ui.publish_window_runtime_snapshots(app);
+}
+
 pub fn set_value_text(
     ui: &mut UiTree,
     app: &mut App,

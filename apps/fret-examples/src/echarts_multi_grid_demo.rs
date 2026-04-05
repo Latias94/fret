@@ -142,6 +142,7 @@ fn render(
         state
             .ui
             .set_focus(nodes.canvases.first().map(|(_, node)| *node));
+        state.ui.publish_window_runtime_snapshots(app);
         state.root = Some(nodes.root);
     }
 
