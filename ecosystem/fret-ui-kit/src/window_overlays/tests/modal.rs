@@ -915,6 +915,276 @@ fn modal_initial_focus_is_only_applied_on_opening_edge() {
 }
 
 #[test]
+fn reopening_attached_modal_republishes_input_context_after_focus_handoff() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let command = fret_runtime::CommandId::from("test.modal_reopen_available");
+    app.commands_mut().register(
+        command.clone(),
+        fret_runtime::CommandMeta::new("Modal Reopen Available")
+            .with_scope(fret_runtime::CommandScope::Widget),
+    );
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let mut trigger_id: Option<GlobalElementId> = None;
+
+    let value = app.models_mut().insert(String::new());
+
+    fn build_modal_children<H: fret_ui::UiHost>(
+        cx: &mut fret_ui::ElementContext<'_, H>,
+        focusable_out: Option<&mut Option<GlobalElementId>>,
+        value: Model<String>,
+        command: fret_runtime::CommandId,
+    ) -> Vec<fret_ui::element::AnyElement> {
+        let input = cx
+            .text_input(fret_ui::element::TextInputProps::new(value.clone()))
+            .key_context("modal.reopen");
+        if let Some(out) = focusable_out {
+            *out = Some(input.id);
+        }
+        let shell = cx.container(ContainerProps::default(), |_cx| vec![input]);
+        cx.command_on_command_availability_for(
+            shell.id,
+            Arc::new(move |_host, _acx, requested| {
+                if requested == command {
+                    return fret_ui::CommandAvailability::Available;
+                }
+                fret_ui::CommandAvailability::NotHandled
+            }),
+        );
+        vec![shell]
+    }
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "modal-reopen-keyctx-base",
+        |cx| {
+            vec![cx.pressable_with_id(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(80.0));
+                        layout.size.height = Length::Px(Px(32.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st, id| {
+                    trigger_id = Some(id);
+                    Vec::new()
+                },
+            )]
+        },
+    );
+    ui.set_root(base);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let trigger = trigger_id.expect("trigger element id");
+    let trigger_node =
+        fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+    ui.set_focus(Some(trigger_node));
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let initial_input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("initial input context snapshot");
+    assert!(
+        !initial_input_ctx.focus_is_text_input,
+        "underlay trigger focus should publish a non-text-input snapshot before the modal reopens"
+    );
+
+    let modal_id = GlobalElementId(0xfeed);
+    let mut modal_focusable: Option<GlobalElementId> = None;
+    let modal_children_closed =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-reopen-keyctx", |cx| {
+            build_modal_children(
+                cx,
+                Some(&mut modal_focusable),
+                value.clone(),
+                command.clone(),
+            )
+        });
+    let modal_focusable = modal_focusable.expect("modal focusable id");
+
+    begin_frame(&mut app, window);
+    let _ = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "modal-reopen-keyctx-base",
+        |cx| {
+            vec![cx.pressable_with_id(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(80.0));
+                        layout.size.height = Length::Px(Px(32.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st, _id| Vec::new(),
+            )]
+        },
+    );
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: modal_id,
+            root_name: modal_root_name(modal_id),
+            trigger: Some(trigger),
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: Some(modal_focusable),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            children: modal_children_closed,
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let closed_input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("closed modal input context snapshot");
+    assert!(
+        !closed_input_ctx.focus_is_text_input,
+        "keeping the attached modal closed should not move the published input context into text-input mode"
+    );
+    let closed_key_contexts = app
+        .global::<fret_runtime::WindowKeyContextStackService>()
+        .and_then(|svc| svc.snapshot(window))
+        .map(|v| v.to_vec())
+        .unwrap_or_default();
+    assert!(
+        closed_key_contexts.is_empty(),
+        "keeping the attached modal closed should not publish the modal key context onto the authoritative window routing stack"
+    );
+    let closed_availability = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &command));
+    assert_eq!(
+        closed_availability,
+        Some(false),
+        "keeping the attached modal closed should leave the modal widget command unavailable to same-frame consumers"
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let modal_children_open =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-reopen-keyctx", |cx| {
+            build_modal_children(cx, None, value.clone(), command.clone())
+        });
+
+    begin_frame(&mut app, window);
+    let _ = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "modal-reopen-keyctx-base",
+        |cx| {
+            vec![cx.pressable_with_id(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(80.0));
+                        layout.size.height = Length::Px(Px(32.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st, _id| Vec::new(),
+            )]
+        },
+    );
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: modal_id,
+            root_name: modal_root_name(modal_id),
+            trigger: Some(trigger),
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: Some(modal_focusable),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            children: modal_children_open,
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let modal_focus_node = fret_ui::elements::node_for_element(&mut app, window, modal_focusable)
+        .expect("modal focus node");
+    assert_eq!(
+        ui.focus(),
+        Some(modal_focus_node),
+        "reopening the attached modal should hand focus to the requested modal element in the render frame"
+    );
+
+    let reopened_input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("reopened modal input context snapshot");
+    assert!(
+        reopened_input_ctx.focus_is_text_input,
+        "reopening an attached modal should republish the window input context after focus moves into the modal text input"
+    );
+    let reopened_key_contexts = app
+        .global::<fret_runtime::WindowKeyContextStackService>()
+        .and_then(|svc| svc.snapshot(window))
+        .map(|v| v.to_vec())
+        .unwrap_or_default();
+    assert_eq!(
+        reopened_key_contexts,
+        vec![Arc::<str>::from("modal.reopen")],
+        "reopening an attached modal should republish the window key-context stack after focus moves into the modal subtree"
+    );
+    let reopened_availability = app
+        .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.available(window, &command));
+    assert_eq!(
+        reopened_availability,
+        Some(true),
+        "reopening an attached modal should republish widget command availability after focus moves into the modal subtree"
+    );
+}
+
+#[test]
 fn modal_reasserts_focus_when_focus_leaves_modal_layer_while_open() {
     let window = AppWindowId::default();
     let mut app = App::new();

@@ -3440,6 +3440,12 @@ pub fn render<H: UiHost + 'static>(
     indexed.sort_by_key(|(idx, layer)| (layer_priorities.get(layer).copied().unwrap_or(0), *idx));
     let next_order: Vec<UiLayerId> = indexed.into_iter().map(|(_, id)| id).collect();
     ui.reorder_layers_in_paint_order(next_order);
+
+    // The declarative root render only captures tree state as it existed during that root's build.
+    // Overlay policy then mutates layer visibility/barriers/focus restoration on top. Publish once
+    // more after all per-window overlay policy commits so same-frame cross-surface consumers see
+    // the final authoritative routing/focus state.
+    ui.publish_window_runtime_snapshots(app);
 }
 
 #[cfg(test)]
