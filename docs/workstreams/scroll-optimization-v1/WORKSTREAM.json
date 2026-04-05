@@ -113,6 +113,10 @@
     {
       "name": "diag-inspect-overlay-non-authoritative-window-snapshots",
       "command": "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics -E 'test(inspect_overlay_render_keeps_window_runtime_snapshots_authoritative_to_base_ui)'"
+    },
+    {
+      "name": "internal-drag-ignores-detached-stale-frame-region",
+      "command": "cargo nextest run -p fret-ui -E 'test(internal_drag_after_raw_rebuild_does_not_route_to_detached_stale_frame_region)'"
     }
   ],
   "evidence": [
@@ -134,6 +138,7 @@
     "ecosystem/fret/src/view.rs",
     "apps/fret-examples/src/todo_demo.rs",
     "crates/fret-ui/src/declarative/tests/core.rs",
+    "crates/fret-ui/src/declarative/tests/interactions/pointer_regions.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_overlay.rs",
     "ecosystem/fret-ui-kit/src/window_overlays/render.rs",

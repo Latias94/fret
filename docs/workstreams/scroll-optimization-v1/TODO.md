@@ -245,6 +245,8 @@ Status: Active
     after an explicit window snapshot commit,
   - [x] `layout_all()` after an imperative raw tree mutation still requires that same explicit
     window snapshot commit instead of acting as an implicit authoritative publish boundary,
+  - [x] raw rebuilds may leave stale declarative frame records behind, but internal-drag target
+    promotion still ignores detached stale regions and only walks the live hit ancestry,
   - [x] best-effort input-context readers inherit authoritative command availability over stale or
     fallback published snapshots,
   - [x] diagnostics inspect overlays stay input-transparent and non-authoritative for window

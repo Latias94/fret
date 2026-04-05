@@ -156,6 +156,26 @@ Verified gates (2026-04-05):
     `WindowKeyContextStackService`, and `WindowCommandActionAvailabilityService` remain stale until
     `UiTree::publish_window_runtime_snapshots(...)` is called explicitly.
 
+## Follow-on slice — Internal-drag target promotion ignores detached stale frame records
+
+This follow-on slice locks the contract that:
+
+- raw rebuilds can temporarily leave prior declarative `WindowFrame` records intact until the next
+  declarative refresh,
+- `Event::InternalDrag(...)` target promotion may consult retained declarative instance metadata,
+  but it must only do so along the current live hit/parent chain,
+- detached stale `InternalDragRegion` frame records must not hijack routing after a raw rebuild +
+  `layout_all()` frame.
+
+Verified gates (2026-04-05):
+
+- `cargo nextest run -p fret-ui -E 'test(internal_drag_after_raw_rebuild_does_not_route_to_detached_stale_frame_region)'`
+  - Result: passed.
+  - Contract: even while the prior `WindowFrame` still retains an `InternalDragRegion` record after
+    a raw rebuild, `dispatch/window.rs` only promotes the target through the current
+    `pointer_chain_snapshot.parent` ancestry and therefore does not dispatch the drag event back
+    into the detached stale region.
+
 ## Follow-on slice — Diagnostics inspect overlay remains non-authoritative for window snapshots
 
 This follow-on slice locks the contract that:

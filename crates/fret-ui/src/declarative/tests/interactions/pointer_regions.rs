@@ -1080,6 +1080,127 @@ fn declarative_internal_drag_region_can_handle_internal_drag_events() {
 }
 
 #[test]
+fn internal_drag_after_raw_rebuild_does_not_route_to_detached_stale_frame_region() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let counter = app.models_mut().insert(0u32);
+    let drag_kind = fret_runtime::DragKindId(0x465245545F494452); // "FRET_IDR"
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "internal-drag-region-raw-rebuild",
+        |cx| {
+            let counter = counter.clone();
+            let mut props = crate::element::InternalDragRegionProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            vec![cx.internal_drag_region(props, |cx| {
+                cx.internal_drag_region_on_internal_drag(Arc::new(
+                    move |host: &mut dyn crate::action::UiDragActionHost,
+                          acx: crate::action::ActionCx,
+                          drag: crate::action::InternalDragCx| {
+                        let Some(session) = host.drag(drag.pointer_id) else {
+                            return false;
+                        };
+                        if session.kind != drag_kind {
+                            return false;
+                        }
+                        if drag.kind == fret_core::InternalDragKind::Over {
+                            let _ = host
+                                .models_mut()
+                                .update(&counter, |v: &mut u32| *v = v.saturating_add(1));
+                            host.request_redraw(acx.window);
+                            return true;
+                        }
+                        false
+                    },
+                ));
+                vec![cx.text("stale drop target")]
+            })]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let stale_region = ui.children(root)[0];
+    let stale_record_present_before_rebuild =
+        crate::declarative::with_window_frame(&mut app, window, |window_frame| {
+            let window_frame = window_frame?;
+            let record = window_frame.instances.get(stale_region)?;
+            Some(matches!(
+                record.instance,
+                crate::declarative::ElementInstance::InternalDragRegion(_)
+            ))
+        })
+        .unwrap_or(false);
+    assert!(
+        stale_record_present_before_rebuild,
+        "expected the baseline internal-drag region to be recorded in the window frame"
+    );
+
+    let replacement_root = ui.create_node(FillStack);
+    ui.set_root(replacement_root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let stale_record_present_after_rebuild =
+        crate::declarative::with_window_frame(&mut app, window, |window_frame| {
+            let window_frame = window_frame?;
+            let record = window_frame.instances.get(stale_region)?;
+            Some(matches!(
+                record.instance,
+                crate::declarative::ElementInstance::InternalDragRegion(_)
+            ))
+        })
+        .unwrap_or(false);
+    assert!(
+        stale_record_present_after_rebuild,
+        "raw rebuild audit requires the previous window-frame record to remain until a declarative refresh"
+    );
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        drag_kind,
+        window,
+        Point::new(Px(4.0), Px(4.0)),
+        (),
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::InternalDrag(fret_core::InternalDragEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(Px(10.0), Px(10.0)),
+            kind: fret_core::InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+        }),
+    );
+
+    let value = app.models_mut().read(&counter, |v| *v).unwrap_or_default();
+    assert_eq!(
+        value, 0,
+        "detached stale window-frame records must not hijack internal-drag routing after a raw rebuild"
+    );
+}
+
+#[test]
 fn declarative_command_availability_hooks_participate_in_dispatch_path_queries() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
