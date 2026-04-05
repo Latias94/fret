@@ -334,14 +334,13 @@ fn owned_cached_modal_request_is_pruned_when_request_owner_is_removed() {
     );
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         assert!(
-            overlays.modals.get(&(window, modal_id)).is_none(),
+            !overlays.modals.contains_key(&(window, modal_id)),
             "active modal entry should be pruned with the removed owner"
         );
         assert!(
-            overlays
+            !overlays
                 .cached_modal_requests
-                .get(&(window, modal_id))
-                .is_none(),
+                .contains_key(&(window, modal_id)),
             "cached modal declaration should be pruned with the removed owner"
         );
     });
@@ -437,21 +436,19 @@ fn owned_cached_hover_request_is_pruned_immediately_when_request_owner_is_remove
     );
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         assert!(
-            overlays.hover_overlays.get(&(window, hover_id)).is_none(),
+            !overlays.hover_overlays.contains_key(&(window, hover_id)),
             "active hover entry should be pruned with the removed owner"
         );
         assert!(
-            overlays
+            !overlays
                 .cached_hover_overlay_requests
-                .get(&(window, hover_id))
-                .is_none(),
+                .contains_key(&(window, hover_id)),
             "cached hover declaration should be pruned with the removed owner"
         );
         assert!(
-            overlays
+            !overlays
                 .cached_hover_overlay_pointer_move_handlers
-                .get(&(window, hover_id))
-                .is_none(),
+                .contains_key(&(window, hover_id)),
             "cached hover pointer-move handler should be pruned with the removed owner"
         );
     });
@@ -623,14 +620,13 @@ fn owned_cached_popover_request_is_pruned_when_request_owner_is_removed() {
     );
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         assert!(
-            overlays.popovers.get(&(window, popover_id)).is_none(),
+            !overlays.popovers.contains_key(&(window, popover_id)),
             "active popover entry should be pruned with the removed owner"
         );
         assert!(
-            overlays
+            !overlays
                 .cached_popover_requests
-                .get(&(window, popover_id))
-                .is_none(),
+                .contains_key(&(window, popover_id)),
             "cached popover declaration should be pruned with the removed owner"
         );
     });
@@ -818,14 +814,13 @@ fn owned_cached_tooltip_request_is_pruned_immediately_when_request_owner_is_remo
     );
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         assert!(
-            overlays.tooltips.get(&(window, tooltip_id)).is_none(),
+            !overlays.tooltips.contains_key(&(window, tooltip_id)),
             "active tooltip entry should be pruned with the removed owner"
         );
         assert!(
-            overlays
+            !overlays
                 .cached_tooltip_requests
-                .get(&(window, tooltip_id))
-                .is_none(),
+                .contains_key(&(window, tooltip_id)),
             "cached tooltip declaration should be pruned with the removed owner"
         );
     });
@@ -997,17 +992,15 @@ fn owned_cached_toast_layer_request_is_pruned_when_request_owner_is_removed() {
     );
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         assert!(
-            overlays
+            !overlays
                 .toast_layers
-                .get(&(window, toast_layer_id))
-                .is_none(),
+                .contains_key(&(window, toast_layer_id)),
             "active toast layer entry should be pruned with the removed owner"
         );
         assert!(
-            overlays
+            !overlays
                 .cached_toast_layer_requests
-                .get(&(window, toast_layer_id))
-                .is_none(),
+                .contains_key(&(window, toast_layer_id)),
             "cached toast layer declaration should be pruned with the removed owner"
         );
     });

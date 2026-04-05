@@ -21,8 +21,10 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::tree::UiLayerId;
 use fret_ui::{Invalidation, UiHost, UiTree};
 
-pub use frame::{
-    begin_frame, request_dismissible_popover_for_window, request_hover_overlay_for_window,
+pub(crate) use frame::begin_frame;
+#[cfg(test)]
+pub(crate) use frame::{
+    request_dismissible_popover_for_window, request_hover_overlay_for_window,
     request_modal_for_window, request_toast_layer_for_window, request_tooltip_for_window,
 };
 pub(crate) use frame::{

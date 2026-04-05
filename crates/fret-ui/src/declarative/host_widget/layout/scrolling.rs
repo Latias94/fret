@@ -825,7 +825,7 @@ fn commit_scroll_authoritative_extent<H: UiHost>(
             window,
             element,
             ScrollDeferredUnboundedProbeState::default,
-            |state| clear_scroll_deferred_probe_state(state),
+            clear_scroll_deferred_probe_state,
         );
     }
 

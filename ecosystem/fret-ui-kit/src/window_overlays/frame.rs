@@ -172,7 +172,8 @@ pub fn request_dismissible_popover<H: UiHost>(
     request_dismissible_popover_for_window_owned(cx.app, cx.window, request, Some(cx.root_id()));
 }
 
-pub fn request_dismissible_popover_for_window<H: UiHost>(
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn request_dismissible_popover_for_window<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     request: DismissiblePopoverRequest,
@@ -185,7 +186,8 @@ pub fn request_modal<H: UiHost>(cx: &mut ElementContext<'_, H>, request: ModalRe
     request_modal_for_window_owned(cx.app, cx.window, request, Some(cx.root_id()));
 }
 
-pub fn request_modal_for_window<H: UiHost>(
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn request_modal_for_window<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     request: ModalRequest,
@@ -201,7 +203,8 @@ pub fn request_hover_overlay<H: UiHost>(
     request_hover_overlay_for_window_owned(cx.app, cx.window, request, Some(cx.root_id()));
 }
 
-pub fn request_hover_overlay_for_window<H: UiHost>(
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn request_hover_overlay_for_window<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     request: HoverOverlayRequest,
@@ -214,7 +217,8 @@ pub fn request_tooltip<H: UiHost>(cx: &mut ElementContext<'_, H>, request: Toolt
     request_tooltip_for_window_owned(cx.app, cx.window, request, Some(cx.root_id()));
 }
 
-pub fn request_tooltip_for_window<H: UiHost>(
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn request_tooltip_for_window<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     request: TooltipRequest,
@@ -227,7 +231,8 @@ pub fn request_toast_layer<H: UiHost>(cx: &mut ElementContext<'_, H>, request: T
     request_toast_layer_for_window_owned(cx.app, cx.window, request, Some(cx.root_id()));
 }
 
-pub fn request_toast_layer_for_window<H: UiHost>(
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn request_toast_layer_for_window<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     request: ToastLayerRequest,
