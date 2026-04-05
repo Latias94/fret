@@ -175,6 +175,24 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(in crate::tree) fn publish_post_dispatch_runtime_snapshots_for_event(
+        &mut self,
+        app: &mut H,
+        event: &Event,
+    ) {
+        let focus_is_text_input = self.focus_is_text_input(app);
+        self.set_ime_allowed(app, focus_is_text_input);
+
+        let (_active_layers, barrier_root) = self.active_input_layers();
+        if matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. })) {
+            let input_ctx =
+                self.current_window_input_context(app, barrier_root.is_some(), focus_is_text_input);
+            self.publish_window_input_context_snapshot_untracked(app, &input_ctx, false);
+        } else {
+            self.publish_window_runtime_snapshots(app);
+        }
+    }
+
     /// Publishes authoritative window-level runtime snapshots for the tree's current retained
     /// state.
     ///

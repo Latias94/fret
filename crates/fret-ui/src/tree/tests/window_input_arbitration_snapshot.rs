@@ -72,6 +72,102 @@ fn dispatch_event_publishes_post_dispatch_input_arbitration_snapshot() {
 }
 
 #[test]
+fn escape_cancels_dock_drag_and_publishes_post_dispatch_input_arbitration_snapshot() {
+    struct CaptureOnDown;
+
+    impl<H: UiHost> Widget<H> for CaptureOnDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            true
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                cx.capture_pointer(cx.node);
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let anchor = ui.create_node(CaptureOnDown);
+    ui.set_root(anchor);
+    crate::internal_drag::set_route(&mut app, window, fret_runtime::DRAG_KIND_DOCK_PANEL, anchor);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(7),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.captured_for(fret_core::PointerId(7)), Some(anchor));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert!(
+        app.drag(fret_core::PointerId(7)).is_none(),
+        "expected Escape to cancel the dock drag session"
+    );
+    assert_eq!(
+        ui.captured_for(fret_core::PointerId(7)),
+        None,
+        "expected dock-drag capture to be cleared when the session is canceled"
+    );
+
+    let input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window input context snapshot");
+    let arbitration = input_ctx
+        .window_arbitration
+        .expect("expected `InputContext.window_arbitration` to be populated");
+    assert!(
+        !arbitration.pointer_capture_active,
+        "dock-drag cancel should publish an arbitration snapshot without stale pointer capture"
+    );
+    assert_eq!(arbitration.pointer_capture_root, None);
+}
+
+#[test]
 fn dispatch_command_publishes_post_dispatch_input_arbitration_snapshot() {
     struct OpenModal {
         overlay_root: NodeId,

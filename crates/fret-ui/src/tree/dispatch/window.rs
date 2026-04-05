@@ -401,6 +401,7 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 self.replay_captured_keystrokes(app, services, &input_ctx, pending.keystrokes);
             }
+            self.publish_post_dispatch_runtime_snapshots_for_event(app, event);
             return;
         }
         if let Event::Timer { token } = event {
@@ -592,6 +593,7 @@ impl<H: UiHost> UiTree<H> {
                 if needs_redraw {
                     self.request_redraw_coalesced(app);
                 }
+                self.publish_post_dispatch_runtime_snapshots_for_event(app, event);
                 return;
             }
         }
@@ -714,6 +716,7 @@ impl<H: UiHost> UiTree<H> {
             }
         {
             self.request_redraw_coalesced(app);
+            self.publish_post_dispatch_runtime_snapshots_for_event(app, event);
             return;
         }
 
@@ -1328,6 +1331,7 @@ impl<H: UiHost> UiTree<H> {
             if needs_redraw {
                 self.request_redraw_coalesced(app);
             }
+            self.publish_post_dispatch_runtime_snapshots_for_event(app, event);
             return;
         }
 
@@ -1337,6 +1341,7 @@ impl<H: UiHost> UiTree<H> {
             if needs_redraw {
                 self.request_redraw_coalesced(app);
             }
+            self.publish_post_dispatch_runtime_snapshots_for_event(app, event);
             return;
         }
 
@@ -1365,6 +1370,7 @@ impl<H: UiHost> UiTree<H> {
             if needs_redraw {
                 self.request_redraw_coalesced(app);
             }
+            self.publish_post_dispatch_runtime_snapshots_for_event(app, event);
             return;
         }
 
@@ -3077,32 +3083,13 @@ impl<H: UiHost> UiTree<H> {
             self.request_redraw_coalesced(app);
         }
 
-        // Keep IME enable/disable tightly coupled to focus changes caused by the event itself.
-        let focus_is_text_input = self.focus_is_text_input(app);
-        self.set_ime_allowed(app, focus_is_text_input);
-
         // Publish a post-dispatch snapshot so runner-level integration surfaces (e.g. OS menubars)
         // see the latest focus/modal state without waiting for the next paint pass.
         let (_, elapsed) = fret_perf::measure_span(
             self.debug_enabled,
             trace_enabled,
             || tracing::trace_span!("fret.ui.dispatch.post_dispatch_snapshot"),
-            || {
-                let (_active_layers, barrier_root) = self.active_input_layers();
-                let is_pointer_move =
-                    matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. }));
-
-                if is_pointer_move {
-                    let input_ctx = self.current_window_input_context(
-                        app,
-                        barrier_root.is_some(),
-                        focus_is_text_input,
-                    );
-                    self.publish_window_input_context_snapshot_untracked(app, &input_ctx, false);
-                } else {
-                    self.publish_window_runtime_snapshots(app);
-                }
-            },
+            || self.publish_post_dispatch_runtime_snapshots_for_event(app, event),
         );
         if let Some(elapsed) = elapsed {
             self.debug_stats.dispatch_post_dispatch_snapshot_time += elapsed;
