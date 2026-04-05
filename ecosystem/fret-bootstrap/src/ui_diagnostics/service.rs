@@ -1666,7 +1666,8 @@ mod service_tests {
 
     #[test]
     fn preferred_window_wait_frames_without_window_stays_migratable_during_pointer_session() {
-        let active = active_script_for_step(UiActionStepV2::WaitFrames { window: None, n: 2 });
+        let mut active = active_script_for_step(UiActionStepV2::WaitFrames { window: None, n: 2 });
+        active.next_step = 1;
 
         assert_eq!(
             UiDiagnosticsService::preferred_window_for_active_script(&active),
@@ -1676,10 +1677,11 @@ mod service_tests {
 
     #[test]
     fn preferred_window_wait_ms_without_window_stays_migratable_during_pointer_session() {
-        let active = active_script_for_step(UiActionStepV2::WaitMs {
+        let mut active = active_script_for_step(UiActionStepV2::WaitMs {
             window: None,
             n_ms: 16,
         });
+        active.next_step = 1;
 
         assert_eq!(
             UiDiagnosticsService::preferred_window_for_active_script(&active),
@@ -1689,13 +1691,14 @@ mod service_tests {
 
     #[test]
     fn preferred_window_pointer_move_without_window_stays_migratable_during_pointer_session() {
-        let active = active_script_for_step(UiActionStepV2::PointerMove {
+        let mut active = active_script_for_step(UiActionStepV2::PointerMove {
             window: None,
             pointer_kind: None,
             delta_x: 12.0,
             delta_y: 0.0,
             steps: 1,
         });
+        active.next_step = 1;
 
         assert_eq!(
             UiDiagnosticsService::preferred_window_for_active_script(&active),
