@@ -399,16 +399,40 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         frame_id: fret_runtime::FrameId,
         dispatch_snapshot: &UiDispatchSnapshot,
-        barrier_root: Option<NodeId>,
+        scope_root: Option<NodeId>,
     ) -> (CommandAvailability, bool) {
-        let Some(base_root) = self
-            .base_layer
-            .and_then(|id| self.layers.get(id).map(|l| l.root))
-        else {
-            return (CommandAvailability::NotHandled, false);
+        let (focusables, needs_layout_refine) = self.focus_traversal_candidates_for_snapshot(
+            app,
+            frame_id,
+            dispatch_snapshot,
+            scope_root,
+        );
+
+        (
+            if focusables.is_empty() {
+                CommandAvailability::NotHandled
+            } else {
+                CommandAvailability::Available
+            },
+            needs_layout_refine && !focusables.is_empty(),
+        )
+    }
+
+    fn focus_traversal_candidates_for_snapshot(
+        &mut self,
+        app: &mut H,
+        frame_id: fret_runtime::FrameId,
+        dispatch_snapshot: &UiDispatchSnapshot,
+        scope_root: Option<NodeId>,
+    ) -> (Vec<NodeId>, bool) {
+        let scope_root = scope_root.or(dispatch_snapshot.barrier_root).or_else(|| {
+            self.base_layer
+                .and_then(|id| self.layers.get(id).map(|l| l.root))
+        });
+        let Some(scope_root) = scope_root else {
+            return (Vec::new(), false);
         };
 
-        let scope_root = barrier_root.unwrap_or(base_root);
         let mut focusables: Vec<NodeId> = Vec::new();
         let needs_layout_refine = self.last_layout_frame_id != Some(frame_id)
             || self.node_subtree_layout_dirty(scope_root);
@@ -427,14 +451,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        (
-            if focusables.is_empty() {
-                CommandAvailability::NotHandled
-            } else {
-                CommandAvailability::Available
-            },
-            needs_layout_refine && !focusables.is_empty(),
-        )
+        (focusables, needs_layout_refine)
     }
 
     fn collect_focusables_structural(
@@ -718,7 +735,7 @@ impl<H: UiHost> UiTree<H> {
             return false;
         };
 
-        let (active_layers, input_barrier_root) = self.active_input_layers();
+        let (_active_input_layers, input_barrier_root) = self.active_input_layers();
         let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
         let barrier_root = focus_barrier_root.or(input_barrier_root);
         let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
@@ -941,9 +958,8 @@ impl<H: UiHost> UiTree<H> {
             handled = self.dispatch_focus_traversal(
                 app,
                 command,
-                &active_layers,
+                active_focus_layers.as_slice(),
                 barrier_root,
-                base_root,
             );
             needs_redraw = true;
         }
@@ -1049,9 +1065,8 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         command: &CommandId,
-        active_layers: &[NodeId],
-        barrier_root: Option<NodeId>,
-        base_root: NodeId,
+        active_focus_layers: &[NodeId],
+        scope_root: Option<NodeId>,
     ) -> bool {
         let direction = match command.as_str() {
             "focus.next" => Some(true),
@@ -1062,15 +1077,14 @@ impl<H: UiHost> UiTree<H> {
             return false;
         };
 
-        let _ = base_root;
-        self.focus_traverse_in_roots(app, active_layers, forward, barrier_root)
+        self.focus_traverse_in_roots(app, active_focus_layers, forward, scope_root)
     }
 
     /// Focus traversal mechanism used by both the runtime default and component-owned focus scopes.
     ///
     /// Notes:
-    /// - `roots` are treated as candidates; only focusables that are in the current active input layers
-    ///   (modal-aware) and intersect the modal scope bounds are included.
+    /// - `roots` are treated as the authoritative traversal roots for this dispatch path.
+    /// - `scope_root` gates authoritative geometry clipping when layout is current.
     /// - This is intentionally conservative until we formalize a scroll-into-view contract (ADR 0068).
     pub fn focus_traverse_in_roots(
         &mut self,
@@ -1079,30 +1093,14 @@ impl<H: UiHost> UiTree<H> {
         forward: bool,
         scope_root: Option<NodeId>,
     ) -> bool {
-        let Some(base_root) = self
-            .base_layer
-            .and_then(|id| self.layers.get(id).map(|l| l.root))
-        else {
-            return true;
-        };
-        let (active_layers, barrier_root) = self.active_input_layers();
-        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+        let dispatch_snapshot =
+            self.build_dispatch_snapshot_for_layer_roots(app.frame_id(), roots, scope_root);
+        let (focusables, _) = self.focus_traversal_candidates_for_snapshot(
+            app,
             app.frame_id(),
-            active_layers.as_slice(),
-            barrier_root,
+            &dispatch_snapshot,
+            scope_root,
         );
-
-        let scope_root = scope_root.or(barrier_root).unwrap_or(base_root);
-        let scope_bounds = self
-            .nodes
-            .get(scope_root)
-            .map(|n| n.bounds)
-            .unwrap_or_default();
-
-        let mut focusables: Vec<NodeId> = Vec::new();
-        for &root in roots {
-            self.collect_focusables(root, &dispatch_snapshot, scope_bounds, &mut focusables);
-        }
         if focusables.is_empty() {
             return true;
         }

@@ -1228,6 +1228,81 @@ fn layout_refines_focus_traversal_availability_after_structural_fallback() {
 }
 
 #[test]
+fn focus_traversal_command_can_focus_rebuilt_declarative_nodes_before_layout() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+    let mut focusable_element = None;
+
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "rebuild-focus-traverse-dispatch",
+        |cx| vec![cx.text("plain text")],
+    );
+
+    app.advance_frame();
+
+    render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "rebuild-focus-traverse-dispatch",
+        |cx| {
+            vec![cx.pressable_with_id(
+                crate::element::PressableProps {
+                    layout: {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(48.0));
+                        layout.size.height = Length::Px(Px(20.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st, id| {
+                    focusable_element = Some(id);
+                    Vec::new()
+                },
+            )]
+        },
+    );
+
+    let did_handle = ui.dispatch_command(&mut app, &mut text, &CommandId::from("focus.next"));
+    assert!(
+        did_handle,
+        "focus.next should still handle when a declarative rebuild introduces focusable nodes before layout runs"
+    );
+
+    let focusable_node = crate::declarative::mount::node_for_element_in_window_frame(
+        &mut app,
+        window,
+        focusable_element.expect("focusable element id"),
+    )
+    .expect("focusable node");
+    assert_eq!(
+        ui.focus(),
+        Some(focusable_node),
+        "focus.next should use the same structural declarative fallback as availability when rebuild happens before layout"
+    );
+}
+
+#[test]
 fn render_dismissible_root_initial_attach_commits_window_snapshot_after_root_attachment() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities::default());
