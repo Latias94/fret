@@ -577,6 +577,7 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn active_focus_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {
         let mut any_visible = false;
         let mut barrier_root: Option<NodeId> = None;
+        let focused_layer = self.focus.and_then(|node| self.node_layer(node));
         for &layer_id in &self.layer_order {
             let Some(layer) = self.layers.get(layer_id) else {
                 continue;
@@ -607,7 +608,15 @@ impl<H: UiHost> UiTree<H> {
             // Focus barriers can become active while the barrier layer is hit-test-inert (e.g.
             // open/close transitions or pointer-only underlay blocking). Include the barrier root
             // itself so focus can remain inside (and be moved within) the barrier scope.
-            if layer.hit_testable || barrier_root == Some(layer.root) {
+            //
+            // Likewise, if focus already lives inside a visible layer, keep that layer in the
+            // authoritative focus snapshot even when pointer arbitration temporarily makes it
+            // hit-test-inert. Otherwise same-frame focus repair can self-invalidate by resolving a
+            // live node and then immediately pruning it out of the active focus roots.
+            if layer.hit_testable
+                || barrier_root == Some(layer.root)
+                || focused_layer == Some(layer_id)
+            {
                 roots.push(layer.root);
             }
 

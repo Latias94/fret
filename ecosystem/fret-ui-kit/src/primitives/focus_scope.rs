@@ -71,11 +71,27 @@ pub fn apply_initial_focus_for_overlay<H: UiHost>(
     root: NodeId,
     initial_focus: Option<GlobalElementId>,
 ) -> bool {
-    if let Some(focus) = initial_focus
-        && let Some(node) = ui.live_attached_node_for_element(app, focus)
-    {
-        ui.set_focus(Some(node));
-        return true;
+    if let Some(focus) = initial_focus {
+        let focus_is_live = ui.live_attached_node_for_element(app, focus).is_some()
+            || fret_ui::elements::element_identity_is_live_in_current_frame(app, window, focus);
+        if focus_is_live {
+            // Element-based initial focus must tolerate rebuild / barrier transitions in the same
+            // way close-auto-focus hooks do: request now, then let the authoritative runtime
+            // commit boundary resolve the target if direct focus is transiently rejected. A
+            // deferred request alone does not satisfy the current-frame containment contract,
+            // so keep the pending target but continue to fallback focus if focus did not
+            // actually move yet.
+            let before = ui.focus();
+            ui.request_focus_element(app, focus);
+            if ui.focus() != before {
+                return true;
+            }
+            if let Some(node) = ui.live_attached_node_for_element(app, focus)
+                && ui.focus() == Some(node)
+            {
+                return true;
+            }
+        }
     }
 
     if let Some(node) =
