@@ -75,114 +75,34 @@
   ],
   "scene_ops": [
     {
-      "kind": "Quad",
-      "rect": {
-        "origin": {
-          "x": -2.0,
-          "y": -1.0
-        },
-        "size": {
-          "w": 424.0,
-          "h": 36.0
-        }
-      },
-      "background": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.017
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
-      },
-      "corner_radii": {
-        "top_left": 10.0,
-        "top_right": 10.0,
-        "bottom_right": 10.0,
-        "bottom_left": 10.0
-      }
-    },
-    {
-      "kind": "Quad",
-      "rect": {
-        "origin": {
-          "x": -1.0,
-          "y": 0.0
-        },
-        "size": {
-          "w": 422.0,
-          "h": 34.0
-        }
-      },
-      "background": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.025
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
-      },
-      "corner_radii": {
-        "top_left": 9.0,
-        "top_right": 9.0,
-        "bottom_right": 9.0,
-        "bottom_left": 9.0
-      }
-    },
-    {
-      "kind": "Quad",
+      "kind": "ShadowRRect",
       "rect": {
         "origin": {
           "x": 0.0,
-          "y": 1.0
+          "y": 0.0
         },
         "size": {
           "w": 420.0,
           "h": 32.0
         }
       },
-      "background": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.05
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
-      },
       "corner_radii": {
         "top_left": 8.0,
         "top_right": 8.0,
         "bottom_right": 8.0,
         "bottom_left": 8.0
+      },
+      "offset": {
+        "x": 0.0,
+        "y": 1.0
+      },
+      "spread": 0.0,
+      "blur_radius": 2.0,
+      "color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.05
       }
     },
     {

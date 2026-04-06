@@ -4,6 +4,7 @@ use fret_core::{
     SceneOp, SemanticsRole, Size as CoreSize,
 };
 use fret_icons::ids;
+use fret_ui::element::{CrossAlign, LayoutStyle, Length, RowProps, SizeStyle};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::ChromeRefinement;
 use fret_ui_kit::Space;
@@ -3829,14 +3830,31 @@ fn web_vs_fret_separator_demo_geometry_matches() {
         0.6,
     );
 
-    // Vertical separator: fill height at y=0.
+    // Vertical separator: upstream shadcn/radix recipes rely on `self-stretch`, so exercise it
+    // inside an explicit row context with a caller-owned height instead of rendering it bare.
     let (_snap, scene) =
         render_and_paint_in_bounds(CoreSize::new(Px(80.0), Px(web_sep_v.rect.h)), |cx| {
-            vec![
-                shadcn::Separator::new()
-                    .orientation(shadcn::SeparatorOrientation::Vertical)
-                    .into_element(cx),
-            ]
+            vec![cx.row(
+                RowProps {
+                    align: CrossAlign::Stretch,
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Px(Px(80.0)),
+                            height: Length::Px(Px(web_sep_v.rect.h)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![
+                        shadcn::Separator::new()
+                            .orientation(shadcn::SeparatorOrientation::Vertical)
+                            .into_element(cx),
+                    ]
+                },
+            )]
         });
     let target = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

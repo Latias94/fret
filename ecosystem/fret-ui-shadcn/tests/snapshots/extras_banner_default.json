@@ -386,114 +386,65 @@
       }
     },
     {
-      "kind": "Quad",
-      "rect": {
-        "origin": {
-          "x": 14.0,
-          "y": 13.0
-        },
-        "size": {
-          "w": 30.0,
-          "h": 30.0
-        }
-      },
-      "background": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.047
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
-      },
-      "corner_radii": {
-        "top_left": 15.0,
-        "top_right": 15.0,
-        "bottom_right": 15.0,
-        "bottom_left": 15.0
-      }
-    },
-    {
-      "kind": "Quad",
-      "rect": {
-        "origin": {
-          "x": 15.0,
-          "y": 14.0
-        },
-        "size": {
-          "w": 28.0,
-          "h": 28.0
-        }
-      },
-      "background": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.07
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
-      },
-      "corner_radii": {
-        "top_left": 14.0,
-        "top_right": 14.0,
-        "bottom_right": 14.0,
-        "bottom_left": 14.0
-      }
-    },
-    {
-      "kind": "Quad",
+      "kind": "ShadowRRect",
       "rect": {
         "origin": {
           "x": 16.0,
-          "y": 15.0
+          "y": 13.0
         },
         "size": {
           "w": 26.0,
           "h": 26.0
         }
       },
-      "background": {
+      "corner_radii": {
+        "top_left": 13.0,
+        "top_right": 13.0,
+        "bottom_right": 13.0,
+        "bottom_left": 13.0
+      },
+      "offset": {
+        "x": 0.0,
+        "y": 1.0
+      },
+      "spread": 0.0,
+      "blur_radius": 3.0,
+      "color": {
         "r": 0.0,
         "g": 0.0,
         "b": 0.0,
-        "a": 0.14
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
+        "a": 0.1
+      }
+    },
+    {
+      "kind": "ShadowRRect",
+      "rect": {
+        "origin": {
+          "x": 16.0,
+          "y": 13.0
+        },
+        "size": {
+          "w": 26.0,
+          "h": 26.0
+        }
       },
       "corner_radii": {
         "top_left": 13.0,
         "top_right": 13.0,
         "bottom_right": 13.0,
         "bottom_left": 13.0
+      },
+      "offset": {
+        "x": 0.0,
+        "y": 1.0
+      },
+      "spread": -1.0,
+      "blur_radius": 2.0,
+      "color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.1
       }
     },
     {
@@ -568,114 +519,34 @@
       }
     },
     {
-      "kind": "Quad",
-      "rect": {
-        "origin": {
-          "x": 622.0,
-          "y": 11.0
-        },
-        "size": {
-          "w": 40.0,
-          "h": 32.0
-        }
-      },
-      "background": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.017
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
-      },
-      "corner_radii": {
-        "top_left": 10.0,
-        "top_right": 10.0,
-        "bottom_right": 10.0,
-        "bottom_left": 10.0
-      }
-    },
-    {
-      "kind": "Quad",
-      "rect": {
-        "origin": {
-          "x": 623.0,
-          "y": 12.0
-        },
-        "size": {
-          "w": 38.0,
-          "h": 30.0
-        }
-      },
-      "background": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.025
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
-      },
-      "corner_radii": {
-        "top_left": 9.0,
-        "top_right": 9.0,
-        "bottom_right": 9.0,
-        "bottom_left": 9.0
-      }
-    },
-    {
-      "kind": "Quad",
+      "kind": "ShadowRRect",
       "rect": {
         "origin": {
           "x": 624.0,
-          "y": 13.0
+          "y": 12.0
         },
         "size": {
           "w": 36.0,
           "h": 28.0
         }
       },
-      "background": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.05
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
-      },
       "corner_radii": {
         "top_left": 8.0,
         "top_right": 8.0,
         "bottom_right": 8.0,
         "bottom_left": 8.0
+      },
+      "offset": {
+        "x": 0.0,
+        "y": 1.0
+      },
+      "spread": 0.0,
+      "blur_radius": 2.0,
+      "color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.05
       }
     },
     {

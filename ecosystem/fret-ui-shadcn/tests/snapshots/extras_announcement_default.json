@@ -234,114 +234,65 @@
   ],
   "scene_ops": [
     {
-      "kind": "Quad",
-      "rect": {
-        "origin": {
-          "x": -2.0,
-          "y": 0.0
-        },
-        "size": {
-          "w": 78.0,
-          "h": 28.0
-        }
-      },
-      "background": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.047
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
-      },
-      "corner_radii": {
-        "top_left": 14.0,
-        "top_right": 14.0,
-        "bottom_right": 14.0,
-        "bottom_left": 14.0
-      }
-    },
-    {
-      "kind": "Quad",
-      "rect": {
-        "origin": {
-          "x": -1.0,
-          "y": 1.0
-        },
-        "size": {
-          "w": 76.0,
-          "h": 26.0
-        }
-      },
-      "background": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.07
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
-      },
-      "corner_radii": {
-        "top_left": 13.0,
-        "top_right": 13.0,
-        "bottom_right": 13.0,
-        "bottom_left": 13.0
-      }
-    },
-    {
-      "kind": "Quad",
+      "kind": "ShadowRRect",
       "rect": {
         "origin": {
           "x": 0.0,
-          "y": 2.0
+          "y": 0.0
         },
         "size": {
           "w": 74.0,
           "h": 24.0
         }
       },
-      "background": {
+      "corner_radii": {
+        "top_left": 12.0,
+        "top_right": 12.0,
+        "bottom_right": 12.0,
+        "bottom_left": 12.0
+      },
+      "offset": {
+        "x": 0.0,
+        "y": 1.0
+      },
+      "spread": 0.0,
+      "blur_radius": 3.0,
+      "color": {
         "r": 0.0,
         "g": 0.0,
         "b": 0.0,
-        "a": 0.14
-      },
-      "border": {
-        "top": 0.0,
-        "right": 0.0,
-        "bottom": 0.0,
-        "left": 0.0
-      },
-      "border_color": {
-        "r": 0.0,
-        "g": 0.0,
-        "b": 0.0,
-        "a": 0.0
+        "a": 0.1
+      }
+    },
+    {
+      "kind": "ShadowRRect",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 74.0,
+          "h": 24.0
+        }
       },
       "corner_radii": {
         "top_left": 12.0,
         "top_right": 12.0,
         "bottom_right": 12.0,
         "bottom_left": 12.0
+      },
+      "offset": {
+        "x": 0.0,
+        "y": 1.0
+      },
+      "spread": -1.0,
+      "blur_radius": 2.0,
+      "color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.1
       }
     },
     {
