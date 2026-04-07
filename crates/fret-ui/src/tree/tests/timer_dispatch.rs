@@ -52,6 +52,45 @@ fn timer_dispatch_uses_visible_layer_snapshot_when_input_layers_are_empty() {
 }
 
 #[test]
+fn timer_broadcast_reaches_descendant_handlers_when_target_is_missing() {
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let hits = Arc::new(AtomicUsize::new(0));
+
+    let root = ui.create_node(TestStack);
+    let child = ui.create_node(TimerCounter { hits: hits.clone() });
+    ui.add_child(root, child);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Timer {
+            token: fret_core::TimerToken::default(),
+        },
+    );
+
+    assert_eq!(
+        hits.load(Ordering::SeqCst),
+        1,
+        "expected timer broadcast to reach descendant handlers when no live timer target is available"
+    );
+}
+
+#[test]
 fn timer_dispatch_resolves_live_attached_element_target_over_stale_detached_seed() {
     use crate::elements::NodeEntry;
 

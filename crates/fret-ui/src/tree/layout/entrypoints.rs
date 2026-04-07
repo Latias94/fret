@@ -186,6 +186,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_skipped_engine_frame = true;
 
             let focus_started = self.debug_enabled.then(Instant::now);
+            self.resolve_pending_focus_target_if_needed(app);
             self.repair_focus_node_from_focused_element_if_needed(app);
             if let Some(focus_started) = focus_started {
                 self.debug_stats.layout_focus_repair_time += focus_started.elapsed();
@@ -524,7 +525,10 @@ impl<H: UiHost> UiTree<H> {
                         pass_kind = ?pass_kind,
                     )
                 },
-                || self.repair_focus_node_from_focused_element_if_needed(app),
+                || {
+                    self.resolve_pending_focus_target_if_needed(app);
+                    self.repair_focus_node_from_focused_element_if_needed(app)
+                },
             );
             if let Some(focus_elapsed) = focus_elapsed {
                 self.debug_stats.layout_focus_repair_time += focus_elapsed;

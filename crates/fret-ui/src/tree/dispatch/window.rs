@@ -521,7 +521,7 @@ impl<H: UiHost> UiTree<H> {
                                         if !layer.wants_timer_events || !layer.visible {
                                             continue;
                                         }
-                                        let stopped = self.dispatch_event_to_node_chain(
+                                        let stopped = self.dispatch_event_to_subtree_bubble(
                                             app,
                                             services,
                                             &timer_dispatch_cx,
@@ -621,9 +621,11 @@ impl<H: UiHost> UiTree<H> {
                 if self.dispatch_event_to_subtree_bubble(
                     app,
                     services,
+                    &dispatch_cx,
                     &input_ctx,
                     layer_root,
                     event,
+                    &mut needs_redraw,
                     &mut invalidation_visited,
                 ) {
                     break;

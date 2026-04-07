@@ -9,6 +9,50 @@ impl<H: UiHost> UiTree<H> {
         self.focus
     }
 
+    /// Request focus for a declarative element.
+    ///
+    /// If the target element is already attached to a live node, focus moves immediately. If the
+    /// target is being rebuilt and its node is not yet attached, the request is retained and
+    /// retried at later authoritative same-frame boundaries (window snapshot publish / final
+    /// layout), so policy code does not need to guess whether the node is "ready" yet.
+    pub fn request_focus_element(&mut self, app: &mut H, target: GlobalElementId) {
+        if let Some(node) = self.resolve_live_attached_node_for_element(app, self.window, target) {
+            let before = self.focus;
+            self.set_focus(Some(node));
+            if self.focus == Some(node) {
+                self.pending_focus_target = None;
+            } else if before != Some(node) {
+                self.pending_focus_target = Some(target);
+            }
+        } else {
+            self.pending_focus_target = Some(target);
+        }
+    }
+
+    pub(in crate::tree) fn resolve_pending_focus_target_if_needed(&mut self, app: &mut H) -> bool {
+        let Some(target) = self.pending_focus_target else {
+            return false;
+        };
+
+        if let Some(node) = self.resolve_live_attached_node_for_element(app, self.window, target) {
+            let before = self.focus;
+            self.set_focus(Some(node));
+            if self.focus == Some(node) {
+                self.pending_focus_target = None;
+                return self.focus != before;
+            }
+            return false;
+        }
+
+        if let Some(window) = self.window
+            && !crate::elements::element_identity_is_live_in_current_frame(app, window, target)
+        {
+            self.pending_focus_target = None;
+        }
+
+        false
+    }
+
     #[track_caller]
     pub fn set_focus(&mut self, focus: Option<NodeId>) {
         #[cfg(debug_assertions)]
@@ -39,6 +83,9 @@ impl<H: UiHost> UiTree<H> {
         }
         let changed = self.focus != focus;
         self.focus = focus;
+        if focus.is_some() {
+            self.pending_focus_target = None;
+        }
         if changed {
             self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
         }
@@ -75,6 +122,9 @@ impl<H: UiHost> UiTree<H> {
         }
         let changed = self.focus != focus;
         self.focus = focus;
+        if focus.is_some() {
+            self.pending_focus_target = None;
+        }
         if changed {
             self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
         }

@@ -183,7 +183,13 @@ impl ElementHostWidget {
                 if let Some(expanded) = props.expanded {
                     cx.set_expanded(expanded);
                 }
-                cx.set_active_descendant(props.active_descendant);
+                if let Some(element) = props.active_descendant_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.set_active_descendant(Some(node));
+                } else {
+                    cx.set_active_descendant(props.active_descendant);
+                }
                 if let Some(element) = props.controls_element
                     && let Some(node) = cx.resolve_declarative_element(element)
                 {

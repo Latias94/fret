@@ -1936,6 +1936,12 @@ pub struct TextInputProps {
     pub a11y_required: bool,
     pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub active_descendant: Option<NodeId>,
+    /// Declarative-only: element ID of the active descendant for composite widgets.
+    ///
+    /// This is an authoring convenience for `aria-activedescendant`-style relationships where the
+    /// target is another declarative element. The runtime resolves this into a `NodeId` during
+    /// semantics snapshot production.
+    pub active_descendant_element: Option<u64>,
     /// Declarative-only: element ID of a node which this text input controls.
     ///
     /// This is an authoring convenience for relationships like `aria-controls` where the target
@@ -1970,6 +1976,7 @@ impl TextInputProps {
             a11y_required: false,
             a11y_invalid: None,
             active_descendant: None,
+            active_descendant_element: None,
             controls_element: None,
             expanded: None,
             chrome: TextInputStyle::default(),
@@ -1996,6 +2003,7 @@ impl std::fmt::Debug for TextInputProps {
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
             .field("obscure_text", &self.obscure_text)
+            .field("active_descendant_element", &self.active_descendant_element)
             .field("controls_element", &self.controls_element)
             .field("expanded", &self.expanded)
             .field("chrome", &self.chrome)

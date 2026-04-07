@@ -214,16 +214,38 @@ impl<H: UiHost> UiTree<H> {
     pub fn publish_window_runtime_snapshots(&mut self, app: &mut H) {
         self.pending_declarative_window_snapshot_roots
             .retain(|pending| self.nodes.contains_key(*pending));
+        self.resolve_pending_focus_target_if_needed(app);
+        let focused_element_before_revalidate = self.window.and_then(|window| {
+            self.focus.and_then(|focused| {
+                crate::elements::with_window_state(app, window, |state| {
+                    state.element_for_node(focused)
+                })
+            })
+        });
         let (_active_input_layers, input_barrier_root) = self.active_input_layers();
         let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
         let barrier_root = focus_barrier_root.or(input_barrier_root);
 
+        let focus_before_revalidate = self.focus;
         self.revalidate_focus_for_dispatch_snapshot(
             app.frame_id(),
             active_focus_layers.as_slice(),
             barrier_root,
             "commands: focus missing from dispatch snapshot",
         );
+        if focus_before_revalidate.is_some()
+            && self.focus.is_none()
+            && let Some(window) = self.window
+            && let Some(element) = focused_element_before_revalidate
+            && crate::elements::element_identity_is_live_in_current_frame(app, window, element)
+        {
+            // Declarative overlay/content roots can attach before final layout makes them part of
+            // the authoritative dispatch snapshot. Preserve the element identity as a deferred
+            // target so the final-layout snapshot refine can recover focus instead of dropping it
+            // for the rest of the frame.
+            self.pending_focus_target = Some(element);
+            self.request_post_layout_window_runtime_snapshot_refine();
+        }
 
         self.revalidate_pending_shortcut_for_current_routing_context(app, barrier_root);
 

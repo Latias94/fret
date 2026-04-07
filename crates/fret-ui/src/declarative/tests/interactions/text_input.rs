@@ -1793,3 +1793,82 @@ fn text_input_semantics_controls_element_is_exposed() {
         "expected combobox to control the listbox"
     );
 }
+
+#[test]
+fn text_input_semantics_active_descendant_element_is_exposed() {
+    use std::cell::Cell;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-text-input-active-descendant",
+        |cx| {
+            let option_id_out: Cell<Option<crate::elements::GlobalElementId>> = Cell::new(None);
+            let option = cx.pressable_with_id(
+                crate::element::PressableProps {
+                    layout: {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    focusable: false,
+                    a11y: crate::element::PressableA11y {
+                        role: Some(fret_core::SemanticsRole::ListBoxOption),
+                        test_id: Some(Arc::from("option")),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                |cx, _st, id| {
+                    option_id_out.set(Some(id));
+                    vec![cx.container(crate::element::ContainerProps::default(), |_cx| Vec::new())]
+                },
+            );
+
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            props.test_id = Some(Arc::from("combo"));
+            props.a11y_role = Some(fret_core::SemanticsRole::ComboBox);
+            props.active_descendant_element = option_id_out.get().map(|id| id.0);
+
+            vec![cx.text_input(props), option]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let combo = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("combo"))
+        .expect("expected combobox semantics node");
+    let option = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("option"))
+        .expect("expected option semantics node");
+
+    assert_eq!(
+        combo.active_descendant,
+        Some(option.id),
+        "expected combobox active_descendant to resolve through declarative element mapping"
+    );
+}

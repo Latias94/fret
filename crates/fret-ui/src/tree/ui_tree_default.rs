@@ -9,6 +9,7 @@ impl<H: UiHost> Default for UiTree<H> {
             root_to_layer: HashMap::new(),
             base_layer: None,
             focus: None,
+            pending_focus_target: None,
             captured: HashMap::new(),
             active_touch_drag_target: HashMap::new(),
             last_pointer_move_hit: HashMap::new(),

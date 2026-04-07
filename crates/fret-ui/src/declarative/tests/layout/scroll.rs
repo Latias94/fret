@@ -5204,6 +5204,29 @@ fn outer_y_scroll_does_not_count_nested_both_scroll_descendant_overflow() {
 
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
+    let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
+        &mut app,
+        window,
+        inner_handle.binding_key(),
+    );
+    let inner_scroll_element = bound
+        .first()
+        .copied()
+        .expect("expected nested inner scroll to stay bound to its handle");
+    let inner_scroll_node = crate::declarative::node_for_element_in_window_frame(
+        &mut app,
+        window,
+        inner_scroll_element,
+    )
+    .expect("expected nested inner scroll node");
+    let inner_scroll_bounds = ui
+        .debug_node_bounds(inner_scroll_node)
+        .expect("nested inner scroll bounds");
+    assert!(
+        (inner_scroll_bounds.size.height.0 - 400.0).abs() <= 0.5,
+        "expected nested inner scroll viewport bounds to retain its fixed 400px height inside the outer flex flow: bounds={inner_scroll_bounds:?}"
+    );
+
     let inner_content = inner_handle.content_size();
     assert!(
         (inner_content.height.0 - 1100.0).abs() <= 0.5,

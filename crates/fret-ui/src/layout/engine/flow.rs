@@ -911,14 +911,23 @@ fn build_flow_subtree_impl<H: UiHost>(
             let has_definite_size =
                 !matches!(layout_style.size.width, crate::element::Length::Auto)
                     && !matches!(layout_style.size.height, crate::element::Length::Auto);
-            if has_definite_size || layout_style.flex.grow > 0.0 {
+            if has_definite_size {
+                measured = false;
+            }
+            if layout_style.flex.grow > 0.0 {
                 // Barrier elements like Scroll/VirtualList frequently participate in flex layouts
                 // as "fill the remaining space" items. When `flex-basis` is `Auto`, Taffy uses the
                 // item's intrinsic size, which triggers our (potentially expensive) widget-level
                 // measurement even though the final size is dominated by `flex-grow`.
                 //
-                // Prefer `flex-basis: 0` so the flex distribution is determined by grow factors
-                // and the parent can size the barrier without invoking intrinsic measurement.
+                // Prefer `flex-basis: 0` only for actual grow-driven items so the flex
+                // distribution is determined by grow factors and the parent can size the barrier
+                // without invoking intrinsic measurement.
+                //
+                // Do not apply this to fixed-size scroll items. In a column flex, forcing
+                // `flex-basis: 0` on `height: 60px` scroll surfaces collapses the engine's local
+                // rect to zero, even though the barrier later reports a 60px viewport to its
+                // handle.
                 if matches!(parent_kind, ParentLayoutKind::Flex { .. })
                     && matches!(layout_style.flex.basis, crate::element::Length::Auto)
                 {

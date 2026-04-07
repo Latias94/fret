@@ -381,19 +381,15 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
                     (bounds.origin.x.0 + bounds.size.width.0 - content_bounds.origin.x.0).max(0.0);
                 let bottom =
                     (bounds.origin.y.0 + bounds.size.height.0 - content_bounds.origin.y.0).max(0.0);
-                record_scroll_overflow_candidate(
-                    &*tree,
-                    axis,
-                    extent_may_be_stale,
-                    content_size,
-                    observe_root,
-                    right,
-                    bottom,
-                    &mut root_loose,
-                    &mut root_trusted,
-                    &mut root_suspicious_nonleaf_x,
-                    &mut root_suspicious_nonleaf_y,
-                );
+                // The scroll barrier root's own laid-out bounds are authoritative for the current
+                // frame. The stale-wrapper guard applies to descendants under that root, not to
+                // the barrier root itself; otherwise explicit-size content roots (for example a
+                // 100.2px tall container inside a 50px viewport) would never be allowed to grow
+                // on the initial clean frame.
+                root_loose.width = Px(root_loose.width.0.max(right));
+                root_loose.height = Px(root_loose.height.0.max(bottom));
+                root_trusted.width = Px(root_trusted.width.0.max(right));
+                root_trusted.height = Px(root_trusted.height.0.max(bottom));
             }
         }
         let observe_children: Vec<NodeId> = tree.children_ref(observe_root).to_vec();
@@ -2108,11 +2104,15 @@ impl ElementHostWidget {
         if !is_probe_layout {
             let mut relayout_with_updated_content_bounds = false;
             let mut authoritative_observation_cleared_pending = false;
+            let mut authoritative_observation_committed_this_pass = false;
             // If we didn't do a deep unbounded probe for `max_child` this frame, scroll extents can
             // be temporarily pinned to cached values even if descendants overflow the forced
             // `content_bounds` rect (common with wrapper-heavy trees like docs pages and tab
             // panels). In that mode we allow a small, bounded subtree scan to discover overflow
             // and grow the scroll handle immediately.
+            // Under the authoritative post-layout path, descendant wrapper bounds may be stale
+            // even on the initial clean frame. Keep the stale-wrapper guard enabled for the whole
+            // mode, and let the observer trust the direct barrier root's own bounds separately.
             let extent_may_be_stale = post_layout_extents_mode
                 || defer_this_frame
                 || cached_max_child.is_some()
@@ -2346,11 +2346,14 @@ impl ElementHostWidget {
                                 && pending_extent_probe,
                         },
                     );
+                    authoritative_observation_committed_this_pass =
+                        scroll_overflow_observation_is_authoritative(observation);
                     authoritative_observation_cleared_pending =
                         scroll_overflow_observation_is_authoritative(observation);
                 }
 
                 if shrink_validation_enabled
+                    && !authoritative_observation_committed_this_pass
                     && scroll_overflow_observation_is_authoritative(observation)
                 {
                     // Single-child scroll subtrees can over-measure under unbounded probe passes
@@ -2366,11 +2369,21 @@ impl ElementHostWidget {
                     // large, only that the final layout phase constrained it. Only treat fresh-probe
                     // observations as shrink proof when the laid-out subtree still exceeds the viewport
                     // (i.e. the observation contains real post-layout overflow beyond `desired`).
+                    let post_layout_shrink_has_layout_evidence_x = post_layout_shrink_revalidation
+                        && observed.loose.width.0 > 0.0
+                        && observed.loose.width.0 + 0.5 < content_w.0;
+                    let post_layout_shrink_has_layout_evidence_y = post_layout_shrink_revalidation
+                        && observed.loose.height.0 > 0.0
+                        && observed.loose.height.0 + 0.5 < content_h.0;
+                    let multi_child_post_layout_shrink_revalidation =
+                        post_layout_shrink_revalidation && cx.children.len() > 1;
                     let can_shrink_x = defer_this_frame
-                        || post_layout_shrink_revalidation
+                        || post_layout_shrink_has_layout_evidence_x
+                        || multi_child_post_layout_shrink_revalidation
                         || observed.trusted.width.0 > desired.width.0 + 0.5;
                     let can_shrink_y = defer_this_frame
-                        || post_layout_shrink_revalidation
+                        || post_layout_shrink_has_layout_evidence_y
+                        || multi_child_post_layout_shrink_revalidation
                         || observed.trusted.height.0 > desired.height.0 + 0.5;
                     let mut changed = false;
                     if props.axis.scroll_x()

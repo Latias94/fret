@@ -564,10 +564,12 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
+        dispatch_cx: &DispatchCx,
         input_ctx: &InputContext,
         root: NodeId,
         event: &Event,
-        invalidation_visited: &mut impl InvalidationVisited,
+        needs_redraw: &mut bool,
+        invalidation_visited: &mut HashMap<NodeId, u8>,
     ) -> bool {
         debug_assert!(
             event_position(event).is_none(),
@@ -591,6 +593,7 @@ impl<H: UiHost> UiTree<H> {
             Event::Pointer(PointerEvent::Wheel { delta, .. }) => Some(*delta),
             _ => None,
         };
+        let node_in_active_layers = |node: NodeId| dispatch_cx.node_in_active_input_layers(node);
 
         let mut stack = vec![(root, false)];
         while let Some((node_id, children_visited)) = stack.pop() {
@@ -615,6 +618,9 @@ impl<H: UiHost> UiTree<H> {
                 invalidations,
                 scroll_handle_invalidations,
                 scroll_target_invalidations,
+                requested_focus,
+                requested_focus_target,
+                requested_capture,
                 notify_requested,
                 notify_requested_location,
                 stop_propagation,
@@ -660,11 +666,25 @@ impl<H: UiHost> UiTree<H> {
                     cx.invalidations,
                     cx.scroll_handle_invalidations,
                     cx.scroll_target_invalidations,
+                    cx.requested_focus,
+                    cx.requested_focus_target,
+                    cx.requested_capture,
                     cx.notify_requested,
                     cx.notify_requested_location,
                     cx.stop_propagation,
                 )
             });
+
+            if !invalidations.is_empty()
+                || !scroll_handle_invalidations.is_empty()
+                || !scroll_target_invalidations.is_empty()
+                || requested_focus.is_some()
+                || requested_focus_target.is_some()
+                || requested_capture.is_some()
+                || notify_requested
+            {
+                *needs_redraw = true;
+            }
 
             for (id, inv) in invalidations {
                 Self::pending_invalidation_merge(
@@ -719,6 +739,71 @@ impl<H: UiHost> UiTree<H> {
                     UiDebugInvalidationSource::Notify,
                     UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
                 );
+            }
+
+            if let Some(focus) =
+                self.resolve_requested_focus(app, requested_focus, requested_focus_target)
+                && self.focus_request_is_allowed(
+                    app,
+                    self.window,
+                    dispatch_cx.active_focus_roots.as_slice(),
+                    focus,
+                    Some(&dispatch_cx.focus_snapshot),
+                )
+            {
+                if let Some(prev) = self.focus {
+                    Self::pending_invalidation_merge(
+                        &mut pending_invalidations,
+                        prev,
+                        Invalidation::Paint,
+                        UiDebugInvalidationSource::Focus,
+                        UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Focus),
+                    );
+                }
+                self.focus = Some(focus);
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    focus,
+                    Invalidation::Paint,
+                    UiDebugInvalidationSource::Focus,
+                    UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Focus),
+                );
+                if !matches!(event, Event::Pointer(_) | Event::PointerCancel(_)) {
+                    self.scroll_node_into_view(app, focus);
+                }
+            }
+
+            if let Some(capture) = requested_capture
+                && capture.is_none_or(&node_in_active_layers)
+                && let Some(pointer_id) = pointer_id_for_capture
+            {
+                if let Some(new_capture) = capture
+                    && !matches!(event, Event::PointerCancel(_))
+                    && let Some(old_capture) = self.captured.get(&pointer_id).copied()
+                    && old_capture != new_capture
+                    && node_in_active_layers(old_capture)
+                {
+                    let cancel_event = pointer_cancel_event_for_capture_switch(event, pointer_id);
+                    let _ = self.dispatch_event_to_node_chain(
+                        app,
+                        services,
+                        dispatch_cx,
+                        input_ctx,
+                        old_capture,
+                        &cancel_event,
+                        needs_redraw,
+                        invalidation_visited,
+                    );
+                }
+
+                match capture {
+                    Some(node) => {
+                        self.captured.insert(pointer_id, node);
+                    }
+                    None => {
+                        self.captured.remove(&pointer_id);
+                    }
+                }
             }
 
             if stop_propagation {

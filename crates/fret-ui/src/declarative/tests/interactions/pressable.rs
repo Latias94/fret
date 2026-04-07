@@ -1644,6 +1644,78 @@ fn pressable_on_activate_hook_runs_on_keyboard_activation() {
 }
 
 #[test]
+fn pressable_pointer_click_focuses_pressable_even_when_not_in_tab_order() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-pointer-focuses-even-when-not-tab-stop",
+        |cx| {
+            let mut props = crate::element::PressableProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.layout.size.height = crate::element::Length::Fill;
+            props.focusable = false;
+
+            vec![cx.pressable(props, |cx, _state| vec![cx.text("pressable")])]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let pressable_node = ui.children(root)[0];
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+    let position = Point::new(
+        Px(pressable_bounds.origin.x.0 + 4.0),
+        Px(pressable_bounds.origin.y.0 + 4.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), None);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(pressable_node),
+        "expected pointer activation to focus the pressable even when it is excluded from Tab traversal"
+    );
+}
+
+#[test]
 fn pressable_pointer_up_does_not_steal_focus_from_text_input_descendant() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
