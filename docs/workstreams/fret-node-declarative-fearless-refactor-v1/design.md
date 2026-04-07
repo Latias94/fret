@@ -384,6 +384,10 @@ Status note (2026-04-03):
 - Retained rename host layout lifecycle now also routes through the private
   `ui/overlays/rename_host_layout.rs` seam, so hidden/cancelled/active overlay layout planning
   lives behind one focused authority instead of staying embedded in the rename host widget file.
+- Retained rename host key handling now also routes through the private
+  `ui/overlays/rename_host_event.rs` seam, so Enter/Escape commit-vs-close routing plus
+  controller-first submit/close ordering live behind one focused authority instead of staying
+  embedded in the rename host widget file.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

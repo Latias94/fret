@@ -1,20 +1,21 @@
 //! Node graph overlay host state (UI-only).
 
-use fret_core::{KeyCode, Point, Rect, Size};
+use fret_core::{Point, Rect, Size};
 use fret_runtime::Model;
 use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::core::{GroupId, SymbolId};
-use crate::ops::GraphTransaction;
 use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::controller::NodeGraphController;
 use crate::ui::style::NodeGraphStyle;
 
 use super::layout_hidden_child_and_release_focus;
+use super::rename_host_event::{
+    apply_rename_host_key_decision, close_rename_host_sessions, decide_rename_host_key,
+};
 use super::rename_host_layout::{RenameHostLayoutPlan, plan_rename_host_layout};
 use super::rename_policy::{
-    RenameOverlaySession, RenameOverlaySessionKey, active_rename_session,
-    build_rename_commit_transaction, clear_rename_sessions, rename_session_seed_text,
+    RenameOverlaySession, RenameOverlaySessionKey, active_rename_session, rename_session_seed_text,
 };
 
 /// UI-only overlay state for a node graph editor instance.
@@ -92,43 +93,11 @@ impl NodeGraphOverlayHost {
         self
     }
 
-    fn submit_transaction<H: UiHost>(&self, host: &mut H, tx: &GraphTransaction) {
-        crate::ui::retained_submit::submit_graph_transaction(
-            host,
-            self.controller.as_ref(),
-            self.edits.as_ref(),
-            &self.graph,
-            tx,
-        );
-    }
-
     fn active_rename_session<H: UiHost>(&self, host: &H) -> Option<RenameOverlaySession> {
         self.overlays
             .read_ref(host, active_rename_session)
             .ok()
             .flatten()
-    }
-
-    fn close_rename_sessions<H: UiHost>(&mut self, host: &mut H) {
-        let _ = self.overlays.update(host, |s, _cx| {
-            clear_rename_sessions(s);
-        });
-    }
-
-    fn commit_rename_session<H: UiHost>(&mut self, host: &mut H, session: &RenameOverlaySession) {
-        let to = self
-            .group_rename_text
-            .read_ref(host, |t| t.clone())
-            .ok()
-            .unwrap_or_default();
-        let tx = self
-            .graph
-            .read_ref(host, |g| build_rename_commit_transaction(g, session, &to))
-            .ok()
-            .flatten();
-        if let Some(tx) = tx {
-            self.submit_transaction(host, &tx);
-        }
     }
 }
 
@@ -146,26 +115,25 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
             return;
         };
 
-        match event {
-            fret_core::Event::KeyDown { key, .. } => match *key {
-                KeyCode::Escape => {
-                    self.close_rename_sessions(cx.app);
-                    crate::ui::retained_event_tail::focus_canvas_and_finish_layout_event(
-                        cx,
-                        self.canvas_node,
-                    );
-                }
-                KeyCode::Enter | KeyCode::NumpadEnter => {
-                    self.commit_rename_session(cx.app, &session);
-                    self.close_rename_sessions(cx.app);
-                    crate::ui::retained_event_tail::focus_canvas_and_finish_layout_event(
-                        cx,
-                        self.canvas_node,
-                    );
-                }
-                _ => {}
-            },
-            _ => {}
+        let fret_core::Event::KeyDown { key, .. } = event else {
+            return;
+        };
+
+        let decision = decide_rename_host_key(*key);
+        if apply_rename_host_key_decision(
+            cx.app,
+            decision,
+            &self.graph,
+            &self.group_rename_text,
+            &self.overlays,
+            &session,
+            self.controller.as_ref(),
+            self.edits.as_ref(),
+        ) {
+            crate::ui::retained_event_tail::focus_canvas_and_finish_layout_event(
+                cx,
+                self.canvas_node,
+            );
         }
     }
 
@@ -187,7 +155,7 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
             self.last_opened_session,
         ) {
             RenameHostLayoutPlan::CancelActiveSession => {
-                self.close_rename_sessions(cx.app);
+                close_rename_host_sessions(cx.app, &self.overlays);
                 self.last_opened_session = None;
                 self.rename_bounds = None;
                 self.active = false;

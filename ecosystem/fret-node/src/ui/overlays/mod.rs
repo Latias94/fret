@@ -17,6 +17,7 @@ mod minimap_projection;
 mod panel_item_state;
 mod panel_navigation_policy;
 mod panel_pointer_policy;
+mod rename_host_event;
 mod rename_host_layout;
 mod rename_policy;
 mod toolbar_policy;
