@@ -1455,6 +1455,10 @@ real editors.
   `ui/retained_submit.rs` seam, so portal command commits plus blackboard/group-rename overlays
   share one controller-first vs edit-queue fallback policy instead of duplicating that
   compatibility branch inline.
+- Retained action-panel keyboard routing now also routes through the private
+  `ui/overlays/panel_navigation_policy.rs` seam, so controls and blackboard overlays share one
+  Arrow/Home/End/Enter/Escape navigation authority instead of each embedding the same keyboard
+  roster policy inline.
 - The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
   `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
   seam instead of remaining duplicated across both wrapper and submodule entrypoints.

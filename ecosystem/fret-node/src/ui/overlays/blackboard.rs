@@ -5,8 +5,8 @@
 use std::collections::BTreeMap;
 
 use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
+    SemanticsRole, Size, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::Invalidation;
@@ -24,9 +24,9 @@ use super::NodeGraphOverlayState;
 use super::SymbolRenameOverlay;
 use super::blackboard_policy::{
     BlackboardAction, BlackboardActionPlan, blackboard_action_a11y_label,
-    blackboard_action_button_label, blackboard_actions_in_order, next_blackboard_action,
-    plan_blackboard_action,
+    blackboard_action_button_label, blackboard_actions_in_order, plan_blackboard_action,
 };
+use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
 
 const PANEL_MARGIN_PX: f32 = 12.0;
 const BUTTON_GAP_PX: f32 = 6.0;
@@ -352,46 +352,16 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 let items = blackboard_actions_in_order(&symbols);
                 let _ = layout;
 
-                match *key {
-                    KeyCode::ArrowDown => {
+                match panel_keyboard_action(*key, self.keyboard_active, &items) {
+                    PanelKeyboardAction::Select(action) => {
                         self.hovered = None;
                         self.pressed = None;
-                        self.keyboard_active =
-                            next_blackboard_action(self.keyboard_active, 1, &items);
+                        self.keyboard_active = Some(action);
                         cx.stop_propagation();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
                     }
-                    KeyCode::ArrowUp => {
-                        self.hovered = None;
-                        self.pressed = None;
-                        self.keyboard_active =
-                            next_blackboard_action(self.keyboard_active, -1, &items);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
-                    KeyCode::Home => {
-                        self.hovered = None;
-                        self.pressed = None;
-                        self.keyboard_active = items.first().copied();
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
-                    KeyCode::End => {
-                        self.hovered = None;
-                        self.pressed = None;
-                        self.keyboard_active = items.last().copied();
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
-                    KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
-                        let action = self
-                            .keyboard_active
-                            .or_else(|| items.first().copied())
-                            .unwrap_or(BlackboardAction::AddSymbol);
+                    PanelKeyboardAction::Activate(action) => {
                         self.dispatch_action(
                             cx.app,
                             cx.bounds,
@@ -402,7 +372,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
                     }
-                    KeyCode::Escape => {
+                    PanelKeyboardAction::FocusCanvas => {
                         self.hovered = None;
                         self.pressed = None;
                         self.keyboard_active = None;
@@ -411,7 +381,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
                     }
-                    _ => {}
+                    PanelKeyboardAction::Ignore => {}
                 }
             }
             Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {

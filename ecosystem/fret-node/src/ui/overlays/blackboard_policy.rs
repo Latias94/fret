@@ -61,17 +61,7 @@ pub(super) fn next_blackboard_action(
     delta: i32,
     items: &[BlackboardAction],
 ) -> Option<BlackboardAction> {
-    if items.is_empty() {
-        return None;
-    }
-
-    let len = items.len() as i32;
-    let idx0 = current
-        .and_then(|action| items.iter().position(|candidate| *candidate == action))
-        .unwrap_or(0) as i32;
-    let mut next = idx0 + delta;
-    next = ((next % len) + len) % len;
-    Some(items[next as usize])
+    super::panel_navigation_policy::cyclic_panel_item(current, delta, items)
 }
 
 pub(super) fn plan_blackboard_action(

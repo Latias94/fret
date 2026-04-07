@@ -351,6 +351,10 @@ Status note (2026-04-03):
   `ui/retained_submit.rs` seam, so portal command commits plus blackboard/group-rename overlays
   share one controller-first vs edit-queue fallback policy instead of duplicating that
   compatibility branch inline.
+- Retained action-panel keyboard routing now also routes through the private
+  `ui/overlays/panel_navigation_policy.rs` seam, so controls and blackboard overlays share one
+  Arrow/Home/End/Enter/Escape navigation authority instead of each embedding the same keyboard
+  roster policy inline.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

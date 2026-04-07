@@ -614,6 +614,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/retained_submit.rs` seam, so portal command commits plus blackboard/group-rename overlays
     share one controller-first vs edit-queue fallback policy instead of duplicating that
     compatibility branch inline.
+  - Progress: retained action-panel keyboard routing now also routes through the private
+    `ui/overlays/panel_navigation_policy.rs` seam, so controls and blackboard overlays share one
+    Arrow/Home/End/Enter/Escape navigation authority instead of each embedding the same keyboard
+    roster policy inline.
   - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
     `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
     instead of staying duplicated in both the wrapper and the searcher submodule.

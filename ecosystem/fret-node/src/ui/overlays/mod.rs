@@ -11,6 +11,7 @@ mod group_rename;
 mod minimap;
 mod minimap_navigation_policy;
 mod minimap_policy;
+mod panel_navigation_policy;
 mod rename_policy;
 mod toolbar_policy;
 mod toolbars;

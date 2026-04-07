@@ -1,8 +1,8 @@
 //! Node graph controls overlay (UI-only).
 
 use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
-    SceneOp, Size, TextBlobId, TextConstraints, TextOverflow, TextWrap,
+    Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
+    Size, TextBlobId, TextConstraints, TextOverflow, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::{UiHost, retained_bridge::*};
@@ -14,8 +14,9 @@ use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
 use super::OverlayPlacement;
 use super::controls_policy::{
     ControlsButton, NodeGraphControlsBindings, controls_button_a11y_label, controls_button_label,
-    controls_buttons, next_controls_button, resolve_controls_command_id,
+    controls_buttons, resolve_controls_command_id,
 };
+use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
 
 struct ControlsLayout {
     panel: Rect,
@@ -155,57 +156,31 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         match event {
-            Event::KeyDown { key, repeat: _, .. } => match *key {
-                KeyCode::ArrowDown => {
-                    self.hovered = None;
-                    self.pressed = None;
-                    self.keyboard_active = Some(next_controls_button(self.keyboard_active, 1));
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+            Event::KeyDown { key, repeat: _, .. } => {
+                match panel_keyboard_action(*key, self.keyboard_active, controls_buttons()) {
+                    PanelKeyboardAction::Select(button) => {
+                        self.hovered = None;
+                        self.pressed = None;
+                        self.keyboard_active = Some(button);
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                    }
+                    PanelKeyboardAction::Activate(button) => {
+                        self.dispatch_button(cx, button);
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                    }
+                    PanelKeyboardAction::FocusCanvas => {
+                        cx.request_focus(self.canvas_node);
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                    }
+                    PanelKeyboardAction::Ignore => {}
                 }
-                KeyCode::ArrowUp => {
-                    self.hovered = None;
-                    self.pressed = None;
-                    self.keyboard_active = Some(next_controls_button(self.keyboard_active, -1));
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
-                }
-                KeyCode::Home => {
-                    self.hovered = None;
-                    self.pressed = None;
-                    self.keyboard_active = controls_buttons().first().copied();
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
-                }
-                KeyCode::End => {
-                    self.hovered = None;
-                    self.pressed = None;
-                    self.keyboard_active = controls_buttons().last().copied();
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
-                }
-                KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
-                    let btn = self
-                        .keyboard_active
-                        .or_else(|| controls_buttons().first().copied())
-                        .expect("controls buttons");
-                    self.dispatch_button(cx, btn);
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
-                }
-                KeyCode::Escape => {
-                    cx.request_focus(self.canvas_node);
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
-                }
-                _ => {}
-            },
+            }
             Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
                 let hovered = self.button_at(cx.bounds, *position);
                 if hovered.is_some() {
