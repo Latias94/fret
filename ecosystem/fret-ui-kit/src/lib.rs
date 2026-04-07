@@ -540,7 +540,10 @@ mod source_policy_tests {
         assert!(!UI_RS.contains("trait UiChildIntoElement"));
         assert!(!IMUI_RS.contains("UiChildIntoElement"));
         assert!(UI_RS.contains("I::Item: IntoUiElement<H>"));
-        assert!(UI_RS.contains("IntoUiElement::into_element(child, cx)"));
+        assert!(UI_RS.contains("crate::land_child(cx, child)"));
+        assert!(
+            LIB_RS.contains("crate::ui_builder::IntoUiElement::into_element(child, cx.elements())")
+        );
         assert!(IMUI_RS.contains("B: IntoUiElement<H>"));
     }
 

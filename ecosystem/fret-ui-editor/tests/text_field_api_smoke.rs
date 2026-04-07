@@ -20,6 +20,7 @@ fn text_field_accepts_editor_text_extensions(value_model: &Model<String>) {
             submit_command: Some(CommandId::from("tests.text_field.submit")),
             assistive_semantics: TextFieldAssistiveSemantics {
                 active_descendant: Some(NodeId::default()),
+                active_descendant_element: Some(7),
                 controls_element: Some(42),
                 expanded: Some(true),
             },

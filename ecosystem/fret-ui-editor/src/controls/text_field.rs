@@ -58,6 +58,8 @@ pub enum TextFieldBlurBehavior {
 pub struct TextFieldAssistiveSemantics {
     /// Active-descendant semantics for an assistive surface such as completion or history.
     pub active_descendant: Option<NodeId>,
+    /// Declarative element id for the current active assistive option.
+    pub active_descendant_element: Option<u64>,
     /// Declarative element id for an assistive surface controlled by this field.
     pub controls_element: Option<u64>,
     /// Whether the assistive surface is currently expanded.
@@ -511,6 +513,7 @@ impl TextField {
                     props.test_id = test_id.clone();
                     props.obscure_text = matches!(mode, TextFieldMode::Password);
                     props.active_descendant = assistive_semantics.active_descendant;
+                    props.active_descendant_element = assistive_semantics.active_descendant_element;
                     props.controls_element = assistive_semantics.controls_element;
                     props.expanded = assistive_semantics.expanded;
                     if !buffered {

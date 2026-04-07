@@ -1,6 +1,6 @@
 use super::*;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 fn zero_motion_toast_style() -> ToastLayerStyle {
     let mut style = ToastLayerStyle::default();
@@ -342,6 +342,179 @@ fn owned_cached_modal_request_is_pruned_when_request_owner_is_removed() {
                 .cached_modal_requests
                 .contains_key(&(window, modal_id)),
             "cached modal declaration should be pruned with the removed owner"
+        );
+    });
+}
+
+#[test]
+fn owned_cached_modal_prune_runs_close_auto_focus_before_teardown() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    let modal_id = GlobalElementId(0x4a);
+    let calls = Arc::new(AtomicUsize::new(0));
+    let calls_for_handler = calls.clone();
+    let underlay_for_handler: Arc<Mutex<Option<GlobalElementId>>> = Arc::new(Mutex::new(None));
+    let underlay_for_request = underlay_for_handler.clone();
+    let mut underlay_id: Option<GlobalElementId> = None;
+    let mut focusable_id: Option<GlobalElementId> = None;
+
+    let on_close_auto_focus: fret_ui::action::OnCloseAutoFocus = Arc::new(move |host, _cx, req| {
+        calls_for_handler.fetch_add(1, Ordering::SeqCst);
+        let target = *underlay_for_handler
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        if let Some(target) = target {
+            host.request_focus(target);
+        }
+        req.prevent_default();
+    });
+
+    // Frame 1: mount an owned modal and focus inside it.
+    begin_frame(&mut app, window);
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "owned-cached-modal-close-autofocus-prune",
+        |cx| {
+            let mut out = vec![cx.pressable_with_id(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(80.0));
+                        layout.size.height = Length::Px(Px(32.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st, id| {
+                    underlay_id = Some(id);
+                    *underlay_for_request
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner()) = Some(id);
+                    Vec::new()
+                },
+            )];
+
+            let trigger = underlay_id.expect("underlay id");
+            let handler = on_close_auto_focus.clone();
+            out.push(cx.keyed("owner", |cx| {
+                let focusable = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(96.0));
+                            layout.size.height = Length::Px(Px(32.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        focusable_id = Some(id);
+                        Vec::new()
+                    },
+                );
+                let mut req = crate::OverlayRequest::modal(
+                    modal_id,
+                    Some(trigger),
+                    open.clone(),
+                    crate::OverlayPresence::instant(true),
+                    vec![focusable],
+                );
+                req.on_close_auto_focus = Some(handler);
+                crate::OverlayController::request(cx, req);
+                cx.text("owner")
+            }));
+
+            out
+        },
+    );
+    ui.set_root(root);
+    crate::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let focusable = focusable_id.expect("modal focusable");
+    let focusable_node =
+        fret_ui::elements::node_for_element(&mut app, window, focusable).expect("focusable node");
+    ui.set_focus(Some(focusable_node));
+
+    // Frame 2: producer disappears while the modal closes; owner-prune should still honor the
+    // close auto-focus contract before tearing the layer down.
+    let _ = app.models_mut().update(&open, |v| *v = false);
+    begin_frame(&mut app, window);
+    underlay_id = None;
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "owned-cached-modal-close-autofocus-prune",
+        |cx| {
+            vec![cx.pressable_with_id(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(80.0));
+                        layout.size.height = Length::Px(Px(32.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st, id| {
+                    underlay_id = Some(id);
+                    *underlay_for_request
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner()) = Some(id);
+                    Vec::new()
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    crate::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let underlay = underlay_id.expect("underlay id after prune");
+    let underlay_node =
+        fret_ui::elements::node_for_element(&mut app, window, underlay).expect("underlay node");
+    assert!(
+        calls.load(Ordering::SeqCst) > 0,
+        "expected owner-pruned modal teardown to run close auto-focus"
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(underlay_node),
+        "expected close auto-focus to redirect focus before the pruned modal layer is removed"
+    );
+    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        assert!(
+            !overlays.modals.contains_key(&(window, modal_id)),
+            "active modal entry should be removed after owner-prune close handling"
+        );
+        assert!(
+            !overlays
+                .cached_modal_requests
+                .contains_key(&(window, modal_id)),
+            "cached modal declaration should be removed after owner-prune close handling"
         );
     });
 }

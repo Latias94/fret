@@ -198,6 +198,7 @@ fn command_text_input<H: UiHost>(
     a11y_required: bool,
     test_id: Option<Arc<str>>,
     active_descendant: Option<NodeId>,
+    active_descendant_element: Option<u64>,
     expanded: Option<bool>,
     pad_y: Px,
     height: Length,
@@ -236,6 +237,7 @@ fn command_text_input<H: UiHost>(
     props.test_id = test_id;
     props.placeholder = placeholder;
     props.active_descendant = active_descendant;
+    props.active_descendant_element = active_descendant_element;
     props.expanded = expanded;
     props.chrome = chrome;
     props.text_style = item_text_style(&theme);
@@ -752,6 +754,7 @@ impl CommandInput {
                     Some(SemanticsRole::ComboBox),
                     false,
                     input_test_id,
+                    None,
                     None,
                     None,
                     input_pad_y,
@@ -3135,9 +3138,9 @@ impl CommandPalette {
                 })
                 .collect();
 
-            let active_opt = active_desc::active_option_for_index(cx, &row_ids, active_idx);
-            let active_descendant = active_opt.map(|opt| opt.node);
-            let active_row_element = active_opt.map(|opt| opt.element);
+            let active_row_element = active_desc::active_element_for_index(&row_ids, active_idx);
+            let active_descendant =
+                active_row_element.and_then(|element| cx.live_node_for_element(element));
 
             let border = border(&theme);
             let wrapper_h = theme
@@ -3190,6 +3193,7 @@ impl CommandPalette {
                 self.input_required,
                 effective_input_test_id.clone(),
                 active_descendant,
+                active_row_element.map(|id| id.0),
                 self.input_expanded,
                 MetricRef::space(Space::N3).resolve(&theme),
                 Length::Px(input_h),

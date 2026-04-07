@@ -255,6 +255,7 @@ pub struct TextField {
     test_id: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
     active_descendant: Option<NodeId>,
+    active_descendant_element: Option<u64>,
     controls_element: Option<u64>,
     expanded: Option<bool>,
     input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
@@ -313,6 +314,7 @@ impl TextField {
             test_id: None,
             a11y_role: None,
             active_descendant: None,
+            active_descendant_element: None,
             controls_element: None,
             expanded: None,
             input_id_out: None,
@@ -470,6 +472,11 @@ impl TextField {
         self
     }
 
+    pub(crate) fn active_descendant_element(mut self, element: Option<u64>) -> Self {
+        self.active_descendant_element = element;
+        self
+    }
+
     pub(crate) fn controls_element(mut self, element: Option<u64>) -> Self {
         self.controls_element = element;
         self
@@ -516,6 +523,7 @@ impl TextField {
                 test_id,
                 a11y_role,
                 active_descendant,
+                active_descendant_element,
                 controls_element,
                 expanded,
                 input_id_out,
@@ -992,6 +1000,7 @@ impl TextField {
                                     props.test_id = test_id.clone();
                                     props.placeholder = placeholder.clone();
                                     props.active_descendant = active_descendant;
+                                    props.active_descendant_element = active_descendant_element;
                                     props.controls_element = controls_element;
                                     props.expanded = expanded;
                                     props.chrome = chrome;

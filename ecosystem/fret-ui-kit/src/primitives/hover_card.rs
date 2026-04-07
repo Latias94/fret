@@ -12,6 +12,7 @@ use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
+use std::panic::Location;
 
 use crate::declarative::ModelWatchExt;
 use crate::headless::hover_intent::{HoverIntentConfig, HoverIntentState, HoverIntentUpdate};
@@ -151,7 +152,6 @@ struct HoverCardIntentDriverState {
 /// - `defaultOpen=true` behaves like Radix: the card stays open until an "active" period is
 ///   observed and then a leave edge occurs,
 /// - active text selection keeps the hover card open while selecting.
-#[track_caller]
 pub fn hover_card_update_interaction<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open_now: bool,
@@ -161,7 +161,8 @@ pub fn hover_card_update_interaction<H: UiHost>(
     cfg: HoverIntentConfig,
 ) -> HoverIntentUpdate {
     let frame_tick = cx.app.frame_id().0;
-    cx.slot_state(HoverCardIntentDriverState::default, |st| {
+    let slot = cx.keyed_slot_id_at(Location::caller(), "hover_card_intent_driver");
+    cx.state_for(slot, HoverCardIntentDriverState::default, |st| {
         match st.last_frame_tick {
             None => {
                 st.last_frame_tick = Some(frame_tick);

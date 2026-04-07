@@ -3483,16 +3483,16 @@ impl ContextMenu {
             });
 
             let pointer_policy_for_region = pointer_policy.clone();
-            let anchor_store_model_for_region = anchor_store_model.clone();
             let open_for_region = open.clone();
             let cancel_open_for_region = cancel_open.clone();
+            let anchor_store_model_for_trigger = anchor_store_model.clone();
             let trigger = cx.keyed((open_model_id, "context-menu-trigger-region"), move |cx| {
                 let pointer_policy_for_region = pointer_policy_for_region.clone();
                 let cancel_open_for_region = cancel_open_for_region.clone();
                 let (touch_on_move, touch_on_up, touch_on_cancel) =
                     menu::context_menu_touch_long_press_pointer_handlers(touch_long_press.clone());
                 let touch_long_press_for_timer = touch_long_press.clone();
-                let anchor_store_model_for_timer = anchor_store_model_for_region.clone();
+                let anchor_store_model_for_timer = anchor_store_model_for_trigger.clone();
                 let open_for_timer = open_for_region.clone();
                 cx.pointer_region(PointerRegionProps::default(), move |cx| {
                     cx.pointer_region_on_pointer_down(pointer_policy_for_region);

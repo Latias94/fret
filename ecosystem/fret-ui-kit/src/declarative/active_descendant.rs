@@ -9,6 +9,13 @@ pub struct ActiveOption {
     pub node: NodeId,
 }
 
+pub fn active_element_for_index(
+    elements: &[GlobalElementId],
+    active_index: Option<usize>,
+) -> Option<GlobalElementId> {
+    active_index.and_then(|idx| elements.get(idx).copied())
+}
+
 /// Resolve an active descendant `NodeId` from a list of element IDs and an active index.
 ///
 /// This is a small helper for cmdk/listbox-like composite widgets where:
@@ -27,7 +34,7 @@ pub fn active_option_for_index<H: UiHost>(
     elements: &[GlobalElementId],
     active_index: Option<usize>,
 ) -> Option<ActiveOption> {
-    let element = active_index.and_then(|idx| elements.get(idx).copied())?;
+    let element = active_element_for_index(elements, active_index)?;
     let node = cx.live_node_for_element(element)?;
     Some(ActiveOption { element, node })
 }

@@ -1,7 +1,7 @@
 //! Active-descendant helpers (ADR 0073 outcomes).
 
 pub use crate::declarative::active_descendant::{
-    ActiveOption, active_descendant_for_index, active_option_for_index,
+    ActiveOption, active_descendant_for_index, active_element_for_index, active_option_for_index,
     scroll_active_element_align_top_y, scroll_active_element_into_view_y,
     scroll_handle_align_top_y, scroll_handle_into_view_y,
 };

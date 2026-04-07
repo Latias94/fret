@@ -15,13 +15,16 @@ use fret_ui::action::{ActionCx, OnKeyDown, UiFocusActionHost};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
-use crate::declarative::active_descendant::active_descendant_for_index;
+use crate::declarative::active_descendant::{
+    active_descendant_for_index, active_element_for_index,
+};
 
 pub use fret_ui_headless::text_assist::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct InputOwnedTextAssistSemantics {
     pub active_descendant: Option<NodeId>,
+    pub active_descendant_element: Option<u64>,
     pub controls_element: Option<u64>,
     pub expanded: bool,
 }
@@ -88,6 +91,10 @@ pub fn input_owned_text_assist_semantics<H: UiHost>(
         active_descendant: expanded
             .then(|| active_descendant_for_index(cx, option_elements, active_index))
             .flatten(),
+        active_descendant_element: expanded
+            .then(|| active_element_for_index(option_elements, active_index))
+            .flatten()
+            .map(|element| element.0),
         controls_element: controls_element.map(|element| element.0),
         expanded,
     }

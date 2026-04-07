@@ -26,9 +26,7 @@ use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::primitives::active_descendant::{
-    active_descendant_for_index, active_option_for_index,
-};
+use fret_ui_kit::primitives::active_descendant::active_option_for_index;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -572,9 +570,11 @@ fn autocomplete_into_element<H: UiHost>(
             runtime.option_elements.borrow_mut().clear();
         }
 
-        let active_descendant = {
+        let active_descendant_element = {
             let option_elements = runtime.option_elements.borrow();
-            active_descendant_for_index(cx, &option_elements, active_index)
+            active_index
+                .and_then(|idx| option_elements.get(idx).copied())
+                .map(|id| id.0)
         };
 
         let controls_element = runtime.listbox_element_id.get().map(|id| id.0);
@@ -627,7 +627,8 @@ fn autocomplete_into_element<H: UiHost>(
             .a11y_label_opt(autocomplete.a11y_label.clone())
             .test_id_opt(autocomplete.test_id.clone())
             .a11y_role(SemanticsRole::ComboBox)
-            .active_descendant(active_descendant)
+            .active_descendant(None)
+            .active_descendant_element(active_descendant_element)
             .controls_element(controls_element)
             .expanded(Some(open_now))
             .input_id_out(input_id_out.clone())

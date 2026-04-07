@@ -333,7 +333,8 @@ pub mod facade {
     };
     pub use crate::breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
     pub use crate::button::{
-        Button, ButtonRender, ButtonSize, ButtonVariant, ButtonVariants, button_variants,
+        Button, ButtonRender, ButtonSize, ButtonStyle, ButtonVariant, ButtonVariants,
+        button_variants,
     };
     pub use crate::button_group::{
         ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupSeparator,
@@ -563,7 +564,7 @@ pub mod facade {
         toggle_variants,
     };
     pub use crate::toggle_group::{
-        ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple,
+        ToggleGroup, ToggleGroupItem, ToggleGroupKind, ToggleGroupStyle, toggle_group_multiple,
         toggle_group_multiple_uncontrolled, toggle_group_single, toggle_group_single_uncontrolled,
     };
     pub use crate::tooltip::{

@@ -247,6 +247,7 @@ impl TextAssistField {
         field_options.input_id_out = Some(input_id_out.clone());
         field_options.assistive_semantics = TextFieldAssistiveSemantics {
             active_descendant: semantics.active_descendant,
+            active_descendant_element: semantics.active_descendant_element,
             controls_element: semantics.controls_element,
             expanded: Some(semantics.expanded),
         };

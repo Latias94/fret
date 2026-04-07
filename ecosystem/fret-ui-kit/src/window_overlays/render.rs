@@ -103,9 +103,7 @@ impl<'a, H: UiHost> UiActionHost for OverlayFocusActionHostAdapter<'a, H> {
 
 impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusActionHostAdapter<'a, H> {
     fn request_focus(&mut self, target: GlobalElementId) {
-        if let Some(node) = self.ui.live_attached_node_for_element(self.app, target) {
-            self.ui.set_focus(Some(node));
-        }
+        self.ui.request_focus_element(self.app, target);
     }
 }
 
@@ -452,9 +450,7 @@ impl<'a, H: UiHost> UiActionHost for OverlayFocusHost<'a, H> {
 
 impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusHost<'a, H> {
     fn request_focus(&mut self, target: fret_ui::elements::GlobalElementId) {
-        if let Some(node) = self.ui.live_attached_node_for_element(self.app, target) {
-            self.ui.set_focus(Some(node));
-        }
+        self.ui.request_focus_element(self.app, target);
     }
 }
 
@@ -547,6 +543,120 @@ fn collect_owned_overlay_prune_actions<H: UiHost>(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
+fn finalize_hidden_non_modal_overlay<H: UiHost>(
+    ui: &mut UiTree<H>,
+    app: &mut H,
+    window: AppWindowId,
+    layer: UiLayerId,
+    trigger: GlobalElementId,
+    consume_outside_pointer_events: bool,
+    restore_focus: Option<NodeId>,
+    close_auto_focus_handled: bool,
+    close_auto_focus_prevented: bool,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
+    modal_barrier_active: bool,
+) {
+    let mut close_auto_focus_prevented = close_auto_focus_prevented;
+    if !close_auto_focus_handled && let Some(on_close_auto_focus) = on_close_auto_focus.as_ref() {
+        let mut host = OverlayFocusActionHostAdapter { app, ui };
+        let mut req_cx = AutoFocusRequestCx::new();
+        on_close_auto_focus(
+            &mut host,
+            ActionCx {
+                window,
+                target: trigger,
+            },
+            &mut req_cx,
+        );
+        close_auto_focus_prevented = req_cx.default_prevented();
+    }
+
+    let focus_now = ui.focus();
+    let focus_in_layer = focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer));
+    let focus_cleared_by_modal_scope = modal_barrier_active && focus_now.is_none();
+    let should_restore_focus =
+        focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer);
+
+    apply_non_modal_dismissible_layer(
+        ui,
+        layer,
+        false,
+        false,
+        NonModalDismissibleLayerPolicy {
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+        },
+    );
+
+    // Radix-aligned outcome for menu-like overlays (ADR 0069):
+    // when the overlay consumes outside pointer-down events (non-click-through), it's safe to
+    // always restore focus to the trigger on unmount (like modals).
+    if !close_auto_focus_prevented
+        && (consume_outside_pointer_events
+            || (focus_in_layer || (!focus_cleared_by_modal_scope && should_restore_focus)))
+        && let Some(node) = focus_scope_prim::resolve_restore_focus_node(
+            ui,
+            app,
+            window,
+            Some(trigger),
+            restore_focus,
+        )
+    {
+        ui.set_focus(Some(node));
+    }
+}
+
+fn finalize_hidden_modal_overlay<H: UiHost>(
+    ui: &mut UiTree<H>,
+    app: &mut H,
+    window: AppWindowId,
+    layer: UiLayerId,
+    modal_id: GlobalElementId,
+    trigger: Option<GlobalElementId>,
+    restore_focus: Option<NodeId>,
+    close_auto_focus_handled: bool,
+    close_auto_focus_prevented: bool,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
+) {
+    let mut close_auto_focus_prevented = close_auto_focus_prevented;
+    if !close_auto_focus_handled && let Some(on_close_auto_focus) = on_close_auto_focus.as_ref() {
+        let mut host = OverlayFocusActionHostAdapter { app, ui };
+        let mut req_cx = AutoFocusRequestCx::new();
+        on_close_auto_focus(
+            &mut host,
+            ActionCx {
+                window,
+                target: trigger.unwrap_or(modal_id),
+            },
+            &mut req_cx,
+        );
+        close_auto_focus_prevented = req_cx.default_prevented();
+    }
+
+    // Modals often remain `present` during exit motion while `open=false` (non-interactive).
+    // Underlay focus can legitimately move during that window, so avoid restoring focus on
+    // unmount unless focus is still unset or still within the modal layer.
+    apply_modal_layer(ui, layer, false);
+
+    if !close_auto_focus_prevented {
+        let focus_now = ui.focus();
+        let focus_in_layer = focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer));
+        if (focus_now.is_none() || focus_in_layer)
+            && let Some(node) = focus_scope_prim::resolve_restore_focus_node(
+                ui,
+                app,
+                window,
+                trigger,
+                restore_focus,
+            )
+        {
+            ui.set_focus(Some(node));
+        }
+    }
+}
+
 fn prune_owned_overlay_entries<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -558,7 +668,102 @@ fn prune_owned_overlay_entries<H: UiHost>(
         return;
     }
 
+    let modal_barrier_active =
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .modals
+                .iter()
+                .any(|((w, _id), active)| *w == window && active.open)
+        });
+
     for action in &prune_actions {
+        match action.kind {
+            OwnedOverlayKind::Popover => {
+                let data =
+                    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                        let active = overlays.popovers.get(&action.key)?;
+                        let on_close_auto_focus = overlays
+                            .cached_popover_requests
+                            .get(&action.key)
+                            .and_then(|req| req.on_close_auto_focus.clone());
+                        Some((
+                            active.layer,
+                            active.trigger,
+                            active.consume_outside_pointer_events,
+                            active.restore_focus,
+                            active.close_auto_focus_handled,
+                            active.close_auto_focus_prevented,
+                            on_close_auto_focus,
+                        ))
+                    });
+                if let Some((
+                    layer,
+                    trigger,
+                    consume_outside_pointer_events,
+                    restore_focus,
+                    close_auto_focus_handled,
+                    close_auto_focus_prevented,
+                    on_close_auto_focus,
+                )) = data
+                {
+                    finalize_hidden_non_modal_overlay(
+                        ui,
+                        app,
+                        window,
+                        layer,
+                        trigger,
+                        consume_outside_pointer_events,
+                        restore_focus,
+                        close_auto_focus_handled,
+                        close_auto_focus_prevented,
+                        on_close_auto_focus,
+                        modal_barrier_active,
+                    );
+                }
+            }
+            OwnedOverlayKind::Modal => {
+                let data =
+                    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                        let active = overlays.modals.get(&action.key)?;
+                        let on_close_auto_focus = overlays
+                            .cached_modal_requests
+                            .get(&action.key)
+                            .and_then(|req| req.on_close_auto_focus.clone());
+                        Some((
+                            active.layer,
+                            active.trigger,
+                            active.restore_focus,
+                            active.close_auto_focus_handled,
+                            active.close_auto_focus_prevented,
+                            on_close_auto_focus,
+                        ))
+                    });
+                if let Some((
+                    layer,
+                    trigger,
+                    restore_focus,
+                    close_auto_focus_handled,
+                    close_auto_focus_prevented,
+                    on_close_auto_focus,
+                )) = data
+                {
+                    finalize_hidden_modal_overlay(
+                        ui,
+                        app,
+                        window,
+                        layer,
+                        action.key.1,
+                        trigger,
+                        restore_focus,
+                        close_auto_focus_handled,
+                        close_auto_focus_prevented,
+                        on_close_auto_focus,
+                    );
+                }
+            }
+            OwnedOverlayKind::Hover | OwnedOverlayKind::Tooltip | OwnedOverlayKind::ToastLayer => {}
+        }
+
         if let Some(layer) = action.layer {
             let _ = ui.remove_layer(services, layer);
         }
@@ -1618,70 +1823,19 @@ pub fn render<H: UiHost + 'static>(
     ) in to_hide_popovers
     {
         let was_visible = ui.is_layer_visible(layer);
-        let mut close_auto_focus_prevented = close_auto_focus_prevented;
-        if !close_auto_focus_handled && let Some(on_close_auto_focus) = on_close_auto_focus.as_ref()
-        {
-            let mut host = OverlayFocusActionHostAdapter { app, ui };
-            let mut req_cx = AutoFocusRequestCx::new();
-            on_close_auto_focus(
-                &mut host,
-                ActionCx {
-                    window,
-                    target: trigger,
-                },
-                &mut req_cx,
-            );
-            close_auto_focus_prevented = req_cx.default_prevented();
-        }
-
-        let focus_now = ui.focus();
-        let focus_in_layer = focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer));
-        let focus_cleared_by_modal_scope = modal_barrier_active && focus_now.is_none();
-
-        // Radix-aligned outcome for menu-like overlays (ADR 0069):
-        // when the overlay consumes outside pointer-down events (non-click-through), it's safe to
-        // always restore focus to the trigger on unmount (like modals).
-        if !close_auto_focus_prevented
-            && (consume_outside_pointer_events
-                || (focus_in_layer
-                    || (!focus_cleared_by_modal_scope
-                        && focus_scope_prim::should_restore_focus_for_non_modal_overlay(
-                            ui, layer,
-                        ))))
-        {
-            apply_non_modal_dismissible_layer(
-                ui,
-                layer,
-                false,
-                false,
-                NonModalDismissibleLayerPolicy {
-                    dismissable_branches: Vec::new(),
-                    consume_outside_pointer_events: false,
-                    disable_outside_pointer_events: false,
-                },
-            );
-            if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
-                ui,
-                app,
-                window,
-                Some(trigger),
-                restore_focus,
-            ) {
-                ui.set_focus(Some(node));
-            }
-        } else {
-            apply_non_modal_dismissible_layer(
-                ui,
-                layer,
-                false,
-                false,
-                NonModalDismissibleLayerPolicy {
-                    dismissable_branches: Vec::new(),
-                    consume_outside_pointer_events: false,
-                    disable_outside_pointer_events: false,
-                },
-            );
-        }
+        finalize_hidden_non_modal_overlay(
+            ui,
+            app,
+            window,
+            layer,
+            trigger,
+            consume_outside_pointer_events,
+            restore_focus,
+            close_auto_focus_handled,
+            close_auto_focus_prevented,
+            on_close_auto_focus,
+            modal_barrier_active,
+        );
 
         // When a non-modal overlay is hidden/unmounted, ensure the underlay repaints the region
         // previously covered by the overlay. Without an explicit paint invalidation, a damage-
@@ -1702,42 +1856,18 @@ pub fn render<H: UiHost + 'static>(
         on_close_auto_focus,
     ) in to_hide_modals
     {
-        let mut close_auto_focus_prevented = close_auto_focus_prevented;
-        if !close_auto_focus_handled && let Some(on_close_auto_focus) = on_close_auto_focus.as_ref()
-        {
-            let mut host = OverlayFocusActionHostAdapter { app, ui };
-            let mut req_cx = AutoFocusRequestCx::new();
-            on_close_auto_focus(
-                &mut host,
-                ActionCx {
-                    window,
-                    target: trigger.unwrap_or(modal_id),
-                },
-                &mut req_cx,
-            );
-            close_auto_focus_prevented = req_cx.default_prevented();
-        }
-
-        // Modals often remain `present` during exit motion while `open=false` (non-interactive).
-        // Underlay focus can legitimately move during that window, so avoid restoring focus on
-        // unmount unless focus is still unset or still within the modal layer.
-        apply_modal_layer(ui, layer, false);
-
-        if !close_auto_focus_prevented {
-            let focus_now = ui.focus();
-            let focus_in_layer = focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer));
-            if (focus_now.is_none() || focus_in_layer)
-                && let Some(node) = focus_scope_prim::resolve_restore_focus_node(
-                    ui,
-                    app,
-                    window,
-                    trigger,
-                    restore_focus,
-                )
-            {
-                ui.set_focus(Some(node));
-            }
-        }
+        finalize_hidden_modal_overlay(
+            ui,
+            app,
+            window,
+            layer,
+            modal_id,
+            trigger,
+            restore_focus,
+            close_auto_focus_handled,
+            close_auto_focus_prevented,
+            on_close_auto_focus,
+        );
     }
 
     for req in hover_overlay_requests {

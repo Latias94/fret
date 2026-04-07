@@ -991,8 +991,8 @@ mod tests {
                             ..Default::default()
                         },
                         move |cx| {
-                            let underlay = cx.pressable(
-                                PressableProps {
+                            let underlay = cx.container(
+                                fret_ui::element::ContainerProps {
                                     layout: {
                                         let mut layout = LayoutStyle::default();
                                         layout.position = PositionStyle::Absolute;
@@ -1002,11 +1002,9 @@ mod tests {
                                         layout.size.height = Length::Px(Px(40.0));
                                         layout
                                     },
-                                    enabled: true,
-                                    focusable: false,
                                     ..Default::default()
                                 },
-                                |_cx, _st| Vec::new(),
+                                |_cx| Vec::new(),
                             );
 
                             let trigger = cx.pressable_with_id(

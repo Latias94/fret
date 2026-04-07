@@ -16,6 +16,7 @@
 pub use crate::headless::tooltip_delay_group::{TooltipDelayGroupConfig, TooltipDelayGroupState};
 
 use std::cmp::Ordering;
+use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::{Point, PointerType, Px, Rect};
@@ -223,11 +224,17 @@ pub fn tooltip_trigger_update_gates<H: UiHost>(
         .copied()
         .unwrap_or(false);
 
-    let left_hover = cx.slot_state(TooltipTriggerHoverEdgeState::default, |st| {
-        let left = st.was_hovered && !hovered;
-        st.was_hovered = hovered;
-        left
-    });
+    let hover_edge_slot =
+        cx.keyed_slot_id_at(Location::caller(), "tooltip_trigger_hover_edge_state");
+    let left_hover = cx.state_for(
+        hover_edge_slot,
+        TooltipTriggerHoverEdgeState::default,
+        |st| {
+            let left = st.was_hovered && !hovered;
+            st.was_hovered = hovered;
+            left
+        },
+    );
 
     if left_hover && (has_pointer_move_opened || suppress_hover_open) {
         let _ = cx
@@ -655,9 +662,10 @@ pub fn tooltip_update_interaction<H: UiHost>(
     cfg: TooltipInteractionConfig,
 ) -> TooltipInteractionUpdate {
     let tooltip_id = cx.root_id();
-    let open_broadcast_slot = cx.slot_id();
-    let hover_intent_slot = cx.slot_id();
-    let focus_edge_slot = cx.slot_id();
+    let open_broadcast_slot =
+        cx.keyed_slot_id_at(Location::caller(), "tooltip_open_broadcast_state");
+    let hover_intent_slot = cx.keyed_slot_id_at(Location::caller(), "tooltip_hover_intent_state");
+    let focus_edge_slot = cx.keyed_slot_id_at(Location::caller(), "tooltip_focus_edge_state");
     let (last_id, token) = last_opened_tooltip(cx).unwrap_or((tooltip_id, 0));
     let should_close_because_other_opened = cx.state_for(
         open_broadcast_slot,

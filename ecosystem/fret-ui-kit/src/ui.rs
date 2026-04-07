@@ -41,17 +41,38 @@ where
 }
 
 fn flex_root_needs_fill_height(direction: Axis, layout: &LayoutRefinement) -> bool {
+    fn metric_ref_is_zero(metric: &crate::MetricRef) -> bool {
+        match metric {
+            crate::MetricRef::Px(px) => px.0.abs() <= f32::EPSILON,
+            crate::MetricRef::Token { key, fallback } => {
+                *key == crate::Space::N0.token_key()
+                    || matches!(fallback, crate::style::MetricFallback::Px(px) if px.0.abs() <= f32::EPSILON)
+            }
+        }
+    }
+
+    fn min_max_height_requests_fill(length: &crate::LengthRefinement) -> bool {
+        match length {
+            crate::LengthRefinement::Auto => false,
+            crate::LengthRefinement::Fill | crate::LengthRefinement::Fraction(_) => true,
+            // `min_h_0()` / `max_h_0()` are escape hatches for shrink/clamp behavior; they should
+            // not turn an otherwise auto-height stack into a fill-height flex root.
+            crate::LengthRefinement::Px(metric) => !metric_ref_is_zero(metric),
+        }
+    }
+
     let has_height_constraint = layout.size.as_ref().is_some_and(|size| {
         matches!(
             size.height,
             Some(LengthRefinement::Px(_) | LengthRefinement::Fraction(_) | LengthRefinement::Fill)
-        ) || matches!(
-            size.min_height,
-            Some(LengthRefinement::Px(_) | LengthRefinement::Fraction(_) | LengthRefinement::Fill)
-        ) || matches!(
-            size.max_height,
-            Some(LengthRefinement::Px(_) | LengthRefinement::Fraction(_) | LengthRefinement::Fill)
-        )
+        ) || size
+            .min_height
+            .as_ref()
+            .is_some_and(min_max_height_requests_fill)
+            || size
+                .max_height
+                .as_ref()
+                .is_some_and(min_max_height_requests_fill)
     });
     if has_height_constraint {
         return true;
@@ -1249,6 +1270,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> T,
     T: IntoUiElement<H>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Self {
             callsite,
@@ -2392,6 +2414,41 @@ mod tests {
                     assert!(
                         matches!(props.layout.size.height, Length::Fill),
                         "inner flex root should fill the constrained outer wrapper height"
+                    );
+                }
+                other => panic!("expected inner flex root, got {other:?}"),
+            }
+        });
+    }
+
+    #[test]
+    fn stack_box_min_h_0_keeps_inner_flex_root_auto_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = v_stack(|_cx| [text("hello")]).min_h_0().into_element(cx);
+
+            let inner = match &el.kind {
+                ElementKind::Container(props) => {
+                    assert_eq!(props.layout.size.min_height, Some(Length::Px(Px(0.0))));
+                    el.children
+                        .first()
+                        .expect("stack box container should wrap an inner flex root")
+                }
+                other => panic!("expected outer container wrapper, got {other:?}"),
+            };
+
+            match &inner.kind {
+                ElementKind::Flex(props) => {
+                    assert_eq!(
+                        props.layout.size.height,
+                        Length::Auto,
+                        "min_h_0 should not force the inner stack root to fill available height"
                     );
                 }
                 other => panic!("expected inner flex root, got {other:?}"),
