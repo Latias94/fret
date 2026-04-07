@@ -810,10 +810,15 @@ mod authoring_surface_policy_tests {
         assert!(TODO_DEMO.contains("let locals = TodoLocals::new(cx);"));
         assert!(TODO_DEMO.contains("locals.bind_actions(cx);"));
         assert!(TODO_DEMO.contains("draft: cx.state().local::<String>(),"));
-        assert!(TODO_DEMO.contains("filter: cx.state().local_init(|| TodoFilter::All),"));
+        assert!(normalized.contains(
+            "filter:cx.state().local_init(||Some(Arc::<str>::from(TodoFilter::All.value()))),"
+        ));
         assert!(TODO_DEMO.contains("next_id: cx.state().local_init(|| 4u64),"));
         assert!(TODO_DEMO.contains("todos: cx.state().local_init(|| {"));
         assert!(TODO_DEMO.contains("fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {"));
+        assert!(normalized.contains(
+            "letfilter_value=TodoFilter::from_value(locals.filter.layout_value(cx).as_deref());"
+        ));
         assert!(TODO_DEMO.contains(".setup(fret_icons_lucide::app::install)"));
         assert!(TODO_DEMO.contains(".window_min_size(TODO_WINDOW_MIN_SIZE)"));
         assert!(TODO_DEMO.contains(".window_position_logical(TODO_WINDOW_POSITION_LOGICAL)"));
@@ -842,14 +847,15 @@ mod authoring_surface_policy_tests {
             normalized
                 .contains(".test_id(TEST_ID_DRAFT).ui().shadow_sm().flex_1().min_w_0().build()")
         );
-        assert!(normalized.contains(".ui().px(Space::N3).h_px(Px(28.0)).build().action(action)"));
+        assert!(normalized.contains(
+            ".a11y_label(format!(\"Show{}tasks\",filter.label().to_lowercase())).test_id(test_id).refine_style(ChromeRefinement::default().rounded(Radius::Full)).refine_layout(fret_ui_kit::LayoutRefinement::default().h_px(Px(28.0)).min_h(Px(28.0)),)"
+        ));
         assert!(!TODO_DEMO.contains("footer_pill_chrome()"));
         assert!(!TODO_DEMO.contains("footer_pill_layout()"));
         assert!(TODO_DEMO.contains("ui::hover_region(move |cx, hovered| {"));
         assert!(TODO_DEMO.contains("ui::rich_text(rich)"));
         assert!(!TODO_DEMO.contains("HoverRegionProps"));
         assert!(!TODO_DEMO.contains("StyledTextProps"));
-        assert!(!TODO_DEMO.contains("LayoutRefinement"));
         assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
         assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
         assert!(!TODO_DEMO.contains("cx: &mut fret_ui::ElementContext<'_, App>,"));
@@ -2004,7 +2010,7 @@ mod authoring_surface_policy_tests {
                 ") -> impl IntoUiElement<KernelApp> + use<>",
                 "fn query_inputs_row(cx: &mut UiCx<'_>,",
                 "fn query_result_view(cx: &mut UiCx<'_>,",
-                "fn active_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> FetchMode",
+                "fn active_mode(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> FetchMode",
                 "fn status_badge(",
                 "diag: Option<&QueryDiag>",
                 ") -> impl IntoUiElement<KernelApp> + use<>",
@@ -2025,7 +2031,7 @@ mod authoring_surface_policy_tests {
                 "fn query_panel_for_mode(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, global_slow: bool, selected: QueryId, mode: FetchMode,) -> AnyElement",
                 "fn query_inputs_row(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, id: QueryId,) -> AnyElement",
                 "fn query_result_view(cx: &mut UiCx<'_>, theme: ThemeSnapshot, id: QueryId, key: QueryKey<Arc<str>>, state: &QueryState<Arc<str>>, snap: Option<&QuerySnapshotEntry>, policy: &QueryPolicy,) -> AnyElement",
-                "fn active_mode(cx: &mut ElementContext<'_, KernelApp>, st: &AsyncPlaygroundState) -> FetchMode",
+                "fn active_mode(cx: &mut ElementContext<'_, KernelApp>, locals: &AsyncPlaygroundLocals) -> FetchMode",
                 "fn status_badge(cx: &mut UiCx<'_>, diag: Option<&QueryDiag>) -> AnyElement",
                 "fn status_badge(cx: &mut ElementContext<'_, KernelApp>, diag: Option<&QueryDiag>) -> AnyElement",
                 "fn snapshot_entry_for_key(cx: &mut ElementContext<'_, KernelApp>,",
@@ -2311,9 +2317,10 @@ mod authoring_surface_policy_tests {
                 "let todos = locals.todos.layout_value(cx);",
                 "let draft_value = locals.draft.layout_value(cx);",
                 "draft: cx.state().local::<String>(),",
-                "filter: cx.state().local_init(|| TodoFilter::All),",
+                "filter: cx.state().local_init(|| Some(Arc::<str>::from(TodoFilter::All.value()))),",
                 "next_id: cx.state().local_init(|| 4u64),",
                 "todos: cx.state().local_init(|| {",
+                "let filter_value = TodoFilter::from_value(locals.filter.layout_value(cx).as_deref());",
                 ".locals_with((&self.draft, &self.next_id, &self.todos))",
                 ".on::<act::Add>(|tx, (draft, next_id, todos)| {",
                 "let text = tx.value(&draft).trim().to_string();",
@@ -2325,7 +2332,6 @@ mod authoring_surface_policy_tests {
                 ".payload_update_if::<act::Remove>(|rows, id| {",
                 "fn todo_row<'a, Cx>(",
                 "Cx: fret::app::ElementContextAccess<'a, App>,",
-                "let cx = cx.elements();",
             ],
             &[
                 "bind_todo_actions(",
@@ -2441,7 +2447,7 @@ mod authoring_surface_policy_tests {
                 "let select_mode_state = cx.state().local_init(|| None::<Arc<str>>);",
                 "let a_overlap_clicked_state = cx.state().local_init(|| false);",
                 "\"Window A\",",
-                "open_a_state.model(),",
+                ".with_open(open_a_state.model())",
                 "let clicked = a_overlap_clicked_state.paint_value_in(cx);",
                 "\"Mode\",",
                 "select_mode_state.model(),",
@@ -3057,7 +3063,7 @@ mod authoring_surface_policy_tests {
                 ".selector_model_paint(&editor_gradient_stops_model,",
                 ".selector_model_paint(&m.target, |target| target)",
                 "let shared = cx.data().selector_model_paint(",
-                "(&name_model, &drag_value_model, &slider_model, &enabled_model, &shading_model,)",
+                "(&name_model, &drag_value_model, &slider_model, &enabled_model, &shading_model, &gradient_angle_model, &gradient_stops_model,)",
             ],
             &[
                 "let query = cx.watch_model(&editor_name_assist_model)",

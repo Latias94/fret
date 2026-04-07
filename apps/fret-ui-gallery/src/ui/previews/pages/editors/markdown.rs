@@ -179,7 +179,8 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                         "Soft wrap: off"
                     }),
                 ]
-            }),
+            })
+            .into_element(cx),
             {
                 let folds_caret_handle = header_handle.clone();
                 doc_layout::wrap_controls_row(cx, theme, Space::N2, move |cx| {
@@ -277,6 +278,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                         }),
                     ]
                 })
+                .into_element(cx)
             },
             ui::h_row(move |cx| {
                 let inject = {

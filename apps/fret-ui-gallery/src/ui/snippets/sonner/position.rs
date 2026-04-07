@@ -8,9 +8,18 @@ use super::{
 };
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
-use fret_ui::element::SemanticsDecoration;
+use fret_ui::UiHost;
+use fret_ui::element::{AnyElement, SemanticsDecoration};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
+
+fn wrap_controls_row<H: UiHost>(
+    gap: Space,
+    children: Vec<AnyElement>,
+) -> impl IntoUiElement<H> + use<H> {
+    preview_controls_row::<H>(gap, children)
+}
 
 fn toast_position_key(position: shadcn::ToastPosition) -> &'static str {
     match position {
@@ -81,7 +90,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::ToastPosition::TopRight,
         ),
     ];
-    let top_row = preview_controls_row::<fret_app::App>(Space::N2, top_children).into_element(cx);
+    let top_row = wrap_controls_row::<fret_app::App>(Space::N2, top_children).into_element(cx);
 
     let bottom_children = vec![
         action_button(
@@ -104,7 +113,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ),
     ];
     let bottom_row =
-        preview_controls_row::<fret_app::App>(Space::N2, bottom_children).into_element(cx);
+        wrap_controls_row::<fret_app::App>(Space::N2, bottom_children).into_element(cx);
 
     preview_stack::<fret_app::App>(
         Space::N3,

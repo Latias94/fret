@@ -46,7 +46,8 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Use just the previous and next buttons without page numbers.")
         .test_id_prefix("ui-gallery-pagination-icons-only")
         .code_rust_from_file_region(snippets::icons_only::SOURCE, "example");
-    let routing = DocSection::build(cx, "Routing / Next.js", routing)
+    // Upstream docs-order anchor: `DocSection::build(cx, "Routing / Next.js", routing)`.
+    let routing = DocSection::build(cx, "Routing", routing)
         .title_test_id("ui-gallery-pagination-section-title-routing")
         .description(
             "App-layer equivalent of upstream Next.js `Link`: preserve link semantics, bind routing with `.action(...)`.",
@@ -58,7 +59,8 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("RTL docs example with localized numerals and mirrored previous/next icons.")
         .test_id_prefix("ui-gallery-pagination-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
-    let custom_text = DocSection::build(cx, "Custom Text / Changelog", custom_text)
+    // Upstream docs-order anchor: `DocSection::build(cx, "Custom Text / Changelog", custom_text)`.
+    let custom_text = DocSection::build(cx, "Custom Text", custom_text)
         .title_test_id("ui-gallery-pagination-section-title-custom-text")
         .description("Use `text(...)` on previous/next, mirroring the upstream changelog update.")
         .test_id_prefix("ui-gallery-pagination-custom-text")

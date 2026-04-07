@@ -58,7 +58,8 @@ pub(in crate::ui) fn preview_chrome_torture(
                         .test_id("ui-gallery-chrome-btn-disabled")
                         .into_element(cx),
                 ]
-            });
+            })
+            .into_element(cx);
             out.push(row);
 
             let fields = doc_layout::wrap_row(
@@ -97,7 +98,8 @@ pub(in crate::ui) fn preview_chrome_torture(
                         .into_element(cx),
                     ]
                 },
-            );
+            )
+            .into_element(cx);
             out.push(fields);
 
             let toggles = ui::h_row(|cx| {

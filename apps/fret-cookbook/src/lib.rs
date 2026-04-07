@@ -698,7 +698,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn shared_scaffold_prefers_explicit_app_context_access_for_cookbook_page_shells() {
         assert!(SCAFFOLD.contains("use fret::app::prelude::*;"));
-        assert!(SCAFFOLD.contains("use fret::style::{ColorRef, Space, Theme};"));
+        assert!(SCAFFOLD.contains("use fret::style::{ColorRef, Space};"));
         assert!(SCAFFOLD.contains("Cx: fret::app::ElementContextAccess<'a, App>"));
         assert!(SCAFFOLD.contains("B: UiChild"));
         assert!(SCAFFOLD.contains("let theme = cx.elements().theme().snapshot();"));
@@ -805,7 +805,9 @@ mod authoring_surface_policy_tests {
 
         assert!(EFFECTS_LAYER_EXAMPLE.contains("UiCx<'_>"));
         assert!(EFFECTS_LAYER_EXAMPLE.contains("use fret::component::prelude::*;"));
-        assert!(EFFECTS_LAYER_EXAMPLE.contains("cx.actions().models::<act::Pixelate>"));
+        assert!(
+            EFFECTS_LAYER_EXAMPLE.contains("ui::effect_layer(EffectMode::FilterContent, chain")
+        );
 
         assert!(DROP_SHADOW_EXAMPLE.contains("UiCx<'_>"));
         assert!(DROP_SHADOW_EXAMPLE.contains("DropShadowV1"));
@@ -1008,14 +1010,8 @@ mod authoring_surface_policy_tests {
     fn advanced_helper_contexts_prefer_uicx_aliases() {
         assert_advanced_helpers_prefer_uicx(
             EFFECTS_LAYER_EXAMPLE,
-            &[
-                "let button = |_cx: &mut UiCx<'_>,",
-                "let tile = |_cx: &mut UiCx<'_>, color: ColorRef|",
-            ],
-            &[
-                "let button = |_cx: &mut ElementContext<'_, KernelApp>,",
-                "let tile = |_cx: &mut ElementContext<'_, KernelApp>, color: ColorRef|",
-            ],
+            &["let tile = |_cx: &mut UiCx<'_>, color: ColorRef|"],
+            &["let tile = |_cx: &mut ElementContext<'_, KernelApp>, color: ColorRef|"],
         );
 
         assert_advanced_helpers_prefer_uicx(

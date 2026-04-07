@@ -358,7 +358,8 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                  "Inlays: off"
                              }),
                         ]
-                    }),
+                    })
+                    .into_element(cx),
                 ui::h_row(move |cx| {
                         let mode_handle = header_handle_mode.clone();
                         let edit_handle = header_handle_mode.clone();

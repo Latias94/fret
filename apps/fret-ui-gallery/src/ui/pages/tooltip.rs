@@ -18,6 +18,7 @@ pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Tooltip::new(cx, trigger, content)` already acts as the default copyable root lane and covers the upstream nested `<Tooltip><TooltipTrigger /><TooltipContent /></Tooltip>` composition plus the `TooltipTrigger asChild` custom-trigger story, because `trigger` can be any landed or late-landed element.",
         "`TooltipProvider` owns shared delay-group policy, while `Tooltip::open_delay(...)`, `close_delay(...)`, `track_cursor_axis(...)`, and `anchor_element(...)` stay available as explicit root-level tuning seams.",
         "`TooltipTrigger::build(...)` and `TooltipContent::build(cx, ...)` cover the typed compound-parts lane for copyable first-party snippets, while `TooltipContent::new([...])` remains the landed-content follow-up when you already own the children.",
+        "No extra generic `children([...])` / `compose()` root API is currently warranted: tooltip root only needs trigger/content, and `Tooltip::new(...)` already models that contract without hidden collection or scope state.",
         "No extra generic `children([...])` / `compose()` / `asChild` root API is currently warranted: tooltip root only needs trigger/content, and `Tooltip::new(...)` already models that contract without hidden collection or scope state.",
     ]);
     let notes = doc_layout::notes_block([

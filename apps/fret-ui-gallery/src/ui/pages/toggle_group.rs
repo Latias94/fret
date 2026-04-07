@@ -25,6 +25,7 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "Reference stack for this page: shadcn Toggle Group docs, the default registry recipe, Radix Primitives Toggle Group, and Base UI Toggle Group.",
         "The upstream docs-path examples come from the default shadcn demo/outline/sm/lg/spacing set plus the vertical, font-weight-selector, and RTL examples.",
+        "Source anchors for that docs path: `toggle-group-demo.tsx`, `toggle-group-outline.tsx`, `toggle-group-sm.tsx`, `toggle-group-lg.tsx`, `toggle-group-spacing.tsx`, `toggle-group-vertical.tsx`, `toggle-group-font-weight-selector.tsx`, and `toggle-group-rtl.tsx`.",
         "`fret_ui_kit::primitives::toggle_group` already covers the mechanism lane (single/multiple state, roving focus, and control-id focus forwarding), so the remaining parity work here is docs/recipe alignment rather than a `fret-ui` contract gap.",
         "`ToggleGroup::single(...)`, `ToggleGroup::multiple(...)`, and their uncontrolled constructors plus `.items([...])` cover the documented docs-path root surface.",
         "`toggle_group_single(...)`, `toggle_group_single_uncontrolled(...)`, `toggle_group_multiple(...)`, and `toggle_group_multiple_uncontrolled(...)` are the builder-preserving composable-children lane when callers want to assemble items inside a closure without landing early.",

@@ -2,15 +2,13 @@ use std::sync::Arc;
 
 use fret::app::LocalState;
 use fret::app::prelude::*;
-use fret::icons::IconId;
-use fret::shadcn::raw::icon;
+use fret::icons::{IconId, icon};
 use fret::style::{ChromeRefinement, ColorRef, Radius, Space, Theme, ThemeSnapshot};
 use fret_core::scene::DashPatternV1;
 use fret_core::{
     AttributedText, Color, Corners, DecorationLineStyle, Px, StrikethroughStyle, TextPaintStyle,
     TextSpan,
 };
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::AnyElement;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -161,6 +159,7 @@ impl TodoFilter {
 
 struct TodoLocals {
     draft: LocalState<String>,
+    filter: LocalState<Option<Arc<str>>>,
     next_id: LocalState<u64>,
     todos: LocalState<Vec<TodoRow>>,
 }
@@ -169,6 +168,9 @@ impl TodoLocals {
     fn new(cx: &mut AppUi<'_, '_>) -> Self {
         Self {
             draft: cx.state().local::<String>(),
+            filter: cx
+                .state()
+                .local_init(|| Some(Arc::<str>::from(TodoFilter::All.value()))),
             next_id: cx.state().local_init(|| 4u64),
             todos: cx.state().local_init(|| {
                 vec![
@@ -248,17 +250,11 @@ impl TodoLocals {
     }
 }
 
-struct TodoDemoView {
-    filter: Model<Option<Arc<str>>>,
-}
+struct TodoDemoView;
 
 impl View for TodoDemoView {
-    fn init(app: &mut App, _window: WindowId) -> Self {
-        Self {
-            filter: app
-                .models_mut()
-                .insert(Some(Arc::from(TodoFilter::All.value()))),
-        }
+    fn init(_app: &mut App, _window: WindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
@@ -281,12 +277,7 @@ impl View for TodoDemoView {
 
         let todos = locals.todos.layout_value(cx);
         let draft_value = locals.draft.layout_value(cx);
-        let filter_value = TodoFilter::from_value(
-            cx.watch_model(&self.filter)
-                .layout()
-                .value_or(Some(Arc::<str>::from(TodoFilter::All.value())))
-                .as_deref(),
-        );
+        let filter_value = TodoFilter::from_value(locals.filter.layout_value(cx).as_deref());
 
         let filtered_todos: Vec<TodoRow> = todos
             .iter()
@@ -537,7 +528,7 @@ impl View for TodoDemoView {
             .flex_1()
             .min_h_0();
 
-        let filters = filter_group(cx, self.filter.clone(), theme.clone());
+        let filters = filter_group(cx, &locals.filter, theme.clone());
 
         let clear_done_btn = shadcn::Button::new("Clear completed")
             .variant(shadcn::ButtonVariant::Ghost)
@@ -665,13 +656,13 @@ fn todo_page(
 
 fn filter_group<'a, Cx>(
     cx: &mut Cx,
-    filter: Model<Option<Arc<str>>>,
+    filter: &LocalState<Option<Arc<str>>>,
     theme: ThemeSnapshot,
 ) -> AnyElement
 where
     Cx: fret::app::ElementContextAccess<'a, App>,
 {
-    let style = fret::shadcn::raw::toggle_group::ToggleGroupStyle::default()
+    let style = shadcn::ToggleGroupStyle::default()
         .item_background(
             WidgetStateProperty::new(None)
                 .when(
@@ -923,8 +914,8 @@ fn todo_card_footer_section(
 fn subtle_destructive_button_style(
     muted_foreground: Color,
     destructive: Color,
-) -> shadcn::raw::button::ButtonStyle {
-    shadcn::raw::button::ButtonStyle::default()
+) -> shadcn::ButtonStyle {
+    shadcn::ButtonStyle::default()
         .background(
             WidgetStateProperty::new(Some(ColorRef::Color(Color::TRANSPARENT)))
                 .when(
@@ -1224,11 +1215,7 @@ mod tests {
         ui.set_view_cache_enabled(true);
         let mut services = FakeUiServices;
         let mut root_state = AppUiRenderRootState::default();
-        let mut view = TodoDemoView {
-            filter: app
-                .models_mut()
-                .insert(Some(Arc::from(TodoFilter::All.value()))),
-        };
+        let mut view = TodoDemoView;
 
         let frame1 = render_todo_demo_snapshot_for_frame(
             &mut app,
@@ -1304,11 +1291,7 @@ mod tests {
         ui.set_view_cache_enabled(true);
         let mut services = FakeUiServices;
         let mut root_state = AppUiRenderRootState::default();
-        let mut view = TodoDemoView {
-            filter: app
-                .models_mut()
-                .insert(Some(Arc::from(TodoFilter::All.value()))),
-        };
+        let mut view = TodoDemoView;
 
         let _frame1 = render_todo_demo_snapshot_for_frame(
             &mut app,
@@ -1386,11 +1369,7 @@ mod tests {
         ui.set_view_cache_enabled(true);
         let mut services = FakeUiServices;
         let mut root_state = AppUiRenderRootState::default();
-        let mut view = TodoDemoView {
-            filter: app
-                .models_mut()
-                .insert(Some(Arc::from(TodoFilter::All.value()))),
-        };
+        let mut view = TodoDemoView;
 
         let mut last_snapshot = None;
         for frame_id in 1..=22 {

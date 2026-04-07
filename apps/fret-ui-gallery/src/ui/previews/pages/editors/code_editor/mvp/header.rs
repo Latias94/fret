@@ -100,7 +100,8 @@ pub(super) fn build_header(
                             "Soft wrap: off"
                         }),
                     ]
-                }),
+                })
+                .into_element(cx),
                 cx.keyed("word-boundary-gate", |cx| {
                     gates::word_boundary_gate(cx, theme, word_gate_handle.clone())
                         .into_element(cx)

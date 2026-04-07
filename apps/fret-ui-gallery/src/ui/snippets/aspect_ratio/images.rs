@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 pub const SOURCE: &str = include_str!("images.rs");
 
-use crate::driver::demo_assets;
+use crate::demo_assets;
 use fret::assets::AssetRequest;
 use fret_core::ImageId;
 use fret_ui::{ElementContext, UiHost};

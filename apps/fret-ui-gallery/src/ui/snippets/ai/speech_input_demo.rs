@@ -75,14 +75,14 @@ fn fill_text_layout() -> LayoutStyle {
 
 fn body_text(
     cx: &mut UiCx<'_>,
-    text: Arc<str>,
+    text: impl Into<Arc<str>>,
     style: TextStyle,
     color: Color,
     align: TextAlign,
 ) -> impl UiChild + use<> {
     cx.text_props(TextProps {
         layout: fill_text_layout(),
-        text,
+        text: text.into(),
         style: Some(style),
         color: Some(color),
         wrap: TextWrap::WordBreak,

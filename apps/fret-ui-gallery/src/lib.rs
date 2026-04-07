@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused)]
 
+mod demo_assets;
 mod driver;
 mod harness;
 mod spec;

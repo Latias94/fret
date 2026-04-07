@@ -11,7 +11,7 @@ fn slider_page_documents_source_axes_and_children_api_decision() {
         "Example axis: shadcn slider demo, range, multiple-thumbs, vertical, controlled, disabled, and RTL examples.",
         "Recipe axis: the default shadcn registry slider plus the base and radix registry variants.",
         "The upstream docs surface intentionally splits the top-of-page preview (`[75]`) from the `Usage` code block (`[33]`), so this page mirrors those two lanes instead of normalizing them to one demo value.",
-        "Slider already exposes the important authoring surface (`new`, `new_controllable`, range/step/orientation/on_value_commit), so the main parity gap here is usage clarity rather than missing composition APIs.",
+        "Default first-party teaching should prefer `slider(model)`, while `new_controllable(...)` stays as the builder-preserving bridge for the upstream `defaultValue` lane and element-owned state.",
         "generic composable children / `compose()` API",
         "Base UI's `Slider.Root/Label/Value/Control/Track/Indicator/Thumb` family is a useful headless reference, but it belongs to a future `fret-ui-kit`-level surface rather than the `fret-ui-shadcn::Slider` recipe.",
         "Vertical sliders keep the upstream `min-h-44` floor; examples can still pass an explicit height to bound the docs lane, but values below the floor clamp upward unless the caller asks for something taller.",

@@ -6,9 +6,18 @@ pub const SOURCE: &str = include_str!("extras.rs");
 use super::{last_action_model, message_request, preview_controls_row, preview_frame, request};
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
-use fret_ui::element::SemanticsDecoration;
+use fret_ui::UiHost;
+use fret_ui::element::{AnyElement, SemanticsDecoration};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
+
+fn wrap_controls_row<H: UiHost>(
+    gap: Space,
+    children: Vec<AnyElement>,
+) -> impl IntoUiElement<H> + use<H> {
+    preview_controls_row::<H>(gap, children)
+}
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let sonner = shadcn::Sonner::global(&mut *cx.app);
@@ -83,7 +92,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .test_id("ui-gallery-sonner-demo-show-swipe")
         .into_element(cx);
 
-    preview_frame::<fret_app::App, _>(preview_controls_row::<fret_app::App>(
+    preview_frame::<fret_app::App, _>(wrap_controls_row::<fret_app::App>(
         Space::N2,
         vec![action, cancel, swipe],
     ))

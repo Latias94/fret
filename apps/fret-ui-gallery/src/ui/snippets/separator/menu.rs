@@ -10,7 +10,6 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn section<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    test_id: &'static str,
     title: &'static str,
     description: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
@@ -32,7 +31,6 @@ fn section<H: UiHost>(
     .gap(Space::N1)
     .items_start()
     .into_element(cx)
-    .test_id(test_id)
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -45,24 +43,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     ui::h_flex(|cx| {
         let mut children = vec![
-            section(
-                cx,
-                "ui-gallery-separator-menu-settings",
-                "Settings",
-                "Manage preferences",
-            )
-            .into_element(cx),
+            section(cx, "Settings", "Manage preferences")
+                .into_element(cx)
+                .test_id("ui-gallery-separator-menu-settings"),
             shadcn::Separator::new()
                 .orientation(shadcn::SeparatorOrientation::Vertical)
                 .into_element(cx)
                 .test_id("ui-gallery-separator-menu-divider-primary"),
-            section(
-                cx,
-                "ui-gallery-separator-menu-account",
-                "Account",
-                "Profile & security",
-            )
-            .into_element(cx),
+            section(cx, "Account", "Profile & security")
+                .into_element(cx)
+                .test_id("ui-gallery-separator-menu-account"),
         ];
 
         if is_md {
@@ -73,13 +63,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-separator-menu-divider-secondary"),
             );
             children.push(
-                section(
-                    cx,
-                    "ui-gallery-separator-menu-help",
-                    "Help",
-                    "Support & docs",
-                )
-                .into_element(cx),
+                section(cx, "Help", "Support & docs")
+                    .into_element(cx)
+                    .test_id("ui-gallery-separator-menu-help"),
             );
         }
 

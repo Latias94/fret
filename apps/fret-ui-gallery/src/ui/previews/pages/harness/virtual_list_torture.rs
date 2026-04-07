@@ -133,6 +133,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                     .into_element(cx),
             ]
         })
+        .into_element(cx)
     });
 
     let editing_indicator = (!minimal_harness).then(|| {

@@ -9,10 +9,19 @@ use super::{
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
+use fret_ui::UiHost;
 use fret_ui::action::{ActionCx, UiActionHost};
-use fret_ui::element::SemanticsDecoration;
+use fret_ui::element::{AnyElement, SemanticsDecoration};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
+
+fn wrap_controls_row<H: UiHost>(
+    gap: Space,
+    children: Vec<AnyElement>,
+) -> impl IntoUiElement<H> + use<H> {
+    preview_controls_row::<H>(gap, children)
+}
 
 fn type_button(
     cx: &mut UiCx<'_>,
@@ -200,7 +209,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .flatten()
         .is_some();
 
-    let buttons = preview_controls_row::<fret_app::App>(
+    let buttons = wrap_controls_row::<fret_app::App>(
         Space::N2,
         vec![
             default_button,

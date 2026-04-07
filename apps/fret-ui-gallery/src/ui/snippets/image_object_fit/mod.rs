@@ -1,6 +1,6 @@
 //! Snippet-backed `MediaImage` object-fit examples for UI Gallery.
 
-use crate::driver::demo_assets;
+use crate::demo_assets;
 use fret::UiCx;
 use fret_core::ImageId;
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;

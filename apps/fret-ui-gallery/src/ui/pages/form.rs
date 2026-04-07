@@ -23,7 +23,7 @@ pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::upstream_demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .description(
-            "Copyable minimal usage for the framework-agnostic `Form` + `FormField` surface, including field-level `required` ownership on `FormField::required(true)` and wrapper-owned invalid decoration from `FormState`.",
+            "Copyable minimal usage for the framework-agnostic `Form` + `FormField` surface, including field-level `required` ownership on `FormField::required(true)`, keeping field-level required semantics on `FormField`, and wrapper-owned invalid decoration from `FormState`.",
         )
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let demo = DocSection::build(cx, "Demo", demo)

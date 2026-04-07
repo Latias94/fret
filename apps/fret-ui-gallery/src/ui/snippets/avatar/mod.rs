@@ -6,7 +6,7 @@
 //!
 //! Keep `ui-gallery-avatar-*` `test_id`s stable: diag scripts depend on them.
 
-use crate::driver::demo_assets;
+use crate::demo_assets;
 use fret_core::ImageId;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("persona_demo.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use std::sync::Arc;
 
 use fret::{UiChild, UiCx};
@@ -129,6 +130,29 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .w_full()
         .into_element(cx);
 
+    let reset_state = state_model.clone();
+    let reset_variant = variant_model.clone();
+    let reset = shadcn::Button::new("Reset")
+        .variant(shadcn::ButtonVariant::Ghost)
+        .size(shadcn::ButtonSize::Sm)
+        .on_activate(cx.actions().listen(move |host, action_cx| {
+            let _ = host.models_mut().update(&reset_state, |value| {
+                *value = Some(Arc::<str>::from(ui_ai::PersonaState::Idle.as_str()));
+            });
+            let _ = host.models_mut().update(&reset_variant, |value| {
+                *value = Some(Arc::<str>::from(ui_ai::PersonaVariant::Obsidian.as_str()));
+            });
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        }))
+        .test_id("ui-ai-persona-demo-reset")
+        .into_element(cx);
+
+    let reset = ui::h_row(move |_cx| [reset])
+        .justify_center()
+        .w_full()
+        .into_element(cx);
+
     let preview = ui::v_flex(move |cx| {
         vec![
             ui_ai::Persona::new(current_state)
@@ -171,7 +195,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let shell = cx
         .container(shell_props, move |_cx| {
-            [preview, state_controls, variant_controls]
+            [preview, state_controls, variant_controls, reset]
         })
         .test_id("ui-ai-persona-demo-shell");
 
