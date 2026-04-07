@@ -23,9 +23,9 @@ Long-term, ecosystem crates may move to a separate components repository.
 - **Viewport-heavy apps**: embed one or more GPU viewports (render targets) inside a UI.
 - **Web demos/apps** via wasm (WebGPU path).
 
-Advanced capability surface (`embedded_viewport_demo`):
+Representative ecosystem surface (`fret-ui-gallery`, Table page):
 
-![Fret Embedded Viewport Demo screenshot](screenshots/embedded-viewport-demo.png)
+![Fret UI Gallery Table screenshot](screenshots/table.png)
 
 ## Why Fret (high-signal features)
 
@@ -209,15 +209,11 @@ Reference implementation:
 
 Default-path demo surface (`todo_demo`):
 
-![Fret Todo Demo screenshot](screenshots/todo-demo.png)
+![Fret Todo Demo screenshot](screenshots/todo_demo.png)
 
 ## Ecosystem Coverage (Incubating)
 
 Fret keeps stable boundaries in `crates/` and incubates faster-moving pieces in `ecosystem/`.
-
-Representative UI Gallery recipe surface (`fret-ui-gallery`, Command page):
-
-![Fret UI Gallery Command screenshot](screenshots/ui-gallery-command.png)
 
 - Component systems:
   - [`fret-ui-kit`](./ecosystem/fret-ui-kit)
