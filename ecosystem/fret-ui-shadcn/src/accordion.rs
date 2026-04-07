@@ -877,6 +877,15 @@ pub mod composable {
             self
         }
 
+        /// Adds accordion items through the typed compound-children lane.
+        ///
+        /// This is an alias for `items(...)` that keeps first-party docs/examples closer to the
+        /// upstream compound component shape without widening the surface to untyped children.
+        pub fn children(mut self, children: impl IntoIterator<Item = AccordionItem>) -> Self {
+            self.items.extend(children);
+            self
+        }
+
         pub fn items(mut self, items: impl IntoIterator<Item = AccordionItem>) -> Self {
             self.items.extend(items);
             self
