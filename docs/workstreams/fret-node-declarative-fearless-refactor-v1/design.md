@@ -371,6 +371,9 @@ Status note (2026-04-03):
   `ui/overlays/minimap_projection.rs` seam, so world-bounds union, project/unproject transforms,
   and center-pan math live behind one focused authority instead of staying embedded in the overlay
   widget file.
+- Retained blackboard layout and hit-testing now also route through the private
+  `ui/overlays/blackboard_layout.rs` seam, so panel/header/row geometry plus action hit detection
+  live behind one focused authority instead of staying embedded in the overlay widget file.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

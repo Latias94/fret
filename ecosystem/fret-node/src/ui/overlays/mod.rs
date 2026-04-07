@@ -4,6 +4,7 @@
 //! asset. They are hosted outside the canvas render transform (ADR 0126) so they can use regular
 //! `fret-ui` widgets (focus, IME, clipboard, semantics).
 mod blackboard;
+mod blackboard_layout;
 mod blackboard_policy;
 mod controls;
 mod controls_policy;
