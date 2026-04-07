@@ -107,16 +107,13 @@ impl NodeGraphBlackboardOverlay {
     }
 
     fn submit_transaction<H: fret_ui::UiHost>(&self, host: &mut H, tx: &GraphTransaction) {
-        if let Some(controller) = &self.controller {
-            let _ = controller.submit_transaction_and_sync_graph_model(host, &self.graph, tx);
-            return;
-        }
-
-        if let Some(edits) = &self.edits {
-            let _ = edits.update(host, |q, _cx| {
-                q.push(tx.clone());
-            });
-        }
+        crate::ui::retained_submit::submit_graph_transaction(
+            host,
+            self.controller.as_ref(),
+            self.edits.as_ref(),
+            &self.graph,
+            tx,
+        );
     }
 
     fn row_height_px(&self) -> f32 {

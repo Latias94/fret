@@ -610,6 +610,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     Tab-navigation suppression, edge double-click preflight, motion/auto-pan tick guards, and
     retained `view_interacting(...)` all reuse one `context_menu || searcher` authority instead of
     re-embedding that overlay-session policy across multiple runtime files.
+  - Progress: retained portal/overlay transaction fallback now also routes through the private
+    `ui/retained_submit.rs` seam, so portal command commits plus blackboard/group-rename overlays
+    share one controller-first vs edit-queue fallback policy instead of duplicating that
+    compatibility branch inline.
   - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
     `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
     instead of staying duplicated in both the wrapper and the searcher submodule.

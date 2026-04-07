@@ -347,6 +347,10 @@ Status note (2026-04-03):
   Tab-navigation suppression, edge double-click preflight, motion/auto-pan tick guards, and
   retained `view_interacting(...)` all reuse one `context_menu || searcher` authority instead of
   re-embedding that overlay-session policy inline.
+- Retained portal/overlay transaction fallback now also routes through the private
+  `ui/retained_submit.rs` seam, so portal command commits plus blackboard/group-rename overlays
+  share one controller-first vs edit-queue fallback policy instead of duplicating that
+  compatibility branch inline.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.
