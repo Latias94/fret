@@ -367,6 +367,10 @@ Status note (2026-04-03):
   `ui/overlays/panel_pointer_policy.rs` seam, so controls and blackboard overlays share one hover
   sync plus press-on-down / activate-on-matching-up authority instead of each re-embedding that
   pointer-state policy inline.
+- Retained minimap projection math now also routes through the private
+  `ui/overlays/minimap_projection.rs` seam, so world-bounds union, project/unproject transforms,
+  and center-pan math live behind one focused authority instead of staying embedded in the overlay
+  widget file.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.
