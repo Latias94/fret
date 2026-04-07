@@ -1612,7 +1612,7 @@ impl Gizmo {
                 if axis_dir.length_squared() == 0.0 {
                     return None;
                 }
-                let plane_normal = axis_drag_plane_normal(
+                let plane_normal = axis_drag_plane_normal_facing_camera(
                     view_projection,
                     viewport,
                     self.config.depth_range,
