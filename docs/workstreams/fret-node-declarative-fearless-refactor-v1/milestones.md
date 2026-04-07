@@ -1495,6 +1495,10 @@ real editors.
   `ui/overlays/rename_host_event.rs` seam, so Enter/Escape commit-vs-close routing plus
   controller-first submit/close ordering live behind one focused authority instead of staying
   embedded in the rename host widget file.
+- Retained minimap drag planning now also routes through the private
+  `ui/overlays/minimap_drag_policy.rs` seam, so pointer-down recentering and drag-pan delta
+  planning live behind one focused authority instead of staying embedded in the overlay widget
+  file.
 - The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
   `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
   seam instead of remaining duplicated across both wrapper and submodule entrypoints.

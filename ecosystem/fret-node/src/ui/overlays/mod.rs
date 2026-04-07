@@ -11,6 +11,7 @@ mod controls_layout;
 mod controls_policy;
 mod group_rename;
 mod minimap;
+mod minimap_drag_policy;
 mod minimap_navigation_policy;
 mod minimap_policy;
 mod minimap_projection;

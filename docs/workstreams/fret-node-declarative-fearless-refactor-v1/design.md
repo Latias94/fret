@@ -388,6 +388,10 @@ Status note (2026-04-03):
   `ui/overlays/rename_host_event.rs` seam, so Enter/Escape commit-vs-close routing plus
   controller-first submit/close ordering live behind one focused authority instead of staying
   embedded in the rename host widget file.
+- Retained minimap drag planning now also routes through the private
+  `ui/overlays/minimap_drag_policy.rs` seam, so pointer-down recentering and drag-pan delta
+  planning live behind one focused authority instead of staying embedded in the overlay widget
+  file.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

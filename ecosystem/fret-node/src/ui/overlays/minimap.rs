@@ -16,6 +16,7 @@ use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
 use crate::ui::{NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphStyle};
 
 use super::OverlayPlacement;
+use super::minimap_drag_policy::{plan_minimap_drag_pan, plan_minimap_drag_start};
 use super::minimap_navigation_policy::{
     NodeGraphMiniMapBindings, NodeGraphMiniMapNavigationBinding, apply_minimap_viewport_update,
     normalize_minimap_navigation_zoom,
@@ -24,10 +25,7 @@ use super::minimap_policy::{
     MiniMapKeyboardAction, minimap_keyboard_action_from_key, plan_minimap_keyboard_pan,
     plan_minimap_keyboard_zoom,
 };
-use super::minimap_projection::{
-    minimap_world_bounds, pan_to_center_canvas_point, project_world_rect_to_minimap,
-    unproject_minimap_point,
-};
+use super::minimap_projection::{minimap_world_bounds, project_world_rect_to_minimap};
 
 #[derive(Debug, Clone)]
 struct MiniMapDragState {
@@ -281,30 +279,29 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                 let snapshot = self.internals.snapshot();
                 let canvas_bounds = Self::canvas_bounds_from_internals(&snapshot);
                 let world = self.compute_world_bounds(canvas_bounds, &snapshot);
-                let Some(canvas_pt) = unproject_minimap_point(minimap, world, *position) else {
-                    return;
-                };
-
-                let zoom = snapshot.transform.zoom;
                 let viewport = self.canvas_bounds_from_internals_and_view(canvas_bounds, &snapshot);
-                let viewport_rr = project_world_rect_to_minimap(minimap, world, viewport);
-
                 let current_pan = self
                     .view_state
                     .read_ref(cx.app, |s| s.pan)
                     .ok()
                     .unwrap_or_default();
-
-                let start_pan = if viewport_rr.contains(*position) {
-                    current_pan
-                } else {
-                    let new_pan = pan_to_center_canvas_point(canvas_bounds, zoom, canvas_pt);
-                    self.update_pan(cx.app, new_pan);
-                    new_pan
+                let Some(plan) = plan_minimap_drag_start(
+                    minimap,
+                    world,
+                    viewport,
+                    *position,
+                    current_pan,
+                    snapshot.transform.zoom,
+                    canvas_bounds,
+                ) else {
+                    return;
                 };
+                if let Some(pan) = plan.immediate_pan {
+                    self.update_pan(cx.app, pan);
+                }
                 self.drag = Some(MiniMapDragState {
-                    start_canvas: canvas_pt,
-                    start_pan,
+                    start_canvas: plan.start_canvas,
+                    start_pan: plan.start_pan,
                 });
 
                 crate::ui::retained_event_tail::request_paint_repaint(cx);
@@ -318,15 +315,14 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                 let snapshot = self.internals.snapshot();
                 let canvas_bounds = Self::canvas_bounds_from_internals(&snapshot);
                 let world = self.compute_world_bounds(canvas_bounds, &snapshot);
-                let Some(canvas_pt) = unproject_minimap_point(minimap, world, *position) else {
+                let Some(pan) = plan_minimap_drag_pan(
+                    minimap,
+                    world,
+                    *position,
+                    drag.start_canvas,
+                    drag.start_pan,
+                ) else {
                     return;
-                };
-
-                let dx = canvas_pt.x.0 - drag.start_canvas.x.0;
-                let dy = canvas_pt.y.0 - drag.start_canvas.y.0;
-                let pan = crate::core::CanvasPoint {
-                    x: drag.start_pan.x - dx,
-                    y: drag.start_pan.y - dy,
                 };
                 self.update_pan(cx.app, pan);
                 crate::ui::retained_event_tail::request_paint_repaint(cx);
