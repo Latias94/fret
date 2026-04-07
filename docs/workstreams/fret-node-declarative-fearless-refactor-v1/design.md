@@ -377,6 +377,10 @@ Status note (2026-04-03):
 - Retained controls layout and hit-testing now also route through the private
   `ui/overlays/controls_layout.rs` seam, so panel geometry plus button hit detection live behind
   one focused authority instead of staying embedded in the overlay widget file.
+- Retained action-panel item state now also routes through the private
+  `ui/overlays/panel_item_state.rs` seam, so controls and blackboard overlays share one authority
+  for keyboard selection resets, pointer-to-keyboard promotion, and visible item-state evaluation
+  instead of each re-embedding that panel-state policy inline.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

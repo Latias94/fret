@@ -1483,6 +1483,10 @@ real editors.
 - Retained controls layout and hit-testing now also route through the private
   `ui/overlays/controls_layout.rs` seam, so panel geometry plus button hit detection live
   behind one focused authority instead of staying embedded in the overlay widget file.
+- Retained action-panel item state now also routes through the private
+  `ui/overlays/panel_item_state.rs` seam, so controls and blackboard overlays share one
+  authority for keyboard selection resets, pointer-to-keyboard promotion, and visible
+  item-state evaluation instead of each re-embedding that panel-state policy inline.
 - The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
   `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
   seam instead of remaining duplicated across both wrapper and submodule entrypoints.
