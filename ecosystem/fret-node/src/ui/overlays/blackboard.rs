@@ -28,6 +28,7 @@ use super::blackboard_policy::{
     BlackboardAction, BlackboardActionPlan, blackboard_action_a11y_label,
     blackboard_action_button_label, blackboard_actions_in_order, plan_blackboard_action,
 };
+use super::panel_button_paint::{paint_panel_button, paint_panel_label};
 use super::panel_item_state::{
     clear_panel_item_state, panel_item_visual_state, promote_pointer_target_to_keyboard_item,
     select_panel_keyboard_item,
@@ -375,22 +376,17 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
 
         // Header title.
         {
-            let (id, metrics) = cx
-                .services
-                .text()
-                .prepare_str("Symbols", &text_style, constraints);
-            self.text_blobs.push(id);
-            let tx = layout.header.origin.x.0 + LABEL_PADDING_PX;
-            let ty = layout.header.origin.y.0
-                + 0.5 * (layout.header.size.height.0 - metrics.size.height.0);
-            cx.scene.push(SceneOp::Text {
-                order: DrawOrder(20_901),
-                text: id,
-                origin: Point::new(Px(tx), Px(ty)),
-                paint: (text_color).into(),
-                outline: None,
-                shadow: None,
-            });
+            paint_panel_label(
+                cx,
+                &mut self.text_blobs,
+                layout.header,
+                "Symbols",
+                &text_style,
+                constraints,
+                text_color,
+                LABEL_PADDING_PX,
+                DrawOrder(20_901),
+            );
         }
 
         // Add button.
@@ -408,35 +404,19 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
             } else {
                 Color::TRANSPARENT
             };
-            cx.scene.push(SceneOp::Quad {
-                order: DrawOrder(20_901),
-                rect: layout.add_button,
-                background: fret_core::Paint::Solid(button_bg).into(),
-
-                border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                corner_radii: Corners::all(Px(corner.max(4.0))),
-            });
-
-            let (id, metrics) = cx.services.text().prepare_str(
+            paint_panel_button(
+                cx,
+                &mut self.text_blobs,
+                layout.add_button,
                 blackboard_action_button_label(BlackboardAction::AddSymbol),
                 &text_style,
                 constraints,
+                button_bg,
+                text_color,
+                corner,
+                DrawOrder(20_901),
+                DrawOrder(20_902),
             );
-            self.text_blobs.push(id);
-            let tx = layout.add_button.origin.x.0
-                + 0.5 * (layout.add_button.size.width.0 - metrics.size.width.0);
-            let ty = layout.add_button.origin.y.0
-                + 0.5 * (layout.add_button.size.height.0 - metrics.size.height.0);
-            cx.scene.push(SceneOp::Text {
-                order: DrawOrder(20_902),
-                text: id,
-                origin: Point::new(Px(tx), Px(ty)),
-                paint: (text_color).into(),
-                outline: None,
-                shadow: None,
-            });
         }
 
         for row in &layout.rows {
@@ -460,32 +440,19 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                     } else {
                         Color::TRANSPARENT
                     };
-                    cx.scene.push(SceneOp::Quad {
-                        order: DrawOrder(20_901),
+                    paint_panel_button(
+                        cx,
+                        &mut self.text_blobs,
                         rect,
-                        background: fret_core::Paint::Solid(button_bg).into(),
-
-                        border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                        corner_radii: Corners::all(Px(corner.max(4.0))),
-                    });
-
-                    let (id, metrics) =
-                        cx.services
-                            .text()
-                            .prepare_str(label, &text_style, constraints);
-                    self.text_blobs.push(id);
-                    let tx = rect.origin.x.0 + 0.5 * (rect.size.width.0 - metrics.size.width.0);
-                    let ty = rect.origin.y.0 + 0.5 * (rect.size.height.0 - metrics.size.height.0);
-                    cx.scene.push(SceneOp::Text {
-                        order: DrawOrder(20_902),
-                        text: id,
-                        origin: Point::new(Px(tx), Px(ty)),
-                        paint: (text_color).into(),
-                        outline: None,
-                        shadow: None,
-                    });
+                        label,
+                        &text_style,
+                        constraints,
+                        button_bg,
+                        text_color,
+                        corner,
+                        DrawOrder(20_901),
+                        DrawOrder(20_902),
+                    );
                 };
 
             draw_button(
@@ -507,21 +474,17 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 blackboard_action_button_label(BlackboardAction::Delete { symbol: row.symbol }),
             );
 
-            let (id, metrics) = cx
-                .services
-                .text()
-                .prepare_str(name, &text_style, constraints);
-            self.text_blobs.push(id);
-            let tx = row.label.origin.x.0 + LABEL_PADDING_PX;
-            let ty = row.label.origin.y.0 + 0.5 * (row.label.size.height.0 - metrics.size.height.0);
-            cx.scene.push(SceneOp::Text {
-                order: DrawOrder(20_902),
-                text: id,
-                origin: Point::new(Px(tx), Px(ty)),
-                paint: (text_color).into(),
-                outline: None,
-                shadow: None,
-            });
+            paint_panel_label(
+                cx,
+                &mut self.text_blobs,
+                row.label,
+                name,
+                &text_style,
+                constraints,
+                text_color,
+                LABEL_PADDING_PX,
+                DrawOrder(20_902),
+            );
         }
     }
 }

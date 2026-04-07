@@ -657,6 +657,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/overlays/minimap_drag_policy.rs` seam, so pointer-down recentering and drag-pan delta
     planning live behind one focused authority instead of staying embedded in the overlay widget
     file.
+  - Progress: retained overlay panel button paint now also routes through the private
+    `ui/overlays/panel_button_paint.rs` seam, so controls and blackboard overlays share one
+    authority for centered button-label placement and left-aligned panel text placement instead of
+    each re-embedding that paint-side text geometry inline.
   - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
     `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
     instead of staying duplicated in both the wrapper and the searcher submodule.

@@ -18,6 +18,7 @@ use super::controls_policy::{
     ControlsButton, NodeGraphControlsBindings, controls_button_a11y_label, controls_button_label,
     controls_buttons, resolve_controls_command_id,
 };
+use super::panel_button_paint::paint_panel_button;
 use super::panel_item_state::{panel_item_visual_state, select_panel_keyboard_item};
 use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
 use super::panel_pointer_policy::{release_panel_press, sync_panel_hover};
@@ -242,35 +243,20 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 Color::TRANSPARENT
             };
 
-            cx.scene.push(SceneOp::Quad {
-                order: DrawOrder(21_001),
-                rect: *rect,
-                background: fret_core::Paint::Solid(button_bg).into(),
-
-                border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                corner_radii: Corners::all(Px(corner.max(4.0))),
-            });
-
             let label = controls_button_label(*btn, mode);
-            let (id, metrics) = cx
-                .services
-                .text()
-                .prepare_str(label, &text_style, constraints);
-            self.text_blobs.push(id);
-
-            let tx = rect.origin.x.0 + 0.5 * (rect.size.width.0 - metrics.size.width.0);
-            let ty = rect.origin.y.0 + 0.5 * (rect.size.height.0 - metrics.size.height.0);
-
-            cx.scene.push(SceneOp::Text {
-                order: DrawOrder(21_002),
-                text: id,
-                origin: Point::new(Px(tx), Px(ty)),
-                paint: (self.style.paint.controls_text).into(),
-                outline: None,
-                shadow: None,
-            });
+            paint_panel_button(
+                cx,
+                &mut self.text_blobs,
+                *rect,
+                label,
+                &text_style,
+                constraints,
+                button_bg,
+                self.style.paint.controls_text,
+                corner,
+                DrawOrder(21_001),
+                DrawOrder(21_002),
+            );
         }
     }
 }

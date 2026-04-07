@@ -392,6 +392,10 @@ Status note (2026-04-03):
   `ui/overlays/minimap_drag_policy.rs` seam, so pointer-down recentering and drag-pan delta
   planning live behind one focused authority instead of staying embedded in the overlay widget
   file.
+- Retained overlay panel button paint now also routes through the private
+  `ui/overlays/panel_button_paint.rs` seam, so controls and blackboard overlays share one
+  authority for centered button-label placement and left-aligned panel text placement instead of
+  each re-embedding that paint-side text geometry inline.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.
