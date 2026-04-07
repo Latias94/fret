@@ -357,9 +357,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                         self.hovered = None;
                         self.pressed = None;
                         self.keyboard_active = Some(action);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        crate::ui::retained_event_tail::finish_paint_event(cx);
                     }
                     PanelKeyboardAction::Activate(action) => {
                         self.dispatch_action(
@@ -368,18 +366,16 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                             action,
                             Point::new(Px(0.0), Px(0.0)),
                         );
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        crate::ui::retained_event_tail::finish_paint_event(cx);
                     }
                     PanelKeyboardAction::FocusCanvas => {
                         self.hovered = None;
                         self.pressed = None;
                         self.keyboard_active = None;
-                        cx.request_focus(self.canvas_node);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        crate::ui::retained_event_tail::focus_canvas_and_finish_paint_event(
+                            cx,
+                            self.canvas_node,
+                        );
                     }
                     PanelKeyboardAction::Ignore => {}
                 }
@@ -391,8 +387,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 }
                 if hovered != self.hovered {
                     self.hovered = hovered;
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                    crate::ui::retained_event_tail::request_paint_repaint(cx);
                 }
             }
             Event::Pointer(fret_core::PointerEvent::Down {
@@ -419,8 +414,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 };
                 self.pressed = Some(action);
                 cx.capture_pointer(cx.node);
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
+                crate::ui::retained_event_tail::request_paint_repaint(cx);
             }
             Event::Pointer(fret_core::PointerEvent::Up {
                 position, button, ..
@@ -438,8 +432,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 let pressed = self.pressed.take();
                 cx.release_pointer_capture();
                 if pressed.is_some() {
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                    crate::ui::retained_event_tail::request_paint_repaint(cx);
                 }
                 let Some(pressed) = pressed else {
                     return;

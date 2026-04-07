@@ -41,6 +41,8 @@ pub mod panel;
 #[cfg(feature = "compat-retained-canvas")]
 pub mod portal;
 #[cfg(feature = "compat-retained-canvas")]
+mod retained_event_tail;
+#[cfg(feature = "compat-retained-canvas")]
 mod retained_submit;
 #[cfg(feature = "compat-retained-canvas")]
 mod screen_space_placement;

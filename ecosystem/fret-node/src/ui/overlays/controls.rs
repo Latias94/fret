@@ -129,7 +129,6 @@ impl NodeGraphControlsOverlay {
         if let Some(id) = resolve_controls_command_id(&self.bindings, btn) {
             cx.dispatch_command(id);
         }
-        cx.request_redraw();
     }
 }
 
@@ -162,21 +161,17 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                         self.hovered = None;
                         self.pressed = None;
                         self.keyboard_active = Some(button);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        crate::ui::retained_event_tail::finish_paint_event(cx);
                     }
                     PanelKeyboardAction::Activate(button) => {
                         self.dispatch_button(cx, button);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        crate::ui::retained_event_tail::finish_paint_event(cx);
                     }
                     PanelKeyboardAction::FocusCanvas => {
-                        cx.request_focus(self.canvas_node);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        crate::ui::retained_event_tail::focus_canvas_and_finish_paint_event(
+                            cx,
+                            self.canvas_node,
+                        );
                     }
                     PanelKeyboardAction::Ignore => {}
                 }
@@ -188,8 +183,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 }
                 if hovered != self.hovered {
                     self.hovered = hovered;
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                    crate::ui::retained_event_tail::request_paint_repaint(cx);
                 }
             }
             Event::Pointer(fret_core::PointerEvent::Down {
@@ -204,8 +198,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 };
                 self.pressed = Some(btn);
                 cx.capture_pointer(cx.node);
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
+                crate::ui::retained_event_tail::request_paint_repaint(cx);
             }
             Event::Pointer(fret_core::PointerEvent::Up {
                 position, button, ..
@@ -216,9 +209,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 let pressed = self.pressed.take();
                 cx.release_pointer_capture();
                 if pressed.is_some() {
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                    crate::ui::retained_event_tail::finish_paint_event(cx);
                 }
                 let Some(pressed) = pressed else {
                     return;

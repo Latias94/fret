@@ -1463,6 +1463,11 @@ real editors.
   `ui/overlays/toolbars_layout.rs` seam, so node and edge toolbars share one child measurement,
   hide-and-release-focus, and child paint authority while the root widget file keeps only
   target-specific anchor resolution.
+- Retained overlay/portal handled-event tails now also route through the private
+  `ui/retained_event_tail.rs` seam, so portal commands plus
+  controls/blackboard/minimap/group-rename overlays share one authority for focus-to-canvas,
+  stop-propagation, redraw, and paint/layout invalidation tails instead of duplicating those
+  handled-event endings inline.
 - The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
   `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
   seam instead of remaining duplicated across both wrapper and submodule entrypoints.

@@ -308,9 +308,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                             Self::KEYBOARD_PAN_STEP_SCREEN_PX,
                         ) {
                             self.update_pan(cx.app, pan);
-                            cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
+                            crate::ui::retained_event_tail::finish_paint_event(cx);
                         }
                     }
                     MiniMapKeyboardAction::ZoomIn | MiniMapKeyboardAction::ZoomOut => {
@@ -331,16 +329,14 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                             action,
                         ) {
                             self.update_viewport(cx.app, pan, zoom);
-                            cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
+                            crate::ui::retained_event_tail::finish_paint_event(cx);
                         }
                     }
                     MiniMapKeyboardAction::FocusCanvas => {
-                        cx.request_focus(self.canvas_node);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        crate::ui::retained_event_tail::focus_canvas_and_finish_paint_event(
+                            cx,
+                            self.canvas_node,
+                        );
                     }
                 }
             }
@@ -388,8 +384,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                     start_pan,
                 });
 
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
+                crate::ui::retained_event_tail::request_paint_repaint(cx);
             }
             Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
                 let Some(drag) = &self.drag else {
@@ -411,8 +406,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                     y: drag.start_pan.y - dy,
                 };
                 self.update_pan(cx.app, pan);
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
+                crate::ui::retained_event_tail::request_paint_repaint(cx);
             }
             Event::Pointer(fret_core::PointerEvent::Up { button, .. }) => {
                 if *button != MouseButton::Left {
@@ -420,9 +414,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                 }
                 if self.drag.take().is_some() {
                     cx.release_pointer_capture();
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                    crate::ui::retained_event_tail::finish_paint_event(cx);
                 }
             }
             _ => {}

@@ -622,6 +622,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/overlays/toolbars_layout.rs` seam, so node and edge toolbars share one child measurement,
     hide-and-release-focus, and child paint authority while the root widget file keeps only
     target-specific anchor resolution.
+  - Progress: retained overlay/portal handled-event tails now also route through the private
+    `ui/retained_event_tail.rs` seam, so portal commands plus
+    controls/blackboard/minimap/group-rename overlays share one authority for focus-to-canvas,
+    stop-propagation, redraw, and paint/layout invalidation tails instead of duplicating those
+    handled-event endings inline.
   - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
     `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
     instead of staying duplicated in both the wrapper and the searcher submodule.

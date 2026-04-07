@@ -387,11 +387,7 @@ where
         match outcome {
             PortalCommandOutcome::NotHandled => false,
             PortalCommandOutcome::Handled => {
-                if let Some(canvas) = self.focus_canvas {
-                    cx.request_focus(canvas);
-                }
-                cx.stop_propagation();
-                cx.request_redraw();
+                crate::ui::retained_event_tail::finish_portal_command(cx, self.focus_canvas);
                 true
             }
             PortalCommandOutcome::Commit(tx) => {
@@ -403,11 +399,7 @@ where
                     &self.view_state,
                     &tx,
                 );
-                if let Some(canvas) = self.focus_canvas {
-                    cx.request_focus(canvas);
-                }
-                cx.stop_propagation();
-                cx.request_redraw();
+                crate::ui::retained_event_tail::finish_portal_command(cx, self.focus_canvas);
                 true
             }
         }

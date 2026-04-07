@@ -359,6 +359,10 @@ Status note (2026-04-03):
   `ui/overlays/toolbars_layout.rs` seam, so node and edge toolbars share one child measurement,
   hide-and-release-focus, and child paint authority while the root widget file keeps only
   target-specific anchor resolution.
+- Retained overlay/portal handled-event tails now also route through the private
+  `ui/retained_event_tail.rs` seam, so portal commands plus controls/blackboard/minimap/group-
+  rename overlays share one authority for focus-to-canvas, stop-propagation, redraw, and
+  paint/layout invalidation tails instead of duplicating those handled-event endings inline.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.
