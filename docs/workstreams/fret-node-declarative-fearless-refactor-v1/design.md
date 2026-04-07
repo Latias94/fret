@@ -1,6 +1,6 @@
 # `fret-node` Fearless Refactor (v1) - Design Map
 
-Status: execution-oriented companion (last updated 2026-04-03)
+Status: execution-oriented companion (last updated 2026-04-07)
 Scope: `ecosystem/fret-node` only
 
 This file is the shortest possible answer to:
@@ -342,6 +342,11 @@ Status note (2026-04-03):
   `ui/canvas/widget/context_menu/ui/event.rs` and `ui/canvas/widget/searcher_ui/event.rs` both use
   `retained_widget_runtime_shared` for stop-propagation plus paint invalidation, so overlay event
   tails stop re-embedding the same low-level redraw/invalidation steps.
+- Active menu-session occupancy now also routes through the private
+  `ui/canvas/widget/menu_session.rs` seam, so window-focus deferral, space-to-pan gating,
+  Tab-navigation suppression, edge double-click preflight, motion/auto-pan tick guards, and
+  retained `view_interacting(...)` all reuse one `context_menu || searcher` authority instead of
+  re-embedding that overlay-session policy inline.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

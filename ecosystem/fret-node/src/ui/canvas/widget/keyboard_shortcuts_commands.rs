@@ -41,7 +41,7 @@ pub(super) fn handle_tab_navigation<H: UiHost, M: NodeGraphCanvasMiddleware>(
         return false;
     }
 
-    if canvas.interaction.searcher.is_some() || canvas.interaction.context_menu.is_some() {
+    if super::menu_session::has_active_menu_session(&canvas.interaction) {
         return true;
     }
 

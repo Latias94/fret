@@ -2,6 +2,11 @@ mod context_menu;
 mod searcher;
 
 use super::*;
+use crate::ui::canvas::state::InteractionState;
+
+pub(super) fn has_active_menu_session(interaction: &InteractionState) -> bool {
+    interaction.context_menu.is_some() || interaction.searcher.is_some()
+}
 
 #[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn first_enabled_context_menu_item(items: &[NodeGraphContextMenuItem]) -> usize {
@@ -58,3 +63,6 @@ pub(super) fn build_searcher_state<M: NodeGraphCanvasMiddleware>(
         rows_mode,
     )
 }
+
+#[cfg(test)]
+mod tests;

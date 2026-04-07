@@ -42,5 +42,5 @@ fn connection_interacting(interaction: &InteractionState) -> bool {
 }
 
 fn overlay_interacting(interaction: &InteractionState) -> bool {
-    interaction.context_menu.is_some() || interaction.searcher.is_some()
+    super::super::super::menu_session::has_active_menu_session(interaction)
 }

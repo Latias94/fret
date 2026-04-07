@@ -605,6 +605,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     helper, so `ui/canvas/widget/context_menu/ui/event.rs` and
     `ui/canvas/widget/searcher_ui/event.rs` stop re-embedding the same stop-propagation plus paint
     invalidation tail logic inline.
+  - Progress: active menu-session occupancy now also routes through the private
+    `canvas/widget/menu_session.rs` seam, so window-focus deferral, space-to-pan gating,
+    Tab-navigation suppression, edge double-click preflight, motion/auto-pan tick guards, and
+    retained `view_interacting(...)` all reuse one `context_menu || searcher` authority instead of
+    re-embedding that overlay-session policy across multiple runtime files.
   - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
     `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
     instead of staying duplicated in both the wrapper and the searcher submodule.

@@ -1446,6 +1446,11 @@ real editors.
 - Context-menu/searcher event tails now also share the retained widget runtime finish helper, so
   `ui/canvas/widget/context_menu/ui/event.rs` and `ui/canvas/widget/searcher_ui/event.rs` stop
   duplicating the same stop-propagation plus paint invalidation tail logic inline.
+- Active menu-session occupancy now also routes through the private
+  `canvas/widget/menu_session.rs` seam, so window-focus deferral, space-to-pan gating,
+  Tab-navigation suppression, edge double-click preflight, motion/auto-pan tick guards, and
+  retained `view_interacting(...)` all reuse one `context_menu || searcher` authority instead of
+  re-embedding that overlay-session policy across multiple runtime files.
 - The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
   `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
   seam instead of remaining duplicated across both wrapper and submodule entrypoints.
