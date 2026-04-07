@@ -355,6 +355,10 @@ Status note (2026-04-03):
   `ui/overlays/panel_navigation_policy.rs` seam, so controls and blackboard overlays share one
   Arrow/Home/End/Enter/Escape navigation authority instead of each embedding the same keyboard
   roster policy inline.
+- Retained toolbar child layout lifecycle now also routes through the private
+  `ui/overlays/toolbars_layout.rs` seam, so node and edge toolbars share one child measurement,
+  hide-and-release-focus, and child paint authority while the root widget file keeps only
+  target-specific anchor resolution.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

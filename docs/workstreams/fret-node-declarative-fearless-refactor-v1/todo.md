@@ -618,6 +618,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/overlays/panel_navigation_policy.rs` seam, so controls and blackboard overlays share one
     Arrow/Home/End/Enter/Escape navigation authority instead of each embedding the same keyboard
     roster policy inline.
+  - Progress: retained toolbar child layout lifecycle now also routes through the private
+    `ui/overlays/toolbars_layout.rs` seam, so node and edge toolbars share one child measurement,
+    hide-and-release-focus, and child paint authority while the root widget file keeps only
+    target-specific anchor resolution.
   - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
     `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
     instead of staying duplicated in both the wrapper and the searcher submodule.

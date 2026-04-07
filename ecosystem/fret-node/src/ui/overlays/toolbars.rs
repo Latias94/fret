@@ -1,10 +1,12 @@
 //! Node graph toolbars (UI-only).
 
+#[path = "toolbars_layout.rs"]
+mod layout;
+
 use std::sync::Arc;
 
 use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::Model;
-use fret_ui::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::core::{EdgeId, NodeId};
@@ -124,20 +126,7 @@ impl NodeGraphNodeToolbar {
         cx: &mut LayoutCx<'_, H>,
         child: fret_core::NodeId,
     ) -> Size {
-        match self.size {
-            NodeGraphToolbarSize::Fixed(size) => size,
-            NodeGraphToolbarSize::Auto => {
-                let avail = cx.bounds.size;
-                let constraints = LayoutConstraints::new(
-                    LayoutSize::new(None, None),
-                    LayoutSize::new(
-                        AvailableSpace::Definite(avail.width),
-                        AvailableSpace::Definite(avail.height),
-                    ),
-                );
-                cx.measure_in(child, constraints)
-            }
-        }
+        layout::resolve_toolbar_child_size(cx, self.size, child)
     }
 }
 
@@ -157,55 +146,40 @@ impl<H: UiHost> Widget<H> for NodeGraphNodeToolbar {
         let Some((node_id, is_selected)) =
             resolve_node_toolbar_target(&self.view_state, self.node, &*cx.app)
         else {
-            if let Some(child) = child {
-                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
-            }
+            layout::hide_toolbar_child(cx, child, self.canvas_node);
             return cx.bounds.size;
         };
 
         if !toolbar_visible(self.visibility, is_selected) {
-            if let Some(child) = child {
-                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
-            }
+            layout::hide_toolbar_child(cx, child, self.canvas_node);
             return cx.bounds.size;
         }
 
         let snapshot = self.internals.snapshot();
         let Some(node_rect) = snapshot.nodes_window.get(&node_id).copied() else {
-            if let Some(child) = child {
-                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
-            }
+            layout::hide_toolbar_child(cx, child, self.canvas_node);
             return cx.bounds.size;
         };
 
-        if let Some(child) = child {
-            let size = self.resolve_child_size(cx, child);
-            if size.width.0 <= 0.0 && size.height.0 <= 0.0 {
-                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
-            } else {
-                let rect = Self::positioned_rect_for(
-                    cx.bounds,
+        let bounds = cx.bounds;
+        self.last_child_bounds =
+            layout::layout_toolbar_child(cx, child, self.canvas_node, self.size, |size| {
+                Self::positioned_rect_for(
+                    bounds,
                     node_rect,
                     size,
                     self.position,
                     self.align,
                     self.gap_px,
                     self.offset,
-                );
-                self.last_child_bounds = Some(rect);
-                cx.layout_in(child, rect);
-            }
-        }
+                )
+            });
 
         cx.bounds.size
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        for &child in cx.children {
-            if let Some(bounds) = cx.child_bounds(child) {
-                cx.paint(child, bounds);
-            }
-        }
+        layout::paint_toolbar_children(cx);
     }
 }
 
@@ -305,20 +279,7 @@ impl NodeGraphEdgeToolbar {
         cx: &mut LayoutCx<'_, H>,
         child: fret_core::NodeId,
     ) -> Size {
-        match self.size {
-            NodeGraphToolbarSize::Fixed(size) => size,
-            NodeGraphToolbarSize::Auto => {
-                let avail = cx.bounds.size;
-                let constraints = LayoutConstraints::new(
-                    LayoutSize::new(None, None),
-                    LayoutSize::new(
-                        AvailableSpace::Definite(avail.width),
-                        AvailableSpace::Definite(avail.height),
-                    ),
-                );
-                cx.measure_in(child, constraints)
-            }
-        }
+        layout::resolve_toolbar_child_size(cx, self.size, child)
     }
 }
 
@@ -338,54 +299,39 @@ impl<H: UiHost> Widget<H> for NodeGraphEdgeToolbar {
         let Some((edge_id, is_selected)) =
             resolve_edge_toolbar_target(&self.view_state, self.edge, &*cx.app)
         else {
-            if let Some(child) = child {
-                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
-            }
+            layout::hide_toolbar_child(cx, child, self.canvas_node);
             return cx.bounds.size;
         };
 
         if !toolbar_visible(self.visibility, is_selected) {
-            if let Some(child) = child {
-                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
-            }
+            layout::hide_toolbar_child(cx, child, self.canvas_node);
             return cx.bounds.size;
         }
 
         let snapshot = self.internals.snapshot();
         let Some(center) = snapshot.edge_centers_window.get(&edge_id).copied() else {
-            if let Some(child) = child {
-                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
-            }
+            layout::hide_toolbar_child(cx, child, self.canvas_node);
             return cx.bounds.size;
         };
 
-        if let Some(child) = child {
-            let size = self.resolve_child_size(cx, child);
-            if size.width.0 <= 0.0 && size.height.0 <= 0.0 {
-                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
-            } else {
-                let rect = Self::positioned_rect_for(
-                    cx.bounds,
+        let bounds = cx.bounds;
+        self.last_child_bounds =
+            layout::layout_toolbar_child(cx, child, self.canvas_node, self.size, |size| {
+                Self::positioned_rect_for(
+                    bounds,
                     center,
                     size,
                     self.align_x,
                     self.align_y,
                     self.offset,
-                );
-                self.last_child_bounds = Some(rect);
-                cx.layout_in(child, rect);
-            }
-        }
+                )
+            });
 
         cx.bounds.size
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        for &child in cx.children {
-            if let Some(bounds) = cx.child_bounds(child) {
-                cx.paint(child, bounds);
-            }
-        }
+        layout::paint_toolbar_children(cx);
     }
 }
 

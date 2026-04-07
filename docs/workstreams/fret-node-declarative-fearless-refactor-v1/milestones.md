@@ -1459,6 +1459,10 @@ real editors.
   `ui/overlays/panel_navigation_policy.rs` seam, so controls and blackboard overlays share one
   Arrow/Home/End/Enter/Escape navigation authority instead of each embedding the same keyboard
   roster policy inline.
+- Retained toolbar child layout lifecycle now also routes through the private
+  `ui/overlays/toolbars_layout.rs` seam, so node and edge toolbars share one child measurement,
+  hide-and-release-focus, and child paint authority while the root widget file keeps only
+  target-specific anchor resolution.
 - The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
   `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
   seam instead of remaining duplicated across both wrapper and submodule entrypoints.
