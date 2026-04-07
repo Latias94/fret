@@ -3051,7 +3051,7 @@ mod tests {
             eval_debug_snapshot_predicate(
                 &debug,
                 &UiPredicateV1::RendererFontSourceAssetKeySeen {
-                    asset_key: "fonts/inter-regular.ttf".to_string(),
+                    asset_key: "fonts/Inter-roman-subset.ttf".to_string(),
                 },
             ),
             Some(true)
