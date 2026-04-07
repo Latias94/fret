@@ -7,6 +7,7 @@ mod blackboard;
 mod blackboard_layout;
 mod blackboard_policy;
 mod controls;
+mod controls_layout;
 mod controls_policy;
 mod group_rename;
 mod minimap;

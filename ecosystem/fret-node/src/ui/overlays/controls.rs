@@ -9,20 +9,17 @@ use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use crate::ui::NodeGraphStyle;
-use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
 
 use super::OverlayPlacement;
+use super::controls_layout::{
+    ControlsLayout, compute_controls_layout, controls_button_at, controls_panel_size,
+};
 use super::controls_policy::{
     ControlsButton, NodeGraphControlsBindings, controls_button_a11y_label, controls_button_label,
     controls_buttons, resolve_controls_command_id,
 };
 use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
 use super::panel_pointer_policy::{release_panel_press, sync_panel_hover};
-
-struct ControlsLayout {
-    panel: Rect,
-    buttons: Vec<(ControlsButton, Rect)>,
-}
 
 pub struct NodeGraphControlsOverlay {
     canvas_node: fret_core::NodeId,
@@ -69,59 +66,13 @@ impl NodeGraphControlsOverlay {
         self
     }
 
-    fn panel_size_px(&self) -> (f32, f32) {
-        let pad = self.style.paint.controls_padding.max(0.0);
-        let gap = self.style.paint.controls_gap.max(0.0);
-        let button = self.style.paint.controls_button_size.max(10.0);
-
-        let panel_w = button + 2.0 * pad;
-        let item_count = controls_buttons().len() as f32;
-        let panel_h = item_count * button + (item_count - 1.0) * gap + 2.0 * pad;
-        (panel_w, panel_h)
-    }
-
     fn compute_layout(&self, bounds: Rect) -> ControlsLayout {
-        let margin = self.style.paint.controls_margin.max(0.0);
-        let pad = self.style.paint.controls_padding.max(0.0);
-        let gap = self.style.paint.controls_gap.max(0.0);
-        let button = self.style.paint.controls_button_size.max(10.0);
-
-        let (panel_w, panel_h) = self.panel_size_px();
-
-        let panel = match self.placement {
-            OverlayPlacement::FloatingInCanvas => rect_in_bounds(
-                bounds,
-                Size::new(Px(panel_w), Px(panel_h)),
-                AxisAlign::End,
-                AxisAlign::Start,
-                margin,
-                Point::new(Px(0.0), Px(0.0)),
-            ),
-            OverlayPlacement::PanelBounds => bounds,
-        };
-
-        let mut buttons = Vec::with_capacity(controls_buttons().len());
-        let mut cy = panel.origin.y.0 + pad;
-        for item in controls_buttons().iter().copied() {
-            let rect = Rect::new(
-                Point::new(Px(panel.origin.x.0 + pad), Px(cy)),
-                Size::new(Px(button), Px(button)),
-            );
-            buttons.push((item, rect));
-            cy += button + gap;
-        }
-
-        ControlsLayout { panel, buttons }
+        compute_controls_layout(&self.style, self.placement, bounds)
     }
 
     fn button_at(&self, bounds: Rect, position: Point) -> Option<ControlsButton> {
         let layout = self.compute_layout(bounds);
-        for (btn, rect) in layout.buttons {
-            if rect.contains(position) {
-                return Some(btn);
-            }
-        }
-        None
+        controls_button_at(&layout, position)
     }
 
     fn dispatch_button<H: UiHost>(&self, cx: &mut EventCx<'_, H>, btn: ControlsButton) {
@@ -139,8 +90,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
     }
 
     fn measure(&mut self, _cx: &mut MeasureCx<'_, H>) -> Size {
-        let (w, h) = self.panel_size_px();
-        Size::new(Px(w), Px(h))
+        controls_panel_size(&self.style)
     }
 
     fn hit_test(&self, bounds: Rect, position: Point) -> bool {

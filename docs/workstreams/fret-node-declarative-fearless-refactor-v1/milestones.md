@@ -1480,6 +1480,9 @@ real editors.
   `ui/overlays/blackboard_layout.rs` seam, so panel/header/row geometry plus action hit
   detection live behind one focused authority instead of staying embedded in the overlay
   widget file.
+- Retained controls layout and hit-testing now also route through the private
+  `ui/overlays/controls_layout.rs` seam, so panel geometry plus button hit detection live
+  behind one focused authority instead of staying embedded in the overlay widget file.
 - The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
   `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
   seam instead of remaining duplicated across both wrapper and submodule entrypoints.
