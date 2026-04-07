@@ -588,6 +588,23 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `ui/canvas/widget/context_menu/opening.rs` seam, so group-vs-edge-vs-background
     precedence becomes a named, focused-testable authority while the group/edge opener modules keep
     only already-resolved target presentation work.
+  - Progress: context-menu presentation now also routes open-event state effects through the
+    private `ui/canvas/widget/context_menu/ui.rs` seam, so menu install, hover-edge cleanup, focus
+    request, and event-finish invalidation no longer stay embedded in `show_context_menu(...)`, and
+    the open-path hover-edge behavior now uses an explicit policy type instead of a bare boolean.
+  - Progress: context-menu presentation lifecycle now also mirrors the searcher split:
+    `ui/canvas/widget/context_menu/ui/overlay.rs` owns state install/restore/take/clear plus
+    hover-edge cleanup policy, `ui/canvas/widget/context_menu/ui/event.rs` owns
+    open/restore/dismiss event tails plus finish/invalidation, and the root `ui.rs` now stays a
+    thin wrapper surface instead of mixing state and event responsibilities.
+  - Progress: searcher overlay install now also has an explicit replacement seam in
+    `ui/canvas/widget/searcher_ui/overlay.rs`, so the "clear context menu, then install/replace
+    searcher state" rule becomes a named, focused-testable helper instead of staying hidden in the
+    root install path.
+  - Progress: context-menu/searcher event tails now also share the retained widget runtime finish
+    helper, so `ui/canvas/widget/context_menu/ui/event.rs` and
+    `ui/canvas/widget/searcher_ui/event.rs` stop re-embedding the same stop-propagation plus paint
+    invalidation tail logic inline.
   - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
     `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
     instead of staying duplicated in both the wrapper and the searcher submodule.

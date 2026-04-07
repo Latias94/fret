@@ -1,4 +1,5 @@
 use crate::core::GroupId;
+use crate::ui::canvas::widget::context_menu::ui::ContextMenuHoverEdgePolicy;
 use crate::ui::canvas::widget::*;
 
 use super::super::item_builders;
@@ -19,6 +20,6 @@ pub(super) fn show_group_context_menu<H: UiHost, M: NodeGraphCanvasMiddleware>(
         ContextMenuTarget::Group(group_id),
         items,
         Vec::new(),
-        true,
+        ContextMenuHoverEdgePolicy::Clear,
     )
 }

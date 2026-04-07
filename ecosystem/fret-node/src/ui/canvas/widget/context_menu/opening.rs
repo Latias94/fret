@@ -4,6 +4,7 @@ mod group;
 
 use super::item_builders;
 use crate::core::GroupId;
+use crate::ui::canvas::widget::context_menu::ui::ContextMenuHoverEdgePolicy;
 use crate::ui::canvas::widget::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -72,17 +73,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         target: ContextMenuTarget,
         items: Vec<NodeGraphContextMenuItem>,
         candidates: Vec<InsertNodeCandidate>,
-        clear_hover_edge: bool,
+        hover_edge_policy: ContextMenuHoverEdgePolicy,
     ) -> bool {
         let menu = build_context_menu_state(
             self, position, cx.bounds, snapshot, target, items, candidates,
         );
-        super::restore_context_menu(&mut self.interaction, menu);
-        if clear_hover_edge {
-            self.interaction.hover_edge = None;
-        }
-        cx.request_focus(cx.node);
-        super::ui::finish_context_menu_event(cx)
+        super::ui::open_context_menu_event(self, cx, menu, hover_edge_policy)
     }
 
     pub(in crate::ui::canvas::widget) fn build_edge_context_menu_items<H: UiHost>(

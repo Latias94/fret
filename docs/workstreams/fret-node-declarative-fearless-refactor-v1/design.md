@@ -325,6 +325,23 @@ Status note (2026-04-03):
   `ui/canvas/widget/context_menu/opening.rs` now owns the group-vs-edge-vs-background opening
   route, so opening priority stops living as an inline `if` chain while the target-specific
   openers keep only the already-resolved target presentation work.
+- Context-menu presentation now also routes open-event state effects through a named private seam:
+  `ui/canvas/widget/context_menu/ui.rs` now owns menu install plus hover-edge cleanup policy and
+  event-finish focus/invalidation, while `opening.rs` only builds the menu state and passes an
+  explicit hover-edge policy instead of a boolean flag.
+- Context-menu presentation lifecycle now also mirrors the searcher split:
+  `ui/canvas/widget/context_menu/ui/overlay.rs` owns state install/restore/take/clear plus
+  hover-edge cleanup policy, `ui/canvas/widget/context_menu/ui/event.rs` owns event-finish and
+  open/restore/dismiss tails, and `ui/canvas/widget/context_menu/ui.rs` now acts as a thin wrapper
+  surface instead of a mixed state-and-event file.
+- Searcher overlay install now also has an explicit replacement seam:
+  `ui/canvas/widget/searcher_ui/overlay.rs` now owns the "clear context menu, then install or
+  replace searcher state" rule through a dedicated state helper, so this overlay-replacement policy
+  no longer stays hidden inside the root install function.
+- Context-menu/searcher event tails now also share the retained widget runtime finish helper:
+  `ui/canvas/widget/context_menu/ui/event.rs` and `ui/canvas/widget/searcher_ui/event.rs` both use
+  `retained_widget_runtime_shared` for stop-propagation plus paint invalidation, so overlay event
+  tails stop re-embedding the same low-level redraw/invalidation steps.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

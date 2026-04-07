@@ -1,3 +1,4 @@
+use crate::ui::canvas::widget::context_menu::ui::ContextMenuHoverEdgePolicy;
 use crate::ui::canvas::widget::*;
 
 pub(super) fn show_edge_context_menu<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -16,6 +17,6 @@ pub(super) fn show_edge_context_menu<H: UiHost, M: NodeGraphCanvasMiddleware>(
         ContextMenuTarget::Edge(edge),
         items,
         Vec::new(),
-        true,
+        ContextMenuHoverEdgePolicy::Clear,
     )
 }

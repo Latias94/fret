@@ -1430,6 +1430,22 @@ real editors.
   `ui/canvas/widget/context_menu/opening.rs` seam, so group-vs-edge-vs-background precedence
   becomes explicit, gains focused route-mapping coverage, and no longer lives as an inline `if`
   chain in the opening event glue.
+- Context-menu presentation now also routes open-event state effects through the private
+  `ui/canvas/widget/context_menu/ui.rs` seam, so menu install, hover-edge cleanup, focus request,
+  and event-finish invalidation stop living in `show_context_menu(...)`; the open-path hover-edge
+  behavior now also uses an explicit policy type instead of a boolean flag.
+- Context-menu presentation lifecycle now also mirrors the searcher split:
+  `ui/canvas/widget/context_menu/ui/overlay.rs` owns state install/restore/take/clear plus
+  hover-edge cleanup policy, `ui/canvas/widget/context_menu/ui/event.rs` owns
+  open/restore/dismiss event tails plus finish/invalidation, and the root `ui.rs` now stays a thin
+  wrapper surface instead of a mixed state-and-event file.
+- Searcher overlay install now also has an explicit replacement seam in
+  `ui/canvas/widget/searcher_ui/overlay.rs`, so the "clear context menu, then install/replace
+  searcher state" rule becomes a named helper with focused state tests instead of staying hidden in
+  the root install path.
+- Context-menu/searcher event tails now also share the retained widget runtime finish helper, so
+  `ui/canvas/widget/context_menu/ui/event.rs` and `ui/canvas/widget/searcher_ui/event.rs` stop
+  duplicating the same stop-propagation plus paint invalidation tail logic inline.
 - The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
   `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
   seam instead of remaining duplicated across both wrapper and submodule entrypoints.
