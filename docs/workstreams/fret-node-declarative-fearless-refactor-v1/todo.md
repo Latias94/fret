@@ -572,6 +572,76 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: searcher row activation now also reuses selectable-row policy from
     `ui/canvas/widget/searcher_rows.rs`, so activation gating no longer keeps a second implicit
     "candidate + enabled" rule separate from active-row selection and keyboard navigation.
+  - Progress: context-menu target dispatch now also routes non-command activation through the
+    private `ui/canvas/widget/context_menu/activate/target.rs` seam, so `activate.rs` keeps the
+    command-vs-target action-kind split while background/connection/edge/conversion target routing
+    becomes a named, focused-testable authority instead of an unowned inline match.
+  - Progress: command context-menu activation now also routes target-scoped selection side effects
+    through the private `ui/canvas/widget/context_menu/activate/command.rs` seam, so the
+    group-selection-vs-ignore policy becomes explicit and command dispatch no longer keeps that
+    target-specific selection sync inline.
+  - Progress: edge context-menu activation now also routes edge-action planning through the
+    private `ui/canvas/widget/context_menu/edge_execution.rs` seam, so insert-picker / reroute /
+    delete / custom edge actions no longer stay as an unowned inline match before delegating to
+    their executor modules.
+  - Progress: right-click context-menu opening now also routes target-hit priority through the
+    private `ui/canvas/widget/context_menu/opening.rs` seam, so group-vs-edge-vs-background
+    precedence becomes a named, focused-testable authority while the group/edge opener modules keep
+    only already-resolved target presentation work.
+  - Progress: context-menu presentation now also routes open-event state effects through the
+    private `ui/canvas/widget/context_menu/ui.rs` seam, so menu install, hover-edge cleanup, focus
+    request, and event-finish invalidation no longer stay embedded in `show_context_menu(...)`, and
+    the open-path hover-edge behavior now uses an explicit policy type instead of a bare boolean.
+  - Progress: context-menu presentation lifecycle now also mirrors the searcher split:
+    `ui/canvas/widget/context_menu/ui/overlay.rs` owns state install/restore/take/clear plus
+    hover-edge cleanup policy, `ui/canvas/widget/context_menu/ui/event.rs` owns
+    open/restore/dismiss event tails plus finish/invalidation, and the root `ui.rs` now stays a
+    thin wrapper surface instead of mixing state and event responsibilities.
+  - Progress: searcher overlay install now also has an explicit replacement seam in
+    `ui/canvas/widget/searcher_ui/overlay.rs`, so the "clear context menu, then install/replace
+    searcher state" rule becomes a named, focused-testable helper instead of staying hidden in the
+    root install path.
+  - Progress: context-menu/searcher event tails now also share the retained widget runtime finish
+    helper, so `ui/canvas/widget/context_menu/ui/event.rs` and
+    `ui/canvas/widget/searcher_ui/event.rs` stop re-embedding the same stop-propagation plus paint
+    invalidation tail logic inline.
+  - Progress: active menu-session occupancy now also routes through the private
+    `canvas/widget/menu_session.rs` seam, so window-focus deferral, space-to-pan gating,
+    Tab-navigation suppression, edge double-click preflight, motion/auto-pan tick guards, and
+    retained `view_interacting(...)` all reuse one `context_menu || searcher` authority instead of
+    re-embedding that overlay-session policy across multiple runtime files.
+  - Progress: retained portal/overlay transaction fallback now also routes through the private
+    `ui/retained_submit.rs` seam, so portal command commits plus blackboard/group-rename overlays
+    share one controller-first vs edit-queue fallback policy instead of duplicating that
+    compatibility branch inline.
+  - Progress: retained action-panel keyboard routing now also routes through the private
+    `ui/overlays/panel_navigation_policy.rs` seam, so controls and blackboard overlays share one
+    Arrow/Home/End/Enter/Escape navigation authority instead of each embedding the same keyboard
+    roster policy inline.
+  - Progress: retained toolbar child layout lifecycle now also routes through the private
+    `ui/overlays/toolbars_layout.rs` seam, so node and edge toolbars share one child measurement,
+    hide-and-release-focus, and child paint authority while the root widget file keeps only
+    target-specific anchor resolution.
+  - Progress: retained overlay/portal handled-event tails now also route through the private
+    `ui/retained_event_tail.rs` seam, so portal commands plus
+    controls/blackboard/minimap/group-rename overlays share one authority for focus-to-canvas,
+    stop-propagation, redraw, and paint/layout invalidation tails instead of duplicating those
+    handled-event endings inline.
+  - Progress: retained action-panel pointer state now also routes through the private
+    `ui/overlays/panel_pointer_policy.rs` seam, so controls and blackboard overlays share one
+    hover sync plus press-on-down / activate-on-matching-up authority instead of each
+    re-embedding that pointer-state policy inline.
+  - Progress: retained minimap projection math now also routes through the private
+    `ui/overlays/minimap_projection.rs` seam, so world-bounds union, project/unproject
+    transforms, and center-pan math live behind one focused authority instead of staying embedded
+    in the overlay widget file.
+  - Progress: retained blackboard layout and hit-testing now also route through the private
+    `ui/overlays/blackboard_layout.rs` seam, so panel/header/row geometry plus action hit
+    detection live behind one focused authority instead of staying embedded in the overlay widget
+    file.
+  - Progress: retained controls layout and hit-testing now also route through the private
+    `ui/overlays/controls_layout.rs` seam, so panel geometry plus button hit detection live
+    behind one focused authority instead of staying embedded in the overlay widget file.
   - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
     `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
     instead of staying duplicated in both the wrapper and the searcher submodule.

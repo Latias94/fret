@@ -99,6 +99,61 @@ pub struct EventCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> EventCx<'a, H> {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        app: &'a mut H,
+        services: &'a mut dyn UiServices,
+        node: NodeId,
+        layer_root: Option<NodeId>,
+        window: Option<AppWindowId>,
+        input_ctx: InputContext,
+        pointer_id: Option<fret_core::PointerId>,
+        scale_factor: f32,
+        event_window_position: Option<Point>,
+        event_window_wheel_delta: Option<Point>,
+        pointer_hit_is_text_input: bool,
+        pointer_hit_is_pressable: bool,
+        pointer_hit_pressable_target: Option<crate::GlobalElementId>,
+        pointer_hit_pressable_target_in_descendant_subtree: bool,
+        prevented_default_actions: &'a mut DefaultActionSet,
+        children: &'a [NodeId],
+        focus: Option<NodeId>,
+        captured: Option<NodeId>,
+        bounds: Rect,
+    ) -> Self {
+        Self {
+            app,
+            services,
+            node,
+            layer_root,
+            window,
+            pointer_id,
+            scale_factor,
+            event_window_position,
+            event_window_wheel_delta,
+            input_ctx,
+            pointer_hit_is_text_input,
+            pointer_hit_is_pressable,
+            pointer_hit_pressable_target,
+            pointer_hit_pressable_target_in_descendant_subtree,
+            prevented_default_actions,
+            children,
+            focus,
+            captured,
+            bounds,
+            invalidations: Vec::new(),
+            scroll_handle_invalidations: Vec::new(),
+            scroll_target_invalidations: Vec::new(),
+            requested_focus: None,
+            requested_focus_target: None,
+            requested_capture: None,
+            requested_cursor: None,
+            notify_requested: false,
+            notify_requested_location: None,
+            stop_propagation: false,
+        }
+    }
+
     pub fn theme(&self) -> &Theme {
         Theme::global(&*self.app)
     }

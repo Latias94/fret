@@ -24,13 +24,12 @@ pub(super) fn handle_searcher_escape_event<H: UiHost, M: NodeGraphCanvasMiddlewa
 pub(super) fn invalidate_searcher_paint<H: UiHost>(
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) {
-    super::super::paint_invalidation::invalidate_paint(cx);
+    super::super::retained_widget_runtime_shared::invalidate_widget_paint(cx);
 }
 
 pub(super) fn finish_searcher_event<H: UiHost>(
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
-    cx.stop_propagation();
-    invalidate_searcher_paint(cx);
+    super::super::retained_widget_runtime_shared::finish_middleware_handled(cx);
     true
 }

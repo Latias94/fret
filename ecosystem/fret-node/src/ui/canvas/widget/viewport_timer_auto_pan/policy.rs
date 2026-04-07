@@ -7,7 +7,7 @@ pub(super) fn auto_pan_should_tick<M: NodeGraphCanvasMiddleware>(
     snapshot: &ViewSnapshot,
     bounds: Rect,
 ) -> bool {
-    if canvas.interaction.searcher.is_some() || canvas.interaction.context_menu.is_some() {
+    if super::super::menu_session::has_active_menu_session(&canvas.interaction) {
         return false;
     }
     let Some(pos) = canvas.interaction.last_pos else {

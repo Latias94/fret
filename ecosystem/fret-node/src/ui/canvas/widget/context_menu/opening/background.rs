@@ -1,3 +1,4 @@
+use crate::ui::canvas::widget::context_menu::ui::ContextMenuHoverEdgePolicy;
 use crate::ui::canvas::widget::*;
 
 use super::super::item_builders;
@@ -21,6 +22,6 @@ pub(super) fn show_background_context_menu<H: UiHost, M: NodeGraphCanvasMiddlewa
         ContextMenuTarget::Background,
         items,
         Vec::new(),
-        false,
+        ContextMenuHoverEdgePolicy::Preserve,
     )
 }

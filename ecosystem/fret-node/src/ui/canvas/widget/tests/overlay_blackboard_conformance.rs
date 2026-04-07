@@ -61,6 +61,18 @@ fn bounds() -> Rect {
     )
 }
 
+fn blackboard_add_button_point(style: &NodeGraphStyle) -> Point {
+    let panel_x = 12.0;
+    let panel_y = 12.0;
+    let pad = style.paint.context_menu_padding.max(0.0);
+    let row_h = style.paint.context_menu_item_height.max(20.0);
+    let button_w = row_h.max(18.0);
+    let inner_w = (style.paint.context_menu_width.max(120.0) - 2.0 * pad).max(0.0);
+    let add_x = panel_x + pad + (inner_w - button_w).max(0.0);
+    let add_y = panel_y + pad;
+    Point::new(Px(add_x + 1.0), Px(add_y + 1.0))
+}
+
 #[test]
 fn blackboard_overlay_is_hit_test_transparent_outside_panel() {
     let mut host = TestUiHostImpl::default();
@@ -144,6 +156,66 @@ fn blackboard_overlay_enter_defaults_to_add_symbol_when_focused() {
         matches!(&pending[0].ops[0], GraphOp::AddSymbol { .. }),
         "expected AddSymbol op"
     );
+}
+
+#[test]
+fn blackboard_overlay_pointer_click_adds_symbol_when_released_on_same_action() {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
+    let edits = host.models.insert(NodeGraphEditQueue::default());
+    let overlays = host.models.insert(NodeGraphOverlayState::default());
+    let style = NodeGraphStyle::default();
+    let add_button = blackboard_add_button_point(&style);
+
+    let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+    let overlay = NodeGraphBlackboardOverlay::new(graph, view, overlays, underlay, style)
+        .with_edit_queue(edits.clone());
+    let overlay_node = ui.create_node_retained(overlay);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, overlay_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: add_button,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(overlay_node));
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: add_button,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let pending = edits
+        .read_ref(&host, |q| q.pending.clone())
+        .ok()
+        .unwrap_or_default();
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].label.as_deref(), Some("Add Symbol"));
+    assert!(matches!(&pending[0].ops[0], GraphOp::AddSymbol { .. }));
 }
 
 #[test]

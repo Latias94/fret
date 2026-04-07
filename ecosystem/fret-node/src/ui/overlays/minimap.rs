@@ -24,6 +24,10 @@ use super::minimap_policy::{
     MiniMapKeyboardAction, minimap_keyboard_action_from_key, plan_minimap_keyboard_pan,
     plan_minimap_keyboard_zoom,
 };
+use super::minimap_projection::{
+    minimap_world_bounds, pan_to_center_canvas_point, project_world_rect_to_minimap,
+    unproject_minimap_point,
+};
 
 #[derive(Debug, Clone)]
 struct MiniMapDragState {
@@ -150,98 +154,17 @@ impl NodeGraphMiniMapOverlay {
         canvas_bounds: Rect,
         snapshot: &NodeGraphInternalsSnapshot,
     ) -> Rect {
-        fn rect_union(a: Rect, b: Rect) -> Rect {
-            let x0 = a.origin.x.0.min(b.origin.x.0);
-            let y0 = a.origin.y.0.min(b.origin.y.0);
-            let x1 = (a.origin.x.0 + a.size.width.0).max(b.origin.x.0 + b.size.width.0);
-            let y1 = (a.origin.y.0 + a.size.height.0).max(b.origin.y.0 + b.size.height.0);
-            Rect::new(
-                Point::new(Px(x0), Px(y0)),
-                Size::new(Px((x1 - x0).max(1.0)), Px((y1 - y0).max(1.0))),
-            )
-        }
-
-        let mut out: Option<Rect> = None;
-        for rect in snapshot.nodes_window.values().copied() {
-            let r = self.invert_window_rect_to_canvas(rect, snapshot);
-            out = Some(match out {
-                Some(prev) => rect_union(prev, r),
-                None => r,
-            });
-        }
-
         let viewport = self.canvas_bounds_from_internals_and_view(canvas_bounds, snapshot);
-        out = Some(match out {
-            Some(prev) => rect_union(prev, viewport),
-            None => viewport,
-        });
-
-        let mut out = out.unwrap_or(viewport);
-        let pad = self.style.paint.minimap_world_padding.max(0.0);
-        out.origin.x.0 -= pad;
-        out.origin.y.0 -= pad;
-        out.size.width.0 += 2.0 * pad;
-        out.size.height.0 += 2.0 * pad;
-        out
-    }
-
-    fn project_rect(minimap: Rect, world: Rect, r: Rect) -> Rect {
-        let ww = world.size.width.0.max(1.0e-6);
-        let wh = world.size.height.0.max(1.0e-6);
-        let sx = minimap.size.width.0 / ww;
-        let sy = minimap.size.height.0 / wh;
-        let scale = sx.min(sy);
-
-        let ox = minimap.origin.x.0 + 0.5 * (minimap.size.width.0 - world.size.width.0 * scale)
-            - world.origin.x.0 * scale;
-        let oy = minimap.origin.y.0 + 0.5 * (minimap.size.height.0 - world.size.height.0 * scale)
-            - world.origin.y.0 * scale;
-
-        Rect::new(
-            Point::new(Px(ox + r.origin.x.0 * scale), Px(oy + r.origin.y.0 * scale)),
-            Size::new(
-                Px((r.size.width.0 * scale).max(1.0)),
-                Px((r.size.height.0 * scale).max(1.0)),
-            ),
+        let rects = snapshot
+            .nodes_window
+            .values()
+            .copied()
+            .map(|rect| self.invert_window_rect_to_canvas(rect, snapshot));
+        minimap_world_bounds(
+            rects,
+            viewport,
+            self.style.paint.minimap_world_padding.max(0.0),
         )
-    }
-
-    fn unproject_point(minimap: Rect, world: Rect, p: Point) -> Option<fret_core::Point> {
-        let ww = world.size.width.0.max(1.0e-6);
-        let wh = world.size.height.0.max(1.0e-6);
-        let sx = minimap.size.width.0 / ww;
-        let sy = minimap.size.height.0 / wh;
-        let scale = sx.min(sy);
-        if !scale.is_finite() || scale <= 0.0 {
-            return None;
-        }
-
-        let ox = minimap.origin.x.0 + 0.5 * (minimap.size.width.0 - world.size.width.0 * scale)
-            - world.origin.x.0 * scale;
-        let oy = minimap.origin.y.0 + 0.5 * (minimap.size.height.0 - world.size.height.0 * scale)
-            - world.origin.y.0 * scale;
-
-        let x = (p.x.0 - ox) / scale;
-        let y = (p.y.0 - oy) / scale;
-        Some(Point::new(Px(x), Px(y)))
-    }
-
-    fn pan_to_center_point(
-        bounds: Rect,
-        zoom: f32,
-        canvas_center: fret_core::Point,
-    ) -> crate::core::CanvasPoint {
-        let zoom = if zoom.is_finite() && zoom > 0.0 {
-            zoom
-        } else {
-            1.0
-        };
-        let cx = 0.5 * bounds.size.width.0;
-        let cy = 0.5 * bounds.size.height.0;
-        crate::core::CanvasPoint {
-            x: cx / zoom - canvas_center.x.0,
-            y: cy / zoom - canvas_center.y.0,
-        }
     }
 
     fn update_pan<H: UiHost>(&self, host: &mut H, pan: crate::core::CanvasPoint) {
@@ -308,9 +231,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                             Self::KEYBOARD_PAN_STEP_SCREEN_PX,
                         ) {
                             self.update_pan(cx.app, pan);
-                            cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
+                            crate::ui::retained_event_tail::finish_paint_event(cx);
                         }
                     }
                     MiniMapKeyboardAction::ZoomIn | MiniMapKeyboardAction::ZoomOut => {
@@ -331,16 +252,14 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                             action,
                         ) {
                             self.update_viewport(cx.app, pan, zoom);
-                            cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
+                            crate::ui::retained_event_tail::finish_paint_event(cx);
                         }
                     }
                     MiniMapKeyboardAction::FocusCanvas => {
-                        cx.request_focus(self.canvas_node);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        crate::ui::retained_event_tail::focus_canvas_and_finish_paint_event(
+                            cx,
+                            self.canvas_node,
+                        );
                     }
                 }
             }
@@ -362,13 +281,13 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                 let snapshot = self.internals.snapshot();
                 let canvas_bounds = Self::canvas_bounds_from_internals(&snapshot);
                 let world = self.compute_world_bounds(canvas_bounds, &snapshot);
-                let Some(canvas_pt) = Self::unproject_point(minimap, world, *position) else {
+                let Some(canvas_pt) = unproject_minimap_point(minimap, world, *position) else {
                     return;
                 };
 
                 let zoom = snapshot.transform.zoom;
                 let viewport = self.canvas_bounds_from_internals_and_view(canvas_bounds, &snapshot);
-                let viewport_rr = Self::project_rect(minimap, world, viewport);
+                let viewport_rr = project_world_rect_to_minimap(minimap, world, viewport);
 
                 let current_pan = self
                     .view_state
@@ -379,7 +298,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                 let start_pan = if viewport_rr.contains(*position) {
                     current_pan
                 } else {
-                    let new_pan = Self::pan_to_center_point(canvas_bounds, zoom, canvas_pt);
+                    let new_pan = pan_to_center_canvas_point(canvas_bounds, zoom, canvas_pt);
                     self.update_pan(cx.app, new_pan);
                     new_pan
                 };
@@ -388,8 +307,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                     start_pan,
                 });
 
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
+                crate::ui::retained_event_tail::request_paint_repaint(cx);
             }
             Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
                 let Some(drag) = &self.drag else {
@@ -400,7 +318,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                 let snapshot = self.internals.snapshot();
                 let canvas_bounds = Self::canvas_bounds_from_internals(&snapshot);
                 let world = self.compute_world_bounds(canvas_bounds, &snapshot);
-                let Some(canvas_pt) = Self::unproject_point(minimap, world, *position) else {
+                let Some(canvas_pt) = unproject_minimap_point(minimap, world, *position) else {
                     return;
                 };
 
@@ -411,8 +329,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                     y: drag.start_pan.y - dy,
                 };
                 self.update_pan(cx.app, pan);
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
+                crate::ui::retained_event_tail::request_paint_repaint(cx);
             }
             Event::Pointer(fret_core::PointerEvent::Up { button, .. }) => {
                 if *button != MouseButton::Left {
@@ -420,9 +337,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                 }
                 if self.drag.take().is_some() {
                     cx.release_pointer_capture();
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                    crate::ui::retained_event_tail::finish_paint_event(cx);
                 }
             }
             _ => {}
@@ -465,7 +380,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
 
         for rect in snapshot.nodes_window.values().copied() {
             let r = self.invert_window_rect_to_canvas(rect, &snapshot);
-            let rr = Self::project_rect(minimap, world, r);
+            let rr = project_world_rect_to_minimap(minimap, world, r);
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(20_001),
                 rect: rr,
@@ -479,7 +394,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
         }
 
         let viewport = self.canvas_bounds_from_internals_and_view(canvas_bounds, &snapshot);
-        let rr = Self::project_rect(minimap, world, viewport);
+        let rr = project_world_rect_to_minimap(minimap, world, viewport);
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(20_002),
             rect: rr,

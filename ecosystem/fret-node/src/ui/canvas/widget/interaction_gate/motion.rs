@@ -1,7 +1,7 @@
 use crate::ui::canvas::state::InteractionState;
 
 pub(in super::super) fn pan_inertia_should_tick(interaction: &InteractionState) -> bool {
-    if interaction.searcher.is_some() || interaction.context_menu.is_some() {
+    if super::super::menu_session::has_active_menu_session(interaction) {
         return false;
     }
     if interaction.panning {

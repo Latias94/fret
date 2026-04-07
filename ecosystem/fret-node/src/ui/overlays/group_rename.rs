@@ -93,16 +93,13 @@ impl NodeGraphOverlayHost {
     }
 
     fn submit_transaction<H: UiHost>(&self, host: &mut H, tx: &GraphTransaction) {
-        if let Some(controller) = &self.controller {
-            let _ = controller.submit_transaction_and_sync_graph_model(host, &self.graph, tx);
-            return;
-        }
-
-        if let Some(edits) = &self.edits {
-            let _ = edits.update(host, |q, _cx| {
-                q.push(tx.clone());
-            });
-        }
+        crate::ui::retained_submit::submit_graph_transaction(
+            host,
+            self.controller.as_ref(),
+            self.edits.as_ref(),
+            &self.graph,
+            tx,
+        );
     }
 
     fn active_rename_session<H: UiHost>(&self, host: &H) -> Option<RenameOverlaySession> {
@@ -153,18 +150,18 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
             fret_core::Event::KeyDown { key, .. } => match *key {
                 KeyCode::Escape => {
                     self.close_rename_sessions(cx.app);
-                    cx.request_focus(self.canvas_node);
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Layout);
+                    crate::ui::retained_event_tail::focus_canvas_and_finish_layout_event(
+                        cx,
+                        self.canvas_node,
+                    );
                 }
                 KeyCode::Enter | KeyCode::NumpadEnter => {
                     self.commit_rename_session(cx.app, &session);
                     self.close_rename_sessions(cx.app);
-                    cx.request_focus(self.canvas_node);
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Layout);
+                    crate::ui::retained_event_tail::focus_canvas_and_finish_layout_event(
+                        cx,
+                        self.canvas_node,
+                    );
                 }
                 _ => {}
             },

@@ -5,8 +5,8 @@
 use std::collections::BTreeMap;
 
 use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
+    SemanticsRole, Size, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::Invalidation;
@@ -17,37 +17,21 @@ use crate::io::NodeGraphViewState;
 use crate::ops::GraphTransaction;
 use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::controller::NodeGraphController;
-use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
 use crate::ui::style::NodeGraphStyle;
 
 use super::NodeGraphOverlayState;
 use super::SymbolRenameOverlay;
+use super::blackboard_layout::{
+    BlackboardLayout, blackboard_action_at, blackboard_panel_size, compute_blackboard_layout,
+};
 use super::blackboard_policy::{
     BlackboardAction, BlackboardActionPlan, blackboard_action_a11y_label,
-    blackboard_action_button_label, blackboard_actions_in_order, next_blackboard_action,
-    plan_blackboard_action,
+    blackboard_action_button_label, blackboard_actions_in_order, plan_blackboard_action,
 };
+use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
+use super::panel_pointer_policy::{release_panel_press, sync_panel_hover};
 
-const PANEL_MARGIN_PX: f32 = 12.0;
-const BUTTON_GAP_PX: f32 = 6.0;
 const LABEL_PADDING_PX: f32 = 4.0;
-
-#[derive(Debug, Clone)]
-struct BlackboardRowLayout {
-    symbol: SymbolId,
-    label: Rect,
-    insert_ref: Rect,
-    rename: Rect,
-    delete: Rect,
-}
-
-#[derive(Debug, Clone)]
-struct BlackboardLayout {
-    panel: Rect,
-    header: Rect,
-    add_button: Rect,
-    rows: Vec<BlackboardRowLayout>,
-}
 
 /// Window-space blackboard (symbols) overlay.
 pub struct NodeGraphBlackboardOverlay {
@@ -107,36 +91,17 @@ impl NodeGraphBlackboardOverlay {
     }
 
     fn submit_transaction<H: fret_ui::UiHost>(&self, host: &mut H, tx: &GraphTransaction) {
-        if let Some(controller) = &self.controller {
-            let _ = controller.submit_transaction_and_sync_graph_model(host, &self.graph, tx);
-            return;
-        }
-
-        if let Some(edits) = &self.edits {
-            let _ = edits.update(host, |q, _cx| {
-                q.push(tx.clone());
-            });
-        }
-    }
-
-    fn row_height_px(&self) -> f32 {
-        self.style.paint.context_menu_item_height.max(20.0)
-    }
-
-    fn panel_width_px(&self) -> f32 {
-        self.style.paint.context_menu_width.max(120.0)
-    }
-
-    fn header_height_px(&self) -> f32 {
-        self.row_height_px()
+        crate::ui::retained_submit::submit_graph_transaction(
+            host,
+            self.controller.as_ref(),
+            self.edits.as_ref(),
+            &self.graph,
+            tx,
+        );
     }
 
     fn panel_size_px_for_rows(&self, rows: usize) -> Size {
-        let pad = self.style.paint.context_menu_padding.max(0.0);
-        let w = self.panel_width_px();
-        let h =
-            (self.header_height_px() + rows as f32 * self.row_height_px() + 2.0 * pad).max(24.0);
-        Size::new(Px(w), Px(h))
+        blackboard_panel_size(&self.style, rows)
     }
 
     fn snapshot_symbols<H: fret_ui::UiHost>(&self, host: &H) -> BTreeMap<SymbolId, Symbol> {
@@ -151,106 +116,13 @@ impl NodeGraphBlackboardOverlay {
         bounds: Rect,
         symbols: &BTreeMap<SymbolId, Symbol>,
     ) -> BlackboardLayout {
-        let size = self.panel_size_px_for_rows(symbols.len());
-        let panel = rect_in_bounds(
-            bounds,
-            size,
-            AxisAlign::Start,
-            AxisAlign::Start,
-            PANEL_MARGIN_PX,
-            Point::new(Px(0.0), Px(0.0)),
-        );
-
-        let pad = self.style.paint.context_menu_padding.max(0.0);
-        let row_h = self.row_height_px();
-        let header_h = self.header_height_px();
-
-        let inner_x = panel.origin.x.0 + pad;
-        let inner_y = panel.origin.y.0 + pad;
-        let inner_w = (panel.size.width.0 - 2.0 * pad).max(0.0);
-
-        let header = Rect::new(
-            Point::new(Px(inner_x), Px(inner_y)),
-            Size::new(Px(inner_w), Px(header_h)),
-        );
-
-        let button_w = row_h.max(18.0);
-        let add_button = Rect::new(
-            Point::new(
-                Px(header.origin.x.0 + (header.size.width.0 - button_w).max(0.0)),
-                header.origin.y,
-            ),
-            Size::new(Px(button_w), Px(header_h)),
-        );
-
-        let mut rows = Vec::new();
-        let mut y = inner_y + header_h;
-        for symbol in symbols.keys().copied() {
-            let row = Rect::new(
-                Point::new(Px(inner_x), Px(y)),
-                Size::new(Px(inner_w), Px(row_h)),
-            );
-
-            let btn_w = button_w;
-            let delete = Rect::new(
-                Point::new(
-                    Px(row.origin.x.0 + (row.size.width.0 - btn_w).max(0.0)),
-                    row.origin.y,
-                ),
-                Size::new(Px(btn_w), Px(row_h)),
-            );
-            let rename = Rect::new(
-                Point::new(Px(delete.origin.x.0 - BUTTON_GAP_PX - btn_w), row.origin.y),
-                Size::new(Px(btn_w), Px(row_h)),
-            );
-            let insert_ref = Rect::new(
-                Point::new(Px(rename.origin.x.0 - BUTTON_GAP_PX - btn_w), row.origin.y),
-                Size::new(Px(btn_w), Px(row_h)),
-            );
-            let label = Rect::new(
-                row.origin,
-                Size::new(
-                    Px((insert_ref.origin.x.0 - row.origin.x.0 - BUTTON_GAP_PX).max(0.0)),
-                    row.size.height,
-                ),
-            );
-
-            rows.push(BlackboardRowLayout {
-                symbol,
-                label,
-                insert_ref,
-                rename,
-                delete,
-            });
-
-            y += row_h;
-        }
-
-        BlackboardLayout {
-            panel,
-            header,
-            add_button,
-            rows,
-        }
+        compute_blackboard_layout(&self.style, bounds, symbols.keys().copied())
     }
 
     fn action_at(&self, position: Point) -> Option<BlackboardAction> {
-        let layout = self.last_layout.as_ref()?;
-        if layout.add_button.contains(position) {
-            return Some(BlackboardAction::AddSymbol);
-        }
-        for row in &layout.rows {
-            if row.insert_ref.contains(position) {
-                return Some(BlackboardAction::InsertRef { symbol: row.symbol });
-            }
-            if row.rename.contains(position) {
-                return Some(BlackboardAction::Rename { symbol: row.symbol });
-            }
-            if row.delete.contains(position) {
-                return Some(BlackboardAction::Delete { symbol: row.symbol });
-            }
-        }
-        None
+        self.last_layout
+            .as_ref()
+            .and_then(|layout| blackboard_action_at(layout, position))
     }
 
     fn dispatch_action<H: fret_ui::UiHost>(
@@ -355,66 +227,32 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 let items = blackboard_actions_in_order(&symbols);
                 let _ = layout;
 
-                match *key {
-                    KeyCode::ArrowDown => {
+                match panel_keyboard_action(*key, self.keyboard_active, &items) {
+                    PanelKeyboardAction::Select(action) => {
                         self.hovered = None;
                         self.pressed = None;
-                        self.keyboard_active =
-                            next_blackboard_action(self.keyboard_active, 1, &items);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        self.keyboard_active = Some(action);
+                        crate::ui::retained_event_tail::finish_paint_event(cx);
                     }
-                    KeyCode::ArrowUp => {
-                        self.hovered = None;
-                        self.pressed = None;
-                        self.keyboard_active =
-                            next_blackboard_action(self.keyboard_active, -1, &items);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
-                    KeyCode::Home => {
-                        self.hovered = None;
-                        self.pressed = None;
-                        self.keyboard_active = items.first().copied();
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
-                    KeyCode::End => {
-                        self.hovered = None;
-                        self.pressed = None;
-                        self.keyboard_active = items.last().copied();
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
-                    KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
-                        let action = self
-                            .keyboard_active
-                            .or_else(|| items.first().copied())
-                            .unwrap_or(BlackboardAction::AddSymbol);
+                    PanelKeyboardAction::Activate(action) => {
                         self.dispatch_action(
                             cx.app,
                             cx.bounds,
                             action,
                             Point::new(Px(0.0), Px(0.0)),
                         );
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        crate::ui::retained_event_tail::finish_paint_event(cx);
                     }
-                    KeyCode::Escape => {
+                    PanelKeyboardAction::FocusCanvas => {
                         self.hovered = None;
                         self.pressed = None;
                         self.keyboard_active = None;
-                        cx.request_focus(self.canvas_node);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        crate::ui::retained_event_tail::focus_canvas_and_finish_paint_event(
+                            cx,
+                            self.canvas_node,
+                        );
                     }
-                    _ => {}
+                    PanelKeyboardAction::Ignore => {}
                 }
             }
             Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
@@ -422,10 +260,8 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 if hovered.is_some() {
                     cx.set_cursor_icon(CursorIcon::Pointer);
                 }
-                if hovered != self.hovered {
-                    self.hovered = hovered;
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                if sync_panel_hover(&mut self.hovered, hovered) {
+                    crate::ui::retained_event_tail::request_paint_repaint(cx);
                 }
             }
             Event::Pointer(fret_core::PointerEvent::Down {
@@ -452,8 +288,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 };
                 self.pressed = Some(action);
                 cx.capture_pointer(cx.node);
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
+                crate::ui::retained_event_tail::request_paint_repaint(cx);
             }
             Event::Pointer(fret_core::PointerEvent::Up {
                 position, button, ..
@@ -468,18 +303,16 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                     cx.stop_propagation();
                 }
 
-                let pressed = self.pressed.take();
+                let released_on = self.action_at(*position);
+                let release = release_panel_press(&mut self.pressed, released_on);
                 cx.release_pointer_capture();
-                if pressed.is_some() {
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                if release.had_pressed {
+                    crate::ui::retained_event_tail::request_paint_repaint(cx);
                 }
-                let Some(pressed) = pressed else {
+                let Some(pressed) = release.activate else {
                     return;
                 };
-                if self.action_at(*position) == Some(pressed) {
-                    self.dispatch_action(cx.app, cx.bounds, pressed, *position);
-                }
+                self.dispatch_action(cx.app, cx.bounds, pressed, *position);
             }
             _ => {}
         }

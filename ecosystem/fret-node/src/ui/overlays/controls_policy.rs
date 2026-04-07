@@ -77,16 +77,8 @@ pub(super) fn resolve_controls_command_id(
 }
 
 pub(super) fn next_controls_button(current: Option<ControlsButton>, dir: i32) -> ControlsButton {
-    let buttons = controls_buttons();
-    let idx = current
-        .and_then(|current| buttons.iter().position(|button| *button == current))
-        .unwrap_or(0);
-    let len = buttons.len().max(1);
-    let idx_i32 = idx as i32;
-    let len_i32 = len as i32;
-    let mut next = idx_i32 + dir;
-    next = ((next % len_i32) + len_i32) % len_i32;
-    buttons[next as usize]
+    super::panel_navigation_policy::cyclic_panel_item(current, dir, controls_buttons())
+        .expect("controls buttons")
 }
 
 pub(super) fn controls_button_a11y_label(button: ControlsButton) -> &'static str {

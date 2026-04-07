@@ -387,31 +387,19 @@ where
         match outcome {
             PortalCommandOutcome::NotHandled => false,
             PortalCommandOutcome::Handled => {
-                if let Some(canvas) = self.focus_canvas {
-                    cx.request_focus(canvas);
-                }
-                cx.stop_propagation();
-                cx.request_redraw();
+                crate::ui::retained_event_tail::finish_portal_command(cx, self.focus_canvas);
                 true
             }
             PortalCommandOutcome::Commit(tx) => {
-                if let Some(controller) = &self.controller {
-                    let _ = controller.submit_transaction_and_sync_models(
-                        cx.app,
-                        &self.graph,
-                        &self.view_state,
-                        &tx,
-                    );
-                } else if let Some(edits) = &self.edits {
-                    let _ = edits.update(cx.app, |q, _cx| {
-                        q.push(tx.clone());
-                    });
-                }
-                if let Some(canvas) = self.focus_canvas {
-                    cx.request_focus(canvas);
-                }
-                cx.stop_propagation();
-                cx.request_redraw();
+                crate::ui::retained_submit::submit_graph_and_view_transaction(
+                    cx.app,
+                    self.controller.as_ref(),
+                    self.edits.as_ref(),
+                    &self.graph,
+                    &self.view_state,
+                    &tx,
+                );
+                crate::ui::retained_event_tail::finish_portal_command(cx, self.focus_canvas);
                 true
             }
         }

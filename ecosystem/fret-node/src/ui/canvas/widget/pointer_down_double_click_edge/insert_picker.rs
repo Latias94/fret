@@ -13,8 +13,7 @@ pub(super) fn handle_edge_insert_picker_double_click<H: UiHost, M: NodeGraphCanv
 ) -> bool {
     if click_count != 2
         || !(modifiers.alt || modifiers.alt_gr)
-        || canvas.interaction.searcher.is_some()
-        || canvas.interaction.context_menu.is_some()
+        || super::super::menu_session::has_active_menu_session(&canvas.interaction)
     {
         return false;
     }

@@ -12,8 +12,7 @@ pub(super) fn handle_edge_reroute_double_click<H: UiHost, M: NodeGraphCanvasMidd
 ) -> bool {
     if click_count != 2
         || !snapshot.interaction.reroute_on_edge_double_click
-        || canvas.interaction.searcher.is_some()
-        || canvas.interaction.context_menu.is_some()
+        || super::super::menu_session::has_active_menu_session(&canvas.interaction)
     {
         return false;
     }

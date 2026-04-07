@@ -12,8 +12,7 @@ pub(super) fn handle_pan_activation_key_down<H: UiHost, M: NodeGraphCanvasMiddle
     }
 
     if !snapshot.interaction.space_to_pan
-        || canvas.interaction.searcher.is_some()
-        || canvas.interaction.context_menu.is_some()
+        || super::menu_session::has_active_menu_session(&canvas.interaction)
     {
         return false;
     }
